@@ -23,4 +23,8 @@ A source connector cannot be accepted until it passes:
 
 ## CCLD FacilityReports baseline
 
-The initial CCLD connector implementation targets the public FacilityReports endpoint for facility `157806098`, report index `3`. It extracts labeled HTML fields deterministically and normalizes them into the existing facility, source document, complaint, allegation, and extraction audit records without adding source-specific canonical columns.
+The CCLD connector discovers public FacilityReports URLs from the facility detail page for facility `157806098`. Discovery normalizes each rendered report link into a source document candidate with source name, facility number, report index, source URL, visible report date, and optional discovery timestamp. Duplicate URLs and duplicate report indexes are removed before candidates are returned.
+
+Discovery does not download or parse each report body. Fetching, raw storage, extraction, normalization, validation, and emission remain separate connector contract steps.
+
+The initial deterministic extraction fixture targets report index `3`. It extracts labeled HTML fields deterministically and normalizes them into the existing facility, source document, complaint, allegation, and extraction audit records without adding source-specific canonical columns.
