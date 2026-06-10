@@ -10,6 +10,21 @@ https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=<facility
 
 The connector must follow `SOURCE_CONNECTOR_CONTRACT.md`.
 
+## Facility detail discovery
+
+Discovery starts from the public facility detail page for facility `157806098` and identifies rendered `FacilityReports` links that match the canonical report URL format. Each discovered link is normalized into a source document candidate with:
+
+- `source_name`
+- `facility_number`
+- `report_index`
+- `source_url`
+- `discovered_report_date`
+- `discovered_at`, when the discovery run provides one
+
+Discovery removes duplicate report URLs and duplicate report indexes. It does not download or parse each report body; report fetching and extraction remain separate connector steps.
+
+If a live facility detail response does not contain rendered report anchors, the connector falls back to the public report-list API used by the facility detail page and creates the same candidate URL shape from the returned report array indexes.
+
 ## Initial deterministic extraction
 
 The first implemented fixture covers facility `157806098` with report index `3`.
