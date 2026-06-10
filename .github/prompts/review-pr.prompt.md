@@ -1,0 +1,1 @@
+Review this change against PROJECT_CHARTER.md, DATA_CONTRACT.md, SOURCE_CONNECTOR_CONTRACT.md, TESTING_STRATEGY.md, DOCUMENTATION_STRATEGY.md, ACCESSIBILITY_REQUIREMENTS.md, and SECURITY_AND_PRIVACY.md. Identify governance violations and missing tests/docs.

@@ -1,0 +1,1 @@
+Before adding a field, review DATA_CONTRACT.md. If the field is canonical, update schema files, data dictionary, tests, fixtures, and database initialization. If source-specific, prefer extraction_audit or source metadata unless approved.

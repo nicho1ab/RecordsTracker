@@ -1,0 +1,60 @@
+{
+  "type": "object",
+  "required": [
+    "facility_id",
+    "source_id",
+    "external_facility_number",
+    "facility_name"
+  ],
+  "properties": {
+    "facility_id": {
+      "type": "string"
+    },
+    "source_id": {
+      "type": "string"
+    },
+    "external_facility_number": {
+      "type": "string"
+    },
+    "facility_name": {
+      "type": "string"
+    },
+    "facility_type": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "licensee_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "county": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "status": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "capacity": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "regional_office": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

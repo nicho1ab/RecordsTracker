@@ -1,0 +1,28 @@
+name: Source connector
+description: Request or track a new source connector
+title: "Connector: "
+labels: [connector]
+body:
+  - type: input
+    id: source_name
+    attributes:
+      label: Source name
+    validations:
+      required: true
+  - type: input
+    id: source_url
+    attributes:
+      label: Source URL
+  - type: textarea
+    id: structure
+    attributes:
+      label: Data structure notes
+  - type: checkboxes
+    id: requirements
+    attributes:
+      label: Contract requirements
+      options:
+        - label: Source terms reviewed
+        - label: Fixture examples available
+        - label: Data contract mapping identified
+        - label: Accessibility impact reviewed

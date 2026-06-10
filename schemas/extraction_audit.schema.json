@@ -1,0 +1,58 @@
+{
+  "type": "object",
+  "required": [
+    "audit_id",
+    "document_id",
+    "field_name",
+    "extraction_method",
+    "extractor_version"
+  ],
+  "properties": {
+    "audit_id": {
+      "type": "string"
+    },
+    "document_id": {
+      "type": "string"
+    },
+    "field_name": {
+      "type": "string"
+    },
+    "extraction_method": {
+      "type": "string"
+    },
+    "extractor_version": {
+      "type": "string"
+    },
+    "extracted_value": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "confidence": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "source_text": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source_section": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "warning": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

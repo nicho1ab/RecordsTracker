@@ -1,0 +1,19 @@
+name: Documentation change
+description: Request documentation updates
+title: "Docs: "
+labels: [documentation]
+body:
+  - type: textarea
+    id: docs
+    attributes:
+      label: Documentation need
+    validations:
+      required: true
+  - type: dropdown
+    id: audience
+    attributes:
+      label: Audience
+      options:
+        - Developer
+        - End user
+        - Both

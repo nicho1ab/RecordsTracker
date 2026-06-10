@@ -1,0 +1,26 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run tests",
+      "type": "shell",
+      "command": ".\\scripts\\test.ps1",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run lint",
+      "type": "shell",
+      "command": ".\\scripts\\lint.ps1",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Check docs",
+      "type": "shell",
+      "command": ".\\scripts\\docs.ps1",
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}

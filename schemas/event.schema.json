@@ -1,0 +1,42 @@
+{
+  "type": "object",
+  "required": [
+    "event_id",
+    "complaint_id",
+    "event_date",
+    "event_type"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string"
+    },
+    "complaint_id": {
+      "type": "string"
+    },
+    "event_date": {
+      "type": "string"
+    },
+    "event_type": {
+      "type": "string"
+    },
+    "event_text": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "extracted_from_section": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "extraction_confidence": {
+      "type": [
+        "number",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false
+}
