@@ -20,3 +20,7 @@ A source connector cannot be accepted until it passes:
 - Data contract validation
 - Accessibility review for any user-facing output
 - Documentation checks
+
+## CCLD FacilityReports baseline
+
+The initial CCLD connector implementation targets the public FacilityReports endpoint for facility `157806098`, report index `3`. It extracts labeled HTML fields deterministically and normalizes them into the existing facility, source document, complaint, allegation, and extraction audit records without adding source-specific canonical columns.
