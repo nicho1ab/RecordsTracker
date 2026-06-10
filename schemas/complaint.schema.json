@@ -1,0 +1,80 @@
+{
+  "type": "object",
+  "required": [
+    "complaint_id",
+    "facility_id",
+    "document_id"
+  ],
+  "properties": {
+    "complaint_id": {
+      "type": "string"
+    },
+    "facility_id": {
+      "type": "string"
+    },
+    "document_id": {
+      "type": "string"
+    },
+    "complaint_control_number": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "complaint_received_date": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "first_investigation_activity_date": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "visit_date": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "report_date": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "date_signed": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "finding": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "days_received_to_first_activity": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "days_received_to_report": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "extraction_confidence": {
+      "type": [
+        "number",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

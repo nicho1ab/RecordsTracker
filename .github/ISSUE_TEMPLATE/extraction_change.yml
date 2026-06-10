@@ -1,0 +1,23 @@
+name: Extraction change
+description: Request extraction behavior changes
+title: "Extraction: "
+labels: [extraction]
+body:
+  - type: textarea
+    id: change
+    attributes:
+      label: Requested change
+    validations:
+      required: true
+  - type: textarea
+    id: fixture
+    attributes:
+      label: Fixture or source report example
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Required updates
+      options:
+        - label: Fixture test added or updated
+        - label: Expected JSON updated
+        - label: Data quality checks reviewed

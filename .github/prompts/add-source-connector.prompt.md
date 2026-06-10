@@ -1,0 +1,1 @@
+Read SOURCE_CONNECTOR_CONTRACT.md and DATA_CONTRACT.md. Create the smallest connector for the requested source. Add fixtures, expected JSON, tests, connector docs, and known limitations. Do not change canonical schema unless you explain the need first.

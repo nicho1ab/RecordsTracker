@@ -1,0 +1,38 @@
+{
+  "type": "object",
+  "required": [
+    "allegation_id",
+    "complaint_id",
+    "allegation_text"
+  ],
+  "properties": {
+    "allegation_id": {
+      "type": "string"
+    },
+    "complaint_id": {
+      "type": "string"
+    },
+    "allegation_text": {
+      "type": "string"
+    },
+    "allegation_category": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "finding": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "extraction_confidence": {
+      "type": [
+        "number",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

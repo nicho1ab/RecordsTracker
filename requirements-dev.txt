@@ -1,0 +1,9 @@
+pytest
+ruff
+mypy
+jsonschema
+python-dateutil
+types-jsonschema
+types-python-dateutil
+datasette
+pip-audit

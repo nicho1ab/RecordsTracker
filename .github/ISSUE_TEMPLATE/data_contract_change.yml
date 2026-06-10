@@ -1,0 +1,25 @@
+name: Data contract change
+description: Request a schema or canonical field change
+title: "Data contract: "
+labels: [data-contract]
+body:
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Rationale
+    validations:
+      required: true
+  - type: textarea
+    id: fields
+    attributes:
+      label: Proposed field/entity changes
+  - type: checkboxes
+    id: updates
+    attributes:
+      label: Required updates
+      options:
+        - label: DATA_CONTRACT.md
+        - label: JSON schemas
+        - label: Database initialization/migration
+        - label: User data dictionary
+        - label: Tests and fixtures

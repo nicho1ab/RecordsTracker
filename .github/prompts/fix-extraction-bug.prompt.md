@@ -1,0 +1,1 @@
+Create a failing fixture or regression test for the extraction bug first. Then make the smallest parser change needed. Update docs only if user-visible behavior changes. Run or list validation commands.
