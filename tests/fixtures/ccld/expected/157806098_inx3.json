@@ -1,62 +1,62 @@
 {
-    "facility": {
-        "facility_id": "ccld-facility-157806098",
-        "source_id": "ccld",
-        "external_facility_number": "157806098",
-        "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
-        "facility_type": null,
-        "licensee_name": null,
-        "county": null,
-        "status": null,
-        "capacity": null,
-        "regional_office": null
+  "facility": {
+    "facility_id": "ccld-facility-157806098",
+    "source_id": "ccld",
+    "external_facility_number": "157806098",
+    "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+    "facility_type": null,
+    "licensee_name": null,
+    "county": null,
+    "status": null,
+    "capacity": null,
+    "regional_office": null
+  },
+  "source_document": {
+    "document_id": "ccld-157806098-inx-3",
+    "source_id": "ccld",
+    "facility_id": "ccld-facility-157806098",
+    "source_url": "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=3",
+    "retrieved_at": "2026-06-09T19:00:00-05:00",
+    "raw_sha256": "507f23d506e9596e2b4936b39701f80be40c6da35ee29c8d140ea9092a7cdb10",
+    "connector_name": "ccld_facility_reports",
+    "connector_version": "0.1.0",
+    "raw_path": "tests/fixtures/ccld/raw/157806098_inx3.html",
+    "document_type": "COMPLAINT INVESTIGATION REPORT",
+    "report_index": 3,
+    "http_status": null,
+    "content_type": "text/html"
+  },
+  "complaint": {
+    "complaint_id": "ccld-complaint-32-CR-20220407124448",
+    "facility_id": "ccld-facility-157806098",
+    "document_id": "ccld-157806098-inx-3",
+    "complaint_control_number": "32-CR-20220407124448",
+    "complaint_received_date": "2022-04-07",
+    "first_investigation_activity_date": null,
+    "visit_date": "2022-08-24",
+    "report_date": "2022-08-24",
+    "date_signed": "2022-08-26",
+    "finding": "Unsubstantiated",
+    "days_received_to_first_activity": null,
+    "days_received_to_report": 139,
+    "extraction_confidence": 1.0
+  },
+  "allegations": [
+    {
+      "allegation_id": "ccld-complaint-32-CR-20220407124448-allegation-1",
+      "complaint_id": "ccld-complaint-32-CR-20220407124448",
+      "allegation_text": "Facility clients are being mistreated while in care",
+      "allegation_category": null,
+      "finding": "Unsubstantiated",
+      "extraction_confidence": 1.0
     },
-    "source_document": {
-        "document_id": "ccld-157806098-inx-3",
-        "source_id": "ccld",
-        "facility_id": "ccld-facility-157806098",
-        "source_url": "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=3",
-        "retrieved_at": "2026-06-10T00:00:00+00:00",
-        "raw_sha256": "507f23d506e9596e2b4936b39701f80be40c6da35ee29c8d140ea9092a7cdb10",
-        "connector_name": "ccld_facility_reports",
-        "connector_version": "0.1.0",
-        "raw_path": "tests/fixtures/ccld/raw/157806098_inx3.html",
-        "document_type": "COMPLAINT INVESTIGATION REPORT",
-        "report_index": 3,
-        "http_status": null,
-        "content_type": "text/html"
-    },
-    "complaint": {
-        "complaint_id": "ccld-complaint-32-CR-20220407124448",
-        "facility_id": "ccld-facility-157806098",
-        "document_id": "ccld-157806098-inx-3",
-        "complaint_control_number": "32-CR-20220407124448",
-        "complaint_received_date": "2022-04-07",
-        "first_investigation_activity_date": null,
-        "visit_date": "2022-08-24",
-        "report_date": "2022-08-24",
-        "date_signed": "2022-08-26",
-        "finding": "Unsubstantiated",
-        "days_received_to_first_activity": null,
-        "days_received_to_report": 139,
-        "extraction_confidence": 1.0
-    },
-    "allegations": [
-        {
-            "allegation_id": "ccld-complaint-32-CR-20220407124448-allegation-1",
-            "complaint_id": "ccld-complaint-32-CR-20220407124448",
-            "allegation_text": "Facility clients are being mistreated while in care",
-            "allegation_category": null,
-            "finding": "Unsubstantiated",
-            "extraction_confidence": 1.0
-        },
-        {
-            "allegation_id": "ccld-complaint-32-CR-20220407124448-allegation-2",
-            "complaint_id": "ccld-complaint-32-CR-20220407124448",
-            "allegation_text": "Facility staff do not provide adequate supervision to the facility clients",
-            "allegation_category": null,
-            "finding": "Unsubstantiated",
-            "extraction_confidence": 1.0
-        }
-    ]
+    {
+      "allegation_id": "ccld-complaint-32-CR-20220407124448-allegation-2",
+      "complaint_id": "ccld-complaint-32-CR-20220407124448",
+      "allegation_text": "Facility staff do not provide adequate supervision to the facility clients",
+      "allegation_category": null,
+      "finding": "Unsubstantiated",
+      "extraction_confidence": 1.0
+    }
+  ]
 }
