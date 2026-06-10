@@ -10,6 +10,7 @@ class SourceDocument:
     source_url: str
     raw_path: Path
     raw_sha256: str
+    retrieved_at: str | None = None
     content_type: str | None = None
 
 
