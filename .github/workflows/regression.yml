@@ -18,3 +18,4 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Run fixture regression tests
         run: pytest tests/regression tests/fixtures
+
