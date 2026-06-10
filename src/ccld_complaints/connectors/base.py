@@ -6,6 +6,16 @@ from typing import Protocol
 
 
 @dataclass(frozen=True)
+class SourceDocumentCandidate:
+    source_name: str
+    facility_number: str
+    report_index: int
+    source_url: str
+    discovered_report_date: str | None = None
+    discovered_at: str | None = None
+
+
+@dataclass(frozen=True)
 class SourceDocument:
     source_url: str
     raw_path: Path
@@ -18,7 +28,7 @@ class SourceConnector(Protocol):
     connector_name: str
     connector_version: str
 
-    def discover(self) -> list[str]: ...
+    def discover(self) -> list[SourceDocumentCandidate]: ...
 
     def fetch(self, source_url: str) -> bytes: ...
 

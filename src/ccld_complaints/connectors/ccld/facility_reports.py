@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from datetime import UTC, datetime
 from html.parser import HTMLParser
@@ -8,12 +9,13 @@ from typing import Any, cast
 from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import Request, urlopen
 
-from ccld_complaints.connectors.base import SourceDocument
+from ccld_complaints.connectors.base import SourceDocument, SourceDocumentCandidate
 from ccld_complaints.extraction.dates import days_between, parse_date_or_none
 from ccld_complaints.quality.validate import validate_schema
 from ccld_complaints.utils.hash import sha256_bytes
 
 BASE_URL = "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports"
+FACILITY_DETAIL_URL = "https://www.ccld.dss.ca.gov/carefacilitysearch/FacDetail"
 SOURCE_ID = "ccld"
 DETERMINISTIC_METHOD = "ccld_facility_report_html_labels"
 ALLOWED_FINDINGS = (
@@ -39,6 +41,44 @@ class _HtmlTextParser(HTMLParser):
                 self.lines.append(cleaned)
 
 
+class _FacilityDetailReportLinkParser(HTMLParser):
+    def __init__(self, facility_number: str) -> None:
+        super().__init__(convert_charrefs=True)
+        self.facility_number = facility_number
+        self.report_links: list[tuple[int, str, str]] = []
+        self._active_report: tuple[int, str] | None = None
+        self._active_text: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag.casefold() != "a":
+            return
+        href = dict(attrs).get("href")
+        if href is None:
+            return
+        report_index = _report_index_from_url(href, self.facility_number)
+        if report_index is None:
+            return
+        self._active_report = (
+            report_index,
+            _report_source_url(self.facility_number, report_index),
+        )
+        self._active_text = []
+
+    def handle_data(self, data: str) -> None:
+        if self._active_report is not None:
+            self._active_text.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag.casefold() != "a" or self._active_report is None:
+            return
+        report_index, source_url = self._active_report
+        self.report_links.append(
+            (report_index, source_url, _clean_text("".join(self._active_text)))
+        )
+        self._active_report = None
+        self._active_text = []
+
+
 class CcldFacilityReportsConnector:
     connector_name = "ccld_facility_reports"
     connector_version = "0.1.0"
@@ -55,18 +95,41 @@ class CcldFacilityReportsConnector:
         self.raw_dir = raw_dir
         self.schema_dir = schema_dir
 
-    def discover(self) -> list[str]:
-        query = urlencode({"facNum": self.facility_number, "inx": self.report_index})
-        return [f"{BASE_URL}?{query}"]
+    def discover(
+        self,
+        facility_detail_html: str | None = None,
+        discovered_at: str | None = None,
+    ) -> list[SourceDocumentCandidate]:
+        is_live_discovery = facility_detail_html is None
+        if facility_detail_html is None:
+            detail_url = f"{FACILITY_DETAIL_URL}/{self.facility_number}"
+            facility_detail_html = _fetch_url(detail_url).decode("utf-8", errors="replace")
+        if discovered_at is None and is_live_discovery:
+            discovered_at = datetime.now(UTC).isoformat()
+
+        candidates = discover_facility_report_candidates(
+            facility_detail_html,
+            self.facility_number,
+            discovered_at=discovered_at,
+        )
+        if candidates or not is_live_discovery:
+            return candidates
+
+        report_list_url = f"{BASE_URL}/{self.facility_number}"
+        return _candidates_from_report_list_json(
+            _fetch_url(report_list_url),
+            self.facility_number,
+            discovered_at=discovered_at,
+        )
 
     def fetch(self, source_url: str) -> bytes:
-        request = Request(source_url, headers={"User-Agent": "ccld-complaints-poc/0.1"})
-        with urlopen(request, timeout=30) as response:
-            return cast(bytes, response.read())
+        return _fetch_url(source_url)
 
     def store_raw(self, source_url: str, content: bytes) -> SourceDocument:
         self.raw_dir.mkdir(parents=True, exist_ok=True)
-        raw_path = self.raw_dir / f"{self.facility_number}_inx{self.report_index}.html"
+        source_url_fields = _source_url_fields(source_url)
+        report_index = source_url_fields["report_index"] or self.report_index
+        raw_path = self.raw_dir / f"{self.facility_number}_inx{report_index}.html"
         raw_path.write_bytes(content)
         return SourceDocument(
             source_url=source_url,
@@ -207,6 +270,41 @@ def _html_lines(html: str) -> list[str]:
     return parser.lines
 
 
+def discover_facility_report_candidates(
+    facility_detail_html: str,
+    facility_number: str,
+    discovered_at: str | None = None,
+) -> list[SourceDocumentCandidate]:
+    parser = _FacilityDetailReportLinkParser(facility_number)
+    parser.feed(facility_detail_html)
+
+    candidates: list[SourceDocumentCandidate] = []
+    seen_indexes: set[int] = set()
+    seen_urls: set[str] = set()
+    for report_index, source_url, link_text in parser.report_links:
+        if report_index in seen_indexes or source_url in seen_urls:
+            continue
+        seen_indexes.add(report_index)
+        seen_urls.add(source_url)
+        candidates.append(
+            SourceDocumentCandidate(
+                source_name=SOURCE_ID,
+                facility_number=facility_number,
+                report_index=report_index,
+                source_url=source_url,
+                discovered_report_date=_iso_date(link_text),
+                discovered_at=discovered_at,
+            )
+        )
+    return candidates
+
+
+def _fetch_url(source_url: str) -> bytes:
+    request = Request(source_url, headers={"User-Agent": "ccld-complaints-poc/0.1"})
+    with urlopen(request, timeout=30) as response:
+        return cast(bytes, response.read())
+
+
 def _clean_text(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip()
 
@@ -215,6 +313,49 @@ def _source_url_fields(source_url: str) -> dict[str, int | None]:
     query = parse_qs(urlparse(source_url).query)
     report_index = query.get("inx", [None])[0]
     return {"report_index": int(report_index) if report_index is not None else None}
+
+
+def _report_index_from_url(source_url: str, facility_number: str) -> int | None:
+    parsed_url = urlparse(source_url)
+    if parsed_url.scheme != "https":
+        return None
+    if parsed_url.netloc.casefold() != "www.ccld.dss.ca.gov":
+        return None
+    if parsed_url.path != "/transparencyapi/api/FacilityReports":
+        return None
+
+    query = parse_qs(parsed_url.query)
+    if query.get("facNum", [None])[0] != facility_number:
+        return None
+    report_index = query.get("inx", [None])[0]
+    if report_index is None or not report_index.isdigit():
+        return None
+    return int(report_index)
+
+
+def _report_source_url(facility_number: str, report_index: int) -> str:
+    return f"{BASE_URL}?{urlencode({'facNum': facility_number, 'inx': report_index})}"
+
+
+def _candidates_from_report_list_json(
+    report_list_content: bytes,
+    facility_number: str,
+    discovered_at: str | None = None,
+) -> list[SourceDocumentCandidate]:
+    report_list = cast(dict[str, object], json.loads(report_list_content.decode("utf-8")))
+    report_array = cast(list[dict[str, object]], report_list.get("REPORTARRAY", []))
+    return [
+        SourceDocumentCandidate(
+            source_name=SOURCE_ID,
+            facility_number=facility_number,
+            report_index=report_index,
+            source_url=_report_source_url(facility_number, report_index),
+            discovered_report_date=_iso_date(cast(str | None, report.get("REPORTDATE"))),
+            discovered_at=discovered_at,
+        )
+        for report_index, report in enumerate(report_array)
+        if report.get("FACILITYNUMBER") == facility_number
+    ]
 
 
 def _value_after_label(lines: list[str], label: str) -> str | None:
