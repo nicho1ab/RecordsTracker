@@ -15,3 +15,7 @@ data/logs/*
 
 outcome.txt
 output*.txt
+
+outcome.txt
+output*.txt
+*.tmp
