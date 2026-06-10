@@ -13,3 +13,4 @@ jobs:
           python-version: '3.11'
       - name: Check required docs
         run: python scripts/check_docs.py
+
