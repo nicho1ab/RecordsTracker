@@ -93,6 +93,140 @@ CREATE TABLE IF NOT EXISTS extraction_audit (
 );
 """
 
+REVIEW_VIEWS_SQL = """
+DROP VIEW IF EXISTS delay_review_flags;
+DROP VIEW IF EXISTS facility_complaint_summary;
+DROP VIEW IF EXISTS complaint_review_summary;
+DROP VIEW IF EXISTS source_traceability_review;
+
+CREATE VIEW complaint_review_summary AS
+SELECT
+    f.external_facility_number AS facility_number,
+    f.facility_name,
+    c.complaint_id,
+    c.complaint_control_number,
+    c.complaint_received_date,
+    c.first_investigation_activity_date,
+    c.visit_date,
+    c.report_date,
+    c.date_signed,
+    c.finding,
+    COUNT(a.allegation_id) AS allegation_count,
+    GROUP_CONCAT(a.allegation_text, '; ') AS allegation_summary,
+    c.days_received_to_first_activity,
+    c.days_received_to_visit,
+    c.days_received_to_report,
+    c.days_report_to_signed,
+    c.review_delay_over_30_days,
+    c.review_delay_over_60_days,
+    c.review_delay_over_90_days,
+    c.review_delay_over_120_days,
+    c.missing_first_activity_date,
+    c.report_date_used_as_proxy,
+    c.extraction_confidence,
+    sd.source_url,
+    sd.raw_path
+FROM complaints c
+JOIN facilities f ON f.facility_id = c.facility_id
+JOIN source_documents sd ON sd.document_id = c.document_id
+LEFT JOIN allegations a ON a.complaint_id = c.complaint_id
+GROUP BY
+    f.external_facility_number,
+    f.facility_name,
+    c.complaint_id,
+    c.complaint_control_number,
+    c.complaint_received_date,
+    c.first_investigation_activity_date,
+    c.visit_date,
+    c.report_date,
+    c.date_signed,
+    c.finding,
+    c.days_received_to_first_activity,
+    c.days_received_to_visit,
+    c.days_received_to_report,
+    c.days_report_to_signed,
+    c.review_delay_over_30_days,
+    c.review_delay_over_60_days,
+    c.review_delay_over_90_days,
+    c.review_delay_over_120_days,
+    c.missing_first_activity_date,
+    c.report_date_used_as_proxy,
+    c.extraction_confidence,
+    sd.source_url,
+    sd.raw_path;
+
+CREATE VIEW facility_complaint_summary AS
+SELECT
+    f.external_facility_number AS facility_number,
+    f.facility_name,
+    COUNT(DISTINCT c.complaint_id) AS complaint_count,
+    COUNT(a.allegation_id) AS allegation_count,
+    MIN(c.complaint_received_date) AS earliest_complaint_received_date,
+    MAX(c.complaint_received_date) AS latest_complaint_received_date,
+    COUNT(DISTINCT CASE
+        WHEN c.review_delay_over_30_days = 1
+          OR c.review_delay_over_60_days = 1
+          OR c.review_delay_over_90_days = 1
+          OR c.review_delay_over_120_days = 1
+          OR c.missing_first_activity_date = 1
+          OR c.report_date_used_as_proxy = 1
+        THEN c.complaint_id
+    END) AS records_with_delay_review_flags
+FROM facilities f
+LEFT JOIN complaints c ON c.facility_id = f.facility_id
+LEFT JOIN allegations a ON a.complaint_id = c.complaint_id
+GROUP BY f.external_facility_number, f.facility_name;
+
+CREATE VIEW delay_review_flags AS
+SELECT
+    facility_number,
+    facility_name,
+    complaint_id,
+    complaint_control_number,
+    complaint_received_date,
+    first_investigation_activity_date,
+    visit_date,
+    report_date,
+    date_signed,
+    finding,
+    days_received_to_first_activity,
+    days_received_to_visit,
+    days_received_to_report,
+    days_report_to_signed,
+    review_delay_over_30_days,
+    review_delay_over_60_days,
+    review_delay_over_90_days,
+    review_delay_over_120_days,
+    missing_first_activity_date,
+    report_date_used_as_proxy,
+    source_url,
+    raw_path
+FROM complaint_review_summary
+WHERE review_delay_over_30_days = 1
+   OR review_delay_over_60_days = 1
+   OR review_delay_over_90_days = 1
+   OR review_delay_over_120_days = 1
+   OR missing_first_activity_date = 1
+   OR report_date_used_as_proxy = 1;
+
+CREATE VIEW source_traceability_review AS
+SELECT
+    f.external_facility_number AS facility_number,
+    f.facility_name,
+    sd.document_id,
+    sd.source_url,
+    sd.raw_sha256,
+    sd.raw_path,
+    sd.connector_name,
+    sd.connector_version,
+    sd.retrieved_at,
+    sd.report_index,
+    sd.document_type,
+    sd.content_type
+FROM source_documents sd
+JOIN facilities f ON f.facility_id = sd.facility_id;
+"""
+
 TABLE_COLUMNS = {
     "facilities": (
         "facility_id",
@@ -201,6 +335,7 @@ def initialize_database(path: Path) -> None:
     with sqlite3.connect(path) as conn:
         conn.executescript(SCHEMA_SQL)
         _ensure_complaint_columns(conn)
+        conn.executescript(REVIEW_VIEWS_SQL)
         conn.commit()
 
 
