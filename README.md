@@ -6,7 +6,7 @@ The initial source is the California Community Care Licensing Division public fa
 
 ## Core principle
 
-The project must preserve source traceability, avoid unnecessary paid GitHub features, meet digital accessibility requirements, and prevent regression through fixture-based testing.
+The project must preserve source traceability, avoid project dependencies on optional paid platform features, meet digital accessibility requirements, and prevent regression through fixture-based testing.
 
 ## Recommended initial architecture
 
@@ -28,7 +28,7 @@ Public source portal/API
 - ADA/digital accessibility requirements
 - GitHub Copilot instructions and reusable prompts
 - GitHub issue and pull request templates
-- GitHub Actions workflows using standard free capabilities
+- GitHub Actions workflows using lightweight standard capabilities
 - PowerShell scaffolding/setup script
 - Python project skeleton with tests, schemas, and fixtures
 
@@ -40,13 +40,13 @@ Public source portal/API
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\setup-project.ps1 -ProjectPath "C:\Users\andre\Desktop\ccld-complaints-poc" -InitializeGit
+.\setup-project.ps1 -ProjectPath "<local-project-path>" -InitializeGit
 ```
 
 4. Open the project in VS Code:
 
 ```powershell
-code "C:\Users\andre\Desktop\ccld-complaints-poc"
+code "<local-project-path>"
 ```
 
 5. Read `docs/developer/setup.md` and `docs/developer/copilot-workflow.md` before asking Copilot to make changes.

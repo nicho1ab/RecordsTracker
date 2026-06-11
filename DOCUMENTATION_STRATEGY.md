@@ -37,3 +37,16 @@ End users need plain-language instructions for browsing, searching, filtering, u
 - If schema changes, update data dictionary and schemas.
 - If connector behavior changes, update connector docs and known limitations.
 - If accessibility behavior changes, update accessibility docs and test notes.
+
+## Public documentation hygiene
+
+Public documentation, examples, templates, and repository metadata must avoid personal or environment-specific details. Do not publish personal names, handles, email addresses, local machine names, private URLs, tokens, secrets, or machine-specific paths.
+
+Use neutral placeholders in public examples:
+
+- `<repo-root>` for the repository root.
+- `<local-project-path>` for local filesystem paths.
+- `<your-github-org-or-user>` for GitHub owners.
+- `<repository-name>` for repository names.
+
+Do not include account-specific billing or entitlement details. State the governance rule as: avoid project dependencies on optional paid platform features.

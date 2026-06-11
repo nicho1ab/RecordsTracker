@@ -12,14 +12,14 @@ Skips Python virtual environment creation and dependency installation.
 .PARAMETER Force
 Allows setup to continue when the target folder already contains files.
 .EXAMPLE
-.\setup-project.ps1 -ProjectPath "C:\Users\andre\Desktop\ccld-complaints-poc" -InitializeGit
+.\setup-project.ps1 -ProjectPath "<local-project-path>" -InitializeGit
 .EXAMPLE
-.\setup-project.ps1 -ProjectPath "C:\Users\andre\Desktop\ccld-complaints-poc" -InitializeGit -SkipInstall
+.\setup-project.ps1 -ProjectPath "<local-project-path>" -InitializeGit -SkipInstall
 .NOTES
 Run this from the extracted governance pack folder. It is designed for Windows PowerShell and VS Code local development.
 #>
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$ProjectPath,
 
     [switch]$InitializeGit,
@@ -68,7 +68,8 @@ if (-not $SkipInstall) {
     & $python -m pip install --upgrade pip
     & $python -m pip install -r requirements-dev.txt
     & $python -m ccld_complaints.cli.init_db
-} else {
+}
+else {
     Write-Host "Skipping Python install."
 }
 
@@ -77,7 +78,8 @@ if ($InitializeGit) {
         git init
         git add .
         git commit -m "Initial governed project scaffold"
-    } else {
+    }
+    else {
         Write-Host "Git repository already exists."
     }
 }

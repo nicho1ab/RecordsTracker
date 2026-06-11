@@ -3,7 +3,7 @@
 ## First setup
 
 ```powershell
-.\setup-project.ps1 -ProjectPath "C:\Users\andre\Desktop\ccld-complaints-poc" -InitializeGit
+.\setup-project.ps1 -ProjectPath "<local-project-path>" -InitializeGit
 ```
 
 ## Run tests

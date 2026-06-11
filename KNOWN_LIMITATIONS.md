@@ -9,4 +9,4 @@
 - Single-facility CCLD ingestion currently returns structured records in memory and does not persist them to SQLite yet.
 - Fixture-backed ingestion only extracts discovered reports when matching raw report content is supplied by the test loader.
 - Accessibility of third-party presentation layers must be validated before release.
-- GitHub Actions availability and limits may depend on organization policy and included usage.
+- GitHub Actions availability and limits may depend on project policy and platform usage limits.
