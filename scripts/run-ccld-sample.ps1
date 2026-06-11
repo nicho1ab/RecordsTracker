@@ -1,16 +1,41 @@
 <#
 .SYNOPSIS
-Initializes the sample SQLite database.
+Populates the sample SQLite database.
 .DESCRIPTION
-Creates the SQLite database schema for the initial CCLD proof of concept. This is a scaffold command; ingestion implementation is added later.
-.PARAMETER None
-This script does not accept parameters.
+Initializes the local SQLite database and writes the bundled fixture-backed CCLD report data for local Datasette browsing.
+.PARAMETER DbPath
+SQLite database path to initialize and populate.
 .EXAMPLE
 .\scripts\run-ccld-sample.ps1
+.EXAMPLE
+.\scripts\run-ccld-sample.ps1 -DbPath data\processed\sample.sqlite
 .NOTES
 Run from the repository root.
 #>
+param(
+    [string]$DbPath = "data\processed\ccld.sqlite"
+)
+
 $ErrorActionPreference = "Stop"
 $python = Join-Path $PWD ".venv\Scripts\python.exe"
-if (Test-Path $python) { & $python -m ccld_complaints.cli.init_db } else { python -m ccld_complaints.cli.init_db }
-Write-Host "SQLite database is at data\processed\ccld.sqlite"
+$srcPath = Join-Path $PWD "src"
+$previousPythonPath = $env:PYTHONPATH
+
+try {
+    if ([string]::IsNullOrWhiteSpace($previousPythonPath)) {
+        $env:PYTHONPATH = $srcPath
+    }
+    else {
+        $env:PYTHONPATH = "$srcPath;$previousPythonPath"
+    }
+
+    if (Test-Path $python) {
+        & $python -m ccld_complaints.cli.populate_sample_db --db-path $DbPath
+    }
+    else {
+        python -m ccld_complaints.cli.populate_sample_db --db-path $DbPath
+    }
+}
+finally {
+    $env:PYTHONPATH = $previousPythonPath
+}
