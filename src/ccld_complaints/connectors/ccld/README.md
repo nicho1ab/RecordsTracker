@@ -38,13 +38,13 @@ If a live facility detail response does not contain rendered report anchors, the
 
 The function returns in-memory normalized records and per-candidate ingestion failures. Missing fixture content and extraction or validation errors are recorded in the result instead of being hidden.
 
-The optional `limit` argument restricts the number of discovered report candidates selected for fetch or fixture loading. This lets users test with one or a few reports before requesting all discovered reports.
+The optional `limit` argument restricts the number of discovered report candidates selected for fetch or fixture loading. This lets users test with one or a few reports before requesting all discovered reports. The optional `max_requests` argument is a safety guard that prevents accidental large live fetches when a selected candidate set is larger than intended.
 
 ## Explicit live fetch command
 
-Live CCLD requests are user-invoked through `scripts/run-ccld-live-fetch.ps1`. The command discovers reports for facility `157806098` by default, downloads the selected report bodies to `data/raw/ccld`, and ingests the saved raw files into SQLite for Datasette review.
+Live CCLD requests are user-invoked through `scripts/run-ccld-live-fetch.ps1`. The command discovers reports for facility `157806098` by default, downloads the selected report bodies to `data/raw/ccld`, and ingests the saved raw files into SQLite for Datasette review. The default fetches one report; users can provide `-Limit 3` or `-Limit 5` for a small selected batch, or combine `-All` with an intentionally raised `-MaxRequests` value.
 
-The live command prints an external-site warning, uses a clear user agent, applies a reasonable timeout, limits report requests unless the user chooses all discovered reports, and does not use an aggressive retry loop. Automated tests should inject fixture HTML and fake report fetchers instead of making live web requests.
+The live command prints an external-site warning, uses a clear user agent, applies a reasonable timeout, limits report requests unless the user chooses all discovered reports, enforces the max-request guard, and does not use an aggressive retry loop. Automated tests should inject fixture HTML and fake report fetchers instead of making live web requests.
 
 ## Initial deterministic extraction
 
