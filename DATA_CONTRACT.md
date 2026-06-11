@@ -68,7 +68,15 @@ Optional fields:
 - date_signed
 - finding
 - days_received_to_first_activity
+- days_received_to_visit
 - days_received_to_report
+- days_report_to_signed
+- review_delay_over_30_days
+- review_delay_over_60_days
+- review_delay_over_90_days
+- review_delay_over_120_days
+- missing_first_activity_date
+- report_date_used_as_proxy
 - extraction_confidence
 
 ### allegation
@@ -148,6 +156,16 @@ Allowed initial categories:
 ## Delay calculations
 
 - `days_received_to_first_activity`: difference between complaint received date and first investigation activity date.
+- `days_received_to_visit`: difference between complaint received date and visit date.
 - `days_received_to_report`: difference between complaint received date and report date.
+- `days_report_to_signed`: difference between report date and date signed.
 - Do not infer first activity date from report date.
 - Narrative date extraction must identify source text and confidence.
+
+## Delay review flags
+
+- Delay review flags are screening aids, not conclusions that an investigation was delayed.
+- `review_delay_over_30_days`, `review_delay_over_60_days`, `review_delay_over_90_days`, and `review_delay_over_120_days` are based on the earliest available deterministic delay date in this order: first investigation activity date, visit date, then report date only when no earlier activity or visit date is available.
+- `missing_first_activity_date` must be true when a complaint received date is available but no first investigation activity date is available.
+- `report_date_used_as_proxy` must be true only when report date is used as the delay review basis because no first investigation activity date or visit date is available.
+- Report date may not equal first investigative activity and must not be used alone to claim a delayed investigation.

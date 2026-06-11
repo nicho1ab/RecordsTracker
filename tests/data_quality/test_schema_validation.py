@@ -16,7 +16,15 @@ def test_complaint_schema_accepts_minimal_record() -> None:
         "date_signed": None,
         "finding": "Unknown",
         "days_received_to_first_activity": None,
+        "days_received_to_visit": None,
         "days_received_to_report": None,
+        "days_report_to_signed": None,
+        "review_delay_over_30_days": False,
+        "review_delay_over_60_days": False,
+        "review_delay_over_90_days": False,
+        "review_delay_over_120_days": False,
+        "missing_first_activity_date": False,
+        "report_date_used_as_proxy": False,
         "extraction_confidence": None,
     }
     validate_schema(record, Path("schemas/complaint.schema.json"))
