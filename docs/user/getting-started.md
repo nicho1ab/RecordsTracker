@@ -115,7 +115,14 @@ datasette "data/processed/live-ccld.sqlite"
 
 ## Tables to open first
 
-Start with these tables in this order:
+Start with these Datasette views in this order:
+
+1. `complaint_review_summary` is the main review view. It combines facility number, facility name, complaint dates, finding, allegation count and summary, delay calculations, review flags, source URL, and raw path.
+2. `facility_complaint_summary` gives one row per facility with complaint count, allegation count, earliest and latest complaint received dates, and a count of records with delay review flags.
+3. `delay_review_flags` shows only complaint records with one or more delay or review flags. Use it as a triage list for closer review, not as proof that an investigation was delayed.
+4. `source_traceability_review` lists source URL, raw SHA-256 hash, raw path, connector name, connector version, retrieval time, and report index so reviewers can confirm where each record came from.
+
+Then use these normalized tables when you need lower-level detail:
 
 1. `facilities` lists the facility identifiers and names. Use this table to confirm that the database contains the facility you intended to review.
 2. `source_documents` lists each public source document, source URL, raw file hash, connector name, connector version, retrieval time, and report index when available. Use this table to verify source traceability before relying on extracted complaint fields.
