@@ -27,6 +27,8 @@ src/ccld_complaints/
 
 ## Current ingestion boundary
 
-The CCLD connector includes `ingest_facility_reports_for_facility()` for the initial single-facility workflow. It discovers report candidates and runs each available report through fetch or fixture load, raw storage for live fetches, extraction, normalization, validation, and emit. The current emit step keeps validated records in memory; SQLite persistence remains a later architecture step.
+The CCLD connector includes `ingest_facility_reports_for_facility()` for the initial single-facility workflow. It discovers report candidates and runs each available report through fetch or fixture load, raw storage for live fetches, extraction, normalization, validation, and emit.
+
+When the CCLD connector is initialized with a SQLite database path, the emit step writes normalized facility, source document, complaint, allegation, event, and extraction audit records to the existing SQLite schema. Writes are idempotent upserts keyed by the canonical record identifiers, so rerunning the same ingestion updates existing rows rather than duplicating them.
 
 In tests, report content must be loaded through injected fixture loaders. Tests must not make live CCLD web requests.
