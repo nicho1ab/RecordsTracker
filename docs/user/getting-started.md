@@ -34,7 +34,7 @@ You can choose a different local database path:
 
 ## Live CCLD fetch mode
 
-Live mode is explicitly user-invoked and accesses the public CCLD external site. The default is conservative: if you do not provide a limit, the script fetches one discovered report.
+Live mode is explicitly user-invoked and accesses the public CCLD external site. The default is conservative: if you do not provide facility input, the script uses facility `157806098`; if you do not provide a limit, the script fetches one discovered report per facility. The workflow does not crawl statewide, expand searches, or fetch every report unless you explicitly use `-All` and set `-MaxRequests` high enough.
 
 Start with one report so you can confirm the workflow before fetching more:
 
@@ -42,7 +42,38 @@ Start with one report so you can confirm the workflow before fetching more:
 .\scripts\run-ccld-live-fetch.ps1 -Limit 1
 ```
 
-After that succeeds, try a small larger limit such as three or five reports. `-MaxRequests` is a safety guard that must be at least as large as the selected report limit:
+You can also provide the facility number explicitly:
+
+```powershell
+.\scripts\run-ccld-live-fetch.ps1 -FacilityNumber 157806098 -Limit 1 -MaxRequests 1
+```
+
+To fetch one discovered report for two or three explicit facilities, pass multiple facility numbers. `-Limit` applies per facility, and `-MaxRequests` is the overall report-request guard:
+
+```powershell
+.\scripts\run-ccld-live-fetch.ps1 -FacilityNumber 157806098, 123456789 -Limit 1 -MaxRequests 2
+```
+
+```powershell
+.\scripts\run-ccld-live-fetch.ps1 -FacilityNumber 157806098, 123456789, 987654321 -Limit 1 -MaxRequests 3
+```
+
+For a small text or CSV file, put one facility number per line or use comma-separated values:
+
+```text
+facility_number
+157806098
+123456789
+987654321
+```
+
+Then pass the file path:
+
+```powershell
+.\scripts\run-ccld-live-fetch.ps1 -FacilityInputPath .\facility-numbers.csv -Limit 1 -MaxRequests 3
+```
+
+After one report per facility succeeds, try a small larger per-facility limit such as three or five reports. `-MaxRequests` must be at least as large as the total selected report count across all facilities:
 
 ```powershell
 .\scripts\run-ccld-live-fetch.ps1 -Limit 3 -MaxRequests 5
@@ -75,6 +106,12 @@ datasette "data/processed/ccld.sqlite"
 ```
 
 Open the local URL printed by Datasette in a browser.
+
+If you wrote live results to a different database path, open that path instead:
+
+```powershell
+datasette "data/processed/live-ccld.sqlite"
+```
 
 ## Tables to open first
 
