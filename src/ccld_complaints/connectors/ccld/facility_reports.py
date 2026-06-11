@@ -14,6 +14,7 @@ from urllib.request import Request, urlopen
 from ccld_complaints.connectors.base import SourceDocument, SourceDocumentCandidate
 from ccld_complaints.extraction.dates import days_between, parse_date_or_none
 from ccld_complaints.quality.validate import validate_schema
+from ccld_complaints.storage.sqlite import write_normalized_records
 from ccld_complaints.utils.hash import sha256_bytes
 
 BASE_URL = "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports"
@@ -108,11 +109,13 @@ class CcldFacilityReportsConnector:
         facility_number: str = "157806098",
         report_index: int = 3,
         raw_dir: Path = Path("data/raw/ccld"),
+        db_path: Path | None = None,
         schema_dir: Path = Path("schemas"),
     ) -> None:
         self.facility_number = facility_number
         self.report_index = report_index
         self.raw_dir = raw_dir
+        self.db_path = db_path
         self.schema_dir = schema_dir
 
     def discover(
@@ -282,6 +285,8 @@ class CcldFacilityReportsConnector:
 
     def emit(self, normalized: dict[str, object]) -> None:
         self.validate(normalized)
+        if self.db_path is not None:
+            write_normalized_records(self.db_path, [normalized])
 
 
 def ingest_facility_reports_for_facility(
