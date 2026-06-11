@@ -6,7 +6,14 @@ from typing import cast
 
 from pytest import MonkeyPatch
 
-from ccld_complaints.local_sample import datasette_command, populate_sample_database
+from ccld_complaints.local_sample import (
+    datasette_command,
+    datasette_metadata,
+    datasette_metadata_path,
+    populate_sample_database,
+    review_workflow_lines,
+    write_datasette_metadata,
+)
 from ccld_complaints.utils.hash import sha256_bytes
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -72,8 +79,53 @@ def test_populate_sample_database_uses_bundled_fixtures_from_other_cwd(
 
 def test_datasette_command_quotes_database_path() -> None:
     assert datasette_command(Path("data/processed/ccld.sqlite")) == (
-        'datasette "data/processed/ccld.sqlite"'
+        'datasette "data/processed/ccld.sqlite" '
+        '--metadata "data/processed/ccld.datasette-metadata.json"'
     )
+
+
+def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
+    metadata = datasette_metadata(Path("data/processed/live-ccld.sqlite"))
+
+    assert metadata["title"] == "CCLD Complaints Review"
+    assert "live-ccld" in metadata["databases"]
+    database_metadata = metadata["databases"]["live-ccld"]
+    assert "complaint_review_summary" in database_metadata["tables"]
+    assert "delay_review_flags" in database_metadata["tables"]
+    assert "source_traceability_review" in database_metadata["tables"]
+    assert "complaints_by_facility" in database_metadata["queries"]
+    assert "records_with_delay_review_flags" in database_metadata["queries"]
+    assert "source_traceability_check" in database_metadata["queries"]
+    assert "allegation_summary_by_facility" in database_metadata["queries"]
+    assert "newest_reports" in database_metadata["queries"]
+    assert (
+        "screening aids"
+        in database_metadata["tables"]["delay_review_flags"]["description"]
+    )
+    assert (
+        "Public source URL"
+        in database_metadata["tables"]["source_traceability_review"]["columns"]["source_url"]
+    )
+
+
+def test_write_datasette_metadata_writes_json_next_to_database(tmp_path: Path) -> None:
+    db_path = tmp_path / "review.sqlite"
+
+    metadata_path = write_datasette_metadata(db_path)
+
+    assert metadata_path == datasette_metadata_path(db_path)
+    assert metadata_path.exists()
+    assert '"review"' in metadata_path.read_text(encoding="utf-8")
+
+
+def test_review_workflow_lines_name_first_views() -> None:
+    lines = review_workflow_lines()
+
+    assert "Open these Datasette views first:" in lines
+    assert any("complaint_review_summary" in line for line in lines)
+    assert any("facility_complaint_summary" in line for line in lines)
+    assert any("delay_review_flags" in line for line in lines)
+    assert any("source_traceability_review" in line for line in lines)
 
 
 def _row_count(db_path: Path, table_name: str) -> int:

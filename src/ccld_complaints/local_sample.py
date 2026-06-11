@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from ccld_complaints.connectors.base import SourceDocument, SourceDocumentCandidate
 from ccld_complaints.connectors.ccld import CcldFacilityReportsConnector, FacilityIngestionResult
@@ -13,6 +15,7 @@ DEFAULT_SAMPLE_DB_PATH = Path("data/processed/ccld.sqlite")
 DEFAULT_CCLD_FIXTURE_DIR = Path("tests/fixtures/ccld")
 DEFAULT_SAMPLE_FACILITY_NUMBER = "157806098"
 DEFAULT_SAMPLE_RETRIEVED_AT = "2026-06-10T00:00:00+00:00"
+DATASSETTE_METADATA_SUFFIX = ".datasette-metadata.json"
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -45,7 +48,249 @@ def populate_sample_database(
 
 
 def datasette_command(db_path: Path) -> str:
-    return f'datasette "{db_path.as_posix()}"'
+    metadata_path = datasette_metadata_path(db_path)
+    return f'datasette "{db_path.as_posix()}" --metadata "{metadata_path.as_posix()}"'
+
+
+def datasette_metadata_path(db_path: Path) -> Path:
+    return db_path.with_name(f"{db_path.stem}{DATASSETTE_METADATA_SUFFIX}")
+
+
+def write_datasette_metadata(db_path: Path) -> Path:
+    metadata_path = datasette_metadata_path(db_path)
+    metadata_path.parent.mkdir(parents=True, exist_ok=True)
+    metadata_path.write_text(
+        json.dumps(datasette_metadata(db_path), indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return metadata_path
+
+
+def datasette_metadata(db_path: Path) -> dict[str, Any]:
+    return {
+        "title": "CCLD Complaints Review",
+        "description": (
+            "Local review database for derived CCLD complaint records. "
+            "The public portal remains the source of record; delay flags are screening aids."
+        ),
+        "databases": {
+            db_path.stem: {
+                "title": "CCLD Complaints Review Database",
+                "description": (
+                    "Start with the review views before opening normalized source tables. "
+                    "Keep source URL and raw hash fields when exporting review data."
+                ),
+                "tables": _datasette_table_metadata(),
+                "queries": _datasette_saved_queries(),
+            }
+        },
+    }
+
+
+def review_workflow_lines() -> list[str]:
+    return [
+        "Open these Datasette views first:",
+        "1. complaint_review_summary - main complaint review across facilities.",
+        "2. facility_complaint_summary - facility-level counts and date range.",
+        "3. delay_review_flags - triage list for records with review flags.",
+        "4. source_traceability_review - source URLs, hashes, connector details, and report index.",
+        "Saved query examples are included in the Datasette metadata.",
+        "Delay flags are screening aids only; verify important details against source documents.",
+    ]
+
+
+def _datasette_table_metadata() -> dict[str, Any]:
+    delay_flag_caution = (
+        "Delay and review flags are screening aids for closer review, not conclusions that an "
+        "investigation was delayed. Verify source documents before making claims."
+    )
+    source_traceability_note = (
+        "Source URL, raw SHA-256 hash, raw path, connector, retrieval time, and report index help "
+        "reviewers trace each derived record back to public source evidence."
+    )
+    return {
+        "complaint_review_summary": {
+            "title": "Complaint Review Summary",
+            "description": (
+                "Main review view combining facility, complaint, allegation summary, delay fields, "
+                "review flags, source URL, and raw path. Sort by complaint_received_date or "
+                "report_date descending when reviewing newer records first. "
+                f"{delay_flag_caution}"
+            ),
+            "sort_desc": "report_date",
+            "columns": {
+                "facility_number": "Public CCLD facility number used for filtering.",
+                "facility_name": "Facility name extracted from the source report.",
+                "complaint_control_number": "Complaint control number when available.",
+                "complaint_received_date": "Date the complaint was reportedly received.",
+                "first_investigation_activity_date": (
+                    "Earliest deterministic investigation activity date when extracted."
+                ),
+                "visit_date": "Visit date shown in the source report when available.",
+                "report_date": "Report date shown in the source report.",
+                "date_signed": "Date the report was signed when available.",
+                "finding": "Normalized finding value from the data contract.",
+                "allegation_count": "Number of allegation rows linked to the complaint.",
+                "allegation_summary": "Combined allegation text for quick review.",
+                "days_received_to_first_activity": (
+                    "Days from complaint received date to first activity date when available."
+                ),
+                "days_received_to_visit": "Days from complaint received date to visit date.",
+                "days_received_to_report": "Days from complaint received date to report date.",
+                "days_report_to_signed": "Days from report date to signature date.",
+                "review_delay_over_30_days": delay_flag_caution,
+                "review_delay_over_60_days": delay_flag_caution,
+                "review_delay_over_90_days": delay_flag_caution,
+                "review_delay_over_120_days": delay_flag_caution,
+                "missing_first_activity_date": (
+                    "Set when complaint received date exists but first activity date is missing."
+                ),
+                "report_date_used_as_proxy": (
+                    "Set only when report date is used as the delay review basis because earlier "
+                    "activity or visit dates are unavailable."
+                ),
+                "extraction_confidence": "Extractor confidence value when available.",
+                "source_url": "Public source URL for checking the derived record.",
+                "raw_path": "Local raw file path for preserved source content.",
+            },
+        },
+        "facility_complaint_summary": {
+            "title": "Facility Complaint Summary",
+            "description": (
+                "One row per facility with complaint count, allegation count, complaint date "
+                "range, "
+                "and count of records with delay review flags. Sort by complaint_count descending "
+                "to find facilities with more reviewed records."
+            ),
+            "sort_desc": "complaint_count",
+            "columns": {
+                "facility_number": "Public CCLD facility number.",
+                "facility_name": "Facility name extracted from source reports.",
+                "complaint_count": "Number of complaint records in the local database.",
+                "allegation_count": "Number of allegation records linked to facility complaints.",
+                "earliest_complaint_received_date": "Earliest complaint received date in the data.",
+                "latest_complaint_received_date": "Latest complaint received date in the data.",
+                "records_with_delay_review_flags": (
+                    "Complaint records with at least one delay or review flag. "
+                    f"{delay_flag_caution}"
+                ),
+            },
+        },
+        "delay_review_flags": {
+            "title": "Delay Review Flags",
+            "description": (
+                "Filtered triage view showing records with one or more delay or review flags. "
+                "Sort by days_received_to_visit or days_received_to_report descending to review "
+                f"larger calculated intervals first. {delay_flag_caution}"
+            ),
+            "sort_desc": "days_received_to_report",
+            "columns": {
+                "facility_number": "Public CCLD facility number used for filtering.",
+                "complaint_control_number": "Complaint control number when available.",
+                "days_received_to_first_activity": (
+                    "Days from complaint received date to first activity date when available."
+                ),
+                "days_received_to_visit": "Days from complaint received date to visit date.",
+                "days_received_to_report": "Days from complaint received date to report date.",
+                "review_delay_over_30_days": delay_flag_caution,
+                "review_delay_over_60_days": delay_flag_caution,
+                "review_delay_over_90_days": delay_flag_caution,
+                "review_delay_over_120_days": delay_flag_caution,
+                "missing_first_activity_date": (
+                    "Set when complaint received date exists but first activity date is missing."
+                ),
+                "report_date_used_as_proxy": (
+                    "Set only when report date is used as the delay review basis."
+                ),
+                "source_url": "Public source URL for checking the derived record.",
+                "raw_path": "Local raw file path for preserved source content.",
+            },
+        },
+        "source_traceability_review": {
+            "title": "Source Traceability Review",
+            "description": (
+                "Use this view to verify source provenance before relying on extracted fields. "
+                f"{source_traceability_note} Sort by retrieved_at or report_index descending "
+                "when checking newest retrieved reports first."
+            ),
+            "sort_desc": "retrieved_at",
+            "columns": {
+                "facility_number": "Public CCLD facility number.",
+                "facility_name": "Facility name extracted from source reports.",
+                "document_id": "Stable local source document identifier.",
+                "source_url": "Public source URL used for retrieval.",
+                "raw_sha256": "SHA-256 hash for the preserved raw source file.",
+                "raw_path": "Local path to preserved raw source content.",
+                "connector_name": "Connector that retrieved and normalized the document.",
+                "connector_version": "Connector version used for extraction.",
+                "retrieved_at": "Timestamp when source content was retrieved.",
+                "report_index": "CCLD report index when available.",
+                "document_type": "Document type extracted from the source report when available.",
+                "content_type": "Fetched source content type when available.",
+            },
+        },
+    }
+
+
+def _datasette_saved_queries() -> dict[str, Any]:
+    return {
+        "complaints_by_facility": {
+            "title": "Complaints by Facility",
+            "description": "Filter the main review view by CCLD facility number.",
+            "sql": """
+SELECT *
+FROM complaint_review_summary
+WHERE facility_number = :facility_number
+ORDER BY complaint_received_date DESC, report_date DESC
+            """.strip(),
+        },
+        "records_with_delay_review_flags": {
+            "title": "Records with Delay Review Flags",
+            "description": (
+                "Triage records with one or more delay or review flags. These are screening aids, "
+                "not conclusions."
+            ),
+            "sql": """
+SELECT *
+FROM delay_review_flags
+ORDER BY days_received_to_report DESC, complaint_received_date DESC
+            """.strip(),
+        },
+        "source_traceability_check": {
+            "title": "Source Traceability Review",
+            "description": (
+                "Check source URLs, hashes, connector metadata, retrieval time, and report index."
+            ),
+            "sql": """
+SELECT *
+FROM source_traceability_review
+ORDER BY facility_number, report_index DESC
+            """.strip(),
+        },
+        "allegation_summary_by_facility": {
+            "title": "Allegation Summary by Facility",
+            "description": "Count complaints and allegations by facility for high-level review.",
+            "sql": """
+SELECT
+    facility_number,
+    facility_name,
+    COUNT(DISTINCT complaint_id) AS complaint_count,
+    SUM(allegation_count) AS allegation_count
+FROM complaint_review_summary
+GROUP BY facility_number, facility_name
+ORDER BY allegation_count DESC, complaint_count DESC
+            """.strip(),
+        },
+        "newest_reports": {
+            "title": "Newest Reports",
+            "description": "Review most recently retrieved source documents first.",
+            "sql": """
+SELECT *
+FROM source_traceability_review
+ORDER BY retrieved_at DESC, report_index DESC
+            """.strip(),
+        },
+    }
 
 
 def _load_report_fixture(
