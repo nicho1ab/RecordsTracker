@@ -14,7 +14,7 @@ Describe the change.
 - [ ] Accessibility requirements reviewed.
 - [ ] Security/privacy impact reviewed.
 - [ ] Known limitations updated, if needed.
-- [ ] No paid GitHub feature dependency added.
+- [ ] No project dependency on optional paid platform features added.
 - [ ] No secrets committed.
 - [ ] Raw source traceability preserved.
 

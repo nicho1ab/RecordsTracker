@@ -24,6 +24,10 @@ The initial source is a public portal. Before expanding to new sources, document
 
 Local secrets must use environment variables or untracked `.env` files. `.env` is ignored by Git.
 
+## Public repository hygiene
+
+Public repository content must not include personal paths, account details, secrets, tokens, private URLs, local machine names, personal handles, personal email addresses, or other machine-specific identifiers. Use neutral placeholders such as `<repo-root>`, `<local-project-path>`, `<your-github-org-or-user>`, and `<repository-name>` in examples.
+
 ## Logging
 
 Logs must not include secrets or unnecessary personal information. Logs should include source URL, document ID, connector name, and error details.
