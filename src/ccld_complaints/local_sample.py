@@ -13,6 +13,7 @@ DEFAULT_SAMPLE_DB_PATH = Path("data/processed/ccld.sqlite")
 DEFAULT_CCLD_FIXTURE_DIR = Path("tests/fixtures/ccld")
 DEFAULT_SAMPLE_FACILITY_NUMBER = "157806098"
 DEFAULT_SAMPLE_RETRIEVED_AT = "2026-06-10T00:00:00+00:00"
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 @dataclass(frozen=True)
@@ -27,8 +28,10 @@ def populate_sample_database(
     fixture_dir: Path = DEFAULT_CCLD_FIXTURE_DIR,
 ) -> SampleDatabaseResult:
     initialize_database(db_path)
-    connector = CcldFacilityReportsConnector(db_path=db_path)
-    detail_fixture = fixture_dir / "raw" / f"{DEFAULT_SAMPLE_FACILITY_NUMBER}_facility_detail.html"
+    connector = CcldFacilityReportsConnector(db_path=db_path, schema_dir=_REPO_ROOT / "schemas")
+    detail_fixture = _resolve_fixture_path(
+        fixture_dir / "raw" / f"{DEFAULT_SAMPLE_FACILITY_NUMBER}_facility_detail.html"
+    )
 
     result = ingest_facility_reports_for_facility(
         facility_number=DEFAULT_SAMPLE_FACILITY_NUMBER,
@@ -50,14 +53,28 @@ def _load_report_fixture(
     fixture_dir: Path,
 ) -> SourceDocument | None:
     raw_path = fixture_dir / "raw" / f"{candidate.facility_number}_inx{candidate.report_index}.html"
-    if not raw_path.exists():
+    resolved_raw_path = _resolve_fixture_path(raw_path)
+    if not resolved_raw_path.exists():
         return None
 
-    raw_content = raw_path.read_bytes()
+    raw_content = resolved_raw_path.read_bytes()
     return SourceDocument(
         source_url=candidate.source_url,
-        raw_path=raw_path,
+        raw_path=_repo_relative_path(resolved_raw_path),
         raw_sha256=sha256_bytes(raw_content),
         retrieved_at=DEFAULT_SAMPLE_RETRIEVED_AT,
         content_type="text/html",
     )
+
+
+def _resolve_fixture_path(path: Path) -> Path:
+    if path.exists() or path.is_absolute():
+        return path
+    return _REPO_ROOT / path
+
+
+def _repo_relative_path(path: Path) -> Path:
+    try:
+        return path.relative_to(_REPO_ROOT)
+    except ValueError:
+        return path

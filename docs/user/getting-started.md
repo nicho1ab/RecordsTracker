@@ -22,7 +22,7 @@ From the repository root, run the bundled sample script:
 .\scripts\run-ccld-sample.ps1
 ```
 
-The script initializes `data/processed/ccld.sqlite` if needed and writes the available fixture-backed CCLD sample report into SQLite. It prints the database path and the Datasette command to open it.
+The script initializes `data/processed/ccld.sqlite` if needed and writes the available fixture-backed CCLD sample report into SQLite. The bundled facility detail fixture discovers 40 report candidates, but only bundled fixture-backed report content is written. At present, the bundled report fixture is facility `157806098`, report index `3`. It prints the database path and the Datasette command to open it.
 
 This mode uses bundled test fixtures only. It does not make live web requests, and it is the right first check when you want a repeatable local sample.
 
