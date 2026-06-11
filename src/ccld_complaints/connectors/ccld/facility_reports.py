@@ -21,6 +21,8 @@ BASE_URL = "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports"
 FACILITY_DETAIL_URL = "https://www.ccld.dss.ca.gov/carefacilitysearch/FacDetail"
 SOURCE_ID = "ccld"
 DETERMINISTIC_METHOD = "ccld_facility_report_html_labels"
+LIVE_REQUEST_TIMEOUT_SECONDS = 30
+LIVE_USER_AGENT = "ccld-complaints-poc/0.1 (explicit-user-invoked-public-data-fetch)"
 ALLOWED_FINDINGS = (
     "Substantiated",
     "Unsubstantiated",
@@ -315,14 +317,21 @@ def ingest_facility_reports_for_facility(
     connector: CcldFacilityReportsConnector | None = None,
     facility_detail_html: str | None = None,
     discovered_at: str | None = None,
+    limit: int | None = None,
     load_document: ReportDocumentLoader | None = None,
     fetch_report: ReportFetcher | None = None,
 ) -> FacilityIngestionResult:
+    if limit is not None and limit < 0:
+        raise ValueError("limit must be greater than or equal to 0.")
+
     active_connector = connector or CcldFacilityReportsConnector(facility_number=facility_number)
     candidates = active_connector.discover(
         facility_detail_html=facility_detail_html,
         discovered_at=discovered_at,
     )
+    if limit is not None:
+        candidates = candidates[:limit]
+
     records: list[dict[str, object]] = []
     failures: list[IngestionFailure] = []
 
@@ -452,8 +461,8 @@ def discover_facility_report_candidates(
 
 
 def _fetch_url(source_url: str) -> bytes:
-    request = Request(source_url, headers={"User-Agent": "ccld-complaints-poc/0.1"})
-    with urlopen(request, timeout=30) as response:
+    request = Request(source_url, headers={"User-Agent": LIVE_USER_AGENT})
+    with urlopen(request, timeout=LIVE_REQUEST_TIMEOUT_SECONDS) as response:
         return cast(bytes, response.read())
 
 
