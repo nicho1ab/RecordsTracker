@@ -48,7 +48,15 @@ CREATE TABLE IF NOT EXISTS complaints (
     date_signed TEXT,
     finding TEXT,
     days_received_to_first_activity INTEGER,
+    days_received_to_visit INTEGER,
     days_received_to_report INTEGER,
+    days_report_to_signed INTEGER,
+    review_delay_over_30_days INTEGER NOT NULL DEFAULT 0,
+    review_delay_over_60_days INTEGER NOT NULL DEFAULT 0,
+    review_delay_over_90_days INTEGER NOT NULL DEFAULT 0,
+    review_delay_over_120_days INTEGER NOT NULL DEFAULT 0,
+    missing_first_activity_date INTEGER NOT NULL DEFAULT 0,
+    report_date_used_as_proxy INTEGER NOT NULL DEFAULT 0,
     extraction_confidence REAL
 );
 
@@ -125,7 +133,15 @@ TABLE_COLUMNS = {
         "date_signed",
         "finding",
         "days_received_to_first_activity",
+        "days_received_to_visit",
         "days_received_to_report",
+        "days_report_to_signed",
+        "review_delay_over_30_days",
+        "review_delay_over_60_days",
+        "review_delay_over_90_days",
+        "review_delay_over_120_days",
+        "missing_first_activity_date",
+        "report_date_used_as_proxy",
         "extraction_confidence",
     ),
     "allegations": (
@@ -238,6 +254,8 @@ def _upsert(
 
 
 def _sqlite_value(value: object) -> SqliteValue:
+    if isinstance(value, bool):
+        return int(value)
     if value is None or isinstance(value, str | int | float):
         return value
     raise TypeError(f"Unsupported SQLite value type: {type(value).__name__}")

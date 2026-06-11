@@ -101,7 +101,16 @@ def test_ccld_facility_report_extracts_required_fields() -> None:
     ]
     assert extracted["finding"] == "Unsubstantiated"
     assert extracted["visit_date"] == "2022-08-24"
+    assert extracted["days_received_to_first_activity"] is None
+    assert extracted["days_received_to_visit"] == 139
     assert extracted["days_received_to_report"] == 139
+    assert extracted["days_report_to_signed"] == 2
+    assert extracted["review_delay_over_30_days"] is True
+    assert extracted["review_delay_over_60_days"] is True
+    assert extracted["review_delay_over_90_days"] is True
+    assert extracted["review_delay_over_120_days"] is True
+    assert extracted["missing_first_activity_date"] is True
+    assert extracted["report_date_used_as_proxy"] is False
 
 
 def test_ccld_facility_report_normalizes_to_expected_fixture() -> None:
@@ -187,14 +196,30 @@ def test_ccld_facility_ingestion_can_emit_records_to_sqlite(tmp_path: Path) -> N
                 "extraction_audit",
             )
         }
+        complaint_delay_fields = conn.execute(
+            """
+            SELECT days_received_to_first_activity,
+                   days_received_to_visit,
+                   days_received_to_report,
+                   days_report_to_signed,
+                   review_delay_over_30_days,
+                   review_delay_over_60_days,
+                   review_delay_over_90_days,
+                   review_delay_over_120_days,
+                   missing_first_activity_date,
+                   report_date_used_as_proxy
+            FROM complaints
+            """
+        ).fetchone()
 
     assert counts == {
         "facilities": 1,
         "source_documents": 1,
         "complaints": 1,
         "allegations": 2,
-        "extraction_audit": 11,
+        "extraction_audit": 21,
     }
+    assert complaint_delay_fields == (None, 139, 139, 2, 1, 1, 1, 1, 1, 0)
 
 
 def _extract_fixture() -> dict[str, object]:
