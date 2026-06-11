@@ -34,27 +34,37 @@ You can choose a different local database path:
 
 ## Live CCLD fetch mode
 
-Live mode is explicitly user-invoked and accesses the public CCLD external site. Start with one report so you can confirm the workflow before fetching more:
+Live mode is explicitly user-invoked and accesses the public CCLD external site. The default is conservative: if you do not provide a limit, the script fetches one discovered report.
+
+Start with one report so you can confirm the workflow before fetching more:
 
 ```powershell
 .\scripts\run-ccld-live-fetch.ps1 -Limit 1
 ```
 
+After that succeeds, try a small larger limit such as three or five reports. `-MaxRequests` is a safety guard that must be at least as large as the selected report limit:
+
+```powershell
+.\scripts\run-ccld-live-fetch.ps1 -Limit 3 -MaxRequests 5
+```
+
 You can choose a different local database path or raw file directory:
 
 ```powershell
-.\scripts\run-ccld-live-fetch.ps1 -Limit 3 -DbPath data\processed\live-ccld.sqlite -RawDir data\raw\ccld
+.\scripts\run-ccld-live-fetch.ps1 -Limit 5 -MaxRequests 5 -DbPath data\processed\live-ccld.sqlite -RawDir data\raw\ccld
 ```
 
-To fetch every discovered report for facility `157806098`, use:
+To fetch every discovered report for facility `157806098`, use `-All` and intentionally raise `-MaxRequests` high enough for the discovered report count:
 
 ```powershell
-.\scripts\run-ccld-live-fetch.ps1 -All
+.\scripts\run-ccld-live-fetch.ps1 -All -MaxRequests 50
 ```
 
-The live script prints a warning before making requests, uses a clear user agent, applies a request timeout, limits report requests unless `-All` is used, and does not use an aggressive retry loop.
+The live script prints a warning before making requests, uses a clear user agent, applies a request timeout, limits report requests unless `-All` is used, enforces `-MaxRequests`, and does not use an aggressive retry loop.
 
 Downloaded report files are saved under `data/raw/ccld` by default. The `data/raw` path is ignored by Git so live public source files stay local unless you intentionally move or copy them. Ingestion reads the saved raw files, records their SHA-256 hashes, and writes source traceability fields to the `source_documents` table.
+
+Rerunning the same command updates existing SQLite rows by stable identifiers rather than duplicating the same source documents.
 
 ## Start Datasette
 

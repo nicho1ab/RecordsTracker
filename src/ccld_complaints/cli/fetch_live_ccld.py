@@ -14,6 +14,7 @@ from ccld_complaints.local_sample import DEFAULT_SAMPLE_DB_PATH, datasette_comma
 DEFAULT_LIVE_RAW_DIR = Path("data/raw/ccld")
 DEFAULT_LIVE_FACILITY_NUMBER = "157806098"
 DEFAULT_LIVE_LIMIT = 1
+DEFAULT_LIVE_MAX_REQUESTS = 5
 
 
 def main() -> None:
@@ -53,10 +54,23 @@ def main() -> None:
         action="store_true",
         help="Fetch all discovered reports for the facility.",
     )
+    parser.add_argument(
+        "--max-requests",
+        type=int,
+        default=DEFAULT_LIVE_MAX_REQUESTS,
+        help=(
+            "Safety guard for the maximum number of report requests allowed. "
+            "Increase intentionally when using --all or a larger --limit."
+        ),
+    )
     args = parser.parse_args()
 
     if args.limit is not None and args.limit < 0:
         parser.error("--limit must be greater than or equal to 0.")
+    if args.max_requests < 0:
+        parser.error("--max-requests must be greater than or equal to 0.")
+    if not args.all and args.limit > args.max_requests:
+        parser.error("--limit cannot exceed --max-requests.")
 
     limit = None if args.all else args.limit
     estimated_request_count = "discovery requests plus all discovered report requests"
@@ -69,7 +83,10 @@ def main() -> None:
     print(f"Raw files: {args.raw_dir.as_posix()}")
     print(f"SQLite database: {args.db_path.as_posix()}")
     print(f"Request policy: timeout {LIVE_REQUEST_TIMEOUT_SECONDS}s, user-agent {LIVE_USER_AGENT}")
-    print(f"Request count: {estimated_request_count}; no retry loop is used.")
+    print(
+        f"Request count: {estimated_request_count}; "
+        f"max report requests {args.max_requests}; no retry loop is used."
+    )
 
     connector = CcldFacilityReportsConnector(
         facility_number=args.facility_number,
@@ -80,6 +97,7 @@ def main() -> None:
         facility_number=args.facility_number,
         connector=connector,
         limit=limit,
+        max_requests=args.max_requests,
     )
 
     print(f"Discovered candidates selected: {len(result.candidates)}")
