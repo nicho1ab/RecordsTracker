@@ -20,6 +20,7 @@ REQUIRED = [
     "docs/developer/accessibility.md",
     "docs/developer/copilot-workflow.md",
     "docs/user/getting-started.md",
+    "docs/user/local-review-workflow.md",
     "docs/user/reviewing-records.md",
     "docs/user/data-dictionary.md",
     "docs/user/exporting-data.md",
@@ -43,6 +44,15 @@ REQUIRED_CONTENT = {
         "flagged for review based on available extracted dates",
         "The public portal remains the source of record",
         "Do not treat missing dates as evidence",
+    ],
+    "docs/user/local-review-workflow.md": [
+        "What to open first",
+        "How to find concerning records",
+        "How to filter by facility",
+        "How to inspect source documents",
+        "How to export accessible CSVs",
+        "What not to conclude",
+        "delay review flags are screening aids, not conclusions",
     ],
     "docs/user/exporting-data.md": [
         "Export from Datasette",

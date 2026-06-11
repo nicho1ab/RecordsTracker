@@ -11,3 +11,15 @@ Use the browse/search interface to filter by:
 - Delay threshold
 
 Use source links to verify extracted data.
+
+## Saved query examples
+
+When you open Datasette with the metadata command printed by the sample or live fetch script, these saved query examples are available:
+
+- `complaints_by_facility` filters the main complaint review view by facility number.
+- `records_with_delay_review_flags` lists records with one or more delay or review flags.
+- `source_traceability_check` helps check source URLs, raw hashes, connector metadata, retrieval time, and report indexes.
+- `allegation_summary_by_facility` summarizes complaint and allegation counts by facility.
+- `newest_reports` lists the most recently retrieved source documents first.
+
+Use `delay_review_flags` and the saved delay query as triage aids only. Delay flags do not prove that an investigation was delayed.
