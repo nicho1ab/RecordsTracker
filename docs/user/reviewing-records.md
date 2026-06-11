@@ -1,5 +1,7 @@
 # Reviewing Records
 
+For a step-by-step reviewer workflow, start with [Local Review Workflow](local-review-workflow.md).
+
 ## Suggested review steps
 
 1. Open the `complaint_review_summary` view for the main complaint review across facilities. It includes facility details, complaint dates, finding, allegation count and summary, delay fields, review flags, source URL, and raw path.

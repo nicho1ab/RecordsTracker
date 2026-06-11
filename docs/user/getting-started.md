@@ -113,6 +113,8 @@ If you wrote live results to a different database path, open that path instead:
 datasette "data/processed/live-ccld.sqlite"
 ```
 
+The printed command includes a Datasette metadata file. That metadata adds review-oriented titles, descriptions, column notes, suggested sort fields, delay flag caution language, source traceability explanations, and saved query examples. See [Local Review Workflow](local-review-workflow.md) for the guided review steps.
+
 ## Tables to open first
 
 Start with these Datasette views in this order:
