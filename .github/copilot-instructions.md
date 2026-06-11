@@ -12,6 +12,7 @@ Before making changes, read and follow:
 - `SOURCE_CONNECTOR_CONTRACT.md`
 - `TESTING_STRATEGY.md`
 - `DOCUMENTATION_STRATEGY.md`
+- `DESIGN_AND_USABILITY.md`
 - `ACCESSIBILITY_REQUIREMENTS.md`
 - `SECURITY_AND_PRIVACY.md`
 - `KNOWN_LIMITATIONS.md`
@@ -25,6 +26,7 @@ Before making changes, read and follow:
 - Do not use LLM extraction for fields that can be deterministically parsed.
 - Avoid project dependencies on optional paid platform features.
 - Do not introduce inaccessible user-facing output.
+- Do not make user-facing workflow, documentation, output, interface, or visual design changes without following `DESIGN_AND_USABILITY.md`.
 - Do not remove source traceability.
 - Do not delete raw source preservation behavior.
 - Do not store secrets in the repo.
