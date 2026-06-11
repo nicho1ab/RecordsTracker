@@ -41,7 +41,7 @@ Initial facility:
 ## Non-goals
 
 - Do not create a custom web application during the POC.
-- Do not rely on paid GitHub features that are not available in the user's University of Illinois GitHub Enterprise account or organization.
+- Avoid project dependencies on optional paid platform features.
 - Do not treat portal data as complete, authoritative, or guaranteed accurate.
 - Do not use LLM extraction where deterministic parsing is reliable.
 - Do not include Paperless-ngx in the initial architecture unless a document-management requirement emerges.

@@ -1,14 +1,14 @@
 # Setup Instructions
 
-## Recommended no-cost approach
+## Recommended platform approach
 
-Use local VS Code, local Python, Git, and GitHub repository features available to your University of Illinois GitHub Enterprise organization. Avoid Codespaces and any metered add-on features unless the organization confirms they are covered.
+Use local VS Code, local Python, Git, and repository features available to your project. Avoid project dependencies on optional paid platform features unless the project explicitly approves them.
 
 ## Create GitHub repository
 
-1. Sign in to GitHub with your University of Illinois account.
-2. Create a new repository in the appropriate organization.
-3. Do not enable paid add-ons unless your organization confirms they are included.
+1. Sign in to GitHub with the account that owns `<your-github-org-or-user>`.
+2. Create a new repository in `<your-github-org-or-user>`.
+3. Do not enable optional paid add-ons unless the project explicitly approves them.
 4. Keep the repository private or internal unless public release is intentional.
 5. After local setup, push the local repo to GitHub.
 
@@ -18,7 +18,7 @@ Run from the extracted governance pack folder:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\setup-project.ps1 -ProjectPath "C:\Users\andre\Desktop\ccld-complaints-poc" -InitializeGit
+.\setup-project.ps1 -ProjectPath "<local-project-path>" -InitializeGit
 ```
 
 ## Connect local repo to GitHub
@@ -26,8 +26,8 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 Replace the URL with your repository URL:
 
 ```powershell
-cd "C:\Users\andre\Desktop\ccld-complaints-poc"
-git remote add origin https://github.com/YOUR-ORG/ccld-complaints-poc.git
+cd "<local-project-path>"
+git remote add origin https://github.com/<your-github-org-or-user>/<repository-name>.git
 git branch -M main
 git push -u origin main
 ```
@@ -56,7 +56,7 @@ data\processed\ccld.sqlite
 To browse the SQLite database with Datasette:
 
 ```powershell
-cd "C:\Users\andre\Desktop\ccld-complaints-poc"
+cd "<local-project-path>"
 .\.venv\Scripts\datasette.exe data\processed\ccld.sqlite
 ```
 
@@ -64,7 +64,7 @@ Open the local URL shown by Datasette.
 
 ## GitHub Actions
 
-The pack includes GitHub Actions workflows. They use standard hosted runners and lightweight validation. If your organization limits or disables Actions, keep using the same commands locally:
+The pack includes GitHub Actions workflows. They use standard hosted runners and lightweight validation. If project policy limits or disables Actions, keep using the same commands locally:
 
 ```powershell
 .\scripts\lint.ps1
@@ -74,7 +74,7 @@ The pack includes GitHub Actions workflows. They use standard hosted runners and
 
 ## Branch protection or rulesets
 
-If available in your GitHub organization, configure `main` to require:
+If available for the repository, configure `main` to require:
 
 - Pull request before merge
 - CI checks passing
@@ -86,11 +86,11 @@ If rulesets are not available to you, use the same policy manually.
 
 ## Avoid by default
 
-- GitHub Codespaces unless billing is confirmed.
-- GitHub Advanced Security paid features unless included.
+- GitHub Codespaces unless explicitly approved for the project.
+- GitHub Advanced Security or other optional paid platform features unless explicitly approved for the project.
 - Long-running GitHub Actions jobs.
 - Large workflow artifacts.
-- Paid external SaaS services.
+- Optional paid external SaaS services.
 
 ## First development task
 

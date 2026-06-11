@@ -22,5 +22,5 @@
 - Do not change extraction behavior without fixture tests.
 - Do not change schemas without updating `DATA_CONTRACT.md` and user data dictionary docs.
 - Do not add connectors outside `SOURCE_CONNECTOR_CONTRACT.md`.
-- Do not introduce paid GitHub feature dependencies.
+- Avoid project dependencies on optional paid platform features.
 - Do not merge accessibility regressions.
