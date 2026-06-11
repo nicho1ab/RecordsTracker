@@ -6,5 +6,5 @@
   ],
   "editor.formatOnSave": true,
   "github.copilot.chat.codeGeneration.useInstructionFiles": true,
-  "python.defaultInterpreterPath": "C:\\Users\\andre\\OneDrive\\Desktop\\Repos\\CCLD-complaints-poc\\.venv\\Scripts\\python.exe"
+  "python.defaultInterpreterPath": ".venv\\Scripts\\python.exe"
 }

@@ -7,7 +7,7 @@ Install these locally on Windows:
 - Git
 - Python 3.11 or newer
 - Visual Studio Code
-- GitHub Copilot extension for VS Code, if available through your account
+- GitHub Copilot extension for VS Code, if available
 
 ## Setup command
 
@@ -15,7 +15,7 @@ From the extracted governance pack folder:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\setup-project.ps1 -ProjectPath "C:\Users\andre\Desktop\ccld-complaints-poc" -InitializeGit
+.\setup-project.ps1 -ProjectPath "<local-project-path>" -InitializeGit
 ```
 
 ## What setup does
@@ -31,7 +31,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ## Open in VS Code
 
 ```powershell
-code "C:\Users\andre\Desktop\ccld-complaints-poc"
+code "<local-project-path>"
 ```
 
 ## Validate setup

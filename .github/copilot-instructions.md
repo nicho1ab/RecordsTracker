@@ -23,7 +23,7 @@ Before making changes, read and follow:
 - Do not add a source connector unless it follows `SOURCE_CONNECTOR_CONTRACT.md`.
 - Do not modify extraction behavior without adding or updating fixture-based regression tests.
 - Do not use LLM extraction for fields that can be deterministically parsed.
-- Do not add paid GitHub feature dependencies.
+- Avoid project dependencies on optional paid platform features.
 - Do not introduce inaccessible user-facing output.
 - Do not remove source traceability.
 - Do not delete raw source preservation behavior.
@@ -53,3 +53,5 @@ For every code change:
 ## Accessibility
 
 All user-facing docs, exports, and presentation layers must meet `ACCESSIBILITY_REQUIREMENTS.md`.
+Public repository hygiene:
+Do not include personal local paths, usernames, personal email addresses, organization account details, private URLs, tokens, secrets, screenshots containing private account details, or machine-specific configuration in committed documentation, examples, fixtures, comments, or tests. Use placeholders such as <repo-root>, <local-project-path>, <your-github-org-or-user>, and <repository-name>.
