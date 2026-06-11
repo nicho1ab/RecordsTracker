@@ -10,7 +10,9 @@ Exports should include clear headers and source traceability fields.
 4. Keep the header row in the exported CSV.
 5. Keep source traceability columns in review exports so each record can be checked against the public source.
 
-For complaint review, export `complaints` together with source traceability from `source_documents` when possible. If a single CSV does not include all needed fields, export both tables and preserve the ID columns so reviewers can join or compare records.
+For complaint review, start with the `complaint_review_summary` view because it includes complaint fields, allegation count and summary, delay review fields, source URL, and raw path in one export. Use `facility_complaint_summary` for facility-level counts, `delay_review_flags` for records that need closer delay review, and `source_traceability_review` when checking source URLs, raw hashes, connector metadata, retrieval time, and report indexes.
+
+If a view does not include all needed low-level fields, export the normalized tables and preserve the ID columns so reviewers can join or compare records.
 
 Recommended export columns:
 
@@ -38,5 +40,6 @@ For accessible tabular output:
 - Do not communicate findings, warnings, or status by color alone.
 - Include a note that delay review flags are screening aids, not conclusions.
 - Include a note that the public portal remains the source of record.
+- When exporting `delay_review_flags`, label the export as a triage or review list rather than a list of delayed investigations.
 - Avoid adding personal paths, account names, emails, private URLs, or machine-specific details to exported files.
 - Share CSV or spreadsheet formats with readable headers instead of PDF unless PDF accessibility can be validated.

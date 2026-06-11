@@ -10,6 +10,31 @@ def test_initialize_database(tmp_path: Path) -> None:
     assert db.exists()
 
 
+def test_initialize_database_creates_review_views(tmp_path: Path) -> None:
+    db = tmp_path / "test.sqlite"
+
+    initialize_database(db)
+
+    with sqlite3.connect(db) as conn:
+        views = {
+            row[0]
+            for row in conn.execute(
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'view'
+                """
+            ).fetchall()
+        }
+
+    assert {
+        "complaint_review_summary",
+        "facility_complaint_summary",
+        "delay_review_flags",
+        "source_traceability_review",
+    }.issubset(views)
+
+
 def test_initialize_database_backfills_existing_complaint_delay_columns(
     tmp_path: Path,
 ) -> None:
@@ -48,3 +73,27 @@ def test_initialize_database_backfills_existing_complaint_delay_columns(
     assert "review_delay_over_120_days" in columns
     assert "missing_first_activity_date" in columns
     assert "report_date_used_as_proxy" in columns
+
+
+def test_initialize_database_recreates_review_views_on_rerun(tmp_path: Path) -> None:
+    db = tmp_path / "test.sqlite"
+
+    initialize_database(db)
+    initialize_database(db)
+
+    with sqlite3.connect(db) as conn:
+        view_count = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM sqlite_master
+            WHERE type = 'view'
+              AND name IN (
+                  'complaint_review_summary',
+                  'facility_complaint_summary',
+                  'delay_review_flags',
+                  'source_traceability_review'
+              )
+            """
+        ).fetchone()[0]
+
+    assert view_count == 4
