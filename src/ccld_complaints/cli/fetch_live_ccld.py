@@ -12,7 +12,12 @@ from ccld_complaints.connectors.ccld.facility_reports import (
     normalize_facility_numbers,
     read_facility_numbers_file,
 )
-from ccld_complaints.local_sample import DEFAULT_SAMPLE_DB_PATH, datasette_command
+from ccld_complaints.local_sample import (
+    DEFAULT_SAMPLE_DB_PATH,
+    datasette_command,
+    review_workflow_lines,
+    write_datasette_metadata,
+)
 
 DEFAULT_LIVE_RAW_DIR = Path("data/raw/ccld")
 DEFAULT_LIVE_FACILITY_NUMBER = "157806098"
@@ -163,8 +168,12 @@ def main() -> None:
             f"message={report_failure.message}"
         )
 
+    metadata_path = write_datasette_metadata(args.db_path)
+    print(f"Datasette metadata: {metadata_path.as_posix()}")
     print("Open in Datasette:")
     print(datasette_command(args.db_path))
+    for line in review_workflow_lines():
+        print(line)
 
 
 def _collect_facility_numbers(
