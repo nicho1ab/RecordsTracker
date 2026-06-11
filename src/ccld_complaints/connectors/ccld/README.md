@@ -25,6 +25,19 @@ Discovery removes duplicate report URLs and duplicate report indexes. It does no
 
 If a live facility detail response does not contain rendered report anchors, the connector falls back to the public report-list API used by the facility detail page and creates the same candidate URL shape from the returned report array indexes.
 
+## Single-facility ingestion orchestration
+
+`ingest_facility_reports_for_facility()` runs one facility through the connector contract without writing to SQLite yet:
+
+1. Discover report candidates.
+2. Load a report document through an injected fixture loader, or fetch live content and store raw bytes before extraction.
+3. Extract deterministic report fields.
+4. Normalize records to the canonical data contract.
+5. Validate normalized records against JSON schemas.
+6. Emit records through the connector's current no-op validation-backed emit step.
+
+The function returns in-memory normalized records and per-candidate ingestion failures. Missing fixture content and extraction or validation errors are recorded in the result instead of being hidden.
+
 ## Initial deterministic extraction
 
 The first implemented fixture covers facility `157806098` with report index `3`.

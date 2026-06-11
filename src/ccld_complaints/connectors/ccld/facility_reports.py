@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from html.parser import HTMLParser
 from pathlib import Path
@@ -27,6 +29,24 @@ ALLOWED_FINDINGS = (
     "Deficiency cited",
     "Unknown",
 )
+
+ReportDocumentLoader = Callable[[SourceDocumentCandidate], SourceDocument | None]
+ReportFetcher = Callable[[str], bytes]
+
+
+@dataclass(frozen=True)
+class IngestionFailure:
+    candidate: SourceDocumentCandidate
+    stage: str
+    error_type: str
+    message: str
+
+
+@dataclass(frozen=True)
+class FacilityIngestionResult:
+    candidates: list[SourceDocumentCandidate]
+    records: list[dict[str, object]]
+    failures: list[IngestionFailure]
 
 
 class _HtmlTextParser(HTMLParser):
@@ -262,6 +282,113 @@ class CcldFacilityReportsConnector:
 
     def emit(self, normalized: dict[str, object]) -> None:
         self.validate(normalized)
+
+
+def ingest_facility_reports_for_facility(
+    facility_number: str = "157806098",
+    *,
+    connector: CcldFacilityReportsConnector | None = None,
+    facility_detail_html: str | None = None,
+    discovered_at: str | None = None,
+    load_document: ReportDocumentLoader | None = None,
+    fetch_report: ReportFetcher | None = None,
+) -> FacilityIngestionResult:
+    active_connector = connector or CcldFacilityReportsConnector(facility_number=facility_number)
+    candidates = active_connector.discover(
+        facility_detail_html=facility_detail_html,
+        discovered_at=discovered_at,
+    )
+    records: list[dict[str, object]] = []
+    failures: list[IngestionFailure] = []
+
+    for candidate in candidates:
+        document = _load_or_fetch_document(
+            active_connector,
+            candidate,
+            failures,
+            load_document=load_document,
+            fetch_report=fetch_report,
+        )
+        if document is None:
+            continue
+
+        try:
+            extracted = active_connector.extract(document)
+        except Exception as exc:
+            failures.append(_ingestion_failure(candidate, "extract", exc))
+            continue
+
+        try:
+            normalized = active_connector.normalize(extracted)
+        except Exception as exc:
+            failures.append(_ingestion_failure(candidate, "normalize", exc))
+            continue
+
+        try:
+            active_connector.validate(normalized)
+        except Exception as exc:
+            failures.append(_ingestion_failure(candidate, "validate", exc))
+            continue
+
+        try:
+            active_connector.emit(normalized)
+        except Exception as exc:
+            failures.append(_ingestion_failure(candidate, "emit", exc))
+            continue
+
+        records.append(normalized)
+
+    return FacilityIngestionResult(candidates=candidates, records=records, failures=failures)
+
+
+def _load_or_fetch_document(
+    connector: CcldFacilityReportsConnector,
+    candidate: SourceDocumentCandidate,
+    failures: list[IngestionFailure],
+    *,
+    load_document: ReportDocumentLoader | None,
+    fetch_report: ReportFetcher | None,
+) -> SourceDocument | None:
+    if load_document is not None:
+        try:
+            document = load_document(candidate)
+        except Exception as exc:
+            failures.append(_ingestion_failure(candidate, "load", exc))
+            return None
+
+        if document is None:
+            failures.append(
+                IngestionFailure(
+                    candidate=candidate,
+                    stage="load",
+                    error_type="ReportContentNotFound",
+                    message="No report content was available for the discovered candidate.",
+                )
+            )
+        return document
+
+    try:
+        content = (fetch_report or connector.fetch)(candidate.source_url)
+    except Exception as exc:
+        failures.append(_ingestion_failure(candidate, "fetch", exc))
+        return None
+
+    try:
+        return connector.store_raw(candidate.source_url, content)
+    except Exception as exc:
+        failures.append(_ingestion_failure(candidate, "store_raw", exc))
+        return None
+
+
+def _ingestion_failure(
+    candidate: SourceDocumentCandidate, stage: str, exc: Exception
+) -> IngestionFailure:
+    return IngestionFailure(
+        candidate=candidate,
+        stage=stage,
+        error_type=type(exc).__name__,
+        message=str(exc),
+    )
 
 
 def _html_lines(html: str) -> list[str]:

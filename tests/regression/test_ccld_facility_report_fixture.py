@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-from ccld_complaints.connectors.base import SourceDocument
+from ccld_complaints.connectors.base import SourceDocument, SourceDocumentCandidate
 from ccld_complaints.connectors.ccld import CcldFacilityReportsConnector
+from ccld_complaints.connectors.ccld.facility_reports import ingest_facility_reports_for_facility
 from ccld_complaints.utils.hash import sha256_bytes
 
 FIXTURE_URL = "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=3"
@@ -117,6 +118,51 @@ def test_ccld_facility_report_validates_normalized_records() -> None:
     connector.validate(normalized)
 
 
+def test_ccld_facility_ingestion_loads_existing_report_fixture() -> None:
+    result = ingest_facility_reports_for_facility(
+        facility_detail_html=RAW_DETAIL_FIXTURE.read_text(encoding="utf-8"),
+        discovered_at=RETRIEVED_AT,
+        load_document=_load_existing_report_fixture,
+    )
+
+    assert len(result.candidates) == 40
+    assert len(result.records) == 1
+    assert len(result.failures) == 39
+    assert result.records[0]["complaint"] == json.loads(
+        EXPECTED_FIXTURE.read_text(encoding="utf-8")
+    )["complaint"]
+
+
+def test_ccld_facility_ingestion_records_missing_report_content() -> None:
+    result = ingest_facility_reports_for_facility(
+        facility_detail_html=RAW_DETAIL_FIXTURE.read_text(encoding="utf-8"),
+        discovered_at=RETRIEVED_AT,
+        load_document=lambda _candidate: None,
+    )
+
+    assert len(result.candidates) == 40
+    assert result.records == []
+    assert len(result.failures) == 40
+    assert {failure.stage for failure in result.failures} == {"load"}
+    assert {failure.error_type for failure in result.failures} == {"ReportContentNotFound"}
+
+
+def test_ccld_facility_ingestion_preserves_source_traceability() -> None:
+    result = ingest_facility_reports_for_facility(
+        facility_detail_html=RAW_DETAIL_FIXTURE.read_text(encoding="utf-8"),
+        discovered_at=RETRIEVED_AT,
+        load_document=_load_existing_report_fixture,
+    )
+
+    source_document = cast(dict[str, object], result.records[0]["source_document"])
+
+    assert source_document["source_url"] == FIXTURE_URL
+    assert source_document["report_index"] == 3
+    assert source_document["raw_sha256"] == sha256_bytes(RAW_FIXTURE.read_bytes())
+    assert source_document["connector_name"] == "ccld_facility_reports"
+    assert source_document["retrieved_at"] == RETRIEVED_AT
+
+
 def _extract_fixture() -> dict[str, object]:
     raw_content = RAW_FIXTURE.read_bytes()
     document = SourceDocument(
@@ -127,6 +173,19 @@ def _extract_fixture() -> dict[str, object]:
         content_type="text/html",
     )
     return CcldFacilityReportsConnector().extract(document)
+
+
+def _load_existing_report_fixture(candidate: SourceDocumentCandidate) -> SourceDocument | None:
+    if candidate.report_index != 3:
+        return None
+    raw_content = RAW_FIXTURE.read_bytes()
+    return SourceDocument(
+        source_url=candidate.source_url,
+        raw_path=RAW_FIXTURE,
+        raw_sha256=sha256_bytes(raw_content),
+        retrieved_at=RETRIEVED_AT,
+        content_type="text/html",
+    )
 
 
 def _without_audit(normalized: dict[str, object]) -> dict[str, Any]:
