@@ -27,7 +27,7 @@ If a live facility detail response does not contain rendered report anchors, the
 
 ## Single-facility ingestion orchestration
 
-`ingest_facility_reports_for_facility()` runs one facility through the connector contract without writing to SQLite yet:
+`ingest_facility_reports_for_facility()` runs one facility through the connector contract:
 
 1. Discover report candidates.
 2. Load a report document through an injected fixture loader, or fetch live content and store raw bytes before extraction.
@@ -37,6 +37,14 @@ If a live facility detail response does not contain rendered report anchors, the
 6. Emit records to SQLite when the connector is configured with a database path.
 
 The function returns in-memory normalized records and per-candidate ingestion failures. Missing fixture content and extraction or validation errors are recorded in the result instead of being hidden.
+
+The optional `limit` argument restricts the number of discovered report candidates selected for fetch or fixture loading. This lets users test with one or a few reports before requesting all discovered reports.
+
+## Explicit live fetch command
+
+Live CCLD requests are user-invoked through `scripts/run-ccld-live-fetch.ps1`. The command discovers reports for facility `157806098` by default, downloads the selected report bodies to `data/raw/ccld`, and ingests the saved raw files into SQLite for Datasette review.
+
+The live command prints an external-site warning, uses a clear user agent, applies a reasonable timeout, limits report requests unless the user chooses all discovered reports, and does not use an aggressive retry loop. Automated tests should inject fixture HTML and fake report fetchers instead of making live web requests.
 
 ## Initial deterministic extraction
 
