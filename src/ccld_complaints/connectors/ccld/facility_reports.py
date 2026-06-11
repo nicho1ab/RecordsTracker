@@ -163,7 +163,7 @@ class CcldFacilityReportsConnector:
         )
 
     def extract(self, document: SourceDocument) -> dict[str, object]:
-        html = document.raw_path.read_text(encoding="utf-8")
+        html = _read_raw_text(document.raw_path)
         lines = _html_lines(html)
         source_url_fields = _source_url_fields(document.source_url)
 
@@ -455,6 +455,12 @@ def _fetch_url(source_url: str) -> bytes:
     request = Request(source_url, headers={"User-Agent": "ccld-complaints-poc/0.1"})
     with urlopen(request, timeout=30) as response:
         return cast(bytes, response.read())
+
+
+def _read_raw_text(raw_path: Path) -> str:
+    if raw_path.exists() or raw_path.is_absolute():
+        return raw_path.read_text(encoding="utf-8")
+    return (Path(__file__).resolve().parents[4] / raw_path).read_text(encoding="utf-8")
 
 
 def _clean_text(value: str) -> str:

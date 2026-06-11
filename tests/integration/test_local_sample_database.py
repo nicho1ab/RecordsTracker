@@ -4,10 +4,13 @@ import sqlite3
 from pathlib import Path
 from typing import cast
 
+from pytest import MonkeyPatch
+
 from ccld_complaints.local_sample import datasette_command, populate_sample_database
 from ccld_complaints.utils.hash import sha256_bytes
 
-RAW_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_inx3.html")
+REPO_ROOT = Path(__file__).resolve().parents[2]
+RAW_FIXTURE = REPO_ROOT / "tests/fixtures/ccld/raw/157806098_inx3.html"
 
 
 def test_populate_sample_database_initializes_and_writes_fixture_data(tmp_path: Path) -> None:
@@ -44,6 +47,27 @@ def test_populate_sample_database_is_idempotent(tmp_path: Path) -> None:
     assert _row_count(db_path, "complaints") == 1
     assert _row_count(db_path, "allegations") == 2
     assert _row_count(db_path, "extraction_audit") == 21
+
+
+def test_populate_sample_database_uses_bundled_fixtures_from_other_cwd(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    db_path = tmp_path / "ccld.sqlite"
+    monkeypatch.chdir(tmp_path)
+
+    result = populate_sample_database(db_path)
+
+    assert len(result.ingestion.records) == 1
+    assert len(result.ingestion.candidates) == 40
+    assert len(result.ingestion.failures) == 39
+    assert _row_count(db_path, "source_documents") == 1
+    assert _source_document(db_path) == {
+        "source_url": "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=3",
+        "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
+        "connector_name": "ccld_facility_reports",
+        "connector_version": "0.1.0",
+        "report_index": 3,
+    }
 
 
 def test_datasette_command_quotes_database_path() -> None:
