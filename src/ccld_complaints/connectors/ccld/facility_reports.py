@@ -318,11 +318,14 @@ def ingest_facility_reports_for_facility(
     facility_detail_html: str | None = None,
     discovered_at: str | None = None,
     limit: int | None = None,
+    max_requests: int | None = None,
     load_document: ReportDocumentLoader | None = None,
     fetch_report: ReportFetcher | None = None,
 ) -> FacilityIngestionResult:
     if limit is not None and limit < 0:
         raise ValueError("limit must be greater than or equal to 0.")
+    if max_requests is not None and max_requests < 0:
+        raise ValueError("max_requests must be greater than or equal to 0.")
 
     active_connector = connector or CcldFacilityReportsConnector(facility_number=facility_number)
     candidates = active_connector.discover(
@@ -331,6 +334,11 @@ def ingest_facility_reports_for_facility(
     )
     if limit is not None:
         candidates = candidates[:limit]
+    if max_requests is not None and len(candidates) > max_requests:
+        raise ValueError(
+            "Selected report candidates exceed max_requests. "
+            f"Selected {len(candidates)} report(s), max_requests is {max_requests}."
+        )
 
     records: list[dict[str, object]] = []
     failures: list[IngestionFailure] = []

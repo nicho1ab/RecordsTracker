@@ -11,14 +11,16 @@ SQLite database path to initialize and populate.
 Local gitignored directory for downloaded raw report files.
 .PARAMETER Limit
 Maximum number of discovered reports to fetch. Use a small number first.
+.PARAMETER MaxRequests
+Safety guard for the maximum number of report requests allowed.
 .PARAMETER All
 Fetch all discovered reports for the facility.
 .EXAMPLE
 .\scripts\run-ccld-live-fetch.ps1 -Limit 1
 .EXAMPLE
-.\scripts\run-ccld-live-fetch.ps1 -Limit 3 -DbPath data\processed\live-ccld.sqlite
+.\scripts\run-ccld-live-fetch.ps1 -Limit 3 -MaxRequests 5 -DbPath data\processed\live-ccld.sqlite
 .EXAMPLE
-.\scripts\run-ccld-live-fetch.ps1 -All
+.\scripts\run-ccld-live-fetch.ps1 -All -MaxRequests 50
 .NOTES
 Run from the repository root. This command accesses a public external site only when invoked by the user.
 #>
@@ -28,6 +30,8 @@ param(
     [string]$RawDir = "data\raw\ccld",
     [ValidateRange(0, [int]::MaxValue)]
     [int]$Limit = 1,
+    [ValidateRange(0, [int]::MaxValue)]
+    [int]$MaxRequests = 5,
     [switch]$All
 )
 
@@ -52,7 +56,9 @@ try {
         "--db-path",
         $DbPath,
         "--raw-dir",
-        $RawDir
+        $RawDir,
+        "--max-requests",
+        $MaxRequests
     )
 
     if ($All) {
