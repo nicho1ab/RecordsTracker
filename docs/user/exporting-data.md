@@ -2,6 +2,16 @@
 
 Exports should include clear headers and source traceability fields.
 
+## Export from Datasette
+
+1. Open the table you want to review.
+2. Apply any needed filters in Datasette.
+3. Use Datasette's CSV export link for the filtered table or query.
+4. Keep the header row in the exported CSV.
+5. Keep source traceability columns in review exports so each record can be checked against the public source.
+
+For complaint review, export `complaints` together with source traceability from `source_documents` when possible. If a single CSV does not include all needed fields, export both tables and preserve the ID columns so reviewers can join or compare records.
+
 Recommended export columns:
 
 - Facility number
@@ -13,5 +23,20 @@ Recommended export columns:
 - Finding
 - Allegations
 - Source URL
+- Raw SHA-256 hash
+- Connector name
+- Retrieval timestamp
 
-Do not remove source URL fields from research exports.
+Do not remove source URL or raw hash fields from research exports.
+
+## Accessible CSV review
+
+For accessible tabular output:
+
+- Keep clear column headers from the database or data dictionary.
+- Do not replace headers with abbreviations that are not explained.
+- Do not communicate findings, warnings, or status by color alone.
+- Include a note that delay review flags are screening aids, not conclusions.
+- Include a note that the public portal remains the source of record.
+- Avoid adding personal paths, account names, emails, private URLs, or machine-specific details to exported files.
+- Share CSV or spreadsheet formats with readable headers instead of PDF unless PDF accessibility can be validated.

@@ -42,14 +42,16 @@ Open the local URL printed by Datasette in a browser.
 
 ## Tables to open first
 
-Start with these tables:
+Start with these tables in this order:
 
-- `complaints` for complaint dates, findings, delay fields, and complaint control numbers.
-- `allegations` for the allegation text linked to each complaint.
-- `source_documents` for source URL, raw file hash, connector name, retrieval time, and report index.
-- `facilities` for facility identifiers and names.
+1. `facilities` lists the facility identifiers and names. Use this table to confirm that the database contains the facility you intended to review.
+2. `source_documents` lists each public source document, source URL, raw file hash, connector name, connector version, retrieval time, and report index when available. Use this table to verify source traceability before relying on extracted complaint fields.
+3. `complaints` lists complaint dates, findings, delay fields, review flags, and complaint control numbers. Use this table for the main complaint review.
+4. `allegations` lists allegation text and categories linked to each complaint by complaint ID.
+5. `events` lists dated events extracted from reports when available.
+6. `extraction_audit` lists field-level extraction methods, source text, confidence, and warnings when available.
 
-Use `source_documents` to verify source traceability before relying on extracted complaint fields.
+The table and column names are intentionally close to the data contract so exported CSV files remain understandable outside Datasette.
 
 ## Accessibility notes
 
