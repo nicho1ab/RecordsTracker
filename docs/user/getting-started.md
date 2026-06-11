@@ -10,6 +10,10 @@ This project creates a searchable dataset from public complaint and facility rep
 - Review calculated delay fields.
 - Export structured data.
 
+## Local database
+
+Normalized ingestion results can be stored in the local SQLite database for browsing with Datasette. Stored records include source traceability fields such as source URL, raw file hash, raw path, connector name, connector version, retrieval time, and report index when available.
+
 ## Important limitation
 
 The dataset is derived from public source reports. The public portal remains the source of record.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from pathlib import Path
 from typing import Any, cast
 
@@ -161,6 +162,39 @@ def test_ccld_facility_ingestion_preserves_source_traceability() -> None:
     assert source_document["raw_sha256"] == sha256_bytes(RAW_FIXTURE.read_bytes())
     assert source_document["connector_name"] == "ccld_facility_reports"
     assert source_document["retrieved_at"] == RETRIEVED_AT
+
+
+def test_ccld_facility_ingestion_can_emit_records_to_sqlite(tmp_path: Path) -> None:
+    db_path = tmp_path / "ccld.sqlite"
+    connector = CcldFacilityReportsConnector(db_path=db_path)
+
+    result = ingest_facility_reports_for_facility(
+        connector=connector,
+        facility_detail_html=RAW_DETAIL_FIXTURE.read_text(encoding="utf-8"),
+        discovered_at=RETRIEVED_AT,
+        load_document=_load_existing_report_fixture,
+    )
+
+    assert len(result.records) == 1
+    with sqlite3.connect(db_path) as conn:
+        counts = {
+            table_name: conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
+            for table_name in (
+                "facilities",
+                "source_documents",
+                "complaints",
+                "allegations",
+                "extraction_audit",
+            )
+        }
+
+    assert counts == {
+        "facilities": 1,
+        "source_documents": 1,
+        "complaints": 1,
+        "allegations": 2,
+        "extraction_audit": 11,
+    }
 
 
 def _extract_fixture() -> dict[str, object]:
