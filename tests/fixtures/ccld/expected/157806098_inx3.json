@@ -38,7 +38,15 @@
     "date_signed": "2022-08-26",
     "finding": "Unsubstantiated",
     "days_received_to_first_activity": null,
+    "days_received_to_visit": 139,
     "days_received_to_report": 139,
+    "days_report_to_signed": 2,
+    "review_delay_over_30_days": true,
+    "review_delay_over_60_days": true,
+    "review_delay_over_90_days": true,
+    "review_delay_over_120_days": true,
+    "missing_first_activity_date": true,
+    "report_date_used_as_proxy": false,
     "extraction_confidence": 1.0
   },
   "allegations": [

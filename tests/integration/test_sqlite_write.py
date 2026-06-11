@@ -25,7 +25,7 @@ def test_write_normalized_ccld_report_to_sqlite(tmp_path: Path) -> None:
     assert _row_count(db_path, "complaints") == 1
     assert _row_count(db_path, "allegations") == 2
     assert _row_count(db_path, "events") == 0
-    assert _row_count(db_path, "extraction_audit") == 11
+    assert _row_count(db_path, "extraction_audit") == 21
     assert _source_traceability(db_path) == {
         "source_url": FIXTURE_URL,
         "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
@@ -34,6 +34,18 @@ def test_write_normalized_ccld_report_to_sqlite(tmp_path: Path) -> None:
         "connector_version": "0.1.0",
         "retrieved_at": RETRIEVED_AT,
         "report_index": 3,
+    }
+    assert _complaint_delay_fields(db_path) == {
+        "days_received_to_first_activity": None,
+        "days_received_to_visit": 139,
+        "days_received_to_report": 139,
+        "days_report_to_signed": 2,
+        "review_delay_over_30_days": 1,
+        "review_delay_over_60_days": 1,
+        "review_delay_over_90_days": 1,
+        "review_delay_over_120_days": 1,
+        "missing_first_activity_date": 1,
+        "report_date_used_as_proxy": 0,
     }
 
 
@@ -48,7 +60,7 @@ def test_write_normalized_ccld_report_is_idempotent(tmp_path: Path) -> None:
     assert _row_count(db_path, "source_documents") == 1
     assert _row_count(db_path, "complaints") == 1
     assert _row_count(db_path, "allegations") == 2
-    assert _row_count(db_path, "extraction_audit") == 11
+    assert _row_count(db_path, "extraction_audit") == 21
 
 
 def test_written_complaint_and_allegations_link_to_parent_rows(tmp_path: Path) -> None:
@@ -138,6 +150,27 @@ def _source_traceability(db_path: Path) -> dict[str, object]:
                    retrieved_at,
                    report_index
             FROM source_documents
+            """
+        ).fetchone()
+    return dict(row)
+
+
+def _complaint_delay_fields(db_path: Path) -> dict[str, object]:
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            """
+            SELECT days_received_to_first_activity,
+                   days_received_to_visit,
+                   days_received_to_report,
+                   days_report_to_signed,
+                   review_delay_over_30_days,
+                   review_delay_over_60_days,
+                   review_delay_over_90_days,
+                   review_delay_over_120_days,
+                   missing_first_activity_date,
+                   report_date_used_as_proxy
+            FROM complaints
             """
         ).fetchone()
     return dict(row)

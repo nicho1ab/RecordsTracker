@@ -63,11 +63,41 @@
         "null"
       ]
     },
+    "days_received_to_visit": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
     "days_received_to_report": {
       "type": [
         "integer",
         "null"
       ]
+    },
+    "days_report_to_signed": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "review_delay_over_30_days": {
+      "type": "boolean"
+    },
+    "review_delay_over_60_days": {
+      "type": "boolean"
+    },
+    "review_delay_over_90_days": {
+      "type": "boolean"
+    },
+    "review_delay_over_120_days": {
+      "type": "boolean"
+    },
+    "missing_first_activity_date": {
+      "type": "boolean"
+    },
+    "report_date_used_as_proxy": {
+      "type": "boolean"
     },
     "extraction_confidence": {
       "type": [

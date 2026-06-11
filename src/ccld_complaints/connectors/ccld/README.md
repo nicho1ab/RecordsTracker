@@ -34,7 +34,7 @@ If a live facility detail response does not contain rendered report anchors, the
 3. Extract deterministic report fields.
 4. Normalize records to the canonical data contract.
 5. Validate normalized records against JSON schemas.
-6. Emit records through the connector's current no-op validation-backed emit step.
+6. Emit records to SQLite when the connector is configured with a database path.
 
 The function returns in-memory normalized records and per-candidate ingestion failures. Missing fixture content and extraction or validation errors are recorded in the result instead of being hidden.
 
@@ -49,6 +49,9 @@ The extractor reads the public FacilityReports HTML response, preserves the raw 
 - Complaint received date and complaint control number
 - Allegation text
 - Normalized finding
-- Days from complaint received date to report date
+- Deterministic delay metrics for received-to-visit, received-to-report, and report-to-signed dates when both dates are available
+- Review delay flags for records that may need closer review
 
 The normalized output uses the canonical entities in `DATA_CONTRACT.md`; the CCLD facility number is stored as `external_facility_number` on the facility record.
+
+The connector does not infer `first_investigation_activity_date` from report date. If no first activity date is available, the normalized complaint record marks `missing_first_activity_date`. Report date is used as a delay review proxy only when no first activity date or visit date is available.

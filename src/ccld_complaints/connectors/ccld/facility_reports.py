@@ -169,6 +169,16 @@ class CcldFacilityReportsConnector:
 
         complaint_received_date = _iso_date(_complaint_received_date(lines))
         report_date = _iso_date(_value_after_label(lines, "Report Date:"))
+        visit_date = _iso_date(_value_after_label(lines, "VISIT DATE:"))
+        date_signed = _iso_date(_value_after_label(lines, "Date Signed:"))
+        first_activity_date = None
+        delay_metrics = _delay_metrics(
+            complaint_received_date=complaint_received_date,
+            first_investigation_activity_date=first_activity_date,
+            visit_date=visit_date,
+            report_date=report_date,
+            date_signed=date_signed,
+        )
 
         return {
             "source_url": document.source_url,
@@ -181,16 +191,14 @@ class CcldFacilityReportsConnector:
             "facility_name": _value_after_label(lines, "FACILITY NAME:"),
             "report_type": _report_type(lines),
             "report_date": report_date,
-            "date_signed": _iso_date(_value_after_label(lines, "Date Signed:")),
+            "date_signed": date_signed,
             "complaint_received_date": complaint_received_date,
+            "first_investigation_activity_date": first_activity_date,
             "complaint_control_number": _value_after_label(lines, "COMPLAINT CONTROL NUMBER:"),
             "allegations": _allegations(lines),
             "finding": _finding(lines),
-            "visit_date": _iso_date(_value_after_label(lines, "VISIT DATE:")),
-            "days_received_to_report": days_between(
-                parse_date_or_none(complaint_received_date),
-                parse_date_or_none(report_date),
-            ),
+            "visit_date": visit_date,
+            **delay_metrics,
         }
 
     def normalize(self, extracted: dict[str, object]) -> dict[str, object]:
@@ -252,15 +260,27 @@ class CcldFacilityReportsConnector:
                 "document_id": document_id,
                 "complaint_control_number": complaint_control_number,
                 "complaint_received_date": _optional_str(extracted, "complaint_received_date"),
-                "first_investigation_activity_date": None,
+                "first_investigation_activity_date": _optional_str(
+                    extracted, "first_investigation_activity_date"
+                ),
                 "visit_date": _optional_str(extracted, "visit_date"),
                 "report_date": _optional_str(extracted, "report_date"),
                 "date_signed": _optional_str(extracted, "date_signed"),
                 "finding": finding,
-                "days_received_to_first_activity": None,
+                "days_received_to_first_activity": cast(
+                    int | None, extracted.get("days_received_to_first_activity")
+                ),
+                "days_received_to_visit": cast(int | None, extracted.get("days_received_to_visit")),
                 "days_received_to_report": cast(
                     int | None, extracted.get("days_received_to_report")
                 ),
+                "days_report_to_signed": cast(int | None, extracted.get("days_report_to_signed")),
+                "review_delay_over_30_days": bool(extracted.get("review_delay_over_30_days")),
+                "review_delay_over_60_days": bool(extracted.get("review_delay_over_60_days")),
+                "review_delay_over_90_days": bool(extracted.get("review_delay_over_90_days")),
+                "review_delay_over_120_days": bool(extracted.get("review_delay_over_120_days")),
+                "missing_first_activity_date": bool(extracted.get("missing_first_activity_date")),
+                "report_date_used_as_proxy": bool(extracted.get("report_date_used_as_proxy")),
                 "extraction_confidence": 1.0,
             },
             "allegations": normalized_allegations,
@@ -551,6 +571,65 @@ def _finding(lines: list[str]) -> str:
     return "Unknown"
 
 
+def _delay_metrics(
+    *,
+    complaint_received_date: str | None,
+    first_investigation_activity_date: str | None,
+    visit_date: str | None,
+    report_date: str | None,
+    date_signed: str | None,
+) -> dict[str, object]:
+    received_date = parse_date_or_none(complaint_received_date)
+    first_activity_date = parse_date_or_none(first_investigation_activity_date)
+    parsed_visit_date = parse_date_or_none(visit_date)
+    parsed_report_date = parse_date_or_none(report_date)
+
+    days_received_to_first_activity = days_between(received_date, first_activity_date)
+    days_received_to_visit = days_between(received_date, parsed_visit_date)
+    days_received_to_report = days_between(received_date, parsed_report_date)
+    delay_basis = _delay_review_basis(
+        days_received_to_first_activity,
+        days_received_to_visit,
+        days_received_to_report,
+    )
+
+    return {
+        "days_received_to_first_activity": days_received_to_first_activity,
+        "days_received_to_visit": days_received_to_visit,
+        "days_received_to_report": days_received_to_report,
+        "days_report_to_signed": days_between(parsed_report_date, parse_date_or_none(date_signed)),
+        "review_delay_over_30_days": _review_delay_over(delay_basis, 30),
+        "review_delay_over_60_days": _review_delay_over(delay_basis, 60),
+        "review_delay_over_90_days": _review_delay_over(delay_basis, 90),
+        "review_delay_over_120_days": _review_delay_over(delay_basis, 120),
+        "missing_first_activity_date": received_date is not None and first_activity_date is None,
+        "report_date_used_as_proxy": (
+            days_received_to_first_activity is None
+            and days_received_to_visit is None
+            and days_received_to_report is not None
+        ),
+    }
+
+
+def _delay_review_basis(
+    days_received_to_first_activity: int | None,
+    days_received_to_visit: int | None,
+    days_received_to_report: int | None,
+) -> int | None:
+    for delay_days in (
+        days_received_to_first_activity,
+        days_received_to_visit,
+        days_received_to_report,
+    ):
+        if delay_days is not None:
+            return delay_days
+    return None
+
+
+def _review_delay_over(delay_days: int | None, threshold: int) -> bool:
+    return delay_days is not None and delay_days > threshold
+
+
 def _iso_date(value: str | None) -> str | None:
     parsed = parse_date_or_none(value)
     return parsed.isoformat() if parsed is not None else None
@@ -576,11 +655,21 @@ def _audit_records(document_id: str, extracted: dict[str, object]) -> list[dict[
         "report_date",
         "date_signed",
         "complaint_received_date",
+        "first_investigation_activity_date",
         "complaint_control_number",
         "allegations",
         "finding",
         "visit_date",
+        "days_received_to_first_activity",
+        "days_received_to_visit",
         "days_received_to_report",
+        "days_report_to_signed",
+        "review_delay_over_30_days",
+        "review_delay_over_60_days",
+        "review_delay_over_90_days",
+        "review_delay_over_120_days",
+        "missing_first_activity_date",
+        "report_date_used_as_proxy",
     )
     records: list[dict[str, object]] = []
     for field_name in field_names:

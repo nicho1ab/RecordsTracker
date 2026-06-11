@@ -10,4 +10,10 @@
 
 ## Delay fields
 
-Delay fields are calculated from extracted dates. If a date is missing or uncertain, the delay should be blank or marked unknown.
+Delay fields are calculated from extracted dates. If either date needed for a calculation is missing, the delay should be blank or marked unknown.
+
+Use `days_received_to_first_activity` when it is available because it is closest to the question of when investigation activity began. If that field is blank, compare it with `days_received_to_visit`, `days_received_to_report`, `missing_first_activity_date`, and `report_date_used_as_proxy` before drawing any conclusions.
+
+The `review_delay_over_30_days`, `review_delay_over_60_days`, `review_delay_over_90_days`, and `review_delay_over_120_days` fields are review flags. They identify records that may deserve closer review. They do not prove that CCLD delayed an investigation.
+
+Report date may not equal first investigative activity. Do not claim an investigation was delayed based only on `days_received_to_report` or `report_date_used_as_proxy`; check the source report and any available activity or visit dates.
