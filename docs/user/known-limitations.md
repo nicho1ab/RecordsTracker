@@ -9,7 +9,7 @@
 - Narrative extraction may require manual review.
 - The first CCLD extraction fixture covers one public facility report for facility number `157806098`; additional report layouts need their own fixtures before broader use.
 - The local sample database is populated only from bundled fixtures. It does not make live web requests and currently writes the single report fixture that has bundled raw content.
-- Live CCLD fetch mode is explicitly user-invoked and depends on the public site being available when the command runs.
+- Live CCLD fetch mode is explicitly user-invoked, accepts only provided facility numbers, and depends on the public site being available when the command runs. It does not perform statewide crawling or automatic search expansion.
 - Live fetched raw report files are saved under the local ignored `data/raw/ccld` path by default. Treat public narrative content carefully when sharing exports or raw files.
 - Live fetched records reflect the public response at retrieval time. Public reports may later change, be corrected, become unavailable, or use layouts the current extractor does not fully understand.
 - Datasette accessibility depends partly on the installed Datasette version, browser, and assistive technology. Validate keyboard navigation, table headers, focus visibility, and exported table usability before treating a release as stable.
