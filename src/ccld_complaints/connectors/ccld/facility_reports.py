@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 import re
 from collections.abc import Callable
@@ -35,6 +36,7 @@ ALLOWED_FINDINGS = (
 
 ReportDocumentLoader = Callable[[SourceDocumentCandidate], SourceDocument | None]
 ReportFetcher = Callable[[str], bytes]
+ConnectorFactory = Callable[[str], "CcldFacilityReportsConnector"]
 
 
 @dataclass(frozen=True)
@@ -50,6 +52,44 @@ class FacilityIngestionResult:
     candidates: list[SourceDocumentCandidate]
     records: list[dict[str, object]]
     failures: list[IngestionFailure]
+
+
+@dataclass(frozen=True)
+class FacilityWorkflowFailure:
+    facility_number: str
+    stage: str
+    error_type: str
+    message: str
+
+
+@dataclass(frozen=True)
+class MultiFacilityIngestionResult:
+    facility_results: list[FacilityIngestionResult]
+    facility_failures: list[FacilityWorkflowFailure]
+
+    @property
+    def candidates(self) -> list[SourceDocumentCandidate]:
+        return [
+            candidate
+            for facility_result in self.facility_results
+            for candidate in facility_result.candidates
+        ]
+
+    @property
+    def records(self) -> list[dict[str, object]]:
+        return [
+            record
+            for facility_result in self.facility_results
+            for record in facility_result.records
+        ]
+
+    @property
+    def failures(self) -> list[IngestionFailure]:
+        return [
+            failure
+            for facility_result in self.facility_results
+            for failure in facility_result.failures
+        ]
 
 
 class _HtmlTextParser(HTMLParser):
@@ -340,6 +380,116 @@ def ingest_facility_reports_for_facility(
             f"Selected {len(candidates)} report(s), max_requests is {max_requests}."
         )
 
+    return _ingest_selected_candidates(
+        active_connector,
+        candidates,
+        load_document=load_document,
+        fetch_report=fetch_report,
+    )
+
+
+def ingest_facility_reports_for_facilities(
+    facility_numbers: list[str],
+    *,
+    connector_factory: ConnectorFactory | None = None,
+    facility_detail_html_by_number: dict[str, str] | None = None,
+    discovered_at: str | None = None,
+    per_facility_limit: int | None = None,
+    max_requests: int | None = None,
+    load_document: ReportDocumentLoader | None = None,
+    fetch_report: ReportFetcher | None = None,
+) -> MultiFacilityIngestionResult:
+    if per_facility_limit is not None and per_facility_limit < 0:
+        raise ValueError("per_facility_limit must be greater than or equal to 0.")
+    if max_requests is not None and max_requests < 0:
+        raise ValueError("max_requests must be greater than or equal to 0.")
+
+    normalized_facility_numbers = normalize_facility_numbers(facility_numbers)
+    selected: list[tuple[CcldFacilityReportsConnector, list[SourceDocumentCandidate]]] = []
+    facility_failures: list[FacilityWorkflowFailure] = []
+
+    for facility_number in normalized_facility_numbers:
+        active_connector = (
+            connector_factory(facility_number)
+            if connector_factory is not None
+            else CcldFacilityReportsConnector(facility_number=facility_number)
+        )
+        try:
+            candidates = active_connector.discover(
+                facility_detail_html=(facility_detail_html_by_number or {}).get(facility_number),
+                discovered_at=discovered_at,
+            )
+        except Exception as exc:
+            facility_failures.append(_facility_workflow_failure(facility_number, "discover", exc))
+            continue
+
+        if per_facility_limit is not None:
+            candidates = candidates[:per_facility_limit]
+        selected.append((active_connector, candidates))
+
+    selected_report_count = sum(len(candidates) for _, candidates in selected)
+    if max_requests is not None and selected_report_count > max_requests:
+        raise ValueError(
+            "Selected report candidates exceed max_requests. "
+            f"Selected {selected_report_count} report(s), max_requests is {max_requests}."
+        )
+
+    facility_results = [
+        _ingest_selected_candidates(
+            active_connector,
+            candidates,
+            load_document=load_document,
+            fetch_report=fetch_report,
+        )
+        for active_connector, candidates in selected
+    ]
+
+    return MultiFacilityIngestionResult(
+        facility_results=facility_results,
+        facility_failures=facility_failures,
+    )
+
+
+def normalize_facility_numbers(facility_numbers: list[str]) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for facility_number in facility_numbers:
+        cleaned = facility_number.strip()
+        if not cleaned:
+            continue
+        if not cleaned.isdigit():
+            raise ValueError(f"Facility number must contain digits only: {facility_number!r}")
+        if cleaned in seen:
+            continue
+        seen.add(cleaned)
+        normalized.append(cleaned)
+    if not normalized:
+        raise ValueError("At least one facility number is required.")
+    return normalized
+
+
+def read_facility_numbers_file(path: Path) -> list[str]:
+    values: list[str] = []
+    with path.open(newline="", encoding="utf-8") as handle:
+        for row in csv.reader(handle):
+            for value in row:
+                cleaned = value.strip()
+                if not cleaned or cleaned.startswith("#"):
+                    continue
+                if cleaned.casefold() in {"facility_number", "facilitynumber", "facnum"}:
+                    continue
+                values.append(cleaned)
+    return normalize_facility_numbers(values)
+
+
+def _ingest_selected_candidates(
+    active_connector: CcldFacilityReportsConnector,
+    candidates: list[SourceDocumentCandidate],
+    *,
+    load_document: ReportDocumentLoader | None,
+    fetch_report: ReportFetcher | None,
+) -> FacilityIngestionResult:
+
     records: list[dict[str, object]] = []
     failures: list[IngestionFailure] = []
 
@@ -381,6 +531,17 @@ def ingest_facility_reports_for_facility(
         records.append(normalized)
 
     return FacilityIngestionResult(candidates=candidates, records=records, failures=failures)
+
+
+def _facility_workflow_failure(
+    facility_number: str, stage: str, exc: Exception
+) -> FacilityWorkflowFailure:
+    return FacilityWorkflowFailure(
+        facility_number=facility_number,
+        stage=stage,
+        error_type=type(exc).__name__,
+        message=str(exc),
+    )
 
 
 def _load_or_fetch_document(

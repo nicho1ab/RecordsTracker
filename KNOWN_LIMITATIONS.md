@@ -8,7 +8,7 @@
 - Report date may be used as a review proxy only when no first investigation activity date or visit date is available; report date alone does not establish when investigation activity began.
 - Narrative dates may require separate extraction and confidence scoring.
 - Some older reports may have different layouts or missing fields.
-- Single-facility CCLD ingestion can persist normalized records to SQLite when configured with a database path; the current end-user live command is limited to one CCLD facility workflow.
+- Live CCLD ingestion can persist normalized records to SQLite for one or more explicitly provided facility numbers when configured with a database path; it does not perform statewide crawling or automatic search expansion.
 - Fixture-backed ingestion only extracts discovered reports when matching raw report content is supplied by the test loader.
 - Live CCLD fetching is explicitly user-invoked through the local script and depends on the public site being available when the command runs.
 - Live fetched raw report files are saved under the local ignored `data/raw/ccld` path by default and should be treated carefully because public narrative content may be sensitive.
