@@ -184,12 +184,33 @@ PRIMARY_KEYS = {
     "extraction_audit": "audit_id",
 }
 
+COMPLAINT_COLUMN_DEFINITIONS = {
+    "days_received_to_visit": "INTEGER",
+    "days_report_to_signed": "INTEGER",
+    "review_delay_over_30_days": "INTEGER NOT NULL DEFAULT 0",
+    "review_delay_over_60_days": "INTEGER NOT NULL DEFAULT 0",
+    "review_delay_over_90_days": "INTEGER NOT NULL DEFAULT 0",
+    "review_delay_over_120_days": "INTEGER NOT NULL DEFAULT 0",
+    "missing_first_activity_date": "INTEGER NOT NULL DEFAULT 0",
+    "report_date_used_as_proxy": "INTEGER NOT NULL DEFAULT 0",
+}
+
 
 def initialize_database(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as conn:
         conn.executescript(SCHEMA_SQL)
+        _ensure_complaint_columns(conn)
         conn.commit()
+
+
+def _ensure_complaint_columns(conn: sqlite3.Connection) -> None:
+    existing_columns = {
+        str(row[1]) for row in conn.execute("PRAGMA table_info(complaints)").fetchall()
+    }
+    for column, definition in COMPLAINT_COLUMN_DEFINITIONS.items():
+        if column not in existing_columns:
+            conn.execute(f"ALTER TABLE complaints ADD COLUMN {column} {definition}")
 
 
 def write_normalized_records(path: Path, records: Iterable[Mapping[str, object]]) -> None:

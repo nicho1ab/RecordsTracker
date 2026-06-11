@@ -36,6 +36,8 @@ REQUIRED_CONTENT = {
         "Tables to open first",
         "source_documents",
         "extraction_audit",
+        "discovers 40 report candidates",
+        "facility `157806098`, report index `3`",
     ],
     "docs/user/reviewing-records.md": [
         "flagged for review based on available extracted dates",
