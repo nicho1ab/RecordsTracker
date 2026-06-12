@@ -60,6 +60,22 @@ Open the local URL shown in PowerShell and start with these views:
 3. `delay_review_flags`
 4. `source_traceability_review`
 
+## Export review bundle
+
+After populating the database, export standard source-traceable CSV review outputs:
+
+```powershell
+.\scripts\export-review-bundle.ps1
+```
+
+For a custom database or output folder:
+
+```powershell
+.\scripts\export-review-bundle.ps1 -DbPath data\processed\live-ccld.sqlite -OutputDir data\processed\live-review-bundle
+```
+
+The bundle includes complaint review, delay triage, and source traceability CSVs plus a README with caution language. Delay review flags are screening aids only; verify important details against source documents.
+
 ## Add a fixture
 
 1. Save raw source content under `tests/fixtures/<source>/raw/`.

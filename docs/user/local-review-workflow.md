@@ -55,6 +55,14 @@ Do not redistribute raw narrative text unless it is needed for the review purpos
 
 Use Datasette's CSV export for a filtered view or saved query. Keep the header row and source traceability columns in the export.
 
+To export the standard local review bundle without opening Datasette, run:
+
+```powershell
+.\scripts\export-review-bundle.ps1
+```
+
+This writes complaint review, delay triage, and source traceability CSV files under `data/processed/review-bundle` by default. The complaint and delay CSV files include source URL, raw SHA-256 hash, raw path, connector metadata, retrieval timestamp, and report index. Unknown database values are exported as `unknown`.
+
 For complaint review exports, start with `complaint_review_summary`. For source checks, export `source_traceability_review`. For delay triage, export `delay_review_flags` and label the file or notes as a triage list, not a list of delayed investigations.
 
 For accessible CSV review:
