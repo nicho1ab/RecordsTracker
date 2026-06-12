@@ -60,6 +60,9 @@ governance scaffold.
 
 - Keep roadmap, changelog, setup, runbook, and Copilot workflow documentation
 	current after each meaningful capability or workflow change.
+- Reduce review noise and increase reviewer signal through task-based local
+	review improvements before deciding whether a dashboard or custom web
+	application is justified.
 - Harden extraction with additional representative fixtures and edge-case tests.
 - Expand narrative date and event extraction only when source text, confidence,
 	and fixture-backed regression tests are included.
@@ -72,10 +75,53 @@ governance scaffold.
 
 ## Current next priorities
 
-1. Add additional CCLD fixtures and extraction hardening for representative
+These priorities should be implemented as incremental local review improvements
+before deciding whether Datasette has been outgrown or a dashboard/custom web
+interface is justified.
+
+1. Add a review home or start-here surface that gives reviewers one clear first
+	place to open, explains the available review paths, and links or points to
+	complaint review, delay triage, facility summary, source checking, and export
+	workflows.
+2. Group review workflows by user task rather than by implementation table,
+	using task labels such as review complaints, find records needing closer
+	review, compare facilities, verify sources, and export CSVs.
+3. Add contextual help to primary views and saved queries with short guidance
+	for when to use each item, how to use it, what not to conclude, and what to
+	preserve when exporting.
+4. Add low-noise review views that hide implementation-heavy fields during
+	first-pass review while preserving source traceability and links to lower-level
+	detail when needed.
+5. Improve script output as navigation by grouping next steps after sample or
+	live fetch commands, including what to open first, what to use for delay
+	triage, what to use for source verification, and what to use for CSV export.
+6. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
-2. Evaluate a lightweight dashboard only after the Datasette review workflow is
-	validated and documented as sufficient or insufficient for repeated review.
+7. Evaluate persistent navigation, lightweight dashboard options, or a custom
+	web interface only after the task-based Datasette review workflow is validated
+	and documented as sufficient or insufficient for repeated review.
+
+## Web app transition path
+
+Datasette remains useful as the proof-of-concept review surface while the team
+validates data quality, extraction behavior, source traceability, review language,
+and task-based workflows. The project should treat Datasette as outgrown when
+reviewers repeatedly need capabilities it cannot provide cleanly, such as
+persistent navigation, grouped task dashboards, guided review queues, saved user
+state, annotations, correction workflows, richer contextual help, or fewer-click
+paths that Datasette metadata and saved queries cannot reasonably support.
+
+Before building the eventual web app, use the local review workflow to identify
+and test the smallest useful product shape:
+
+1. Define the core user tasks and the minimum fields each task needs.
+2. Keep SQLite views, saved queries, and exports as the stable data access layer.
+3. Prototype low-noise review surfaces locally before adding accounts, hosted
+	infrastructure, or role-based workflows.
+4. Preserve source traceability, accessibility, and public-source caution
+	language as non-negotiable web app requirements.
+5. Decide whether to extend Datasette with templates/plugins, add a lightweight
+	dashboard, or start a custom frontend based on validated reviewer friction.
 
 ## Decision points
 
@@ -85,6 +131,9 @@ governance scaffold.
 	correction import workflow, or an external review tool.
 - Decide whether Baserow, Metabase, or another tool provides enough value to
 	justify adding it outside the baseline workflow.
+- Decide whether repeated reviewer friction means Datasette should remain the
+	local validation surface while a separate web app becomes the primary user
+	experience.
 - Decide when to add a second public source connector under the source connector
 	contract.
 - Decide what accessibility checks are required before any public or stable
@@ -94,7 +143,9 @@ governance scaffold.
 
 ## Deferred product work
 
-- Custom frontend application.
+- Custom frontend application, unless the web app transition path confirms that
+	Datasette cannot provide the needed persistent navigation, grouped review
+	workflows, contextual help, and few-click task paths.
 - Hosted review queues, reviewer accounts, assignments, or role-based access
 	control.
 - Interactive dashboards beyond the local SQLite and Datasette proof of concept.
