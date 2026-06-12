@@ -51,6 +51,8 @@ governance scaffold.
 	checks, merge cleanup, and next-task handoff.
 - Added governance feedback-loop rules so bug and CI-failure fixes update
 	relevant governance when a missing or unclear rule allowed the failure.
+- Added a local output accessibility checklist for Datasette views, generated
+	metadata, saved queries, CSV exports, review bundles, and script output.
 
 ## Near-term milestones
 
@@ -73,9 +75,7 @@ governance scaffold.
 	traceability.
 2. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
-3. Add an accessibility review checklist for local outputs, including Datasette
-	views, generated metadata, saved queries, and CSV exports.
-4. Evaluate a lightweight dashboard only after the Datasette review workflow is
+3. Evaluate a lightweight dashboard only after the Datasette review workflow is
 	validated and documented as sufficient or insufficient for repeated review.
 
 ## Decision points
