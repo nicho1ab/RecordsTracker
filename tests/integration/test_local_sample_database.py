@@ -100,8 +100,11 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "events" in database_metadata["tables"]
     assert "extraction_audit" in database_metadata["tables"]
     assert "complaints_by_facility" in database_metadata["queries"]
+    assert "complaint_review_export_with_traceability" in database_metadata["queries"]
     assert "records_with_delay_review_flags" in database_metadata["queries"]
+    assert "facilities_with_delay_review_flags" in database_metadata["queries"]
     assert "source_traceability_check" in database_metadata["queries"]
+    assert "source_traceability_by_facility" in database_metadata["queries"]
     assert "allegation_summary_by_facility" in database_metadata["queries"]
     assert "newest_reports" in database_metadata["queries"]
     assert (
@@ -126,6 +129,23 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
         ":facility_number"
         in database_metadata["queries"]["complaints_by_facility"]["sql"]
     )
+    export_query_sql = database_metadata["queries"][
+        "complaint_review_export_with_traceability"
+    ]["sql"]
+    assert "sd.raw_sha256" in export_query_sql
+    assert "sd.connector_name" in export_query_sql
+    assert "sd.retrieved_at" in export_query_sql
+    assert "source_url" in export_query_sql
+    assert (
+        "screening aids"
+        in database_metadata["queries"]["facilities_with_delay_review_flags"][
+            "description"
+        ]
+    )
+    assert (
+        ":facility_number"
+        in database_metadata["queries"]["source_traceability_by_facility"]["sql"]
+    )
 
 
 def test_write_datasette_metadata_writes_json_next_to_database(tmp_path: Path) -> None:
@@ -141,12 +161,15 @@ def test_write_datasette_metadata_writes_json_next_to_database(tmp_path: Path) -
 def test_review_workflow_lines_name_first_views() -> None:
     lines = review_workflow_lines()
 
-    assert "Open these Datasette views first:" in lines
+    assert "Open these Datasette review views first, in order:" in lines
+    assert "Saved queries for common workflows:" in lines
     assert any("complaint_review_summary" in line for line in lines)
     assert any("facility_complaint_summary" in line for line in lines)
     assert any("delay_review_flags" in line for line in lines)
     assert any("source_traceability_review" in line for line in lines)
     assert any("complaints_by_facility" in line for line in lines)
+    assert any("complaint_review_export_with_traceability" in line for line in lines)
+    assert any("source_traceability_by_facility" in line for line in lines)
     assert any("newest_reports" in line for line in lines)
 
 

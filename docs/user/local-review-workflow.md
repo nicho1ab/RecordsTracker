@@ -71,8 +71,11 @@ For accessible CSV review:
 The generated Datasette metadata includes saved query examples:
 
 - `complaints_by_facility` filters `complaint_review_summary` by facility number and prompts for the facility number.
+- `complaint_review_export_with_traceability` exports complaint review fields with source URL, raw hash, raw path, connector metadata, retrieval time, and report index.
 - `records_with_delay_review_flags` opens the delay triage list with review flags described as screening aids.
+- `facilities_with_delay_review_flags` ranks facilities by records with delay or review flags. Treat the counts as triage aids, not conclusions.
 - `source_traceability_check` lists source URL, raw hash, connector metadata, retrieval time, and report index.
+- `source_traceability_by_facility` filters source traceability details by facility number.
 - `allegation_summary_by_facility` summarizes complaint and allegation counts by facility.
 - `newest_reports` sorts source documents by retrieval timestamp and report index.
 
