@@ -33,6 +33,10 @@ ALLOWED_FINDINGS = (
     "Deficiency cited",
     "Unknown",
 )
+NUMBERED_ALLEGATION_PREFIX_RE = re.compile(
+    r"^\s*(?:allegation\s*)?\d+\s*(?:[.)\-:]|$)\s*",
+    re.IGNORECASE,
+)
 
 ReportDocumentLoader = Callable[[SourceDocumentCandidate], SourceDocument | None]
 ReportFetcher = Callable[[str], bytes]
@@ -735,9 +739,17 @@ def _allegations(lines: list[str]) -> list[str]:
 
     allegations: list[str] = []
     for line in lines[start + 1 : end]:
-        if not line.isdigit():
-            allegations.append(line)
+        allegation = _allegation_text(line)
+        if allegation is not None:
+            allegations.append(allegation)
     return allegations
+
+
+def _allegation_text(line: str) -> str | None:
+    allegation = NUMBERED_ALLEGATION_PREFIX_RE.sub("", line).strip()
+    if not allegation:
+        return None
+    return " ".join(allegation.split())
 
 
 def _line_index(lines: list[str], value: str) -> int | None:
