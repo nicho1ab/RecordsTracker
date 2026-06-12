@@ -1,51 +1,83 @@
 # Roadmap
 
-## Phase 0: Governance and scaffolding
+This roadmap reflects the current proof-of-concept state. The project is an
+active CCLD complaints ingestion and local review workflow, not a blank
+governance scaffold.
 
-- Establish repo structure.
-- Add Copilot instructions and prompts.
-- Add data contract and connector contract.
-- Add testing, documentation, accessibility, and security rules.
-- Add local setup and CI workflows.
+## Completed foundation
 
-## Phase 1: CCLD single-facility POC
+- Established the governed repository structure, Copilot instructions, and core
+	project documentation.
+- Defined the data contract, source connector contract, testing strategy,
+	documentation strategy, accessibility requirements, security rules, and
+	decision log.
+- Adopted Python, SQLite, and Datasette for the proof of concept.
+- Documented raw source preservation, source traceability, accessibility, and
+	optional paid platform dependency rules.
 
-- Implement CCLD connector discovery for one facility.
-- Download/store raw report files.
-- Extract fields from complaint reports.
-- Write records to SQLite.
-- Generate Datasette browse/search interface.
-- Add fixture-based tests for known reports.
+## Completed CCLD proof-of-concept capabilities
 
-## Phase 2: Extraction hardening
+- Implemented the CCLD single-facility fixture workflow for the initial facility.
+- Added fixture-backed extraction and regression coverage for known CCLD reports.
+- Preserved raw source files and SHA-256 hashes before extraction.
+- Normalized extracted records into facility, source document, complaint,
+	allegation, event, and extraction audit records.
+- Wrote normalized records to SQLite with idempotent upsert behavior.
+- Added controlled live fetch for explicitly provided facility numbers.
+- Added multi-facility input for live fetch workflows scoped to user-provided
+	facility numbers.
+- Added SQLite review views for complaint review, facility summaries, delay
+	review flags, and source traceability.
+- Added Datasette metadata and saved queries to guide review, filtering,
+	source-checking, and export workflows.
 
-- Add additional report fixtures.
-- Add narrative date/event extraction.
-- Add extraction confidence and audit records.
-- Add duplicate detection and raw source hash validation.
-- Add edge-case tests for report types and missing fields.
+## Completed governance and review experience improvements
 
-## Phase 3: Multi-facility support
+- Added design and usability governance for the local Datasette review
+	experience.
+- Documented delay review flags as screening aids, not conclusions.
+- Documented accessible CSV export expectations and source traceability review.
+- Added documentation checks to guard against stale scaffold language and missing
+	required public guidance.
+- Added Copilot workflow guidance for small, testable changes under the project
+	governance rules.
 
-- Expand discovery to multiple facilities.
-- Add facility-level summary exports.
-- Add batch reprocessing commands.
-- Add data quality dashboard queries.
+## Near-term milestones
 
-## Phase 4: Review workflow
+- Keep roadmap, changelog, setup, runbook, and Copilot workflow documentation
+	current after each meaningful capability or workflow change.
+- Harden extraction with additional representative fixtures and edge-case tests.
+- Expand narrative date and event extraction only when source text, confidence,
+	and fixture-backed regression tests are included.
+- Strengthen data quality checks for duplicates, date consistency, source hash
+	presence, and raw source traceability.
+- Improve local review documentation for repeated reviewer tasks and export
+	cautions.
+- Add release checklist guidance for validation, accessibility review, PR checks,
+	merge cleanup, and next-task handoff.
 
-- Add export/review workflow for extracted rows.
-- Add correction import or lightweight review table.
-- Evaluate whether Baserow provides sufficient value for collaborative review.
+## Decision points
 
-## Phase 5: Multi-source support
+- Decide when the proof of concept has enough fixture coverage to treat CCLD
+	extraction as stable for broader review.
+- Decide whether collaborative review needs a lightweight correction table,
+	correction import workflow, or an external review tool.
+- Decide whether Baserow, Metabase, or another tool provides enough value to
+	justify adding it outside the baseline workflow.
+- Decide when to add a second public source connector under the source connector
+	contract.
+- Decide what accessibility checks are required before any public or stable
+	release.
+- Decide whether and when a custom frontend is justified by validated product
+	needs rather than visual polish.
 
-- Add a second connector under the source connector contract.
-- Validate canonical object model with a distinct source structure.
-- Update documentation and known limitations.
+## Deferred product work
 
-## Phase 6: Public presentation hardening
-
-- Validate accessibility requirements.
-- Add accessible end-user documentation.
-- Add release checklist and publication workflow.
+- Custom frontend application.
+- Hosted review queues, reviewer accounts, assignments, or role-based access
+	control.
+- Interactive dashboards beyond the local SQLite and Datasette proof of concept.
+- PDF report generation unless accessibility can be validated.
+- Optional paid platform dependencies unless explicitly approved and documented.
+- Statewide crawling or automatic search expansion beyond explicitly provided
+	facility numbers.
