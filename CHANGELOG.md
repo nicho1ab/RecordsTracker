@@ -43,3 +43,5 @@
 - Added governance rules requiring bug and CI-failure fixes to include root-cause
 	governance review, and requiring raw fixture hashes to be verified against
 	Git-normalized fixture bytes governed by `.gitattributes`.
+- Added GitHub CLI governance for repeatable PR status checks, check watching,
+	squash merge automation, and authentication-secret hygiene.

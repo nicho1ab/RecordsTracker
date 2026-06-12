@@ -30,6 +30,10 @@ Before making changes, read and follow:
 - Do not remove source traceability.
 - Do not delete raw source preservation behavior.
 - Do not store secrets in the repo.
+- When GitHub CLI is installed and authenticated, prefer `gh` for repeatable PR
+	operations such as viewing PR status, waiting for checks, editing PR bodies,
+	and squash merging after required checks pass. Do not print, paste, commit, or
+	document GitHub tokens or authentication secrets.
 - When a bug, CI failure, or repeated review correction exposes a missing or
 	weakable governance rule, update the relevant governance, testing, fixture,
 	or workflow documentation in the same task. If no governance rule is needed,
@@ -52,6 +56,8 @@ For every code change:
 8. Explain validation commands.
 9. For bug or CI-failure fixes, describe the root cause and whether a new or
 	updated governance rule was added to prevent recurrence.
+10. When `gh` is available, use it to verify PR state and checks before telling
+	the user to merge or clean up a branch.
 
 ## Required task handoff
 
