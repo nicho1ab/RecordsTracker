@@ -34,3 +34,6 @@
 	title/body separation, post-merge cleanup, and next-branch creation.
 - Improved Datasette review usability with additional source-traceable saved
 	queries and clearer script launch guidance for common review workflows.
+- Added a local review bundle export script that writes complaint review, delay
+	triage, and source traceability CSV files with source URL, raw hash, connector
+	metadata, retrieval time, report index, and delay-flag caution notes.
