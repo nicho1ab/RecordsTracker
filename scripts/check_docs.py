@@ -30,6 +30,23 @@ REQUIRED = [
 ]
 
 REQUIRED_CONTENT = {
+    "README.md": [
+        "CCLD complaints proof of concept",
+        "SQLite",
+        "Datasette",
+        "source traceability",
+        "fixture-backed tests",
+        "controlled live fetch",
+    ],
+    "DOCUMENTATION_STRATEGY.md": [
+        "Documentation impact and currency",
+        "Every feature, workflow, source connector, CLI or script, database or view",
+        "README.md",
+        "docs/user/*",
+        "docs/developer/*",
+        "DECISIONS.md and ADRs",
+        "no user-facing or documentation-impacting behavior changed",
+    ],
     "docs/developer/accessibility.md": [
         "Local output checklist",
         "Delay fields and review flags are described as screening aids",
@@ -84,6 +101,15 @@ REQUIRED_CONTENT = {
     ],
 }
 
+FORBIDDEN_CONTENT = {
+    "README.md": [
+        "governance pack",
+        "zip scaffold",
+        "Extract this zip file",
+        "Python project skeleton",
+    ],
+}
+
 
 def find_missing_files(root: Path = Path(".")) -> list[str]:
     return [item for item in REQUIRED if not (root / item).exists()]
@@ -102,6 +128,19 @@ def find_missing_required_content(root: Path = Path(".")) -> list[str]:
     return missing
 
 
+def find_forbidden_content(root: Path = Path(".")) -> list[str]:
+    found = []
+    for relative_path, forbidden_phrases in FORBIDDEN_CONTENT.items():
+        path = root / relative_path
+        if not path.exists():
+            continue
+        content = path.read_text(encoding="utf-8").lower()
+        for phrase in forbidden_phrases:
+            if phrase.lower() in content:
+                found.append(f"{relative_path}: {phrase}")
+    return found
+
+
 def main() -> None:
     missing_files = find_missing_files()
     if missing_files:
@@ -111,6 +150,12 @@ def main() -> None:
     if missing_content:
         raise SystemExit(
             "Missing required documentation content: " + "; ".join(missing_content)
+        )
+
+    forbidden_content = find_forbidden_content()
+    if forbidden_content:
+        raise SystemExit(
+            "Forbidden stale documentation content found: " + "; ".join(forbidden_content)
         )
 
     print("Documentation check passed.")

@@ -40,7 +40,9 @@ For every code change:
 3. Update developer docs if developer behavior changes.
 4. Update user docs if user-visible behavior changes.
 5. Update known limitations if limitations change.
-6. Explain validation commands.
+6. Check documentation impact across `README.md`, `docs/user/*`, `docs/developer/*`, `DATA_CONTRACT.md`, `SOURCE_CONNECTOR_CONTRACT.md`, `KNOWN_LIMITATIONS.md`, `DESIGN_AND_USABILITY.md`, `DECISIONS.md`, and ADRs.
+7. If no documentation changes are needed, explicitly state that no user-facing or documentation-impacting behavior changed.
+8. Explain validation commands.
 
 ## Preferred stack
 

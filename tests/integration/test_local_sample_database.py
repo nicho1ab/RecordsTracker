@@ -93,6 +93,12 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "complaint_review_summary" in database_metadata["tables"]
     assert "delay_review_flags" in database_metadata["tables"]
     assert "source_traceability_review" in database_metadata["tables"]
+    assert "facilities" in database_metadata["tables"]
+    assert "source_documents" in database_metadata["tables"]
+    assert "complaints" in database_metadata["tables"]
+    assert "allegations" in database_metadata["tables"]
+    assert "events" in database_metadata["tables"]
+    assert "extraction_audit" in database_metadata["tables"]
     assert "complaints_by_facility" in database_metadata["queries"]
     assert "records_with_delay_review_flags" in database_metadata["queries"]
     assert "source_traceability_check" in database_metadata["queries"]
@@ -105,6 +111,20 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert (
         "Public source URL"
         in database_metadata["tables"]["source_traceability_review"]["columns"]["source_url"]
+    )
+    assert (
+        "preserve traceability"
+        in database_metadata["tables"]["source_documents"]["description"]
+    )
+    assert (
+        "screening aids"
+        in database_metadata["tables"]["complaints"]["columns"][
+            "review_delay_over_30_days"
+        ]
+    )
+    assert (
+        ":facility_number"
+        in database_metadata["queries"]["complaints_by_facility"]["sql"]
     )
 
 
@@ -126,6 +146,8 @@ def test_review_workflow_lines_name_first_views() -> None:
     assert any("facility_complaint_summary" in line for line in lines)
     assert any("delay_review_flags" in line for line in lines)
     assert any("source_traceability_review" in line for line in lines)
+    assert any("complaints_by_facility" in line for line in lines)
+    assert any("newest_reports" in line for line in lines)
 
 
 def _row_count(db_path: Path, table_name: str) -> int:

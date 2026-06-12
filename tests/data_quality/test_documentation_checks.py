@@ -10,6 +10,8 @@ class CheckDocsModule(Protocol):
 
     def find_missing_required_content(self) -> list[str]: ...
 
+    def find_forbidden_content(self) -> list[str]: ...
+
 
 def _load_check_docs_module() -> CheckDocsModule:
     path = Path("scripts/check_docs.py")
@@ -31,3 +33,9 @@ def test_required_public_output_guidance_is_documented() -> None:
     check_docs = _load_check_docs_module()
 
     assert check_docs.find_missing_required_content() == []
+
+
+def test_stale_public_readme_language_is_not_present() -> None:
+    check_docs = _load_check_docs_module()
+
+    assert check_docs.find_forbidden_content() == []
