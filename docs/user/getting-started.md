@@ -102,7 +102,7 @@ Rerunning the same command updates existing SQLite rows by stable identifiers ra
 After the sample or live database is populated, run the command printed by the script:
 
 ```powershell
-datasette "data/processed/ccld.sqlite"
+datasette "data/processed/ccld.sqlite" --metadata "data/processed/ccld.datasette-metadata.json"
 ```
 
 Open the local URL printed by Datasette in a browser.
@@ -110,10 +110,12 @@ Open the local URL printed by Datasette in a browser.
 If you wrote live results to a different database path, open that path instead:
 
 ```powershell
-datasette "data/processed/live-ccld.sqlite"
+datasette "data/processed/live-ccld.sqlite" --metadata "data/processed/live-ccld.datasette-metadata.json"
 ```
 
-The printed command includes a Datasette metadata file. That metadata adds review-oriented titles, descriptions, column notes, suggested sort fields, delay flag caution language, source traceability explanations, and saved query examples. See [Local Review Workflow](local-review-workflow.md) for the guided review steps.
+The printed command includes a Datasette metadata file. That metadata adds the project title, database description, review-oriented table and view descriptions, column notes, suggested sort fields, delay flag caution language, source traceability explanations, and saved query examples. See [Local Review Workflow](local-review-workflow.md) for the guided review steps.
+
+The saved query examples include `complaints_by_facility`, `records_with_delay_review_flags`, `newest_reports`, `allegation_summary_by_facility`, and `source_traceability_check`.
 
 ## Tables to open first
 

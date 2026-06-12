@@ -6,6 +6,8 @@ This guide describes the first local review workflow for non-technical reviewers
 
 After running the sample or live fetch script, open the Datasette command printed by the script. The command includes a metadata file that adds clearer labels, descriptions, column notes, and saved query examples.
 
+On the Datasette database page, use the review view titles and descriptions from the metadata as the starting guide. The metadata also labels the normalized tables for lower-level checks, but routine browsing should begin with the review views.
+
 Open these views first:
 
 1. `complaint_review_summary` for the main complaint review across facilities.
@@ -68,8 +70,8 @@ For accessible CSV review:
 
 The generated Datasette metadata includes saved query examples:
 
-- `complaints_by_facility` filters `complaint_review_summary` by facility number.
-- `records_with_delay_review_flags` opens the delay triage list.
+- `complaints_by_facility` filters `complaint_review_summary` by facility number and prompts for the facility number.
+- `records_with_delay_review_flags` opens the delay triage list with review flags described as screening aids.
 - `source_traceability_check` lists source URL, raw hash, connector metadata, retrieval time, and report index.
 - `allegation_summary_by_facility` summarizes complaint and allegation counts by facility.
 - `newest_reports` sorts source documents by retrieval timestamp and report index.
