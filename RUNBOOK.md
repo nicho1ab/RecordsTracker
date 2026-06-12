@@ -1,42 +1,64 @@
 # Runbook
 
-## First setup
+## Validate changes
 
-```powershell
-.\setup-project.ps1 -ProjectPath "<local-project-path>" -InitializeGit
-```
-
-## Run tests
-
-```powershell
-.\scripts\test.ps1
-```
-
-## Run linting
+Run the full local validation set before completing a task:
 
 ```powershell
 .\scripts\lint.ps1
-```
-
-## Run documentation check
-
-```powershell
+.\scripts\test.ps1
 .\scripts\docs.ps1
 ```
 
-## Run sample ingestion
+## Run fixture-backed sample ingestion
+
+Use committed fixtures to populate the local sample database without making live
+web requests:
 
 ```powershell
 .\scripts\run-ccld-sample.ps1
 ```
 
-## Browse with Datasette
+The script prints the SQLite database path, generated Datasette metadata path,
+and the Datasette command to open.
+
+## Run controlled live fetch
+
+Live fetch is explicitly user-invoked and must be scoped to provided facility
+numbers. Use conservative limits while testing:
 
 ```powershell
-.\.venv\Scripts\datasette.exe data\processed\ccld.sqlite
+.\scripts\run-ccld-live-fetch.ps1 -FacilityNumber 157806098 -Limit 5 -MaxRequests 10
 ```
 
-Then open the local URL shown in PowerShell.
+## Run multi-facility live fetch
+
+Provide multiple explicit facility numbers when you need a multi-facility local
+review database:
+
+```powershell
+.\scripts\run-ccld-live-fetch.ps1 -FacilityNumber 157806098,157806097 -Limit 5 -MaxRequests 20
+```
+
+This workflow does not perform statewide crawling or automatic search expansion.
+
+## Browse with Datasette
+
+Prefer the Datasette command printed by the sample or live fetch script because
+it includes the generated metadata file.
+
+Manual command:
+
+```powershell
+.\.venv\Scripts\datasette.exe data\processed\ccld.sqlite --metadata data\processed\ccld.datasette-metadata.json
+```
+
+Open the local URL shown in PowerShell and start with these views:
+
+1. `complaint_review_summary`
+2. `facility_complaint_summary`
+3. `delay_review_flags`
+4. `source_traceability_review`
 
 ## Add a fixture
 
@@ -51,5 +73,27 @@ Then open the local URL shown in PowerShell.
 2. Check logs under `data/logs/`.
 3. Run the extractor against the raw file only.
 4. Add or update a fixture reproducing the failure.
-5. Fix extraction logic.
-6. Run full regression tests.
+5. Fix the smallest amount of extraction logic needed.
+6. Run full regression tests and documentation checks.
+
+## PR and merge cleanup
+
+Before opening a PR, include the validation results, a concise PR title, and a PR
+body that states whether user-facing or documentation-impacting behavior changed.
+
+After the PR merges, clean up the local branch:
+
+```powershell
+git switch main
+git pull --ff-only
+git branch --delete <merged-branch-name>
+git remote prune origin
+```
+
+Start follow-up work from an updated `main` branch:
+
+```powershell
+git switch main
+git pull --ff-only
+git switch -c <next-branch-name>
+```

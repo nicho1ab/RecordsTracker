@@ -44,6 +44,28 @@ For every code change:
 7. If no documentation changes are needed, explicitly state that no user-facing or documentation-impacting behavior changed.
 8. Explain validation commands.
 
+## Required task handoff
+
+At the end of every completed task, provide a self-contained handoff that lets
+the user finish the GitHub workflow and start the next Copilot task without
+reconstructing context. Include all of the following:
+
+1. Summary of changes.
+2. Validation results, including commands run and whether each passed.
+3. Exact git commit and push commands. Prefer `git push -u origin HEAD` so the
+	command works for the current branch without embedding account-specific
+	details.
+4. PR title.
+5. PR body, including test results and documentation impact.
+6. Required GitHub checks to wait for before merge.
+7. Post-merge cleanup commands.
+8. Recommended next branch name.
+9. Next Copilot prompt.
+
+Do not include personal paths, usernames, account-specific URLs, private URLs,
+tokens, secrets, or machine-specific details in the handoff. Use placeholders
+when a repository owner, branch, or pull request URL is unknown.
+
 ## Preferred stack
 
 - Python

@@ -37,6 +37,10 @@ End users need plain-language instructions for browsing, searching, filtering, u
 - If schema changes, update data dictionary and schemas.
 - If connector behavior changes, update connector docs and known limitations.
 - If accessibility behavior changes, update accessibility docs and test notes.
+- If milestones, implemented capabilities, workflow scope, or deferred work
+	changes, update `ROADMAP.md`.
+- If implemented capabilities or user-visible workflows change, update
+	`CHANGELOG.md` under Unreleased.
 
 ## Documentation impact and currency
 
@@ -47,6 +51,8 @@ contract, limitation, design, and decision documentation needs to change.
 At minimum, review these documentation surfaces for impact:
 
 - `README.md`
+- `ROADMAP.md`
+- `CHANGELOG.md`
 - `docs/user/*`
 - `docs/developer/*`
 - `DATA_CONTRACT.md`
