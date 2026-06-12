@@ -30,3 +30,5 @@
 	checks, merge cleanup, and next-task handoff.
 - Added next-task selection guidance so Copilot handoffs prefer active roadmap
 	product and technical milestones over repeated documentation-only work.
+- Added copy/paste-safe handoff formatting rules for PowerShell commands, PR
+	title/body separation, post-merge cleanup, and next-branch creation.
