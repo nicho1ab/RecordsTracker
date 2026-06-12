@@ -144,6 +144,11 @@ REQUIRED_CONTENT = {
     ],
     "docs/developer/accessibility.md": [
         "Local output checklist",
+        "Datasette views",
+        "Generated metadata",
+        "Saved queries",
+        "CSV exports and review bundles",
+        "Script output",
         "Delay fields and review flags are described as screening aids",
         "source URL, raw SHA-256 hash, connector name, and retrieval timestamp",
     ],
