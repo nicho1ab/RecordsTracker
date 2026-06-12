@@ -48,16 +48,21 @@ Use commands that avoid account-specific details when possible:
 ```powershell
 git add <changed-files>
 git commit -m "<concise imperative commit message>"
-git push -u origin HEAD
+git -c gc.auto=0 push -u origin <branch-name>
 ```
 
-Post-merge cleanup should usually be:
+Post-merge cleanup should usually be labeled "Run only after squash merge is complete":
 
 ```powershell
 git switch main
 git pull --ff-only
 git branch --delete <merged-branch-name>
 git remote prune origin
+```
+
+Create the next branch in a separate command block:
+
+```powershell
 git switch -c <next-branch-name>
 ```
 
@@ -69,6 +74,20 @@ The next Copilot prompt should point to the governance files and ask for the
 smallest safe, tested change. Do not include personal paths, usernames, account
 details, private URLs, tokens, secrets, or machine-specific configuration in the
 handoff.
+
+## Handoff formatting rules
+
+All completed-task handoffs must be copy/paste-safe for PowerShell users.
+
+- Commands must be in separate fenced code blocks.
+- Prose must never appear on the same line as a command.
+- GitHub PR title/body must be separate from PowerShell commands.
+- Post-merge cleanup commands must be clearly labeled "Run only after squash merge is complete."
+- The next branch command must not be combined with cleanup commands.
+- Do not concatenate commands together without a semicolon or newline.
+- Prefer one short command block per step.
+- For push commands, use `git -c gc.auto=0 push -u origin <branch-name>` to
+	avoid auto-gc prompts.
 
 ## Next task selection
 

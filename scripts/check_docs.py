@@ -53,6 +53,10 @@ REQUIRED_CONTENT = {
         "Next task selection",
         "Do not repeatedly recommend documentation-only work",
         "select the next product or technical milestone from `ROADMAP.md`",
+        "Handoff formatting rules",
+        "copy/paste-safe",
+        "GitHub PR title/body must be separate from PowerShell commands",
+        "Run only after squash merge is complete",
     ],
     "README.md": [
         "CCLD complaints proof of concept",
@@ -121,6 +125,10 @@ REQUIRED_CONTENT = {
         "Next task selection",
         "Do not repeatedly recommend documentation-only work",
         "select the next product or technical milestone from `ROADMAP.md`",
+        "Handoff formatting rules",
+        "copy/paste-safe",
+        "GitHub PR title/body must be separate from PowerShell commands",
+        "Run only after squash merge is complete",
     ],
     "docs/developer/release-process.md": [
         "Task completion checklist",
