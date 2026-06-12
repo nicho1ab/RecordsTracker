@@ -7,14 +7,27 @@ from typing import Any, cast
 
 from ccld_complaints.connectors.base import SourceDocument, SourceDocumentCandidate
 from ccld_complaints.connectors.ccld import CcldFacilityReportsConnector
-from ccld_complaints.connectors.ccld.facility_reports import ingest_facility_reports_for_facility
+from ccld_complaints.connectors.ccld.facility_reports import (
+    _allegation_text,
+    ingest_facility_reports_for_facility,
+)
 from ccld_complaints.utils.hash import sha256_bytes
 
 FIXTURE_URL = "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=3"
+NUMBERED_ALLEGATIONS_FIXTURE_URL = (
+    "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=40"
+)
 RAW_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_inx3.html")
+NUMBERED_ALLEGATIONS_RAW_FIXTURE = Path(
+    "tests/fixtures/ccld/raw/157806098_inx40_numbered_allegations.html"
+)
 RAW_DETAIL_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_facility_detail.html")
 EXPECTED_FIXTURE = Path("tests/fixtures/ccld/expected/157806098_inx3.json")
+NUMBERED_ALLEGATIONS_EXPECTED_FIXTURE = Path(
+    "tests/fixtures/ccld/expected/157806098_inx40_numbered_allegations.json"
+)
 RETRIEVED_AT = "2026-06-10T00:00:00+00:00"
+NUMBERED_ALLEGATIONS_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 
 
 def test_ccld_facility_detail_discovers_report_candidates_from_fixture() -> None:
@@ -119,6 +132,33 @@ def test_ccld_facility_report_normalizes_to_expected_fixture() -> None:
     expected = json.loads(EXPECTED_FIXTURE.read_text(encoding="utf-8"))
 
     assert _without_audit(normalized) == expected
+
+
+def test_ccld_facility_report_strips_numbered_allegation_prefixes() -> None:
+    connector = CcldFacilityReportsConnector()
+    normalized = connector.normalize(_extract_numbered_allegations_fixture())
+    expected = json.loads(NUMBERED_ALLEGATIONS_EXPECTED_FIXTURE.read_text(encoding="utf-8"))
+
+    assert _without_audit(normalized) == expected
+
+
+def test_ccld_allegation_cleanup_handles_numbered_prefix_variants() -> None:
+    assert _allegation_text("1. Facility did not follow procedures") == (
+        "Facility did not follow procedures"
+    )
+    assert _allegation_text("2) Facility staff did not supervise") == (
+        "Facility staff did not supervise"
+    )
+    assert _allegation_text("1 - Facility records were incomplete") == (
+        "Facility records were incomplete"
+    )
+    assert _allegation_text("01: Facility medication log was missing") == (
+        "Facility medication log was missing"
+    )
+    assert _allegation_text("ALLEGATION 1: Facility did not report an incident") == (
+        "Facility did not report an incident"
+    )
+    assert _allegation_text("3") is None
 
 
 def test_ccld_facility_report_validates_normalized_records() -> None:
@@ -229,6 +269,18 @@ def _extract_fixture() -> dict[str, object]:
         raw_path=RAW_FIXTURE,
         raw_sha256=sha256_bytes(raw_content),
         retrieved_at=RETRIEVED_AT,
+        content_type="text/html",
+    )
+    return CcldFacilityReportsConnector().extract(document)
+
+
+def _extract_numbered_allegations_fixture() -> dict[str, object]:
+    raw_content = NUMBERED_ALLEGATIONS_RAW_FIXTURE.read_bytes()
+    document = SourceDocument(
+        source_url=NUMBERED_ALLEGATIONS_FIXTURE_URL,
+        raw_path=NUMBERED_ALLEGATIONS_RAW_FIXTURE,
+        raw_sha256=sha256_bytes(raw_content),
+        retrieved_at=NUMBERED_ALLEGATIONS_RETRIEVED_AT,
         content_type="text/html",
     )
     return CcldFacilityReportsConnector().extract(document)

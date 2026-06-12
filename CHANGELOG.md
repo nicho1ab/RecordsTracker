@@ -37,3 +37,6 @@
 - Added a local review bundle export script that writes complaint review, delay
 	triage, and source traceability CSV files with source URL, raw hash, connector
 	metadata, retrieval time, report index, and delay-flag caution notes.
+- Hardened CCLD allegation extraction for report layouts where numeric allegation
+	markers and allegation text appear on the same line, with fixture-backed
+	regression coverage.
