@@ -8,6 +8,7 @@ from typing import Any
 from ccld_complaints.connectors.base import SourceDocument, SourceDocumentCandidate
 from ccld_complaints.connectors.ccld import CcldFacilityReportsConnector, FacilityIngestionResult
 from ccld_complaints.connectors.ccld.facility_reports import ingest_facility_reports_for_facility
+from ccld_complaints.review_bundle import COMPLAINT_REVIEW_EXPORT_SQL
 from ccld_complaints.storage.sqlite import initialize_database
 from ccld_complaints.utils.hash import sha256_bytes
 
@@ -383,41 +384,7 @@ ORDER BY complaint_received_date DESC, report_date DESC
                 "Export complaint review fields with source URL, raw hash, connector metadata, "
                 "retrieval time, and report index. Treat derived fields as review aids."
             ),
-            "sql": """
-SELECT
-    cr.facility_number,
-    cr.facility_name,
-    cr.complaint_control_number,
-    cr.complaint_received_date,
-    cr.first_investigation_activity_date,
-    cr.visit_date,
-    cr.report_date,
-    cr.date_signed,
-    cr.finding,
-    cr.allegation_count,
-    cr.allegation_summary,
-    cr.days_received_to_first_activity,
-    cr.days_received_to_visit,
-    cr.days_received_to_report,
-    cr.days_report_to_signed,
-    cr.review_delay_over_30_days,
-    cr.review_delay_over_60_days,
-    cr.review_delay_over_90_days,
-    cr.review_delay_over_120_days,
-    cr.missing_first_activity_date,
-    cr.report_date_used_as_proxy,
-    cr.source_url,
-    sd.raw_sha256,
-    cr.raw_path,
-    sd.connector_name,
-    sd.connector_version,
-    sd.retrieved_at,
-    sd.report_index
-FROM complaint_review_summary cr
-JOIN complaints c ON c.complaint_id = cr.complaint_id
-JOIN source_documents sd ON sd.document_id = c.document_id
-ORDER BY cr.facility_number, cr.complaint_received_date DESC, cr.report_date DESC
-            """.strip(),
+            "sql": COMPLAINT_REVIEW_EXPORT_SQL,
         },
         "records_with_delay_review_flags": {
             "title": "Records with Delay Review Flags",

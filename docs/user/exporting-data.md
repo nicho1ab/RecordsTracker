@@ -2,6 +2,29 @@
 
 Exports should include clear headers and source traceability fields.
 
+## Export a local review bundle
+
+After populating the local SQLite database, use the review bundle script to write source-traceable CSV files and a short README with review cautions:
+
+```powershell
+.\scripts\export-review-bundle.ps1
+```
+
+The default output folder is `data/processed/review-bundle`. Use `-DbPath` and `-OutputDir` when exporting from a custom database path:
+
+```powershell
+.\scripts\export-review-bundle.ps1 -DbPath data\processed\live-ccld.sqlite -OutputDir data\processed\live-review-bundle
+```
+
+The bundle includes:
+
+- `complaint_review_with_source_traceability.csv` for complaint review fields with source URL, raw SHA-256 hash, raw path, connector metadata, retrieval timestamp, and report index.
+- `delay_review_flags_with_source_traceability.csv` for triage records with one or more review flags and the same source traceability fields.
+- `source_traceability.csv` for checking source URL, raw hash, connector metadata, retrieval time, report index, document type, and content type.
+- `README.md` with review notes and delay-flag caution language.
+
+Unknown database values are exported as `unknown`. Delay review flags in the bundle are screening aids for closer review, not conclusions that an investigation was delayed.
+
 ## Export from Datasette
 
 1. Open the table you want to review.
