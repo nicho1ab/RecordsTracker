@@ -32,3 +32,5 @@
 	product and technical milestones over repeated documentation-only work.
 - Added copy/paste-safe handoff formatting rules for PowerShell commands, PR
 	title/body separation, post-merge cleanup, and next-branch creation.
+- Improved Datasette review usability with additional source-traceable saved
+	queries and clearer script launch guidance for common review workflows.
