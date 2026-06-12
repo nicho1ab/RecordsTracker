@@ -11,10 +11,20 @@ from ccld_complaints.connectors.ccld.facility_reports import ingest_facility_rep
 from ccld_complaints.utils.hash import sha256_bytes
 
 FIXTURE_URL = "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=3"
+NUMBERED_ALLEGATIONS_FIXTURE_URL = (
+    "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=40"
+)
 RAW_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_inx3.html")
+NUMBERED_ALLEGATIONS_RAW_FIXTURE = Path(
+    "tests/fixtures/ccld/raw/157806098_inx40_numbered_allegations.html"
+)
 RAW_DETAIL_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_facility_detail.html")
 EXPECTED_FIXTURE = Path("tests/fixtures/ccld/expected/157806098_inx3.json")
+NUMBERED_ALLEGATIONS_EXPECTED_FIXTURE = Path(
+    "tests/fixtures/ccld/expected/157806098_inx40_numbered_allegations.json"
+)
 RETRIEVED_AT = "2026-06-10T00:00:00+00:00"
+NUMBERED_ALLEGATIONS_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 
 
 def test_ccld_facility_detail_discovers_report_candidates_from_fixture() -> None:
@@ -117,6 +127,14 @@ def test_ccld_facility_report_normalizes_to_expected_fixture() -> None:
     connector = CcldFacilityReportsConnector()
     normalized = connector.normalize(_extract_fixture())
     expected = json.loads(EXPECTED_FIXTURE.read_text(encoding="utf-8"))
+
+    assert _without_audit(normalized) == expected
+
+
+def test_ccld_facility_report_strips_numbered_allegation_prefixes() -> None:
+    connector = CcldFacilityReportsConnector()
+    normalized = connector.normalize(_extract_numbered_allegations_fixture())
+    expected = json.loads(NUMBERED_ALLEGATIONS_EXPECTED_FIXTURE.read_text(encoding="utf-8"))
 
     assert _without_audit(normalized) == expected
 
@@ -229,6 +247,18 @@ def _extract_fixture() -> dict[str, object]:
         raw_path=RAW_FIXTURE,
         raw_sha256=sha256_bytes(raw_content),
         retrieved_at=RETRIEVED_AT,
+        content_type="text/html",
+    )
+    return CcldFacilityReportsConnector().extract(document)
+
+
+def _extract_numbered_allegations_fixture() -> dict[str, object]:
+    raw_content = NUMBERED_ALLEGATIONS_RAW_FIXTURE.read_bytes()
+    document = SourceDocument(
+        source_url=NUMBERED_ALLEGATIONS_FIXTURE_URL,
+        raw_path=NUMBERED_ALLEGATIONS_RAW_FIXTURE,
+        raw_sha256=sha256_bytes(raw_content),
+        retrieved_at=NUMBERED_ALLEGATIONS_RETRIEVED_AT,
         content_type="text/html",
     )
     return CcldFacilityReportsConnector().extract(document)
