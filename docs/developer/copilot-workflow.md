@@ -47,6 +47,13 @@ Every completed Copilot task must end with a handoff that includes:
 - Recommended next branch name.
 - Next Copilot prompt.
 
+When GitHub CLI completes the PR workflow for the user, including PR creation,
+check verification, squash merge, branch deletion, and returning the workspace
+to updated `main`, the final response may be a concise completion summary rather
+than a manual copy/paste handoff. Include the PR number, validation/check
+results, merge status, current git state, and recommended next task. Use the
+full handoff format when any GitHub or git step remains for the user.
+
 Use commands that avoid account-specific details when possible:
 
 ```powershell

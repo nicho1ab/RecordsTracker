@@ -76,6 +76,13 @@ reconstructing context. Include all of the following:
 8. Recommended next branch name.
 9. Next Copilot prompt.
 
+If GitHub CLI successfully creates the PR, verifies checks, completes the squash
+merge, deletes the remote/local branch, and returns the workspace to updated
+`main`, provide a concise completion summary instead of manual copy/paste
+commands. Include PR number, validation/check results, merge status, current git
+state, and recommended next task. Use the full copy/paste-safe handoff when the
+user still needs to complete any GitHub or git workflow step manually.
+
 Do not include personal paths, usernames, account-specific URLs, private URLs,
 tokens, secrets, or machine-specific details in the handoff. Use placeholders
 when a repository owner, branch, or pull request URL is unknown.

@@ -82,6 +82,11 @@ the merge when checks pass:
 gh pr merge --squash --auto --delete-branch
 ```
 
+When `gh` completes PR creation, check verification, squash merge, remote branch
+deletion, and local branch cleanup, the completion note may summarize what was
+done instead of giving the user manual PR and cleanup commands. Use the full
+copy/paste-safe handoff when any GitHub or git step still needs user action.
+
 ### Merge cleanup
 
 After the PR merges, update `main`, delete the merged branch, and prune stale

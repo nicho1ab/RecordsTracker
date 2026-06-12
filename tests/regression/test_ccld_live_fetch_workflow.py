@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 
+from ccld_complaints.cli.fetch_live_ccld import live_fetch_summary_lines
 from ccld_complaints.connectors.base import SourceDocument
 from ccld_complaints.connectors.ccld import CcldFacilityReportsConnector, facility_reports
 from ccld_complaints.connectors.ccld.facility_reports import (
@@ -228,6 +229,57 @@ def test_live_fetch_workflow_limit_selects_discovered_candidates() -> None:
     )
 
     assert [candidate.report_index for candidate in result.candidates] == [39, 37, 29]
+
+
+def test_live_fetch_summary_reports_discovered_selected_and_skipped_counts() -> None:
+    result = ingest_facility_reports_for_facility(
+        facility_detail_html=RAW_DETAIL_FIXTURE.read_text(encoding="utf-8"),
+        discovered_at=RETRIEVED_AT,
+        limit=2,
+        max_requests=2,
+        fetch_report=_fake_report_fetch,
+    )
+
+    assert result.discovered_count == 40
+    assert len(result.candidates) == 2
+
+    summary = live_fetch_summary_lines([result], [])
+
+    assert "- Report candidates discovered: 40" in summary
+    assert "- Report candidates selected: 2" in summary
+    assert "- Reports skipped by limit: 38" in summary
+    assert "- Reports fetched: 2" in summary
+    assert "- Records written: 2" in summary
+    assert "- Report failures: 0" in summary
+    assert (
+        "- 157806098: discovered=40, selected=2, skipped=38, "
+        "fetched=2, written=2, failed=0"
+    ) in summary
+
+
+def test_live_fetch_summary_separates_fetch_failures_from_fetched_reports() -> None:
+    def partially_failing_fetch(source_url: str) -> bytes:
+        if "inx=37" in source_url:
+            raise RuntimeError("controlled report fetch failure")
+        return _fake_report_fetch(source_url)
+
+    result = ingest_facility_reports_for_facility(
+        facility_detail_html=RAW_DETAIL_FIXTURE.read_text(encoding="utf-8"),
+        discovered_at=RETRIEVED_AT,
+        limit=3,
+        max_requests=3,
+        fetch_report=partially_failing_fetch,
+    )
+
+    summary = live_fetch_summary_lines([result], [])
+
+    assert "- Reports fetched: 2" in summary
+    assert "- Records written: 2" in summary
+    assert "- Report failures: 1" in summary
+    assert (
+        "- 157806098: discovered=40, selected=3, skipped=37, "
+        "fetched=2, written=2, failed=1"
+    ) in summary
 
 
 def test_live_fetch_workflow_enforces_max_requests() -> None:
