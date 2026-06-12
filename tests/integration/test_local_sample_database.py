@@ -99,6 +99,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "allegations" in database_metadata["tables"]
     assert "events" in database_metadata["tables"]
     assert "extraction_audit" in database_metadata["tables"]
+    assert "review_home" in database_metadata["queries"]
     assert "complaint_review_start_here" in database_metadata["queries"]
     assert "complaints_by_facility" in database_metadata["queries"]
     assert "complaint_review_export_with_traceability" in database_metadata["queries"]
@@ -130,6 +131,17 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
         ":facility_number"
         in database_metadata["queries"]["complaints_by_facility"]["sql"]
     )
+    review_home_query = database_metadata["queries"]["review_home"]
+    assert "Open this first" in review_home_query["description"]
+    assert "Review complaints" in review_home_query["sql"]
+    assert "Find records needing closer review" in review_home_query["sql"]
+    assert "Compare facilities" in review_home_query["sql"]
+    assert "Verify sources" in review_home_query["sql"]
+    assert "Export CSVs" in review_home_query["sql"]
+    assert "source URL, raw hash, connector metadata" in review_home_query["sql"]
+    with sqlite3.connect(":memory:") as conn:
+        review_home_rows = conn.execute(review_home_query["sql"]).fetchall()
+    assert len(review_home_rows) == 5
     start_here_query = database_metadata["queries"]["complaint_review_start_here"]
     assert "Open this first" in start_here_query["description"]
     assert "screening fields" in start_here_query["description"]
@@ -169,12 +181,14 @@ def test_write_datasette_metadata_writes_json_next_to_database(tmp_path: Path) -
 def test_review_workflow_lines_name_first_views() -> None:
     lines = review_workflow_lines()
 
+    assert "Open the review_home saved query first for task-based review paths." in lines
     assert "Open these Datasette review views first, in order:" in lines
     assert "Saved queries for common workflows:" in lines
     assert any("complaint_review_summary" in line for line in lines)
     assert any("facility_complaint_summary" in line for line in lines)
     assert any("delay_review_flags" in line for line in lines)
     assert any("source_traceability_review" in line for line in lines)
+    assert any("review_home" in line for line in lines)
     assert any("complaint_review_start_here" in line for line in lines)
     assert any("complaints_by_facility" in line for line in lines)
     assert any("complaint_review_export_with_traceability" in line for line in lines)
