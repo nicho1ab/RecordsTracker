@@ -89,15 +89,21 @@ def datasette_metadata(db_path: Path) -> dict[str, Any]:
 
 def review_workflow_lines() -> list[str]:
     return [
-        "Open these Datasette views first:",
+        "Open these Datasette review views first, in order:",
         "1. complaint_review_summary - main complaint review across facilities.",
         "2. facility_complaint_summary - facility-level counts and date range.",
         "3. delay_review_flags - triage list for records with review flags.",
         "4. source_traceability_review - source URLs, hashes, connector details, and report index.",
+        "Saved queries for common workflows:",
+        "- complaints_by_facility - filter complaint review by facility number.",
+        "- complaint_review_export_with_traceability - export complaint fields with source hashes.",
+        "- records_with_delay_review_flags - triage review flags as screening aids only.",
         (
-            "Saved queries to try: complaints_by_facility, records_with_delay_review_flags, "
-            "newest_reports, allegation_summary_by_facility, source_traceability_check."
+            "- facilities_with_delay_review_flags - find facilities with records needing "
+            "closer review."
         ),
+        "- source_traceability_by_facility - check source provenance for one facility.",
+        "- newest_reports - review most recently retrieved source documents.",
         "Delay flags are screening aids only; verify important details against source documents.",
     ]
 
@@ -371,6 +377,48 @@ WHERE facility_number = :facility_number
 ORDER BY complaint_received_date DESC, report_date DESC
             """.strip(),
         },
+        "complaint_review_export_with_traceability": {
+            "title": "Complaint Review Export with Source Traceability",
+            "description": (
+                "Export complaint review fields with source URL, raw hash, connector metadata, "
+                "retrieval time, and report index. Treat derived fields as review aids."
+            ),
+            "sql": """
+SELECT
+    cr.facility_number,
+    cr.facility_name,
+    cr.complaint_control_number,
+    cr.complaint_received_date,
+    cr.first_investigation_activity_date,
+    cr.visit_date,
+    cr.report_date,
+    cr.date_signed,
+    cr.finding,
+    cr.allegation_count,
+    cr.allegation_summary,
+    cr.days_received_to_first_activity,
+    cr.days_received_to_visit,
+    cr.days_received_to_report,
+    cr.days_report_to_signed,
+    cr.review_delay_over_30_days,
+    cr.review_delay_over_60_days,
+    cr.review_delay_over_90_days,
+    cr.review_delay_over_120_days,
+    cr.missing_first_activity_date,
+    cr.report_date_used_as_proxy,
+    cr.source_url,
+    sd.raw_sha256,
+    cr.raw_path,
+    sd.connector_name,
+    sd.connector_version,
+    sd.retrieved_at,
+    sd.report_index
+FROM complaint_review_summary cr
+JOIN complaints c ON c.complaint_id = cr.complaint_id
+JOIN source_documents sd ON sd.document_id = c.document_id
+ORDER BY cr.facility_number, cr.complaint_received_date DESC, cr.report_date DESC
+            """.strip(),
+        },
         "records_with_delay_review_flags": {
             "title": "Records with Delay Review Flags",
             "description": (
@@ -383,6 +431,19 @@ FROM delay_review_flags
 ORDER BY days_received_to_report DESC, complaint_received_date DESC
             """.strip(),
         },
+        "facilities_with_delay_review_flags": {
+            "title": "Facilities with Delay Review Flags",
+            "description": (
+                "Rank facilities by records with delay or review flags. Counts are screening "
+                "aids, not conclusions about delays."
+            ),
+            "sql": """
+SELECT *
+FROM facility_complaint_summary
+WHERE records_with_delay_review_flags > 0
+ORDER BY records_with_delay_review_flags DESC, complaint_count DESC, facility_number
+            """.strip(),
+        },
         "source_traceability_check": {
             "title": "Source Traceability Review",
             "description": (
@@ -392,6 +453,19 @@ ORDER BY days_received_to_report DESC, complaint_received_date DESC
 SELECT *
 FROM source_traceability_review
 ORDER BY facility_number, report_index DESC
+            """.strip(),
+        },
+        "source_traceability_by_facility": {
+            "title": "Source Traceability by Facility",
+            "description": (
+                "Filter source provenance by facility number before relying on or exporting "
+                "derived complaint fields."
+            ),
+            "sql": """
+SELECT *
+FROM source_traceability_review
+WHERE facility_number = :facility_number
+ORDER BY report_index DESC, retrieved_at DESC
             """.strip(),
         },
         "allegation_summary_by_facility": {
