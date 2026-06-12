@@ -69,3 +69,15 @@ The next Copilot prompt should point to the governance files and ask for the
 smallest safe, tested change. Do not include personal paths, usernames, account
 details, private URLs, tokens, secrets, or machine-specific configuration in the
 handoff.
+
+## Next task selection
+
+Do not repeatedly recommend documentation-only work in the next Copilot prompt.
+Documentation-only work is appropriate only when documentation is stale,
+validation is failing, governance files are missing, or the user explicitly asks
+for documentation work. Otherwise, select the next product or technical milestone from `ROADMAP.md`.
+
+Prefer feature work that improves ingestion, review usability, extraction
+quality, exports, accessibility validation, or release readiness. The recommended
+next branch and next Copilot prompt must move the project forward on the current
+roadmap backlog unless validation failed or documentation is stale.

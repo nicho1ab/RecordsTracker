@@ -72,6 +72,11 @@ stay current with implemented project capabilities, including local SQLite and
 Datasette review, source traceability, fixture-backed tests, and controlled live
 fetch behavior.
 
+Documentation checks prevent stale, missing, or misleading documentation. They
+should not become the default next milestone when validation is passing and the
+documentation is current; future work should then come from the active roadmap
+backlog.
+
 ## Public documentation hygiene
 
 Public documentation, examples, templates, and repository metadata must avoid personal or environment-specific details. Do not publish personal names, handles, email addresses, local machine names, private URLs, tokens, secrets, or machine-specific paths.
