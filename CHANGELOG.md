@@ -26,4 +26,3 @@
 	roadmap, changelog, setup, runbook, and Copilot workflow guidance.
 - Added release checklist guidance for validation, accessibility review, PR
 	checks, merge cleanup, and next-task handoff.
-- Added data contract, connector contract, testing strategy, documentation strategy, accessibility requirements, and GitHub Copilot instructions.
