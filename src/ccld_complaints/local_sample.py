@@ -94,7 +94,10 @@ def review_workflow_lines() -> list[str]:
         "2. facility_complaint_summary - facility-level counts and date range.",
         "3. delay_review_flags - triage list for records with review flags.",
         "4. source_traceability_review - source URLs, hashes, connector details, and report index.",
-        "Saved query examples are included in the Datasette metadata.",
+        (
+            "Saved queries to try: complaints_by_facility, records_with_delay_review_flags, "
+            "newest_reports, allegation_summary_by_facility, source_traceability_check."
+        ),
         "Delay flags are screening aids only; verify important details against source documents.",
     ]
 
@@ -108,7 +111,7 @@ def _datasette_table_metadata() -> dict[str, Any]:
         "Source URL, raw SHA-256 hash, raw path, connector, retrieval time, and report index help "
         "reviewers trace each derived record back to public source evidence."
     )
-    return {
+    review_table_metadata = {
         "complaint_review_summary": {
             "title": "Complaint Review Summary",
             "description": (
@@ -227,6 +230,130 @@ def _datasette_table_metadata() -> dict[str, Any]:
                 "report_index": "CCLD report index when available.",
                 "document_type": "Document type extracted from the source report when available.",
                 "content_type": "Fetched source content type when available.",
+            },
+        },
+    }
+    return review_table_metadata | _normalized_table_metadata()
+
+
+def _normalized_table_metadata() -> dict[str, Any]:
+    delay_flag_caution = (
+        "Delay and review flags are screening aids for closer review, not conclusions that an "
+        "investigation was delayed. Verify source documents before making claims."
+    )
+    source_traceability_note = (
+        "Source URL, raw SHA-256 hash, raw path, connector name, connector version, and "
+        "retrieval timestamp preserve traceability back to public source evidence."
+    )
+    return {
+        "facilities": {
+            "title": "Facilities",
+            "description": (
+                "Normalized facility identifiers and descriptive fields. Use review views first "
+                "for routine browsing, then this table for lower-level facility details."
+            ),
+            "columns": {
+                "facility_id": "Stable local facility identifier.",
+                "source_id": "Identifier for the public data source.",
+                "external_facility_number": "Public CCLD facility number.",
+                "facility_name": "Facility name from the public source.",
+            },
+        },
+        "source_documents": {
+            "title": "Source Documents",
+            "description": (
+                "Normalized source document records. Check this table when you need raw source "
+                f"provenance below the review views. {source_traceability_note}"
+            ),
+            "sort_desc": "retrieved_at",
+            "columns": {
+                "document_id": "Stable local source document identifier.",
+                "source_url": "Public source URL used for retrieval.",
+                "retrieved_at": "Timestamp when source content was retrieved.",
+                "raw_sha256": "SHA-256 hash for the preserved raw source file.",
+                "connector_name": "Connector that retrieved and normalized the document.",
+                "connector_version": "Connector version used for extraction.",
+                "raw_path": "Local path to preserved raw source content.",
+                "report_index": "CCLD report index when available.",
+            },
+        },
+        "complaints": {
+            "title": "Complaints",
+            "description": (
+                "Normalized complaint records with extracted dates, findings, delay calculations, "
+                f"and review flags. {delay_flag_caution}"
+            ),
+            "sort_desc": "report_date",
+            "columns": {
+                "complaint_id": "Stable local complaint identifier.",
+                "facility_id": "Facility identifier linking to facilities.",
+                "document_id": "Source document identifier linking to source_documents.",
+                "complaint_control_number": "Complaint control number when available.",
+                "complaint_received_date": "Date the complaint was reportedly received.",
+                "first_investigation_activity_date": (
+                    "Earliest deterministic investigation activity date when extracted."
+                ),
+                "visit_date": "Visit date shown in the source report when available.",
+                "report_date": "Report date shown in the source report.",
+                "finding": "Normalized finding value from the data contract.",
+                "review_delay_over_30_days": delay_flag_caution,
+                "review_delay_over_60_days": delay_flag_caution,
+                "review_delay_over_90_days": delay_flag_caution,
+                "review_delay_over_120_days": delay_flag_caution,
+                "missing_first_activity_date": (
+                    "Set when complaint received date exists but first activity date is missing."
+                ),
+                "report_date_used_as_proxy": (
+                    "Set only when report date is used as the delay review basis because earlier "
+                    "activity or visit dates are unavailable."
+                ),
+            },
+        },
+        "allegations": {
+            "title": "Allegations",
+            "description": (
+                "Normalized allegation text and categories linked to complaint records. Review "
+                "source documents before quoting narrative content."
+            ),
+            "columns": {
+                "allegation_id": "Stable local allegation identifier.",
+                "complaint_id": "Complaint identifier linking to complaints.",
+                "allegation_text": "Allegation text extracted from the source report.",
+                "allegation_category": "Normalized allegation category from the data contract.",
+                "finding": "Normalized allegation finding when available.",
+            },
+        },
+        "events": {
+            "title": "Events",
+            "description": (
+                "Normalized dated events extracted from complaint records when available. Use "
+                "field-level audit details when checking uncertain extraction."
+            ),
+            "sort_desc": "event_date",
+            "columns": {
+                "event_id": "Stable local event identifier.",
+                "complaint_id": "Complaint identifier linking to complaints.",
+                "event_date": "Date of the extracted event.",
+                "event_type": "Normalized event type.",
+                "event_text": "Source text associated with the event when available.",
+            },
+        },
+        "extraction_audit": {
+            "title": "Extraction Audit",
+            "description": (
+                "Field-level extraction audit records for checking extraction method, source text, "
+                "confidence, and warnings. Use this table when verifying important derived fields."
+            ),
+            "columns": {
+                "audit_id": "Stable local extraction audit identifier.",
+                "document_id": "Source document identifier linking to source_documents.",
+                "field_name": "Canonical field name audited by the extractor.",
+                "extraction_method": "Method used to extract the field.",
+                "extractor_version": "Extractor version that produced the audit record.",
+                "extracted_value": "Extracted value when available.",
+                "confidence": "Extractor confidence value when available.",
+                "source_text": "Source text used for field-level review when available.",
+                "warning": "Extraction warning when available.",
             },
         },
     }

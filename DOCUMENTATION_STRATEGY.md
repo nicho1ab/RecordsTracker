@@ -38,6 +38,34 @@ End users need plain-language instructions for browsing, searching, filtering, u
 - If connector behavior changes, update connector docs and known limitations.
 - If accessibility behavior changes, update accessibility docs and test notes.
 
+## Documentation impact and currency
+
+Every feature, workflow, source connector, CLI or script, database or view, or
+user-facing behavior change must evaluate whether public, user, developer,
+contract, limitation, design, and decision documentation needs to change.
+
+At minimum, review these documentation surfaces for impact:
+
+- `README.md`
+- `docs/user/*`
+- `docs/developer/*`
+- `DATA_CONTRACT.md`
+- `SOURCE_CONNECTOR_CONTRACT.md`
+- `KNOWN_LIMITATIONS.md`
+- `DESIGN_AND_USABILITY.md`
+- `DECISIONS.md and ADRs` in `docs/decisions/`
+
+Not every change requires every document to change. However, every pull request
+must either update affected documentation or explicitly state that no user-facing
+or documentation-impacting behavior changed. In PR text, use a clear statement
+such as: no user-facing or documentation-impacting behavior changed.
+
+Root public documentation must describe the active CCLD complaints proof of
+concept, not obsolete scaffold, template, or packaging language. The README must
+stay current with implemented project capabilities, including local SQLite and
+Datasette review, source traceability, fixture-backed tests, and controlled live
+fetch behavior.
+
 ## Public documentation hygiene
 
 Public documentation, examples, templates, and repository metadata must avoid personal or environment-specific details. Do not publish personal names, handles, email addresses, local machine names, private URLs, tokens, secrets, or machine-specific paths.
