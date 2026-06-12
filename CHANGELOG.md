@@ -45,3 +45,5 @@
 	Git-normalized fixture bytes governed by `.gitattributes`.
 - Added GitHub CLI governance for repeatable PR status checks, check watching,
 	squash merge automation, and authentication-secret hygiene.
+- Added live fetch summary output so reviewers can see discovered, selected,
+	skipped, fetched, written, and failed report counts before opening logs.

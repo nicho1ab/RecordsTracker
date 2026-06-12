@@ -31,6 +31,11 @@ numbers. Use conservative limits while testing:
 .\scripts\run-ccld-live-fetch.ps1 -FacilityNumber 157806098 -Limit 5 -MaxRequests 10
 ```
 
+The command prints a live fetch summary with facilities requested, report
+candidates discovered, selected, skipped by limit, fetched, written, and failed.
+Check this summary before opening logs when a run produces fewer records than
+expected.
+
 ## Run multi-facility live fetch
 
 Provide multiple explicit facility numbers when you need a multi-facility local
@@ -41,6 +46,8 @@ review database:
 ```
 
 This workflow does not perform statewide crawling or automatic search expansion.
+The printed facility summary is the first place to check for partial discovery,
+fetch, extraction, validation, or write failures across multiple facilities.
 
 ## Browse with Datasette
 

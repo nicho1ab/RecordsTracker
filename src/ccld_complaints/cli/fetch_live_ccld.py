@@ -7,6 +7,8 @@ from ccld_complaints.connectors.ccld import CcldFacilityReportsConnector
 from ccld_complaints.connectors.ccld.facility_reports import (
     LIVE_REQUEST_TIMEOUT_SECONDS,
     LIVE_USER_AGENT,
+    FacilityIngestionResult,
+    FacilityWorkflowFailure,
     ingest_facility_reports_for_facilities,
     ingest_facility_reports_for_facility,
     normalize_facility_numbers,
@@ -128,8 +130,7 @@ def main() -> None:
             limit=limit,
             max_requests=args.max_requests,
         )
-        candidates = single_result.candidates
-        records = single_result.records
+        facility_results = [single_result]
         report_failures = single_result.failures
         facility_failures = []
     else:
@@ -143,14 +144,12 @@ def main() -> None:
             per_facility_limit=limit,
             max_requests=args.max_requests,
         )
-        candidates = multi_result.candidates
-        records = multi_result.records
+        facility_results = multi_result.facility_results
         report_failures = multi_result.failures
         facility_failures = multi_result.facility_failures
 
-    print(f"Discovered candidates selected: {len(candidates)}")
-    print(f"Records written: {len(records)}")
-    print(f"Failures recorded: {len(report_failures) + len(facility_failures)}")
+    for line in live_fetch_summary_lines(facility_results, facility_failures):
+        print(line)
     for facility_failure in facility_failures:
         print(
             "Facility failure: "
@@ -174,6 +173,70 @@ def main() -> None:
     print(datasette_command(args.db_path))
     for line in review_workflow_lines():
         print(line)
+
+
+def live_fetch_summary_lines(
+    facility_results: list[FacilityIngestionResult],
+    facility_failures: list[FacilityWorkflowFailure],
+) -> list[str]:
+    discovered = sum(result.discovered_count for result in facility_results)
+    selected = sum(len(result.candidates) for result in facility_results)
+    skipped = sum(
+        max(result.discovered_count - len(result.candidates), 0)
+        for result in facility_results
+    )
+    written = sum(len(result.records) for result in facility_results)
+    report_failures = sum(len(result.failures) for result in facility_results)
+    fetched = written + sum(
+        1
+        for result in facility_results
+        for failure in result.failures
+        if failure.stage in _POST_FETCH_FAILURE_STAGES
+    )
+
+    lines = [
+        "Live fetch summary:",
+        f"- Facilities requested: {len(facility_results) + len(facility_failures)}",
+        f"- Facilities with discovery failures: {len(facility_failures)}",
+        f"- Report candidates discovered: {discovered}",
+        f"- Report candidates selected: {selected}",
+        f"- Reports skipped by limit: {skipped}",
+        f"- Reports fetched: {fetched}",
+        f"- Records written: {written}",
+        f"- Report failures: {report_failures}",
+    ]
+
+    if facility_results:
+        lines.append("Facility summary:")
+    for result in facility_results:
+        lines.append(_facility_summary_line(result))
+
+    if facility_failures:
+        lines.append("Facility failures:")
+    for failure in facility_failures:
+        lines.append(
+            "- "
+            f"{failure.facility_number}: stage={failure.stage}, "
+            f"error={failure.error_type}, message={failure.message}"
+        )
+
+    return lines
+
+
+_POST_FETCH_FAILURE_STAGES = {"extract", "normalize", "validate", "emit"}
+
+
+def _facility_summary_line(result: FacilityIngestionResult) -> str:
+    skipped = max(result.discovered_count - len(result.candidates), 0)
+    fetched = len(result.records) + sum(
+        1 for failure in result.failures if failure.stage in _POST_FETCH_FAILURE_STAGES
+    )
+    return (
+        "- "
+        f"{result.facility_number}: discovered={result.discovered_count}, "
+        f"selected={len(result.candidates)}, skipped={skipped}, "
+        f"fetched={fetched}, written={len(result.records)}, failed={len(result.failures)}"
+    )
 
 
 def _collect_facility_numbers(
