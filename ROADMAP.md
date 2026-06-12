@@ -41,6 +41,8 @@ governance scaffold.
 	required public guidance.
 - Added Copilot workflow guidance for small, testable changes under the project
 	governance rules.
+- Added release checklist guidance for validation, accessibility review, PR
+	checks, merge cleanup, and next-task handoff.
 
 ## Near-term milestones
 
@@ -53,8 +55,8 @@ governance scaffold.
 	presence, and raw source traceability.
 - Improve local review documentation for repeated reviewer tasks and export
 	cautions.
-- Add release checklist guidance for validation, accessibility review, PR checks,
-	merge cleanup, and next-task handoff.
+- Keep release checklist guidance current as validation, accessibility, and PR
+	workflow requirements evolve.
 
 ## Decision points
 
