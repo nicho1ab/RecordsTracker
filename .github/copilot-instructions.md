@@ -80,8 +80,16 @@ If GitHub CLI successfully creates the PR, verifies checks, completes the squash
 merge, deletes the remote/local branch, and returns the workspace to updated
 `main`, provide a concise completion summary instead of manual copy/paste
 commands. Include PR number, validation/check results, merge status, current git
-state, and recommended next task. Use the full copy/paste-safe handoff when the
-user still needs to complete any GitHub or git workflow step manually.
+state, recommended next branch name, and exact next Copilot prompt. The next
+branch and next Copilot prompt are always required, even when every GitHub step
+was automated successfully. Use the full copy/paste-safe handoff when the user
+still needs to complete any GitHub or git workflow step manually.
+
+Do not start an unattended loop through multiple roadmap tasks after a merge.
+Complete one small task, automate the PR lifecycle with `gh` when available,
+return to updated `main`, then provide the next branch and exact next Copilot
+prompt for the user to approve or send. Continue automatically only when the
+user explicitly requests the next task in the current conversation.
 
 Do not include personal paths, usernames, account-specific URLs, private URLs,
 tokens, secrets, or machine-specific details in the handoff. Use placeholders

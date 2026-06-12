@@ -86,6 +86,8 @@ When `gh` completes PR creation, check verification, squash merge, remote branch
 deletion, and local branch cleanup, the completion note may summarize what was
 done instead of giving the user manual PR and cleanup commands. Use the full
 copy/paste-safe handoff when any GitHub or git step still needs user action.
+Even in the abbreviated successful-`gh` completion note, include the recommended
+next branch name and exact next Copilot prompt.
 
 ### Merge cleanup
 
@@ -107,6 +109,11 @@ exact commit and push commands, PR title, PR body, Required GitHub checks,
 post-merge cleanup commands, recommended next branch name, and next Copilot
 prompt. The handoff must include a next Copilot prompt that points to the
 governance files and asks for the smallest safe, tested change.
+
+Do not automatically continue through multiple roadmap items without a user
+checkpoint. After an automated merge, return to updated `main`, summarize the
+completed task, and provide the next branch and exact prompt for the user to
+approve or send.
 
 Start follow-up work from updated `main`:
 

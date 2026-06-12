@@ -47,3 +47,6 @@
 	squash merge automation, and authentication-secret hygiene.
 - Added live fetch summary output so reviewers can see discovered, selected,
 	skipped, fetched, written, and failed report counts before opening logs.
+- Tightened GitHub CLI completion governance so automated PR workflows still
+	include the next branch and exact next Copilot prompt, and so roadmap work
+	continues through explicit user checkpoints rather than unattended loops.
