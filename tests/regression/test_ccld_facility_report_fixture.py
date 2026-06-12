@@ -7,7 +7,10 @@ from typing import Any, cast
 
 from ccld_complaints.connectors.base import SourceDocument, SourceDocumentCandidate
 from ccld_complaints.connectors.ccld import CcldFacilityReportsConnector
-from ccld_complaints.connectors.ccld.facility_reports import ingest_facility_reports_for_facility
+from ccld_complaints.connectors.ccld.facility_reports import (
+    _allegation_text,
+    ingest_facility_reports_for_facility,
+)
 from ccld_complaints.utils.hash import sha256_bytes
 
 FIXTURE_URL = "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=3"
@@ -137,6 +140,25 @@ def test_ccld_facility_report_strips_numbered_allegation_prefixes() -> None:
     expected = json.loads(NUMBERED_ALLEGATIONS_EXPECTED_FIXTURE.read_text(encoding="utf-8"))
 
     assert _without_audit(normalized) == expected
+
+
+def test_ccld_allegation_cleanup_handles_numbered_prefix_variants() -> None:
+    assert _allegation_text("1. Facility did not follow procedures") == (
+        "Facility did not follow procedures"
+    )
+    assert _allegation_text("2) Facility staff did not supervise") == (
+        "Facility staff did not supervise"
+    )
+    assert _allegation_text("1 - Facility records were incomplete") == (
+        "Facility records were incomplete"
+    )
+    assert _allegation_text("01: Facility medication log was missing") == (
+        "Facility medication log was missing"
+    )
+    assert _allegation_text("ALLEGATION 1: Facility did not report an incident") == (
+        "Facility did not report an incident"
+    )
+    assert _allegation_text("3") is None
 
 
 def test_ccld_facility_report_validates_normalized_records() -> None:
