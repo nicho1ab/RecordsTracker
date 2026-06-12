@@ -50,3 +50,6 @@
 - Tightened GitHub CLI completion governance so automated PR workflows still
 	include the next branch and exact next Copilot prompt, and so roadmap work
 	continues through explicit user checkpoints rather than unattended loops.
+- Added a local output accessibility checklist covering Datasette views,
+	generated metadata, saved queries, CSV exports, review bundles, and script
+	output.

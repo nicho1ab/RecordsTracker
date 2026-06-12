@@ -33,6 +33,9 @@ pull request.
 - Review `ACCESSIBILITY_REQUIREMENTS.md` and `docs/developer/accessibility.md`
 	for any user-facing documentation, Datasette output, export, or presentation
 	change.
+- Use the local output checklist in `docs/developer/accessibility.md` for
+	Datasette views, generated metadata, saved queries, CSV exports, review bundle
+	files, and script output.
 - Confirm delay fields and review flags are described as screening aids, not
 	conclusions.
 - Confirm source traceability remains visible where reviewers may cite, export,

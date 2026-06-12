@@ -10,6 +10,10 @@ Run the full local validation set before completing a task:
 .\scripts\docs.ps1
 ```
 
+For changes to Datasette views, generated metadata, saved queries, CSV exports,
+review bundle files, or script output, also review the local output checklist in
+`docs/developer/accessibility.md`.
+
 ## Run fixture-backed sample ingestion
 
 Use committed fixtures to populate the local sample database without making live
