@@ -49,6 +49,38 @@ pull request.
 - Wait for Required GitHub checks to pass before merge, including CI,
 	documentation, regression, and security checks when those workflows are
 	enabled.
+- When GitHub CLI is installed and authenticated, use `gh pr view` and
+	`gh pr checks --watch` to verify PR status instead of relying on memory or
+	manual browser refreshes. Do not include token values or authentication secrets
+	in PR bodies, docs, handoffs, logs, or commits.
+
+Useful status command:
+
+```powershell
+gh pr view --json number,state,isDraft,mergeStateStatus,url,statusCheckRollup
+```
+
+Useful checks command:
+
+```powershell
+gh pr checks --watch
+```
+
+### Squash merge automation
+
+After required checks pass and no conflicts remain, GitHub CLI may perform the
+squash merge and remote branch deletion:
+
+```powershell
+gh pr merge --squash --delete-branch
+```
+
+If repository auto-merge is enabled, set squash auto-merge so GitHub completes
+the merge when checks pass:
+
+```powershell
+gh pr merge --squash --auto --delete-branch
+```
 
 ### Merge cleanup
 
