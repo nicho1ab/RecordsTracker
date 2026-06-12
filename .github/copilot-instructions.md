@@ -52,9 +52,8 @@ reconstructing context. Include all of the following:
 
 1. Summary of changes.
 2. Validation results, including commands run and whether each passed.
-3. Exact git commit and push commands. Prefer `git push -u origin HEAD` so the
-	command works for the current branch without embedding account-specific
-	details.
+3. Exact git commit and push commands. For push commands, use
+	`git -c gc.auto=0 push -u origin <branch-name>` to avoid auto-gc prompts.
 4. PR title.
 5. PR body, including test results and documentation impact.
 6. Required GitHub checks to wait for before merge.
@@ -65,6 +64,20 @@ reconstructing context. Include all of the following:
 Do not include personal paths, usernames, account-specific URLs, private URLs,
 tokens, secrets, or machine-specific details in the handoff. Use placeholders
 when a repository owner, branch, or pull request URL is unknown.
+
+## Handoff formatting rules
+
+All completed-task handoffs must be copy/paste-safe for PowerShell users.
+
+- Commands must be in separate fenced code blocks.
+- Prose must never appear on the same line as a command.
+- GitHub PR title/body must be separate from PowerShell commands.
+- Post-merge cleanup commands must be clearly labeled "Run only after squash merge is complete."
+- The next branch command must not be combined with cleanup commands.
+- Do not concatenate commands together without a semicolon or newline.
+- Prefer one short command block per step.
+- For push commands, use `git -c gc.auto=0 push -u origin <branch-name>` to
+	avoid auto-gc prompts.
 
 ## Next task selection
 
