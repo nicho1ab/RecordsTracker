@@ -58,6 +58,22 @@ governance scaffold.
 - Keep release checklist guidance current as validation, accessibility, and PR
 	workflow requirements evolve.
 
+## Current next priorities
+
+1. Verify and improve Datasette metadata and saved-query usability where review
+	workflows still need clearer labels, descriptions, parameters, or source
+	traceability.
+2. Add an export/review bundle workflow for derived complaint review outputs that
+	preserves source traceability and accessible CSV guidance.
+3. Add additional CCLD fixtures and extraction hardening for representative
+	report layouts, missing fields, and edge cases.
+4. Add live fetch reporting and failure summary output so reviewers can see what
+	was discovered, fetched, skipped, or failed without reading logs first.
+5. Add an accessibility review checklist for local outputs, including Datasette
+	views, generated metadata, saved queries, and CSV exports.
+6. Evaluate a lightweight dashboard only after the Datasette review workflow is
+	validated and documented as sufficient or insufficient for repeated review.
+
 ## Decision points
 
 - Decide when the proof of concept has enough fixture coverage to treat CCLD

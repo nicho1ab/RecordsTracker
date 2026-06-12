@@ -24,5 +24,9 @@
 	plain-language delay flag guidance and accessible export expectations.
 - Added documentation validation for required governance, user, developer,
 	roadmap, changelog, setup, runbook, and Copilot workflow guidance.
+- Expanded documentation validation to cover all required developer docs and
+	the required user searching and filtering guide.
 - Added release checklist guidance for validation, accessibility review, PR
 	checks, merge cleanup, and next-task handoff.
+- Added next-task selection guidance so Copilot handoffs prefer active roadmap
+	product and technical milestones over repeated documentation-only work.
