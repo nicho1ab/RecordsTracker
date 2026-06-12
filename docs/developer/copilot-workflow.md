@@ -19,7 +19,7 @@ Using the governance files, implement the smallest safe version of <feature>. Ad
 ## Fix a bug prompt
 
 ```text
-Create a failing regression test or fixture for this bug first. Then fix the smallest amount of code needed. Run or describe the validation commands I should run.
+Create a failing regression test or fixture for this bug first. Then fix the smallest amount of code needed. Identify the root cause and update governance rules if a missing or unclear rule allowed the bug. Run or describe the validation commands I should run.
 ```
 
 ## Guardrails
@@ -27,6 +27,10 @@ Create a failing regression test or fixture for this bug first. Then fix the sma
 - Do not accept broad rewrites.
 - Do not accept schema changes without migration, docs, and tests.
 - Do not accept extraction changes without fixture tests.
+- Do not accept bug or CI-failure fixes that skip root-cause governance review.
+- When a bug or CI failure reveals a missing or unclear rule, update the relevant
+	governance, testing, fixture, connector, or workflow documentation in the same
+	change.
 - Ask Copilot to show changed files and summarize validation results.
 
 ## Required completion handoff

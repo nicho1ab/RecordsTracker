@@ -44,6 +44,8 @@ pull request.
 
 - Include validation results in the PR body.
 - State whether user-facing or documentation-impacting behavior changed.
+- For bug and CI-failure fixes, state the root cause and whether a governance
+	rule was added or updated to prevent recurrence.
 - Wait for Required GitHub checks to pass before merge, including CI,
 	documentation, regression, and security checks when those workflows are
 	enabled.

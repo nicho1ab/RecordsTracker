@@ -14,6 +14,8 @@ Validate complete extraction from known raw source files into expected JSON.
 
 Every extraction bug fix must add a failing fixture or test before the fix is accepted.
 
+Every bug fix, CI failure fix, or repeated review correction must include a root-cause review. If the root cause reveals a missing, unclear, or too-weak project rule, add or update the relevant governance, testing, fixture, connector, or workflow documentation in the same change. If no governance change is needed, state why in the PR or handoff.
+
 ### Contract tests
 
 Validate connector output against JSON schemas and the source connector contract.
@@ -26,6 +28,10 @@ Validate internal consistency, including required fields, valid date order, allo
 
 Validate that required documentation files exist and that data dictionary/schema updates are present when schema files change.
 
+### Fixture hash and line-ending tests
+
+Raw fixtures with expected SHA-256 hashes must use the line endings required by `.gitattributes`. Expected fixture hashes must match Git-normalized bytes, not platform-specific working-tree bytes. When adding or changing raw fixtures that appear in expected JSON, verify line endings and hashes before committing.
+
 ### Accessibility tests
 
 Validate documentation structure and run manual or automated checks for user-facing pages before release.
@@ -35,6 +41,7 @@ Validate documentation structure and run manual or automated checks for user-fac
 - Existing tests pass.
 - New or changed extraction behavior includes fixture tests.
 - Bug fixes include regression tests.
+- Bug and CI-failure fixes include a root-cause governance review and update the relevant governance rule when a missing rule contributed to the failure.
 - Data contract changes include schema and documentation updates.
 - User-visible behavior changes include user documentation updates.
 
@@ -44,4 +51,14 @@ Validate documentation structure and run manual or automated checks for user-fac
 .\scripts\test.ps1
 .\scripts\lint.ps1
 .\scripts\docs.ps1
+```
+
+For CI failures, also run the exact failing workflow command locally when it can be run without secrets or live external requests. For fixture hash failures, verify Git-normalized bytes with commands such as:
+
+```powershell
+git ls-files --eol tests\fixtures\ccld\raw\<fixture-name>.html
+```
+
+```powershell
+git show HEAD:tests/fixtures/ccld/raw/<fixture-name>.html
 ```

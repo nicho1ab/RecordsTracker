@@ -80,8 +80,12 @@ The bundle includes complaint review, delay triage, and source traceability CSVs
 
 1. Save raw source content under `tests/fixtures/<source>/raw/`.
 2. Add expected output under `tests/fixtures/<source>/expected/`.
-3. Run tests.
-4. Commit raw fixture and expected JSON together.
+3. Verify the raw fixture uses the line endings required by `.gitattributes`.
+4. If expected output includes `raw_sha256`, compute it from the Git-normalized
+	fixture bytes that CI will read, not from a platform-specific working-tree
+	copy.
+5. Run tests.
+6. Commit raw fixture and expected JSON together.
 
 ## Recover from failed extraction
 
@@ -90,7 +94,28 @@ The bundle includes complaint review, delay triage, and source traceability CSVs
 3. Run the extractor against the raw file only.
 4. Add or update a fixture reproducing the failure.
 5. Fix the smallest amount of extraction logic needed.
-6. Run full regression tests and documentation checks.
+6. Review the root cause for a missing or unclear governance rule. Add or update
+	governance, testing, fixture, connector, or workflow documentation when a new
+	rule would prevent recurrence.
+7. Run full regression tests and documentation checks.
+
+## Recover from a CI failure
+
+1. Identify the exact workflow step and command that failed.
+2. Run the same command locally when it does not require secrets or live external
+	requests.
+3. If local results differ from CI, check cross-platform behavior such as line
+	endings, path separators, locale-sensitive output, and Git-normalized fixture
+	bytes.
+4. If the failure involved expected raw hashes, verify fixture line endings with:
+
+```powershell
+git ls-files --eol tests\fixtures\ccld\raw\<fixture-name>.html
+```
+
+5. Fix the smallest root cause, rerun the exact failing command, then run the
+	standard validation set.
+6. Add or update a governance rule if the root cause exposed a missing rule.
 
 ## PR and merge cleanup
 
