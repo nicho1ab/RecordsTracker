@@ -55,6 +55,26 @@ git commit -m "<concise imperative commit message>"
 git -c gc.auto=0 push -u origin <branch-name>
 ```
 
+When GitHub CLI is installed and authenticated, Copilot may use `gh` to reduce
+manual PR work. Prefer these commands for repeatable PR operations:
+
+```powershell
+gh pr view --json number,state,isDraft,mergeStateStatus,url,statusCheckRollup
+```
+
+```powershell
+gh pr checks --watch
+```
+
+```powershell
+gh pr merge --squash --delete-branch
+```
+
+Use `gh pr merge --squash --auto --delete-branch` only when repository
+auto-merge is enabled and required checks are expected to pass. Never include
+GitHub tokens, one-time authentication codes, or other secrets in handoffs,
+documentation, PR bodies, logs, or commits.
+
 Post-merge cleanup should usually be labeled "Run only after squash merge is complete":
 
 ```powershell

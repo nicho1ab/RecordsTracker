@@ -122,6 +122,35 @@ git ls-files --eol tests\fixtures\ccld\raw\<fixture-name>.html
 Before opening a PR, include the validation results, a concise PR title, and a PR
 body that states whether user-facing or documentation-impacting behavior changed.
 
+When GitHub CLI is installed and authenticated, prefer `gh` for repeatable PR
+steps. Keep token values and authentication details out of docs, handoffs, logs,
+and commits.
+
+Check the active PR state:
+
+```powershell
+gh pr view --json number,state,isDraft,mergeStateStatus,baseRefName,headRefName,url,statusCheckRollup
+```
+
+Wait for required checks:
+
+```powershell
+gh pr checks --watch
+```
+
+Squash merge after required checks pass and no conflicts remain:
+
+```powershell
+gh pr merge --squash --delete-branch
+```
+
+If repository auto-merge is enabled, prefer setting auto-merge after required
+checks have started:
+
+```powershell
+gh pr merge --squash --auto --delete-branch
+```
+
 After the PR merges, clean up the local branch:
 
 ```powershell
