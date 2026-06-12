@@ -177,6 +177,11 @@ REQUIRED_CONTENT = {
 }
 
 FORBIDDEN_CONTENT = {
+    "CHANGELOG.md": [
+        "Added data contract, connector contract, testing strategy, "
+        "documentation strategy, accessibility requirements, and GitHub Copilot "
+        "instructions.",
+    ],
     "README.md": [
         "governance pack",
         "zip scaffold",
