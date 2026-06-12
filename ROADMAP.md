@@ -28,6 +28,8 @@ governance scaffold.
 - Added controlled live fetch for explicitly provided facility numbers.
 - Added multi-facility input for live fetch workflows scoped to user-provided
 	facility numbers.
+- Added live fetch summary output for discovered, selected, skipped, fetched,
+	written, and failed report counts.
 - Added SQLite review views for complaint review, facility summaries, delay
 	review flags, and source traceability.
 - Added Datasette metadata and saved queries to guide review, filtering,
@@ -71,11 +73,9 @@ governance scaffold.
 	traceability.
 2. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
-3. Add live fetch reporting and failure summary output so reviewers can see what
-	was discovered, fetched, skipped, or failed without reading logs first.
-4. Add an accessibility review checklist for local outputs, including Datasette
+3. Add an accessibility review checklist for local outputs, including Datasette
 	views, generated metadata, saved queries, and CSV exports.
-5. Evaluate a lightweight dashboard only after the Datasette review workflow is
+4. Evaluate a lightweight dashboard only after the Datasette review workflow is
 	validated and documented as sufficient or insufficient for repeated review.
 
 ## Decision points

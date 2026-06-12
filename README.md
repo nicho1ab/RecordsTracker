@@ -62,6 +62,10 @@ numbers and request limits:
 .\scripts\run-ccld-live-fetch.ps1 -FacilityNumber 157806098 -Limit 5 -MaxRequests 10
 ```
 
+The live fetch command prints a summary of facilities requested, report
+candidates discovered, selected, skipped by limit, fetched, written, and failed
+so reviewers can see the run outcome before opening logs or Datasette.
+
 Downloaded live raw files are saved under the ignored local `data/raw` path by
 default. Treat public complaint narratives carefully because they may contain
 sensitive details even when publicly available.

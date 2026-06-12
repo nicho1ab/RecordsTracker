@@ -93,6 +93,12 @@ To fetch every discovered report for facility `157806098`, use `-All` and intent
 
 The live script prints a warning before making requests, uses a clear user agent, applies a request timeout, limits report requests unless `-All` is used, enforces `-MaxRequests`, and does not use an aggressive retry loop.
 
+After the run, the script prints a live fetch summary with the number of
+facilities requested, report candidates discovered, selected, skipped by limit,
+fetched, written to SQLite, and failed. The facility summary shows the same
+counts by facility so you can spot partial failures before opening logs or
+Datasette.
+
 Downloaded report files are saved under `data/raw/ccld` by default. The `data/raw` path is ignored by Git so live public source files stay local unless you intentionally move or copy them. Ingestion reads the saved raw files, records their SHA-256 hashes, and writes source traceability fields to the `source_documents` table.
 
 Rerunning the same command updates existing SQLite rows by stable identifiers rather than duplicating the same source documents.

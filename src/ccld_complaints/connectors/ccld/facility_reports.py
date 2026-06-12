@@ -53,6 +53,8 @@ class IngestionFailure:
 
 @dataclass(frozen=True)
 class FacilityIngestionResult:
+    facility_number: str
+    discovered_count: int
     candidates: list[SourceDocumentCandidate]
     records: list[dict[str, object]]
     failures: list[IngestionFailure]
@@ -372,10 +374,11 @@ def ingest_facility_reports_for_facility(
         raise ValueError("max_requests must be greater than or equal to 0.")
 
     active_connector = connector or CcldFacilityReportsConnector(facility_number=facility_number)
-    candidates = active_connector.discover(
+    discovered_candidates = active_connector.discover(
         facility_detail_html=facility_detail_html,
         discovered_at=discovered_at,
     )
+    candidates = discovered_candidates
     if limit is not None:
         candidates = candidates[:limit]
     if max_requests is not None and len(candidates) > max_requests:
@@ -387,6 +390,7 @@ def ingest_facility_reports_for_facility(
     return _ingest_selected_candidates(
         active_connector,
         candidates,
+        discovered_count=len(discovered_candidates),
         load_document=load_document,
         fetch_report=fetch_report,
     )
@@ -409,7 +413,7 @@ def ingest_facility_reports_for_facilities(
         raise ValueError("max_requests must be greater than or equal to 0.")
 
     normalized_facility_numbers = normalize_facility_numbers(facility_numbers)
-    selected: list[tuple[CcldFacilityReportsConnector, list[SourceDocumentCandidate]]] = []
+    selected: list[tuple[CcldFacilityReportsConnector, list[SourceDocumentCandidate], int]] = []
     facility_failures: list[FacilityWorkflowFailure] = []
 
     for facility_number in normalized_facility_numbers:
@@ -419,7 +423,7 @@ def ingest_facility_reports_for_facilities(
             else CcldFacilityReportsConnector(facility_number=facility_number)
         )
         try:
-            candidates = active_connector.discover(
+            discovered_candidates = active_connector.discover(
                 facility_detail_html=(facility_detail_html_by_number or {}).get(facility_number),
                 discovered_at=discovered_at,
             )
@@ -427,11 +431,12 @@ def ingest_facility_reports_for_facilities(
             facility_failures.append(_facility_workflow_failure(facility_number, "discover", exc))
             continue
 
+        candidates = discovered_candidates
         if per_facility_limit is not None:
             candidates = candidates[:per_facility_limit]
-        selected.append((active_connector, candidates))
+        selected.append((active_connector, candidates, len(discovered_candidates)))
 
-    selected_report_count = sum(len(candidates) for _, candidates in selected)
+    selected_report_count = sum(len(candidates) for _, candidates, _ in selected)
     if max_requests is not None and selected_report_count > max_requests:
         raise ValueError(
             "Selected report candidates exceed max_requests. "
@@ -442,10 +447,11 @@ def ingest_facility_reports_for_facilities(
         _ingest_selected_candidates(
             active_connector,
             candidates,
+            discovered_count=discovered_count,
             load_document=load_document,
             fetch_report=fetch_report,
         )
-        for active_connector, candidates in selected
+        for active_connector, candidates, discovered_count in selected
     ]
 
     return MultiFacilityIngestionResult(
@@ -490,6 +496,7 @@ def _ingest_selected_candidates(
     active_connector: CcldFacilityReportsConnector,
     candidates: list[SourceDocumentCandidate],
     *,
+    discovered_count: int,
     load_document: ReportDocumentLoader | None,
     fetch_report: ReportFetcher | None,
 ) -> FacilityIngestionResult:
@@ -534,7 +541,13 @@ def _ingest_selected_candidates(
 
         records.append(normalized)
 
-    return FacilityIngestionResult(candidates=candidates, records=records, failures=failures)
+    return FacilityIngestionResult(
+        facility_number=active_connector.facility_number,
+        discovered_count=discovered_count,
+        candidates=candidates,
+        records=records,
+        failures=failures,
+    )
 
 
 def _facility_workflow_failure(
