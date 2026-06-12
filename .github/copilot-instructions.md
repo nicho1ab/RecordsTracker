@@ -66,6 +66,18 @@ Do not include personal paths, usernames, account-specific URLs, private URLs,
 tokens, secrets, or machine-specific details in the handoff. Use placeholders
 when a repository owner, branch, or pull request URL is unknown.
 
+## Next task selection
+
+Do not repeatedly recommend documentation-only work in the next Copilot prompt.
+Documentation-only work is appropriate only when documentation is stale,
+validation is failing, governance files are missing, or the user explicitly asks
+for documentation work. Otherwise, select the next product or technical milestone from `ROADMAP.md`.
+
+Prefer feature work that improves ingestion, review usability, extraction
+quality, exports, accessibility validation, or release readiness. The recommended
+next branch and next Copilot prompt must move the project forward on that
+roadmap backlog unless validation failed or documentation is stale.
+
 ## Preferred stack
 
 - Python
