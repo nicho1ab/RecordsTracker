@@ -53,3 +53,6 @@
 - Added a local output accessibility checklist covering Datasette views,
 	generated metadata, saved queries, CSV exports, review bundles, and script
 	output.
+- Added a `complaint_review_start_here` Datasette saved query with source URL,
+	raw hash, connector metadata, retrieval time, and report index for guided
+	review and export-safe triage.

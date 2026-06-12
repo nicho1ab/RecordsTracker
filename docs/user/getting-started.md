@@ -121,7 +121,7 @@ datasette "data/processed/live-ccld.sqlite" --metadata "data/processed/live-ccld
 
 The printed command includes a Datasette metadata file. That metadata adds the project title, database description, review-oriented table and view descriptions, column notes, suggested sort fields, delay flag caution language, source traceability explanations, and saved query examples. See [Local Review Workflow](local-review-workflow.md) for the guided review steps.
 
-The saved query examples include `complaints_by_facility`, `complaint_review_export_with_traceability`, `records_with_delay_review_flags`, `facilities_with_delay_review_flags`, `source_traceability_by_facility`, `newest_reports`, `allegation_summary_by_facility`, and `source_traceability_check`.
+The saved query examples include `complaint_review_start_here`, `complaints_by_facility`, `complaint_review_export_with_traceability`, `records_with_delay_review_flags`, `facilities_with_delay_review_flags`, `source_traceability_by_facility`, `newest_reports`, `allegation_summary_by_facility`, and `source_traceability_check`.
 
 ## Tables to open first
 

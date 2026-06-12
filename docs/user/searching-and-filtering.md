@@ -16,6 +16,7 @@ Use source links to verify extracted data.
 
 When you open Datasette with the metadata command printed by the sample or live fetch script, these saved query examples are available:
 
+- `complaint_review_start_here` opens a guided complaint review list with source URL, raw SHA-256 hash, connector metadata, retrieval time, and report index.
 - `complaints_by_facility` filters the main complaint review view by facility number.
 - `complaint_review_export_with_traceability` prepares complaint review fields with source traceability columns for CSV export.
 - `records_with_delay_review_flags` lists records with one or more delay or review flags.
