@@ -735,9 +735,17 @@ def _allegations(lines: list[str]) -> list[str]:
 
     allegations: list[str] = []
     for line in lines[start + 1 : end]:
-        if not line.isdigit():
-            allegations.append(line)
+        allegation = _allegation_text(line)
+        if allegation is not None:
+            allegations.append(allegation)
     return allegations
+
+
+def _allegation_text(line: str) -> str | None:
+    if line.isdigit():
+        return None
+    allegation = re.sub(r"^\d+\s*[.)]\s+", "", line)
+    return allegation or None
 
 
 def _line_index(lines: list[str], value: str) -> int | None:

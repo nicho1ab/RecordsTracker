@@ -19,6 +19,8 @@ governance scaffold.
 
 - Implemented the CCLD single-facility fixture workflow for the initial facility.
 - Added fixture-backed extraction and regression coverage for known CCLD reports.
+- Added fixture-backed hardening for numbered allegation rows in CCLD report
+	layouts.
 - Preserved raw source files and SHA-256 hashes before extraction.
 - Normalized extracted records into facility, source document, complaint,
 	allegation, event, and extraction audit records.
