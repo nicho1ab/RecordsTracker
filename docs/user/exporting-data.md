@@ -35,6 +35,8 @@ Unknown database values are exported as `unknown`. Delay review flags in the bun
 
 For complaint review, start with the `complaint_review_summary` view because it includes complaint fields, allegation count and summary, delay review fields, source URL, and raw path in one export. Use `facility_complaint_summary` for facility-level counts, `delay_review_flags` for records that need closer delay review, and `source_traceability_review` when checking source URLs, raw hashes, connector metadata, retrieval time, and report indexes.
 
+If you are unsure which export path to use, open the `review_home` saved query first. Its export row points to `complaint_review_export_with_traceability` and reminds reviewers to keep clear headers plus source URL, raw hash, connector metadata, retrieval time, and report index when available.
+
 If a view does not include all needed low-level fields, export the normalized tables and preserve the ID columns so reviewers can join or compare records.
 
 Recommended export columns:
