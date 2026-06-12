@@ -56,3 +56,7 @@
 - Added a `complaint_review_start_here` Datasette saved query with source URL,
 	raw hash, connector metadata, retrieval time, and report index for guided
 	review and export-safe triage.
+- Updated the roadmap to prioritize incremental local review usability work,
+	including a review home, task-based workflow grouping, contextual help,
+	low-noise review views, script-output navigation, and a web app transition
+	path before deciding whether Datasette has been outgrown.
