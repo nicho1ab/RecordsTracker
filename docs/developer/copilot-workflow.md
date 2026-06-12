@@ -28,3 +28,44 @@ Create a failing regression test or fixture for this bug first. Then fix the sma
 - Do not accept schema changes without migration, docs, and tests.
 - Do not accept extraction changes without fixture tests.
 - Ask Copilot to show changed files and summarize validation results.
+
+## Required completion handoff
+
+Every completed Copilot task must end with a handoff that includes:
+
+- Summary of changes.
+- Validation results, including exact commands run and whether each passed.
+- Exact git commit and push commands.
+- PR title.
+- PR body.
+- Required GitHub checks to wait for before merge.
+- Post-merge cleanup commands.
+- Recommended next branch name.
+- Next Copilot prompt.
+
+Use commands that avoid account-specific details when possible:
+
+```powershell
+git add <changed-files>
+git commit -m "<concise imperative commit message>"
+git push -u origin HEAD
+```
+
+Post-merge cleanup should usually be:
+
+```powershell
+git switch main
+git pull --ff-only
+git branch --delete <merged-branch-name>
+git remote prune origin
+git switch -c <next-branch-name>
+```
+
+The PR body should state whether user-facing or documentation-impacting behavior
+changed. If no documentation changes are needed for a future task, use the exact
+statement: no user-facing or documentation-impacting behavior changed.
+
+The next Copilot prompt should point to the governance files and ask for the
+smallest safe, tested change. Do not include personal paths, usernames, account
+details, private URLs, tokens, secrets, or machine-specific configuration in the
+handoff.
