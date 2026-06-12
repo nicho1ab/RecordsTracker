@@ -30,6 +30,13 @@ Before making changes, read and follow:
 - Do not remove source traceability.
 - Do not delete raw source preservation behavior.
 - Do not store secrets in the repo.
+- When a bug, CI failure, or repeated review correction exposes a missing or
+	weakable governance rule, update the relevant governance, testing, fixture,
+	or workflow documentation in the same task. If no governance rule is needed,
+	explicitly state why in the handoff or PR body.
+- When raw fixtures are used for expected hashes, compute and verify hashes from
+	Git-normalized fixture bytes governed by `.gitattributes`, not from a local
+	working-tree copy with platform-specific line endings.
 
 ## Required change behavior
 
@@ -43,6 +50,8 @@ For every code change:
 6. Check documentation impact across `README.md`, `docs/user/*`, `docs/developer/*`, `DATA_CONTRACT.md`, `SOURCE_CONNECTOR_CONTRACT.md`, `KNOWN_LIMITATIONS.md`, `DESIGN_AND_USABILITY.md`, `DECISIONS.md`, and ADRs.
 7. If no documentation changes are needed, explicitly state that no user-facing or documentation-impacting behavior changed.
 8. Explain validation commands.
+9. For bug or CI-failure fixes, describe the root cause and whether a new or
+	updated governance rule was added to prevent recurrence.
 
 ## Required task handoff
 

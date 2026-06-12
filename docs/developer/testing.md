@@ -38,3 +38,19 @@ Prefer fixture-based tests over ad hoc manual verification. Every important sour
 ## Regression rule
 
 When fixing extraction behavior, add the failing case as a fixture before changing parser code.
+
+## CI failure rule
+
+When fixing a CI failure, identify the exact failing workflow command and run it locally when it does not require secrets or live external requests. If local and CI results differ, check cross-platform behavior such as line endings, path separators, locale-sensitive output, and Git-normalized fixture bytes.
+
+Every bug or CI-failure fix must include a root-cause governance review. If a missing or unclear rule contributed to the failure, update the relevant governance, testing, fixture, connector, or workflow documentation in the same change. If no governance rule is needed, state why in the PR or handoff.
+
+## Fixture hash rule
+
+Raw fixtures with expected SHA-256 hashes must use the line endings required by `.gitattributes`. Compute expected hashes from Git-normalized bytes, not from platform-specific working-tree bytes.
+
+Use this check when changing raw fixtures:
+
+```powershell
+git ls-files --eol tests\fixtures\ccld\raw\<fixture-name>.html
+```

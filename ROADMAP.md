@@ -47,6 +47,8 @@ governance scaffold.
 	governance rules.
 - Added release checklist guidance for validation, accessibility review, PR
 	checks, merge cleanup, and next-task handoff.
+- Added governance feedback-loop rules so bug and CI-failure fixes update
+	relevant governance when a missing or unclear rule allowed the failure.
 
 ## Near-term milestones
 

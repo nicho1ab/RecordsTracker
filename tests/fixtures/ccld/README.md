@@ -4,6 +4,8 @@ Add raw CCLD source files under `raw/` and expected extracted JSON under `expect
 
 Every extraction change should add or update fixtures.
 
+Raw fixtures and expected JSON are governed by `.gitattributes` line-ending rules. When an expected JSON file includes a raw SHA-256 hash, the hash must match the Git-normalized fixture bytes that CI reads, not a local working-tree copy with platform-specific line endings. Verify line endings with `git ls-files --eol` when adding or changing raw fixtures.
+
 ## Current fixtures
 
 - `raw/157806098_facility_detail.html`: Public CCLD facility detail page fixture for facility `157806098`, including rendered FacilityReports links used for offline discovery regression tests.
