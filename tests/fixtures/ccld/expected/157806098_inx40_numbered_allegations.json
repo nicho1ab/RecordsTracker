@@ -17,7 +17,7 @@
         "facility_id": "ccld-facility-157806098",
         "source_url": "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=40",
         "retrieved_at": "2026-06-12T00:00:00+00:00",
-        "raw_sha256": "0973483f7b22f7e755ee1be0abb07e52413b1120cc41ff0dad35497bf70c2d8c",
+        "raw_sha256": "f6a24ffbaa0b2bc4a6b283c5c6fedd8d08443de1923cde0c32bb4466701f3822",
         "connector_name": "ccld_facility_reports",
         "connector_version": "0.1.0",
         "raw_path": "tests/fixtures/ccld/raw/157806098_inx40_numbered_allegations.html",
