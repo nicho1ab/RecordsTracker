@@ -96,6 +96,7 @@ def review_workflow_lines() -> list[str]:
         "3. delay_review_flags - triage list for records with review flags.",
         "4. source_traceability_review - source URLs, hashes, connector details, and report index.",
         "Saved queries for common workflows:",
+        "- complaint_review_start_here - guided complaint review with source traceability.",
         "- complaints_by_facility - filter complaint review by facility number.",
         "- complaint_review_export_with_traceability - export complaint fields with source hashes.",
         "- records_with_delay_review_flags - triage review flags as screening aids only.",
@@ -368,9 +369,53 @@ def _normalized_table_metadata() -> dict[str, Any]:
 
 def _datasette_saved_queries() -> dict[str, Any]:
     return {
+        "complaint_review_start_here": {
+            "title": "Start Here: Complaint Review with Source Traceability",
+            "description": (
+                "Open this first for a review-ready complaint list with facility context, "
+                "delay screening fields, source URL, raw SHA-256 hash, connector metadata, "
+                "retrieval time, and report index. Treat derived fields as review aids."
+            ),
+            "sql": """
+SELECT
+    cr.facility_number,
+    cr.facility_name,
+    cr.complaint_control_number,
+    cr.complaint_received_date,
+    cr.first_investigation_activity_date,
+    cr.visit_date,
+    cr.report_date,
+    cr.finding,
+    cr.allegation_count,
+    cr.allegation_summary,
+    cr.days_received_to_first_activity,
+    cr.days_received_to_visit,
+    cr.days_received_to_report,
+    cr.review_delay_over_30_days,
+    cr.review_delay_over_60_days,
+    cr.review_delay_over_90_days,
+    cr.review_delay_over_120_days,
+    cr.missing_first_activity_date,
+    cr.report_date_used_as_proxy,
+    cr.source_url,
+    sd.raw_sha256,
+    cr.raw_path,
+    sd.connector_name,
+    sd.connector_version,
+    sd.retrieved_at,
+    sd.report_index
+FROM complaint_review_summary cr
+JOIN complaints c ON c.complaint_id = cr.complaint_id
+JOIN source_documents sd ON sd.document_id = c.document_id
+ORDER BY cr.report_date DESC, cr.complaint_received_date DESC, cr.facility_number
+            """.strip(),
+        },
         "complaints_by_facility": {
             "title": "Complaints by Facility",
-            "description": "Filter the main review view by CCLD facility number.",
+            "description": (
+                "Filter the main review view by CCLD facility number. Enter the public "
+                "facility number, such as 157806098, when Datasette prompts for facility_number."
+            ),
             "sql": """
 SELECT *
 FROM complaint_review_summary
@@ -426,7 +471,8 @@ ORDER BY facility_number, report_index DESC
             "title": "Source Traceability by Facility",
             "description": (
                 "Filter source provenance by facility number before relying on or exporting "
-                "derived complaint fields."
+                "derived complaint fields. Enter the public facility number when Datasette "
+                "prompts for facility_number."
             ),
             "sql": """
 SELECT *

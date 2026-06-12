@@ -99,6 +99,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "allegations" in database_metadata["tables"]
     assert "events" in database_metadata["tables"]
     assert "extraction_audit" in database_metadata["tables"]
+    assert "complaint_review_start_here" in database_metadata["queries"]
     assert "complaints_by_facility" in database_metadata["queries"]
     assert "complaint_review_export_with_traceability" in database_metadata["queries"]
     assert "records_with_delay_review_flags" in database_metadata["queries"]
@@ -129,6 +130,13 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
         ":facility_number"
         in database_metadata["queries"]["complaints_by_facility"]["sql"]
     )
+    start_here_query = database_metadata["queries"]["complaint_review_start_here"]
+    assert "Open this first" in start_here_query["description"]
+    assert "screening fields" in start_here_query["description"]
+    assert "sd.raw_sha256" in start_here_query["sql"]
+    assert "sd.connector_version" in start_here_query["sql"]
+    assert "sd.retrieved_at" in start_here_query["sql"]
+    assert "ORDER BY cr.report_date DESC" in start_here_query["sql"]
     export_query_sql = database_metadata["queries"][
         "complaint_review_export_with_traceability"
     ]["sql"]
@@ -167,6 +175,7 @@ def test_review_workflow_lines_name_first_views() -> None:
     assert any("facility_complaint_summary" in line for line in lines)
     assert any("delay_review_flags" in line for line in lines)
     assert any("source_traceability_review" in line for line in lines)
+    assert any("complaint_review_start_here" in line for line in lines)
     assert any("complaints_by_facility" in line for line in lines)
     assert any("complaint_review_export_with_traceability" in line for line in lines)
     assert any("source_traceability_by_facility" in line for line in lines)
