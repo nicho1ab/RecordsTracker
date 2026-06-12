@@ -30,6 +30,8 @@ governance scaffold.
 	review flags, and source traceability.
 - Added Datasette metadata and saved queries to guide review, filtering,
 	source-checking, and export workflows.
+- Added a local review bundle export workflow for source-traceable complaint
+	review, delay triage, and source traceability CSV files.
 
 ## Completed governance and review experience improvements
 
@@ -63,15 +65,13 @@ governance scaffold.
 1. Verify and improve Datasette metadata and saved-query usability where review
 	workflows still need clearer labels, descriptions, parameters, or source
 	traceability.
-2. Add an export/review bundle workflow for derived complaint review outputs that
-	preserves source traceability and accessible CSV guidance.
-3. Add additional CCLD fixtures and extraction hardening for representative
+2. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
-4. Add live fetch reporting and failure summary output so reviewers can see what
+3. Add live fetch reporting and failure summary output so reviewers can see what
 	was discovered, fetched, skipped, or failed without reading logs first.
-5. Add an accessibility review checklist for local outputs, including Datasette
+4. Add an accessibility review checklist for local outputs, including Datasette
 	views, generated metadata, saved queries, and CSV exports.
-6. Evaluate a lightweight dashboard only after the Datasette review workflow is
+5. Evaluate a lightweight dashboard only after the Datasette review workflow is
 	validated and documented as sufficient or insufficient for repeated review.
 
 ## Decision points
