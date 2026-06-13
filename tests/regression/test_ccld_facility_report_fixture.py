@@ -35,6 +35,9 @@ SPLIT_FINDING_FIXTURE_URL = (
 ALLEGATION_HEADING_VARIANT_FIXTURE_URL = (
     "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=46"
 )
+INVESTIGATION_FINDING_HEADING_FIXTURE_URL = (
+    "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=47"
+)
 RAW_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_inx3.html")
 NUMBERED_ALLEGATIONS_RAW_FIXTURE = Path(
     "tests/fixtures/ccld/raw/157806098_inx40_numbered_allegations.html"
@@ -56,6 +59,9 @@ SPLIT_FINDING_RAW_FIXTURE = Path(
 )
 ALLEGATION_HEADING_VARIANT_RAW_FIXTURE = Path(
     "tests/fixtures/ccld/raw/157806098_inx46_allegations_heading.html"
+)
+INVESTIGATION_FINDING_HEADING_RAW_FIXTURE = Path(
+    "tests/fixtures/ccld/raw/157806098_inx47_investigation_finding_heading.html"
 )
 RAW_DETAIL_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_facility_detail.html")
 EXPECTED_FIXTURE = Path("tests/fixtures/ccld/expected/157806098_inx3.json")
@@ -80,6 +86,9 @@ SPLIT_FINDING_EXPECTED_FIXTURE = Path(
 ALLEGATION_HEADING_VARIANT_EXPECTED_FIXTURE = Path(
     "tests/fixtures/ccld/expected/157806098_inx46_allegations_heading.json"
 )
+INVESTIGATION_FINDING_HEADING_EXPECTED_FIXTURE = Path(
+    "tests/fixtures/ccld/expected/157806098_inx47_investigation_finding_heading.json"
+)
 RETRIEVED_AT = "2026-06-10T00:00:00+00:00"
 NUMBERED_ALLEGATIONS_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 INLINE_RECEIVED_DATE_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
@@ -88,6 +97,7 @@ LABELED_FINDING_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 WRAPPED_ALLEGATION_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 SPLIT_FINDING_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 ALLEGATION_HEADING_VARIANT_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
+INVESTIGATION_FINDING_HEADING_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 
 
 def test_ccld_facility_detail_discovers_report_candidates_from_fixture() -> None:
@@ -247,6 +257,16 @@ def test_ccld_facility_report_extracts_allegations_heading_variant() -> None:
     normalized = connector.normalize(_extract_allegation_heading_variant_fixture())
     expected = json.loads(
         ALLEGATION_HEADING_VARIANT_EXPECTED_FIXTURE.read_text(encoding="utf-8")
+    )
+
+    assert _without_audit(normalized) == expected
+
+
+def test_ccld_facility_report_extracts_investigation_finding_heading_variant() -> None:
+    connector = CcldFacilityReportsConnector()
+    normalized = connector.normalize(_extract_investigation_finding_heading_fixture())
+    expected = json.loads(
+        INVESTIGATION_FINDING_HEADING_EXPECTED_FIXTURE.read_text(encoding="utf-8")
     )
 
     assert _without_audit(normalized) == expected
@@ -463,6 +483,18 @@ def _extract_allegation_heading_variant_fixture() -> dict[str, object]:
         raw_path=ALLEGATION_HEADING_VARIANT_RAW_FIXTURE,
         raw_sha256=sha256_bytes(raw_content),
         retrieved_at=ALLEGATION_HEADING_VARIANT_RETRIEVED_AT,
+        content_type="text/html",
+    )
+    return CcldFacilityReportsConnector().extract(document)
+
+
+def _extract_investigation_finding_heading_fixture() -> dict[str, object]:
+    raw_content = INVESTIGATION_FINDING_HEADING_RAW_FIXTURE.read_bytes()
+    document = SourceDocument(
+        source_url=INVESTIGATION_FINDING_HEADING_FIXTURE_URL,
+        raw_path=INVESTIGATION_FINDING_HEADING_RAW_FIXTURE,
+        raw_sha256=sha256_bytes(raw_content),
+        retrieved_at=INVESTIGATION_FINDING_HEADING_RETRIEVED_AT,
         content_type="text/html",
     )
     return CcldFacilityReportsConnector().extract(document)
