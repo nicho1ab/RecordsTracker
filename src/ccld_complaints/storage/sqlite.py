@@ -97,6 +97,7 @@ REVIEW_VIEWS_SQL = """
 DROP VIEW IF EXISTS delay_review_flags;
 DROP VIEW IF EXISTS facility_complaint_summary;
 DROP VIEW IF EXISTS complaint_first_pass_review;
+DROP VIEW IF EXISTS complaint_timeline_review;
 DROP VIEW IF EXISTS complaint_review_summary;
 DROP VIEW IF EXISTS source_traceability_review;
 
@@ -287,6 +288,193 @@ SELECT
     sd.content_type
 FROM source_documents sd
 JOIN facilities f ON f.facility_id = sd.facility_id;
+
+CREATE VIEW complaint_timeline_review AS
+SELECT
+    f.external_facility_number AS facility_number,
+    f.facility_name,
+    c.complaint_id,
+    c.complaint_control_number,
+    1 AS timeline_sequence,
+    'complaint received' AS timeline_item_type,
+    'complaint_received_date' AS timeline_source_field,
+    c.complaint_received_date AS timeline_date,
+    'Complaint received date extracted from the public source report.' AS timeline_note,
+    c.finding,
+    c.review_delay_over_30_days,
+    c.review_delay_over_60_days,
+    c.review_delay_over_90_days,
+    c.review_delay_over_120_days,
+    c.missing_first_activity_date,
+    c.report_date_used_as_proxy,
+    sd.source_url,
+    sd.raw_sha256,
+    sd.raw_path,
+    sd.connector_name,
+    sd.connector_version,
+    sd.retrieved_at,
+    sd.report_index,
+    NULL AS event_id,
+    sd.document_id
+FROM complaints c
+JOIN facilities f ON f.facility_id = c.facility_id
+JOIN source_documents sd ON sd.document_id = c.document_id
+WHERE c.complaint_received_date IS NOT NULL
+UNION ALL
+SELECT
+    f.external_facility_number,
+    f.facility_name,
+    c.complaint_id,
+    c.complaint_control_number,
+    2,
+    'first investigation activity',
+    'first_investigation_activity_date',
+    c.first_investigation_activity_date,
+    'Earliest deterministic investigation activity date extracted when available.',
+    c.finding,
+    c.review_delay_over_30_days,
+    c.review_delay_over_60_days,
+    c.review_delay_over_90_days,
+    c.review_delay_over_120_days,
+    c.missing_first_activity_date,
+    c.report_date_used_as_proxy,
+    sd.source_url,
+    sd.raw_sha256,
+    sd.raw_path,
+    sd.connector_name,
+    sd.connector_version,
+    sd.retrieved_at,
+    sd.report_index,
+    NULL,
+    sd.document_id
+FROM complaints c
+JOIN facilities f ON f.facility_id = c.facility_id
+JOIN source_documents sd ON sd.document_id = c.document_id
+WHERE c.first_investigation_activity_date IS NOT NULL
+UNION ALL
+SELECT
+    f.external_facility_number,
+    f.facility_name,
+    c.complaint_id,
+    c.complaint_control_number,
+    3,
+    'visit',
+    'visit_date',
+    c.visit_date,
+    'Visit date shown in the public source report when available.',
+    c.finding,
+    c.review_delay_over_30_days,
+    c.review_delay_over_60_days,
+    c.review_delay_over_90_days,
+    c.review_delay_over_120_days,
+    c.missing_first_activity_date,
+    c.report_date_used_as_proxy,
+    sd.source_url,
+    sd.raw_sha256,
+    sd.raw_path,
+    sd.connector_name,
+    sd.connector_version,
+    sd.retrieved_at,
+    sd.report_index,
+    NULL,
+    sd.document_id
+FROM complaints c
+JOIN facilities f ON f.facility_id = c.facility_id
+JOIN source_documents sd ON sd.document_id = c.document_id
+WHERE c.visit_date IS NOT NULL
+UNION ALL
+SELECT
+    f.external_facility_number,
+    f.facility_name,
+    c.complaint_id,
+    c.complaint_control_number,
+    4,
+    'report',
+    'report_date',
+    c.report_date,
+    'Report date shown in the public source report; this may not be first activity.',
+    c.finding,
+    c.review_delay_over_30_days,
+    c.review_delay_over_60_days,
+    c.review_delay_over_90_days,
+    c.review_delay_over_120_days,
+    c.missing_first_activity_date,
+    c.report_date_used_as_proxy,
+    sd.source_url,
+    sd.raw_sha256,
+    sd.raw_path,
+    sd.connector_name,
+    sd.connector_version,
+    sd.retrieved_at,
+    sd.report_index,
+    NULL,
+    sd.document_id
+FROM complaints c
+JOIN facilities f ON f.facility_id = c.facility_id
+JOIN source_documents sd ON sd.document_id = c.document_id
+WHERE c.report_date IS NOT NULL
+UNION ALL
+SELECT
+    f.external_facility_number,
+    f.facility_name,
+    c.complaint_id,
+    c.complaint_control_number,
+    5,
+    'date signed',
+    'date_signed',
+    c.date_signed,
+    'Date the report was signed when available.',
+    c.finding,
+    c.review_delay_over_30_days,
+    c.review_delay_over_60_days,
+    c.review_delay_over_90_days,
+    c.review_delay_over_120_days,
+    c.missing_first_activity_date,
+    c.report_date_used_as_proxy,
+    sd.source_url,
+    sd.raw_sha256,
+    sd.raw_path,
+    sd.connector_name,
+    sd.connector_version,
+    sd.retrieved_at,
+    sd.report_index,
+    NULL,
+    sd.document_id
+FROM complaints c
+JOIN facilities f ON f.facility_id = c.facility_id
+JOIN source_documents sd ON sd.document_id = c.document_id
+WHERE c.date_signed IS NOT NULL
+UNION ALL
+SELECT
+    f.external_facility_number,
+    f.facility_name,
+    c.complaint_id,
+    c.complaint_control_number,
+    6,
+    'extracted event',
+    e.event_type,
+    e.event_date,
+    e.event_text,
+    c.finding,
+    c.review_delay_over_30_days,
+    c.review_delay_over_60_days,
+    c.review_delay_over_90_days,
+    c.review_delay_over_120_days,
+    c.missing_first_activity_date,
+    c.report_date_used_as_proxy,
+    sd.source_url,
+    sd.raw_sha256,
+    sd.raw_path,
+    sd.connector_name,
+    sd.connector_version,
+    sd.retrieved_at,
+    sd.report_index,
+    e.event_id,
+    sd.document_id
+FROM events e
+JOIN complaints c ON c.complaint_id = e.complaint_id
+JOIN facilities f ON f.facility_id = c.facility_id
+JOIN source_documents sd ON sd.document_id = c.document_id;
 """
 
 TABLE_COLUMNS = {

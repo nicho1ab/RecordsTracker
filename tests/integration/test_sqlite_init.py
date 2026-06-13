@@ -30,6 +30,7 @@ def test_initialize_database_creates_review_views(tmp_path: Path) -> None:
     assert {
         "complaint_review_summary",
         "complaint_first_pass_review",
+        "complaint_timeline_review",
         "facility_complaint_summary",
         "delay_review_flags",
         "source_traceability_review",
@@ -91,6 +92,7 @@ def test_initialize_database_recreates_review_views_on_rerun(tmp_path: Path) -> 
               AND name IN (
                   'complaint_review_summary',
                   'complaint_first_pass_review',
+                  'complaint_timeline_review',
                   'facility_complaint_summary',
                   'delay_review_flags',
                   'source_traceability_review'
@@ -98,4 +100,4 @@ def test_initialize_database_recreates_review_views_on_rerun(tmp_path: Path) -> 
             """
         ).fetchone()[0]
 
-    assert view_count == 5
+    assert view_count == 6

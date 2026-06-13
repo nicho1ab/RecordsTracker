@@ -52,9 +52,11 @@ path, the Datasette command to open, and grouped next steps. Start with
 `review_home`, `complaint_review_start_here`, or `complaint_first_pass_review`;
 use `public_record_allegation_search` for cautious keyword discovery over
 source-derived allegation text, categories, and findings; use
-`delay_review_flags` for delay triage; use `source_traceability_review` for
-source verification; and use `complaint_review_export_with_traceability` or
-`export-review-bundle.ps1` for source-traceable CSV export.
+`complaint_timeline_review` for complaint milestone dates and extracted event
+dates; use `delay_review_flags` for delay triage; use
+`source_traceability_review` for source verification; and use
+`complaint_review_export_with_traceability` or `export-review-bundle.ps1` for
+source-traceable CSV export.
 
 For live public data, use the controlled live fetch script with explicit facility
 numbers and request limits:

@@ -128,6 +128,44 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
         "retrieved_at": RETRIEVED_AT,
         "report_index": 3,
     }
+    assert _complaint_timeline_review(db_path) == [
+        {
+            "timeline_sequence": 1,
+            "timeline_item_type": "complaint received",
+            "timeline_source_field": "complaint_received_date",
+            "timeline_date": "2022-04-07",
+            "source_url": FIXTURE_URL,
+            "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
+            "connector_name": "ccld_facility_reports",
+        },
+        {
+            "timeline_sequence": 3,
+            "timeline_item_type": "visit",
+            "timeline_source_field": "visit_date",
+            "timeline_date": "2022-08-24",
+            "source_url": FIXTURE_URL,
+            "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
+            "connector_name": "ccld_facility_reports",
+        },
+        {
+            "timeline_sequence": 4,
+            "timeline_item_type": "report",
+            "timeline_source_field": "report_date",
+            "timeline_date": "2022-08-24",
+            "source_url": FIXTURE_URL,
+            "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
+            "connector_name": "ccld_facility_reports",
+        },
+        {
+            "timeline_sequence": 5,
+            "timeline_item_type": "date signed",
+            "timeline_source_field": "date_signed",
+            "timeline_date": "2022-08-26",
+            "source_url": FIXTURE_URL,
+            "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
+            "connector_name": "ccld_facility_reports",
+        },
+    ]
 
 
 def test_delay_review_flags_view_exposes_flagged_records(tmp_path: Path) -> None:
@@ -158,6 +196,7 @@ def test_review_views_do_not_duplicate_rows_on_rerun(tmp_path: Path) -> None:
 
     assert _row_count(db_path, "complaint_review_summary") == 1
     assert _row_count(db_path, "complaint_first_pass_review") == 1
+    assert _row_count(db_path, "complaint_timeline_review") == 4
     assert _row_count(db_path, "facility_complaint_summary") == 1
     assert _row_count(db_path, "delay_review_flags") == 1
     assert _row_count(db_path, "source_traceability_review") == 1
@@ -179,6 +218,7 @@ def test_review_views_include_delay_review_flag_columns(tmp_path: Path) -> None:
     }
     assert expected_columns.issubset(_view_columns(db_path, "complaint_review_summary"))
     assert expected_columns.issubset(_view_columns(db_path, "delay_review_flags"))
+    assert expected_columns.issubset(_view_columns(db_path, "complaint_timeline_review"))
 
 
 def test_write_normalized_ccld_report_is_idempotent(tmp_path: Path) -> None:
@@ -424,6 +464,25 @@ def _source_traceability_review(db_path: Path) -> dict[str, object]:
             """
         ).fetchone()
     return dict(row)
+
+
+def _complaint_timeline_review(db_path: Path) -> list[dict[str, object]]:
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT timeline_sequence,
+                   timeline_item_type,
+                   timeline_source_field,
+                   timeline_date,
+                   source_url,
+                   raw_sha256,
+                   connector_name
+            FROM complaint_timeline_review
+            ORDER BY timeline_date, timeline_sequence
+            """
+        ).fetchall()
+    return [dict(row) for row in rows]
 
 
 def _view_value(db_path: Path, view_name: str, column_name: str) -> str:
