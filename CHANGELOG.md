@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Expanded the local review bundle into a source-traceable public-record review
+	packet with complaint timeline, field source traceability, and facility
+	pattern CSV exports plus cautious README notes.
 - Added a `facility_pattern_review` Datasette view and
 	`facility_patterns_with_review_flags` saved query for comparing finding mix,
 	allegation categories, missingness, report-date proxy usage, review flags, and

@@ -84,6 +84,10 @@ To export source-traceable CSV review outputs after populating the database:
 .\scripts\export-review-bundle.ps1
 ```
 
+The review bundle writes complaint review, delay triage, source traceability,
+complaint timeline, field traceability, and facility pattern CSV files plus a
+README with cautious public-record review notes.
+
 ## Documentation
 
 - Start with [docs/user/getting-started.md](docs/user/getting-started.md) for

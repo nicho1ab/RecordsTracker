@@ -84,10 +84,31 @@ FROM source_traceability_review
 ORDER BY facility_number, report_index DESC, retrieved_at DESC
 """.strip()
 
+COMPLAINT_TIMELINE_EXPORT_SQL = """
+SELECT *
+FROM complaint_timeline_review
+ORDER BY facility_number, timeline_date, timeline_sequence, complaint_control_number
+""".strip()
+
+FIELD_TRACEABILITY_EXPORT_SQL = """
+SELECT *
+FROM field_source_traceability_review
+ORDER BY facility_number, report_date DESC, complaint_received_date DESC, field_name
+""".strip()
+
+FACILITY_PATTERN_EXPORT_SQL = """
+SELECT *
+FROM facility_pattern_review
+ORDER BY records_with_review_flags DESC, complaint_count DESC, facility_number
+""".strip()
+
 EXPORTS: tuple[tuple[str, str], ...] = (
     ("complaint_review_with_source_traceability.csv", COMPLAINT_REVIEW_EXPORT_SQL),
     ("delay_review_flags_with_source_traceability.csv", DELAY_REVIEW_EXPORT_SQL),
     ("source_traceability.csv", SOURCE_TRACEABILITY_EXPORT_SQL),
+    ("complaint_timeline_with_source_traceability.csv", COMPLAINT_TIMELINE_EXPORT_SQL),
+    ("field_source_traceability.csv", FIELD_TRACEABILITY_EXPORT_SQL),
+    ("facility_pattern_review.csv", FACILITY_PATTERN_EXPORT_SQL),
 )
 
 
@@ -170,6 +191,21 @@ def _bundle_readme() -> str:
             "connector metadata, retrieval timestamp, report index, document type, and "
             "content type."
         ),
+        (
+            "- complaint_timeline_with_source_traceability.csv: complaint milestone dates "
+            "and extracted event dates with source traceability. Missing dates are unknown "
+            "in the derived dataset."
+        ),
+        (
+            "- field_source_traceability.csv: extracted values, source text, source section, "
+            "warnings, confidence, extraction method, extractor version, and source document "
+            "traceability."
+        ),
+        (
+            "- facility_pattern_review.csv: facility-level complaint counts, source document "
+            "counts, allegation categories, finding mix, missingness, report-date proxy usage, "
+            "review flag counts, and date ranges."
+        ),
         "",
         "## Review Notes",
         "",
@@ -183,6 +219,14 @@ def _bundle_readme() -> str:
         ),
         "- Unknown database values are exported as \"unknown\".",
         "- Keep source URL and raw SHA-256 hash columns when sharing or citing review outputs.",
+        (
+            "- Facility pattern counts and timeline rows are screening aids over the derived "
+            "dataset, not findings about a facility or proof that an event did or did not occur."
+        ),
+        (
+            "- Field traceability rows are provided so reviewers can check extracted values "
+            "against source text, warnings, confidence, and the public source."
+        ),
         (
             "- Verify important details against the public source document before relying "
             "on extracted fields."
