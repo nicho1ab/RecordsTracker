@@ -23,7 +23,10 @@ src/ccld_complaints/
 5. Normalize to canonical objects.
 6. Validate against JSON schemas.
 7. Write to SQLite.
-8. Present through Datasette.
+8. Expose SQLite through Datasette for validation, inspection, debugging, local
+  exploration, and export support.
+9. Keep future primary reviewer UX work behind production-discovery requirements
+  and architecture decisions.
 
 ## Current ingestion boundary
 

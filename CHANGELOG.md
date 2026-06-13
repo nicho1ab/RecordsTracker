@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added Datasette exit governance for the production-discovery phase: Datasette
+	is retained for validation, inspection, debugging, local exploration, and
+	export support, while future primary reviewer UX work moves to requirements
+	and architecture decisions.
 - Added a small fixture-backed multi-facility sample corpus that exercises
 	facility identifier intake diagnostics, controlled fetch summaries,
 	multi-facility source traceability, facility comparison, and review-bundle
@@ -225,4 +229,4 @@
 - Updated the roadmap to prioritize incremental local review usability work,
 	including a review home, task-based workflow grouping, contextual help,
 	low-noise review views, script-output navigation, and a web app transition
-	path before deciding whether Datasette has been outgrown.
+	path that later informed the Datasette primary review UX exit decision.

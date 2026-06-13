@@ -2,13 +2,70 @@
 
 ## Primary rule
 
-Use chat to ask Copilot to make small, testable changes. Always point Copilot to governance files before requesting code changes.
+Use chat to ask Copilot for small, scoped, validated changes. Always point
+Copilot to governance files before requesting code, documentation, governance,
+architecture, phase-transition, or prototype work.
 
 ## Recommended first prompt in VS Code Chat
 
 ```text
 Read .github/copilot-instructions.md, PROJECT_CHARTER.md, DATA_CONTRACT.md, SOURCE_CONNECTOR_CONTRACT.md, TESTING_STRATEGY.md, DOCUMENTATION_STRATEGY.md, DESIGN_AND_USABILITY.md, ACCESSIBILITY_REQUIREMENTS.md, and DECISIONS.md. Summarize the project rules you must follow before making code changes.
 ```
+
+## Prompt types
+
+### Analysis-only prompts
+
+Use analysis-only prompts when you want Copilot to inspect code, docs, issues,
+test failures, or architecture options without editing files.
+
+```text
+Read the governance files and analyze <question or risk>. Do not edit files, run
+mutating commands, create branches, or open a PR. Summarize findings, open
+questions, and recommended next steps.
+```
+
+Analysis-only work may challenge assumptions and identify stale governance, but
+it must not weaken source traceability, raw source preservation, deterministic
+extraction, fixture-backed regression expectations, accessibility, security,
+privacy, or public-source caution language.
+
+### Governance-change proposals
+
+Use governance-change prompts when rules, decision logs, roadmap language,
+testing policy, documentation policy, or workflow guidance may need to change.
+
+```text
+Using the governance files, propose and implement the smallest governance update
+for <change>. Preserve non-negotiable safeguards, update related docs that would
+otherwise become stale, run focused documentation validation first, then standard
+PR validation.
+```
+
+Governance may be challenged when project phase, reviewer needs, validation
+evidence, CI failures, repeated review corrections, or architecture decisions
+show that prior assumptions are stale. Source traceability, raw source
+preservation, deterministic extraction where reliable, fixture-backed regression
+coverage, accessibility, security/privacy, schema-change discipline, connector
+contract discipline, and public-source caution language remain strict.
+
+### Architecture decision reviews
+
+Use architecture decision review prompts when comparing boundaries, tradeoffs, or
+stack options. These prompts should produce or update ADRs and should not select
+or implement a production stack unless the task explicitly asks for that decision
+and the required context is available.
+
+```text
+Read the governance files and current ADRs. Review the architecture decision for
+<topic>, compare options, preserve the non-negotiable safeguards, and draft the
+smallest ADR or ADR update needed. Do not build the implementation.
+```
+
+### Implementation tasks
+
+Use implementation prompts for code, schema, connector, extraction, export,
+review-view, or script changes.
 
 ## Add a feature prompt
 
@@ -20,6 +77,41 @@ Using the governance files, implement the smallest safe version of <feature>. Ad
 
 ```text
 Create a failing regression test or fixture for this bug first. Then fix the smallest amount of code needed. Identify the root cause and update governance rules if a missing or unclear rule allowed the bug. Run or describe the validation commands I should run.
+```
+
+Implementation work must keep schema, extraction, connector, traceability,
+accessibility, privacy, and documentation impacts explicit. Do not treat focused
+validation as a substitute for standard PR validation.
+
+### Phase-transition tasks
+
+Use phase-transition prompts when the project moves from POC to local
+attorney-review aid, production-discovery, production-build, or production
+operations governance.
+
+```text
+Implement the smallest phase-transition governance update for <phase change>.
+Preserve non-negotiable safeguards, mark prior decisions as historical or
+superseded only where applicable, update roadmap/design/architecture/workflow
+docs that would otherwise become misleading, and do not build application code.
+```
+
+Phase-transition work may supersede stale POC-era assumptions. It must not remove
+source traceability, raw source preservation, deterministic extraction
+expectations, fixture-backed regression expectations, accessibility,
+security/privacy, public-source caution language, or schema/connector governance.
+
+### Prototype and spike tasks
+
+Use prototype or spike prompts to explore uncertain approaches before production
+commitment. Spikes should be clearly labeled, small, reversible, and separated
+from production decisions.
+
+```text
+Create a small prototype or spike for <question>. Keep it isolated, document what
+it proves and does not prove, avoid new baseline dependencies unless explicitly
+approved, preserve source traceability and accessibility constraints, and do not
+present it as the production stack decision.
 ```
 
 ## Guardrails

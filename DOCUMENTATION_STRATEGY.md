@@ -66,11 +66,12 @@ must either update affected documentation or explicitly state that no user-facin
 or documentation-impacting behavior changed. In PR text, use a clear statement
 such as: no user-facing or documentation-impacting behavior changed.
 
-Root public documentation must describe the active CCLD complaints proof of
-concept, not obsolete scaffold, template, or packaging language. The README must
-stay current with implemented project capabilities, including local SQLite and
-Datasette review, source traceability, fixture-backed tests, and controlled live
-fetch behavior.
+Root public documentation must describe the active CCLD complaints project and
+its current phase, not obsolete scaffold, template, packaging, or stale
+Datasette-primary POC language. The README must stay current with implemented
+project capabilities, including local SQLite and Datasette validation/review
+support, source traceability, fixture-backed tests, controlled live fetch
+behavior, source-traceable exports, and production-discovery governance.
 
 Documentation checks prevent stale, missing, or misleading documentation. They
 should not become the default next milestone when validation is passing and the
@@ -99,11 +100,12 @@ must either update affected documentation or explicitly state that no user-facin
 or documentation-impacting behavior changed. In PR text, use a clear statement
 such as: no user-facing or documentation-impacting behavior changed.
 
-Root public documentation must describe the active CCLD complaints proof of
-concept, not obsolete scaffold, template, or packaging language. The README must
-stay current with implemented project capabilities, including local SQLite and
-Datasette review, source traceability, fixture-backed tests, and controlled live
-fetch behavior.
+Root public documentation must describe the active CCLD complaints project and
+its current phase, not obsolete scaffold, template, packaging, or stale
+Datasette-primary POC language. The README must stay current with implemented
+project capabilities, including local SQLite and Datasette validation/review
+support, source traceability, fixture-backed tests, controlled live fetch
+behavior, source-traceable exports, and production-discovery governance.
 
 ## Public documentation hygiene
 
