@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Hardened CCLD finding extraction for source layouts where the normalized
+  finding appears after an explicit `Finding:` label, with fixture-backed
+  regression coverage.
 - Improved sample and live fetch script output by grouping next review steps by
 	task: what to open first, delay triage, source verification, CSV export, and
 	other useful review paths.
