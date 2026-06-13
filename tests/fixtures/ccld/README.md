@@ -49,3 +49,5 @@ Raw fixtures and expected JSON are governed by `.gitattributes` line-ending rule
 - `expected/157806098_inx57_split_facility_number.json`: Expected normalized records for split facility number label extraction hardening.
 - `raw/157806098_inx58_report_type_case.html`: Source-shaped CCLD report fixture covering a title-case complaint investigation report type heading.
 - `expected/157806098_inx58_report_type_case.json`: Expected normalized records for report type case hardening.
+- `raw/157806098_inx59_spaced_allegation_heading.html`: Source-shaped CCLD report fixture covering an `ALLEGATION (S):` section heading variant.
+- `expected/157806098_inx59_spaced_allegation_heading.json`: Expected normalized records for spaced allegation heading extraction hardening.
