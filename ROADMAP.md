@@ -90,6 +90,9 @@ governance scaffold.
 	the complaint investigation report heading uses different casing.
 - Added fixture-backed spaced allegation heading extraction hardening for CCLD
 	report layouts that use an `ALLEGATION (S):` section heading.
+- Added fixture-backed no-colon investigation findings heading extraction
+	hardening for CCLD report layouts that use an `INVESTIGATION FINDINGS`
+	section heading.
 
 ## Completed governance and review experience improvements
 
