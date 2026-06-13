@@ -49,13 +49,31 @@ pull request.
 - State whether user-facing or documentation-impacting behavior changed.
 - For bug and CI-failure fixes, state the root cause and whether a governance
 	rule was added or updated to prevent recurrence.
-- Wait for Required GitHub checks to pass before merge, including CI,
-	documentation, regression, and security checks when those workflows are
-	enabled.
+- The `main` branch must be protected by a GitHub branch protection rule or repository ruleset
+	that requires pull requests and requires these status-check
+	contexts before squash merge: `validate`, `docs-check`, `fixtures`, and
+	`security`.
+- Wait for Required GitHub checks to pass before merge. The required checks are
+	`validate`, `docs-check`, `fixtures`, and `security` when the project workflows
+	are enabled.
 - When GitHub CLI is installed and authenticated, use `gh pr view` and
 	`gh pr checks --watch` to verify PR status instead of relying on memory or
 	manual browser refreshes. Do not include token values or authentication secrets
 	in PR bodies, docs, handoffs, logs, or commits.
+- If GitHub allows a PR to merge before the required check contexts pass, stop
+	and fix the repository branch protection rule or ruleset before the next merge.
+	Governance documentation is not a substitute for GitHub-side enforcement.
+
+Before using GitHub CLI automation from VS Code, verify that GitHub CLI is
+available and authenticated in the integrated terminal:
+
+```powershell
+gh --version
+```
+
+```powershell
+gh auth status
+```
 
 Useful status command:
 
@@ -68,6 +86,9 @@ Useful checks command:
 ```powershell
 gh pr checks --watch
 ```
+
+The checks output must show passing `validate`, `docs-check`, `fixtures`, and
+`security` contexts before a squash merge.
 
 ### Squash merge automation
 

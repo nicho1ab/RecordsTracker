@@ -75,12 +75,29 @@ When GitHub CLI is installed and authenticated, Copilot may use `gh` to reduce
 manual PR work. Prefer these commands for repeatable PR operations:
 
 ```powershell
+gh --version
+```
+
+```powershell
+gh auth status
+```
+
+Only use `gh` automation when both commands work in the VS Code terminal. Never
+print, paste, commit, or document token values from authentication output.
+
+```powershell
 gh pr view --json number,state,isDraft,mergeStateStatus,url,statusCheckRollup
 ```
 
 ```powershell
 gh pr checks --watch
 ```
+
+The `main` branch must be protected by a GitHub branch protection rule or repository ruleset
+that requires pull requests and requires the `validate`,
+`docs-check`, `fixtures`, and `security` status-check contexts to pass before
+squash merge. Copilot must stop before merge if GitHub does not report those
+checks as passing or if repository protection does not require them.
 
 ```powershell
 gh pr merge --squash --delete-branch

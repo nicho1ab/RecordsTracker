@@ -34,6 +34,11 @@ Before making changes, read and follow:
 	operations such as viewing PR status, waiting for checks, editing PR bodies,
 	and squash merging after required checks pass. Do not print, paste, commit, or
 	document GitHub tokens or authentication secrets.
+- The `main` branch must be protected by a GitHub branch protection rule or repository ruleset
+	that requires pull requests and requires the `validate`,
+	`docs-check`, `fixtures`, and `security` status checks to pass before merge.
+	Do not recommend or perform a squash merge unless those required checks have
+	passed and the PR has no merge blockers.
 - When a bug, CI failure, or repeated review correction exposes a missing or
 	weakable governance rule, update the relevant governance, testing, fixture,
 	or workflow documentation in the same task. If no governance rule is needed,
@@ -56,8 +61,10 @@ For every code change:
 8. Explain validation commands.
 9. For bug or CI-failure fixes, describe the root cause and whether a new or
 	updated governance rule was added to prevent recurrence.
-10. When `gh` is available, use it to verify PR state and checks before telling
-	the user to merge or clean up a branch.
+10. Before using GitHub CLI automation, verify `gh --version` and
+	`gh auth status` work in the VS Code terminal without printing tokens. When
+	`gh` is available, use it to verify PR state and required checks before
+	telling the user to merge or clean up a branch.
 
 ## Required task handoff
 
@@ -94,6 +101,11 @@ user explicitly requests the next task in the current conversation.
 Do not include personal paths, usernames, account-specific URLs, private URLs,
 tokens, secrets, or machine-specific details in the handoff. Use placeholders
 when a repository owner, branch, or pull request URL is unknown.
+
+Required GitHub checks must be named by status-check context in the handoff:
+`validate`, `docs-check`, `fixtures`, and `security`. If GitHub does not show
+those checks as required by branch protection or repository rulesets, stop before
+merge and tell the user to fix repository protection for `main`.
 
 ## Handoff formatting rules
 

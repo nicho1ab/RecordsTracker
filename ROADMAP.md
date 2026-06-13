@@ -54,6 +54,9 @@ governance scaffold.
 	governance rules.
 - Added release checklist guidance for validation, accessibility review, PR
 	checks, merge cleanup, and next-task handoff.
+- Added governance requiring GitHub branch protection or repository rulesets for
+	`main`, including required `validate`, `docs-check`, `fixtures`, and
+	`security` status checks before squash merge.
 - Added governance feedback-loop rules so bug and CI-failure fixes update
 	relevant governance when a missing or unclear rule allowed the failure.
 - Added a local output accessibility checklist for Datasette views, generated
