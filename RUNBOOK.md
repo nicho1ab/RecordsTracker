@@ -24,7 +24,8 @@ web requests:
 ```
 
 The script prints the SQLite database path, generated Datasette metadata path,
-and the Datasette command to open.
+the Datasette command to open, and grouped next steps for what to open first,
+delay triage, source verification, and CSV export.
 
 ## Run controlled live fetch
 
@@ -38,7 +39,8 @@ numbers. Use conservative limits while testing:
 The command prints a live fetch summary with facilities requested, report
 candidates discovered, selected, skipped by limit, fetched, written, and failed.
 Check this summary before opening logs when a run produces fewer records than
-expected.
+expected. After the summary, the command prints grouped next steps for opening
+Datasette review paths, delay triage, source verification, and CSV export.
 
 ## Run multi-facility live fetch
 
@@ -78,6 +80,10 @@ views:
 The `review_home` saved query groups the local review paths by task: review
 complaints, find records needing closer review, compare facilities, verify
 sources, and export CSVs.
+
+The sample and live fetch scripts also print grouped next steps: open first,
+delay triage, source verification, CSV export, and other useful review paths.
+Use those groups as the first navigation guide after each run.
 
 If saved queries are unavailable, start with these views:
 

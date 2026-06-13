@@ -91,25 +91,44 @@ def datasette_metadata(db_path: Path) -> dict[str, Any]:
 
 def review_workflow_lines() -> list[str]:
     return [
-        "Open the review_home saved query first for task-based review paths.",
-        "Open these Datasette review views first, in order:",
-        "1. complaint_first_pass_review - low-noise first-pass complaint review.",
-        "2. complaint_review_summary - full complaint review across facilities.",
-        "3. facility_complaint_summary - facility-level counts and date range.",
-        "4. delay_review_flags - triage list for records with review flags.",
-        "5. source_traceability_review - source URLs, hashes, connector details, and report index.",
-        "Saved queries for common workflows:",
-        "- review_home - start-here task menu for local review workflows.",
-        "- complaint_review_start_here - guided complaint review with source traceability.",
-        "- complaints_by_facility - filter complaint review by facility number.",
-        "- complaint_review_export_with_traceability - export complaint fields with source hashes.",
-        "- records_with_delay_review_flags - triage review flags as screening aids only.",
+        "Next review steps:",
+        "Open first:",
+        "- review_home saved query - start-here task menu for local review workflows.",
+        (
+            "- complaint_review_start_here saved query - guided complaint review with source "
+            "traceability."
+        ),
+        "- complaint_first_pass_review view - low-noise first-pass complaint review.",
+        "For delay triage:",
+        "- delay_review_flags view - records with review flags for closer review.",
+        (
+            "- records_with_delay_review_flags saved query - triage review flags as screening "
+            "aids only."
+        ),
+        "For source verification:",
+        (
+            "- source_traceability_review view - source URLs, raw hashes, connector details, "
+            "and report index."
+        ),
+        "- source_traceability_by_facility saved query - check source provenance for one facility.",
+        "For CSV export:",
+        (
+            "- complaint_review_export_with_traceability saved query - export complaint fields "
+            "with source hashes."
+        ),
+        (
+            "- .\\scripts\\export-review-bundle.ps1 - write complaint, delay triage, and "
+            "source traceability CSVs."
+        ),
+        "Other useful review paths:",
+        "- complaint_review_summary view - full complaint review across facilities.",
+        "- facility_complaint_summary view - facility-level counts and date range.",
+        "- complaints_by_facility saved query - filter complaint review by facility number.",
         (
             "- facilities_with_delay_review_flags - find facilities with records needing "
             "closer review."
         ),
-        "- source_traceability_by_facility - check source provenance for one facility.",
-        "- newest_reports - review most recently retrieved source documents.",
+        "- newest_reports saved query - review most recently retrieved source documents.",
         "Delay flags are screening aids only; verify important details against source documents.",
     ]
 
