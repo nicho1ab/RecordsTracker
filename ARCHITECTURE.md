@@ -57,6 +57,14 @@ output, preserves stable source-derived identities and traceability fields, and
 does not approve hosted live crawling, hosted connector execution, import code,
 schemas, migrations, reset/reload implementation, or app scaffold work.
 
+ADR-0010 defines the hosted tester MVP physical schema and migration strategy
+boundary. Future hosted schema work must separate import/batch metadata,
+source-derived imported records, reviewer-created state, audit events, export
+packet state, tester feedback, and operational/reset metadata through separate
+physical schema areas or clearly separated table groups. It does not approve
+schema files, migration files, a database product, a migration tool, import
+implementation, reset/reload implementation, or app scaffold work.
+
 ## Components
 
 ### Connectors
@@ -71,8 +79,10 @@ Raw source files are stored in ordinary file storage under `data/raw/`. Each fil
 
 SQLite is the initial validation database. A hosted relational database is the
 preferred future direction for hosted tester reviewer-created state and imported
-source-derived records, but the specific database product and schema remain
-deferred to future ADRs.
+source-derived records. The specific database product, migration tool, table
+names, columns, indexes, constraints, and implementation remain deferred, but
+future hosted schema work must preserve the physical data-domain separation
+accepted by ADR-0010.
 
 ### Presentation
 
@@ -136,6 +146,10 @@ retention ADRs approve implementation details.
   through controlled imports from validated pipeline output; direct hosted live
   crawling or connector execution is not approved for the tester MVP without a
   later ADR.
+- Future hosted schema work must preserve clear physical separation between
+  import metadata, source-derived imported records, reviewer-created state,
+  audit events, export packet state, tester feedback, and operational/reset
+  metadata.
 - Production app scaffolding, hosted schemas, authentication implementation,
   correction workflows, queues, annotations, and hosted export builders are not
   approved until the relevant future ADRs are complete.

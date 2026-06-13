@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added ADR-0010 defining the hosted tester MVP schema and migration strategy
+	boundary, requiring future hosted schema work to separate import metadata,
+	source-derived imported records, reviewer-created state, audit events, export
+	packet state, tester feedback, and operational/reset metadata while deferring
+	actual schema files, migrations, database product, migration tooling, import
+	implementation, reset/reload implementation, retention, backup, and app
+	scaffold decisions.
 - Added ADR-0009 defining the hosted tester MVP import/sync strategy, keeping
 	the Python pipeline as the source-derived data producer, starting with
 	controlled snapshot imports from validated pipeline output, and deferring

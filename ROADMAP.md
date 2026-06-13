@@ -202,15 +202,20 @@ the governed primary future review experience.
 - Accepted the hosted tester MVP import/sync strategy, keeping the Python
 	pipeline as the source-derived data producer and starting hosted tester data
 	population with controlled snapshot imports from validated pipeline output.
+- Accepted the hosted tester MVP schema and migration strategy boundary,
+  requiring future hosted schema work to separate import metadata,
+  source-derived imported records, reviewer-created state, audit events, export
+  packet state, tester feedback, and operational/reset metadata without
+  implementing schemas or migrations prematurely.
 
 ## Near-term milestones
 
-- Decide the hosted tester MVP physical schema and migration strategy for the
-	accepted source-derived and reviewer-created data domains without implementing
-	hosted persistence prematurely.
 - Decide authenticated tester access, audit logging, export generation,
 	reset/reload, tester data retention, and hosted MVP scaffold sequencing before
 	app scaffold work.
+- Decide concrete database product and migration tooling only after the accepted
+  schema/migration strategy, authentication/access needs, reset/reload needs,
+  audit requirements, and hosted operations constraints are clear.
 - Preserve Datasette, SQLite views, and review-bundle exports where they support
 	validation, inspection, debugging, local exploration, and export workflows.
 - Harden extraction with additional representative fixtures and edge-case tests.
@@ -229,12 +234,11 @@ has been outgrown as the primary future review experience and should be extended
 only where it remains useful for validation, inspection, debugging, local
 exploration, or export support.
 
-1. Draft a physical schema and migration strategy ADR for the hosted tester MVP
-	data domains accepted by ADR-0008 and the controlled import boundary accepted
-	by ADR-0009, without choosing a database product or implementing migrations
-	yet.
-2. Draft authentication/access, audit log, export generation, reset/reload, and
+1. Draft authentication/access, audit log, export generation, reset/reload, and
 	tester retention ADRs before any hosted app scaffold work.
+2. Decide concrete database product and migration tooling for the hosted tester
+  MVP only after the remaining access, audit, reset/reload, export, retention,
+  and operations constraints are understood.
 3. Draft hosted MVP scaffold planning only after data-domain, schema/migration,
 	import/sync, auth/access, export, audit, and retention decisions are accepted.
 4. Add additional CCLD fixtures and extraction hardening for representative
@@ -254,12 +258,11 @@ define the smallest useful product shape:
 2. Decide which architecture boundaries belong to ingestion, storage,
 	validation, review state, correction state, export generation, and future
 	presentation.
-3. Use ADR-0007's hybrid direction and ADR-0008's data-domain boundary to
-	decide physical schema/migration strategy, authentication/access model, audit
-	log, export generation, reset/reload, retention, and implementation scaffold
-	sequence in separate ADRs before build work. Use ADR-0009's controlled import
-	boundary when deciding how hosted source-derived records map into that future
-	physical schema.
+3. Use ADR-0007's hybrid direction, ADR-0008's data-domain boundary, ADR-0009's
+	controlled import boundary, and ADR-0010's physical separation strategy to
+	decide authentication/access model, audit log, export generation,
+	reset/reload, retention, concrete database/migration tooling, and
+	implementation scaffold sequence in separate ADRs before build work.
 
 ## Decision points
 

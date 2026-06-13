@@ -245,6 +245,9 @@ updates must define:
 - How the ADR-0009 controlled import/sync strategy is mapped into import batch
   metadata, stable source-derived identities, reset/reload behavior, and
   reviewer-created state preservation.
+- How the ADR-0010 physical schema and migration strategy is mapped into
+  separated schema areas or table groups, migration validation, and future
+  implementation tests without weakening traceability or mixing data domains.
 - How source traceability and extraction audit context remain available to the
   hosted reviewer application.
 - How authenticated tester access, audit history, reset/reload, and export
