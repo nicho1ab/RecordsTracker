@@ -15,3 +15,5 @@ Raw fixtures and expected JSON are governed by `.gitattributes` line-ending rule
 - `expected/157806098_inx40_numbered_allegations.json`: Expected normalized records for numbered-allegation extraction hardening.
 - `raw/157806098_inx41_inline_received_date.html`: Source-shaped CCLD report fixture covering complaint received dates that appear inline in the narrative sentence.
 - `expected/157806098_inx41_inline_received_date.json`: Expected normalized records for inline complaint received date extraction hardening.
+- `raw/157806098_inx42_missing_visit_date.html`: Source-shaped CCLD report fixture covering missing visit date extraction and report-date proxy delay review flags.
+- `expected/157806098_inx42_missing_visit_date.json`: Expected normalized records for missing visit date extraction hardening.
