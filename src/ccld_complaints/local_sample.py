@@ -99,6 +99,11 @@ def review_workflow_lines() -> list[str]:
             "traceability."
         ),
         "- complaint_first_pass_review view - low-noise first-pass complaint review.",
+        "For public-record discovery:",
+        (
+            "- public_record_allegation_search saved query - search source-derived allegation "
+            "text, categories, and findings with traceability."
+        ),
         "For delay triage:",
         "- delay_review_flags view - records with review flags for closer review.",
         (
@@ -456,6 +461,16 @@ SELECT
 UNION ALL
 SELECT
     2,
+    'Public-record discovery',
+    'Search allegation text',
+    'public_record_allegation_search',
+    'Use a cautious keyword or phrase to search source-derived allegation text, ' ||
+        'categories, and findings while keeping complaint dates and source traceability visible.',
+    'Search results are screening aids over the derived dataset; verify important details ' ||
+        'against the public source.'
+UNION ALL
+SELECT
+    3,
     'Review flags',
     'Find records needing closer review',
     'records_with_delay_review_flags',
@@ -463,7 +478,7 @@ SELECT
     'Delay review flags are screening aids, not conclusions that an investigation was delayed.'
 UNION ALL
 SELECT
-    3,
+    4,
     'Facility comparison',
     'Compare facilities',
     'facility_complaint_summary',
@@ -473,7 +488,7 @@ SELECT
         'against source records.'
 UNION ALL
 SELECT
-    4,
+    5,
     'Source verification',
     'Verify sources',
     'source_traceability_review',
@@ -483,7 +498,7 @@ SELECT
     'The public portal remains the source of record.'
 UNION ALL
 SELECT
-    5,
+    6,
     'CSV export',
     'Export CSVs',
     'complaint_review_export_with_traceability',
@@ -491,6 +506,77 @@ SELECT
     'Keep clear headers and source URL, raw hash, connector metadata, retrieval ' ||
         'time, and report index when available.'
 ORDER BY step
+            """.strip(),
+        },
+        "public_record_allegation_search": {
+            "title": "Public-Record Allegation Search",
+            "description": (
+                "Search source-derived allegation text, allegation categories, and findings by "
+                "keyword or phrase while keeping facility context, complaint dates, review "
+                "flags, source URL, raw hash, connector metadata, retrieval time, and report "
+                "index visible. Use this as a discovery aid over the derived dataset, not as a "
+                "legal conclusion or complete public portal search. Enter a cautious public-record "
+                "term when Datasette prompts for search_term."
+            ),
+            "sql": """
+SELECT
+    f.external_facility_number AS facility_number,
+    f.facility_name,
+    c.complaint_control_number,
+    c.complaint_received_date,
+    c.visit_date,
+    c.report_date,
+    c.finding AS complaint_finding,
+    a.allegation_category,
+    a.finding AS allegation_finding,
+    a.allegation_text,
+    NULLIF(RTRIM(
+        CASE
+            WHEN LOWER(a.allegation_text) LIKE '%' || LOWER(:search_term) || '%'
+            THEN 'allegation text; '
+            ELSE ''
+        END ||
+        CASE
+            WHEN LOWER(COALESCE(a.allegation_category, '')) LIKE '%' || LOWER(:search_term) || '%'
+            THEN 'allegation category; '
+            ELSE ''
+        END ||
+        CASE
+            WHEN LOWER(COALESCE(a.finding, '')) LIKE '%' || LOWER(:search_term) || '%'
+              OR LOWER(COALESCE(c.finding, '')) LIKE '%' || LOWER(:search_term) || '%'
+            THEN 'finding; '
+            ELSE ''
+        END,
+        '; '
+    ), '') AS matched_fields,
+    c.review_delay_over_30_days,
+    c.review_delay_over_60_days,
+    c.review_delay_over_90_days,
+    c.review_delay_over_120_days,
+    c.missing_first_activity_date,
+    c.report_date_used_as_proxy,
+    sd.source_url,
+    sd.raw_sha256,
+    sd.raw_path,
+    sd.connector_name,
+    sd.connector_version,
+    sd.retrieved_at,
+    sd.report_index,
+    c.complaint_id,
+    a.allegation_id,
+    sd.document_id
+FROM allegations a
+JOIN complaints c ON c.complaint_id = a.complaint_id
+JOIN facilities f ON f.facility_id = c.facility_id
+JOIN source_documents sd ON sd.document_id = c.document_id
+WHERE NULLIF(TRIM(:search_term), '') IS NOT NULL
+  AND (
+      LOWER(a.allegation_text) LIKE '%' || LOWER(:search_term) || '%'
+      OR LOWER(COALESCE(a.allegation_category, '')) LIKE '%' || LOWER(:search_term) || '%'
+      OR LOWER(COALESCE(a.finding, '')) LIKE '%' || LOWER(:search_term) || '%'
+      OR LOWER(COALESCE(c.finding, '')) LIKE '%' || LOWER(:search_term) || '%'
+  )
+ORDER BY c.report_date DESC, c.complaint_received_date DESC, facility_number, allegation_id
             """.strip(),
         },
         "complaint_review_start_here": {

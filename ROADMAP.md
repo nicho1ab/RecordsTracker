@@ -39,6 +39,9 @@ governance scaffold.
 	source-checking, and export workflows.
 - Added a source-traceable start-here saved query for guided complaint review in
 	Datasette.
+- Added a source-traceable public-record allegation search saved query for
+  cautious keyword discovery over source-derived allegation text, categories,
+  and findings.
 - Added a `review_home` Datasette saved query as a task-based start-here surface
 	for complaint review, delay triage, facility comparison, source verification,
 	and CSV export paths before any dashboard or custom web interface decision.
