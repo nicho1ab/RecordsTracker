@@ -38,9 +38,12 @@ numbers. Use conservative limits while testing:
 
 The command prints a live fetch summary with facilities requested, report
 candidates discovered, selected, skipped by limit, fetched, written, and failed.
-Check this summary before opening logs when a run produces fewer records than
-expected. After the summary, the command prints grouped next steps for opening
-Datasette review paths, delay triage, source verification, and CSV export.
+It also prints facility identifier intake feedback before discovery, including
+accepted identifiers, duplicate identifiers ignored, and ignored blank, comment,
+or header values. Check these summaries before opening logs when a run produces
+fewer records than expected. After the summary, the command prints grouped next
+steps for opening Datasette review paths, delay triage, source verification, and
+CSV export.
 
 ## Run multi-facility live fetch
 

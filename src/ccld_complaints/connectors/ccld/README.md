@@ -46,6 +46,12 @@ Live CCLD requests are user-invoked through `scripts/run-ccld-live-fetch.ps1`. T
 
 The live command prints an external-site warning, uses a clear user agent, applies a reasonable timeout, limits report requests unless the user chooses all discovered reports, enforces the max-request guard, and does not use an aggressive retry loop. Automated tests should inject fixture HTML and fake report fetchers instead of making live web requests.
 
+Before discovery or report fetching, the live command reports facility identifier
+intake details: accepted facility identifiers, duplicate identifiers ignored, and
+blank, comment, or header values ignored from small text or CSV input files.
+Facility identifiers must contain digits only; invalid values are rejected before
+the connector makes public web requests.
+
 ## Initial deterministic extraction
 
 The first implemented fixture covers facility `157806098` with report index `3`.

@@ -28,6 +28,9 @@ governance scaffold.
 - Added controlled live fetch for explicitly provided facility numbers.
 - Added multi-facility input for live fetch workflows scoped to user-provided
 	facility numbers.
+- Added facility identifier intake diagnostics for controlled live fetch runs,
+  including accepted identifiers, duplicate identifiers ignored, ignored input
+  values, and invalid-format rejection before public requests begin.
 - Added live fetch summary output for discovered, selected, skipped, fetched,
 	written, and failed report counts.
 - Added SQLite review views for complaint review, facility summaries, delay

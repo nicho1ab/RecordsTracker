@@ -73,6 +73,11 @@ Then pass the file path:
 .\scripts\run-ccld-live-fetch.ps1 -FacilityInputPath .\facility-numbers.csv -Limit 1 -MaxRequests 3
 ```
 
+Before making report requests, the live script prints a facility identifier
+intake summary. It shows the accepted facility identifiers, duplicate
+identifiers ignored, and blank, comment, or header values ignored. Invalid
+facility identifiers are rejected before report discovery or fetching begins.
+
 After one report per facility succeeds, try a small larger per-facility limit such as three or five reports. `-MaxRequests` must be at least as large as the total selected report count across all facilities:
 
 ```powershell
@@ -97,7 +102,8 @@ After the run, the script prints a live fetch summary with the number of
 facilities requested, report candidates discovered, selected, skipped by limit,
 fetched, written to SQLite, and failed. The facility summary shows the same
 counts by facility so you can spot partial failures before opening logs or
-Datasette.
+Datasette. Treat failed or skipped items as run states in the derived workflow,
+not as conclusions about the public source.
 
 Downloaded report files are saved under `data/raw/ccld` by default. The `data/raw` path is ignored by Git so live public source files stay local unless you intentionally move or copy them. Ingestion reads the saved raw files, records their SHA-256 hashes, and writes source traceability fields to the `source_documents` table.
 
