@@ -101,6 +101,8 @@ governance scaffold.
 	punctuation.
 - Added fixture-backed dashed investigation findings heading hardening for CCLD
 	report layouts that use an `INVESTIGATION FINDINGS -` section heading.
+- Added fixture-backed dashed allegation heading hardening for CCLD report
+	layouts that use an `ALLEGATION(S) -` section heading.
 
 ## Completed governance and review experience improvements
 
