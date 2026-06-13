@@ -6,7 +6,11 @@ This guide describes the first local review workflow for non-technical reviewers
 
 After running the sample or live fetch script, open the Datasette command printed by the script. The command includes a metadata file that adds clearer labels, descriptions, column notes, and saved query examples.
 
-On the Datasette database page, use the review view titles and descriptions from the metadata as the starting guide. The metadata also labels the normalized tables for lower-level checks, but routine browsing should begin with the review views.
+On the Datasette database page, open the `review_home` saved query first. It gives one task-based starting place for the local review workflow and points to the complaint review, delay triage, facility comparison, source verification, and CSV export paths. This is an incremental Datasette review aid, not a dashboard or custom web application.
+
+Then open `complaint_review_start_here` for a guided complaint list that preserves facility context, delay screening fields, source URL, raw SHA-256 hash, connector metadata, retrieval time, and report index.
+
+Use the review view titles and descriptions from the metadata as the next guide. The metadata also labels the normalized tables for lower-level checks, but routine browsing should begin with the review home, guided complaint query, and review views.
 
 Open these views first:
 
@@ -18,6 +22,10 @@ Open these views first:
 Use normalized tables such as `complaints`, `allegations`, `source_documents`, and `extraction_audit` only when you need lower-level detail.
 
 ## What each view means
+
+`review_home` is a saved query that acts as the local start-here surface. Each row names a reviewer task, the view or saved query to open next, when to use it, and the caution language to preserve.
+
+`complaint_review_start_here` is a saved query for guided complaint review with source traceability. Use it before narrowing to filters or exports.
 
 `complaint_review_summary` combines the most useful review fields in one place: facility number, facility name, complaint control number, complaint dates, finding, allegation count and summary, delay calculation fields, review flags, source URL, and raw path.
 
@@ -78,6 +86,7 @@ For accessible CSV review:
 
 The generated Datasette metadata includes saved query examples:
 
+- `review_home` gives one start-here task menu for review complaints, find records needing closer review, compare facilities, verify sources, and export CSVs.
 - `complaint_review_start_here` opens a review-ready complaint list with facility context, delay screening fields, source URL, raw SHA-256 hash, connector metadata, retrieval time, and report index.
 - `complaints_by_facility` filters `complaint_review_summary` by facility number and prompts for the facility number.
 - `complaint_review_export_with_traceability` exports complaint review fields with source URL, raw hash, raw path, connector metadata, retrieval time, and report index.
@@ -88,7 +97,7 @@ The generated Datasette metadata includes saved query examples:
 - `allegation_summary_by_facility` summarizes complaint and allegation counts by facility.
 - `newest_reports` sorts source documents by retrieval timestamp and report index.
 
-These saved queries are review aids. Start with `complaint_review_start_here` when you want a guided, source-traceable complaint list before choosing a narrower filter. If you export query results, keep clear headers and source traceability fields where available.
+These saved queries are review aids. Start with `review_home` when you need to choose a task, then use `complaint_review_start_here` when you want a guided, source-traceable complaint list before choosing a narrower filter. If you export query results, keep clear headers and source traceability fields where available.
 
 ## What not to conclude
 

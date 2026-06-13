@@ -64,7 +64,21 @@ Manual command:
 .\.venv\Scripts\datasette.exe data\processed\ccld.sqlite --metadata data\processed\ccld.datasette-metadata.json
 ```
 
-Open the local URL shown in PowerShell and start with these views:
+Open the local URL shown in PowerShell and start with these saved queries and
+views:
+
+1. Saved query `review_home`
+2. Saved query `complaint_review_start_here`
+3. `complaint_review_summary`
+4. `facility_complaint_summary`
+5. `delay_review_flags`
+6. `source_traceability_review`
+
+The `review_home` saved query groups the local review paths by task: review
+complaints, find records needing closer review, compare facilities, verify
+sources, and export CSVs.
+
+If saved queries are unavailable, start with these views:
 
 1. `complaint_review_summary`
 2. `facility_complaint_summary`
