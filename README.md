@@ -70,11 +70,12 @@ numbers and request limits:
 
 The live fetch command prints a summary of facilities requested, report
 candidates discovered, selected, skipped by limit, fetched, written, and failed
-so reviewers can see the run outcome before opening logs or Datasette. It also
-prints facility identifier intake feedback, including accepted identifiers,
-duplicates ignored, and ignored blank, comment, or header values. It then prints
-the same grouped next steps for what to open first, delay triage, source
-verification, and CSV export.
+so reviewers can see the run outcome before opening logs or Datasette. The
+summary distinguishes facilities with records discovered, facilities with no
+records discovered, and discovery failures. It also prints facility identifier
+intake feedback, including accepted identifiers, duplicates ignored, and ignored
+blank, comment, or header values. It then prints the same grouped next steps for
+what to open first, delay triage, source verification, and CSV export.
 
 Downloaded live raw files are saved under the ignored local `data/raw` path by
 default. Treat public complaint narratives carefully because they may contain

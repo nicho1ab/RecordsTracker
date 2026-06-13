@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added clearer controlled multi-facility live fetch outcome summaries for
+	records discovered, no records discovered, discovery failures,
+	skipped-by-limit reports, partial report failures, and written records.
 - Added facility identifier intake diagnostics to controlled live fetch runs so
   reviewers can see accepted identifiers, duplicates ignored, ignored file
   values, and invalid-format rejection before public requests begin.

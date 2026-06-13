@@ -33,6 +33,9 @@ governance scaffold.
   values, and invalid-format rejection before public requests begin.
 - Added live fetch summary output for discovered, selected, skipped, fetched,
 	written, and failed report counts.
+- Added controlled multi-facility live fetch outcome summaries that distinguish
+  records discovered, no records discovered, discovery failures,
+  skipped-by-limit reports, partial report failures, and written records.
 - Added SQLite review views for complaint review, facility summaries, delay
 	review flags, and source traceability.
 - Added a low-noise first-pass complaint review view that preserves source

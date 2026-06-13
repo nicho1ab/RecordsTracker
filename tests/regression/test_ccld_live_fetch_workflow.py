@@ -252,6 +252,8 @@ def test_live_fetch_summary_reports_discovered_selected_and_skipped_counts() -> 
 
     summary = live_fetch_summary_lines([result], [])
 
+    assert "- Facilities with records discovered: 1" in summary
+    assert "- Facilities with no records discovered: 0" in summary
     assert "- Report candidates discovered: 40" in summary
     assert "- Report candidates selected: 2" in summary
     assert "- Reports skipped by limit: 38" in summary
@@ -259,7 +261,7 @@ def test_live_fetch_summary_reports_discovered_selected_and_skipped_counts() -> 
     assert "- Records written: 2" in summary
     assert "- Report failures: 0" in summary
     assert (
-        "- 157806098: discovered=40, selected=2, skipped=38, "
+        "- 157806098: status=records written, discovered=40, selected=2, skipped=38, "
         "fetched=2, written=2, failed=0"
     ) in summary
 
@@ -284,8 +286,52 @@ def test_live_fetch_summary_separates_fetch_failures_from_fetched_reports() -> N
     assert "- Records written: 2" in summary
     assert "- Report failures: 1" in summary
     assert (
-        "- 157806098: discovered=40, selected=3, skipped=37, "
+        "- 157806098: status=partial report failures, discovered=40, selected=3, skipped=37, "
         "fetched=2, written=2, failed=1"
+    ) in summary
+
+
+def test_live_fetch_summary_reports_no_records_discovered_by_facility(
+    tmp_path: Path,
+) -> None:
+    result = ingest_facility_reports_for_facilities(
+        ["157806098", "123456789"],
+        connector_factory=_connector_factory(tmp_path / "raw" / "ccld", tmp_path / "ccld.sqlite"),
+        facility_detail_html_by_number={
+            "157806098": _facility_detail_html("157806098"),
+            "123456789": "<html><body>No report links here.</body></html>",
+        },
+        discovered_at=RETRIEVED_AT,
+        per_facility_limit=1,
+        max_requests=1,
+        fetch_report=_fake_multi_facility_report_fetch,
+    )
+
+    summary = live_fetch_summary_lines(result.facility_results, result.facility_failures)
+
+    assert "- Facilities with records discovered: 1" in summary
+    assert "- Facilities with no records discovered: 1" in summary
+    assert (
+        "- 123456789: status=no records discovered, discovered=0, selected=0, skipped=0, "
+        "fetched=0, written=0, failed=0"
+    ) in summary
+
+
+def test_live_fetch_summary_reports_skipped_by_limit_for_zero_limit() -> None:
+    result = ingest_facility_reports_for_facility(
+        facility_detail_html=RAW_DETAIL_FIXTURE.read_text(encoding="utf-8"),
+        discovered_at=RETRIEVED_AT,
+        limit=0,
+        max_requests=0,
+        fetch_report=_fake_report_fetch,
+    )
+
+    summary = live_fetch_summary_lines([result], [])
+
+    assert "- Reports skipped by limit: 40" in summary
+    assert (
+        "- 157806098: status=skipped by limit, discovered=40, selected=0, skipped=40, "
+        "fetched=0, written=0, failed=0"
     ) in summary
 
 
