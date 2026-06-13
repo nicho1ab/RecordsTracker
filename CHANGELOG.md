@@ -5,6 +5,9 @@
 - Improved sample and live fetch script output by grouping next review steps by
 	task: what to open first, delay triage, source verification, CSV export, and
 	other useful review paths.
+- Hardened CCLD complaint received date extraction for source layouts where the
+	received date appears inline in the narrative sentence, with fixture-backed
+	regression coverage.
 - Established the governed CCLD complaints proof-of-concept structure, including
 	project charter, data contract, source connector contract, testing strategy,
 	documentation strategy, accessibility requirements, security rules, decision

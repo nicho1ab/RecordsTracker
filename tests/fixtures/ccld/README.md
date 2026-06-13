@@ -13,3 +13,5 @@ Raw fixtures and expected JSON are governed by `.gitattributes` line-ending rule
 - `expected/157806098_inx3.json`: Expected normalized records for the first deterministic CCLD extraction regression test.
 - `raw/157806098_inx40_numbered_allegations.html`: Source-shaped CCLD report fixture covering allegation rows where the numeric marker and allegation text appear on the same line.
 - `expected/157806098_inx40_numbered_allegations.json`: Expected normalized records for numbered-allegation extraction hardening.
+- `raw/157806098_inx41_inline_received_date.html`: Source-shaped CCLD report fixture covering complaint received dates that appear inline in the narrative sentence.
+- `expected/157806098_inx41_inline_received_date.json`: Expected normalized records for inline complaint received date extraction hardening.
