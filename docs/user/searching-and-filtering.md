@@ -27,4 +27,6 @@ When you open Datasette with the metadata command printed by the sample or live 
 - `allegation_summary_by_facility` summarizes complaint and allegation counts by facility.
 - `newest_reports` lists the most recently retrieved source documents first.
 
+Read the saved query description before running or exporting it. The descriptions explain when to use the query, what not to conclude, and which source traceability fields to preserve.
+
 Use `delay_review_flags` and the saved delay query as triage aids only. Delay flags do not prove that an investigation was delayed.

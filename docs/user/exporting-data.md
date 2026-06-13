@@ -37,6 +37,8 @@ For complaint review, start with the `complaint_review_summary` view because it 
 
 If you are unsure which export path to use, open the `review_home` saved query first. Its export row points to `complaint_review_export_with_traceability` and reminds reviewers to keep clear headers plus source URL, raw hash, connector metadata, retrieval time, and report index when available.
 
+Before exporting from a Datasette view or saved query, read its description. The metadata explains when the output is appropriate, what not to conclude from it, and which traceability columns to keep.
+
 If a view does not include all needed low-level fields, export the normalized tables and preserve the ID columns so reviewers can join or compare records.
 
 Recommended export columns:

@@ -10,7 +10,7 @@ On the Datasette database page, open the `review_home` saved query first. It giv
 
 Then open `complaint_review_start_here` for a guided complaint list that preserves facility context, delay screening fields, source URL, raw SHA-256 hash, connector metadata, retrieval time, and report index.
 
-Use the review view titles and descriptions from the metadata as the next guide. The metadata also labels the normalized tables for lower-level checks, but routine browsing should begin with the review home, guided complaint query, and review views.
+Use the review view titles and descriptions from the metadata as the next guide. The metadata gives short contextual help for when to use each primary view or saved query, what not to conclude from it, and which source traceability fields to preserve when exporting. The metadata also labels the normalized tables for lower-level checks, but routine browsing should begin with the review home, guided complaint query, and review views.
 
 Open these views first:
 
@@ -98,6 +98,8 @@ The generated Datasette metadata includes saved query examples:
 - `newest_reports` sorts source documents by retrieval timestamp and report index.
 
 These saved queries are review aids. Start with `review_home` when you need to choose a task, then use `complaint_review_start_here` when you want a guided, source-traceable complaint list before choosing a narrower filter. If you export query results, keep clear headers and source traceability fields where available.
+
+Read the Datasette description above a view or saved query before exporting or quoting from it. The descriptions are intentionally short contextual help, not a replacement for checking the public source record.
 
 ## What not to conclude
 
