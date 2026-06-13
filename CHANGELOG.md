@@ -64,6 +64,9 @@
 	task-based start-here surface for complaint review, delay triage, facility
 	comparison, source verification, and CSV export paths before any dashboard or
 	custom web interface decision.
+- Added contextual help to primary Datasette review views and saved queries so
+	reviewers can see when to use each item, what not to conclude, and what source
+	traceability to preserve when exporting.
 - Updated the roadmap to prioritize incremental local review usability work,
 	including a review home, task-based workflow grouping, contextual help,
 	low-noise review views, script-output navigation, and a web app transition

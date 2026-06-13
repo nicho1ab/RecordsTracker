@@ -128,7 +128,9 @@ def _datasette_table_metadata() -> dict[str, Any]:
             "description": (
                 "Main review view combining facility, complaint, allegation summary, delay fields, "
                 "review flags, source URL, and raw path. Sort by complaint_received_date or "
-                "report_date descending when reviewing newer records first. "
+                "report_date descending when reviewing newer records first. Use for first-pass "
+                "complaint review; do not treat extracted rows as official source records. Keep "
+                "source URL and raw path when exporting. "
                 f"{delay_flag_caution}"
             ),
             "sort_desc": "report_date",
@@ -174,7 +176,9 @@ def _datasette_table_metadata() -> dict[str, Any]:
                 "One row per facility with complaint count, allegation count, complaint date "
                 "range, "
                 "and count of records with delay review flags. Sort by complaint_count descending "
-                "to find facilities with more reviewed records."
+                "to find facilities with more reviewed records. Use for local comparison, not as "
+                "a complete or official facility history; verify important counts against source "
+                "records before citing them."
             ),
             "sort_desc": "complaint_count",
             "columns": {
@@ -195,7 +199,9 @@ def _datasette_table_metadata() -> dict[str, Any]:
             "description": (
                 "Filtered triage view showing records with one or more delay or review flags. "
                 "Sort by days_received_to_visit or days_received_to_report descending to review "
-                f"larger calculated intervals first. {delay_flag_caution}"
+                "larger calculated intervals first. Use for closer review, not as a list of "
+                "delayed investigations. Preserve source URL and raw path when exporting. "
+                f"{delay_flag_caution}"
             ),
             "sort_desc": "days_received_to_report",
             "columns": {
@@ -225,7 +231,8 @@ def _datasette_table_metadata() -> dict[str, Any]:
             "description": (
                 "Use this view to verify source provenance before relying on extracted fields. "
                 f"{source_traceability_note} Sort by retrieved_at or report_index descending "
-                "when checking newest retrieved reports first."
+                "when checking newest retrieved reports first. Use before citation or export; do "
+                "not use this view alone as a complaint summary."
             ),
             "sort_desc": "retrieved_at",
             "columns": {
@@ -377,7 +384,8 @@ def _datasette_saved_queries() -> dict[str, Any]:
             "description": (
                 "Open this first for task-based local review paths before using normalized "
                 "tables. Each row points to a review view or saved query and names the source "
-                "traceability fields to preserve."
+                "traceability fields to preserve. Use it to choose a task; do not treat it as "
+                "data output for citation."
             ),
             "sql": """
 SELECT
@@ -430,7 +438,9 @@ ORDER BY step
             "description": (
                 "Open this first for a review-ready complaint list with facility context, "
                 "delay screening fields, source URL, raw SHA-256 hash, connector metadata, "
-                "retrieval time, and report index. Treat derived fields as review aids."
+                "retrieval time, and report index. Use for guided first-pass review; do not "
+                "treat derived fields as source conclusions. Preserve traceability columns when "
+                "filtering or exporting."
             ),
             "sql": """
 SELECT
@@ -470,7 +480,9 @@ ORDER BY cr.report_date DESC, cr.complaint_received_date DESC, cr.facility_numbe
             "title": "Complaints by Facility",
             "description": (
                 "Filter the main review view by CCLD facility number. Enter the public "
-                "facility number, such as 157806098, when Datasette prompts for facility_number."
+                "facility number, such as 157806098, when Datasette prompts for facility_number. "
+                "Use for narrowing review scope; do not assume omitted facilities have no "
+                "complaints in the public portal."
             ),
             "sql": """
 SELECT *
@@ -483,7 +495,8 @@ ORDER BY complaint_received_date DESC, report_date DESC
             "title": "Complaint Review Export with Source Traceability",
             "description": (
                 "Export complaint review fields with source URL, raw hash, connector metadata, "
-                "retrieval time, and report index. Treat derived fields as review aids."
+                "retrieval time, and report index. Use for accessible CSV review; keep clear "
+                "headers and do not remove traceability columns from research exports."
             ),
             "sql": COMPLAINT_REVIEW_EXPORT_SQL,
         },
@@ -491,7 +504,8 @@ ORDER BY complaint_received_date DESC, report_date DESC
             "title": "Records with Delay Review Flags",
             "description": (
                 "Triage records with one or more delay or review flags. These are screening aids, "
-                "not conclusions."
+                "not conclusions. Use to decide what to inspect next; do not label the export as "
+                "delayed investigations."
             ),
             "sql": """
 SELECT *
@@ -515,7 +529,9 @@ ORDER BY records_with_delay_review_flags DESC, complaint_count DESC, facility_nu
         "source_traceability_check": {
             "title": "Source Traceability Review",
             "description": (
-                "Check source URLs, hashes, connector metadata, retrieval time, and report index."
+                "Check source URLs, hashes, connector metadata, retrieval time, and report index. "
+                "Use before relying on or citing extracted records; preserve these fields when "
+                "exporting."
             ),
             "sql": """
 SELECT *

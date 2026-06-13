@@ -39,6 +39,9 @@ governance scaffold.
 - Added a `review_home` Datasette saved query as a task-based start-here surface
 	for complaint review, delay triage, facility comparison, source verification,
 	and CSV export paths before any dashboard or custom web interface decision.
+- Added contextual help to primary Datasette review views and saved queries for
+	when to use each item, what not to conclude, and what source traceability to
+	preserve when exporting.
 - Added a local review bundle export workflow for source-traceable complaint
 	review, delay triage, and source traceability CSV files.
 
@@ -88,18 +91,15 @@ interface is justified.
 1. Group review workflows by user task rather than by implementation table,
 	using task labels such as review complaints, find records needing closer
 	review, compare facilities, verify sources, and export CSVs.
-2. Add contextual help to primary views and saved queries with short guidance
-	for when to use each item, how to use it, what not to conclude, and what to
-	preserve when exporting.
-3. Add low-noise review views that hide implementation-heavy fields during
+2. Add low-noise review views that hide implementation-heavy fields during
 	first-pass review while preserving source traceability and links to lower-level
 	detail when needed.
-4. Improve script output as navigation by grouping next steps after sample or
+3. Improve script output as navigation by grouping next steps after sample or
 	live fetch commands, including what to open first, what to use for delay
 	triage, what to use for source verification, and what to use for CSV export.
-5. Add additional CCLD fixtures and extraction hardening for representative
+4. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
-6. Evaluate persistent navigation, lightweight dashboard options, or a custom
+5. Evaluate persistent navigation, lightweight dashboard options, or a custom
 	web interface only after the task-based Datasette review workflow is validated
 	and documented as sufficient or insufficient for repeated review.
 

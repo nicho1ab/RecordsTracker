@@ -114,6 +114,22 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
         in database_metadata["tables"]["delay_review_flags"]["description"]
     )
     assert (
+        "Use for first-pass complaint review"
+        in database_metadata["tables"]["complaint_review_summary"]["description"]
+    )
+    assert (
+        "not as a complete or official facility history"
+        in database_metadata["tables"]["facility_complaint_summary"]["description"]
+    )
+    assert (
+        "not as a list of delayed investigations"
+        in database_metadata["tables"]["delay_review_flags"]["description"]
+    )
+    assert (
+        "Use before citation or export"
+        in database_metadata["tables"]["source_traceability_review"]["description"]
+    )
+    assert (
         "Public source URL"
         in database_metadata["tables"]["source_traceability_review"]["columns"]["source_url"]
     )
@@ -144,7 +160,8 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert len(review_home_rows) == 5
     start_here_query = database_metadata["queries"]["complaint_review_start_here"]
     assert "Open this first" in start_here_query["description"]
-    assert "screening fields" in start_here_query["description"]
+    assert "guided first-pass review" in start_here_query["description"]
+    assert "Preserve traceability columns" in start_here_query["description"]
     assert "sd.raw_sha256" in start_here_query["sql"]
     assert "sd.connector_version" in start_here_query["sql"]
     assert "sd.retrieved_at" in start_here_query["sql"]
@@ -161,6 +178,20 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
         in database_metadata["queries"]["facilities_with_delay_review_flags"][
             "description"
         ]
+    )
+    assert (
+        "do not remove traceability columns"
+        in database_metadata["queries"]["complaint_review_export_with_traceability"][
+            "description"
+        ]
+    )
+    assert (
+        "do not label the export as delayed investigations"
+        in database_metadata["queries"]["records_with_delay_review_flags"]["description"]
+    )
+    assert (
+        "Use before relying on or citing extracted records"
+        in database_metadata["queries"]["source_traceability_check"]["description"]
     )
     assert (
         ":facility_number"
