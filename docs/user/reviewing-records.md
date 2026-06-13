@@ -10,16 +10,19 @@ For a step-by-step reviewer workflow, start with [Local Review Workflow](local-r
 4. Open `complaint_review_start_here` or `complaint_first_pass_review` for the guided low-noise complaint list with source traceability.
 5. Open the `complaint_review_summary` view when you need detailed delay calculations, separate review flag columns, extraction confidence, or broader complaint review context.
 6. Open the `facility_complaint_summary` view to compare complaint counts, allegation counts, complaint date range, and delay review flag counts by facility.
-7. Open the `delay_review_flags` view to triage records with one or more delay or review flags.
-8. Open the `source_traceability_review` view to confirm source URL, raw file hash, raw path, connector name, connector version, retrieval time, and report index.
-9. Open the `field_source_traceability_review` view when you need extracted value, source text, source section, warnings, confidence, extraction method, extractor version, and source traceability together.
-10. Open the normalized `facilities`, `source_documents`, `complaints`, `allegations`, `events`, and `extraction_audit` tables when you need lower-level detail beyond the review views.
-11. Start with records flagged as low confidence when confidence fields are available.
-12. Note any extraction issue for correction.
+7. Open the `facility_pattern_review` view to compare finding mix, allegation categories, missing first activity dates, report-date proxy usage, review flag counts, and source document counts by facility.
+8. Open the `delay_review_flags` view to triage records with one or more delay or review flags.
+9. Open the `source_traceability_review` view to confirm source URL, raw file hash, raw path, connector name, connector version, retrieval time, and report index.
+10. Open the `field_source_traceability_review` view when you need extracted value, source text, source section, warnings, confidence, extraction method, extractor version, and source traceability together.
+11. Open the normalized `facilities`, `source_documents`, `complaints`, `allegations`, `events`, and `extraction_audit` tables when you need lower-level detail beyond the review views.
+12. Start with records flagged as low confidence when confidence fields are available.
+13. Note any extraction issue for correction.
 
 The local database is a derived review aid. The public portal remains the source of record, and source reports may be incomplete, corrected later, removed, or formatted differently across time.
 
 Search matches from `public_record_allegation_search` are screening aids over the derived dataset. They do not prove harm, liability, rights deprivation, abuse, neglect, or any legal element. Verify important details against the public source before relying on them.
+
+Facility pattern counts summarize the local derived dataset only. Use them to choose records for closer source review, not as findings about a facility or the public source record.
 
 Timeline rows in `complaint_timeline_review` show extracted dates that are available in the local derived dataset. Missing dates are unknown and should not be described as proof that an event did not occur.
 

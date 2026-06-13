@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added a `facility_pattern_review` Datasette view and
+	`facility_patterns_with_review_flags` saved query for comparing finding mix,
+	allegation categories, missingness, report-date proxy usage, review flags, and
+	source document counts across facilities without treating counts as findings.
 - Added a field-level `field_source_traceability_review` Datasette view and
 	`field_traceability_by_facility` saved query for reviewing extracted values,
 	source text, warnings, confidence, extraction method, and source document

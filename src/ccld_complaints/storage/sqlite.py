@@ -99,6 +99,7 @@ DROP VIEW IF EXISTS facility_complaint_summary;
 DROP VIEW IF EXISTS complaint_first_pass_review;
 DROP VIEW IF EXISTS complaint_timeline_review;
 DROP VIEW IF EXISTS field_source_traceability_review;
+DROP VIEW IF EXISTS facility_pattern_review;
 DROP VIEW IF EXISTS complaint_review_summary;
 DROP VIEW IF EXISTS source_traceability_review;
 
@@ -506,6 +507,46 @@ FROM extraction_audit ea
 JOIN source_documents sd ON sd.document_id = ea.document_id
 JOIN facilities f ON f.facility_id = sd.facility_id
 LEFT JOIN complaints c ON c.document_id = sd.document_id;
+
+CREATE VIEW facility_pattern_review AS
+SELECT
+    f.external_facility_number AS facility_number,
+    f.facility_name,
+    COUNT(DISTINCT c.complaint_id) AS complaint_count,
+    COUNT(DISTINCT sd.document_id) AS source_document_count,
+    COUNT(a.allegation_id) AS allegation_count,
+    GROUP_CONCAT(DISTINCT COALESCE(a.allegation_category, 'Unknown')) AS allegation_categories,
+    COUNT(DISTINCT CASE WHEN c.finding = 'Substantiated' THEN c.complaint_id END)
+        AS substantiated_complaint_count,
+    COUNT(DISTINCT CASE WHEN c.finding = 'Unsubstantiated' THEN c.complaint_id END)
+        AS unsubstantiated_complaint_count,
+    COUNT(DISTINCT CASE WHEN c.finding = 'Inconclusive' THEN c.complaint_id END)
+        AS inconclusive_complaint_count,
+    COUNT(DISTINCT CASE
+        WHEN c.finding IS NULL OR c.finding = 'Unknown' THEN c.complaint_id
+    END) AS unknown_finding_complaint_count,
+    COUNT(DISTINCT CASE WHEN c.missing_first_activity_date = 1 THEN c.complaint_id END)
+        AS missing_first_activity_count,
+    COUNT(DISTINCT CASE WHEN c.report_date_used_as_proxy = 1 THEN c.complaint_id END)
+        AS report_date_proxy_count,
+    COUNT(DISTINCT CASE
+        WHEN c.review_delay_over_30_days = 1
+          OR c.review_delay_over_60_days = 1
+          OR c.review_delay_over_90_days = 1
+          OR c.review_delay_over_120_days = 1
+          OR c.missing_first_activity_date = 1
+          OR c.report_date_used_as_proxy = 1
+        THEN c.complaint_id
+    END) AS records_with_review_flags,
+    MIN(c.complaint_received_date) AS earliest_complaint_received_date,
+    MAX(c.complaint_received_date) AS latest_complaint_received_date,
+    MIN(sd.retrieved_at) AS earliest_retrieved_at,
+    MAX(sd.retrieved_at) AS latest_retrieved_at
+FROM facilities f
+LEFT JOIN complaints c ON c.facility_id = f.facility_id
+LEFT JOIN source_documents sd ON sd.document_id = c.document_id
+LEFT JOIN allegations a ON a.complaint_id = c.complaint_id
+GROUP BY f.external_facility_number, f.facility_name;
 """
 
 TABLE_COLUMNS = {

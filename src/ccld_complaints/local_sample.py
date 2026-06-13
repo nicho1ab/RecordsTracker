@@ -137,6 +137,10 @@ def review_workflow_lines() -> list[str]:
         "Other useful review paths:",
         "- complaint_review_summary view - full complaint review across facilities.",
         "- facility_complaint_summary view - facility-level counts and date range.",
+        (
+            "- facility_pattern_review view - facility-level finding mix, allegation "
+            "categories, missingness, and review flags."
+        ),
         "- complaint_timeline_by_facility saved query - filter timeline rows by facility number.",
         (
             "- field_traceability_by_facility saved query - filter field-level extraction "
@@ -267,6 +271,52 @@ def _datasette_table_metadata() -> dict[str, Any]:
                     "Complaint records with at least one delay or review flag. "
                     f"{delay_flag_caution}"
                 ),
+            },
+        },
+        "facility_pattern_review": {
+            "title": "Facility Pattern Review",
+            "description": (
+                "Facility-level pattern review over the local derived dataset. Use it to compare "
+                "complaint counts, source document counts, allegation categories, finding mix, "
+                "missing first activity dates, report-date proxy usage, review flags, and date "
+                "ranges. Counts are screening aids for closer source review, not findings about "
+                "the facility or the public source record."
+            ),
+            "sort_desc": "complaint_count",
+            "columns": {
+                "facility_number": "Public CCLD facility number.",
+                "facility_name": "Facility name extracted from source reports.",
+                "complaint_count": "Number of complaint records in the local derived dataset.",
+                "source_document_count": "Number of source documents linked to complaints.",
+                "allegation_count": "Number of allegation records linked to facility complaints.",
+                "allegation_categories": (
+                    "Distinct allegation categories, with unknown for missing values."
+                ),
+                "substantiated_complaint_count": "Complaint records with Substantiated finding.",
+                "unsubstantiated_complaint_count": (
+                    "Complaint records with Unsubstantiated finding."
+                ),
+                "inconclusive_complaint_count": "Complaint records with Inconclusive finding.",
+                "unknown_finding_complaint_count": (
+                    "Complaint records with missing or Unknown finding."
+                ),
+                "missing_first_activity_count": (
+                    "Complaint records where complaint received date exists but first activity "
+                    "date is missing."
+                ),
+                "report_date_proxy_count": (
+                    "Complaint records where report date is used as the delay review basis."
+                ),
+                "records_with_review_flags": (
+                    "Complaint records with at least one delay or review flag. "
+                    f"{delay_flag_caution}"
+                ),
+                "earliest_complaint_received_date": "Earliest complaint received date in the data.",
+                "latest_complaint_received_date": "Latest complaint received date in the data.",
+                "earliest_retrieved_at": (
+                    "Earliest source retrieval timestamp for linked documents."
+                ),
+                "latest_retrieved_at": "Latest source retrieval timestamp for linked documents.",
             },
         },
         "complaint_timeline_review": {
@@ -590,6 +640,14 @@ SELECT
 UNION ALL
 SELECT
     6,
+    'Facility comparison',
+    'Review facility patterns',
+    'facility_pattern_review',
+    'Use for finding mix, allegation categories, missingness, proxy usage, and review flag counts.',
+    'Pattern counts are screening aids over the derived dataset, not facility findings.'
+UNION ALL
+SELECT
+    7,
     'Source verification',
     'Verify sources',
     'field_source_traceability_review',
@@ -599,7 +657,7 @@ SELECT
     'The public portal remains the source of record.'
 UNION ALL
 SELECT
-    7,
+    8,
     'CSV export',
     'Export CSVs',
     'complaint_review_export_with_traceability',
@@ -777,6 +835,20 @@ SELECT *
 FROM facility_complaint_summary
 WHERE records_with_delay_review_flags > 0
 ORDER BY records_with_delay_review_flags DESC, complaint_count DESC, facility_number
+            """.strip(),
+        },
+        "facility_patterns_with_review_flags": {
+            "title": "Facility Patterns with Review Flags",
+            "description": (
+                "Rank facilities with records flagged for review by complaint count, finding "
+                "mix, allegation categories, missingness, and report-date proxy usage. Counts "
+                "summarize the local derived dataset and are not conclusions."
+            ),
+            "sql": """
+SELECT *
+FROM facility_pattern_review
+WHERE records_with_review_flags > 0
+ORDER BY records_with_review_flags DESC, complaint_count DESC, facility_number
             """.strip(),
         },
         "source_traceability_check": {
