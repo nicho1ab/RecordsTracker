@@ -95,6 +95,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "field_source_traceability_review" in database_metadata["tables"]
     assert "multi_facility_source_traceability_review" in database_metadata["tables"]
     assert "facility_pattern_review" in database_metadata["tables"]
+    assert "facility_comparison_review" in database_metadata["tables"]
     assert "complaint_review_summary" in database_metadata["tables"]
     assert "delay_review_flags" in database_metadata["tables"]
     assert "source_traceability_review" in database_metadata["tables"]
@@ -113,6 +114,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "records_with_delay_review_flags" in database_metadata["queries"]
     assert "facilities_with_delay_review_flags" in database_metadata["queries"]
     assert "facility_patterns_with_review_flags" in database_metadata["queries"]
+    assert "repeated_facility_category_findings" in database_metadata["queries"]
     assert "source_traceability_check" in database_metadata["queries"]
     assert "source_traceability_by_facility" in database_metadata["queries"]
     assert "multi_facility_source_traceability_by_facility" in database_metadata["queries"]
@@ -148,6 +150,20 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert (
         "screening aids for closer source review"
         in database_metadata["tables"]["facility_pattern_review"]["description"]
+    )
+    assert (
+        "Comparison-oriented review"
+        in database_metadata["tables"]["facility_comparison_review"]["description"]
+    )
+    assert (
+        "facility-wide conduct"
+        in database_metadata["tables"]["facility_comparison_review"]["description"]
+    )
+    assert (
+        "same allegation category and finding"
+        in database_metadata["tables"]["facility_comparison_review"]["columns"][
+            "facilities_with_same_category_finding"
+        ]
     )
     assert (
         "Timeline-oriented view"
@@ -217,6 +233,8 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "Compare facilities" in review_home_query["sql"]
     assert "Review facility patterns" in review_home_query["sql"]
     assert "facility_pattern_review" in review_home_query["sql"]
+    assert "Compare repeated categories" in review_home_query["sql"]
+    assert "facility_comparison_review" in review_home_query["sql"]
     assert "Verify sources" in review_home_query["sql"]
     assert "multi_facility_source_traceability_review" in review_home_query["sql"]
     assert "Export CSVs" in review_home_query["sql"]
@@ -224,12 +242,13 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "workflow_group" in review_home_query["sql"]
     with sqlite3.connect(":memory:") as conn:
         review_home_rows = conn.execute(review_home_query["sql"]).fetchall()
-    assert len(review_home_rows) == 8
+    assert len(review_home_rows) == 9
     assert [row[1] for row in review_home_rows] == [
         "Complaint review",
         "Public-record discovery",
         "Timeline review",
         "Review flags",
+        "Facility comparison",
         "Facility comparison",
         "Facility comparison",
         "Source verification",
@@ -242,6 +261,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
         "Find records needing closer review",
         "Compare facilities",
         "Review facility patterns",
+        "Compare repeated categories",
         "Verify sources",
         "Export CSVs",
     ]
@@ -280,6 +300,10 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
             "description"
         ]
     )
+    repeated_query = database_metadata["queries"]["repeated_facility_category_findings"]
+    assert "source-review queue" in repeated_query["description"]
+    assert "FROM facility_comparison_review" in repeated_query["sql"]
+    assert "facilities_with_same_category_finding > 1" in repeated_query["sql"]
     assert (
         "do not remove traceability columns"
         in database_metadata["queries"]["complaint_review_export_with_traceability"][
@@ -349,6 +373,8 @@ def test_review_workflow_lines_name_first_views() -> None:
     assert any("complaint_first_pass_review" in line for line in lines)
     assert any("facility_complaint_summary" in line for line in lines)
     assert any("facility_pattern_review" in line for line in lines)
+    assert any("facility_comparison_review" in line for line in lines)
+    assert any("repeated_facility_category_findings" in line for line in lines)
     assert any("delay_review_flags" in line for line in lines)
     assert any("source_traceability_review" in line for line in lines)
     assert any("multi_facility_source_traceability_review" in line for line in lines)
