@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Hardened CCLD date signed extraction for source layouts where a standalone
+	`Date Signed` label is followed by the signed date value, with fixture-backed
+	regression coverage.
 - Hardened CCLD report date extraction for source layouts where a standalone
 	`Report Date` label is followed by the date value, with fixture-backed
 	regression coverage.
