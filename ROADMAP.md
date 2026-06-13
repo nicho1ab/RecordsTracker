@@ -36,6 +36,9 @@ governance scaffold.
 	source-checking, and export workflows.
 - Added a source-traceable start-here saved query for guided complaint review in
 	Datasette.
+- Added a `review_home` Datasette saved query as a task-based start-here surface
+	for complaint review, delay triage, facility comparison, source verification,
+	and CSV export paths before any dashboard or custom web interface decision.
 - Added a local review bundle export workflow for source-traceable complaint
 	review, delay triage, and source traceability CSV files.
 
@@ -79,25 +82,21 @@ These priorities should be implemented as incremental local review improvements
 before deciding whether Datasette has been outgrown or a dashboard/custom web
 interface is justified.
 
-1. Add a review home or start-here surface that gives reviewers one clear first
-	place to open, explains the available review paths, and links or points to
-	complaint review, delay triage, facility summary, source checking, and export
-	workflows.
-2. Group review workflows by user task rather than by implementation table,
+1. Group review workflows by user task rather than by implementation table,
 	using task labels such as review complaints, find records needing closer
 	review, compare facilities, verify sources, and export CSVs.
-3. Add contextual help to primary views and saved queries with short guidance
+2. Add contextual help to primary views and saved queries with short guidance
 	for when to use each item, how to use it, what not to conclude, and what to
 	preserve when exporting.
-4. Add low-noise review views that hide implementation-heavy fields during
+3. Add low-noise review views that hide implementation-heavy fields during
 	first-pass review while preserving source traceability and links to lower-level
 	detail when needed.
-5. Improve script output as navigation by grouping next steps after sample or
+4. Improve script output as navigation by grouping next steps after sample or
 	live fetch commands, including what to open first, what to use for delay
 	triage, what to use for source verification, and what to use for CSV export.
-6. Add additional CCLD fixtures and extraction hardening for representative
+5. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
-7. Evaluate persistent navigation, lightweight dashboard options, or a custom
+6. Evaluate persistent navigation, lightweight dashboard options, or a custom
 	web interface only after the task-based Datasette review workflow is validated
 	and documented as sufficient or insufficient for repeated review.
 

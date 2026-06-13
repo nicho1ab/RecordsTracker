@@ -78,8 +78,9 @@ def datasette_metadata(db_path: Path) -> dict[str, Any]:
             db_path.stem: {
                 "title": "CCLD Complaints Review Database",
                 "description": (
-                    "Start with the review views before opening normalized source tables. "
-                    "Keep source URL and raw hash fields when exporting review data."
+                    "Open the review_home saved query first, then use review views before "
+                    "opening normalized source tables. Keep source URL and raw hash fields "
+                    "when exporting review data."
                 ),
                 "tables": _datasette_table_metadata(),
                 "queries": _datasette_saved_queries(),
@@ -90,12 +91,14 @@ def datasette_metadata(db_path: Path) -> dict[str, Any]:
 
 def review_workflow_lines() -> list[str]:
     return [
+        "Open the review_home saved query first for task-based review paths.",
         "Open these Datasette review views first, in order:",
         "1. complaint_review_summary - main complaint review across facilities.",
         "2. facility_complaint_summary - facility-level counts and date range.",
         "3. delay_review_flags - triage list for records with review flags.",
         "4. source_traceability_review - source URLs, hashes, connector details, and report index.",
         "Saved queries for common workflows:",
+        "- review_home - start-here task menu for local review workflows.",
         "- complaint_review_start_here - guided complaint review with source traceability.",
         "- complaints_by_facility - filter complaint review by facility number.",
         "- complaint_review_export_with_traceability - export complaint fields with source hashes.",
@@ -369,6 +372,59 @@ def _normalized_table_metadata() -> dict[str, Any]:
 
 def _datasette_saved_queries() -> dict[str, Any]:
     return {
+        "review_home": {
+            "title": "Review Home: Start Here",
+            "description": (
+                "Open this first for task-based local review paths before using normalized "
+                "tables. Each row points to a review view or saved query and names the source "
+                "traceability fields to preserve."
+            ),
+            "sql": """
+SELECT
+    1 AS step,
+    'Review complaints' AS task,
+    'complaint_review_start_here' AS open_first,
+    'Use for a source-traceable complaint list with facility context, dates, ' ||
+        'findings, allegation summary, review flags, source URL, raw hash, ' ||
+        'connector metadata, retrieval time, and report index.' AS when_to_use,
+    'Treat extracted fields as derived review aids and keep source traceability ' ||
+        'columns when exporting.' AS caution
+UNION ALL
+SELECT
+    2,
+    'Find records needing closer review',
+    'records_with_delay_review_flags',
+    'Use for delay triage and records flagged for review based on available extracted dates.',
+    'Delay review flags are screening aids, not conclusions that an investigation was delayed.'
+UNION ALL
+SELECT
+    3,
+    'Compare facilities',
+    'facility_complaint_summary',
+    'Use for facility-level complaint counts, allegation counts, date ranges, ' ||
+        'and counts of records with review flags.',
+    'Counts summarize the local derived dataset only; verify important findings ' ||
+        'against source records.'
+UNION ALL
+SELECT
+    4,
+    'Verify sources',
+    'source_traceability_review',
+    'Use before relying on extracted fields; check source URL, raw SHA-256 hash, ' ||
+        'raw path, connector name, connector version, retrieval timestamp, and ' ||
+        'report index.',
+    'The public portal remains the source of record.'
+UNION ALL
+SELECT
+    5,
+    'Export CSVs',
+    'complaint_review_export_with_traceability',
+    'Use for accessible CSV exports with complaint review fields and source traceability columns.',
+    'Keep clear headers and source URL, raw hash, connector metadata, retrieval ' ||
+        'time, and report index when available.'
+ORDER BY step
+            """.strip(),
+        },
         "complaint_review_start_here": {
             "title": "Start Here: Complaint Review with Source Traceability",
             "description": (

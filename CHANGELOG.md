@@ -56,6 +56,10 @@
 - Added a `complaint_review_start_here` Datasette saved query with source URL,
 	raw hash, connector metadata, retrieval time, and report index for guided
 	review and export-safe triage.
+- Added a `review_home` Datasette saved query that gives reviewers one
+	task-based start-here surface for complaint review, delay triage, facility
+	comparison, source verification, and CSV export paths before any dashboard or
+	custom web interface decision.
 - Updated the roadmap to prioritize incremental local review usability work,
 	including a review home, task-based workflow grouping, contextual help,
 	low-noise review views, script-output navigation, and a web app transition

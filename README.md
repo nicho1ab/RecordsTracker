@@ -48,7 +48,8 @@ After setup, populate a sample database:
 ```
 
 The script prints the SQLite database path, the generated Datasette metadata
-path, and the Datasette command to open. Start with these Datasette views:
+path, and the Datasette command to open. In Datasette, open the `review_home`
+saved query first for task-based review paths, then use these review views:
 
 1. `complaint_review_summary`
 2. `facility_complaint_summary`
