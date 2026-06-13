@@ -779,10 +779,24 @@ def _line_index(lines: list[str], value: str) -> int | None:
 
 def _finding(lines: list[str]) -> str:
     for line in lines:
-        for finding in ALLOWED_FINDINGS:
-            if line.casefold() == finding.casefold():
-                return finding
+        finding = _normalized_finding(line)
+        if finding is not None:
+            return finding
+
+    labeled_finding = _value_after_label(lines, "Finding:")
+    if labeled_finding is not None:
+        finding = _normalized_finding(labeled_finding)
+        if finding is not None:
+            return finding
+
     return "Unknown"
+
+
+def _normalized_finding(value: str) -> str | None:
+    for finding in ALLOWED_FINDINGS:
+        if value.casefold() == finding.casefold():
+            return finding
+    return None
 
 
 def _delay_metrics(

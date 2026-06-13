@@ -53,6 +53,8 @@ governance scaffold.
 	fixture-backed CCLD report layout regression test.
 - Added fixture-backed missing visit date coverage for CCLD report-date proxy
 	delay review behavior.
+- Added fixture-backed labeled finding extraction hardening for CCLD report
+	layouts that provide findings after an explicit `Finding:` label.
 
 ## Completed governance and review experience improvements
 
