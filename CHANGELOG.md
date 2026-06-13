@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Hardened CCLD report type extraction for source layouts where the complaint
+	investigation report heading uses different casing, with fixture-backed
+	regression coverage.
 - Hardened CCLD facility number extraction for source layouts where a standalone
 	`FACILITY NUMBER` label is followed by the facility number value, with
 	fixture-backed regression coverage.

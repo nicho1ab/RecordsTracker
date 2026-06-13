@@ -68,6 +68,9 @@ SPLIT_FACILITY_NAME_FIXTURE_URL = (
 SPLIT_FACILITY_NUMBER_FIXTURE_URL = (
     "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=57"
 )
+REPORT_TYPE_CASE_FIXTURE_URL = (
+    "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=58"
+)
 RAW_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_inx3.html")
 NUMBERED_ALLEGATIONS_RAW_FIXTURE = Path(
     "tests/fixtures/ccld/raw/157806098_inx40_numbered_allegations.html"
@@ -122,6 +125,9 @@ SPLIT_FACILITY_NAME_RAW_FIXTURE = Path(
 )
 SPLIT_FACILITY_NUMBER_RAW_FIXTURE = Path(
     "tests/fixtures/ccld/raw/157806098_inx57_split_facility_number.html"
+)
+REPORT_TYPE_CASE_RAW_FIXTURE = Path(
+    "tests/fixtures/ccld/raw/157806098_inx58_report_type_case.html"
 )
 RAW_DETAIL_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_facility_detail.html")
 EXPECTED_FIXTURE = Path("tests/fixtures/ccld/expected/157806098_inx3.json")
@@ -179,6 +185,9 @@ SPLIT_FACILITY_NAME_EXPECTED_FIXTURE = Path(
 SPLIT_FACILITY_NUMBER_EXPECTED_FIXTURE = Path(
     "tests/fixtures/ccld/expected/157806098_inx57_split_facility_number.json"
 )
+REPORT_TYPE_CASE_EXPECTED_FIXTURE = Path(
+    "tests/fixtures/ccld/expected/157806098_inx58_report_type_case.json"
+)
 RETRIEVED_AT = "2026-06-10T00:00:00+00:00"
 NUMBERED_ALLEGATIONS_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 INLINE_RECEIVED_DATE_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
@@ -198,6 +207,7 @@ SPLIT_VISIT_DATE_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 SPLIT_COMPLAINT_CONTROL_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 SPLIT_FACILITY_NAME_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 SPLIT_FACILITY_NUMBER_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
+REPORT_TYPE_CASE_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 
 
 def test_ccld_facility_detail_discovers_report_candidates_from_fixture() -> None:
@@ -452,6 +462,14 @@ def test_ccld_facility_report_extracts_split_facility_number_label() -> None:
     expected = json.loads(
         SPLIT_FACILITY_NUMBER_EXPECTED_FIXTURE.read_text(encoding="utf-8")
     )
+
+    assert _without_audit(normalized) == expected
+
+
+def test_ccld_facility_report_extracts_report_type_case_variant() -> None:
+    connector = CcldFacilityReportsConnector()
+    normalized = connector.normalize(_extract_report_type_case_fixture())
+    expected = json.loads(REPORT_TYPE_CASE_EXPECTED_FIXTURE.read_text(encoding="utf-8"))
 
     assert _without_audit(normalized) == expected
 
@@ -799,6 +817,18 @@ def _extract_split_facility_number_fixture() -> dict[str, object]:
         raw_path=SPLIT_FACILITY_NUMBER_RAW_FIXTURE,
         raw_sha256=sha256_bytes(raw_content),
         retrieved_at=SPLIT_FACILITY_NUMBER_RETRIEVED_AT,
+        content_type="text/html",
+    )
+    return CcldFacilityReportsConnector().extract(document)
+
+
+def _extract_report_type_case_fixture() -> dict[str, object]:
+    raw_content = REPORT_TYPE_CASE_RAW_FIXTURE.read_bytes()
+    document = SourceDocument(
+        source_url=REPORT_TYPE_CASE_FIXTURE_URL,
+        raw_path=REPORT_TYPE_CASE_RAW_FIXTURE,
+        raw_sha256=sha256_bytes(raw_content),
+        retrieved_at=REPORT_TYPE_CASE_RETRIEVED_AT,
         content_type="text/html",
     )
     return CcldFacilityReportsConnector().extract(document)
