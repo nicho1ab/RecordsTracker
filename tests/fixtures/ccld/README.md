@@ -79,3 +79,5 @@ Raw fixtures and expected JSON are governed by `.gitattributes` line-ending rule
 - `expected/157806098_inx72_report_date_semicolon.json`: Expected normalized records for semicolon report date label extraction hardening.
 - `raw/157806098_inx73_date_signed_semicolon.html`: Source-shaped CCLD report fixture covering a `Date Signed;` semicolon label variant.
 - `expected/157806098_inx73_date_signed_semicolon.json`: Expected normalized records for semicolon date signed label extraction hardening.
+- `raw/157806098_inx74_visit_date_semicolon.html`: Source-shaped CCLD report fixture covering a `VISIT DATE;` semicolon label variant.
+- `expected/157806098_inx74_visit_date_semicolon.json`: Expected normalized records for semicolon visit date label extraction hardening.
