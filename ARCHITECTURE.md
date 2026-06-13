@@ -35,6 +35,13 @@ validation, inspection, debugging, local exploration, export-support, and
 transition-comparison layer, and defers production stack selection to future
 ADRs.
 
+ADR-0007 recommends a hybrid transition direction for hosted tester MVP
+planning: preserve the existing Python ingestion and extraction pipeline, retain
+SQLite and Datasette for validation and transition comparison, and introduce a
+hosted relational database plus hosted reviewer application/API boundary for
+tester workflows after the remaining data model, authentication, sync, export,
+audit, retention, and implementation ADRs are accepted.
+
 ## Components
 
 ### Connectors
@@ -47,7 +54,10 @@ Raw source files are stored in ordinary file storage under `data/raw/`. Each fil
 
 ### Structured storage
 
-SQLite is the initial database. PostgreSQL may be introduced later if concurrency, multi-user editing, or dashboarding requires it.
+SQLite is the initial validation database. A hosted relational database is the
+preferred future direction for hosted tester reviewer-created state and imported
+source-derived records, but the specific database product and schema remain
+deferred to future ADRs.
 
 ### Presentation
 
@@ -95,6 +105,10 @@ original extracted values.
   requirements and future ADRs before implementation.
 - Production stack selection belongs in future ADRs after production-discovery
   requirements are documented.
+- The preferred hosted tester MVP direction is hybrid, not Datasette-primary:
+  preserve the Python extraction pipeline and local SQLite/Datasette validation
+  path while planning a hosted relational review-state store and hosted
+  reviewer app/API boundary.
 - Production app scaffolding, hosted schemas, authentication implementation,
   correction workflows, queues, annotations, and hosted export builders are not
   approved until the relevant future ADRs are complete.

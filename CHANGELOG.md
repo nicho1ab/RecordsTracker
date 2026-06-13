@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added ADR-0007 evaluating hosted tester MVP production stack options and
+	recommending a hybrid transition direction that preserves the Python
+	ingestion/extraction pipeline and retained SQLite/Datasette validation layer
+	while planning a hosted relational reviewer-state store and hosted reviewer
+	app/API boundary.
 - Added ADR-0006 for hosted tester MVP architecture boundaries, preserving
 	source-derived data separately from reviewer-created state, retaining Datasette
 	for validation and transition comparison, and deferring production stack

@@ -11,3 +11,4 @@ See detailed ADRs in `docs/decisions/`.
 | ADR-0004 | Treat accessibility as a release gate | Accepted |
 | ADR-0005 | Retain Datasette as a validation layer after primary review UX exit | Accepted |
 | ADR-0006 | Define hosted tester MVP architecture boundaries | Accepted |
+| ADR-0007 | Evaluate hosted tester MVP production stack direction | Accepted |
