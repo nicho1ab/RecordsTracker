@@ -237,9 +237,13 @@ start from a known baseline.
 ## Architecture decision prerequisites
 
 ADR-0006 defines the hosted tester MVP architecture boundary and confirms that a
-primary reviewer application layer must remain separate from Datasette. Before
-hosted tester MVP implementation starts, future ADRs or equivalent governance
-updates must define:
+primary reviewer application layer must remain separate from Datasette.
+ADR-0012 allows hosted tester MVP implementation to begin through a
+scaffold-first sequence after the accepted data-domain, import/sync,
+schema/migration, and authentication/access boundaries. Before hosted tester
+MVP implementation expands beyond scaffold or placeholder shell work, future
+ADRs, implementation PRs, or equivalent governance updates must define the
+affected layer:
 
 - Where review state, annotations, correction proposals, feedback, and export
   packet decisions are persisted.

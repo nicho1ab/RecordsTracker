@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added ADR-0012 defining the hosted tester MVP scope and scaffold sequencing
+	boundary, allowing hosted implementation to begin through a scaffold-first
+	sequence while keeping schemas, authentication, authorization, import/sync,
+	queues, annotations, corrections, exports, reset/reload, hosted deployment,
+	and extraction behavior out of the first scaffold branch.
 - Added ADR-0011 defining the hosted tester MVP authentication and access
 	boundary, requiring authenticated invited or provisioned tester access,
 	simple role-based access, revocable tester accounts, permissioned
