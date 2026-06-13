@@ -37,6 +37,7 @@ NUMBERED_ALLEGATION_PREFIX_RE = re.compile(
     r"^\s*(?:allegation\s*)?\d+\s*(?:[.)\-:]|$)\s*",
     re.IGNORECASE,
 )
+FINDING_INLINE_LABEL_RE = re.compile(r"^finding\s*[-:]\s*(.+)$", re.IGNORECASE)
 
 ReportDocumentLoader = Callable[[SourceDocumentCandidate], SourceDocument | None]
 ReportFetcher = Callable[[str], bytes]
@@ -821,6 +822,12 @@ def _finding(lines: list[str]) -> str:
         if finding is not None:
             return finding
 
+        inline_labeled_finding = _inline_labeled_finding(line)
+        if inline_labeled_finding is not None:
+            finding = _normalized_finding(inline_labeled_finding)
+            if finding is not None:
+                return finding
+
     labeled_finding = _value_after_label(lines, "Finding:")
     if labeled_finding is not None:
         finding = _normalized_finding(labeled_finding)
@@ -834,6 +841,11 @@ def _finding(lines: list[str]) -> str:
             return finding
 
     return "Unknown"
+
+
+def _inline_labeled_finding(line: str) -> str | None:
+    match = FINDING_INLINE_LABEL_RE.match(line)
+    return match.group(1) if match is not None else None
 
 
 def _normalized_finding(value: str) -> str | None:
