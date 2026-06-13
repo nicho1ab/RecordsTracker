@@ -18,6 +18,7 @@ When you open Datasette with the metadata command printed by the sample or live 
 
 - `review_home` gives one start-here task menu for complaint review, delay triage, facility comparison, source verification, and CSV export paths.
 - `public_record_allegation_search` searches source-derived allegation text, allegation categories, and findings by keyword or phrase while preserving complaint dates, review flags, source URL, raw hash, connector metadata, retrieval timestamp, and report index.
+- `complaint_timeline_by_facility` filters complaint milestone dates and extracted event dates by facility number with source traceability visible.
 - `complaint_review_start_here` opens a guided complaint review list with source URL, raw SHA-256 hash, connector metadata, retrieval time, and report index.
 - `complaints_by_facility` filters the main complaint review view by facility number.
 - `complaint_review_export_with_traceability` prepares complaint review fields with source traceability columns for CSV export.
@@ -33,3 +34,5 @@ Read the saved query description before running or exporting it. The description
 Use `delay_review_flags` and the saved delay query as triage aids only. Delay flags do not prove that an investigation was delayed.
 
 Use `public_record_allegation_search` as a discovery aid only. A keyword match means the term appears in the local derived dataset fields searched by the query; it is not a legal conclusion and it is not a complete public portal search.
+
+Use `complaint_timeline_by_facility` when date sequence matters. Missing timeline dates are unknown in the derived dataset; absence from the timeline does not prove an event did not occur.

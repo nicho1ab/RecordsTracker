@@ -91,6 +91,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "live-ccld" in metadata["databases"]
     database_metadata = metadata["databases"]["live-ccld"]
     assert "complaint_first_pass_review" in database_metadata["tables"]
+    assert "complaint_timeline_review" in database_metadata["tables"]
     assert "complaint_review_summary" in database_metadata["tables"]
     assert "delay_review_flags" in database_metadata["tables"]
     assert "source_traceability_review" in database_metadata["tables"]
@@ -104,6 +105,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "public_record_allegation_search" in database_metadata["queries"]
     assert "complaint_review_start_here" in database_metadata["queries"]
     assert "complaints_by_facility" in database_metadata["queries"]
+    assert "complaint_timeline_by_facility" in database_metadata["queries"]
     assert "complaint_review_export_with_traceability" in database_metadata["queries"]
     assert "records_with_delay_review_flags" in database_metadata["queries"]
     assert "facilities_with_delay_review_flags" in database_metadata["queries"]
@@ -132,6 +134,14 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert (
         "not as a complete or official facility history"
         in database_metadata["tables"]["facility_complaint_summary"]["description"]
+    )
+    assert (
+        "Timeline-oriented view"
+        in database_metadata["tables"]["complaint_timeline_review"]["description"]
+    )
+    assert (
+        "absence does not prove the event did not occur"
+        in database_metadata["tables"]["complaint_timeline_review"]["description"]
     )
     assert (
         "not as a list of delayed investigations"
@@ -165,6 +175,8 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "complaint_first_pass_review" in review_home_query["sql"]
     assert "Search allegation text" in review_home_query["sql"]
     assert "public_record_allegation_search" in review_home_query["sql"]
+    assert "Review what happened and when" in review_home_query["sql"]
+    assert "complaint_timeline_review" in review_home_query["sql"]
     assert "Find records needing closer review" in review_home_query["sql"]
     assert "Compare facilities" in review_home_query["sql"]
     assert "Verify sources" in review_home_query["sql"]
@@ -173,10 +185,11 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "workflow_group" in review_home_query["sql"]
     with sqlite3.connect(":memory:") as conn:
         review_home_rows = conn.execute(review_home_query["sql"]).fetchall()
-    assert len(review_home_rows) == 6
+    assert len(review_home_rows) == 7
     assert [row[1] for row in review_home_rows] == [
         "Complaint review",
         "Public-record discovery",
+        "Timeline review",
         "Review flags",
         "Facility comparison",
         "Source verification",
@@ -185,6 +198,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert [row[2] for row in review_home_rows] == [
         "Review complaints",
         "Search allegation text",
+        "Review what happened and when",
         "Find records needing closer review",
         "Compare facilities",
         "Verify sources",
@@ -237,6 +251,10 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
         ":facility_number"
         in database_metadata["queries"]["source_traceability_by_facility"]["sql"]
     )
+    timeline_query = database_metadata["queries"]["complaint_timeline_by_facility"]
+    assert "Missing dates are unknown" in timeline_query["description"]
+    assert ":facility_number" in timeline_query["sql"]
+    assert "FROM complaint_timeline_review" in timeline_query["sql"]
 
 
 def test_write_datasette_metadata_writes_json_next_to_database(tmp_path: Path) -> None:
@@ -256,6 +274,7 @@ def test_review_workflow_lines_name_first_views() -> None:
     assert "Open first:" in lines
     assert "For delay triage:" in lines
     assert "For public-record discovery:" in lines
+    assert "For timeline review:" in lines
     assert "For source verification:" in lines
     assert "For CSV export:" in lines
     assert "Other useful review paths:" in lines
@@ -263,6 +282,7 @@ def test_review_workflow_lines_name_first_views() -> None:
     assert any("guided complaint review with source traceability" in line for line in lines)
     assert any("records with review flags for closer review" in line for line in lines)
     assert any("source-derived allegation text" in line for line in lines)
+    assert any("complaint and event dates" in line for line in lines)
     assert any("screening aids only" in line for line in lines)
     assert any("source URLs, raw hashes, connector details" in line for line in lines)
     assert any("export complaint fields with source hashes" in line for line in lines)
@@ -275,6 +295,8 @@ def test_review_workflow_lines_name_first_views() -> None:
     assert any("review_home" in line for line in lines)
     assert any("complaint_review_start_here" in line for line in lines)
     assert any("public_record_allegation_search" in line for line in lines)
+    assert any("complaint_timeline_review" in line for line in lines)
+    assert any("complaint_timeline_by_facility" in line for line in lines)
     assert any("complaints_by_facility" in line for line in lines)
     assert any("complaint_review_export_with_traceability" in line for line in lines)
     assert any("source_traceability_by_facility" in line for line in lines)
