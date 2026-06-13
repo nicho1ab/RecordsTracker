@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Hardened CCLD allegation extraction for source layouts that use an
+	`INVESTIGATION FINDINGS -` section heading variant, with fixture-backed
+	regression coverage.
 - Hardened CCLD report type extraction for source layouts where the complaint
 	investigation report heading includes trailing punctuation, with
 	fixture-backed regression coverage.
