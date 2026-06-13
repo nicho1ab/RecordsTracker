@@ -222,7 +222,10 @@ class CcldFacilityReportsConnector:
             or _value_after_exact_label(lines, "Report Date")
         )
         visit_date = _iso_date(_value_after_label(lines, "VISIT DATE:"))
-        date_signed = _iso_date(_value_after_label(lines, "Date Signed:"))
+        date_signed = _iso_date(
+            _value_after_label(lines, "Date Signed:")
+            or _value_after_exact_label(lines, "Date Signed")
+        )
         first_activity_date = None
         delay_metrics = _delay_metrics(
             complaint_received_date=complaint_received_date,
