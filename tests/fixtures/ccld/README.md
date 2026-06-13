@@ -75,3 +75,5 @@ Raw fixtures and expected JSON are governed by `.gitattributes` line-ending rule
 - `expected/157806098_inx70_facility_number_spaced_colon.json`: Expected normalized records for spaced-colon facility number label extraction hardening.
 - `raw/157806098_inx71_finding_spaced_colon.html`: Source-shaped CCLD report fixture covering a split `Finding :` spaced-colon label variant.
 - `expected/157806098_inx71_finding_spaced_colon.json`: Expected normalized records for split spaced-colon finding label extraction hardening.
+- `raw/157806098_inx72_report_date_semicolon.html`: Source-shaped CCLD report fixture covering a `Report Date;` semicolon label variant.
+- `expected/157806098_inx72_report_date_semicolon.json`: Expected normalized records for semicolon report date label extraction hardening.
