@@ -759,7 +759,10 @@ def _allegations(lines: list[str]) -> list[str]:
     for line in lines[start + 1 : end]:
         allegation = _allegation_text(line)
         if allegation is not None:
-            allegations.append(allegation)
+            if _is_allegation_continuation(line) and allegations:
+                allegations[-1] = f"{allegations[-1]} {allegation}"
+            else:
+                allegations.append(allegation)
     return allegations
 
 
@@ -768,6 +771,15 @@ def _allegation_text(line: str) -> str | None:
     if not allegation:
         return None
     return " ".join(allegation.split())
+
+
+def _is_allegation_continuation(line: str) -> bool:
+    stripped = line.lstrip()
+    return (
+        bool(stripped)
+        and not NUMBERED_ALLEGATION_PREFIX_RE.match(stripped)
+        and stripped[0].islower()
+    )
 
 
 def _line_index(lines: list[str], value: str) -> int | None:
