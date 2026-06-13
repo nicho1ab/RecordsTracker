@@ -46,6 +46,9 @@ governance scaffold.
 	saved query for complaint milestone dates and extracted event dates.
 - Added a field-level source traceability review view and facility-filtered
 	saved query for extraction audit context alongside source document metadata.
+- Added a facility pattern review view and saved query for comparing finding mix,
+	allegation categories, missingness, report-date proxy usage, review flags, and
+	source document coverage across facilities.
 - Added a `review_home` Datasette saved query as a task-based start-here surface
 	for complaint review, delay triage, facility comparison, source verification,
 	and CSV export paths before any dashboard or custom web interface decision.

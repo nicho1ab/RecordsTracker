@@ -117,6 +117,25 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
         "latest_complaint_received_date": "2022-04-07",
         "records_with_delay_review_flags": 1,
     }
+    assert _facility_pattern_review(db_path) == {
+        "facility_number": "157806098",
+        "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+        "complaint_count": 1,
+        "source_document_count": 1,
+        "allegation_count": 2,
+        "allegation_categories": "Unknown",
+        "substantiated_complaint_count": 0,
+        "unsubstantiated_complaint_count": 1,
+        "inconclusive_complaint_count": 0,
+        "unknown_finding_complaint_count": 0,
+        "missing_first_activity_count": 1,
+        "report_date_proxy_count": 0,
+        "records_with_review_flags": 1,
+        "earliest_complaint_received_date": "2022-04-07",
+        "latest_complaint_received_date": "2022-04-07",
+        "earliest_retrieved_at": RETRIEVED_AT,
+        "latest_retrieved_at": RETRIEVED_AT,
+    }
     assert _source_traceability_review(db_path) == {
         "facility_number": "157806098",
         "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
@@ -216,6 +235,7 @@ def test_review_views_do_not_duplicate_rows_on_rerun(tmp_path: Path) -> None:
     assert _row_count(db_path, "complaint_timeline_review") == 4
     assert _row_count(db_path, "field_source_traceability_review") == 21
     assert _row_count(db_path, "facility_complaint_summary") == 1
+    assert _row_count(db_path, "facility_pattern_review") == 1
     assert _row_count(db_path, "delay_review_flags") == 1
     assert _row_count(db_path, "source_traceability_review") == 1
 
@@ -439,6 +459,34 @@ def _facility_complaint_summary(db_path: Path) -> dict[str, object]:
                    latest_complaint_received_date,
                    records_with_delay_review_flags
             FROM facility_complaint_summary
+            """
+        ).fetchone()
+    return dict(row)
+
+
+def _facility_pattern_review(db_path: Path) -> dict[str, object]:
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            """
+            SELECT facility_number,
+                   facility_name,
+                   complaint_count,
+                   source_document_count,
+                   allegation_count,
+                   allegation_categories,
+                   substantiated_complaint_count,
+                   unsubstantiated_complaint_count,
+                   inconclusive_complaint_count,
+                   unknown_finding_complaint_count,
+                   missing_first_activity_count,
+                   report_date_proxy_count,
+                   records_with_review_flags,
+                   earliest_complaint_received_date,
+                   latest_complaint_received_date,
+                   earliest_retrieved_at,
+                   latest_retrieved_at
+            FROM facility_pattern_review
             """
         ).fetchone()
     return dict(row)

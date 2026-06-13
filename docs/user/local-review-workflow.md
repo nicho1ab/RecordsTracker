@@ -22,9 +22,10 @@ Open these views first:
 2. `complaint_timeline_review` for complaint milestone dates and extracted event dates with source traceability.
 3. `complaint_review_summary` for the fuller complaint review across facilities.
 4. `facility_complaint_summary` for facility-level counts and date ranges.
-5. `delay_review_flags` for records with one or more review flags.
-6. `source_traceability_review` to verify public source URL, raw hash, connector details, retrieval time, and report index.
-7. `field_source_traceability_review` to check extracted field values, source text, extraction warnings, confidence, and source document traceability together.
+5. `facility_pattern_review` for facility-level finding mix, allegation categories, missing dates, report-date proxy usage, and review flag counts.
+6. `delay_review_flags` for records with one or more review flags.
+7. `source_traceability_review` to verify public source URL, raw hash, connector details, retrieval time, and report index.
+8. `field_source_traceability_review` to check extracted field values, source text, extraction warnings, confidence, and source document traceability together.
 
 Use normalized tables such as `complaints`, `allegations`, `source_documents`, and `extraction_audit` only when you need lower-level detail.
 
@@ -43,6 +44,8 @@ Use normalized tables such as `complaints`, `allegations`, `source_documents`, a
 `complaint_review_summary` is the fuller complaint review view. Open it when you need detailed delay calculations, separate review flag columns, extraction confidence, or the broader complaint review context after first-pass triage.
 
 `facility_complaint_summary` gives one row per facility. Use it to compare complaint counts, allegation counts, the earliest and latest complaint received dates, and how many records have delay review flags.
+
+`facility_pattern_review` gives one row per facility with complaint counts, source document counts, allegation categories, finding mix, missing first activity date counts, report-date proxy counts, review flag counts, complaint date range, and source retrieval date range. Use it to spot patterns for closer source review, not as a finding about a facility.
 
 `delay_review_flags` is a filtered triage list. A record appears here when one or more delay or review flags is set. This view helps reviewers decide what to inspect next; it does not prove an investigation was delayed.
 
@@ -64,7 +67,7 @@ In Datasette, open `complaint_first_pass_review` and filter `facility_number` to
 
 You can also open the saved query named `complaints_by_facility` and enter a facility number when prompted.
 
-For high-level comparison, open `facility_complaint_summary` and sort by `complaint_count`, `allegation_count`, or `records_with_delay_review_flags`.
+For high-level comparison, open `facility_complaint_summary` or `facility_pattern_review` and sort by `complaint_count`, `allegation_count`, `records_with_review_flags`, or finding count columns.
 
 ## How to inspect source documents
 
@@ -111,6 +114,7 @@ The generated Datasette metadata includes saved query examples:
 - `complaint_review_export_with_traceability` exports complaint review fields with source URL, raw hash, raw path, connector metadata, retrieval time, and report index.
 - `records_with_delay_review_flags` opens the delay triage list with review flags described as screening aids.
 - `facilities_with_delay_review_flags` ranks facilities by records with delay or review flags. Treat the counts as triage aids, not conclusions.
+- `facility_patterns_with_review_flags` ranks facilities with records flagged for review and shows finding mix, allegation categories, missingness, and report-date proxy counts.
 - `source_traceability_check` lists source URL, raw hash, connector metadata, retrieval time, and report index.
 - `source_traceability_by_facility` filters source traceability details by facility number.
 - `field_traceability_by_facility` filters field-level extraction audit context by facility number.
