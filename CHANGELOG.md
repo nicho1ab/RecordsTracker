@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Hardened CCLD visit date extraction for source layouts where a standalone
+	`VISIT DATE` label is followed by the visit date value, with fixture-backed
+	regression coverage.
 - Hardened CCLD date signed extraction for source layouts where a standalone
 	`Date Signed` label is followed by the signed date value, with fixture-backed
 	regression coverage.
