@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Improved the `review_home` Datasette saved query with a `workflow_group`
+  column so reviewers can scan local review paths by user task before opening
+  implementation tables or detailed views.
 - Hardened CCLD finding extraction for source layouts that split a
 	`Finding :` spaced-colon label from its value, with fixture-backed regression
 	coverage.

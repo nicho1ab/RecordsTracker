@@ -6,7 +6,7 @@ This guide describes the first local review workflow for non-technical reviewers
 
 After running the sample or live fetch script, open the Datasette command printed by the script. The command includes a metadata file that adds clearer labels, descriptions, column notes, and saved query examples. The scripts also print grouped next steps for what to open first, delay triage, source verification, CSV export, and other useful review paths.
 
-On the Datasette database page, open the `review_home` saved query first. It gives one task-based starting place for the local review workflow and points to the complaint review, delay triage, facility comparison, source verification, and CSV export paths. This is an incremental Datasette review aid, not a dashboard or custom web application.
+On the Datasette database page, open the `review_home` saved query first. It gives one task-based starting place for the local review workflow and points to the complaint review, delay triage, facility comparison, source verification, and CSV export paths. The `workflow_group` column labels each path by reviewer task so you can scan by purpose before opening a view or saved query. This is an incremental Datasette review aid, not a dashboard or custom web application.
 
 Then open `complaint_review_start_here` or `complaint_first_pass_review` for a low-noise complaint list that preserves facility context, a single review flag summary, source URL, raw SHA-256 hash, raw path, connector metadata, retrieval time, report index, and lower-level IDs for follow-up.
 
@@ -26,7 +26,7 @@ Use normalized tables such as `complaints`, `allegations`, `source_documents`, a
 
 ## What each view means
 
-`review_home` is a saved query that acts as the local start-here surface. Each row names a reviewer task, the view or saved query to open next, when to use it, and the caution language to preserve.
+`review_home` is a saved query that acts as the local start-here surface. Each row names a workflow group, reviewer task, the view or saved query to open next, when to use it, and the caution language to preserve.
 
 `complaint_review_start_here` is a saved query for guided complaint review with source traceability. Use it before narrowing to filters or exports.
 
