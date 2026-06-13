@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added ADR-0011 defining the hosted tester MVP authentication and access
+	boundary, requiring authenticated invited or provisioned tester access,
+	simple role-based access, revocable tester accounts, permissioned
+	import/reload/reset and export actions, and auditable reviewer-created actions
+	where feasible while deferring provider, identity storage, session,
+	authorization middleware, role schema, user table, invitation, audit schema,
+	and deprovisioning implementation decisions.
 - Added ADR-0010 defining the hosted tester MVP schema and migration strategy
 	boundary, requiring future hosted schema work to separate import metadata,
 	source-derived imported records, reviewer-created state, audit events, export

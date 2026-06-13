@@ -181,6 +181,10 @@ Access must be limited to authenticated testers using an approved access model.
 The repository must not store secrets, tokens, private URLs, or account-specific
 configuration in committed files.
 
+ADR-0011 defines the hosted tester MVP authentication and access boundary.
+Anonymous hosted tester access is not allowed; tester access must be explicitly
+invited or provisioned, role-scoped, auditable where feasible, and revocable.
+
 ### Seeded test corpus
 
 The tester environment must use a seeded, documented test corpus with source
@@ -252,6 +256,9 @@ updates must define:
   hosted reviewer application.
 - How authenticated tester access, audit history, reset/reload, and export
   restrictions are handled without storing secrets in the repository.
+- How ADR-0011's admin, tester reviewer, read-only tester, and
+  developer/operator role boundaries are mapped into implementation without
+  exposing reviewer-created state as public-source facts.
 - Which accessibility checks are required before tester access is enabled.
 - Which production stack, if any, is selected after these requirements are
   reviewed.

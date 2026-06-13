@@ -207,12 +207,16 @@ the governed primary future review experience.
   source-derived imported records, reviewer-created state, audit events, export
   packet state, tester feedback, and operational/reset metadata without
   implementing schemas or migrations prematurely.
+- Accepted the hosted tester MVP authentication and access boundary, requiring
+	authenticated invited or provisioned tester access, simple role-based access,
+	revocable tester accounts, permissioned import/reload/reset and export
+	actions, and auditable reviewer-created actions where feasible.
 
 ## Near-term milestones
 
-- Decide authenticated tester access, audit logging, export generation,
-	reset/reload, tester data retention, and hosted MVP scaffold sequencing before
-	app scaffold work.
+- Decide audit logging, export generation, reset/reload, tester data retention,
+  provider-specific authentication details, and hosted MVP scaffold sequencing
+  before app scaffold work.
 - Decide concrete database product and migration tooling only after the accepted
   schema/migration strategy, authentication/access needs, reset/reload needs,
   audit requirements, and hosted operations constraints are clear.
@@ -234,14 +238,16 @@ has been outgrown as the primary future review experience and should be extended
 only where it remains useful for validation, inspection, debugging, local
 exploration, or export support.
 
-1. Draft authentication/access, audit log, export generation, reset/reload, and
-	tester retention ADRs before any hosted app scaffold work.
-2. Decide concrete database product and migration tooling for the hosted tester
+1. Draft audit log, export generation, reset/reload, and tester retention ADRs
+	before any hosted app scaffold work.
+2. Decide provider-specific authentication and authorization implementation
+	details only after the hosted MVP scope and scaffold sequence are clear.
+3. Decide concrete database product and migration tooling for the hosted tester
   MVP only after the remaining access, audit, reset/reload, export, retention,
   and operations constraints are understood.
-3. Draft hosted MVP scaffold planning only after data-domain, schema/migration,
+4. Draft hosted MVP scaffold planning only after data-domain, schema/migration,
 	import/sync, auth/access, export, audit, and retention decisions are accepted.
-4. Add additional CCLD fixtures and extraction hardening for representative
+5. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
 
 ## Production-discovery transition path
@@ -259,10 +265,11 @@ define the smallest useful product shape:
 	validation, review state, correction state, export generation, and future
 	presentation.
 3. Use ADR-0007's hybrid direction, ADR-0008's data-domain boundary, ADR-0009's
-	controlled import boundary, and ADR-0010's physical separation strategy to
-	decide authentication/access model, audit log, export generation,
-	reset/reload, retention, concrete database/migration tooling, and
-	implementation scaffold sequence in separate ADRs before build work.
+	controlled import boundary, ADR-0010's physical separation strategy, and
+	ADR-0011's authenticated access boundary to decide audit log, export
+	generation, reset/reload, retention, concrete database/migration tooling,
+	provider-specific authentication implementation, and implementation scaffold
+	sequence in separate ADRs before build work.
 
 ## Decision points
 
