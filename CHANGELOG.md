@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Hardened CCLD report date extraction for source layouts where a standalone
+	`Report Date` label is followed by the date value, with fixture-backed
+	regression coverage.
 - Hardened CCLD complaint received date extraction for source layouts that use a
 	`complaint was received in our office on` narrative phrase, with
 	fixture-backed regression coverage.
