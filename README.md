@@ -119,6 +119,9 @@ public-record review notes.
    [SOURCE_CONNECTOR_CONTRACT.md](SOURCE_CONNECTOR_CONTRACT.md), and
    [DOCUMENTATION_STRATEGY.md](DOCUMENTATION_STRATEGY.md) before changing schemas,
    connectors, workflows, or user-facing behavior.
+- Review [PRODUCTION_DISCOVERY_REQUIREMENTS.md](PRODUCTION_DISCOVERY_REQUIREMENTS.md)
+   before planning hosted reviewer app requirements, architecture ADRs, tester
+   MVP workflows, review state, annotations, corrections, or export packet state.
 
 ## Validation
 

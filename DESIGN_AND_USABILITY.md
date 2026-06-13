@@ -17,6 +17,10 @@ queues, saved reviewer state, annotations, correction workflows, contextual help
 source traceability, accessible exports, and fewer-click reviewer paths before
 considering more Datasette metadata or saved-query UX.
 
+The minimum hosted reviewer workflows, review states, annotation boundaries,
+correction boundaries, and tester-readiness expectations are defined in
+`PRODUCTION_DISCOVERY_REQUIREMENTS.md`.
+
 ## Intended users
 
 The local review experience must support:
@@ -64,6 +68,12 @@ complete without relying on Datasette as the main interface:
   cautious public-source language.
 7. Complete common reviewer paths with fewer clicks than the retained Datasette
   validation workflow can reasonably provide.
+
+The future workflow must clearly distinguish source-derived values from
+reviewer-created state such as review status, annotations, proposed corrections,
+tester feedback, and export packet inclusion decisions. Status labels must not
+imply source facts, legal conclusions, facility-wide conclusions, or verified
+harm beyond what qualified reviewers establish from source records.
 
 ## Design principles
 
@@ -245,7 +255,8 @@ Belongs in current production-discovery:
 
 - Product requirements for persistent navigation, saved reviewer state, guided
   queues, annotations, corrections, collaboration, contextual help, accessible
-  exports, and fewer-click reviewer paths.
+  exports, tester feedback, hosted tester readiness, reset/reload processes, and
+  fewer-click reviewer paths.
 - Architecture boundaries for ingestion, storage, validation, review state,
   correction state, export generation, and future presentation.
 - ADRs comparing production-stack options without selecting a stack before the

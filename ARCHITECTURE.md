@@ -13,6 +13,9 @@ Public source portal/API
    -> SQLite database
       -> Datasette validation/inspection/export-support layer
       -> production-discovery boundary for future primary review UX
+         -> future reviewer-created state layer
+            (review state, annotations, proposed corrections, tester feedback,
+             export packet decisions)
 ```
 
 The proof of concept proved the ingestion, extraction, raw preservation, source
@@ -56,6 +59,22 @@ The future review boundary must account for persistent navigation, guided
 queues, saved reviewer state, annotations, correction workflows, contextual help,
 collaboration constraints, accessible exports, and source traceability.
 
+The minimum workflow and hosted tester readiness requirements are defined in
+`PRODUCTION_DISCOVERY_REQUIREMENTS.md`.
+
+### Future reviewer-created state layer
+
+Review state, annotations, proposed corrections, tester feedback, and export
+packet inclusion decisions are future application/reviewer state. They must stay
+separate from source-derived canonical data unless a future schema ADR approves
+the persistence model.
+
+The layer must preserve original extracted values, source document traceability,
+raw source preservation, and extraction audit context where available. Proposed
+corrections may influence a reviewed export presentation only through an
+explicit traceable correction layer; they must not overwrite raw files or erase
+original extracted values.
+
 ## Boundaries
 
 - The repository owns ingestion, extraction, validation, storage, documentation, and tests.
@@ -63,6 +82,9 @@ collaboration constraints, accessible exports, and source traceability.
 - Raw storage is evidence for reproducibility and regression testing, not a replacement for the public portal.
 - Datasette is a retained validation, inspection, debugging, local exploration,
   and export-support layer, not the governed primary future reviewer UX.
+- Reviewer-created state for hosted review workflows is separate from
+  source-derived canonical records and must be defined by production-discovery
+  requirements and future ADRs before implementation.
 - Production stack selection belongs in future ADRs after production-discovery
   requirements are documented.
 
