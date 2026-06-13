@@ -28,10 +28,69 @@ Create a failing regression test or fixture for this bug first. Then fix the sma
 - Do not accept schema changes without migration, docs, and tests.
 - Do not accept extraction changes without fixture tests.
 - Do not accept bug or CI-failure fixes that skip root-cause governance review.
+- Do not skip standard PR validation for implementation work.
+- Use focused validation first to catch likely failures quickly, and explain why
+	the focused tests matched the changed area.
 - When a bug or CI failure reveals a missing or unclear rule, update the relevant
 	governance, testing, fixture, connector, or workflow documentation in the same
 	change.
 - Ask Copilot to show changed files and summarize validation results.
+
+## Validation guidance
+
+Use tiered validation for implementation work.
+
+### Focused validation
+
+Before broader validation, run the smallest relevant tests for the changed area.
+Examples:
+
+- Extraction change: targeted extractor tests and related fixture regression tests.
+- Connector change: targeted connector discovery, fetch, and raw storage tests using fixtures or mocks.
+- Data contract or schema change: schema validation, init or migration SQL tests, persistence tests, and affected data dictionary checks.
+- Datasette, view, or export change: affected SQL, view, export, metadata, and documentation checks.
+- Documentation-only change: documentation validation and link or reference checks.
+- Security or privacy change: security checks and any affected tests.
+- Accessibility-facing change: documentation, export, view, or presentation accessibility checks.
+
+Copilot should state which focused validation it selected and why it matched the
+change.
+
+### Standard PR validation
+
+Run standard PR validation before every PR unless the task is analysis-only and
+no files were edited:
+
+```powershell
+.\scripts\lint.ps1
+```
+
+```powershell
+.\scripts\test.ps1
+```
+
+```powershell
+.\scripts\docs.ps1
+```
+
+```powershell
+git diff --check
+```
+
+### Required remote validation
+
+Before merge, verify the required GitHub checks pass:
+
+- `validate`
+- `docs-check`
+- `fixtures`
+- `security`
+
+### Full release validation
+
+Run or verify the full test suite before any release, production-readiness
+milestone, schema change, connector expansion, export-contract change, or
+production architecture transition.
 
 ## Required completion handoff
 
@@ -126,6 +185,14 @@ git switch -c <next-branch-name>
 The PR body should state whether user-facing or documentation-impacting behavior
 changed. If no documentation changes are needed for a future task, use the exact
 statement: no user-facing or documentation-impacting behavior changed.
+
+The PR body must also include:
+
+- Focused validation run.
+- Why those focused tests matched the change.
+- Full local validation results.
+- Required remote check results.
+- Any tests intentionally not run and why.
 
 The next Copilot prompt should point to the governance files and ask for the
 smallest safe, tested change. Do not include personal paths, usernames, account
