@@ -758,7 +758,10 @@ def _complaint_received_date(lines: list[str]) -> str | None:
 
 
 def _allegations(lines: list[str]) -> list[str]:
-    start = _line_index(lines, "ALLEGATION(S):")
+    start = _line_index_any(
+        lines,
+        ("ALLEGATION(S):", "ALLEGATIONS:", "ALLEGATION:"),
+    )
     end = _line_index(lines, "INVESTIGATION FINDINGS:")
     if start is None or end is None:
         return []
@@ -793,6 +796,14 @@ def _is_allegation_continuation(line: str) -> bool:
 def _line_index(lines: list[str], value: str) -> int | None:
     for index, line in enumerate(lines):
         if line.casefold() == value.casefold():
+            return index
+    return None
+
+
+def _line_index_any(lines: list[str], values: tuple[str, ...]) -> int | None:
+    normalized_values = {value.casefold() for value in values}
+    for index, line in enumerate(lines):
+        if line.casefold() in normalized_values:
             return index
     return None
 
