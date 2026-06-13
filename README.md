@@ -1,13 +1,16 @@
-# CCLD Complaints Data POC
+# CCLD Complaints Data
 
-This repository is the active CCLD complaints proof of concept for ingesting,
-preserving, extracting, validating, and locally reviewing public complaint and
+This repository supports governed ingestion, preservation, extraction,
+validation, local review, and production-discovery for public complaint and
 facility report records from the California Community Care Licensing Division
 public portal.
 
-The project uses Python connectors, preserved raw source files, SQLite, and
-Datasette to support local review without building a custom frontend during the
-proof of concept.
+The initial proof of concept proved Python connectors, preserved raw source
+files, SQLite storage, Datasette local review, and source-traceable exports. The
+current phase is production-discovery for a source-traceable public-record review
+solution. Datasette is retained as a validation, inspection, debugging, local
+exploration, and export-support layer, not as the primary future review
+experience.
 
 ## What This Project Does
 
@@ -16,8 +19,8 @@ proof of concept.
 - Preserves raw public source files before extraction.
 - Stores normalized facility, source document, complaint, allegation, event, and
    extraction audit records in SQLite.
-- Presents review views and saved query examples in Datasette for browsing,
-   filtering, source checking, and CSV export.
+- Presents retained review views and saved query examples in Datasette for local
+   browsing, filtering, source checking, validation, inspection, and CSV export.
 - Exports a local review bundle with complaint review, delay triage, source
    traceability, multi-facility traceability, and comparison CSV files.
 - Preserves source traceability through source URL, raw SHA-256 hash, raw path,
@@ -38,6 +41,9 @@ proof of concept.
 - Delay review flags are screening aids, not conclusions that an investigation
    was delayed.
 - Source traceability and raw source preservation must not be removed.
+- Datasette remains useful for validation, inspection, debugging, local
+   exploration, and export support, but production-discovery will define the
+   future primary reviewer UX.
 - User-facing docs, exports, and presentation layers must follow the project
    accessibility requirements.
 - The baseline workflow avoids optional paid platform dependencies.

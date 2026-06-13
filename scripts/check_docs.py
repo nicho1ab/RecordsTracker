@@ -21,6 +21,7 @@ REQUIRED = [
     "RUNBOOK.md",
     "SETUP_INSTRUCTIONS.md",
     "docs/decisions/ADR-0002-local-review-experience.md",
+    "docs/decisions/ADR-0005-retain-datasette-as-validation-layer.md",
     "docs/developer/setup.md",
     "docs/developer/architecture.md",
     "docs/developer/adding-a-source.md",
@@ -64,7 +65,7 @@ REQUIRED_CONTENT = {
         "branch protection rule or repository ruleset",
     ],
     "README.md": [
-        "CCLD complaints proof of concept",
+        "production-discovery",
         "SQLite",
         "Datasette",
         "source traceability",
@@ -84,6 +85,7 @@ REQUIRED_CONTENT = {
     ],
     "ROADMAP.md": [
         "Completed CCLD proof-of-concept capabilities",
+        "production-discovery",
         "controlled live fetch",
         "multi-facility input",
         "SQLite review views",
@@ -206,7 +208,8 @@ REQUIRED_CONTENT = {
     ],
     "DESIGN_AND_USABILITY.md": [
         "Intended users",
-        "Primary review workflows",
+        "Current local review workflows",
+        "Future primary review UX requirements",
         "Design principles",
         "Usability principles",
         "Visual design principles",
@@ -224,6 +227,13 @@ REQUIRED_CONTENT = {
         "Datasette metadata",
         "Saved queries for common review tasks",
         "will not add a custom frontend during the proof of concept",
+    ],
+    "docs/decisions/ADR-0005-retain-datasette-as-validation-layer.md": [
+        "Datasette is no longer governed as the primary future review experience",
+        "validation, inspection, debugging, local",
+        "production-discovery",
+        "Non-negotiable safeguards",
+        "ADR-0001 and ADR-0002 remain accepted for the initial proof of concept",
     ],
 }
 

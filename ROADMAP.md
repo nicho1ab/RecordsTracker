@@ -1,8 +1,11 @@
 # Roadmap
 
-This roadmap reflects the current proof-of-concept state. The project is an
-active CCLD complaints ingestion and local review workflow, not a blank
-governance scaffold.
+This roadmap reflects the production-discovery phase for a source-traceable
+public-record review solution. The project has completed the initial CCLD
+proof-of-concept threshold for ingestion, extraction, raw preservation, source
+traceability, local review, and exports. Datasette remains useful for validation,
+inspection, debugging, local exploration, and export support, but it is no longer
+the governed primary future review experience.
 
 ## Completed foundation
 
@@ -177,84 +180,89 @@ governance scaffold.
 	relevant governance when a missing or unclear rule allowed the failure.
 - Added a local output accessibility checklist for Datasette views, generated
 	metadata, saved queries, CSV exports, review bundles, and script output.
+- Accepted the Datasette exit governance transition: Datasette is retained as a
+  validation, inspection, debugging, local exploration, and export-support layer,
+  while production-discovery defines the future primary reviewer UX requirements.
 
 ## Near-term milestones
 
-- Keep roadmap, changelog, setup, runbook, and Copilot workflow documentation
-	current after each meaningful capability or workflow change.
-- Reduce review noise and increase reviewer signal through task-based local
-	review improvements before deciding whether a dashboard or custom web
-	application is justified.
+- Define production-discovery requirements for persistent navigation, guided
+	review queues, saved reviewer state, annotations, correction workflows,
+	contextual help, collaboration constraints, accessible exports, and source
+	traceability.
+- Draft architecture decision records for the future primary review experience
+	without selecting a production stack before requirements are clear.
+- Preserve Datasette, SQLite views, and review-bundle exports where they support
+	validation, inspection, debugging, local exploration, and export workflows.
 - Harden extraction with additional representative fixtures and edge-case tests.
 - Expand narrative date and event extraction only when source text, confidence,
 	and fixture-backed regression tests are included.
 - Strengthen data quality checks for duplicates, date consistency, source hash
 	presence, and raw source traceability.
-- Improve local review documentation for repeated reviewer tasks and export
-	cautions.
-- Keep release checklist guidance current as validation, accessibility, and PR
-	workflow requirements evolve.
+- Keep roadmap, changelog, setup, runbook, and Copilot workflow documentation
+	current after each meaningful capability, governance, or workflow change.
 
 ## Current next priorities
 
-These priorities should be implemented as incremental cleanup, data quality,
-extraction, and local review improvements before deciding whether Datasette has
-been outgrown or a dashboard/custom web interface is justified.
+These priorities should be implemented as incremental production-discovery,
+data quality, extraction, architecture, and review-requirements work. Datasette
+has been outgrown as the primary future review experience and should be extended
+only where it remains useful for validation, inspection, debugging, local
+exploration, or export support.
 
 1. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
-2. Evaluate persistent navigation, lightweight dashboard options, or a custom
-	web interface only after the task-based Datasette review workflow is validated
-	and documented as sufficient or insufficient for repeated review.
+2. Define review-state, correction, annotation, queue, collaboration, accessible
+   export, and source-traceability requirements for production-discovery.
+3. Draft ADRs that compare architecture boundaries and production-stack options
+   without committing to a stack before requirements are reviewed.
 
-## Web app transition path
+## Production-discovery transition path
 
-Datasette remains useful as the proof-of-concept review surface while the team
-validates data quality, extraction behavior, source traceability, review language,
-and task-based workflows. The project should treat Datasette as outgrown when
-reviewers repeatedly need capabilities it cannot provide cleanly, such as
-persistent navigation, grouped task dashboards, guided review queues, saved user
-state, annotations, correction workflows, richer contextual help, or fewer-click
-paths that Datasette metadata and saved queries cannot reasonably support.
+Datasette has been outgrown as the primary future review experience. It remains
+part of the local toolkit for validation, inspection, debugging, local
+exploration, and export support over SQLite.
 
-Before building the eventual web app, use the local review workflow to identify
-and test the smallest useful product shape:
+Before production-build work, define the smallest useful product shape:
 
-1. Define the core user tasks and the minimum fields each task needs.
-2. Keep SQLite views, saved queries, and exports as the stable data access layer.
-3. Prototype low-noise review surfaces locally before adding accounts, hosted
-	infrastructure, or role-based workflows.
-4. Preserve source traceability, accessibility, and public-source caution
-	language as non-negotiable web app requirements.
-5. Decide whether to extend Datasette with templates/plugins, add a lightweight
-	dashboard, or start a custom frontend based on validated reviewer friction.
+1. Define the core reviewer tasks and the minimum fields, source traceability,
+	and caution language each task needs.
+2. Define review-state requirements for saved progress, guided queues,
+	annotations, corrections, and collaboration.
+3. Define accessible export requirements and the source-traceability fields that
+	must remain attached to any exported or cited record.
+4. Decide which architecture boundaries belong to ingestion, storage,
+	validation, review state, correction state, export generation, and future
+	presentation.
+5. Compare production-stack options in ADRs only after the requirements and
+	boundaries are documented.
 
 ## Decision points
 
 - Decide when the proof of concept has enough fixture coverage to treat CCLD
 	extraction as stable for broader review.
-- Decide whether collaborative review needs a lightweight correction table,
-	correction import workflow, or an external review tool.
-- Decide whether Baserow, Metabase, or another tool provides enough value to
-	justify adding it outside the baseline workflow.
-- Decide whether repeated reviewer friction means Datasette should remain the
-	local validation surface while a separate web app becomes the primary user
-	experience.
+- Decide the review-state model for saved progress, guided queues, annotations,
+  corrections, and collaboration.
+- Decide whether correction state belongs in SQLite, a separate review store, an
+  import/export workflow, or a future production application boundary.
+- Decide the production architecture boundary for the primary reviewer UX after
+  production-discovery requirements are documented.
+- Decide whether Baserow, Metabase, a custom application, or another tool
+  provides enough value to justify adding it outside the baseline workflow.
 - Decide when to add a second public source connector under the source connector
 	contract.
 - Decide what accessibility checks are required before any public or stable
 	release.
-- Decide whether and when a custom frontend is justified by validated product
-	needs rather than visual polish.
+- Decide which production operations governance is required for access, audit,
+  monitoring, retention, release, incident response, and operational support.
 
 ## Deferred product work
 
-- Custom frontend application, unless the web app transition path confirms that
-	Datasette cannot provide the needed persistent navigation, grouped review
-	workflows, contextual help, and few-click task paths.
+- Production primary review application build work until production-discovery
+  requirements and ADRs define the product and stack direction.
 - Hosted review queues, reviewer accounts, assignments, or role-based access
 	control.
-- Interactive dashboards beyond the local SQLite and Datasette proof of concept.
+- Interactive dashboards beyond validation, inspection, or prototype work.
 - PDF report generation unless accessibility can be validated.
 - Optional paid platform dependencies unless explicitly approved and documented.
 - Statewide crawling or automatic search expansion beyond explicitly provided

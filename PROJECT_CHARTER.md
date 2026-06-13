@@ -2,15 +2,36 @@
 
 ## Project name
 
-CCLD Complaints Data POC
+CCLD Complaints Data
 
 ## Problem statement
 
 Public complaint and inspection records are available through the CCLD public portal, but the portal is not optimized for structured analysis, bulk review, comparison, delay analysis, or repeatable research workflows.
 
+## Current phase
+
+The project is in production-discovery for a source-traceable public-record
+review solution.
+
+The proof of concept has proven ingestion, deterministic extraction, raw source
+preservation, source traceability, local review, and source-traceable exports.
+Current work should define product and architecture requirements for reviewer
+state, guided queues, annotations, corrections, collaboration, accessibility,
+exports, and source traceability before a production-build phase selects or
+implements a primary review application stack.
+
 ## Primary goal
 
-Create a proof of concept that ingests public facility reports, stores raw source evidence, extracts structured complaint fields, validates data quality, and presents searchable records without building a custom web application.
+Advance a governed public-record review solution that ingests public facility
+reports, stores raw source evidence, extracts structured complaint fields,
+validates data quality, preserves source traceability, supports current local
+attorney-review aid workflows, and defines the production-discovery requirements
+for future reviewer state, annotations, corrections, queues, collaboration,
+accessibility, and exports.
+
+Datasette is retained as a validation, inspection, debugging, local exploration,
+and export-support layer. It is no longer the governed primary future review
+experience.
 
 ## Initial source
 
@@ -26,7 +47,8 @@ Initial facility:
 - Researchers and analysts reviewing facility complaint history
 - Advocates reviewing public licensing data
 - Developers maintaining source connectors and extraction logic
-- Non-technical users browsing extracted records
+- Reviewers using local source-traceable exports, Datasette inspection, and
+	future primary review workflows
 
 ## Success criteria
 
@@ -40,7 +62,10 @@ Initial facility:
 
 ## Non-goals
 
-- Do not create a custom web application during the POC.
+- Do not build a production custom application before production-discovery ADRs
+	and architecture decisions define the product and stack direction.
+- Do not add new Datasette-primary UX as a substitute for production-discovery
+	requirements work.
 - Avoid project dependencies on optional paid platform features.
 - Do not treat portal data as complete, authoritative, or guaranteed accurate.
 - Do not use LLM extraction where deterministic parsing is reliable.

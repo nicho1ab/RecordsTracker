@@ -3,11 +3,19 @@
 ## Purpose
 
 This document defines how the local review experience should become useful,
-understandable, accessible, visually organized, and pleasant to use during the
-proof of concept without prematurely building a full custom frontend.
+understandable, accessible, visually organized, and pleasant to use across the
+current local attorney-review aid workflows and the production-discovery phase.
 
-The project should improve the Datasette and SQLite review workflow first by
-using review views, metadata, saved queries, documentation, and script guidance.
+The initial proof of concept improved the Datasette and SQLite review workflow
+with review views, metadata, saved queries, documentation, script guidance, and
+source-traceable exports. Datasette is now retained as a validation, inspection,
+debugging, local exploration, and export-support layer, not as the primary future
+reviewer UX.
+
+Future primary review UX work should prioritize persistent navigation, guided
+queues, saved reviewer state, annotations, correction workflows, contextual help,
+source traceability, accessible exports, and fewer-click reviewer paths before
+considering more Datasette metadata or saved-query UX.
 
 ## Intended users
 
@@ -16,12 +24,13 @@ The local review experience must support:
 - Researchers and analysts reviewing public facility complaint history.
 - Advocates reviewing public licensing records.
 - Developers maintaining source connectors, extraction logic, schemas, and tests.
-- Non-technical reviewers browsing local Datasette views and CSV exports.
+- Non-technical reviewers using local Datasette inspection views, CSV exports,
+  and future primary review workflows.
 
 The experience should assume that some reviewers are unfamiliar with database
 terms, schema names, extraction confidence, or delay calculations.
 
-## Primary review workflows
+## Current local review workflows
 
 The local review experience should make these workflows easy to complete:
 
@@ -37,6 +46,25 @@ The local review experience should make these workflows easy to complete:
 Reviewers should not need to understand every canonical table before completing
 basic browsing, triage, source checking, or export tasks.
 
+## Future primary review UX requirements
+
+The future primary review experience should make these workflows easy to
+complete without relying on Datasette as the main interface:
+
+1. Resume review with persistent navigation and saved state.
+2. Work through guided queues organized by reviewer task, facility, source
+  traceability status, review flags, correction needs, and annotation state.
+3. Add annotations without changing the preserved raw source record or
+  canonical extracted fields.
+4. Propose, review, import, or apply corrections with auditability and source
+  traceability.
+5. See contextual help at the point of use for fields, review flags, source
+  traceability, limitations, and export cautions.
+6. Export accessible, source-traceable review packets with clear headers and
+  cautious public-source language.
+7. Complete common reviewer paths with fewer clicks than the retained Datasette
+  validation workflow can reasonably provide.
+
 ## Design principles
 
 - Prefer review workflows over raw implementation exposure.
@@ -44,8 +72,8 @@ basic browsing, triage, source checking, or export tasks.
 - Preserve the public portal as the source of record.
 - Keep every derived record connected to source URL, raw hash, connector details,
   and retrieval time.
-- Improve the local review experience incrementally before building a custom web
-  application.
+- Treat Datasette as a retained validation and inspection layer while
+  production-discovery defines the future primary review experience.
 - Favor stable, documented local workflows over account-specific services or
   optional paid platform features.
 - Treat extracted records as review aids, not authoritative conclusions.
@@ -53,8 +81,12 @@ basic browsing, triage, source checking, or export tasks.
 ## Usability principles
 
 - Put the most common review fields together in human-readable views.
-- Use plain labels in Datasette metadata where table or column names are terse.
-- Provide saved queries for repeated review tasks.
+- Use plain labels in retained Datasette metadata where table or column names are
+  terse.
+- Preserve useful saved queries for validation, inspection, local exploration,
+  and export support.
+- Prioritize future reviewer state, queues, annotations, corrections,
+  contextual help, and fewer-click paths over additional Datasette-primary UX.
 - Keep scripts explicit about what to open next.
 - Make empty, missing, or unknown values understandable in documentation and
   exports.
@@ -69,8 +101,8 @@ basic browsing, triage, source checking, or export tasks.
   decorative.
 - Prefer clear column order, labels, descriptions, and saved-query names over
   visual novelty.
-- Do not add a frontend framework during the proof of concept only to improve
-  appearance.
+- Do not add a frontend framework during production-discovery only to improve
+  appearance or bypass architecture decisions.
 - Do not add decorative graphics, branding treatments, or custom styling that
   distracts from source review and traceability.
 - If future presentation styling is added, it must preserve keyboard access,
@@ -105,9 +137,10 @@ At minimum:
 - Do not describe missing dates as proof that an event did not happen.
 - Do not describe a delay flag as proof that an investigation was delayed.
 
-## Datasette table and view usability expectations
+## Retained Datasette table and view usability expectations
 
-Datasette review views should:
+Datasette review views retained for validation, inspection, debugging, local
+exploration, and export support should:
 
 - Put high-value review fields near the beginning of the view.
 - Include facility number and facility name when reviewing complaint records.
@@ -122,11 +155,13 @@ Datasette review views should:
 - Avoid exposing users to ambiguous status or flag columns without explanatory
   documentation.
 
-The primary review views should remain aligned with `docs/user/local-review-workflow.md`.
+The retained local review views should remain aligned with
+`docs/user/local-review-workflow.md`.
 
 ## Saved-query expectations
 
-Saved queries should:
+Saved queries retained for validation, inspection, local exploration, and export
+support should:
 
 - Support common review tasks such as filtering complaints by facility, viewing
   records with review flags, checking source traceability, summarizing allegation
@@ -195,7 +230,7 @@ from extracted fields, not as evidence that an event did not occur.
 
 ## POC scope versus later product work
 
-Belongs in the proof of concept:
+Proven in the proof of concept and retained for local attorney-review aid:
 
 - SQLite review views that support common reviewer tasks.
 - Datasette metadata with clearer labels, descriptions, and saved queries.
@@ -206,17 +241,27 @@ Belongs in the proof of concept:
 - Small usability improvements that preserve the existing Python, SQLite, and
   Datasette architecture.
 
-Belongs in later product work:
+Belongs in current production-discovery:
+
+- Product requirements for persistent navigation, saved reviewer state, guided
+  queues, annotations, corrections, collaboration, contextual help, accessible
+  exports, and fewer-click reviewer paths.
+- Architecture boundaries for ingestion, storage, validation, review state,
+  correction state, export generation, and future presentation.
+- ADRs comparing production-stack options without selecting a stack before the
+  requirements are reviewed.
+
+Belongs in future production-build or production-operations work:
 
 - A custom frontend application.
 - Full review queues, assignment workflows, or reviewer accounts.
-- Interactive dashboards beyond Datasette's local presentation capabilities.
+- Interactive dashboards beyond validation, inspection, or prototype work.
 - Role-based access control for a hosted product.
 - Custom charting or visualization layers.
 - PDF report generation unless accessibility can be validated.
 - Optional paid services or account-specific platform features unless explicitly
   approved and documented.
 
-The proof of concept should make the local workflow good enough to evaluate the
-data model, extraction quality, review language, and source traceability before
-committing to a larger product interface.
+Production-discovery should define the primary reviewer UX requirements while
+preserving source traceability, accessibility, cautious public-source language,
+raw source preservation, and deterministic extraction safeguards.
