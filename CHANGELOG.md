@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Hardened CCLD facility name extraction for source layouts where a standalone
+	`FACILITY NAME` label is followed by the facility name value, with
+	fixture-backed regression coverage.
 - Hardened CCLD complaint control number extraction for source layouts where a
 	standalone `COMPLAINT CONTROL NUMBER` label is followed by the complaint
 	control number value, with fixture-backed regression coverage.

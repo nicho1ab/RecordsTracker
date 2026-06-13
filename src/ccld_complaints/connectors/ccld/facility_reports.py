@@ -246,7 +246,8 @@ class CcldFacilityReportsConnector:
             "content_type": document.content_type,
             "report_index": source_url_fields["report_index"],
             "facility_number": _value_after_label(lines, "FACILITY NUMBER:"),
-            "facility_name": _value_after_label(lines, "FACILITY NAME:"),
+            "facility_name": _value_after_label(lines, "FACILITY NAME:")
+            or _value_after_exact_label(lines, "FACILITY NAME"),
             "report_type": _report_type(lines),
             "report_date": report_date,
             "date_signed": date_signed,
