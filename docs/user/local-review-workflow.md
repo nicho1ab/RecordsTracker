@@ -25,10 +25,11 @@ Open these views first:
 3. `complaint_review_summary` for the fuller complaint review across facilities.
 4. `facility_complaint_summary` for facility-level counts and date ranges.
 5. `facility_pattern_review` for facility-level finding mix, allegation categories, missing dates, report-date proxy usage, and review flag counts.
-6. `delay_review_flags` for records with one or more review flags.
-7. `source_traceability_review` to verify public source URL, raw hash, connector details, retrieval time, and report index.
-8. `multi_facility_source_traceability_review` to compare source traceability status and linked derived-record counts across facilities.
-9. `field_source_traceability_review` to check extracted field values, source text, extraction warnings, confidence, and source document traceability together.
+6. `facility_comparison_review` for facility/category/finding rows with source-document counts, same-category/finding facility counts, and cautious scope notes.
+7. `delay_review_flags` for records with one or more review flags.
+8. `source_traceability_review` to verify public source URL, raw hash, connector details, retrieval time, and report index.
+9. `multi_facility_source_traceability_review` to compare source traceability status and linked derived-record counts across facilities.
+10. `field_source_traceability_review` to check extracted field values, source text, extraction warnings, confidence, and source document traceability together.
 
 Use normalized tables such as `complaints`, `allegations`, `source_documents`, and `extraction_audit` only when you need lower-level detail.
 
@@ -49,6 +50,8 @@ Use normalized tables such as `complaints`, `allegations`, `source_documents`, a
 `facility_complaint_summary` gives one row per facility. Use it to compare complaint counts, allegation counts, the earliest and latest complaint received dates, and how many records have delay review flags.
 
 `facility_pattern_review` gives one row per facility with complaint counts, source document counts, allegation categories, finding mix, missing first activity date counts, report-date proxy counts, review flag counts, complaint date range, and source retrieval date range. Use it to spot patterns for closer source review, not as a finding about a facility.
+
+`facility_comparison_review` gives one row per facility, allegation category, and finding. It includes complaint, allegation, source-document, traceability-completeness, review-flag, date-range, and same-category/finding facility counts, plus a scope note. Use it to find repeated public-record categories for source review across facilities, not as a finding about a facility, the public source, or facility-wide conduct.
 
 `delay_review_flags` is a filtered triage list. A record appears here when one or more delay or review flags is set. This view helps reviewers decide what to inspect next; it does not prove an investigation was delayed.
 
@@ -72,7 +75,7 @@ In Datasette, open `complaint_first_pass_review` and filter `facility_number` to
 
 You can also open the saved query named `complaints_by_facility` and enter a facility number when prompted.
 
-For high-level comparison, open `facility_complaint_summary` or `facility_pattern_review` and sort by `complaint_count`, `allegation_count`, `records_with_review_flags`, or finding count columns.
+For high-level comparison, open `facility_complaint_summary` or `facility_pattern_review` and sort by `complaint_count`, `allegation_count`, `records_with_review_flags`, or finding count columns. For category-level comparison, open `facility_comparison_review` and sort by `facilities_with_same_category_finding`, `source_document_count`, or `records_with_review_flags`.
 
 ## How to inspect source documents
 
@@ -122,6 +125,7 @@ The generated Datasette metadata includes saved query examples:
 - `records_with_delay_review_flags` opens the delay triage list with review flags described as screening aids.
 - `facilities_with_delay_review_flags` ranks facilities by records with delay or review flags. Treat the counts as triage aids, not conclusions.
 - `facility_patterns_with_review_flags` ranks facilities with records flagged for review and shows finding mix, allegation categories, missingness, and report-date proxy counts.
+- `repeated_facility_category_findings` lists facility/category/finding rows that appear across more than one facility in the local derived dataset.
 - `source_traceability_check` lists source URL, raw hash, connector metadata, retrieval time, and report index.
 - `source_traceability_by_facility` filters source traceability details by facility number.
 - `multi_facility_source_traceability_by_facility` filters the source traceability matrix by facility number.

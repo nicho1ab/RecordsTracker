@@ -101,6 +101,7 @@ DROP VIEW IF EXISTS complaint_timeline_review;
 DROP VIEW IF EXISTS field_source_traceability_review;
 DROP VIEW IF EXISTS multi_facility_source_traceability_review;
 DROP VIEW IF EXISTS facility_pattern_review;
+DROP VIEW IF EXISTS facility_comparison_review;
 DROP VIEW IF EXISTS complaint_review_summary;
 DROP VIEW IF EXISTS source_traceability_review;
 
@@ -595,6 +596,63 @@ LEFT JOIN complaints c ON c.facility_id = f.facility_id
 LEFT JOIN source_documents sd ON sd.document_id = c.document_id
 LEFT JOIN allegations a ON a.complaint_id = c.complaint_id
 GROUP BY f.external_facility_number, f.facility_name;
+
+CREATE VIEW facility_comparison_review AS
+WITH comparison_rows AS (
+    SELECT
+        f.external_facility_number AS facility_number,
+        f.facility_name,
+        COALESCE(a.allegation_category, 'Unknown') AS allegation_category,
+        COALESCE(a.finding, c.finding, 'Unknown') AS finding,
+        COUNT(DISTINCT c.complaint_id) AS complaint_count,
+        COUNT(a.allegation_id) AS allegation_count,
+        COUNT(DISTINCT sd.document_id) AS source_document_count,
+        COUNT(DISTINCT CASE
+            WHEN COALESCE(TRIM(sd.source_url), '') <> ''
+              AND COALESCE(TRIM(sd.raw_sha256), '') <> ''
+              AND COALESCE(TRIM(sd.connector_name), '') <> ''
+              AND COALESCE(TRIM(sd.connector_version), '') <> ''
+              AND COALESCE(TRIM(sd.retrieved_at), '') <> ''
+            THEN sd.document_id
+        END) AS complete_source_traceability_document_count,
+        COUNT(DISTINCT CASE
+            WHEN COALESCE(TRIM(sd.source_url), '') = ''
+              OR COALESCE(TRIM(sd.raw_sha256), '') = ''
+              OR COALESCE(TRIM(sd.connector_name), '') = ''
+              OR COALESCE(TRIM(sd.connector_version), '') = ''
+              OR COALESCE(TRIM(sd.retrieved_at), '') = ''
+            THEN sd.document_id
+        END) AS missing_source_traceability_document_count,
+        COUNT(DISTINCT CASE
+            WHEN c.review_delay_over_30_days = 1
+              OR c.review_delay_over_60_days = 1
+              OR c.review_delay_over_90_days = 1
+              OR c.review_delay_over_120_days = 1
+              OR c.missing_first_activity_date = 1
+              OR c.report_date_used_as_proxy = 1
+            THEN c.complaint_id
+        END) AS records_with_review_flags,
+        MIN(c.complaint_received_date) AS earliest_complaint_received_date,
+        MAX(c.complaint_received_date) AS latest_complaint_received_date,
+        MIN(sd.retrieved_at) AS earliest_retrieved_at,
+        MAX(sd.retrieved_at) AS latest_retrieved_at
+    FROM complaints c
+    JOIN facilities f ON f.facility_id = c.facility_id
+    JOIN source_documents sd ON sd.document_id = c.document_id
+    LEFT JOIN allegations a ON a.complaint_id = c.complaint_id
+    GROUP BY
+        f.external_facility_number,
+        f.facility_name,
+        COALESCE(a.allegation_category, 'Unknown'),
+        COALESCE(a.finding, c.finding, 'Unknown')
+)
+SELECT
+    comparison_rows.*,
+    COUNT(*) OVER (
+        PARTITION BY allegation_category, finding
+    ) AS facilities_with_same_category_finding,
+    'screening aid; verify source records before citing' AS comparison_scope_note
+FROM comparison_rows;
 """
 
 TABLE_COLUMNS = {
