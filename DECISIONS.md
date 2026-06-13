@@ -10,3 +10,4 @@ See detailed ADRs in `docs/decisions/`.
 | ADR-0003 | Avoid optional paid platform dependencies in baseline workflow | Accepted |
 | ADR-0004 | Treat accessibility as a release gate | Accepted |
 | ADR-0005 | Retain Datasette as a validation layer after primary review UX exit | Accepted |
+| ADR-0006 | Define hosted tester MVP architecture boundaries | Accepted |

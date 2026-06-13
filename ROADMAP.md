@@ -187,16 +187,21 @@ the governed primary future review experience.
 	primary reviewer application, including review state, annotations,
 	corrections, tester readiness, export packet preparation, and source
 	traceability boundaries.
+- Accepted the hosted tester MVP architecture boundary, separating Datasette's
+  retained validation role from a future primary reviewer application layer and
+  deferring stack, persistence, authentication, sync, export, audit log, and
+  retention decisions to future ADRs.
 
 ## Near-term milestones
 
-- Use `PRODUCTION_DISCOVERY_REQUIREMENTS.md` to draft architecture decision
-  records for the future primary review experience without selecting a
-  production stack before requirements are reviewed.
-- Plan the hosted tester MVP around authenticated tester access, seeded corpus
-  loading, review-state persistence, annotation and correction boundaries,
-  source-traceable export packets, accessibility expectations, feedback
-  collection, and reset/reload operations.
+- Compare production-stack options against ADR-0006 criteria for source
+	traceability, reviewer-state separation, accessibility, authentication,
+	auditability, correction workflow support, exports, reset/reload, simplicity,
+	cost, maintainability, testability, and migration from SQLite and Datasette.
+- Decide the hosted tester MVP data and review-state model for review status,
+	queues, annotations, proposed corrections, correction decisions, tester
+	feedback, export packet selections, and audit events without mixing reviewer
+	state into source-derived canonical data.
 - Preserve Datasette, SQLite views, and review-bundle exports where they support
 	validation, inspection, debugging, local exploration, and export workflows.
 - Harden extraction with additional representative fixtures and edge-case tests.
@@ -215,14 +220,11 @@ has been outgrown as the primary future review experience and should be extended
 only where it remains useful for validation, inspection, debugging, local
 exploration, or export support.
 
-1. Draft ADRs that compare hosted reviewer application boundaries, reviewer
-	state persistence options, correction-state handling, tester access, export
-	packet generation, and production-stack options without committing to a stack
-	before requirements are reviewed.
-2. Plan the smallest hosted tester MVP that satisfies the production-discovery
-	requirements for guided queues, review state, annotations, proposed
-	corrections, source verification, accessible exports, tester feedback, and
-	reset/reload operations.
+1. Draft a production-stack evaluation ADR that compares options against the
+   ADR-0006 criteria without building the hosted app.
+2. Draft a hosted tester MVP data and review-state model ADR that decides where
+   reviewer-created state, annotations, proposed corrections, correction
+   decisions, tester feedback, export packet selections, and audit events belong.
 3. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
 
@@ -240,8 +242,9 @@ define the smallest useful product shape:
 2. Decide which architecture boundaries belong to ingestion, storage,
 	validation, review state, correction state, export generation, and future
 	presentation.
-3. Compare production-stack options in ADRs only after the requirements and
-	boundaries are documented.
+3. Compare production-stack options and decide the reviewer-created data model
+   in ADRs only after the requirements and hosted tester MVP boundary are
+   documented.
 
 ## Decision points
 

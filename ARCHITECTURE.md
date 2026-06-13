@@ -29,6 +29,12 @@ architecture decisions for reviewer state, guided queues, annotations,
 corrections, collaboration, accessibility, exports, and source traceability. This
 document does not select a production stack.
 
+ADR-0006 defines the hosted tester MVP architecture boundary. It requires a
+primary reviewer application layer separate from Datasette, keeps Datasette as a
+validation, inspection, debugging, local exploration, export-support, and
+transition-comparison layer, and defers production stack selection to future
+ADRs.
+
 ## Components
 
 ### Connectors
@@ -61,6 +67,8 @@ collaboration constraints, accessible exports, and source traceability.
 
 The minimum workflow and hosted tester readiness requirements are defined in
 `PRODUCTION_DISCOVERY_REQUIREMENTS.md`.
+The hosted tester MVP architecture boundary is defined in
+`docs/decisions/ADR-0006-hosted-tester-mvp-architecture-boundaries.md`.
 
 ### Future reviewer-created state layer
 
@@ -87,6 +95,9 @@ original extracted values.
   requirements and future ADRs before implementation.
 - Production stack selection belongs in future ADRs after production-discovery
   requirements are documented.
+- Production app scaffolding, hosted schemas, authentication implementation,
+  correction workflows, queues, annotations, and hosted export builders are not
+  approved until the relevant future ADRs are complete.
 
 ## Accessibility
 

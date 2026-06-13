@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added ADR-0006 for hosted tester MVP architecture boundaries, preserving
+	source-derived data separately from reviewer-created state, retaining Datasette
+	for validation and transition comparison, and deferring production stack
+	decisions to future ADRs.
 - Added minimum production-discovery requirements for the future hosted primary
 	reviewer application, including hosted reviewer workflows, review-state
 	boundaries, annotation and correction constraints, tester readiness, and
