@@ -291,6 +291,57 @@ smallest safe, tested change. Do not include personal paths, usernames, account
 details, private URLs, tokens, secrets, or machine-specific configuration in the
 handoff.
 
+## Next-prompt quality standard
+
+The next Copilot prompt should be a project-aware continuation prompt, not a
+generic task suggestion. It should synthesize the current project phase, the
+latest merged PR, current roadmap priorities, accepted ADRs, deferred decisions,
+non-negotiable safeguards, and the highest-leverage next milestone.
+
+Prompt-mode guidance:
+
+- `analysis-only`: use when the next task should inspect risks, failures,
+	architecture options, or stale documentation without editing files, creating a
+	branch, opening a PR, or running mutating commands.
+- `governance-change`: use when the next task should update project rules,
+	workflow guidance, testing policy, documentation strategy, roadmap language,
+	decision logs, or other governance surfaces.
+- `architecture decision`: use when the next task should create or update an ADR
+	that decides boundaries, tradeoffs, or deferred production-discovery choices
+	without building the implementation.
+- `implementation`: use when the next task should change code, schemas,
+	connectors, extraction, storage, exports, review views, or scripts, with tests
+	and documentation updates scaled to the change.
+- `prototype/spike`: use when the next task should explore an uncertain approach
+	in an isolated, reversible way without creating an implicit production
+	commitment or baseline dependency.
+- `validation-hardening`: use when the next task should strengthen tests,
+	fixtures, docs checks, security checks, accessibility checks, or CI coverage
+	for an already identified risk.
+
+Every next prompt should include:
+
+- Task mode.
+- Scope boundaries.
+- Files to read.
+- What not to do.
+- Focused validation.
+- Standard PR validation.
+- Remote required checks: `validate`, `docs-check`, `fixtures`, and `security`.
+- PR body requirements.
+- Final handoff requirements.
+
+Next prompts must preserve source traceability, raw source preservation,
+deterministic extraction expectations, fixture-backed regression expectations,
+accessibility requirements, security/privacy expectations, public-source caution
+language, and the rule against unsupported legal, facility-wide, public-source
+completeness, delay, harm, abuse, neglect, liability, or rights-deprivation
+conclusions.
+
+Copilot should not include a recommended next branch command unless the user asks for one.
+If a branch name is useful, provide the name as prose rather than a runnable
+command unless the user requested command-ready branch setup.
+
 ## Handoff formatting rules
 
 All completed-task handoffs must be copy/paste-safe for PowerShell users.
