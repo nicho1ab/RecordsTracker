@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Hardened CCLD facility number extraction for source layouts that use a
+	`FACILITY NUMBER :` spaced-colon label variant, with fixture-backed regression
+	coverage.
 - Hardened CCLD facility name extraction for source layouts that use a
 	`FACILITY NAME :` spaced-colon label variant, with fixture-backed regression
 	coverage.
