@@ -18,6 +18,9 @@ governance scaffold.
 ## Completed CCLD proof-of-concept capabilities
 
 - Implemented the CCLD single-facility fixture workflow for the initial facility.
+- Added a small fixture-backed multi-facility sample corpus for offline coverage
+	of intake diagnostics, fetch summaries, source traceability, facility
+	comparison, and review-bundle export paths without live public requests.
 - Added fixture-backed extraction and regression coverage for known CCLD reports.
 - Added fixture-backed hardening for numbered allegation rows in CCLD report
 	layouts.

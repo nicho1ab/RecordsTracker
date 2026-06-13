@@ -3,7 +3,10 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
-from ccld_complaints.local_sample import populate_sample_database
+from ccld_complaints.local_sample import (
+    populate_multi_facility_sample_database,
+    populate_sample_database,
+)
 from ccld_complaints.review_bundle import export_review_bundle
 
 
@@ -113,6 +116,41 @@ def test_export_review_bundle_writes_accessible_review_notes(tmp_path: Path) -> 
     assert "not findings about a facility" in readme_text
     assert "not conclusions about facilities" in readme_text
     assert "source text, warnings, confidence" in readme_text
+
+
+def test_export_review_bundle_covers_multi_facility_fixture_corpus(tmp_path: Path) -> None:
+    db_path = tmp_path / "ccld.sqlite"
+    output_dir = tmp_path / "review-bundle"
+    populate_multi_facility_sample_database(db_path)
+
+    result = export_review_bundle(db_path, output_dir)
+
+    exported_paths = {exported_file.path.name: exported_file for exported_file in result.files}
+    assert exported_paths["complaint_review_with_source_traceability.csv"].row_count == 2
+    assert exported_paths["multi_facility_source_traceability.csv"].row_count == 2
+    assert exported_paths["facility_comparison_review.csv"].row_count == 2
+
+    complaint_rows = _read_csv(output_dir / "complaint_review_with_source_traceability.csv")
+    assert {row["facility_number"] for row in complaint_rows} == {"157806097", "157806098"}
+    assert {row["connector_name"] for row in complaint_rows} == {"ccld_facility_reports"}
+    assert all(row["raw_sha256"] for row in complaint_rows)
+    assert all(
+        row["source_url"].startswith("https://www.ccld.dss.ca.gov/")
+        for row in complaint_rows
+    )
+
+    multi_source_rows = _read_csv(output_dir / "multi_facility_source_traceability.csv")
+    assert {row["facility_number"] for row in multi_source_rows} == {"157806097", "157806098"}
+    assert {row["traceability_status"] for row in multi_source_rows} == {"complete"}
+    assert {row["complaint_count"] for row in multi_source_rows} == {"1"}
+
+    comparison_rows = _read_csv(output_dir / "facility_comparison_review.csv")
+    assert {row["facility_number"] for row in comparison_rows} == {"157806097", "157806098"}
+    assert {row["finding"] for row in comparison_rows} == {"Unsubstantiated"}
+    assert {row["facilities_with_same_category_finding"] for row in comparison_rows} == {"2"}
+    assert {row["comparison_scope_note"] for row in comparison_rows} == {
+        "screening aid; verify source records before citing"
+    }
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
