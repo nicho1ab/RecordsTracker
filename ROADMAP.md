@@ -66,6 +66,8 @@ governance scaffold.
 	section heading.
 - Added fixture-backed no-colon allegation heading extraction hardening for CCLD
 	report layouts that use an `ALLEGATIONS` section heading.
+- Added fixture-backed punctuated finding extraction hardening for CCLD report
+	layouts where a normalized finding value includes trailing punctuation.
 
 ## Completed governance and review experience improvements
 
