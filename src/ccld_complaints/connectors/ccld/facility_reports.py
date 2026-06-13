@@ -807,8 +807,10 @@ def _allegations(lines: list[str]) -> list[str]:
         lines,
         (
             "INVESTIGATION FINDINGS:",
+              "INVESTIGATION FINDINGS -",
             "INVESTIGATION FINDINGS",
             "INVESTIGATION FINDING:",
+              "INVESTIGATION FINDING -",
             "INVESTIGATION FINDING",
         ),
     )
