@@ -83,6 +83,9 @@ governance scaffold.
 	complaint control number value.
 - Added fixture-backed split facility name label extraction hardening for CCLD
 	report layouts where `FACILITY NAME` is followed by the facility name value.
+- Added fixture-backed split facility number label extraction hardening for CCLD
+	report layouts where `FACILITY NUMBER` is followed by the facility number
+	value.
 
 ## Completed governance and review experience improvements
 

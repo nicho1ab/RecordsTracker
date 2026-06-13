@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Hardened CCLD facility number extraction for source layouts where a standalone
+	`FACILITY NUMBER` label is followed by the facility number value, with
+	fixture-backed regression coverage.
 - Hardened CCLD facility name extraction for source layouts where a standalone
 	`FACILITY NAME` label is followed by the facility name value, with
 	fixture-backed regression coverage.
