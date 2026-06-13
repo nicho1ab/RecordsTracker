@@ -122,6 +122,9 @@ VISIT_DATE_SEMICOLON_FIXTURE_URL = (
 COMPLAINT_CONTROL_SEMICOLON_FIXTURE_URL = (
     "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=75"
 )
+FACILITY_NAME_SEMICOLON_FIXTURE_URL = (
+    "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=77"
+)
 FACILITY_NUMBER_SEMICOLON_FIXTURE_URL = (
     "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=76"
 )
@@ -233,6 +236,9 @@ VISIT_DATE_SEMICOLON_RAW_FIXTURE = Path(
 )
 COMPLAINT_CONTROL_SEMICOLON_RAW_FIXTURE = Path(
     "tests/fixtures/ccld/raw/157806098_inx75_complaint_control_semicolon.html"
+)
+FACILITY_NAME_SEMICOLON_RAW_FIXTURE = Path(
+    "tests/fixtures/ccld/raw/157806098_inx77_facility_name_semicolon.html"
 )
 FACILITY_NUMBER_SEMICOLON_RAW_FIXTURE = Path(
     "tests/fixtures/ccld/raw/157806098_inx76_facility_number_semicolon.html"
@@ -347,6 +353,9 @@ VISIT_DATE_SEMICOLON_EXPECTED_FIXTURE = Path(
 COMPLAINT_CONTROL_SEMICOLON_EXPECTED_FIXTURE = Path(
     "tests/fixtures/ccld/expected/157806098_inx75_complaint_control_semicolon.json"
 )
+FACILITY_NAME_SEMICOLON_EXPECTED_FIXTURE = Path(
+    "tests/fixtures/ccld/expected/157806098_inx77_facility_name_semicolon.json"
+)
 FACILITY_NUMBER_SEMICOLON_EXPECTED_FIXTURE = Path(
     "tests/fixtures/ccld/expected/157806098_inx76_facility_number_semicolon.json"
 )
@@ -387,6 +396,7 @@ REPORT_DATE_SEMICOLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 DATE_SIGNED_SEMICOLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 VISIT_DATE_SEMICOLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 COMPLAINT_CONTROL_SEMICOLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
+FACILITY_NAME_SEMICOLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 FACILITY_NUMBER_SEMICOLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 
 
@@ -815,6 +825,16 @@ def test_ccld_facility_report_extracts_semicolon_complaint_control_label() -> No
     normalized = connector.normalize(_extract_complaint_control_semicolon_fixture())
     expected = json.loads(
         COMPLAINT_CONTROL_SEMICOLON_EXPECTED_FIXTURE.read_text(encoding="utf-8")
+    )
+
+    assert _without_audit(normalized) == expected
+
+
+def test_ccld_facility_report_extracts_semicolon_facility_name_label() -> None:
+    connector = CcldFacilityReportsConnector()
+    normalized = connector.normalize(_extract_facility_name_semicolon_fixture())
+    expected = json.loads(
+        FACILITY_NAME_SEMICOLON_EXPECTED_FIXTURE.read_text(encoding="utf-8")
     )
 
     assert _without_audit(normalized) == expected
@@ -1389,6 +1409,18 @@ def _extract_complaint_control_semicolon_fixture() -> dict[str, object]:
         raw_path=COMPLAINT_CONTROL_SEMICOLON_RAW_FIXTURE,
         raw_sha256=sha256_bytes(raw_content),
         retrieved_at=COMPLAINT_CONTROL_SEMICOLON_RETRIEVED_AT,
+        content_type="text/html",
+    )
+    return CcldFacilityReportsConnector().extract(document)
+
+
+def _extract_facility_name_semicolon_fixture() -> dict[str, object]:
+    raw_content = FACILITY_NAME_SEMICOLON_RAW_FIXTURE.read_bytes()
+    document = SourceDocument(
+        source_url=FACILITY_NAME_SEMICOLON_FIXTURE_URL,
+        raw_path=FACILITY_NAME_SEMICOLON_RAW_FIXTURE,
+        raw_sha256=sha256_bytes(raw_content),
+        retrieved_at=FACILITY_NAME_SEMICOLON_RETRIEVED_AT,
         content_type="text/html",
     )
     return CcldFacilityReportsConnector().extract(document)
