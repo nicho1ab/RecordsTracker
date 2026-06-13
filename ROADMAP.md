@@ -113,6 +113,8 @@ governance scaffold.
 	CCLD report layouts that use a `COMPLAINT CONTROL NUMBER :` label variant.
 - Added fixture-backed spaced-colon facility name label hardening for CCLD
 	report layouts that use a `FACILITY NAME :` label variant.
+- Added fixture-backed spaced-colon facility number label hardening for CCLD
+	report layouts that use a `FACILITY NUMBER :` label variant.
 
 ## Completed governance and review experience improvements
 

@@ -71,3 +71,5 @@ Raw fixtures and expected JSON are governed by `.gitattributes` line-ending rule
 - `expected/157806098_inx68_complaint_control_spaced_colon.json`: Expected normalized records for spaced-colon complaint control number label extraction hardening.
 - `raw/157806098_inx69_facility_name_spaced_colon.html`: Source-shaped CCLD report fixture covering a `FACILITY NAME :` spaced-colon label variant.
 - `expected/157806098_inx69_facility_name_spaced_colon.json`: Expected normalized records for spaced-colon facility name label extraction hardening.
+- `raw/157806098_inx70_facility_number_spaced_colon.html`: Source-shaped CCLD report fixture covering a `FACILITY NUMBER :` spaced-colon label variant.
+- `expected/157806098_inx70_facility_number_spaced_colon.json`: Expected normalized records for spaced-colon facility number label extraction hardening.
