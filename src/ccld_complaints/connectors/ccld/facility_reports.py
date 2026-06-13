@@ -38,6 +38,7 @@ NUMBERED_ALLEGATION_PREFIX_RE = re.compile(
     re.IGNORECASE,
 )
 FINDING_INLINE_LABEL_RE = re.compile(r"^finding\s*[-:]\s*(.+)$", re.IGNORECASE)
+SOURCE_DATE_TOKEN_RE = re.compile(r"\b\d{1,2}/\d{1,2}/\d{2,4}\b")
 
 ReportDocumentLoader = Callable[[SourceDocumentCandidate], SourceDocument | None]
 ReportFetcher = Callable[[str], bytes]
@@ -764,16 +765,28 @@ def _complaint_received_date(lines: list[str]) -> str | None:
     phrases = (
         "complaint received in our office on",
         "complaint was received in our office on",
+        "complaint received in our office",
+        "complaint was received in our office",
     )
     for index, line in enumerate(lines):
         normalized_line = line.casefold()
         for phrase in phrases:
             if phrase in normalized_line:
                 inline_value = line[normalized_line.index(phrase) + len(phrase) :].strip(" .:-")
+                inline_date = _source_date_token(inline_value)
+                if inline_date is not None:
+                    return inline_date
                 if inline_value:
                     return inline_value
                 return _next_value(lines, index)
     return None
+
+
+def _source_date_token(value: str) -> str | None:
+    match = SOURCE_DATE_TOKEN_RE.search(value)
+    if match is None:
+        return None
+    return match.group(0)
 
 
 def _allegations(lines: list[str]) -> list[str]:
