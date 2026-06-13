@@ -21,6 +21,7 @@ documentation-impacting behavior changed.
 - [ ] Accessibility requirements reviewed.
 - [ ] Security/privacy impact reviewed.
 - [ ] Known limitations updated, if needed.
+- [ ] Bug or CI-failure root cause reviewed; governance rules updated when a missing or unclear rule contributed to the failure.
 - [ ] No project dependency on optional paid platform features added.
 - [ ] No secrets committed.
 - [ ] Raw source traceability preserved.

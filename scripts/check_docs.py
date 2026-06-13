@@ -3,9 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 
 REQUIRED = [
+    ".github/copilot-instructions.md",
     "README.md",
     "PROJECT_CHARTER.md",
     "ROADMAP.md",
+    "CHANGELOG.md",
     "ARCHITECTURE.md",
     "DECISIONS.md",
     "DATA_CONTRACT.md",
@@ -17,19 +19,50 @@ REQUIRED = [
     "SECURITY_AND_PRIVACY.md",
     "KNOWN_LIMITATIONS.md",
     "RUNBOOK.md",
+    "SETUP_INSTRUCTIONS.md",
     "docs/decisions/ADR-0002-local-review-experience.md",
     "docs/developer/setup.md",
+    "docs/developer/architecture.md",
+    "docs/developer/adding-a-source.md",
+    "docs/developer/testing.md",
+    "docs/developer/data-contract.md",
     "docs/developer/accessibility.md",
     "docs/developer/copilot-workflow.md",
+    "docs/developer/release-process.md",
     "docs/user/getting-started.md",
     "docs/user/local-review-workflow.md",
     "docs/user/reviewing-records.md",
+    "docs/user/searching-and-filtering.md",
     "docs/user/data-dictionary.md",
     "docs/user/exporting-data.md",
     "docs/user/known-limitations.md",
 ]
 
 REQUIRED_CONTENT = {
+    ".github/copilot-instructions.md": [
+        "Required task handoff",
+        "Summary of changes",
+        "Validation results",
+        "Exact git commit and push commands",
+        "PR title",
+        "PR body",
+        "Required GitHub checks",
+        "Post-merge cleanup commands",
+        "Recommended next branch name",
+        "Next Copilot prompt",
+        "Next task selection",
+        "Do not repeatedly recommend documentation-only work",
+        "select the next product or technical milestone from `ROADMAP.md`",
+        "Handoff formatting rules",
+        "copy/paste-safe",
+        "GitHub PR title/body must be separate from PowerShell commands",
+        "Run only after squash merge is complete",
+        "validate",
+        "docs-check",
+        "fixtures",
+        "security",
+        "branch protection rule or repository ruleset",
+    ],
     "README.md": [
         "CCLD complaints proof of concept",
         "SQLite",
@@ -42,13 +75,106 @@ REQUIRED_CONTENT = {
         "Documentation impact and currency",
         "Every feature, workflow, source connector, CLI or script, database or view",
         "README.md",
+        "ROADMAP.md",
+        "CHANGELOG.md",
         "docs/user/*",
         "docs/developer/*",
         "DECISIONS.md and ADRs",
         "no user-facing or documentation-impacting behavior changed",
     ],
+    "ROADMAP.md": [
+        "Completed CCLD proof-of-concept capabilities",
+        "controlled live fetch",
+        "multi-facility input",
+        "SQLite review views",
+        "Datasette metadata and saved queries",
+        "Near-term milestones",
+        "Current next priorities",
+        "Decision points",
+        "Deferred product work",
+    ],
+    "CHANGELOG.md": [
+        "CCLD complaints proof-of-concept",
+        "fixture-backed sample ingestion",
+        "controlled live fetch scripts",
+        "multi-facility input",
+        "Datasette review views",
+        "documentation validation",
+    ],
+    "SETUP_INSTRUCTIONS.md": [
+        "Run the fixture-backed sample workflow",
+        "Run controlled live fetch",
+        "For multiple explicitly provided facilities",
+        "generated Datasette metadata path",
+        "Copilot handoff expectation",
+    ],
+    "RUNBOOK.md": [
+        "Validate changes",
+        "Run fixture-backed sample ingestion",
+        "Run controlled live fetch",
+        "Run multi-facility live fetch",
+        "generated metadata file",
+        "PR and merge cleanup",
+        "branch protection rule or repository ruleset",
+        "validate",
+        "docs-check",
+        "fixtures",
+        "security",
+        "gh --version",
+        "gh auth status",
+    ],
+    "docs/developer/copilot-workflow.md": [
+        "Required completion handoff",
+        "Summary of changes",
+        "Validation results",
+        "Exact git commit and push commands",
+        "PR title",
+        "PR body",
+        "Required GitHub checks",
+        "Post-merge cleanup commands",
+        "Recommended next branch name",
+        "Next Copilot prompt",
+        "Next task selection",
+        "Do not repeatedly recommend documentation-only work",
+        "select the next product or technical milestone from `ROADMAP.md`",
+        "Handoff formatting rules",
+        "copy/paste-safe",
+        "GitHub PR title/body must be separate from PowerShell commands",
+        "Run only after squash merge is complete",
+        "branch protection rule or repository ruleset",
+        "validate",
+        "docs-check",
+        "fixtures",
+        "security",
+        "gh --version",
+        "gh auth status",
+    ],
+    "docs/developer/release-process.md": [
+        "Task completion checklist",
+        "Validation",
+        "Accessibility review",
+        "Pull request checks",
+        "Merge cleanup",
+        "Next-task handoff",
+        "Required GitHub checks",
+        "post-merge cleanup commands",
+        "recommended next branch name",
+        "next Copilot prompt",
+        "branch protection rule or repository ruleset",
+        "validate",
+        "docs-check",
+        "fixtures",
+        "security",
+        "gh --version",
+        "gh auth status",
+    ],
     "docs/developer/accessibility.md": [
         "Local output checklist",
+        "Datasette views",
+        "Generated metadata",
+        "Saved queries",
+        "CSV exports and review bundles",
+        "Script output",
         "Delay fields and review flags are described as screening aids",
         "source URL, raw SHA-256 hash, connector name, and retrieval timestamp",
     ],
@@ -102,11 +228,22 @@ REQUIRED_CONTENT = {
 }
 
 FORBIDDEN_CONTENT = {
+    "CHANGELOG.md": [
+        "Added data contract, connector contract, testing strategy, "
+        "documentation strategy, accessibility requirements, and GitHub Copilot "
+        "instructions.",
+    ],
     "README.md": [
         "governance pack",
         "zip scaffold",
         "Extract this zip file",
         "Python project skeleton",
+    ],
+}
+
+STALE_ROADMAP_CURRENT_PRIORITIES = {
+    "ROADMAP.md": [
+        "Group review workflows by user task rather than by implementation table",
     ],
 }
 
@@ -141,6 +278,33 @@ def find_forbidden_content(root: Path = Path(".")) -> list[str]:
     return found
 
 
+def find_stale_roadmap_priorities(root: Path = Path(".")) -> list[str]:
+    found = []
+    for relative_path, stale_phrases in STALE_ROADMAP_CURRENT_PRIORITIES.items():
+        path = root / relative_path
+        if not path.exists():
+            continue
+        current_priorities = _markdown_section(
+            path.read_text(encoding="utf-8"), "Current next priorities"
+        ).lower()
+        for phrase in stale_phrases:
+            if phrase.lower() in current_priorities:
+                found.append(f"{relative_path}: {phrase}")
+    return found
+
+
+def _markdown_section(content: str, heading: str) -> str:
+    marker = f"## {heading}"
+    start = content.find(marker)
+    if start == -1:
+        return ""
+    section_start = start + len(marker)
+    next_heading = content.find("\n## ", section_start)
+    if next_heading == -1:
+        return content[section_start:]
+    return content[section_start:next_heading]
+
+
 def main() -> None:
     missing_files = find_missing_files()
     if missing_files:
@@ -156,6 +320,13 @@ def main() -> None:
     if forbidden_content:
         raise SystemExit(
             "Forbidden stale documentation content found: " + "; ".join(forbidden_content)
+        )
+
+    stale_roadmap_priorities = find_stale_roadmap_priorities()
+    if stale_roadmap_priorities:
+        raise SystemExit(
+            "Stale completed roadmap priorities found: "
+            + "; ".join(stale_roadmap_priorities)
         )
 
     print("Documentation check passed.")

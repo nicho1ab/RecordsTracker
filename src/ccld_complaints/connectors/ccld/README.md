@@ -46,6 +46,19 @@ Live CCLD requests are user-invoked through `scripts/run-ccld-live-fetch.ps1`. T
 
 The live command prints an external-site warning, uses a clear user agent, applies a reasonable timeout, limits report requests unless the user chooses all discovered reports, enforces the max-request guard, and does not use an aggressive retry loop. Automated tests should inject fixture HTML and fake report fetchers instead of making live web requests.
 
+Before discovery or report fetching, the live command reports facility identifier
+intake details: accepted facility identifiers, duplicate identifiers ignored, and
+blank, comment, or header values ignored from small text or CSV input files.
+Facility identifiers must contain digits only; invalid values are rejected before
+the connector makes public web requests.
+
+After discovery and fetching, the live command reports facilities with records
+discovered, facilities with no records discovered, discovery failures, candidates
+selected, reports skipped by limit, reports fetched, records written, and report
+failures. Per-facility summary lines include a run-state label such as records
+written, no records discovered, skipped by limit, partial report failures, or
+report failures.
+
 ## Initial deterministic extraction
 
 The first implemented fixture covers facility `157806098` with report index `3`.
@@ -53,10 +66,10 @@ The first implemented fixture covers facility `157806098` with report index `3`.
 The extractor reads the public FacilityReports HTML response, preserves the raw source file, and deterministically extracts labeled fields from the report text:
 
 - Facility number and facility name
-- Report type, report date, date signed, and visit date
-- Complaint received date and complaint control number
-- Allegation text
-- Normalized finding
+- Report type, report date, date signed, and visit date, including split label/value date layouts
+- Complaint received date, including inline narrative phrase variants, and complaint control number
+- Allegation text, including allegation and investigation finding heading variants and lowercase continuation lines in wrapped layouts
+- Normalized finding, including explicit `Finding:` labels, `Finding -` inline labels, split `Finding` label/value layouts, and source punctuation variants
 - Deterministic delay metrics for received-to-visit, received-to-report, and report-to-signed dates when both dates are available
 - Review delay flags for records that may need closer review
 

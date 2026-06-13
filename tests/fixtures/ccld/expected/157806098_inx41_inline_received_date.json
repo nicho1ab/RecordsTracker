@@ -1,0 +1,62 @@
+{
+    "facility": {
+        "facility_id": "ccld-facility-157806098",
+        "source_id": "ccld",
+        "external_facility_number": "157806098",
+        "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+        "facility_type": null,
+        "licensee_name": null,
+        "county": null,
+        "status": null,
+        "capacity": null,
+        "regional_office": null
+    },
+    "source_document": {
+        "document_id": "ccld-157806098-inx-41",
+        "source_id": "ccld",
+        "facility_id": "ccld-facility-157806098",
+        "source_url": "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=41",
+        "retrieved_at": "2026-06-12T00:00:00+00:00",
+        "raw_sha256": "4c624a267a9864fb1f0f750bda617314ff96a2926b9153d3df49bd6cb5fd3d17",
+        "connector_name": "ccld_facility_reports",
+        "connector_version": "0.1.0",
+        "raw_path": "tests/fixtures/ccld/raw/157806098_inx41_inline_received_date.html",
+        "document_type": "COMPLAINT INVESTIGATION REPORT",
+        "report_index": 41,
+        "http_status": null,
+        "content_type": "text/html"
+    },
+    "complaint": {
+        "complaint_id": "ccld-complaint-32-CR-20240120111111",
+        "facility_id": "ccld-facility-157806098",
+        "document_id": "ccld-157806098-inx-41",
+        "complaint_control_number": "32-CR-20240120111111",
+        "complaint_received_date": "2024-01-20",
+        "first_investigation_activity_date": null,
+        "visit_date": "2024-02-10",
+        "report_date": "2024-02-15",
+        "date_signed": "2024-02-16",
+        "finding": "Inconclusive",
+        "days_received_to_first_activity": null,
+        "days_received_to_visit": 21,
+        "days_received_to_report": 26,
+        "days_report_to_signed": 1,
+        "review_delay_over_30_days": false,
+        "review_delay_over_60_days": false,
+        "review_delay_over_90_days": false,
+        "review_delay_over_120_days": false,
+        "missing_first_activity_date": true,
+        "report_date_used_as_proxy": false,
+        "extraction_confidence": 1.0
+    },
+    "allegations": [
+        {
+            "allegation_id": "ccld-complaint-32-CR-20240120111111-allegation-1",
+            "complaint_id": "ccld-complaint-32-CR-20240120111111",
+            "allegation_text": "Facility staff did not document required checks",
+            "allegation_category": null,
+            "finding": "Inconclusive",
+            "extraction_confidence": 1.0
+        }
+    ]
+}

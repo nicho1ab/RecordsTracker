@@ -1,0 +1,70 @@
+{
+    "facility": {
+        "facility_id": "ccld-facility-157806098",
+        "source_id": "ccld",
+        "external_facility_number": "157806098",
+        "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+        "facility_type": null,
+        "licensee_name": null,
+        "county": null,
+        "status": null,
+        "capacity": null,
+        "regional_office": null
+    },
+    "source_document": {
+        "document_id": "ccld-157806098-inx-68",
+        "source_id": "ccld",
+        "facility_id": "ccld-facility-157806098",
+        "source_url": "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=68",
+        "retrieved_at": "2026-06-12T00:00:00+00:00",
+        "raw_sha256": "8e75d85397c944a3aca9227faa9d96f3f5df426ac938e37bfb375fd7b2345263",
+        "connector_name": "ccld_facility_reports",
+        "connector_version": "0.1.0",
+        "raw_path": "tests/fixtures/ccld/raw/157806098_inx68_complaint_control_spaced_colon.html",
+        "document_type": "COMPLAINT INVESTIGATION REPORT",
+        "report_index": 68,
+        "http_status": null,
+        "content_type": "text/html"
+    },
+    "complaint": {
+        "complaint_id": "ccld-complaint-32-CR-20240617212121",
+        "facility_id": "ccld-facility-157806098",
+        "document_id": "ccld-157806098-inx-68",
+        "complaint_control_number": "32-CR-20240617212121",
+        "complaint_received_date": "2024-06-17",
+        "first_investigation_activity_date": null,
+        "visit_date": "2024-06-28",
+        "report_date": "2024-08-26",
+        "date_signed": "2024-08-27",
+        "finding": "Inconclusive",
+        "days_received_to_first_activity": null,
+        "days_received_to_visit": 11,
+        "days_received_to_report": 70,
+        "days_report_to_signed": 1,
+        "review_delay_over_30_days": false,
+        "review_delay_over_60_days": false,
+        "review_delay_over_90_days": false,
+        "review_delay_over_120_days": false,
+        "missing_first_activity_date": true,
+        "report_date_used_as_proxy": false,
+        "extraction_confidence": 1.0
+    },
+    "allegations": [
+        {
+            "allegation_id": "ccld-complaint-32-CR-20240617212121-allegation-1",
+            "complaint_id": "ccld-complaint-32-CR-20240617212121",
+            "allegation_text": "Facility staff did not complete required intake documentation",
+            "allegation_category": null,
+            "finding": "Inconclusive",
+            "extraction_confidence": 1.0
+        },
+        {
+            "allegation_id": "ccld-complaint-32-CR-20240617212121-allegation-2",
+            "complaint_id": "ccld-complaint-32-CR-20240617212121",
+            "allegation_text": "Facility staff did not update the supervision checklist timely",
+            "allegation_category": null,
+            "finding": "Inconclusive",
+            "extraction_confidence": 1.0
+        }
+    ]
+}

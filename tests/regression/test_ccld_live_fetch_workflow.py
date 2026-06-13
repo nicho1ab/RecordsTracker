@@ -6,11 +6,19 @@ from typing import Any
 
 import pytest
 
+from ccld_complaints.cli.fetch_live_ccld import (
+    _collect_facility_number_intake,
+    facility_intake_summary_lines,
+    live_fetch_summary_lines,
+)
 from ccld_complaints.connectors.base import SourceDocument
 from ccld_complaints.connectors.ccld import CcldFacilityReportsConnector, facility_reports
 from ccld_complaints.connectors.ccld.facility_reports import (
+    FacilityNumberIntakeResult,
     ingest_facility_reports_for_facilities,
     ingest_facility_reports_for_facility,
+    inspect_facility_numbers,
+    read_facility_number_input_file,
     read_facility_numbers_file,
 )
 
@@ -230,6 +238,103 @@ def test_live_fetch_workflow_limit_selects_discovered_candidates() -> None:
     assert [candidate.report_index for candidate in result.candidates] == [39, 37, 29]
 
 
+def test_live_fetch_summary_reports_discovered_selected_and_skipped_counts() -> None:
+    result = ingest_facility_reports_for_facility(
+        facility_detail_html=RAW_DETAIL_FIXTURE.read_text(encoding="utf-8"),
+        discovered_at=RETRIEVED_AT,
+        limit=2,
+        max_requests=2,
+        fetch_report=_fake_report_fetch,
+    )
+
+    assert result.discovered_count == 40
+    assert len(result.candidates) == 2
+
+    summary = live_fetch_summary_lines([result], [])
+
+    assert "- Facilities with records discovered: 1" in summary
+    assert "- Facilities with no records discovered: 0" in summary
+    assert "- Report candidates discovered: 40" in summary
+    assert "- Report candidates selected: 2" in summary
+    assert "- Reports skipped by limit: 38" in summary
+    assert "- Reports fetched: 2" in summary
+    assert "- Records written: 2" in summary
+    assert "- Report failures: 0" in summary
+    assert (
+        "- 157806098: status=records written, discovered=40, selected=2, skipped=38, "
+        "fetched=2, written=2, failed=0"
+    ) in summary
+
+
+def test_live_fetch_summary_separates_fetch_failures_from_fetched_reports() -> None:
+    def partially_failing_fetch(source_url: str) -> bytes:
+        if "inx=37" in source_url:
+            raise RuntimeError("controlled report fetch failure")
+        return _fake_report_fetch(source_url)
+
+    result = ingest_facility_reports_for_facility(
+        facility_detail_html=RAW_DETAIL_FIXTURE.read_text(encoding="utf-8"),
+        discovered_at=RETRIEVED_AT,
+        limit=3,
+        max_requests=3,
+        fetch_report=partially_failing_fetch,
+    )
+
+    summary = live_fetch_summary_lines([result], [])
+
+    assert "- Reports fetched: 2" in summary
+    assert "- Records written: 2" in summary
+    assert "- Report failures: 1" in summary
+    assert (
+        "- 157806098: status=partial report failures, discovered=40, selected=3, skipped=37, "
+        "fetched=2, written=2, failed=1"
+    ) in summary
+
+
+def test_live_fetch_summary_reports_no_records_discovered_by_facility(
+    tmp_path: Path,
+) -> None:
+    result = ingest_facility_reports_for_facilities(
+        ["157806098", "123456789"],
+        connector_factory=_connector_factory(tmp_path / "raw" / "ccld", tmp_path / "ccld.sqlite"),
+        facility_detail_html_by_number={
+            "157806098": _facility_detail_html("157806098"),
+            "123456789": "<html><body>No report links here.</body></html>",
+        },
+        discovered_at=RETRIEVED_AT,
+        per_facility_limit=1,
+        max_requests=1,
+        fetch_report=_fake_multi_facility_report_fetch,
+    )
+
+    summary = live_fetch_summary_lines(result.facility_results, result.facility_failures)
+
+    assert "- Facilities with records discovered: 1" in summary
+    assert "- Facilities with no records discovered: 1" in summary
+    assert (
+        "- 123456789: status=no records discovered, discovered=0, selected=0, skipped=0, "
+        "fetched=0, written=0, failed=0"
+    ) in summary
+
+
+def test_live_fetch_summary_reports_skipped_by_limit_for_zero_limit() -> None:
+    result = ingest_facility_reports_for_facility(
+        facility_detail_html=RAW_DETAIL_FIXTURE.read_text(encoding="utf-8"),
+        discovered_at=RETRIEVED_AT,
+        limit=0,
+        max_requests=0,
+        fetch_report=_fake_report_fetch,
+    )
+
+    summary = live_fetch_summary_lines([result], [])
+
+    assert "- Reports skipped by limit: 40" in summary
+    assert (
+        "- 157806098: status=skipped by limit, discovered=40, selected=0, skipped=40, "
+        "fetched=0, written=0, failed=0"
+    ) in summary
+
+
 def test_live_fetch_workflow_enforces_max_requests() -> None:
     fetch_count = 0
 
@@ -424,6 +529,62 @@ def test_live_fetch_workflow_reads_small_facility_input_file(tmp_path: Path) -> 
     )
 
     assert read_facility_numbers_file(input_path) == ["157806098", "123456789"]
+
+
+def test_facility_identifier_intake_reports_duplicates_invalid_and_ignored_values() -> None:
+    intake = inspect_facility_numbers(
+        [
+            " facility_number ",
+            "157806098",
+            "157806098",
+            " 123456789 ",
+            "",
+            "# ignored comment",
+            "12A",
+        ]
+    )
+
+    assert intake.facility_numbers == ["157806098", "123456789"]
+    assert intake.duplicate_facility_numbers == ["157806098"]
+    assert intake.ignored_value_count == 3
+    assert intake.invalid_values == ["12A"]
+
+
+def test_facility_input_file_reports_ignored_values_for_intake_summary(tmp_path: Path) -> None:
+    input_path = tmp_path / "facility-numbers.csv"
+    input_path.write_text(
+        "facility_number\n\n157806098,123456789\n# ignored comment\n",
+        encoding="utf-8",
+    )
+
+    file_input = read_facility_number_input_file(input_path)
+
+    assert file_input.values == ["157806098", "123456789"]
+    assert file_input.ignored_value_count == 3
+
+
+def test_facility_input_file_with_only_ignored_values_is_rejected(tmp_path: Path) -> None:
+    input_path = tmp_path / "facility-numbers.csv"
+    input_path.write_text("facility_number\n# ignored comment\n\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="At least one facility number is required"):
+        _collect_facility_number_intake(None, input_path)
+
+
+def test_facility_intake_summary_lines_show_accepted_duplicate_and_ignored_values() -> None:
+    summary = facility_intake_summary_lines(
+        FacilityNumberIntakeResult(
+            facility_numbers=["157806098", "123456789"],
+            duplicate_facility_numbers=["157806098"],
+            ignored_value_count=2,
+            invalid_values=[],
+        )
+    )
+
+    assert "Facility identifier intake:" in summary
+    assert "- Accepted facility identifiers: 157806098, 123456789" in summary
+    assert "- Duplicate identifiers ignored: 157806098" in summary
+    assert "- Ignored blank, comment, or header values: 2" in summary
 
 
 def _fake_report_fetch(source_url: str) -> bytes:
