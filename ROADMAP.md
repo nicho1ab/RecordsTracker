@@ -57,6 +57,8 @@ governance scaffold.
 	layouts that provide findings after an explicit `Finding:` label.
 - Added fixture-backed wrapped allegation extraction hardening for CCLD report
 	layouts where one allegation continues across adjacent lines.
+- Added fixture-backed split finding label extraction hardening for CCLD report
+	layouts where the finding value appears on the line after a standalone label.
 
 ## Completed governance and review experience improvements
 
