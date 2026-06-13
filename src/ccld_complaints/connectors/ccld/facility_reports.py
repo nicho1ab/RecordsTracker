@@ -100,6 +100,20 @@ class MultiFacilityIngestionResult:
         ]
 
 
+@dataclass(frozen=True)
+class FacilityNumberInputFile:
+    values: list[str]
+    ignored_value_count: int
+
+
+@dataclass(frozen=True)
+class FacilityNumberIntakeResult:
+    facility_numbers: list[str]
+    duplicate_facility_numbers: list[str]
+    ignored_value_count: int
+    invalid_values: list[str]
+
+
 class _HtmlTextParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
@@ -489,35 +503,71 @@ def ingest_facility_reports_for_facilities(
 
 
 def normalize_facility_numbers(facility_numbers: list[str]) -> list[str]:
+    intake = inspect_facility_numbers(facility_numbers)
+    if intake.invalid_values:
+        invalid_values = ", ".join(repr(value) for value in intake.invalid_values)
+        raise ValueError(f"Facility number must contain digits only: {invalid_values}")
+    if not intake.facility_numbers:
+        raise ValueError("At least one facility number is required.")
+    return intake.facility_numbers
+
+
+def inspect_facility_numbers(facility_numbers: list[str]) -> FacilityNumberIntakeResult:
     normalized: list[str] = []
+    duplicates: list[str] = []
+    invalid_values: list[str] = []
     seen: set[str] = set()
+    ignored_value_count = 0
+
     for facility_number in facility_numbers:
         cleaned = facility_number.strip()
-        if not cleaned:
+        if _is_ignored_facility_number_value(cleaned):
+            ignored_value_count += 1
             continue
         if not cleaned.isdigit():
-            raise ValueError(f"Facility number must contain digits only: {facility_number!r}")
+            invalid_values.append(cleaned)
+            continue
         if cleaned in seen:
+            duplicates.append(cleaned)
             continue
         seen.add(cleaned)
         normalized.append(cleaned)
-    if not normalized:
-        raise ValueError("At least one facility number is required.")
-    return normalized
+
+    return FacilityNumberIntakeResult(
+        facility_numbers=normalized,
+        duplicate_facility_numbers=duplicates,
+        ignored_value_count=ignored_value_count,
+        invalid_values=invalid_values,
+    )
 
 
 def read_facility_numbers_file(path: Path) -> list[str]:
+    return normalize_facility_numbers(read_facility_number_input_file(path).values)
+
+
+def read_facility_number_input_file(path: Path) -> FacilityNumberInputFile:
     values: list[str] = []
+    ignored_value_count = 0
     with path.open(newline="", encoding="utf-8") as handle:
         for row in csv.reader(handle):
+            if not row:
+                ignored_value_count += 1
+                continue
             for value in row:
                 cleaned = value.strip()
-                if not cleaned or cleaned.startswith("#"):
-                    continue
-                if cleaned.casefold() in {"facility_number", "facilitynumber", "facnum"}:
+                if _is_ignored_facility_number_value(cleaned):
+                    ignored_value_count += 1
                     continue
                 values.append(cleaned)
-    return normalize_facility_numbers(values)
+    return FacilityNumberInputFile(values=values, ignored_value_count=ignored_value_count)
+
+
+def _is_ignored_facility_number_value(value: str) -> bool:
+    return (
+        not value
+        or value.startswith("#")
+        or value.casefold() in {"facility_number", "facilitynumber", "facnum"}
+    )
 
 
 def _ingest_selected_candidates(

@@ -8,11 +8,12 @@ from ccld_complaints.connectors.ccld.facility_reports import (
     LIVE_REQUEST_TIMEOUT_SECONDS,
     LIVE_USER_AGENT,
     FacilityIngestionResult,
+    FacilityNumberIntakeResult,
     FacilityWorkflowFailure,
     ingest_facility_reports_for_facilities,
     ingest_facility_reports_for_facility,
-    normalize_facility_numbers,
-    read_facility_numbers_file,
+    inspect_facility_numbers,
+    read_facility_number_input_file,
 )
 from ccld_complaints.local_sample import (
     DEFAULT_SAMPLE_DB_PATH,
@@ -92,12 +93,13 @@ def main() -> None:
         parser.error("--limit cannot exceed --max-requests.")
 
     try:
-        facility_numbers = _collect_facility_numbers(
+        facility_intake = _collect_facility_number_intake(
             args.facility_numbers,
             args.facility_input_path,
         )
     except ValueError as exc:
         parser.error(str(exc))
+    facility_numbers = facility_intake.facility_numbers
 
     limit = None if args.all else args.limit
     estimated_request_count = "discovery requests plus all discovered report requests"
@@ -109,7 +111,8 @@ def main() -> None:
 
     print("Warning: this command accesses the public CCLD external site.")
     print("Run it only when you intend to make live public web requests.")
-    print(f"Facility numbers: {', '.join(facility_numbers)}")
+    for line in facility_intake_summary_lines(facility_intake):
+        print(line)
     print(f"Raw files: {args.raw_dir.as_posix()}")
     print(f"SQLite database: {args.db_path.as_posix()}")
     print(f"Request policy: timeout {LIVE_REQUEST_TIMEOUT_SECONDS}s, user-agent {LIVE_USER_AGENT}")
@@ -223,6 +226,18 @@ def live_fetch_summary_lines(
     return lines
 
 
+def facility_intake_summary_lines(intake: FacilityNumberIntakeResult) -> list[str]:
+    lines = [
+        "Facility identifier intake:",
+        f"- Accepted facility identifiers: {', '.join(intake.facility_numbers)}",
+        f"- Duplicate identifiers ignored: {_summary_values(intake.duplicate_facility_numbers)}",
+        f"- Ignored blank, comment, or header values: {intake.ignored_value_count}",
+    ]
+    if intake.invalid_values:
+        lines.append(f"- Invalid identifiers rejected: {_summary_values(intake.invalid_values)}")
+    return lines
+
+
 _POST_FETCH_FAILURE_STAGES = {"extract", "normalize", "validate", "emit"}
 
 
@@ -239,16 +254,36 @@ def _facility_summary_line(result: FacilityIngestionResult) -> str:
     )
 
 
-def _collect_facility_numbers(
+def _collect_facility_number_intake(
     facility_numbers: list[str] | None,
     facility_input_path: Path | None,
-) -> list[str]:
+) -> FacilityNumberIntakeResult:
     values = list(facility_numbers or [])
+    has_explicit_facility_input = bool(values) or facility_input_path is not None
+    ignored_value_count = 0
     if facility_input_path is not None:
-        values.extend(read_facility_numbers_file(facility_input_path))
-    if not values:
+        input_file = read_facility_number_input_file(facility_input_path)
+        values.extend(input_file.values)
+        ignored_value_count += input_file.ignored_value_count
+    if not values and not has_explicit_facility_input:
         values.append(DEFAULT_LIVE_FACILITY_NUMBER)
-    return normalize_facility_numbers(values)
+    intake = inspect_facility_numbers(values)
+    ignored_value_count += intake.ignored_value_count
+    if intake.invalid_values:
+        invalid_values = ", ".join(repr(value) for value in intake.invalid_values)
+        raise ValueError(f"Facility number must contain digits only: {invalid_values}")
+    if not intake.facility_numbers:
+        raise ValueError("At least one facility number is required.")
+    return FacilityNumberIntakeResult(
+        facility_numbers=intake.facility_numbers,
+        duplicate_facility_numbers=intake.duplicate_facility_numbers,
+        ignored_value_count=ignored_value_count,
+        invalid_values=[],
+    )
+
+
+def _summary_values(values: list[str]) -> str:
+    return ", ".join(values) if values else "none"
 
 
 if __name__ == "__main__":

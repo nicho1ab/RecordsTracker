@@ -59,6 +59,10 @@ For multiple explicitly provided facilities:
 .\scripts\run-ccld-live-fetch.ps1 -FacilityNumber 157806098,157806097 -Limit 5 -MaxRequests 20
 ```
 
+The command prints facility identifier intake feedback before discovery,
+including accepted identifiers, duplicate identifiers ignored, and ignored
+blank, comment, or header values.
+
 Downloaded raw public report files are saved under the ignored local `data/raw`
 path by default. Treat public complaint narratives carefully because they may
 contain sensitive details even when publicly available.

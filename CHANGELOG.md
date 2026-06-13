@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added facility identifier intake diagnostics to controlled live fetch runs so
+  reviewers can see accepted identifiers, duplicates ignored, ignored file
+  values, and invalid-format rejection before public requests begin.
 - Expanded the local review bundle into a source-traceable public-record review
 	packet with complaint timeline, field source traceability, and facility
 	pattern CSV exports plus cautious README notes.
