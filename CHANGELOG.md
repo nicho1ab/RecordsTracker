@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added data quality coverage that verifies source document hashes are present
+  as lowercase SHA-256 hex values.
 - Added data quality coverage that verifies complaint date ordering and stored
   delay calculation fields against deterministic date math.
 - Added data quality coverage that checks sample-derived canonical tables for
