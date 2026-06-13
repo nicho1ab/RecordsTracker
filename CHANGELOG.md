@@ -8,6 +8,8 @@
 - Hardened CCLD complaint received date extraction for source layouts where the
 	received date appears inline in the narrative sentence, with fixture-backed
 	regression coverage.
+- Added fixture-backed CCLD missing visit date coverage to preserve report-date
+	proxy delay review behavior and source traceability.
 - Established the governed CCLD complaints proof-of-concept structure, including
 	project charter, data contract, source connector contract, testing strategy,
 	documentation strategy, accessibility requirements, security rules, decision

@@ -51,6 +51,8 @@ governance scaffold.
 	what to open first, delay triage, source verification, and CSV export.
 - Added inline complaint received date extraction hardening with a
 	fixture-backed CCLD report layout regression test.
+- Added fixture-backed missing visit date coverage for CCLD report-date proxy
+	delay review behavior.
 
 ## Completed governance and review experience improvements
 
