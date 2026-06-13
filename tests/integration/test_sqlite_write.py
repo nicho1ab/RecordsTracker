@@ -79,6 +79,27 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
         "source_url": FIXTURE_URL,
         "raw_path": RAW_FIXTURE.as_posix(),
     }
+    assert _complaint_first_pass_review(db_path) == {
+        "facility_number": "157806098",
+        "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+        "complaint_control_number": "32-CR-20220407124448",
+        "complaint_received_date": "2022-04-07",
+        "visit_date": "2022-08-24",
+        "report_date": "2022-08-24",
+        "finding": "Unsubstantiated",
+        "allegation_count": 2,
+        "review_flags_summary": (
+            "over 30 days; over 60 days; over 90 days; over 120 days; "
+            "missing first activity date"
+        ),
+        "source_url": FIXTURE_URL,
+        "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
+        "raw_path": RAW_FIXTURE.as_posix(),
+        "connector_name": "ccld_facility_reports",
+        "connector_version": "0.1.0",
+        "retrieved_at": RETRIEVED_AT,
+        "report_index": 3,
+    }
     allegation_summary = _view_value(
         db_path, "complaint_review_summary", "allegation_summary"
     )
@@ -136,6 +157,7 @@ def test_review_views_do_not_duplicate_rows_on_rerun(tmp_path: Path) -> None:
     write_normalized_records(db_path, [normalized])
 
     assert _row_count(db_path, "complaint_review_summary") == 1
+    assert _row_count(db_path, "complaint_first_pass_review") == 1
     assert _row_count(db_path, "facility_complaint_summary") == 1
     assert _row_count(db_path, "delay_review_flags") == 1
     assert _row_count(db_path, "source_traceability_review") == 1
@@ -314,6 +336,33 @@ def _complaint_review_summary(db_path: Path) -> dict[str, object]:
                    source_url,
                    raw_path
             FROM complaint_review_summary
+            """
+        ).fetchone()
+    return dict(row)
+
+
+def _complaint_first_pass_review(db_path: Path) -> dict[str, object]:
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            """
+            SELECT facility_number,
+                   facility_name,
+                   complaint_control_number,
+                   complaint_received_date,
+                   visit_date,
+                   report_date,
+                   finding,
+                   allegation_count,
+                   review_flags_summary,
+                   source_url,
+                   raw_sha256,
+                   raw_path,
+                   connector_name,
+                   connector_version,
+                   retrieved_at,
+                   report_index
+            FROM complaint_first_pass_review
             """
         ).fetchone()
     return dict(row)

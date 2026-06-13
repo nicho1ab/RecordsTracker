@@ -93,10 +93,11 @@ def review_workflow_lines() -> list[str]:
     return [
         "Open the review_home saved query first for task-based review paths.",
         "Open these Datasette review views first, in order:",
-        "1. complaint_review_summary - main complaint review across facilities.",
-        "2. facility_complaint_summary - facility-level counts and date range.",
-        "3. delay_review_flags - triage list for records with review flags.",
-        "4. source_traceability_review - source URLs, hashes, connector details, and report index.",
+        "1. complaint_first_pass_review - low-noise first-pass complaint review.",
+        "2. complaint_review_summary - full complaint review across facilities.",
+        "3. facility_complaint_summary - facility-level counts and date range.",
+        "4. delay_review_flags - triage list for records with review flags.",
+        "5. source_traceability_review - source URLs, hashes, connector details, and report index.",
         "Saved queries for common workflows:",
         "- review_home - start-here task menu for local review workflows.",
         "- complaint_review_start_here - guided complaint review with source traceability.",
@@ -123,14 +124,50 @@ def _datasette_table_metadata() -> dict[str, Any]:
         "reviewers trace each derived record back to public source evidence."
     )
     review_table_metadata = {
+        "complaint_first_pass_review": {
+            "title": "Complaint First-Pass Review",
+            "description": (
+                "Low-noise first-pass view with facility, complaint dates, finding, allegation "
+                "summary, a single review flag summary, source URL, raw SHA-256 hash, raw path, "
+                "connector metadata, retrieval time, report index, and IDs for lower-level "
+                "follow-up. Use this before the fuller complaint_review_summary; do not treat "
+                "the derived fields as official source records."
+            ),
+            "sort_desc": "report_date",
+            "columns": {
+                "facility_number": "Public CCLD facility number used for filtering.",
+                "facility_name": "Facility name extracted from source reports.",
+                "complaint_control_number": "Complaint control number when available.",
+                "complaint_received_date": "Date the complaint was reportedly received.",
+                "visit_date": "Visit date shown in the source report when available.",
+                "report_date": "Report date shown in the source report.",
+                "finding": "Normalized finding value from the data contract.",
+                "allegation_count": "Number of allegation rows linked to the complaint.",
+                "allegation_summary": "Combined allegation text for quick review.",
+                "review_flags_summary": (
+                    "Plain-language summary of delay or review flags. Review flags are "
+                    "screening aids, not conclusions."
+                ),
+                "source_url": "Public source URL for checking the derived record.",
+                "raw_sha256": "SHA-256 hash for the preserved raw source file.",
+                "raw_path": "Local raw file path for preserved source content.",
+                "connector_name": "Connector that retrieved and normalized the document.",
+                "connector_version": "Connector version used for extraction.",
+                "retrieved_at": "Timestamp when source content was retrieved.",
+                "report_index": "CCLD report index when available.",
+                "complaint_id": "Stable local complaint identifier for lower-level follow-up.",
+                "document_id": "Source document identifier for lower-level source checks.",
+            },
+        },
         "complaint_review_summary": {
             "title": "Complaint Review Summary",
             "description": (
                 "Main review view combining facility, complaint, allegation summary, delay fields, "
                 "review flags, source URL, and raw path. Sort by complaint_received_date or "
-                "report_date descending when reviewing newer records first. Use for first-pass "
-                "complaint review; do not treat extracted rows as official source records. Keep "
-                "source URL and raw path when exporting. "
+                "report_date descending when reviewing newer records first. Use after "
+                "complaint_first_pass_review when detailed delay fields, separate flags, or "
+                "extraction confidence are needed; do not treat extracted rows as official "
+                "source records. Keep source URL and raw path when exporting. "
                 f"{delay_flag_caution}"
             ),
             "sort_desc": "report_date",
@@ -391,10 +428,9 @@ def _datasette_saved_queries() -> dict[str, Any]:
 SELECT
     1 AS step,
     'Review complaints' AS task,
-    'complaint_review_start_here' AS open_first,
-    'Use for a source-traceable complaint list with facility context, dates, ' ||
-        'findings, allegation summary, review flags, source URL, raw hash, ' ||
-        'connector metadata, retrieval time, and report index.' AS when_to_use,
+    'complaint_first_pass_review' AS open_first,
+    'Use for low-noise first-pass complaint review with source URL, raw hash, ' ||
+        'connector metadata, retrieval time, report index, and IDs for follow-up.' AS when_to_use,
     'Treat extracted fields as derived review aids and keep source traceability ' ||
         'columns when exporting.' AS caution
 UNION ALL
@@ -437,43 +473,34 @@ ORDER BY step
             "title": "Start Here: Complaint Review with Source Traceability",
             "description": (
                 "Open this first for a review-ready complaint list with facility context, "
-                "delay screening fields, source URL, raw SHA-256 hash, connector metadata, "
-                "retrieval time, and report index. Use for guided first-pass review; do not "
-                "treat derived fields as source conclusions. Preserve traceability columns when "
-                "filtering or exporting."
+                "a single review flag summary, source URL, raw SHA-256 hash, raw path, "
+                "connector metadata, retrieval time, report index, and IDs for follow-up. Use "
+                "for guided first-pass review; do not treat derived fields as source "
+                "conclusions. Preserve traceability columns when filtering or exporting."
             ),
             "sql": """
 SELECT
-    cr.facility_number,
-    cr.facility_name,
-    cr.complaint_control_number,
-    cr.complaint_received_date,
-    cr.first_investigation_activity_date,
-    cr.visit_date,
-    cr.report_date,
-    cr.finding,
-    cr.allegation_count,
-    cr.allegation_summary,
-    cr.days_received_to_first_activity,
-    cr.days_received_to_visit,
-    cr.days_received_to_report,
-    cr.review_delay_over_30_days,
-    cr.review_delay_over_60_days,
-    cr.review_delay_over_90_days,
-    cr.review_delay_over_120_days,
-    cr.missing_first_activity_date,
-    cr.report_date_used_as_proxy,
-    cr.source_url,
-    sd.raw_sha256,
-    cr.raw_path,
-    sd.connector_name,
-    sd.connector_version,
-    sd.retrieved_at,
-    sd.report_index
-FROM complaint_review_summary cr
-JOIN complaints c ON c.complaint_id = cr.complaint_id
-JOIN source_documents sd ON sd.document_id = c.document_id
-ORDER BY cr.report_date DESC, cr.complaint_received_date DESC, cr.facility_number
+    facility_number,
+    facility_name,
+    complaint_control_number,
+    complaint_received_date,
+    visit_date,
+    report_date,
+    finding,
+    allegation_count,
+    allegation_summary,
+    review_flags_summary,
+    source_url,
+    raw_sha256,
+    raw_path,
+    connector_name,
+    connector_version,
+    retrieved_at,
+    report_index,
+    complaint_id,
+    document_id
+FROM complaint_first_pass_review
+ORDER BY report_date DESC, complaint_received_date DESC, facility_number
             """.strip(),
         },
         "complaints_by_facility": {

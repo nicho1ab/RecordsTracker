@@ -121,7 +121,7 @@ datasette "data/processed/live-ccld.sqlite" --metadata "data/processed/live-ccld
 
 The printed command includes a Datasette metadata file. That metadata adds the project title, database description, review-oriented table and view descriptions, column notes, suggested sort fields, delay flag caution language, source traceability explanations, and saved query examples. See [Local Review Workflow](local-review-workflow.md) for the guided review steps.
 
-Open the `review_home` saved query first. It lists the main review tasks and points to the complaint review, delay triage, facility comparison, source verification, and CSV export paths.
+Open the `review_home` saved query first. It lists the main review tasks and points to the low-noise complaint review, detailed complaint review, delay triage, facility comparison, source verification, and CSV export paths.
 
 The saved query examples include `review_home`, `complaint_review_start_here`, `complaints_by_facility`, `complaint_review_export_with_traceability`, `records_with_delay_review_flags`, `facilities_with_delay_review_flags`, `source_traceability_by_facility`, `newest_reports`, `allegation_summary_by_facility`, and `source_traceability_check`.
 
@@ -129,16 +129,17 @@ The saved query examples include `review_home`, `complaint_review_start_here`, `
 
 Start with the `review_home` saved query. It is a small task menu inside Datasette, not a dashboard or custom web interface. Use it to choose whether you want to review complaints, find records needing closer review, compare facilities, verify sources, or export CSVs.
 
-Then open `complaint_review_start_here` for the guided, source-traceable complaint list.
+Then open `complaint_review_start_here` or `complaint_first_pass_review` for the guided, source-traceable, low-noise complaint list.
 
 ## Tables to open first
 
 After `review_home` and `complaint_review_start_here`, use these Datasette views in this order:
 
-1. `complaint_review_summary` is the main review view. It combines facility number, facility name, complaint dates, finding, allegation count and summary, delay calculations, review flags, source URL, and raw path.
-2. `facility_complaint_summary` gives one row per facility with complaint count, allegation count, earliest and latest complaint received dates, and a count of records with delay review flags.
-3. `delay_review_flags` shows only complaint records with one or more delay or review flags. Use it as a triage list for closer review, not as proof that an investigation was delayed.
-4. `source_traceability_review` lists source URL, raw SHA-256 hash, raw path, connector name, connector version, retrieval time, and report index so reviewers can confirm where each record came from.
+1. `complaint_first_pass_review` is the low-noise first-pass review view. It combines facility number, facility name, complaint dates, finding, allegation count and summary, one review flag summary, source URL, raw SHA-256 hash, raw path, connector metadata, retrieval time, report index, and IDs for lower-level follow-up.
+2. `complaint_review_summary` is the fuller complaint review view. It adds detailed delay calculations, separate review flag columns, extraction confidence, and broader complaint review context.
+3. `facility_complaint_summary` gives one row per facility with complaint count, allegation count, earliest and latest complaint received dates, and a count of records with delay review flags.
+4. `delay_review_flags` shows only complaint records with one or more delay or review flags. Use it as a triage list for closer review, not as proof that an investigation was delayed.
+5. `source_traceability_review` lists source URL, raw SHA-256 hash, raw path, connector name, connector version, retrieval time, and report index so reviewers can confirm where each record came from.
 
 Then use these normalized tables when you need lower-level detail:
 

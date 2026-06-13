@@ -8,16 +8,17 @@ After running the sample or live fetch script, open the Datasette command printe
 
 On the Datasette database page, open the `review_home` saved query first. It gives one task-based starting place for the local review workflow and points to the complaint review, delay triage, facility comparison, source verification, and CSV export paths. This is an incremental Datasette review aid, not a dashboard or custom web application.
 
-Then open `complaint_review_start_here` for a guided complaint list that preserves facility context, delay screening fields, source URL, raw SHA-256 hash, connector metadata, retrieval time, and report index.
+Then open `complaint_review_start_here` or `complaint_first_pass_review` for a low-noise complaint list that preserves facility context, a single review flag summary, source URL, raw SHA-256 hash, raw path, connector metadata, retrieval time, report index, and lower-level IDs for follow-up.
 
 Use the review view titles and descriptions from the metadata as the next guide. The metadata gives short contextual help for when to use each primary view or saved query, what not to conclude from it, and which source traceability fields to preserve when exporting. The metadata also labels the normalized tables for lower-level checks, but routine browsing should begin with the review home, guided complaint query, and review views.
 
 Open these views first:
 
-1. `complaint_review_summary` for the main complaint review across facilities.
-2. `facility_complaint_summary` for facility-level counts and date ranges.
-3. `delay_review_flags` for records with one or more review flags.
-4. `source_traceability_review` to verify public source URL, raw hash, connector details, retrieval time, and report index.
+1. `complaint_first_pass_review` for low-noise first-pass complaint review.
+2. `complaint_review_summary` for the fuller complaint review across facilities.
+3. `facility_complaint_summary` for facility-level counts and date ranges.
+4. `delay_review_flags` for records with one or more review flags.
+5. `source_traceability_review` to verify public source URL, raw hash, connector details, retrieval time, and report index.
 
 Use normalized tables such as `complaints`, `allegations`, `source_documents`, and `extraction_audit` only when you need lower-level detail.
 
@@ -27,7 +28,9 @@ Use normalized tables such as `complaints`, `allegations`, `source_documents`, a
 
 `complaint_review_start_here` is a saved query for guided complaint review with source traceability. Use it before narrowing to filters or exports.
 
-`complaint_review_summary` combines the most useful review fields in one place: facility number, facility name, complaint control number, complaint dates, finding, allegation count and summary, delay calculation fields, review flags, source URL, and raw path.
+`complaint_first_pass_review` is the low-noise first-pass complaint view. It keeps facility details, complaint dates, finding, allegation count and summary, one plain-language review flag summary, source URL, raw SHA-256 hash, raw path, connector metadata, retrieval time, report index, and IDs for lower-level follow-up. It intentionally hides detailed delay calculations, separate flag columns, and extraction confidence from the first screen.
+
+`complaint_review_summary` is the fuller complaint review view. Open it when you need detailed delay calculations, separate review flag columns, extraction confidence, or the broader complaint review context after first-pass triage.
 
 `facility_complaint_summary` gives one row per facility. Use it to compare complaint counts, allegation counts, the earliest and latest complaint received dates, and how many records have delay review flags.
 
@@ -39,13 +42,13 @@ Use normalized tables such as `complaints`, `allegations`, `source_documents`, a
 
 Start with `delay_review_flags` when looking for records that may need closer review. Sort by `days_received_to_report` or `days_received_to_visit` descending to review larger calculated intervals first.
 
-Then open the matching row in `complaint_review_summary` and check the dates, allegation summary, finding, source URL, and raw path. If the first investigation activity date is missing, say that directly. Do not treat a missing date as proof that an activity did not happen.
+Then open the matching row in `complaint_first_pass_review` and check the dates, allegation summary, finding, source URL, raw hash, and raw path. Open `complaint_review_summary`, `source_traceability_review`, or the normalized tables when you need detailed delay calculations, extraction confidence, or lower-level source detail. If the first investigation activity date is missing, say that directly. Do not treat a missing date as proof that an activity did not happen.
 
 Use neutral language such as "flagged for review based on available extracted dates." Do not describe a record as a delayed investigation based only on a delay flag, report date, or proxy field.
 
 ## How to filter by facility
 
-In Datasette, open `complaint_review_summary` and filter `facility_number` to the facility you want to review, such as `157806098` or `157806097` when those records are present in your local database.
+In Datasette, open `complaint_first_pass_review` and filter `facility_number` to the facility you want to review, such as `157806098` or `157806097` when those records are present in your local database. Use `complaint_review_summary` when you need the detailed delay columns for the same facility.
 
 You can also open the saved query named `complaints_by_facility` and enter a facility number when prompted.
 
@@ -71,7 +74,7 @@ To export the standard local review bundle without opening Datasette, run:
 
 This writes complaint review, delay triage, and source traceability CSV files under `data/processed/review-bundle` by default. The complaint and delay CSV files include source URL, raw SHA-256 hash, raw path, connector metadata, retrieval timestamp, and report index. Unknown database values are exported as `unknown`.
 
-For complaint review exports, start with `complaint_review_summary`. For source checks, export `source_traceability_review`. For delay triage, export `delay_review_flags` and label the file or notes as a triage list, not a list of delayed investigations.
+For low-noise first-pass complaint exports, start with `complaint_first_pass_review`. For detailed complaint review exports, use `complaint_review_summary` or `complaint_review_export_with_traceability`. For source checks, export `source_traceability_review`. For delay triage, export `delay_review_flags` and label the file or notes as a triage list, not a list of delayed investigations.
 
 For accessible CSV review:
 
@@ -87,7 +90,7 @@ For accessible CSV review:
 The generated Datasette metadata includes saved query examples:
 
 - `review_home` gives one start-here task menu for review complaints, find records needing closer review, compare facilities, verify sources, and export CSVs.
-- `complaint_review_start_here` opens a review-ready complaint list with facility context, delay screening fields, source URL, raw SHA-256 hash, connector metadata, retrieval time, and report index.
+- `complaint_review_start_here` opens a low-noise review-ready complaint list with facility context, one review flag summary, source URL, raw SHA-256 hash, raw path, connector metadata, retrieval time, report index, and lower-level IDs.
 - `complaints_by_facility` filters `complaint_review_summary` by facility number and prompts for the facility number.
 - `complaint_review_export_with_traceability` exports complaint review fields with source URL, raw hash, raw path, connector metadata, retrieval time, and report index.
 - `records_with_delay_review_flags` opens the delay triage list with review flags described as screening aids.

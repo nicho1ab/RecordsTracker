@@ -67,6 +67,10 @@
 - Added contextual help to primary Datasette review views and saved queries so
 	reviewers can see when to use each item, what not to conclude, and what source
 	traceability to preserve when exporting.
+- Added a low-noise `complaint_first_pass_review` Datasette view and guided
+	query path that hide implementation-heavy fields during first-pass review
+	while preserving source URL, raw hash, raw path, connector metadata,
+	retrieval time, report index, and lower-level IDs for follow-up.
 - Updated the roadmap to prioritize incremental local review usability work,
 	including a review home, task-based workflow grouping, contextual help,
 	low-noise review views, script-output navigation, and a web app transition
