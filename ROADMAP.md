@@ -58,6 +58,8 @@ governance scaffold.
   delay calculation fields against deterministic date math.
 - Added data quality coverage that verifies source document hashes are present
   as lowercase SHA-256 hex values.
+- Added data quality coverage that verifies source document hashes match the
+  preserved raw files referenced by `raw_path`.
 - Added inline complaint received date extraction hardening with a
 	fixture-backed CCLD report layout regression test.
 - Added fixture-backed missing visit date coverage for CCLD report-date proxy
@@ -170,10 +172,9 @@ These priorities should be implemented as incremental cleanup, data quality,
 extraction, and local review improvements before deciding whether Datasette has
 been outgrown or a dashboard/custom web interface is justified.
 
-1. Strengthen data quality checks for raw source traceability.
-2. Add additional CCLD fixtures and extraction hardening for representative
+1. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
-3. Evaluate persistent navigation, lightweight dashboard options, or a custom
+2. Evaluate persistent navigation, lightweight dashboard options, or a custom
 	web interface only after the task-based Datasette review workflow is validated
 	and documented as sufficient or insufficient for repeated review.
 
