@@ -50,6 +50,9 @@ DASHED_FINDING_LABEL_FIXTURE_URL = (
 WAS_RECEIVED_DATE_FIXTURE_URL = (
     "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=51"
 )
+SPLIT_REPORT_DATE_FIXTURE_URL = (
+    "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=52"
+)
 RAW_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_inx3.html")
 NUMBERED_ALLEGATIONS_RAW_FIXTURE = Path(
     "tests/fixtures/ccld/raw/157806098_inx40_numbered_allegations.html"
@@ -86,6 +89,9 @@ DASHED_FINDING_LABEL_RAW_FIXTURE = Path(
 )
 WAS_RECEIVED_DATE_RAW_FIXTURE = Path(
     "tests/fixtures/ccld/raw/157806098_inx51_was_received_date.html"
+)
+SPLIT_REPORT_DATE_RAW_FIXTURE = Path(
+    "tests/fixtures/ccld/raw/157806098_inx52_split_report_date.html"
 )
 RAW_DETAIL_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_facility_detail.html")
 EXPECTED_FIXTURE = Path("tests/fixtures/ccld/expected/157806098_inx3.json")
@@ -125,6 +131,9 @@ DASHED_FINDING_LABEL_EXPECTED_FIXTURE = Path(
 WAS_RECEIVED_DATE_EXPECTED_FIXTURE = Path(
     "tests/fixtures/ccld/expected/157806098_inx51_was_received_date.json"
 )
+SPLIT_REPORT_DATE_EXPECTED_FIXTURE = Path(
+    "tests/fixtures/ccld/expected/157806098_inx52_split_report_date.json"
+)
 RETRIEVED_AT = "2026-06-10T00:00:00+00:00"
 NUMBERED_ALLEGATIONS_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 INLINE_RECEIVED_DATE_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
@@ -138,6 +147,7 @@ ALLEGATION_HEADING_NO_COLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 PUNCTUATED_FINDING_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 DASHED_FINDING_LABEL_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 WAS_RECEIVED_DATE_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
+SPLIT_REPORT_DATE_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 
 
 def test_ccld_facility_detail_discovers_report_candidates_from_fixture() -> None:
@@ -340,6 +350,14 @@ def test_ccld_facility_report_extracts_was_received_complaint_date() -> None:
     connector = CcldFacilityReportsConnector()
     normalized = connector.normalize(_extract_was_received_date_fixture())
     expected = json.loads(WAS_RECEIVED_DATE_EXPECTED_FIXTURE.read_text(encoding="utf-8"))
+
+    assert _without_audit(normalized) == expected
+
+
+def test_ccld_facility_report_extracts_split_report_date_label() -> None:
+    connector = CcldFacilityReportsConnector()
+    normalized = connector.normalize(_extract_split_report_date_fixture())
+    expected = json.loads(SPLIT_REPORT_DATE_EXPECTED_FIXTURE.read_text(encoding="utf-8"))
 
     assert _without_audit(normalized) == expected
 
@@ -615,6 +633,18 @@ def _extract_was_received_date_fixture() -> dict[str, object]:
         raw_path=WAS_RECEIVED_DATE_RAW_FIXTURE,
         raw_sha256=sha256_bytes(raw_content),
         retrieved_at=WAS_RECEIVED_DATE_RETRIEVED_AT,
+        content_type="text/html",
+    )
+    return CcldFacilityReportsConnector().extract(document)
+
+
+def _extract_split_report_date_fixture() -> dict[str, object]:
+    raw_content = SPLIT_REPORT_DATE_RAW_FIXTURE.read_bytes()
+    document = SourceDocument(
+        source_url=SPLIT_REPORT_DATE_FIXTURE_URL,
+        raw_path=SPLIT_REPORT_DATE_RAW_FIXTURE,
+        raw_sha256=sha256_bytes(raw_content),
+        retrieved_at=SPLIT_REPORT_DATE_RETRIEVED_AT,
         content_type="text/html",
     )
     return CcldFacilityReportsConnector().extract(document)

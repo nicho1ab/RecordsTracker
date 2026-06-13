@@ -72,6 +72,8 @@ governance scaffold.
 	layouts where an inline `Finding -` label precedes the normalized finding.
 - Added fixture-backed was-received complaint date extraction hardening for CCLD
 	report layouts that use a `complaint was received in our office on` phrase.
+- Added fixture-backed split report date label extraction hardening for CCLD
+	report layouts where `Report Date` is followed by the date value.
 
 ## Completed governance and review experience improvements
 
