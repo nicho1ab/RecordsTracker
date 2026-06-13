@@ -74,6 +74,8 @@ governance scaffold.
 	report layouts that use a `complaint was received in our office on` phrase.
 - Added fixture-backed split report date label extraction hardening for CCLD
 	report layouts where `Report Date` is followed by the date value.
+- Added fixture-backed split date signed label extraction hardening for CCLD
+	report layouts where `Date Signed` is followed by the signed date value.
 
 ## Completed governance and review experience improvements
 
