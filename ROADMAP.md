@@ -109,6 +109,8 @@ governance scaffold.
 	layouts that use a `Date Signed :` label variant.
 - Added fixture-backed spaced-colon visit date label hardening for CCLD report
 	layouts that use a `VISIT DATE :` label variant.
+- Added fixture-backed spaced-colon complaint control number label hardening for
+	CCLD report layouts that use a `COMPLAINT CONTROL NUMBER :` label variant.
 
 ## Completed governance and review experience improvements
 

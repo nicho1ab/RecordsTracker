@@ -261,7 +261,8 @@ class CcldFacilityReportsConnector:
             "complaint_control_number": _value_after_label(
                 lines, "COMPLAINT CONTROL NUMBER:"
             )
-            or _value_after_exact_label(lines, "COMPLAINT CONTROL NUMBER"),
+            or _value_after_exact_label(lines, "COMPLAINT CONTROL NUMBER")
+            or _value_after_spaced_colon_label(lines, "COMPLAINT CONTROL NUMBER"),
             "allegations": _allegations(lines),
             "finding": _finding(lines),
             "visit_date": visit_date,
