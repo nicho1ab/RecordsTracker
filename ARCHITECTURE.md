@@ -65,6 +65,13 @@ physical schema areas or clearly separated table groups. It does not approve
 schema files, migration files, a database product, a migration tool, import
 implementation, reset/reload implementation, or app scaffold work.
 
+ADR-0011 defines the hosted tester MVP authentication and access boundary. The
+hosted tester MVP must require authenticated, explicitly provisioned or invited
+tester access, use simple role-based boundaries, and prevent anonymous hosted
+tester access. It does not approve an authentication provider, identity storage,
+authorization middleware, role schema, user tables, app scaffold, or hosted
+deployment.
+
 ## Components
 
 ### Connectors
@@ -150,6 +157,10 @@ retention ADRs approve implementation details.
   import metadata, source-derived imported records, reviewer-created state,
   audit events, export packet state, tester feedback, and operational/reset
   metadata.
+- Hosted tester MVP access must be authenticated and role-scoped; anonymous
+  hosted tester access is not approved because the hosted app includes
+  reviewer-created state, tester feedback, annotations, corrections, export
+  decisions, audit history, and sensitive review context.
 - Production app scaffolding, hosted schemas, authentication implementation,
   correction workflows, queues, annotations, and hosted export builders are not
   approved until the relevant future ADRs are complete.
