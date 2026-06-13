@@ -790,7 +790,15 @@ def _allegations(lines: list[str]) -> list[str]:
             "ALLEGATION",
         ),
     )
-    end = _line_index_any(lines, ("INVESTIGATION FINDINGS:", "INVESTIGATION FINDING:"))
+    end = _line_index_any(
+        lines,
+        (
+            "INVESTIGATION FINDINGS:",
+            "INVESTIGATION FINDINGS",
+            "INVESTIGATION FINDING:",
+            "INVESTIGATION FINDING",
+        ),
+    )
     if start is None or end is None:
         return []
 
