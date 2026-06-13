@@ -115,6 +115,8 @@ governance scaffold.
 	report layouts that use a `FACILITY NAME :` label variant.
 - Added fixture-backed spaced-colon facility number label hardening for CCLD
 	report layouts that use a `FACILITY NUMBER :` label variant.
+- Added fixture-backed split spaced-colon finding label hardening for CCLD
+	report layouts that split a `Finding :` label from its value.
 
 ## Completed governance and review experience improvements
 

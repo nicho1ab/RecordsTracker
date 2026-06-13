@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Hardened CCLD finding extraction for source layouts that split a
+	`Finding :` spaced-colon label from its value, with fixture-backed regression
+	coverage.
 - Hardened CCLD facility number extraction for source layouts that use a
 	`FACILITY NUMBER :` spaced-colon label variant, with fixture-backed regression
 	coverage.
