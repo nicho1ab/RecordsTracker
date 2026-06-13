@@ -49,6 +49,9 @@ governance scaffold.
 	review, delay triage, and source traceability CSV files.
 - Grouped sample and live fetch script next steps by reviewer task, including
 	what to open first, delay triage, source verification, and CSV export.
+- Added data quality coverage that verifies derived complaint, allegation,
+  event, and extraction audit records trace back to source documents with source
+  URL, raw hash, connector metadata, and retrieval timestamp.
 - Added inline complaint received date extraction hardening with a
 	fixture-backed CCLD report layout regression test.
 - Added fixture-backed missing visit date coverage for CCLD report-date proxy
@@ -157,13 +160,12 @@ governance scaffold.
 
 ## Current next priorities
 
-These priorities should be implemented as incremental local review improvements
-before deciding whether Datasette has been outgrown or a dashboard/custom web
-interface is justified.
+These priorities should be implemented as incremental cleanup, data quality,
+extraction, and local review improvements before deciding whether Datasette has
+been outgrown or a dashboard/custom web interface is justified.
 
-1. Group review workflows by user task rather than by implementation table,
-	using task labels such as review complaints, find records needing closer
-	review, compare facilities, verify sources, and export CSVs.
+1. Strengthen data quality checks for duplicate derived records, date
+   consistency, source hash presence, and raw source traceability.
 2. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
 3. Evaluate persistent navigation, lightweight dashboard options, or a custom
