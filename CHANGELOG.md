@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added data quality coverage that verifies source document hashes match the
+  preserved raw files referenced by `raw_path`.
 - Added data quality coverage that verifies source document hashes are present
   as lowercase SHA-256 hex values.
 - Added data quality coverage that verifies complaint date ordering and stored
