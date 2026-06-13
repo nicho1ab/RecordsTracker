@@ -96,6 +96,9 @@ governance scaffold.
 - Added fixture-backed punctuated complaint received date phrase hardening for
 	CCLD report layouts where punctuation separates the narrative phrase from the
 	received date value.
+- Added fixture-backed punctuated report type heading hardening for CCLD report
+	layouts where the complaint investigation report heading includes trailing
+	punctuation.
 
 ## Completed governance and review experience improvements
 
