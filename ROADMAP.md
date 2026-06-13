@@ -44,6 +44,8 @@ governance scaffold.
   and findings.
 - Added a source-traceable complaint timeline review view and facility-filtered
 	saved query for complaint milestone dates and extracted event dates.
+- Added a field-level source traceability review view and facility-filtered
+	saved query for extraction audit context alongside source document metadata.
 - Added a `review_home` Datasette saved query as a task-based start-here surface
 	for complaint review, delay triage, facility comparison, source verification,
 	and CSV export paths before any dashboard or custom web interface decision.

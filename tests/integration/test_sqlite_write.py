@@ -166,6 +166,23 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
             "connector_name": "ccld_facility_reports",
         },
     ]
+    assert _field_source_traceability_review(db_path) == {
+        "facility_number": "157806098",
+        "complaint_control_number": "32-CR-20220407124448",
+        "field_name": "facility_number",
+        "extracted_value": "157806098",
+        "source_text": None,
+        "source_section": None,
+        "warning": None,
+        "confidence": 1.0,
+        "extraction_method": "ccld_facility_report_html_labels",
+        "extractor_version": "0.1.0",
+        "source_url": FIXTURE_URL,
+        "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
+        "connector_name": "ccld_facility_reports",
+        "connector_version": "0.1.0",
+        "report_index": 3,
+    }
 
 
 def test_delay_review_flags_view_exposes_flagged_records(tmp_path: Path) -> None:
@@ -197,6 +214,7 @@ def test_review_views_do_not_duplicate_rows_on_rerun(tmp_path: Path) -> None:
     assert _row_count(db_path, "complaint_review_summary") == 1
     assert _row_count(db_path, "complaint_first_pass_review") == 1
     assert _row_count(db_path, "complaint_timeline_review") == 4
+    assert _row_count(db_path, "field_source_traceability_review") == 21
     assert _row_count(db_path, "facility_complaint_summary") == 1
     assert _row_count(db_path, "delay_review_flags") == 1
     assert _row_count(db_path, "source_traceability_review") == 1
@@ -483,6 +501,33 @@ def _complaint_timeline_review(db_path: Path) -> list[dict[str, object]]:
             """
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def _field_source_traceability_review(db_path: Path) -> dict[str, object]:
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            """
+            SELECT facility_number,
+                   complaint_control_number,
+                   field_name,
+                   extracted_value,
+                   source_text,
+                   source_section,
+                   warning,
+                   confidence,
+                   extraction_method,
+                   extractor_version,
+                   source_url,
+                   raw_sha256,
+                   connector_name,
+                   connector_version,
+                   report_index
+            FROM field_source_traceability_review
+            WHERE field_name = 'facility_number'
+            """
+        ).fetchone()
+    return dict(row)
 
 
 def _view_value(db_path: Path, view_name: str, column_name: str) -> str:

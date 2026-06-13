@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added a field-level `field_source_traceability_review` Datasette view and
+	`field_traceability_by_facility` saved query for reviewing extracted values,
+	source text, warnings, confidence, extraction method, and source document
+	traceability together.
 - Added a source-traceable `complaint_timeline_review` Datasette view and
 	`complaint_timeline_by_facility` saved query for reviewing complaint milestone
 	dates and extracted event dates without treating missing dates as proof that
