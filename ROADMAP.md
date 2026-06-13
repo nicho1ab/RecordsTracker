@@ -32,6 +32,9 @@ governance scaffold.
 	written, and failed report counts.
 - Added SQLite review views for complaint review, facility summaries, delay
 	review flags, and source traceability.
+- Added a low-noise first-pass complaint review view that preserves source
+	traceability and lower-level IDs while hiding implementation-heavy fields from
+	the initial review surface.
 - Added Datasette metadata and saved queries to guide review, filtering,
 	source-checking, and export workflows.
 - Added a source-traceable start-here saved query for guided complaint review in
@@ -91,15 +94,12 @@ interface is justified.
 1. Group review workflows by user task rather than by implementation table,
 	using task labels such as review complaints, find records needing closer
 	review, compare facilities, verify sources, and export CSVs.
-2. Add low-noise review views that hide implementation-heavy fields during
-	first-pass review while preserving source traceability and links to lower-level
-	detail when needed.
-3. Improve script output as navigation by grouping next steps after sample or
+2. Improve script output as navigation by grouping next steps after sample or
 	live fetch commands, including what to open first, what to use for delay
 	triage, what to use for source verification, and what to use for CSV export.
-4. Add additional CCLD fixtures and extraction hardening for representative
+3. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
-5. Evaluate persistent navigation, lightweight dashboard options, or a custom
+4. Evaluate persistent navigation, lightweight dashboard options, or a custom
 	web interface only after the task-based Datasette review workflow is validated
 	and documented as sufficient or insufficient for repeated review.
 

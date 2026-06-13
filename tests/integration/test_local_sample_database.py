@@ -90,6 +90,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert metadata["title"] == "CCLD Complaints Review"
     assert "live-ccld" in metadata["databases"]
     database_metadata = metadata["databases"]["live-ccld"]
+    assert "complaint_first_pass_review" in database_metadata["tables"]
     assert "complaint_review_summary" in database_metadata["tables"]
     assert "delay_review_flags" in database_metadata["tables"]
     assert "source_traceability_review" in database_metadata["tables"]
@@ -110,11 +111,21 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "allegation_summary_by_facility" in database_metadata["queries"]
     assert "newest_reports" in database_metadata["queries"]
     assert (
+        "Low-noise first-pass view"
+        in database_metadata["tables"]["complaint_first_pass_review"]["description"]
+    )
+    assert (
+        "lower-level follow-up"
+        in database_metadata["tables"]["complaint_first_pass_review"]["columns"][
+            "complaint_id"
+        ]
+    )
+    assert (
         "screening aids"
         in database_metadata["tables"]["delay_review_flags"]["description"]
     )
     assert (
-        "Use for first-pass complaint review"
+        "Use after complaint_first_pass_review"
         in database_metadata["tables"]["complaint_review_summary"]["description"]
     )
     assert (
@@ -150,6 +161,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     review_home_query = database_metadata["queries"]["review_home"]
     assert "Open this first" in review_home_query["description"]
     assert "Review complaints" in review_home_query["sql"]
+    assert "complaint_first_pass_review" in review_home_query["sql"]
     assert "Find records needing closer review" in review_home_query["sql"]
     assert "Compare facilities" in review_home_query["sql"]
     assert "Verify sources" in review_home_query["sql"]
@@ -162,10 +174,11 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "Open this first" in start_here_query["description"]
     assert "guided first-pass review" in start_here_query["description"]
     assert "Preserve traceability columns" in start_here_query["description"]
-    assert "sd.raw_sha256" in start_here_query["sql"]
-    assert "sd.connector_version" in start_here_query["sql"]
-    assert "sd.retrieved_at" in start_here_query["sql"]
-    assert "ORDER BY cr.report_date DESC" in start_here_query["sql"]
+    assert "raw_sha256" in start_here_query["sql"]
+    assert "connector_version" in start_here_query["sql"]
+    assert "retrieved_at" in start_here_query["sql"]
+    assert "FROM complaint_first_pass_review" in start_here_query["sql"]
+    assert "ORDER BY report_date DESC" in start_here_query["sql"]
     export_query_sql = database_metadata["queries"][
         "complaint_review_export_with_traceability"
     ]["sql"]
@@ -216,6 +229,7 @@ def test_review_workflow_lines_name_first_views() -> None:
     assert "Open these Datasette review views first, in order:" in lines
     assert "Saved queries for common workflows:" in lines
     assert any("complaint_review_summary" in line for line in lines)
+    assert any("complaint_first_pass_review" in line for line in lines)
     assert any("facility_complaint_summary" in line for line in lines)
     assert any("delay_review_flags" in line for line in lines)
     assert any("source_traceability_review" in line for line in lines)

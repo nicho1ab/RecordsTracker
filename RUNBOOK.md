@@ -69,10 +69,11 @@ views:
 
 1. Saved query `review_home`
 2. Saved query `complaint_review_start_here`
-3. `complaint_review_summary`
-4. `facility_complaint_summary`
-5. `delay_review_flags`
-6. `source_traceability_review`
+3. `complaint_first_pass_review`
+4. `complaint_review_summary`
+5. `facility_complaint_summary`
+6. `delay_review_flags`
+7. `source_traceability_review`
 
 The `review_home` saved query groups the local review paths by task: review
 complaints, find records needing closer review, compare facilities, verify
@@ -80,10 +81,11 @@ sources, and export CSVs.
 
 If saved queries are unavailable, start with these views:
 
-1. `complaint_review_summary`
-2. `facility_complaint_summary`
-3. `delay_review_flags`
-4. `source_traceability_review`
+1. `complaint_first_pass_review`
+2. `complaint_review_summary`
+3. `facility_complaint_summary`
+4. `delay_review_flags`
+5. `source_traceability_review`
 
 ## Export review bundle
 
