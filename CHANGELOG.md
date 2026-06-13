@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added the first local hosted tester MVP scaffold with a Python
+	standard-library app shell, health route, smoke check, focused tests, and
+	Windows PowerShell run documentation while intentionally deferring cloud,
+	QNAP, Docker, schema, authentication, authorization, import/sync, queues,
+	annotations, corrections, exports, reset/reload, hosted deployment,
+	reviewer-created state persistence, and extraction behavior.
 - Added ADR-0012 defining the hosted tester MVP scope and scaffold sequencing
 	boundary, allowing hosted implementation to begin through a scaffold-first
 	sequence while keeping schemas, authentication, authorization, import/sync,

@@ -216,12 +216,15 @@ the governed primary future review experience.
   while keeping schemas, authentication, authorization, import/sync, queues,
   annotations, corrections, exports, reset/reload, hosted deployment, and
   extraction behavior out of the first scaffold branch.
+- Added the first local hosted tester MVP scaffold with a Python standard-library
+	app shell, health route, smoke check, focused tests, and local Windows
+	PowerShell run documentation without adding cloud, QNAP, Docker, schema,
+	authentication, authorization, import/sync, or reviewer workflow behavior.
 
 ## Near-term milestones
 
-- Begin the first hosted MVP scaffold implementation branch with a runnable,
-  testable app shell, smoke validation, local development instructions, and no
-  business workflow behavior.
+- Keep the local hosted scaffold runnable and smoke-tested while the next
+	hosted implementation decisions are made.
 - Decide audit logging, export generation, reset/reload, tester data retention,
   provider-specific authentication details, and concrete framework/tooling
   choices before implementing the affected hosted workflow layers.
@@ -246,16 +249,15 @@ has been outgrown as the primary future review experience and should be extended
 only where it remains useful for validation, inspection, debugging, local
 exploration, or export support.
 
-1. Implement the first hosted MVP scaffold branch with project structure,
-	minimal app/API shell as applicable, smoke validation, test harness, local run
-	docs, and no business workflow behavior.
-2. Draft audit log, export generation, reset/reload, and tester retention ADRs
+1. Draft audit log, export generation, reset/reload, and tester retention ADRs
 	before implementing those hosted workflow layers.
-3. Decide provider-specific authentication and authorization implementation
+2. Decide provider-specific authentication and authorization implementation
 	details before implementing real authentication or authorization.
-4. Decide concrete database product and migration tooling for the hosted tester
+3. Decide concrete database product and migration tooling for the hosted tester
   MVP only after the remaining access, audit, reset/reload, export, retention,
   and operations constraints are understood.
+4. Plan the first read-only source-derived hosted view only after the import,
+  schema, and local scaffold boundaries are ready for that layer.
 5. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
 
