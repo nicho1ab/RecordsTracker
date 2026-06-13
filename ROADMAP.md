@@ -56,6 +56,8 @@ governance scaffold.
   duplicate record identifiers and duplicate source URLs.
 - Added data quality coverage that verifies complaint date ordering and stored
   delay calculation fields against deterministic date math.
+- Added data quality coverage that verifies source document hashes are present
+  as lowercase SHA-256 hex values.
 - Added inline complaint received date extraction hardening with a
 	fixture-backed CCLD report layout regression test.
 - Added fixture-backed missing visit date coverage for CCLD report-date proxy
@@ -168,8 +170,7 @@ These priorities should be implemented as incremental cleanup, data quality,
 extraction, and local review improvements before deciding whether Datasette has
 been outgrown or a dashboard/custom web interface is justified.
 
-1. Strengthen data quality checks for source hash presence and raw source
-   traceability.
+1. Strengthen data quality checks for raw source traceability.
 2. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
 3. Evaluate persistent navigation, lightweight dashboard options, or a custom
