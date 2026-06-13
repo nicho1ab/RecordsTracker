@@ -183,15 +183,20 @@ the governed primary future review experience.
 - Accepted the Datasette exit governance transition: Datasette is retained as a
   validation, inspection, debugging, local exploration, and export-support layer,
   while production-discovery defines the future primary reviewer UX requirements.
+- Defined the minimum production-discovery requirements for a future hosted
+	primary reviewer application, including review state, annotations,
+	corrections, tester readiness, export packet preparation, and source
+	traceability boundaries.
 
 ## Near-term milestones
 
-- Define production-discovery requirements for persistent navigation, guided
-	review queues, saved reviewer state, annotations, correction workflows,
-	contextual help, collaboration constraints, accessible exports, and source
-	traceability.
-- Draft architecture decision records for the future primary review experience
-	without selecting a production stack before requirements are clear.
+- Use `PRODUCTION_DISCOVERY_REQUIREMENTS.md` to draft architecture decision
+  records for the future primary review experience without selecting a
+  production stack before requirements are reviewed.
+- Plan the hosted tester MVP around authenticated tester access, seeded corpus
+  loading, review-state persistence, annotation and correction boundaries,
+  source-traceable export packets, accessibility expectations, feedback
+  collection, and reset/reload operations.
 - Preserve Datasette, SQLite views, and review-bundle exports where they support
 	validation, inspection, debugging, local exploration, and export workflows.
 - Harden extraction with additional representative fixtures and edge-case tests.
@@ -210,12 +215,16 @@ has been outgrown as the primary future review experience and should be extended
 only where it remains useful for validation, inspection, debugging, local
 exploration, or export support.
 
-1. Add additional CCLD fixtures and extraction hardening for representative
+1. Draft ADRs that compare hosted reviewer application boundaries, reviewer
+	state persistence options, correction-state handling, tester access, export
+	packet generation, and production-stack options without committing to a stack
+	before requirements are reviewed.
+2. Plan the smallest hosted tester MVP that satisfies the production-discovery
+	requirements for guided queues, review state, annotations, proposed
+	corrections, source verification, accessible exports, tester feedback, and
+	reset/reload operations.
+3. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
-2. Define review-state, correction, annotation, queue, collaboration, accessible
-   export, and source-traceability requirements for production-discovery.
-3. Draft ADRs that compare architecture boundaries and production-stack options
-   without committing to a stack before requirements are reviewed.
 
 ## Production-discovery transition path
 
@@ -223,18 +232,15 @@ Datasette has been outgrown as the primary future review experience. It remains
 part of the local toolkit for validation, inspection, debugging, local
 exploration, and export support over SQLite.
 
-Before production-build work, define the smallest useful product shape:
+Before production-build work, use the production-discovery requirements to
+define the smallest useful product shape:
 
-1. Define the core reviewer tasks and the minimum fields, source traceability,
-	and caution language each task needs.
-2. Define review-state requirements for saved progress, guided queues,
-	annotations, corrections, and collaboration.
-3. Define accessible export requirements and the source-traceability fields that
-	must remain attached to any exported or cited record.
-4. Decide which architecture boundaries belong to ingestion, storage,
+1. Confirm the core reviewer tasks and the minimum fields, source traceability,
+   and caution language each task needs.
+2. Decide which architecture boundaries belong to ingestion, storage,
 	validation, review state, correction state, export generation, and future
 	presentation.
-5. Compare production-stack options in ADRs only after the requirements and
+3. Compare production-stack options in ADRs only after the requirements and
 	boundaries are documented.
 
 ## Decision points
