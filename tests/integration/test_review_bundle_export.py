@@ -21,10 +21,16 @@ def test_export_review_bundle_writes_source_traceable_csvs(tmp_path: Path) -> No
         "complaint_review_with_source_traceability.csv",
         "delay_review_flags_with_source_traceability.csv",
         "source_traceability.csv",
+        "complaint_timeline_with_source_traceability.csv",
+        "field_source_traceability.csv",
+        "facility_pattern_review.csv",
     }
     assert exported_paths["complaint_review_with_source_traceability.csv"].row_count == 1
     assert exported_paths["delay_review_flags_with_source_traceability.csv"].row_count == 1
     assert exported_paths["source_traceability.csv"].row_count == 1
+    assert exported_paths["complaint_timeline_with_source_traceability.csv"].row_count == 4
+    assert exported_paths["field_source_traceability.csv"].row_count == 21
+    assert exported_paths["facility_pattern_review.csv"].row_count == 1
 
     complaint_rows = _read_csv(output_dir / "complaint_review_with_source_traceability.csv")
     assert complaint_rows[0]["facility_number"] == "157806098"
@@ -46,6 +52,22 @@ def test_export_review_bundle_writes_source_traceable_csvs(tmp_path: Path) -> No
     assert source_rows[0]["raw_sha256"] == complaint_rows[0]["raw_sha256"]
     assert source_rows[0]["connector_name"] == "ccld_facility_reports"
 
+    timeline_rows = _read_csv(output_dir / "complaint_timeline_with_source_traceability.csv")
+    assert timeline_rows[0]["timeline_item_type"] == "complaint received"
+    assert timeline_rows[0]["raw_sha256"] == complaint_rows[0]["raw_sha256"]
+    assert timeline_rows[0]["source_url"] == complaint_rows[0]["source_url"]
+
+    field_rows = _read_csv(output_dir / "field_source_traceability.csv")
+    assert field_rows[0]["facility_number"] == "157806098"
+    assert field_rows[0]["field_name"]
+    assert field_rows[0]["source_url"] == complaint_rows[0]["source_url"]
+    assert field_rows[0]["raw_sha256"] == complaint_rows[0]["raw_sha256"]
+
+    pattern_rows = _read_csv(output_dir / "facility_pattern_review.csv")
+    assert pattern_rows[0]["facility_number"] == "157806098"
+    assert pattern_rows[0]["source_document_count"] == "1"
+    assert pattern_rows[0]["records_with_review_flags"] == "1"
+
 
 def test_export_review_bundle_writes_accessible_review_notes(tmp_path: Path) -> None:
     db_path = tmp_path / "ccld.sqlite"
@@ -62,6 +84,11 @@ def test_export_review_bundle_writes_accessible_review_notes(tmp_path: Path) -> 
     assert "flagged for review based on available extracted dates" in readme_text
     assert "Unknown database values are exported as \"unknown\"" in readme_text
     assert "raw SHA-256 hash" in readme_text
+    assert "complaint_timeline_with_source_traceability.csv" in readme_text
+    assert "field_source_traceability.csv" in readme_text
+    assert "facility_pattern_review.csv" in readme_text
+    assert "not findings about a facility" in readme_text
+    assert "source text, warnings, confidence" in readme_text
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
