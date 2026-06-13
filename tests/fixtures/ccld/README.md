@@ -85,3 +85,5 @@ Raw fixtures and expected JSON are governed by `.gitattributes` line-ending rule
 - `expected/157806098_inx75_complaint_control_semicolon.json`: Expected normalized records for semicolon complaint control number label extraction hardening.
 - `raw/157806098_inx76_facility_number_semicolon.html`: Source-shaped CCLD report fixture covering a `FACILITY NUMBER;` semicolon label variant.
 - `expected/157806098_inx76_facility_number_semicolon.json`: Expected normalized records for semicolon facility number label extraction hardening.
+- `raw/157806098_inx77_facility_name_semicolon.html`: Source-shaped CCLD report fixture covering a `FACILITY NAME;` semicolon label variant.
+- `expected/157806098_inx77_facility_name_semicolon.json`: Expected normalized records for semicolon facility name label extraction hardening.
