@@ -16,3 +16,4 @@ See detailed ADRs in `docs/decisions/`.
 | ADR-0009 | Define hosted tester MVP import and sync strategy | Accepted |
 | ADR-0010 | Define hosted tester MVP schema and migration strategy | Accepted |
 | ADR-0011 | Define hosted tester MVP authentication and access boundaries | Accepted |
+| ADR-0012 | Define hosted tester MVP scope and scaffold sequencing | Accepted |

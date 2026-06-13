@@ -72,6 +72,14 @@ tester access. It does not approve an authentication provider, identity storage,
 authorization middleware, role schema, user tables, app scaffold, or hosted
 deployment.
 
+ADR-0012 defines the hosted tester MVP scope and scaffold sequencing boundary.
+Hosted implementation may begin after ADR-0012, but only through a sequenced
+scaffold-first path. The first implementation branch may create a runnable,
+testable hosted app scaffold with smoke validation and local development docs;
+it must not implement business workflows, domain schema, authentication,
+authorization, import/sync, review queues, annotations, corrections, exports,
+reset/reload, hosted deployment, or extraction behavior.
+
 ## Components
 
 ### Connectors
@@ -161,9 +169,11 @@ retention ADRs approve implementation details.
   hosted tester access is not approved because the hosted app includes
   reviewer-created state, tester feedback, annotations, corrections, export
   decisions, audit history, and sensitive review context.
-- Production app scaffolding, hosted schemas, authentication implementation,
-  correction workflows, queues, annotations, and hosted export builders are not
-  approved until the relevant future ADRs are complete.
+- Hosted tester MVP implementation may begin only through the ADR-0012
+  scaffold-first sequence. Hosted schemas, authentication implementation,
+  correction workflows, queues, annotations, import/sync, reset/reload, hosted
+  deployment, and hosted export builders remain unapproved until their relevant
+  future decisions and implementation PRs validate the affected layer.
 
 ## Accessibility
 

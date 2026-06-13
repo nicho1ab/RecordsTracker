@@ -211,12 +211,20 @@ the governed primary future review experience.
 	authenticated invited or provisioned tester access, simple role-based access,
 	revocable tester accounts, permissioned import/reload/reset and export
 	actions, and auditable reviewer-created actions where feasible.
+- Accepted the hosted tester MVP scope and scaffold sequencing boundary,
+  allowing hosted implementation to begin through a scaffold-first sequence
+  while keeping schemas, authentication, authorization, import/sync, queues,
+  annotations, corrections, exports, reset/reload, hosted deployment, and
+  extraction behavior out of the first scaffold branch.
 
 ## Near-term milestones
 
+- Begin the first hosted MVP scaffold implementation branch with a runnable,
+  testable app shell, smoke validation, local development instructions, and no
+  business workflow behavior.
 - Decide audit logging, export generation, reset/reload, tester data retention,
-  provider-specific authentication details, and hosted MVP scaffold sequencing
-  before app scaffold work.
+  provider-specific authentication details, and concrete framework/tooling
+  choices before implementing the affected hosted workflow layers.
 - Decide concrete database product and migration tooling only after the accepted
   schema/migration strategy, authentication/access needs, reset/reload needs,
   audit requirements, and hosted operations constraints are clear.
@@ -238,15 +246,16 @@ has been outgrown as the primary future review experience and should be extended
 only where it remains useful for validation, inspection, debugging, local
 exploration, or export support.
 
-1. Draft audit log, export generation, reset/reload, and tester retention ADRs
-	before any hosted app scaffold work.
-2. Decide provider-specific authentication and authorization implementation
-	details only after the hosted MVP scope and scaffold sequence are clear.
-3. Decide concrete database product and migration tooling for the hosted tester
+1. Implement the first hosted MVP scaffold branch with project structure,
+	minimal app/API shell as applicable, smoke validation, test harness, local run
+	docs, and no business workflow behavior.
+2. Draft audit log, export generation, reset/reload, and tester retention ADRs
+	before implementing those hosted workflow layers.
+3. Decide provider-specific authentication and authorization implementation
+	details before implementing real authentication or authorization.
+4. Decide concrete database product and migration tooling for the hosted tester
   MVP only after the remaining access, audit, reset/reload, export, retention,
   and operations constraints are understood.
-4. Draft hosted MVP scaffold planning only after data-domain, schema/migration,
-	import/sync, auth/access, export, audit, and retention decisions are accepted.
 5. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
 
@@ -266,10 +275,11 @@ define the smallest useful product shape:
 	presentation.
 3. Use ADR-0007's hybrid direction, ADR-0008's data-domain boundary, ADR-0009's
 	controlled import boundary, ADR-0010's physical separation strategy, and
-	ADR-0011's authenticated access boundary to decide audit log, export
-	generation, reset/reload, retention, concrete database/migration tooling,
-	provider-specific authentication implementation, and implementation scaffold
-	sequence in separate ADRs before build work.
+	ADR-0011's authenticated access boundary together with ADR-0012's
+	scaffold-first sequence to begin hosted scaffold implementation while deciding
+	audit log, export generation, reset/reload, retention, concrete
+	database/migration tooling, and provider-specific authentication
+	implementation before the affected layers are built.
 
 ## Decision points
 
@@ -292,8 +302,9 @@ define the smallest useful product shape:
 
 ## Deferred product work
 
-- Production primary review application build work until production-discovery
-  requirements and ADRs define the product and stack direction.
+- Production primary review application workflow build work beyond the
+	ADR-0012 scaffold-first sequence until the affected production-discovery
+	requirements and ADRs define the layer being implemented.
 - Hosted review queues, reviewer accounts, assignments, or role-based access
 	control.
 - Interactive dashboards beyond validation, inspection, or prototype work.

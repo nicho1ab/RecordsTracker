@@ -75,6 +75,15 @@ tester feedback, and export packet inclusion decisions. Status labels must not
 imply source facts, legal conclusions, facility-wide conclusions, or verified
 harm beyond what qualified reviewers establish from source records.
 
+Detailed hosted visual design should begin after the hosted scaffold and first
+read-only source-derived views exist. The document-governance dashboard concept
+may inspire later hosted reviewer UX patterns such as left navigation,
+dashboard/status cards, review queues, source-traceability health panels,
+contextual onboarding/help, light/dark mode support, and audit/change-history
+patterns, but it must not be copied literally. Any adapted design must preserve
+this project's source-traceability, accessibility, cautious-language, tester
+feedback, and reviewer-state boundaries.
+
 ## Design principles
 
 - Prefer review workflows over raw implementation exposure.
