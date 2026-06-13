@@ -88,6 +88,8 @@ governance scaffold.
 	value.
 - Added fixture-backed report type case hardening for CCLD report layouts where
 	the complaint investigation report heading uses different casing.
+- Added fixture-backed spaced allegation heading extraction hardening for CCLD
+	report layouts that use an `ALLEGATION (S):` section heading.
 
 ## Completed governance and review experience improvements
 

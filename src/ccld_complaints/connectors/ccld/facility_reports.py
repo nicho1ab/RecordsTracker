@@ -782,6 +782,8 @@ def _allegations(lines: list[str]) -> list[str]:
         (
             "ALLEGATION(S):",
             "ALLEGATION(S)",
+            "ALLEGATION (S):",
+            "ALLEGATION (S)",
             "ALLEGATIONS:",
             "ALLEGATIONS",
             "ALLEGATION:",
