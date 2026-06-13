@@ -837,8 +837,9 @@ def _finding(lines: list[str]) -> str:
 
 
 def _normalized_finding(value: str) -> str | None:
+    normalized_value = value.strip(" .:-")
     for finding in ALLOWED_FINDINGS:
-        if value.casefold() == finding.casefold():
+        if normalized_value.casefold() == finding.casefold():
             return finding
     return None
 
