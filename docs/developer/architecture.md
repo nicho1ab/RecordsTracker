@@ -27,6 +27,24 @@ src/ccld_complaints/
   exploration, and export support.
 9. Keep future primary reviewer UX work behind production-discovery requirements
   and architecture decisions.
+10. Run the local hosted tester MVP scaffold only as a placeholder app shell and
+  smoke route until later implementation PRs add approved hosted behavior.
+
+## Hosted scaffold boundary
+
+The first hosted tester MVP scaffold is a local-first Python standard-library
+HTTP app shell. It provides a placeholder page and health route for smoke
+validation on a Windows development workstation.
+
+The scaffold does not implement authentication, authorization, production
+schema, migrations, import/sync, queues, annotations, corrections, exports,
+tester feedback, audit trail, reset/reload, hosted live crawling, hosted
+connector execution, deployment, source-derived canonical field changes,
+reviewer-created state persistence, or extraction behavior. It does not require
+Docker, QNAP Container Station, Azure, AWS, a public URL, secrets, or cloud
+resources.
+
+See `docs/developer/hosted-scaffold.md` for local run and smoke-check commands.
 
 ## Current ingestion boundary
 
