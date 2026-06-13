@@ -50,6 +50,13 @@ queues, annotations, proposed corrections, correction decisions, tester
 feedback, export packets, and audit events. Reviewer-created state must not
 overwrite canonical source-derived records or original extracted values.
 
+ADR-0009 defines the hosted tester MVP import/sync strategy. It keeps the
+Python ingestion and extraction pipeline as the source-derived data producer,
+starts the tester MVP with controlled snapshot imports from validated pipeline
+output, preserves stable source-derived identities and traceability fields, and
+does not approve hosted live crawling, hosted connector execution, import code,
+schemas, migrations, reset/reload implementation, or app scaffold work.
+
 ## Components
 
 ### Connectors
@@ -125,6 +132,10 @@ retention ADRs approve implementation details.
   preserve the Python extraction pipeline and local SQLite/Datasette validation
   path while planning a hosted relational review-state store and hosted
   reviewer app/API boundary.
+- Hosted tester MVP source-derived records should enter the hosted environment
+  through controlled imports from validated pipeline output; direct hosted live
+  crawling or connector execution is not approved for the tester MVP without a
+  later ADR.
 - Production app scaffolding, hosted schemas, authentication implementation,
   correction workflows, queues, annotations, and hosted export builders are not
   approved until the relevant future ADRs are complete.

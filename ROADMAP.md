@@ -199,14 +199,15 @@ the governed primary future review experience.
   separating source-derived imported records from reviewer-created review state
   before schema, migration, import/sync, authentication, export, audit, or
   scaffold decisions.
+- Accepted the hosted tester MVP import/sync strategy, keeping the Python
+	pipeline as the source-derived data producer and starting hosted tester data
+	population with controlled snapshot imports from validated pipeline output.
 
 ## Near-term milestones
 
 - Decide the hosted tester MVP physical schema and migration strategy for the
 	accepted source-derived and reviewer-created data domains without implementing
 	hosted persistence prematurely.
-- Decide the source-derived import/sync boundary from the existing Python
-  extraction pipeline into the hosted tester environment.
 - Decide authenticated tester access, audit logging, export generation,
 	reset/reload, tester data retention, and hosted MVP scaffold sequencing before
 	app scaffold work.
@@ -229,16 +230,14 @@ only where it remains useful for validation, inspection, debugging, local
 exploration, or export support.
 
 1. Draft a physical schema and migration strategy ADR for the hosted tester MVP
-	data domains accepted by ADR-0008, without choosing a database product or
-	implementing migrations yet.
-2. Draft a source-derived import/sync ADR that decides how records from the
-	existing Python extraction pipeline enter the hosted tester environment while
-	preserving source traceability and raw source preservation.
-3. Draft authentication/access, audit log, export generation, reset/reload, and
+	data domains accepted by ADR-0008 and the controlled import boundary accepted
+	by ADR-0009, without choosing a database product or implementing migrations
+	yet.
+2. Draft authentication/access, audit log, export generation, reset/reload, and
 	tester retention ADRs before any hosted app scaffold work.
-4. Draft hosted MVP scaffold planning only after data-domain, schema/migration,
+3. Draft hosted MVP scaffold planning only after data-domain, schema/migration,
 	import/sync, auth/access, export, audit, and retention decisions are accepted.
-5. Add additional CCLD fixtures and extraction hardening for representative
+4. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
 
 ## Production-discovery transition path
@@ -256,10 +255,11 @@ define the smallest useful product shape:
 	validation, review state, correction state, export generation, and future
 	presentation.
 3. Use ADR-0007's hybrid direction and ADR-0008's data-domain boundary to
-	decide physical schema/migration strategy, import/sync boundary,
-	authentication/access model, audit log, export generation, reset/reload,
-	retention, and implementation scaffold sequence in separate ADRs before
-	build work.
+	decide physical schema/migration strategy, authentication/access model, audit
+	log, export generation, reset/reload, retention, and implementation scaffold
+	sequence in separate ADRs before build work. Use ADR-0009's controlled import
+	boundary when deciding how hosted source-derived records map into that future
+	physical schema.
 
 ## Decision points
 
