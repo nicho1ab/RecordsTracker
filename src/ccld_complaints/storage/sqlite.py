@@ -98,6 +98,7 @@ DROP VIEW IF EXISTS delay_review_flags;
 DROP VIEW IF EXISTS facility_complaint_summary;
 DROP VIEW IF EXISTS complaint_first_pass_review;
 DROP VIEW IF EXISTS complaint_timeline_review;
+DROP VIEW IF EXISTS field_source_traceability_review;
 DROP VIEW IF EXISTS complaint_review_summary;
 DROP VIEW IF EXISTS source_traceability_review;
 
@@ -475,6 +476,36 @@ FROM events e
 JOIN complaints c ON c.complaint_id = e.complaint_id
 JOIN facilities f ON f.facility_id = c.facility_id
 JOIN source_documents sd ON sd.document_id = c.document_id;
+
+CREATE VIEW field_source_traceability_review AS
+SELECT
+    f.external_facility_number AS facility_number,
+    f.facility_name,
+    c.complaint_id,
+    c.complaint_control_number,
+    c.complaint_received_date,
+    c.report_date,
+    ea.field_name,
+    ea.extracted_value,
+    ea.source_text,
+    ea.source_section,
+    ea.warning,
+    ea.confidence,
+    ea.extraction_method,
+    ea.extractor_version,
+    sd.document_id,
+    sd.source_url,
+    sd.raw_sha256,
+    sd.raw_path,
+    sd.connector_name,
+    sd.connector_version,
+    sd.retrieved_at,
+    sd.report_index,
+    sd.document_type
+FROM extraction_audit ea
+JOIN source_documents sd ON sd.document_id = ea.document_id
+JOIN facilities f ON f.facility_id = sd.facility_id
+LEFT JOIN complaints c ON c.document_id = sd.document_id;
 """
 
 TABLE_COLUMNS = {

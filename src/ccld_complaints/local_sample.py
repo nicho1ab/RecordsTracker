@@ -120,6 +120,10 @@ def review_workflow_lines() -> list[str]:
             "- source_traceability_review view - source URLs, raw hashes, connector details, "
             "and report index."
         ),
+        (
+            "- field_source_traceability_review view - extracted fields with audit source "
+            "text and source document traceability."
+        ),
         "- source_traceability_by_facility saved query - check source provenance for one facility.",
         "For CSV export:",
         (
@@ -134,6 +138,10 @@ def review_workflow_lines() -> list[str]:
         "- complaint_review_summary view - full complaint review across facilities.",
         "- facility_complaint_summary view - facility-level counts and date range.",
         "- complaint_timeline_by_facility saved query - filter timeline rows by facility number.",
+        (
+            "- field_traceability_by_facility saved query - filter field-level extraction "
+            "audit context by facility number."
+        ),
         "- complaints_by_facility saved query - filter complaint review by facility number.",
         (
             "- facilities_with_delay_review_flags - find facilities with records needing "
@@ -359,6 +367,42 @@ def _datasette_table_metadata() -> dict[str, Any]:
                 "content_type": "Fetched source content type when available.",
             },
         },
+        "field_source_traceability_review": {
+            "title": "Field Source Traceability Review",
+            "description": (
+                "Field-level extraction audit view that keeps extracted values, source text, "
+                "source section, warnings, extraction method, extractor version, confidence, "
+                "complaint context, and source document traceability together. Use before "
+                "relying on a specific derived field; the public portal remains the source of "
+                "record."
+            ),
+            "sort_desc": "report_date",
+            "columns": {
+                "facility_number": "Public CCLD facility number used for filtering.",
+                "facility_name": "Facility name extracted from source reports.",
+                "complaint_id": "Stable local complaint identifier when available.",
+                "complaint_control_number": "Complaint control number when available.",
+                "complaint_received_date": "Date the complaint was reportedly received.",
+                "report_date": "Report date shown in the public source report.",
+                "field_name": "Canonical field name audited by the extractor.",
+                "extracted_value": "Extracted value stored or reviewed by the extractor.",
+                "source_text": "Source text used for field-level review when available.",
+                "source_section": "Source section used for field-level review when available.",
+                "warning": "Extraction warning when available.",
+                "confidence": "Extractor confidence value when available.",
+                "extraction_method": "Method used to extract the field.",
+                "extractor_version": "Extractor version that produced the audit record.",
+                "document_id": "Stable local source document identifier.",
+                "source_url": "Public source URL for checking the derived field.",
+                "raw_sha256": "SHA-256 hash for the preserved raw source file.",
+                "raw_path": "Local path to preserved raw source content.",
+                "connector_name": "Connector that retrieved and normalized the document.",
+                "connector_version": "Connector version used for extraction.",
+                "retrieved_at": "Timestamp when source content was retrieved.",
+                "report_index": "CCLD report index when available.",
+                "document_type": "Document type extracted from the source report when available.",
+            },
+        },
     }
     return review_table_metadata | _normalized_table_metadata()
 
@@ -548,10 +592,10 @@ SELECT
     6,
     'Source verification',
     'Verify sources',
-    'source_traceability_review',
+    'field_source_traceability_review',
     'Use before relying on extracted fields; check source URL, raw SHA-256 hash, ' ||
-        'raw path, connector name, connector version, retrieval timestamp, and ' ||
-        'report index.',
+        'raw path, connector metadata, extraction audit source text, warnings, ' ||
+        'confidence, and report index.',
     'The public portal remains the source of record.'
 UNION ALL
 SELECT
@@ -760,6 +804,21 @@ SELECT *
 FROM source_traceability_review
 WHERE facility_number = :facility_number
 ORDER BY report_index DESC, retrieved_at DESC
+            """.strip(),
+        },
+        "field_traceability_by_facility": {
+            "title": "Field Traceability by Facility",
+            "description": (
+                "Filter field-level extraction audit context by public facility number. Use "
+                "before relying on a specific extracted field; check source text, warnings, "
+                "confidence, source URL, raw hash, connector metadata, retrieval time, and "
+                "report index."
+            ),
+            "sql": """
+SELECT *
+FROM field_source_traceability_review
+WHERE facility_number = :facility_number
+ORDER BY report_date DESC, complaint_received_date DESC, field_name
             """.strip(),
         },
         "allegation_summary_by_facility": {

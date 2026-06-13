@@ -92,6 +92,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     database_metadata = metadata["databases"]["live-ccld"]
     assert "complaint_first_pass_review" in database_metadata["tables"]
     assert "complaint_timeline_review" in database_metadata["tables"]
+    assert "field_source_traceability_review" in database_metadata["tables"]
     assert "complaint_review_summary" in database_metadata["tables"]
     assert "delay_review_flags" in database_metadata["tables"]
     assert "source_traceability_review" in database_metadata["tables"]
@@ -111,6 +112,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "facilities_with_delay_review_flags" in database_metadata["queries"]
     assert "source_traceability_check" in database_metadata["queries"]
     assert "source_traceability_by_facility" in database_metadata["queries"]
+    assert "field_traceability_by_facility" in database_metadata["queries"]
     assert "allegation_summary_by_facility" in database_metadata["queries"]
     assert "newest_reports" in database_metadata["queries"]
     assert (
@@ -152,6 +154,16 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
         in database_metadata["tables"]["source_traceability_review"]["description"]
     )
     assert (
+        "Field-level extraction audit view"
+        in database_metadata["tables"]["field_source_traceability_review"]["description"]
+    )
+    assert (
+        "Source text"
+        in database_metadata["tables"]["field_source_traceability_review"]["columns"][
+            "source_text"
+        ]
+    )
+    assert (
         "Public source URL"
         in database_metadata["tables"]["source_traceability_review"]["columns"]["source_url"]
     )
@@ -180,6 +192,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "Find records needing closer review" in review_home_query["sql"]
     assert "Compare facilities" in review_home_query["sql"]
     assert "Verify sources" in review_home_query["sql"]
+    assert "field_source_traceability_review" in review_home_query["sql"]
     assert "Export CSVs" in review_home_query["sql"]
     assert "source URL, raw hash, connector metadata" in review_home_query["sql"]
     assert "workflow_group" in review_home_query["sql"]
@@ -255,6 +268,10 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "Missing dates are unknown" in timeline_query["description"]
     assert ":facility_number" in timeline_query["sql"]
     assert "FROM complaint_timeline_review" in timeline_query["sql"]
+    field_query = database_metadata["queries"]["field_traceability_by_facility"]
+    assert "source text, warnings" in field_query["description"]
+    assert ":facility_number" in field_query["sql"]
+    assert "FROM field_source_traceability_review" in field_query["sql"]
 
 
 def test_write_datasette_metadata_writes_json_next_to_database(tmp_path: Path) -> None:
@@ -285,6 +302,7 @@ def test_review_workflow_lines_name_first_views() -> None:
     assert any("complaint and event dates" in line for line in lines)
     assert any("screening aids only" in line for line in lines)
     assert any("source URLs, raw hashes, connector details" in line for line in lines)
+    assert any("extracted fields with audit source text" in line for line in lines)
     assert any("export complaint fields with source hashes" in line for line in lines)
     assert any("export-review-bundle.ps1" in line for line in lines)
     assert any("complaint_review_summary" in line for line in lines)
@@ -300,6 +318,8 @@ def test_review_workflow_lines_name_first_views() -> None:
     assert any("complaints_by_facility" in line for line in lines)
     assert any("complaint_review_export_with_traceability" in line for line in lines)
     assert any("source_traceability_by_facility" in line for line in lines)
+    assert any("field_source_traceability_review" in line for line in lines)
+    assert any("field_traceability_by_facility" in line for line in lines)
     assert any("newest_reports" in line for line in lines)
 
 

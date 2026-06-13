@@ -14,7 +14,7 @@ For public-record discovery, open `public_record_allegation_search` and enter a 
 
 Use the review view titles and descriptions from the metadata as the next guide. The metadata gives short contextual help for when to use each primary view or saved query, what not to conclude from it, and which source traceability fields to preserve when exporting. The metadata also labels the normalized tables for lower-level checks, but routine browsing should begin with the review home, guided complaint query, and review views.
 
-Use the printed groups as quick navigation after each sample or live fetch run: open first with `review_home`, `complaint_review_start_here`, or `complaint_first_pass_review`; use `public_record_allegation_search` for public-record discovery; use `complaint_timeline_review` for timeline review; use `delay_review_flags` for delay triage; use `source_traceability_review` for source verification; and use `complaint_review_export_with_traceability` or `export-review-bundle.ps1` for source-traceable CSV export.
+Use the printed groups as quick navigation after each sample or live fetch run: open first with `review_home`, `complaint_review_start_here`, or `complaint_first_pass_review`; use `public_record_allegation_search` for public-record discovery; use `complaint_timeline_review` for timeline review; use `delay_review_flags` for delay triage; use `source_traceability_review` and `field_source_traceability_review` for source verification; and use `complaint_review_export_with_traceability` or `export-review-bundle.ps1` for source-traceable CSV export.
 
 Open these views first:
 
@@ -24,6 +24,7 @@ Open these views first:
 4. `facility_complaint_summary` for facility-level counts and date ranges.
 5. `delay_review_flags` for records with one or more review flags.
 6. `source_traceability_review` to verify public source URL, raw hash, connector details, retrieval time, and report index.
+7. `field_source_traceability_review` to check extracted field values, source text, extraction warnings, confidence, and source document traceability together.
 
 Use normalized tables such as `complaints`, `allegations`, `source_documents`, and `extraction_audit` only when you need lower-level detail.
 
@@ -47,6 +48,8 @@ Use normalized tables such as `complaints`, `allegations`, `source_documents`, a
 
 `source_traceability_review` helps verify where each derived record came from. It includes source URL, raw SHA-256 hash, raw path, connector name, connector version, retrieval timestamp, report index, document type, and content type.
 
+`field_source_traceability_review` helps verify specific extracted fields. It combines extraction audit context with complaint context and source document traceability, including extracted value, source text, source section, warning, confidence, extraction method, extractor version, source URL, raw SHA-256 hash, connector metadata, retrieval timestamp, and report index.
+
 ## How to find concerning records
 
 Start with `delay_review_flags` when looking for records that may need closer review. Sort by `days_received_to_report` or `days_received_to_visit` descending to review larger calculated intervals first.
@@ -66,6 +69,8 @@ For high-level comparison, open `facility_complaint_summary` and sort by `compla
 ## How to inspect source documents
 
 Open `source_traceability_review` before relying on extracted complaint fields. Check that each record has a source URL, raw SHA-256 hash, connector name, connector version, retrieval timestamp, and report index when available.
+
+Open `field_source_traceability_review` or `field_traceability_by_facility` before relying on a specific extracted field. Check the source text, source section, extraction warning, confidence, extraction method, and extractor version together with the source URL and raw hash.
 
 Use `source_url` to compare against the public source. Use `raw_path` and `raw_sha256` to identify the locally preserved source content that was used for extraction.
 
@@ -108,6 +113,7 @@ The generated Datasette metadata includes saved query examples:
 - `facilities_with_delay_review_flags` ranks facilities by records with delay or review flags. Treat the counts as triage aids, not conclusions.
 - `source_traceability_check` lists source URL, raw hash, connector metadata, retrieval time, and report index.
 - `source_traceability_by_facility` filters source traceability details by facility number.
+- `field_traceability_by_facility` filters field-level extraction audit context by facility number.
 - `allegation_summary_by_facility` summarizes complaint and allegation counts by facility.
 - `newest_reports` sorts source documents by retrieval timestamp and report index.
 
