@@ -42,6 +42,14 @@ hosted relational database plus hosted reviewer application/API boundary for
 tester workflows after the remaining data model, authentication, sync, export,
 audit, retention, and implementation ADRs are accepted.
 
+ADR-0008 defines the hosted tester MVP data and review-state model boundary. It
+requires two distinct data domains: a source-derived data domain for imported or
+public-source-derived records with preserved traceability, and a
+reviewer-created state domain for review projects, review items, statuses,
+queues, annotations, proposed corrections, correction decisions, tester
+feedback, export packets, and audit events. Reviewer-created state must not
+overwrite canonical source-derived records or original extracted values.
+
 ## Components
 
 ### Connectors
@@ -92,6 +100,14 @@ raw source preservation, and extraction audit context where available. Proposed
 corrections may influence a reviewed export presentation only through an
 explicit traceable correction layer; they must not overwrite raw files or erase
 original extracted values.
+
+ADR-0008 further defines the minimum reviewer-created concepts for hosted tester
+MVP planning: review project or corpus, review item, review status, queue
+membership, assignment if applicable, annotation, field-level note, source
+verification note, proposed correction, correction decision, tester feedback,
+export packet, export packet item, and audit event. These concepts are planning
+boundaries only until future schema, import/sync, API, export, audit, and
+retention ADRs approve implementation details.
 
 ## Boundaries
 

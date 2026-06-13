@@ -111,17 +111,25 @@ Review state is reviewer/application state. It must not be stored as or treated
 as source-derived canonical data unless a future schema ADR explicitly approves
 the persistence model.
 
-Minimum review states:
+ADR-0008 defines the hosted tester MVP data and review-state model boundary. It
+requires a source-derived data domain for imported or public-source-derived
+records and a reviewer-created state domain for tester/reviewer workflow data.
+Reviewer-created state must not overwrite source-derived canonical data or
+original extracted values.
 
-- `unreviewed`: no reviewer has started the record in the hosted workflow.
+Minimum review status concepts:
+
+- `not reviewed`: no reviewer has started the record in the hosted workflow.
 - `in review`: a reviewer has started review and has not completed source
   checking or disposition.
+- `source check needed`: a reviewer or workflow has identified that source
+  traceability or field-level source context needs review.
 - `source checked`: a reviewer has checked available source traceability for the
   record.
-- `needs correction`: a reviewer has identified a likely extraction issue or
-  missing value that needs a correction proposal or review.
 - `correction proposed`: at least one correction proposal exists and is awaiting
   a decision.
+- `correction reviewed`: correction proposals for the current review context
+  have been reviewed or dispositioned.
 - `reviewed`: the reviewer has completed the current review pass without open
   correction decisions blocking use.
 - `included in export`: the record is selected for a specific export packet.
@@ -226,6 +234,9 @@ updates must define:
 
 - Where review state, annotations, correction proposals, feedback, and export
   packet decisions are persisted.
+- How the ADR-0008 source-derived and reviewer-created data domains are mapped
+  into physical schema, migrations, API contracts, UI labels, exports, tests,
+  and audit history.
 - How source traceability and extraction audit context remain available to the
   hosted reviewer application.
 - How authenticated tester access, audit history, reset/reload, and export

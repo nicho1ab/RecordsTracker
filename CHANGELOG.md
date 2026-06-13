@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added ADR-0008 defining the hosted tester MVP data and review-state model
+	boundary, separating source-derived imported records from reviewer-created
+	review state while deferring schema, migration, import/sync, authentication,
+	export, audit, retention, and scaffold decisions.
 - Added Copilot next-prompt quality governance, including prompt-mode guidance,
 	project-aware synthesis requirements, validation expectations, PR body
 	requirements, final handoff requirements, and a rule against including a next
