@@ -42,6 +42,8 @@ governance scaffold.
 - Added a source-traceable public-record allegation search saved query for
   cautious keyword discovery over source-derived allegation text, categories,
   and findings.
+- Added a source-traceable complaint timeline review view and facility-filtered
+	saved query for complaint milestone dates and extracted event dates.
 - Added a `review_home` Datasette saved query as a task-based start-here surface
 	for complaint review, delay triage, facility comparison, source verification,
 	and CSV export paths before any dashboard or custom web interface decision.

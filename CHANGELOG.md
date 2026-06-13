@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added a source-traceable `complaint_timeline_review` Datasette view and
+	`complaint_timeline_by_facility` saved query for reviewing complaint milestone
+	dates and extracted event dates without treating missing dates as proof that
+	an event did not occur.
 - Added a source-traceable `public_record_allegation_search` Datasette saved
 	query for cautious keyword discovery over source-derived allegation text,
 	categories, and findings, with local review documentation and metadata

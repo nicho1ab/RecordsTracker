@@ -104,6 +104,11 @@ def review_workflow_lines() -> list[str]:
             "- public_record_allegation_search saved query - search source-derived allegation "
             "text, categories, and findings with traceability."
         ),
+        "For timeline review:",
+        (
+            "- complaint_timeline_review view - complaint and event dates with source "
+            "traceability."
+        ),
         "For delay triage:",
         "- delay_review_flags view - records with review flags for closer review.",
         (
@@ -128,6 +133,7 @@ def review_workflow_lines() -> list[str]:
         "Other useful review paths:",
         "- complaint_review_summary view - full complaint review across facilities.",
         "- facility_complaint_summary view - facility-level counts and date range.",
+        "- complaint_timeline_by_facility saved query - filter timeline rows by facility number.",
         "- complaints_by_facility saved query - filter complaint review by facility number.",
         (
             "- facilities_with_delay_review_flags - find facilities with records needing "
@@ -253,6 +259,48 @@ def _datasette_table_metadata() -> dict[str, Any]:
                     "Complaint records with at least one delay or review flag. "
                     f"{delay_flag_caution}"
                 ),
+            },
+        },
+        "complaint_timeline_review": {
+            "title": "Complaint Timeline Review",
+            "description": (
+                "Timeline-oriented view with one row per extracted complaint milestone date "
+                "or event date. Use it to see what happened and when according to the derived "
+                "dataset while preserving source URL, raw SHA-256 hash, raw path, connector "
+                "metadata, retrieval time, report index, and IDs for source checking. Missing "
+                "dates remain absent from this view; absence does not prove the event did not "
+                "occur."
+            ),
+            "sort_desc": "timeline_date",
+            "columns": {
+                "facility_number": "Public CCLD facility number used for filtering.",
+                "facility_name": "Facility name extracted from source reports.",
+                "complaint_control_number": "Complaint control number when available.",
+                "timeline_sequence": "Stable ordering for same-date timeline items.",
+                "timeline_item_type": "Plain-language type for the date row.",
+                "timeline_source_field": "Canonical field or event type that supplied the date.",
+                "timeline_date": "Extracted date for this timeline row.",
+                "timeline_note": "Short source-aware note for the timeline row.",
+                "finding": "Normalized finding value from the complaint record.",
+                "review_delay_over_30_days": delay_flag_caution,
+                "review_delay_over_60_days": delay_flag_caution,
+                "review_delay_over_90_days": delay_flag_caution,
+                "review_delay_over_120_days": delay_flag_caution,
+                "missing_first_activity_date": (
+                    "Set when complaint received date exists but first activity date is missing."
+                ),
+                "report_date_used_as_proxy": (
+                    "Set only when report date is used as the delay review basis."
+                ),
+                "source_url": "Public source URL for checking the derived record.",
+                "raw_sha256": "SHA-256 hash for the preserved raw source file.",
+                "raw_path": "Local path to preserved raw source content.",
+                "connector_name": "Connector that retrieved and normalized the document.",
+                "connector_version": "Connector version used for extraction.",
+                "retrieved_at": "Timestamp when source content was retrieved.",
+                "report_index": "CCLD report index when available.",
+                "event_id": "Event identifier when the row comes from an extracted event.",
+                "document_id": "Source document identifier for lower-level source checks.",
             },
         },
         "delay_review_flags": {
@@ -471,6 +519,15 @@ SELECT
 UNION ALL
 SELECT
     3,
+    'Timeline review',
+    'Review what happened and when',
+    'complaint_timeline_review',
+    'Use for complaint milestone dates and extracted event dates with source traceability.',
+    'Missing dates are unknown in the derived dataset; absence does not prove ' ||
+        'an event did not occur.'
+UNION ALL
+SELECT
+    4,
     'Review flags',
     'Find records needing closer review',
     'records_with_delay_review_flags',
@@ -478,7 +535,7 @@ SELECT
     'Delay review flags are screening aids, not conclusions that an investigation was delayed.'
 UNION ALL
 SELECT
-    4,
+    5,
     'Facility comparison',
     'Compare facilities',
     'facility_complaint_summary',
@@ -488,7 +545,7 @@ SELECT
         'against source records.'
 UNION ALL
 SELECT
-    5,
+    6,
     'Source verification',
     'Verify sources',
     'source_traceability_review',
@@ -498,7 +555,7 @@ SELECT
     'The public portal remains the source of record.'
 UNION ALL
 SELECT
-    6,
+    7,
     'CSV export',
     'Export CSVs',
     'complaint_review_export_with_traceability',
@@ -626,6 +683,21 @@ SELECT *
 FROM complaint_review_summary
 WHERE facility_number = :facility_number
 ORDER BY complaint_received_date DESC, report_date DESC
+            """.strip(),
+        },
+        "complaint_timeline_by_facility": {
+            "title": "Complaint Timeline by Facility",
+            "description": (
+                "Filter complaint timeline rows by public facility number. Use to review "
+                "complaint milestone dates and extracted event dates for one facility while "
+                "keeping source traceability visible. Missing dates are unknown in the derived "
+                "dataset and should be checked against the public source when important."
+            ),
+            "sql": """
+SELECT *
+FROM complaint_timeline_review
+WHERE facility_number = :facility_number
+ORDER BY timeline_date DESC, timeline_sequence, complaint_control_number
             """.strip(),
         },
         "complaint_review_export_with_traceability": {

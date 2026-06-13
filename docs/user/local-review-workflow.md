@@ -14,15 +14,16 @@ For public-record discovery, open `public_record_allegation_search` and enter a 
 
 Use the review view titles and descriptions from the metadata as the next guide. The metadata gives short contextual help for when to use each primary view or saved query, what not to conclude from it, and which source traceability fields to preserve when exporting. The metadata also labels the normalized tables for lower-level checks, but routine browsing should begin with the review home, guided complaint query, and review views.
 
-Use the printed groups as quick navigation after each sample or live fetch run: open first with `review_home`, `complaint_review_start_here`, or `complaint_first_pass_review`; use `delay_review_flags` for delay triage; use `source_traceability_review` for source verification; and use `complaint_review_export_with_traceability` or `export-review-bundle.ps1` for source-traceable CSV export.
+Use the printed groups as quick navigation after each sample or live fetch run: open first with `review_home`, `complaint_review_start_here`, or `complaint_first_pass_review`; use `public_record_allegation_search` for public-record discovery; use `complaint_timeline_review` for timeline review; use `delay_review_flags` for delay triage; use `source_traceability_review` for source verification; and use `complaint_review_export_with_traceability` or `export-review-bundle.ps1` for source-traceable CSV export.
 
 Open these views first:
 
 1. `complaint_first_pass_review` for low-noise first-pass complaint review.
-2. `complaint_review_summary` for the fuller complaint review across facilities.
-3. `facility_complaint_summary` for facility-level counts and date ranges.
-4. `delay_review_flags` for records with one or more review flags.
-5. `source_traceability_review` to verify public source URL, raw hash, connector details, retrieval time, and report index.
+2. `complaint_timeline_review` for complaint milestone dates and extracted event dates with source traceability.
+3. `complaint_review_summary` for the fuller complaint review across facilities.
+4. `facility_complaint_summary` for facility-level counts and date ranges.
+5. `delay_review_flags` for records with one or more review flags.
+6. `source_traceability_review` to verify public source URL, raw hash, connector details, retrieval time, and report index.
 
 Use normalized tables such as `complaints`, `allegations`, `source_documents`, and `extraction_audit` only when you need lower-level detail.
 
@@ -33,6 +34,8 @@ Use normalized tables such as `complaints`, `allegations`, `source_documents`, a
 `complaint_review_start_here` is a saved query for guided complaint review with source traceability. Use it before narrowing to filters or exports.
 
 `public_record_allegation_search` is a saved query for keyword discovery over source-derived allegation text, allegation categories, and findings. Use it to find records for closer public-source review while preserving source traceability. Do not treat a search match as proof of harm, liability, rights deprivation, abuse, neglect, or any legal element.
+
+`complaint_timeline_review` is a view with one row per extracted complaint milestone date or event date. Use it to see complaint received, first investigation activity when available, visit, report, signature, and extracted event dates in one source-traceable sequence. Missing dates are unknown in the derived dataset; absence from this view does not prove an event did not occur.
 
 `complaint_first_pass_review` is the low-noise first-pass complaint view. It keeps facility details, complaint dates, finding, allegation count and summary, one plain-language review flag summary, source URL, raw SHA-256 hash, raw path, connector metadata, retrieval time, report index, and IDs for lower-level follow-up. It intentionally hides detailed delay calculations, separate flag columns, and extraction confidence from the first screen.
 
@@ -97,6 +100,7 @@ The generated Datasette metadata includes saved query examples:
 
 - `review_home` gives one start-here task menu for review complaints, find records needing closer review, compare facilities, verify sources, and export CSVs.
 - `public_record_allegation_search` searches source-derived allegation text, allegation categories, and findings by keyword or phrase while keeping source traceability visible.
+- `complaint_timeline_by_facility` filters timeline rows by facility number so reviewers can inspect complaint milestone dates and extracted event dates with source traceability.
 - `complaint_review_start_here` opens a low-noise review-ready complaint list with facility context, one review flag summary, source URL, raw SHA-256 hash, raw path, connector metadata, retrieval time, report index, and lower-level IDs.
 - `complaints_by_facility` filters `complaint_review_summary` by facility number and prompts for the facility number.
 - `complaint_review_export_with_traceability` exports complaint review fields with source URL, raw hash, raw path, connector metadata, retrieval time, and report index.
