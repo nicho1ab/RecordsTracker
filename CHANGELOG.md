@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Hardened CCLD report date extraction for source layouts that use a
+	`Report Date :` spaced-colon label variant, with fixture-backed regression
+	coverage.
 - Hardened CCLD allegation extraction for source layouts that use an
 	`ALLEGATION(S) -` section heading variant, with fixture-backed regression
 	coverage.
