@@ -99,7 +99,7 @@ To export the standard local review bundle without opening Datasette, run:
 .\scripts\export-review-bundle.ps1
 ```
 
-This writes complaint review, delay triage, source traceability, complaint timeline, field source traceability, and facility pattern CSV files under `data/processed/review-bundle` by default. The CSV files preserve source URL, raw SHA-256 hash, raw path, connector metadata, retrieval timestamp, and report index where available. Unknown database values are exported as `unknown`.
+This writes complaint review, delay triage, source traceability, multi-facility source traceability, complaint timeline, field source traceability, facility pattern, and facility comparison CSV files under `data/processed/review-bundle` by default. The CSV files preserve source URL, raw SHA-256 hash, raw path, connector metadata, retrieval timestamp, and report index where available. Unknown database values are exported as `unknown`.
 
 For low-noise first-pass complaint exports, start with `complaint_first_pass_review`. For detailed complaint review exports, use `complaint_review_summary` or `complaint_review_export_with_traceability`. For source checks, export `source_traceability_review`. For delay triage, export `delay_review_flags` and label the file or notes as a triage list, not a list of delayed investigations.
 

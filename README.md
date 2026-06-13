@@ -18,8 +18,8 @@ proof of concept.
    extraction audit records in SQLite.
 - Presents review views and saved query examples in Datasette for browsing,
    filtering, source checking, and CSV export.
-- Exports a local review bundle with complaint review, delay triage, and source
-   traceability CSV files.
+- Exports a local review bundle with complaint review, delay triage, source
+   traceability, multi-facility traceability, and comparison CSV files.
 - Preserves source traceability through source URL, raw SHA-256 hash, raw path,
    connector name, connector version, retrieval timestamp, and report index when
    available.
@@ -89,8 +89,9 @@ To export source-traceable CSV review outputs after populating the database:
 ```
 
 The review bundle writes complaint review, delay triage, source traceability,
-complaint timeline, field traceability, and facility pattern CSV files plus a
-README with cautious public-record review notes.
+multi-facility source traceability, complaint timeline, field traceability,
+facility pattern, and facility comparison CSV files plus a README with cautious
+public-record review notes.
 
 ## Documentation
 

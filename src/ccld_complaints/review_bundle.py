@@ -84,6 +84,12 @@ FROM source_traceability_review
 ORDER BY facility_number, report_index DESC, retrieved_at DESC
 """.strip()
 
+MULTI_FACILITY_SOURCE_TRACEABILITY_EXPORT_SQL = """
+SELECT *
+FROM multi_facility_source_traceability_review
+ORDER BY facility_number, retrieved_at DESC, report_index DESC
+""".strip()
+
 COMPLAINT_TIMELINE_EXPORT_SQL = """
 SELECT *
 FROM complaint_timeline_review
@@ -102,13 +108,29 @@ FROM facility_pattern_review
 ORDER BY records_with_review_flags DESC, complaint_count DESC, facility_number
 """.strip()
 
+FACILITY_COMPARISON_EXPORT_SQL = """
+SELECT *
+FROM facility_comparison_review
+ORDER BY facilities_with_same_category_finding DESC,
+         source_document_count DESC,
+         records_with_review_flags DESC,
+         allegation_category,
+         finding,
+         facility_number
+""".strip()
+
 EXPORTS: tuple[tuple[str, str], ...] = (
     ("complaint_review_with_source_traceability.csv", COMPLAINT_REVIEW_EXPORT_SQL),
     ("delay_review_flags_with_source_traceability.csv", DELAY_REVIEW_EXPORT_SQL),
     ("source_traceability.csv", SOURCE_TRACEABILITY_EXPORT_SQL),
+    (
+        "multi_facility_source_traceability.csv",
+        MULTI_FACILITY_SOURCE_TRACEABILITY_EXPORT_SQL,
+    ),
     ("complaint_timeline_with_source_traceability.csv", COMPLAINT_TIMELINE_EXPORT_SQL),
     ("field_source_traceability.csv", FIELD_TRACEABILITY_EXPORT_SQL),
     ("facility_pattern_review.csv", FACILITY_PATTERN_EXPORT_SQL),
+    ("facility_comparison_review.csv", FACILITY_COMPARISON_EXPORT_SQL),
 )
 
 
@@ -192,6 +214,11 @@ def _bundle_readme() -> str:
             "content type."
         ),
         (
+            "- multi_facility_source_traceability.csv: one row per source document with "
+            "facility context, traceability status, source metadata, and linked derived-record "
+            "counts."
+        ),
+        (
             "- complaint_timeline_with_source_traceability.csv: complaint milestone dates "
             "and extracted event dates with source traceability. Missing dates are unknown "
             "in the derived dataset."
@@ -205,6 +232,11 @@ def _bundle_readme() -> str:
             "- facility_pattern_review.csv: facility-level complaint counts, source document "
             "counts, allegation categories, finding mix, missingness, report-date proxy usage, "
             "review flag counts, and date ranges."
+        ),
+        (
+            "- facility_comparison_review.csv: facility/category/finding rows with "
+            "source-document counts, traceability-completeness counts, same-category/finding "
+            "facility counts, and cautious scope notes."
         ),
         "",
         "## Review Notes",
@@ -222,6 +254,11 @@ def _bundle_readme() -> str:
         (
             "- Facility pattern counts and timeline rows are screening aids over the derived "
             "dataset, not findings about a facility or proof that an event did or did not occur."
+        ),
+        (
+            "- Multi-facility traceability and comparison rows are source-review aids over "
+            "the derived dataset, not conclusions about facilities, public-source completeness, "
+            "or facility-wide conduct."
         ),
         (
             "- Field traceability rows are provided so reviewers can check extracted values "

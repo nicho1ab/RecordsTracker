@@ -68,8 +68,9 @@ governance scaffold.
 	when to use each item, what not to conclude, and what source traceability to
 	preserve when exporting.
 - Added a local review bundle export workflow for source-traceable complaint
-	review, delay triage, source traceability, complaint timeline, field
-  traceability, and facility pattern CSV files.
+	review, delay triage, source traceability, multi-facility source traceability,
+	complaint timeline, field traceability, facility pattern, and facility
+	comparison CSV files.
 - Grouped sample and live fetch script next steps by reviewer task, including
 	what to open first, delay triage, source verification, and CSV export.
 - Added data quality coverage that verifies derived complaint, allegation,
