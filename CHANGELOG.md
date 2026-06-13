@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added minimum production-discovery requirements for the future hosted primary
+	reviewer application, including hosted reviewer workflows, review-state
+	boundaries, annotation and correction constraints, tester readiness, and
+	source-traceable export packet expectations.
 - Added Datasette exit governance for the production-discovery phase: Datasette
 	is retained for validation, inspection, debugging, local exploration, and
 	export support, while future primary reviewer UX work moves to requirements

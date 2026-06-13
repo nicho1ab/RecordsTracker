@@ -30,6 +30,13 @@ End users need plain-language instructions for browsing, searching, filtering, u
 - `docs/user/exporting-data.md`
 - `docs/user/known-limitations.md`
 
+## Required production-discovery docs
+
+- `PRODUCTION_DISCOVERY_REQUIREMENTS.md`
+
+Future hosted primary reviewer application work must keep this requirements
+document current until ADRs and implementation docs supersede specific sections.
+
 ## Update rules
 
 - If user-visible behavior changes, update user docs.
@@ -39,6 +46,9 @@ End users need plain-language instructions for browsing, searching, filtering, u
 - If accessibility behavior changes, update accessibility docs and test notes.
 - If milestones, implemented capabilities, workflow scope, or deferred work
 	changes, update `ROADMAP.md`.
+- If hosted reviewer requirements, review-state boundaries, annotation or
+  correction boundaries, tester-readiness expectations, or future primary review
+  workflow scope changes, update `PRODUCTION_DISCOVERY_REQUIREMENTS.md`.
 - If implemented capabilities or user-visible workflows change, update
 	`CHANGELOG.md` under Unreleased.
 

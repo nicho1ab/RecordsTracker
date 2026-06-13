@@ -28,6 +28,13 @@ Validate internal consistency, including required fields, valid date order, allo
 
 Validate that required documentation files exist and that data dictionary/schema updates are present when schema files change.
 
+Production-discovery requirements changes must run documentation validation and
+affected documentation-check tests. Hosted tester MVP implementation must add
+validation for review-state separation, annotation and correction traceability,
+source-traceable export packet behavior, accessibility expectations,
+authentication and access governance, feedback collection, and reset/reload
+behavior at the level of the implemented change.
+
 ### Fixture hash and line-ending tests
 
 Raw fixtures with expected SHA-256 hashes must use the line endings required by `.gitattributes`. Expected fixture hashes must match Git-normalized bytes, not platform-specific working-tree bytes. When adding or changing raw fixtures that appear in expected JSON, verify line endings and hashes before committing.
@@ -62,6 +69,7 @@ Use focused validation such as:
 - Data contract or schema changes: schema validation, init or migration SQL tests, persistence tests, and affected data dictionary checks.
 - Datasette, view, or export changes: affected SQL, view, export, metadata, and documentation checks.
 - Documentation-only changes: documentation validation and link or reference checks.
+- Production-discovery requirements changes: documentation validation and affected documentation-check tests.
 - Security or privacy changes: security checks and any affected tests.
 - Accessibility-facing changes: documentation, export, view, or presentation accessibility checks.
 
