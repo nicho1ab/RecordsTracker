@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Hardened CCLD finding extraction for source layouts where normalized finding
+	values include trailing punctuation, with fixture-backed regression coverage.
 - Hardened CCLD allegation extraction for source layouts that use allegation
 	section headings without a trailing colon, with fixture-backed regression
 	coverage.
