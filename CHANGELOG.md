@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added a source-traceable `public_record_allegation_search` Datasette saved
+	query for cautious keyword discovery over source-derived allegation text,
+	categories, and findings, with local review documentation and metadata
+	coverage.
 - Hardened CCLD facility name extraction for source layouts that use a
   `FACILITY NAME;` semicolon label variant, with fixture-backed regression
   coverage.

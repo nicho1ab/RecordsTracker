@@ -5,16 +5,19 @@ For a step-by-step reviewer workflow, start with [Local Review Workflow](local-r
 ## Suggested review steps
 
 1. Open the `review_home` saved query first for the task-based local review paths.
-2. Open `complaint_review_start_here` or `complaint_first_pass_review` for the guided low-noise complaint list with source traceability.
-3. Open the `complaint_review_summary` view when you need detailed delay calculations, separate review flag columns, extraction confidence, or broader complaint review context.
-4. Open the `facility_complaint_summary` view to compare complaint counts, allegation counts, complaint date range, and delay review flag counts by facility.
-5. Open the `delay_review_flags` view to triage records with one or more delay or review flags.
-6. Open the `source_traceability_review` view to confirm source URL, raw file hash, raw path, connector name, connector version, retrieval time, and report index.
-7. Open the normalized `facilities`, `source_documents`, `complaints`, `allegations`, `events`, and `extraction_audit` tables when you need lower-level detail, source text, confidence, or extraction warnings.
-8. Start with records flagged as low confidence when confidence fields are available.
-9. Note any extraction issue for correction.
+2. Open `public_record_allegation_search` when you need cautious keyword discovery over source-derived allegation text, allegation categories, and findings with source traceability visible.
+3. Open `complaint_review_start_here` or `complaint_first_pass_review` for the guided low-noise complaint list with source traceability.
+4. Open the `complaint_review_summary` view when you need detailed delay calculations, separate review flag columns, extraction confidence, or broader complaint review context.
+5. Open the `facility_complaint_summary` view to compare complaint counts, allegation counts, complaint date range, and delay review flag counts by facility.
+6. Open the `delay_review_flags` view to triage records with one or more delay or review flags.
+7. Open the `source_traceability_review` view to confirm source URL, raw file hash, raw path, connector name, connector version, retrieval time, and report index.
+8. Open the normalized `facilities`, `source_documents`, `complaints`, `allegations`, `events`, and `extraction_audit` tables when you need lower-level detail, source text, confidence, or extraction warnings.
+9. Start with records flagged as low confidence when confidence fields are available.
+10. Note any extraction issue for correction.
 
 The local database is a derived review aid. The public portal remains the source of record, and source reports may be incomplete, corrected later, removed, or formatted differently across time.
+
+Search matches from `public_record_allegation_search` are screening aids over the derived dataset. They do not prove harm, liability, rights deprivation, abuse, neglect, or any legal element. Verify important details against the public source before relying on them.
 
 ## Delay fields
 

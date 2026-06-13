@@ -101,6 +101,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "events" in database_metadata["tables"]
     assert "extraction_audit" in database_metadata["tables"]
     assert "review_home" in database_metadata["queries"]
+    assert "public_record_allegation_search" in database_metadata["queries"]
     assert "complaint_review_start_here" in database_metadata["queries"]
     assert "complaints_by_facility" in database_metadata["queries"]
     assert "complaint_review_export_with_traceability" in database_metadata["queries"]
@@ -162,6 +163,8 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "Open this first" in review_home_query["description"]
     assert "Review complaints" in review_home_query["sql"]
     assert "complaint_first_pass_review" in review_home_query["sql"]
+    assert "Search allegation text" in review_home_query["sql"]
+    assert "public_record_allegation_search" in review_home_query["sql"]
     assert "Find records needing closer review" in review_home_query["sql"]
     assert "Compare facilities" in review_home_query["sql"]
     assert "Verify sources" in review_home_query["sql"]
@@ -170,9 +173,10 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "workflow_group" in review_home_query["sql"]
     with sqlite3.connect(":memory:") as conn:
         review_home_rows = conn.execute(review_home_query["sql"]).fetchall()
-    assert len(review_home_rows) == 5
+    assert len(review_home_rows) == 6
     assert [row[1] for row in review_home_rows] == [
         "Complaint review",
+        "Public-record discovery",
         "Review flags",
         "Facility comparison",
         "Source verification",
@@ -180,11 +184,19 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     ]
     assert [row[2] for row in review_home_rows] == [
         "Review complaints",
+        "Search allegation text",
         "Find records needing closer review",
         "Compare facilities",
         "Verify sources",
         "Export CSVs",
     ]
+    allegation_search_query = database_metadata["queries"]["public_record_allegation_search"]
+    assert "Search source-derived allegation text" in allegation_search_query["description"]
+    assert "not as a legal conclusion" in allegation_search_query["description"]
+    assert ":search_term" in allegation_search_query["sql"]
+    assert "raw_sha256" in allegation_search_query["sql"]
+    assert "matched_fields" in allegation_search_query["sql"]
+    assert "allegation_text" in allegation_search_query["sql"]
     start_here_query = database_metadata["queries"]["complaint_review_start_here"]
     assert "Open this first" in start_here_query["description"]
     assert "guided first-pass review" in start_here_query["description"]
@@ -243,12 +255,14 @@ def test_review_workflow_lines_name_first_views() -> None:
     assert "Next review steps:" in lines
     assert "Open first:" in lines
     assert "For delay triage:" in lines
+    assert "For public-record discovery:" in lines
     assert "For source verification:" in lines
     assert "For CSV export:" in lines
     assert "Other useful review paths:" in lines
     assert any("start-here task menu" in line for line in lines)
     assert any("guided complaint review with source traceability" in line for line in lines)
     assert any("records with review flags for closer review" in line for line in lines)
+    assert any("source-derived allegation text" in line for line in lines)
     assert any("screening aids only" in line for line in lines)
     assert any("source URLs, raw hashes, connector details" in line for line in lines)
     assert any("export complaint fields with source hashes" in line for line in lines)
@@ -260,10 +274,37 @@ def test_review_workflow_lines_name_first_views() -> None:
     assert any("source_traceability_review" in line for line in lines)
     assert any("review_home" in line for line in lines)
     assert any("complaint_review_start_here" in line for line in lines)
+    assert any("public_record_allegation_search" in line for line in lines)
     assert any("complaints_by_facility" in line for line in lines)
     assert any("complaint_review_export_with_traceability" in line for line in lines)
     assert any("source_traceability_by_facility" in line for line in lines)
     assert any("newest_reports" in line for line in lines)
+
+
+def test_public_record_allegation_search_returns_traceable_matches(tmp_path: Path) -> None:
+    db_path = tmp_path / "ccld.sqlite"
+    populate_sample_database(db_path)
+    query_sql = datasette_metadata(db_path)["databases"][db_path.stem]["queries"][
+        "public_record_allegation_search"
+    ]["sql"]
+
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(query_sql, {"search_term": "supervision"}).fetchall()
+
+    assert len(rows) == 1
+    row = dict(rows[0])
+    assert row["facility_number"] == "157806098"
+    assert row["allegation_text"] == (
+        "Facility staff do not provide adequate supervision to the facility clients"
+    )
+    assert row["matched_fields"] == "allegation text"
+    assert row["source_url"].startswith("https://www.ccld.dss.ca.gov/")
+    assert row["raw_sha256"]
+    assert row["connector_name"] == "ccld_facility_reports"
+    assert row["connector_version"] == "0.1.0"
+    assert row["retrieved_at"] == "2026-06-10T00:00:00+00:00"
+    assert row["report_index"] == 3
 
 
 def _row_count(db_path: Path, table_name: str) -> int:

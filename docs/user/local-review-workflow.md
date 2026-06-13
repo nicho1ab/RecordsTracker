@@ -10,6 +10,8 @@ On the Datasette database page, open the `review_home` saved query first. It giv
 
 Then open `complaint_review_start_here` or `complaint_first_pass_review` for a low-noise complaint list that preserves facility context, a single review flag summary, source URL, raw SHA-256 hash, raw path, connector metadata, retrieval time, report index, and lower-level IDs for follow-up.
 
+For public-record discovery, open `public_record_allegation_search` and enter a cautious keyword or phrase. The saved query searches source-derived allegation text, allegation categories, and findings while keeping complaint dates, review flags, source URL, raw SHA-256 hash, raw path, connector metadata, retrieval time, report index, and lower-level IDs visible. Treat results as screening aids over the derived dataset, not as legal conclusions or a complete public portal search.
+
 Use the review view titles and descriptions from the metadata as the next guide. The metadata gives short contextual help for when to use each primary view or saved query, what not to conclude from it, and which source traceability fields to preserve when exporting. The metadata also labels the normalized tables for lower-level checks, but routine browsing should begin with the review home, guided complaint query, and review views.
 
 Use the printed groups as quick navigation after each sample or live fetch run: open first with `review_home`, `complaint_review_start_here`, or `complaint_first_pass_review`; use `delay_review_flags` for delay triage; use `source_traceability_review` for source verification; and use `complaint_review_export_with_traceability` or `export-review-bundle.ps1` for source-traceable CSV export.
@@ -29,6 +31,8 @@ Use normalized tables such as `complaints`, `allegations`, `source_documents`, a
 `review_home` is a saved query that acts as the local start-here surface. Each row names a workflow group, reviewer task, the view or saved query to open next, when to use it, and the caution language to preserve.
 
 `complaint_review_start_here` is a saved query for guided complaint review with source traceability. Use it before narrowing to filters or exports.
+
+`public_record_allegation_search` is a saved query for keyword discovery over source-derived allegation text, allegation categories, and findings. Use it to find records for closer public-source review while preserving source traceability. Do not treat a search match as proof of harm, liability, rights deprivation, abuse, neglect, or any legal element.
 
 `complaint_first_pass_review` is the low-noise first-pass complaint view. It keeps facility details, complaint dates, finding, allegation count and summary, one plain-language review flag summary, source URL, raw SHA-256 hash, raw path, connector metadata, retrieval time, report index, and IDs for lower-level follow-up. It intentionally hides detailed delay calculations, separate flag columns, and extraction confidence from the first screen.
 
@@ -92,6 +96,7 @@ For accessible CSV review:
 The generated Datasette metadata includes saved query examples:
 
 - `review_home` gives one start-here task menu for review complaints, find records needing closer review, compare facilities, verify sources, and export CSVs.
+- `public_record_allegation_search` searches source-derived allegation text, allegation categories, and findings by keyword or phrase while keeping source traceability visible.
 - `complaint_review_start_here` opens a low-noise review-ready complaint list with facility context, one review flag summary, source URL, raw SHA-256 hash, raw path, connector metadata, retrieval time, report index, and lower-level IDs.
 - `complaints_by_facility` filters `complaint_review_summary` by facility number and prompts for the facility number.
 - `complaint_review_export_with_traceability` exports complaint review fields with source URL, raw hash, raw path, connector metadata, retrieval time, and report index.

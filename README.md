@@ -50,7 +50,9 @@ After setup, populate a sample database:
 The script prints the SQLite database path, the generated Datasette metadata
 path, the Datasette command to open, and grouped next steps. Start with
 `review_home`, `complaint_review_start_here`, or `complaint_first_pass_review`;
-use `delay_review_flags` for delay triage; use `source_traceability_review` for
+use `public_record_allegation_search` for cautious keyword discovery over
+source-derived allegation text, categories, and findings; use
+`delay_review_flags` for delay triage; use `source_traceability_review` for
 source verification; and use `complaint_review_export_with_traceability` or
 `export-review-bundle.ps1` for source-traceable CSV export.
 
