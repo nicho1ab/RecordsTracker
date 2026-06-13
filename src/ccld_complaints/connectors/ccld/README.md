@@ -56,7 +56,7 @@ The extractor reads the public FacilityReports HTML response, preserves the raw 
 - Report type, report date, date signed, and visit date
 - Complaint received date and complaint control number
 - Allegation text, including allegation and investigation finding heading variants and lowercase continuation lines in wrapped layouts
-- Normalized finding, including explicit `Finding:` labels, split `Finding` label/value layouts, and source punctuation variants
+- Normalized finding, including explicit `Finding:` labels, `Finding -` inline labels, split `Finding` label/value layouts, and source punctuation variants
 - Deterministic delay metrics for received-to-visit, received-to-report, and report-to-signed dates when both dates are available
 - Review delay flags for records that may need closer review
 

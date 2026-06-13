@@ -68,6 +68,8 @@ governance scaffold.
 	report layouts that use an `ALLEGATIONS` section heading.
 - Added fixture-backed punctuated finding extraction hardening for CCLD report
 	layouts where a normalized finding value includes trailing punctuation.
+- Added fixture-backed dashed finding label extraction hardening for CCLD report
+	layouts where an inline `Finding -` label precedes the normalized finding.
 
 ## Completed governance and review experience improvements
 

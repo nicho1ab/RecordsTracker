@@ -44,6 +44,9 @@ ALLEGATION_HEADING_NO_COLON_FIXTURE_URL = (
 PUNCTUATED_FINDING_FIXTURE_URL = (
     "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=49"
 )
+DASHED_FINDING_LABEL_FIXTURE_URL = (
+    "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=50"
+)
 RAW_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_inx3.html")
 NUMBERED_ALLEGATIONS_RAW_FIXTURE = Path(
     "tests/fixtures/ccld/raw/157806098_inx40_numbered_allegations.html"
@@ -74,6 +77,9 @@ ALLEGATION_HEADING_NO_COLON_RAW_FIXTURE = Path(
 )
 PUNCTUATED_FINDING_RAW_FIXTURE = Path(
     "tests/fixtures/ccld/raw/157806098_inx49_punctuated_finding.html"
+)
+DASHED_FINDING_LABEL_RAW_FIXTURE = Path(
+    "tests/fixtures/ccld/raw/157806098_inx50_dashed_finding_label.html"
 )
 RAW_DETAIL_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_facility_detail.html")
 EXPECTED_FIXTURE = Path("tests/fixtures/ccld/expected/157806098_inx3.json")
@@ -107,6 +113,9 @@ ALLEGATION_HEADING_NO_COLON_EXPECTED_FIXTURE = Path(
 PUNCTUATED_FINDING_EXPECTED_FIXTURE = Path(
     "tests/fixtures/ccld/expected/157806098_inx49_punctuated_finding.json"
 )
+DASHED_FINDING_LABEL_EXPECTED_FIXTURE = Path(
+    "tests/fixtures/ccld/expected/157806098_inx50_dashed_finding_label.json"
+)
 RETRIEVED_AT = "2026-06-10T00:00:00+00:00"
 NUMBERED_ALLEGATIONS_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 INLINE_RECEIVED_DATE_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
@@ -118,6 +127,7 @@ ALLEGATION_HEADING_VARIANT_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 INVESTIGATION_FINDING_HEADING_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 ALLEGATION_HEADING_NO_COLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 PUNCTUATED_FINDING_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
+DASHED_FINDING_LABEL_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 
 
 def test_ccld_facility_detail_discovers_report_candidates_from_fixture() -> None:
@@ -304,6 +314,14 @@ def test_ccld_facility_report_extracts_punctuated_finding_value() -> None:
     connector = CcldFacilityReportsConnector()
     normalized = connector.normalize(_extract_punctuated_finding_fixture())
     expected = json.loads(PUNCTUATED_FINDING_EXPECTED_FIXTURE.read_text(encoding="utf-8"))
+
+    assert _without_audit(normalized) == expected
+
+
+def test_ccld_facility_report_extracts_dashed_finding_label() -> None:
+    connector = CcldFacilityReportsConnector()
+    normalized = connector.normalize(_extract_dashed_finding_label_fixture())
+    expected = json.loads(DASHED_FINDING_LABEL_EXPECTED_FIXTURE.read_text(encoding="utf-8"))
 
     assert _without_audit(normalized) == expected
 
@@ -555,6 +573,18 @@ def _extract_punctuated_finding_fixture() -> dict[str, object]:
         raw_path=PUNCTUATED_FINDING_RAW_FIXTURE,
         raw_sha256=sha256_bytes(raw_content),
         retrieved_at=PUNCTUATED_FINDING_RETRIEVED_AT,
+        content_type="text/html",
+    )
+    return CcldFacilityReportsConnector().extract(document)
+
+
+def _extract_dashed_finding_label_fixture() -> dict[str, object]:
+    raw_content = DASHED_FINDING_LABEL_RAW_FIXTURE.read_bytes()
+    document = SourceDocument(
+        source_url=DASHED_FINDING_LABEL_FIXTURE_URL,
+        raw_path=DASHED_FINDING_LABEL_RAW_FIXTURE,
+        raw_sha256=sha256_bytes(raw_content),
+        retrieved_at=DASHED_FINDING_LABEL_RETRIEVED_AT,
         content_type="text/html",
     )
     return CcldFacilityReportsConnector().extract(document)
