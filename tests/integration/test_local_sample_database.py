@@ -167,9 +167,24 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "Verify sources" in review_home_query["sql"]
     assert "Export CSVs" in review_home_query["sql"]
     assert "source URL, raw hash, connector metadata" in review_home_query["sql"]
+    assert "workflow_group" in review_home_query["sql"]
     with sqlite3.connect(":memory:") as conn:
         review_home_rows = conn.execute(review_home_query["sql"]).fetchall()
     assert len(review_home_rows) == 5
+    assert [row[1] for row in review_home_rows] == [
+        "Complaint review",
+        "Review flags",
+        "Facility comparison",
+        "Source verification",
+        "CSV export",
+    ]
+    assert [row[2] for row in review_home_rows] == [
+        "Review complaints",
+        "Find records needing closer review",
+        "Compare facilities",
+        "Verify sources",
+        "Export CSVs",
+    ]
     start_here_query = database_metadata["queries"]["complaint_review_start_here"]
     assert "Open this first" in start_here_query["description"]
     assert "guided first-pass review" in start_here_query["description"]
