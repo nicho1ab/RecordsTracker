@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Hardened CCLD complaint received date extraction for source layouts where
+	punctuation separates the narrative received-date phrase from the date value,
+	with fixture-backed regression coverage.
 - Hardened CCLD allegation extraction for source layouts that use an
 	`INVESTIGATION FINDINGS` section heading without a trailing colon, with
 	fixture-backed regression coverage.

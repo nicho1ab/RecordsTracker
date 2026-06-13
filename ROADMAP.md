@@ -93,6 +93,9 @@ governance scaffold.
 - Added fixture-backed no-colon investigation findings heading extraction
 	hardening for CCLD report layouts that use an `INVESTIGATION FINDINGS`
 	section heading.
+- Added fixture-backed punctuated complaint received date phrase hardening for
+	CCLD report layouts where punctuation separates the narrative phrase from the
+	received date value.
 
 ## Completed governance and review experience improvements
 
