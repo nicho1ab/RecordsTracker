@@ -14,7 +14,9 @@ For public-record discovery, open `public_record_allegation_search` and enter a 
 
 Use the review view titles and descriptions from the metadata as the next guide. The metadata gives short contextual help for when to use each primary view or saved query, what not to conclude from it, and which source traceability fields to preserve when exporting. The metadata also labels the normalized tables for lower-level checks, but routine browsing should begin with the review home, guided complaint query, and review views.
 
-Use the printed groups as quick navigation after each sample or live fetch run: open first with `review_home`, `complaint_review_start_here`, or `complaint_first_pass_review`; use `public_record_allegation_search` for public-record discovery; use `complaint_timeline_review` for timeline review; use `delay_review_flags` for delay triage; use `source_traceability_review` and `field_source_traceability_review` for source verification; and use `complaint_review_export_with_traceability` or `export-review-bundle.ps1` for source-traceable CSV export.
+Use the printed groups as quick navigation after each sample or live fetch run: open first with `review_home`, `complaint_review_start_here`, or `complaint_first_pass_review`; use `public_record_allegation_search` for public-record discovery; use `complaint_timeline_review` for timeline review; use `delay_review_flags` for delay triage; use `source_traceability_review`, `multi_facility_source_traceability_review`, and `field_source_traceability_review` for source verification; and use `complaint_review_export_with_traceability` or `export-review-bundle.ps1` for source-traceable CSV export.
+
+For multi-facility source verification, open `multi_facility_source_traceability_review`. It shows one row per source document with facility context, traceability status, source URL, raw SHA-256 hash, raw path, connector metadata, retrieval timestamp, report index, and counts of linked complaints, allegations, events, and extraction audit rows. Use the counts to find records for source checking, not as conclusions about any facility or public source record.
 
 Open these views first:
 
@@ -25,7 +27,8 @@ Open these views first:
 5. `facility_pattern_review` for facility-level finding mix, allegation categories, missing dates, report-date proxy usage, and review flag counts.
 6. `delay_review_flags` for records with one or more review flags.
 7. `source_traceability_review` to verify public source URL, raw hash, connector details, retrieval time, and report index.
-8. `field_source_traceability_review` to check extracted field values, source text, extraction warnings, confidence, and source document traceability together.
+8. `multi_facility_source_traceability_review` to compare source traceability status and linked derived-record counts across facilities.
+9. `field_source_traceability_review` to check extracted field values, source text, extraction warnings, confidence, and source document traceability together.
 
 Use normalized tables such as `complaints`, `allegations`, `source_documents`, and `extraction_audit` only when you need lower-level detail.
 
@@ -51,6 +54,8 @@ Use normalized tables such as `complaints`, `allegations`, `source_documents`, a
 
 `source_traceability_review` helps verify where each derived record came from. It includes source URL, raw SHA-256 hash, raw path, connector name, connector version, retrieval timestamp, report index, document type, and content type.
 
+`multi_facility_source_traceability_review` helps verify source coverage across a multi-facility derived dataset. It adds traceability status and linked complaint, allegation, event, and extraction audit counts for each source document. Counts are source-checking aids only; they do not prove the public portal is complete or that a facility has or lacks a pattern.
+
 `field_source_traceability_review` helps verify specific extracted fields. It combines extraction audit context with complaint context and source document traceability, including extracted value, source text, source section, warning, confidence, extraction method, extractor version, source URL, raw SHA-256 hash, connector metadata, retrieval timestamp, and report index.
 
 ## How to find concerning records
@@ -72,6 +77,8 @@ For high-level comparison, open `facility_complaint_summary` or `facility_patter
 ## How to inspect source documents
 
 Open `source_traceability_review` before relying on extracted complaint fields. Check that each record has a source URL, raw SHA-256 hash, connector name, connector version, retrieval timestamp, and report index when available.
+
+Open `multi_facility_source_traceability_review` before comparing multiple facilities. Check `traceability_status`, `complaint_count`, `allegation_count`, `event_count`, and `extraction_audit_field_count` alongside source URL, raw hash, connector metadata, retrieval timestamp, report index, and document type.
 
 Open `field_source_traceability_review` or `field_traceability_by_facility` before relying on a specific extracted field. Check the source text, source section, extraction warning, confidence, extraction method, and extractor version together with the source URL and raw hash.
 
@@ -117,6 +124,7 @@ The generated Datasette metadata includes saved query examples:
 - `facility_patterns_with_review_flags` ranks facilities with records flagged for review and shows finding mix, allegation categories, missingness, and report-date proxy counts.
 - `source_traceability_check` lists source URL, raw hash, connector metadata, retrieval time, and report index.
 - `source_traceability_by_facility` filters source traceability details by facility number.
+- `multi_facility_source_traceability_by_facility` filters the source traceability matrix by facility number.
 - `field_traceability_by_facility` filters field-level extraction audit context by facility number.
 - `allegation_summary_by_facility` summarizes complaint and allegation counts by facility.
 - `newest_reports` sorts source documents by retrieval timestamp and report index.

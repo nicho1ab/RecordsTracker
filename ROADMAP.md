@@ -52,6 +52,9 @@ governance scaffold.
 	saved query for complaint milestone dates and extracted event dates.
 - Added a field-level source traceability review view and facility-filtered
 	saved query for extraction audit context alongside source document metadata.
+- Added a multi-facility source traceability review view and facility-filtered
+	saved query for checking source traceability status and linked derived-record
+	counts by source document across facilities.
 - Added a facility pattern review view and saved query for comparing finding mix,
 	allegation categories, missingness, report-date proxy usage, review flags, and
 	source document coverage across facilities.
