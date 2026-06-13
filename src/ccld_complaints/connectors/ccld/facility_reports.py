@@ -755,8 +755,8 @@ def _next_value(lines: list[str], index: int) -> str | None:
 
 def _report_type(lines: list[str]) -> str | None:
     for line in lines:
-        if line == "COMPLAINT INVESTIGATION REPORT":
-            return line
+        if line.casefold() == "complaint investigation report":
+            return "COMPLAINT INVESTIGATION REPORT"
     return None
 
 
