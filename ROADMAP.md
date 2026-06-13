@@ -49,6 +49,8 @@ governance scaffold.
 	review, delay triage, and source traceability CSV files.
 - Grouped sample and live fetch script next steps by reviewer task, including
 	what to open first, delay triage, source verification, and CSV export.
+- Added inline complaint received date extraction hardening with a
+	fixture-backed CCLD report layout regression test.
 
 ## Completed governance and review experience improvements
 
