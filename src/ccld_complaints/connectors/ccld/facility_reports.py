@@ -904,6 +904,12 @@ def _finding(lines: list[str]) -> str:
         if finding is not None:
             return finding
 
+    spaced_colon_finding = _value_after_spaced_colon_label(lines, "Finding")
+    if spaced_colon_finding is not None:
+        finding = _normalized_finding(spaced_colon_finding)
+        if finding is not None:
+            return finding
+
     return "Unknown"
 
 

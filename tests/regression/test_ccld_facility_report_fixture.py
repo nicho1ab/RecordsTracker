@@ -107,6 +107,9 @@ FACILITY_NAME_SPACED_COLON_FIXTURE_URL = (
 FACILITY_NUMBER_SPACED_COLON_FIXTURE_URL = (
     "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=70"
 )
+FINDING_SPACED_COLON_FIXTURE_URL = (
+    "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=71"
+)
 RAW_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_inx3.html")
 NUMBERED_ALLEGATIONS_RAW_FIXTURE = Path(
     "tests/fixtures/ccld/raw/157806098_inx40_numbered_allegations.html"
@@ -200,6 +203,9 @@ FACILITY_NAME_SPACED_COLON_RAW_FIXTURE = Path(
 )
 FACILITY_NUMBER_SPACED_COLON_RAW_FIXTURE = Path(
     "tests/fixtures/ccld/raw/157806098_inx70_facility_number_spaced_colon.html"
+)
+FINDING_SPACED_COLON_RAW_FIXTURE = Path(
+    "tests/fixtures/ccld/raw/157806098_inx71_finding_spaced_colon.html"
 )
 RAW_DETAIL_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_facility_detail.html")
 EXPECTED_FIXTURE = Path("tests/fixtures/ccld/expected/157806098_inx3.json")
@@ -296,6 +302,9 @@ FACILITY_NAME_SPACED_COLON_EXPECTED_FIXTURE = Path(
 FACILITY_NUMBER_SPACED_COLON_EXPECTED_FIXTURE = Path(
     "tests/fixtures/ccld/expected/157806098_inx70_facility_number_spaced_colon.json"
 )
+FINDING_SPACED_COLON_EXPECTED_FIXTURE = Path(
+    "tests/fixtures/ccld/expected/157806098_inx71_finding_spaced_colon.json"
+)
 RETRIEVED_AT = "2026-06-10T00:00:00+00:00"
 NUMBERED_ALLEGATIONS_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 INLINE_RECEIVED_DATE_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
@@ -328,6 +337,7 @@ VISIT_DATE_SPACED_COLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 COMPLAINT_CONTROL_SPACED_COLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 FACILITY_NAME_SPACED_COLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 FACILITY_NUMBER_SPACED_COLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
+FINDING_SPACED_COLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 
 
 def test_ccld_facility_detail_discovers_report_candidates_from_fixture() -> None:
@@ -705,6 +715,16 @@ def test_ccld_facility_report_extracts_spaced_colon_facility_number_label() -> N
     normalized = connector.normalize(_extract_facility_number_spaced_colon_fixture())
     expected = json.loads(
         FACILITY_NUMBER_SPACED_COLON_EXPECTED_FIXTURE.read_text(encoding="utf-8")
+    )
+
+    assert _without_audit(normalized) == expected
+
+
+def test_ccld_facility_report_extracts_split_spaced_colon_finding_label() -> None:
+    connector = CcldFacilityReportsConnector()
+    normalized = connector.normalize(_extract_finding_spaced_colon_fixture())
+    expected = json.loads(
+        FINDING_SPACED_COLON_EXPECTED_FIXTURE.read_text(encoding="utf-8")
     )
 
     assert _without_audit(normalized) == expected
@@ -1209,6 +1229,18 @@ def _extract_facility_number_spaced_colon_fixture() -> dict[str, object]:
         raw_path=FACILITY_NUMBER_SPACED_COLON_RAW_FIXTURE,
         raw_sha256=sha256_bytes(raw_content),
         retrieved_at=FACILITY_NUMBER_SPACED_COLON_RETRIEVED_AT,
+        content_type="text/html",
+    )
+    return CcldFacilityReportsConnector().extract(document)
+
+
+def _extract_finding_spaced_colon_fixture() -> dict[str, object]:
+    raw_content = FINDING_SPACED_COLON_RAW_FIXTURE.read_bytes()
+    document = SourceDocument(
+        source_url=FINDING_SPACED_COLON_FIXTURE_URL,
+        raw_path=FINDING_SPACED_COLON_RAW_FIXTURE,
+        raw_sha256=sha256_bytes(raw_content),
+        retrieved_at=FINDING_SPACED_COLON_RETRIEVED_AT,
         content_type="text/html",
     )
     return CcldFacilityReportsConnector().extract(document)
