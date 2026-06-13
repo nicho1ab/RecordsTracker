@@ -139,8 +139,8 @@ def review_workflow_lines() -> list[str]:
             "with source hashes."
         ),
         (
-            "- .\\scripts\\export-review-bundle.ps1 - write complaint, delay triage, and "
-            "source traceability CSVs."
+            r"- .\scripts\export-review-bundle.ps1 - write complaint, delay triage, "
+            "source traceability, and facility comparison CSVs."
         ),
         "Other useful review paths:",
         "- complaint_review_summary view - full complaint review across facilities.",

@@ -24,7 +24,7 @@ The export bundle workflow is covered by integration tests. To manually check it
 .\scripts\export-review-bundle.ps1
 ```
 
-Confirm the generated CSV files keep clear headers and source traceability columns, and that the generated README describes delay flags, timeline rows, and facility pattern counts as screening aids.
+Confirm the generated CSV files keep clear headers and source traceability columns, and that the generated README describes delay flags, timeline rows, facility pattern counts, multi-facility traceability rows, and facility comparison rows as screening aids.
 
 ## Test design
 
