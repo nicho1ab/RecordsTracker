@@ -54,6 +54,8 @@ use `public_record_allegation_search` for cautious keyword discovery over
 source-derived allegation text, categories, and findings; use
 `complaint_timeline_review` for complaint milestone dates and extracted event
 dates; use `delay_review_flags` for delay triage; use
+`facility_pattern_review` for facility-level pattern comparison over the derived
+dataset; use
 `source_traceability_review` and `field_source_traceability_review` for source
 verification; and use
 `complaint_review_export_with_traceability` or `export-review-bundle.ps1` for

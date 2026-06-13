@@ -93,6 +93,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "complaint_first_pass_review" in database_metadata["tables"]
     assert "complaint_timeline_review" in database_metadata["tables"]
     assert "field_source_traceability_review" in database_metadata["tables"]
+    assert "facility_pattern_review" in database_metadata["tables"]
     assert "complaint_review_summary" in database_metadata["tables"]
     assert "delay_review_flags" in database_metadata["tables"]
     assert "source_traceability_review" in database_metadata["tables"]
@@ -110,6 +111,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "complaint_review_export_with_traceability" in database_metadata["queries"]
     assert "records_with_delay_review_flags" in database_metadata["queries"]
     assert "facilities_with_delay_review_flags" in database_metadata["queries"]
+    assert "facility_patterns_with_review_flags" in database_metadata["queries"]
     assert "source_traceability_check" in database_metadata["queries"]
     assert "source_traceability_by_facility" in database_metadata["queries"]
     assert "field_traceability_by_facility" in database_metadata["queries"]
@@ -136,6 +138,14 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert (
         "not as a complete or official facility history"
         in database_metadata["tables"]["facility_complaint_summary"]["description"]
+    )
+    assert (
+        "Facility-level pattern review"
+        in database_metadata["tables"]["facility_pattern_review"]["description"]
+    )
+    assert (
+        "screening aids for closer source review"
+        in database_metadata["tables"]["facility_pattern_review"]["description"]
     )
     assert (
         "Timeline-oriented view"
@@ -191,6 +201,8 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "complaint_timeline_review" in review_home_query["sql"]
     assert "Find records needing closer review" in review_home_query["sql"]
     assert "Compare facilities" in review_home_query["sql"]
+    assert "Review facility patterns" in review_home_query["sql"]
+    assert "facility_pattern_review" in review_home_query["sql"]
     assert "Verify sources" in review_home_query["sql"]
     assert "field_source_traceability_review" in review_home_query["sql"]
     assert "Export CSVs" in review_home_query["sql"]
@@ -198,12 +210,13 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "workflow_group" in review_home_query["sql"]
     with sqlite3.connect(":memory:") as conn:
         review_home_rows = conn.execute(review_home_query["sql"]).fetchall()
-    assert len(review_home_rows) == 7
+    assert len(review_home_rows) == 8
     assert [row[1] for row in review_home_rows] == [
         "Complaint review",
         "Public-record discovery",
         "Timeline review",
         "Review flags",
+        "Facility comparison",
         "Facility comparison",
         "Source verification",
         "CSV export",
@@ -214,6 +227,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
         "Review what happened and when",
         "Find records needing closer review",
         "Compare facilities",
+        "Review facility patterns",
         "Verify sources",
         "Export CSVs",
     ]
@@ -243,6 +257,12 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert (
         "screening aids"
         in database_metadata["queries"]["facilities_with_delay_review_flags"][
+            "description"
+        ]
+    )
+    assert (
+        "not conclusions"
+        in database_metadata["queries"]["facility_patterns_with_review_flags"][
             "description"
         ]
     )
@@ -308,6 +328,7 @@ def test_review_workflow_lines_name_first_views() -> None:
     assert any("complaint_review_summary" in line for line in lines)
     assert any("complaint_first_pass_review" in line for line in lines)
     assert any("facility_complaint_summary" in line for line in lines)
+    assert any("facility_pattern_review" in line for line in lines)
     assert any("delay_review_flags" in line for line in lines)
     assert any("source_traceability_review" in line for line in lines)
     assert any("review_home" in line for line in lines)
