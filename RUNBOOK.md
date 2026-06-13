@@ -147,9 +147,32 @@ git ls-files --eol tests\fixtures\ccld\raw\<fixture-name>.html
 Before opening a PR, include the validation results, a concise PR title, and a PR
 body that states whether user-facing or documentation-impacting behavior changed.
 
+The repository `main` branch must be protected by a GitHub branch protection rule or repository ruleset.
+The rule must require pull requests and must require these status-check contexts
+to pass before squash merge:
+
+- `validate`
+- `docs-check`
+- `fixtures`
+- `security`
+
+If GitHub allows a PR to merge before those required checks pass, treat that as a
+repository governance configuration issue. Fix the branch protection rule or
+ruleset before the next merge.
+
 When GitHub CLI is installed and authenticated, prefer `gh` for repeatable PR
 steps. Keep token values and authentication details out of docs, handoffs, logs,
 and commits.
+
+Verify `gh` is available in the VS Code terminal before relying on automation:
+
+```powershell
+gh --version
+```
+
+```powershell
+gh auth status
+```
 
 Check the active PR state:
 
@@ -162,6 +185,10 @@ Wait for required checks:
 ```powershell
 gh pr checks --watch
 ```
+
+The checks output must include passing `validate`, `docs-check`, `fixtures`, and
+`security` contexts before merge. Do not rely only on local validation when
+deciding whether the PR is merge-ready.
 
 Squash merge after required checks pass and no conflicts remain:
 
