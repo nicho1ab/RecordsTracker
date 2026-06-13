@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added a data quality test that verifies derived complaint, allegation, event,
+  and extraction audit records trace back to source documents with required
+  source URL, raw hash, connector metadata, and retrieval timestamp.
 - Improved the `review_home` Datasette saved query with a `workflow_group`
   column so reviewers can scan local review paths by user task before opening
   implementation tables or detailed views.
