@@ -217,7 +217,10 @@ class CcldFacilityReportsConnector:
         source_url_fields = _source_url_fields(document.source_url)
 
         complaint_received_date = _iso_date(_complaint_received_date(lines))
-        report_date = _iso_date(_value_after_label(lines, "Report Date:"))
+        report_date = _iso_date(
+            _value_after_label(lines, "Report Date:")
+            or _value_after_exact_label(lines, "Report Date")
+        )
         visit_date = _iso_date(_value_after_label(lines, "VISIT DATE:"))
         date_signed = _iso_date(_value_after_label(lines, "Date Signed:"))
         first_activity_date = None

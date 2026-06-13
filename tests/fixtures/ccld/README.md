@@ -35,3 +35,5 @@ Raw fixtures and expected JSON are governed by `.gitattributes` line-ending rule
 - `expected/157806098_inx50_dashed_finding_label.json`: Expected normalized records for dashed finding label extraction hardening.
 - `raw/157806098_inx51_was_received_date.html`: Source-shaped CCLD report fixture covering a `complaint was received in our office on` narrative date phrase.
 - `expected/157806098_inx51_was_received_date.json`: Expected normalized records for was-received complaint date extraction hardening.
+- `raw/157806098_inx52_split_report_date.html`: Source-shaped CCLD report fixture covering a standalone `Report Date` label followed by the date value.
+- `expected/157806098_inx52_split_report_date.json`: Expected normalized records for split report date label extraction hardening.

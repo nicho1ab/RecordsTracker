@@ -53,7 +53,7 @@ The first implemented fixture covers facility `157806098` with report index `3`.
 The extractor reads the public FacilityReports HTML response, preserves the raw source file, and deterministically extracts labeled fields from the report text:
 
 - Facility number and facility name
-- Report type, report date, date signed, and visit date
+- Report type, report date, date signed, and visit date, including split label/value date layouts
 - Complaint received date, including inline narrative phrase variants, and complaint control number
 - Allegation text, including allegation and investigation finding heading variants and lowercase continuation lines in wrapped layouts
 - Normalized finding, including explicit `Finding:` labels, `Finding -` inline labels, split `Finding` label/value layouts, and source punctuation variants
