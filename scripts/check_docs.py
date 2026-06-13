@@ -241,6 +241,12 @@ FORBIDDEN_CONTENT = {
     ],
 }
 
+STALE_ROADMAP_CURRENT_PRIORITIES = {
+    "ROADMAP.md": [
+        "Group review workflows by user task rather than by implementation table",
+    ],
+}
+
 
 def find_missing_files(root: Path = Path(".")) -> list[str]:
     return [item for item in REQUIRED if not (root / item).exists()]
@@ -272,6 +278,33 @@ def find_forbidden_content(root: Path = Path(".")) -> list[str]:
     return found
 
 
+def find_stale_roadmap_priorities(root: Path = Path(".")) -> list[str]:
+    found = []
+    for relative_path, stale_phrases in STALE_ROADMAP_CURRENT_PRIORITIES.items():
+        path = root / relative_path
+        if not path.exists():
+            continue
+        current_priorities = _markdown_section(
+            path.read_text(encoding="utf-8"), "Current next priorities"
+        ).lower()
+        for phrase in stale_phrases:
+            if phrase.lower() in current_priorities:
+                found.append(f"{relative_path}: {phrase}")
+    return found
+
+
+def _markdown_section(content: str, heading: str) -> str:
+    marker = f"## {heading}"
+    start = content.find(marker)
+    if start == -1:
+        return ""
+    section_start = start + len(marker)
+    next_heading = content.find("\n## ", section_start)
+    if next_heading == -1:
+        return content[section_start:]
+    return content[section_start:next_heading]
+
+
 def main() -> None:
     missing_files = find_missing_files()
     if missing_files:
@@ -287,6 +320,13 @@ def main() -> None:
     if forbidden_content:
         raise SystemExit(
             "Forbidden stale documentation content found: " + "; ".join(forbidden_content)
+        )
+
+    stale_roadmap_priorities = find_stale_roadmap_priorities()
+    if stale_roadmap_priorities:
+        raise SystemExit(
+            "Stale completed roadmap priorities found: "
+            + "; ".join(stale_roadmap_priorities)
         )
 
     print("Documentation check passed.")

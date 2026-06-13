@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Updated the roadmap to remove a completed local review workflow grouping item
+  from current priorities and hardened documentation validation against stale
+  completed roadmap priorities.
 - Added a data quality test that verifies derived complaint, allegation, event,
   and extraction audit records trace back to source documents with required
   source URL, raw hash, connector metadata, and retrieval timestamp.
