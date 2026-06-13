@@ -29,6 +29,9 @@ LABELED_FINDING_FIXTURE_URL = (
 WRAPPED_ALLEGATION_FIXTURE_URL = (
     "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=44"
 )
+SPLIT_FINDING_FIXTURE_URL = (
+    "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=45"
+)
 RAW_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_inx3.html")
 NUMBERED_ALLEGATIONS_RAW_FIXTURE = Path(
     "tests/fixtures/ccld/raw/157806098_inx40_numbered_allegations.html"
@@ -44,6 +47,9 @@ LABELED_FINDING_RAW_FIXTURE = Path(
 )
 WRAPPED_ALLEGATION_RAW_FIXTURE = Path(
     "tests/fixtures/ccld/raw/157806098_inx44_wrapped_allegation.html"
+)
+SPLIT_FINDING_RAW_FIXTURE = Path(
+    "tests/fixtures/ccld/raw/157806098_inx45_split_finding.html"
 )
 RAW_DETAIL_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_facility_detail.html")
 EXPECTED_FIXTURE = Path("tests/fixtures/ccld/expected/157806098_inx3.json")
@@ -62,12 +68,16 @@ LABELED_FINDING_EXPECTED_FIXTURE = Path(
 WRAPPED_ALLEGATION_EXPECTED_FIXTURE = Path(
     "tests/fixtures/ccld/expected/157806098_inx44_wrapped_allegation.json"
 )
+SPLIT_FINDING_EXPECTED_FIXTURE = Path(
+    "tests/fixtures/ccld/expected/157806098_inx45_split_finding.json"
+)
 RETRIEVED_AT = "2026-06-10T00:00:00+00:00"
 NUMBERED_ALLEGATIONS_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 INLINE_RECEIVED_DATE_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 MISSING_VISIT_DATE_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 LABELED_FINDING_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 WRAPPED_ALLEGATION_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
+SPLIT_FINDING_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 
 
 def test_ccld_facility_detail_discovers_report_candidates_from_fixture() -> None:
@@ -210,6 +220,14 @@ def test_ccld_facility_report_merges_wrapped_allegation_continuation() -> None:
     connector = CcldFacilityReportsConnector()
     normalized = connector.normalize(_extract_wrapped_allegation_fixture())
     expected = json.loads(WRAPPED_ALLEGATION_EXPECTED_FIXTURE.read_text(encoding="utf-8"))
+
+    assert _without_audit(normalized) == expected
+
+
+def test_ccld_facility_report_extracts_split_finding_label_value() -> None:
+    connector = CcldFacilityReportsConnector()
+    normalized = connector.normalize(_extract_split_finding_fixture())
+    expected = json.loads(SPLIT_FINDING_EXPECTED_FIXTURE.read_text(encoding="utf-8"))
 
     assert _without_audit(normalized) == expected
 
@@ -401,6 +419,18 @@ def _extract_wrapped_allegation_fixture() -> dict[str, object]:
         raw_path=WRAPPED_ALLEGATION_RAW_FIXTURE,
         raw_sha256=sha256_bytes(raw_content),
         retrieved_at=WRAPPED_ALLEGATION_RETRIEVED_AT,
+        content_type="text/html",
+    )
+    return CcldFacilityReportsConnector().extract(document)
+
+
+def _extract_split_finding_fixture() -> dict[str, object]:
+    raw_content = SPLIT_FINDING_RAW_FIXTURE.read_bytes()
+    document = SourceDocument(
+        source_url=SPLIT_FINDING_FIXTURE_URL,
+        raw_path=SPLIT_FINDING_RAW_FIXTURE,
+        raw_sha256=sha256_bytes(raw_content),
+        retrieved_at=SPLIT_FINDING_RETRIEVED_AT,
         content_type="text/html",
     )
     return CcldFacilityReportsConnector().extract(document)

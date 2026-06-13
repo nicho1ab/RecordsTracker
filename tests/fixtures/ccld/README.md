@@ -21,3 +21,5 @@ Raw fixtures and expected JSON are governed by `.gitattributes` line-ending rule
 - `expected/157806098_inx43_labeled_finding.json`: Expected normalized records for labeled finding extraction hardening.
 - `raw/157806098_inx44_wrapped_allegation.html`: Source-shaped CCLD report fixture covering allegation text wrapped across adjacent lines.
 - `expected/157806098_inx44_wrapped_allegation.json`: Expected normalized records for wrapped-allegation extraction hardening.
+- `raw/157806098_inx45_split_finding.html`: Source-shaped CCLD report fixture covering a standalone `Finding` label followed by the normalized finding value on the next line.
+- `expected/157806098_inx45_split_finding.json`: Expected normalized records for split finding label extraction hardening.

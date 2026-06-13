@@ -723,6 +723,14 @@ def _value_after_label(lines: list[str], label: str) -> str | None:
     return None
 
 
+def _value_after_exact_label(lines: list[str], label: str) -> str | None:
+    normalized_label = label.casefold()
+    for index, line in enumerate(lines):
+        if line.casefold() == normalized_label:
+            return _next_value(lines, index)
+    return None
+
+
 def _next_value(lines: list[str], index: int) -> str | None:
     for value in lines[index + 1 :]:
         if not value.endswith(":"):
@@ -798,6 +806,12 @@ def _finding(lines: list[str]) -> str:
     labeled_finding = _value_after_label(lines, "Finding:")
     if labeled_finding is not None:
         finding = _normalized_finding(labeled_finding)
+        if finding is not None:
+            return finding
+
+    split_label_finding = _value_after_exact_label(lines, "Finding")
+    if split_label_finding is not None:
+        finding = _normalized_finding(split_label_finding)
         if finding is not None:
             return finding
 
