@@ -228,6 +228,7 @@ class CcldFacilityReportsConnector:
             _value_after_label(lines, "VISIT DATE:")
             or _value_after_exact_label(lines, "VISIT DATE")
             or _value_after_spaced_colon_label(lines, "VISIT DATE")
+            or _value_after_punctuated_label(lines, "VISIT DATE")
         )
         date_signed = _iso_date(
             _value_after_label(lines, "Date Signed:")
