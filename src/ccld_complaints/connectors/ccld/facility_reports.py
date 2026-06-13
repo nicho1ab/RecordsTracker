@@ -738,8 +738,13 @@ def _report_type(lines: list[str]) -> str | None:
 
 
 def _complaint_received_date(lines: list[str]) -> str | None:
+    phrase = "complaint received in our office on"
     for index, line in enumerate(lines):
-        if "complaint received in our office on" in line.casefold():
+        normalized_line = line.casefold()
+        if phrase in normalized_line:
+            inline_value = line[normalized_line.index(phrase) + len(phrase) :].strip(" .:-")
+            if inline_value:
+                return inline_value
             return _next_value(lines, index)
     return None
 
