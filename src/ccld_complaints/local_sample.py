@@ -121,10 +121,18 @@ def review_workflow_lines() -> list[str]:
             "and report index."
         ),
         (
+            "- multi_facility_source_traceability_review view - source traceability status "
+            "and linked derived-record counts by facility."
+        ),
+        (
             "- field_source_traceability_review view - extracted fields with audit source "
             "text and source document traceability."
         ),
         "- source_traceability_by_facility saved query - check source provenance for one facility.",
+        (
+            "- multi_facility_source_traceability_by_facility saved query - filter source "
+            "traceability status and linked counts by facility number."
+        ),
         "For CSV export:",
         (
             "- complaint_review_export_with_traceability saved query - export complaint fields "
@@ -417,6 +425,42 @@ def _datasette_table_metadata() -> dict[str, Any]:
                 "content_type": "Fetched source content type when available.",
             },
         },
+        "multi_facility_source_traceability_review": {
+            "title": "Multi-Facility Source Traceability Review",
+            "description": (
+                "One row per source document with facility context, source URL, raw SHA-256 "
+                "hash, raw path, connector metadata, retrieval time, report index, document "
+                "type, traceability status, and counts of linked complaints, allegations, "
+                "events, and extraction audit fields. Use before comparing facilities or "
+                "exporting multi-facility review outputs; counts are source-checking aids "
+                "over the derived dataset, not conclusions about the public source."
+            ),
+            "sort_desc": "retrieved_at",
+            "columns": {
+                "facility_number": "Public CCLD facility number.",
+                "facility_name": "Facility name extracted from source reports.",
+                "document_id": "Stable local source document identifier.",
+                "source_url": "Public source URL used for retrieval.",
+                "raw_sha256": "SHA-256 hash for the preserved raw source file.",
+                "raw_path": "Local path to preserved raw source content.",
+                "connector_name": "Connector that retrieved and normalized the document.",
+                "connector_version": "Connector version used for extraction.",
+                "retrieved_at": "Timestamp when source content was retrieved.",
+                "report_index": "CCLD report index when available.",
+                "document_type": "Document type extracted from the source report when available.",
+                "content_type": "Fetched source content type when available.",
+                "traceability_status": (
+                    "Complete when required source traceability fields are present; otherwise "
+                    "missing source traceability."
+                ),
+                "complaint_count": "Complaint records linked to this source document.",
+                "allegation_count": "Allegation records linked through complaints.",
+                "event_count": "Event records linked through complaints.",
+                "extraction_audit_field_count": (
+                    "Extraction audit records linked directly to this source document."
+                ),
+            },
+        },
         "field_source_traceability_review": {
             "title": "Field Source Traceability Review",
             "description": (
@@ -650,10 +694,10 @@ SELECT
     7,
     'Source verification',
     'Verify sources',
-    'field_source_traceability_review',
+    'multi_facility_source_traceability_review',
     'Use before relying on extracted fields; check source URL, raw SHA-256 hash, ' ||
-        'raw path, connector metadata, extraction audit source text, warnings, ' ||
-        'confidence, and report index.',
+        'raw path, connector metadata, retrieval time, report index, traceability ' ||
+        'status, and linked derived-record counts.',
     'The public portal remains the source of record.'
 UNION ALL
 SELECT
@@ -876,6 +920,20 @@ SELECT *
 FROM source_traceability_review
 WHERE facility_number = :facility_number
 ORDER BY report_index DESC, retrieved_at DESC
+            """.strip(),
+        },
+        "multi_facility_source_traceability_by_facility": {
+            "title": "Multi-Facility Source Traceability by Facility",
+            "description": (
+                "Filter the source traceability matrix by public facility number. Use before "
+                "comparing or exporting multi-facility derived records; counts are "
+                "source-checking aids and not conclusions about a facility or the public source."
+            ),
+            "sql": """
+SELECT *
+FROM multi_facility_source_traceability_review
+WHERE facility_number = :facility_number
+ORDER BY retrieved_at DESC, report_index DESC
             """.strip(),
         },
         "field_traceability_by_facility": {

@@ -99,6 +99,7 @@ DROP VIEW IF EXISTS facility_complaint_summary;
 DROP VIEW IF EXISTS complaint_first_pass_review;
 DROP VIEW IF EXISTS complaint_timeline_review;
 DROP VIEW IF EXISTS field_source_traceability_review;
+DROP VIEW IF EXISTS multi_facility_source_traceability_review;
 DROP VIEW IF EXISTS facility_pattern_review;
 DROP VIEW IF EXISTS complaint_review_summary;
 DROP VIEW IF EXISTS source_traceability_review;
@@ -290,6 +291,53 @@ SELECT
     sd.content_type
 FROM source_documents sd
 JOIN facilities f ON f.facility_id = sd.facility_id;
+
+CREATE VIEW multi_facility_source_traceability_review AS
+SELECT
+    f.external_facility_number AS facility_number,
+    f.facility_name,
+    sd.document_id,
+    sd.source_url,
+    sd.raw_sha256,
+    sd.raw_path,
+    sd.connector_name,
+    sd.connector_version,
+    sd.retrieved_at,
+    sd.report_index,
+    sd.document_type,
+    sd.content_type,
+    CASE
+        WHEN COALESCE(TRIM(sd.source_url), '') = ''
+          OR COALESCE(TRIM(sd.raw_sha256), '') = ''
+          OR COALESCE(TRIM(sd.connector_name), '') = ''
+          OR COALESCE(TRIM(sd.connector_version), '') = ''
+          OR COALESCE(TRIM(sd.retrieved_at), '') = ''
+        THEN 'missing source traceability'
+        ELSE 'complete'
+    END AS traceability_status,
+    COUNT(DISTINCT c.complaint_id) AS complaint_count,
+    COUNT(DISTINCT a.allegation_id) AS allegation_count,
+    COUNT(DISTINCT e.event_id) AS event_count,
+    COUNT(DISTINCT ea.audit_id) AS extraction_audit_field_count
+FROM source_documents sd
+JOIN facilities f ON f.facility_id = sd.facility_id
+LEFT JOIN complaints c ON c.document_id = sd.document_id
+LEFT JOIN allegations a ON a.complaint_id = c.complaint_id
+LEFT JOIN events e ON e.complaint_id = c.complaint_id
+LEFT JOIN extraction_audit ea ON ea.document_id = sd.document_id
+GROUP BY
+    f.external_facility_number,
+    f.facility_name,
+    sd.document_id,
+    sd.source_url,
+    sd.raw_sha256,
+    sd.raw_path,
+    sd.connector_name,
+    sd.connector_version,
+    sd.retrieved_at,
+    sd.report_index,
+    sd.document_type,
+    sd.content_type;
 
 CREATE VIEW complaint_timeline_review AS
 SELECT

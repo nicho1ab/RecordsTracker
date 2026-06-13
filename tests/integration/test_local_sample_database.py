@@ -93,6 +93,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "complaint_first_pass_review" in database_metadata["tables"]
     assert "complaint_timeline_review" in database_metadata["tables"]
     assert "field_source_traceability_review" in database_metadata["tables"]
+    assert "multi_facility_source_traceability_review" in database_metadata["tables"]
     assert "facility_pattern_review" in database_metadata["tables"]
     assert "complaint_review_summary" in database_metadata["tables"]
     assert "delay_review_flags" in database_metadata["tables"]
@@ -114,6 +115,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "facility_patterns_with_review_flags" in database_metadata["queries"]
     assert "source_traceability_check" in database_metadata["queries"]
     assert "source_traceability_by_facility" in database_metadata["queries"]
+    assert "multi_facility_source_traceability_by_facility" in database_metadata["queries"]
     assert "field_traceability_by_facility" in database_metadata["queries"]
     assert "allegation_summary_by_facility" in database_metadata["queries"]
     assert "newest_reports" in database_metadata["queries"]
@@ -164,6 +166,18 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
         in database_metadata["tables"]["source_traceability_review"]["description"]
     )
     assert (
+        "counts of linked complaints"
+        in database_metadata["tables"]["multi_facility_source_traceability_review"][
+            "description"
+        ]
+    )
+    assert (
+        "missing source traceability"
+        in database_metadata["tables"]["multi_facility_source_traceability_review"][
+            "columns"
+        ]["traceability_status"]
+    )
+    assert (
         "Field-level extraction audit view"
         in database_metadata["tables"]["field_source_traceability_review"]["description"]
     )
@@ -204,7 +218,7 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
     assert "Review facility patterns" in review_home_query["sql"]
     assert "facility_pattern_review" in review_home_query["sql"]
     assert "Verify sources" in review_home_query["sql"]
-    assert "field_source_traceability_review" in review_home_query["sql"]
+    assert "multi_facility_source_traceability_review" in review_home_query["sql"]
     assert "Export CSVs" in review_home_query["sql"]
     assert "source URL, raw hash, connector metadata" in review_home_query["sql"]
     assert "workflow_group" in review_home_query["sql"]
@@ -284,6 +298,12 @@ def test_datasette_metadata_uses_database_stem_for_custom_paths() -> None:
         ":facility_number"
         in database_metadata["queries"]["source_traceability_by_facility"]["sql"]
     )
+    multi_source_query = database_metadata["queries"][
+        "multi_facility_source_traceability_by_facility"
+    ]
+    assert "source-checking aids" in multi_source_query["description"]
+    assert ":facility_number" in multi_source_query["sql"]
+    assert "FROM multi_facility_source_traceability_review" in multi_source_query["sql"]
     timeline_query = database_metadata["queries"]["complaint_timeline_by_facility"]
     assert "Missing dates are unknown" in timeline_query["description"]
     assert ":facility_number" in timeline_query["sql"]
@@ -331,6 +351,7 @@ def test_review_workflow_lines_name_first_views() -> None:
     assert any("facility_pattern_review" in line for line in lines)
     assert any("delay_review_flags" in line for line in lines)
     assert any("source_traceability_review" in line for line in lines)
+    assert any("multi_facility_source_traceability_review" in line for line in lines)
     assert any("review_home" in line for line in lines)
     assert any("complaint_review_start_here" in line for line in lines)
     assert any("public_record_allegation_search" in line for line in lines)
@@ -339,6 +360,7 @@ def test_review_workflow_lines_name_first_views() -> None:
     assert any("complaints_by_facility" in line for line in lines)
     assert any("complaint_review_export_with_traceability" in line for line in lines)
     assert any("source_traceability_by_facility" in line for line in lines)
+    assert any("multi_facility_source_traceability_by_facility" in line for line in lines)
     assert any("field_source_traceability_review" in line for line in lines)
     assert any("field_traceability_by_facility" in line for line in lines)
     assert any("newest_reports" in line for line in lines)

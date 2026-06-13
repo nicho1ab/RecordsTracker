@@ -147,6 +147,22 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
         "retrieved_at": RETRIEVED_AT,
         "report_index": 3,
     }
+    assert _multi_facility_source_traceability_review(db_path) == {
+        "facility_number": "157806098",
+        "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+        "source_url": FIXTURE_URL,
+        "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
+        "raw_path": RAW_FIXTURE.as_posix(),
+        "connector_name": "ccld_facility_reports",
+        "connector_version": "0.1.0",
+        "retrieved_at": RETRIEVED_AT,
+        "report_index": 3,
+        "traceability_status": "complete",
+        "complaint_count": 1,
+        "allegation_count": 2,
+        "event_count": 0,
+        "extraction_audit_field_count": 21,
+    }
     assert _complaint_timeline_review(db_path) == [
         {
             "timeline_sequence": 1,
@@ -238,6 +254,7 @@ def test_review_views_do_not_duplicate_rows_on_rerun(tmp_path: Path) -> None:
     assert _row_count(db_path, "facility_pattern_review") == 1
     assert _row_count(db_path, "delay_review_flags") == 1
     assert _row_count(db_path, "source_traceability_review") == 1
+    assert _row_count(db_path, "multi_facility_source_traceability_review") == 1
 
 
 def test_review_views_include_delay_review_flag_columns(tmp_path: Path) -> None:
@@ -527,6 +544,31 @@ def _source_traceability_review(db_path: Path) -> dict[str, object]:
                    retrieved_at,
                    report_index
             FROM source_traceability_review
+            """
+        ).fetchone()
+    return dict(row)
+
+
+def _multi_facility_source_traceability_review(db_path: Path) -> dict[str, object]:
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            """
+            SELECT facility_number,
+                   facility_name,
+                   source_url,
+                   raw_sha256,
+                   raw_path,
+                   connector_name,
+                   connector_version,
+                   retrieved_at,
+                   report_index,
+                   traceability_status,
+                   complaint_count,
+                   allegation_count,
+                   event_count,
+                   extraction_audit_field_count
+            FROM multi_facility_source_traceability_review
             """
         ).fetchone()
     return dict(row)

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added a multi-facility source traceability review view and facility-filtered
+	saved query for checking source traceability status and linked derived-record
+	counts by source document across facilities.
 - Added clearer controlled multi-facility live fetch outcome summaries for
 	records discovered, no records discovered, discovery failures,
 	skipped-by-limit reports, partial report failures, and written records.
