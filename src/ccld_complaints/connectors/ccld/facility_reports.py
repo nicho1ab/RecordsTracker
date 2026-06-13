@@ -230,6 +230,7 @@ class CcldFacilityReportsConnector:
         date_signed = _iso_date(
             _value_after_label(lines, "Date Signed:")
             or _value_after_exact_label(lines, "Date Signed")
+            or _value_after_spaced_colon_label(lines, "Date Signed")
         )
         first_activity_date = None
         delay_metrics = _delay_metrics(

@@ -92,6 +92,9 @@ ALLEGATION_HEADING_DASH_FIXTURE_URL = (
 REPORT_DATE_SPACED_COLON_FIXTURE_URL = (
     "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=65"
 )
+DATE_SIGNED_SPACED_COLON_FIXTURE_URL = (
+    "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=66"
+)
 RAW_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_inx3.html")
 NUMBERED_ALLEGATIONS_RAW_FIXTURE = Path(
     "tests/fixtures/ccld/raw/157806098_inx40_numbered_allegations.html"
@@ -170,6 +173,9 @@ ALLEGATION_HEADING_DASH_RAW_FIXTURE = Path(
 )
 REPORT_DATE_SPACED_COLON_RAW_FIXTURE = Path(
     "tests/fixtures/ccld/raw/157806098_inx65_report_date_spaced_colon.html"
+)
+DATE_SIGNED_SPACED_COLON_RAW_FIXTURE = Path(
+    "tests/fixtures/ccld/raw/157806098_inx66_date_signed_spaced_colon.html"
 )
 RAW_DETAIL_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_facility_detail.html")
 EXPECTED_FIXTURE = Path("tests/fixtures/ccld/expected/157806098_inx3.json")
@@ -251,6 +257,9 @@ ALLEGATION_HEADING_DASH_EXPECTED_FIXTURE = Path(
 REPORT_DATE_SPACED_COLON_EXPECTED_FIXTURE = Path(
     "tests/fixtures/ccld/expected/157806098_inx65_report_date_spaced_colon.json"
 )
+DATE_SIGNED_SPACED_COLON_EXPECTED_FIXTURE = Path(
+    "tests/fixtures/ccld/expected/157806098_inx66_date_signed_spaced_colon.json"
+)
 RETRIEVED_AT = "2026-06-10T00:00:00+00:00"
 NUMBERED_ALLEGATIONS_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 INLINE_RECEIVED_DATE_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
@@ -278,6 +287,7 @@ REPORT_TYPE_PUNCTUATION_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 FINDINGS_HEADING_DASH_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 ALLEGATION_HEADING_DASH_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 REPORT_DATE_SPACED_COLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
+DATE_SIGNED_SPACED_COLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 
 
 def test_ccld_facility_detail_discovers_report_candidates_from_fixture() -> None:
@@ -605,6 +615,16 @@ def test_ccld_facility_report_extracts_spaced_colon_report_date_label() -> None:
     normalized = connector.normalize(_extract_report_date_spaced_colon_fixture())
     expected = json.loads(
         REPORT_DATE_SPACED_COLON_EXPECTED_FIXTURE.read_text(encoding="utf-8")
+    )
+
+    assert _without_audit(normalized) == expected
+
+
+def test_ccld_facility_report_extracts_spaced_colon_date_signed_label() -> None:
+    connector = CcldFacilityReportsConnector()
+    normalized = connector.normalize(_extract_date_signed_spaced_colon_fixture())
+    expected = json.loads(
+        DATE_SIGNED_SPACED_COLON_EXPECTED_FIXTURE.read_text(encoding="utf-8")
     )
 
     assert _without_audit(normalized) == expected
@@ -1049,6 +1069,18 @@ def _extract_report_date_spaced_colon_fixture() -> dict[str, object]:
         raw_path=REPORT_DATE_SPACED_COLON_RAW_FIXTURE,
         raw_sha256=sha256_bytes(raw_content),
         retrieved_at=REPORT_DATE_SPACED_COLON_RETRIEVED_AT,
+        content_type="text/html",
+    )
+    return CcldFacilityReportsConnector().extract(document)
+
+
+def _extract_date_signed_spaced_colon_fixture() -> dict[str, object]:
+    raw_content = DATE_SIGNED_SPACED_COLON_RAW_FIXTURE.read_bytes()
+    document = SourceDocument(
+        source_url=DATE_SIGNED_SPACED_COLON_FIXTURE_URL,
+        raw_path=DATE_SIGNED_SPACED_COLON_RAW_FIXTURE,
+        raw_sha256=sha256_bytes(raw_content),
+        retrieved_at=DATE_SIGNED_SPACED_COLON_RETRIEVED_AT,
         content_type="text/html",
     )
     return CcldFacilityReportsConnector().extract(document)

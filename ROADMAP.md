@@ -105,6 +105,8 @@ governance scaffold.
 	layouts that use an `ALLEGATION(S) -` section heading.
 - Added fixture-backed spaced-colon report date label hardening for CCLD report
 	layouts that use a `Report Date :` label variant.
+- Added fixture-backed spaced-colon date signed label hardening for CCLD report
+	layouts that use a `Date Signed :` label variant.
 
 ## Completed governance and review experience improvements
 
