@@ -35,6 +35,11 @@ Prefer fixture-based tests over ad hoc manual verification. Every important sour
 - Parser test
 - Data quality test
 
+Data quality tests should include source traceability checks for derived records.
+At minimum, complaints, allegations, events, and extraction audit rows should
+trace back to a source document with source URL, raw SHA-256 hash, connector
+metadata, and retrieval timestamp.
+
 ## Regression rule
 
 When fixing extraction behavior, add the failing case as a fixture before changing parser code.
