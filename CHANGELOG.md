@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Hardened CCLD facility name extraction for source layouts that use a
+  `FACILITY NAME;` semicolon label variant, with fixture-backed regression
+  coverage.
 - Added data quality coverage that verifies source document hashes match the
   preserved raw files referenced by `raw_path`.
 - Added data quality coverage that verifies source document hashes are present
