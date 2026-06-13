@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added Copilot next-prompt quality governance, including prompt-mode guidance,
+	project-aware synthesis requirements, validation expectations, PR body
+	requirements, final handoff requirements, and a rule against including a next
+	branch command unless the user asks for one.
 - Added ADR-0007 evaluating hosted tester MVP production stack options and
 	recommending a hybrid transition direction that preserves the Python
 	ingestion/extraction pipeline and retained SQLite/Datasette validation layer
