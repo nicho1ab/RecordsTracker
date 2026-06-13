@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Expanded the local review bundle with multi-facility source traceability and
+	facility comparison CSV files plus cautious README notes for attorney-review
+	handoff packets.
 - Added a facility comparison review view and repeated category/finding saved
 	query for cautious cross-facility source-review queues over the local derived
 	dataset.
