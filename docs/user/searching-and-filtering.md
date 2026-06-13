@@ -27,6 +27,7 @@ When you open Datasette with the metadata command printed by the sample or live 
 - `facility_patterns_with_review_flags` ranks facilities with records flagged for review and includes finding mix, allegation categories, missingness, report-date proxy counts, and source document counts.
 - `source_traceability_check` helps check source URLs, raw hashes, connector metadata, retrieval time, and report indexes.
 - `source_traceability_by_facility` filters source traceability details by facility number.
+- `multi_facility_source_traceability_by_facility` filters source traceability status and linked derived-record counts by facility number.
 - `field_traceability_by_facility` filters extracted fields, source text, extraction warnings, confidence, and source document traceability by facility number.
 - `allegation_summary_by_facility` summarizes complaint and allegation counts by facility.
 - `newest_reports` lists the most recently retrieved source documents first.
