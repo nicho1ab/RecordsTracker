@@ -183,6 +183,12 @@ def live_fetch_summary_lines(
     facility_failures: list[FacilityWorkflowFailure],
 ) -> list[str]:
     discovered = sum(result.discovered_count for result in facility_results)
+    facilities_with_records_discovered = sum(
+        1 for result in facility_results if result.discovered_count > 0
+    )
+    facilities_with_no_records_discovered = sum(
+        1 for result in facility_results if result.discovered_count == 0
+    )
     selected = sum(len(result.candidates) for result in facility_results)
     skipped = sum(
         max(result.discovered_count - len(result.candidates), 0)
@@ -200,6 +206,8 @@ def live_fetch_summary_lines(
     lines = [
         "Live fetch summary:",
         f"- Facilities requested: {len(facility_results) + len(facility_failures)}",
+        f"- Facilities with records discovered: {facilities_with_records_discovered}",
+        f"- Facilities with no records discovered: {facilities_with_no_records_discovered}",
         f"- Facilities with discovery failures: {len(facility_failures)}",
         f"- Report candidates discovered: {discovered}",
         f"- Report candidates selected: {selected}",
@@ -248,10 +256,25 @@ def _facility_summary_line(result: FacilityIngestionResult) -> str:
     )
     return (
         "- "
-        f"{result.facility_number}: discovered={result.discovered_count}, "
+        f"{result.facility_number}: status={_facility_result_status(result)}, "
+        f"discovered={result.discovered_count}, "
         f"selected={len(result.candidates)}, skipped={skipped}, "
         f"fetched={fetched}, written={len(result.records)}, failed={len(result.failures)}"
     )
+
+
+def _facility_result_status(result: FacilityIngestionResult) -> str:
+    if result.discovered_count == 0:
+        return "no records discovered"
+    if not result.candidates:
+        return "skipped by limit"
+    if result.failures and result.records:
+        return "partial report failures"
+    if result.failures:
+        return "report failures"
+    if result.records:
+        return "records written"
+    return "no records written"
 
 
 def _collect_facility_number_intake(

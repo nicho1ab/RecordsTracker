@@ -52,6 +52,13 @@ blank, comment, or header values ignored from small text or CSV input files.
 Facility identifiers must contain digits only; invalid values are rejected before
 the connector makes public web requests.
 
+After discovery and fetching, the live command reports facilities with records
+discovered, facilities with no records discovered, discovery failures, candidates
+selected, reports skipped by limit, reports fetched, records written, and report
+failures. Per-facility summary lines include a run-state label such as records
+written, no records discovered, skipped by limit, partial report failures, or
+report failures.
+
 ## Initial deterministic extraction
 
 The first implemented fixture covers facility `157806098` with report index `3`.

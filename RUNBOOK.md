@@ -40,10 +40,12 @@ The command prints a live fetch summary with facilities requested, report
 candidates discovered, selected, skipped by limit, fetched, written, and failed.
 It also prints facility identifier intake feedback before discovery, including
 accepted identifiers, duplicate identifiers ignored, and ignored blank, comment,
-or header values. Check these summaries before opening logs when a run produces
-fewer records than expected. After the summary, the command prints grouped next
-steps for opening Datasette review paths, delay triage, source verification, and
-CSV export.
+or header values. The facility summary also labels per-facility run states such
+as records written, no records discovered, skipped by limit, and partial report
+failures. Check these summaries before opening logs when a run produces fewer
+records than expected. After the summary, the command prints grouped next steps
+for opening Datasette review paths, delay triage, source verification, and CSV
+export.
 
 ## Run multi-facility live fetch
 
@@ -56,7 +58,8 @@ review database:
 
 This workflow does not perform statewide crawling or automatic search expansion.
 The printed facility summary is the first place to check for partial discovery,
-fetch, extraction, validation, or write failures across multiple facilities.
+no-record, skipped-by-limit, fetch, extraction, validation, or write outcomes
+across multiple facilities.
 
 ## Browse with Datasette
 
