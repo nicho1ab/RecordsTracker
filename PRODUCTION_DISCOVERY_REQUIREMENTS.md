@@ -187,6 +187,11 @@ The tester environment must use a seeded, documented test corpus with source
 traceability. The corpus must be suitable for repeatable testing and must not be
 presented as complete statewide coverage or official facility conclusions.
 
+Source-derived hosted tester records must enter the tester environment through
+the controlled import/sync boundary accepted by ADR-0009, starting with
+snapshot imports from validated pipeline output unless a later ADR approves a
+different import mechanism.
+
 ### Known limitations visible
 
 Known limitations must be visible in the hosted workflow at points where testers
@@ -237,6 +242,9 @@ updates must define:
 - How the ADR-0008 source-derived and reviewer-created data domains are mapped
   into physical schema, migrations, API contracts, UI labels, exports, tests,
   and audit history.
+- How the ADR-0009 controlled import/sync strategy is mapped into import batch
+  metadata, stable source-derived identities, reset/reload behavior, and
+  reviewer-created state preservation.
 - How source traceability and extraction audit context remain available to the
   hosted reviewer application.
 - How authenticated tester access, audit history, reset/reload, and export
