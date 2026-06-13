@@ -221,6 +221,7 @@ class CcldFacilityReportsConnector:
         report_date = _iso_date(
             _value_after_label(lines, "Report Date:")
             or _value_after_exact_label(lines, "Report Date")
+            or _value_after_spaced_colon_label(lines, "Report Date")
         )
         visit_date = _iso_date(
             _value_after_label(lines, "VISIT DATE:")
@@ -744,6 +745,17 @@ def _value_after_exact_label(lines: list[str], label: str) -> str | None:
     for index, line in enumerate(lines):
         if line.casefold() == normalized_label:
             return _next_value(lines, index)
+    return None
+
+
+def _value_after_spaced_colon_label(lines: list[str], label: str) -> str | None:
+    pattern = re.compile(rf"^{re.escape(label)}\s+:(.*)$", re.IGNORECASE)
+    for index, line in enumerate(lines):
+        match = pattern.match(line)
+        if match is None:
+            continue
+        value = _clean_text(match.group(1))
+        return value or _next_value(lines, index)
     return None
 
 

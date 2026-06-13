@@ -103,6 +103,8 @@ governance scaffold.
 	report layouts that use an `INVESTIGATION FINDINGS -` section heading.
 - Added fixture-backed dashed allegation heading hardening for CCLD report
 	layouts that use an `ALLEGATION(S) -` section heading.
+- Added fixture-backed spaced-colon report date label hardening for CCLD report
+	layouts that use a `Report Date :` label variant.
 
 ## Completed governance and review experience improvements
 
