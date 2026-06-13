@@ -73,6 +73,11 @@ Then pass the file path:
 .\scripts\run-ccld-live-fetch.ps1 -FacilityInputPath .\facility-numbers.csv -Limit 1 -MaxRequests 3
 ```
 
+Before making report requests, the live script prints a facility identifier
+intake summary. It shows the accepted facility identifiers, duplicate
+identifiers ignored, and blank, comment, or header values ignored. Invalid
+facility identifiers are rejected before report discovery or fetching begins.
+
 After one report per facility succeeds, try a small larger per-facility limit such as three or five reports. `-MaxRequests` must be at least as large as the total selected report count across all facilities:
 
 ```powershell
@@ -92,6 +97,15 @@ To fetch every discovered report for facility `157806098`, use `-All` and intent
 ```
 
 The live script prints a warning before making requests, uses a clear user agent, applies a request timeout, limits report requests unless `-All` is used, enforces `-MaxRequests`, and does not use an aggressive retry loop.
+
+After the run, the script prints a live fetch summary with the number of
+facilities requested, facilities with records discovered, facilities with no
+records discovered, discovery failures, report candidates discovered, selected,
+skipped by limit, fetched, written to SQLite, and failed. The facility summary
+shows a status and the same counts by facility so you can spot no-record,
+skipped-by-limit, partial-failure, or written-record outcomes before opening logs
+or Datasette. Treat failed, skipped, or no-record items as run states in the
+derived workflow, not as conclusions about the public source.
 
 Downloaded report files are saved under `data/raw/ccld` by default. The `data/raw` path is ignored by Git so live public source files stay local unless you intentionally move or copy them. Ingestion reads the saved raw files, records their SHA-256 hashes, and writes source traceability fields to the `source_documents` table.
 
@@ -115,16 +129,25 @@ datasette "data/processed/live-ccld.sqlite" --metadata "data/processed/live-ccld
 
 The printed command includes a Datasette metadata file. That metadata adds the project title, database description, review-oriented table and view descriptions, column notes, suggested sort fields, delay flag caution language, source traceability explanations, and saved query examples. See [Local Review Workflow](local-review-workflow.md) for the guided review steps.
 
-The saved query examples include `complaints_by_facility`, `records_with_delay_review_flags`, `newest_reports`, `allegation_summary_by_facility`, and `source_traceability_check`.
+Open the `review_home` saved query first. It lists the main review tasks and points to the low-noise complaint review, detailed complaint review, delay triage, facility comparison, source verification, and CSV export paths.
+
+The saved query examples include `review_home`, `complaint_review_start_here`, `complaints_by_facility`, `complaint_review_export_with_traceability`, `records_with_delay_review_flags`, `facilities_with_delay_review_flags`, `source_traceability_by_facility`, `newest_reports`, `allegation_summary_by_facility`, and `source_traceability_check`.
+
+## Where to start
+
+Start with the `review_home` saved query. It is a small task menu inside Datasette, not a dashboard or custom web interface. Use it to choose whether you want to review complaints, find records needing closer review, compare facilities, verify sources, or export CSVs.
+
+Then open `complaint_review_start_here` or `complaint_first_pass_review` for the guided, source-traceable, low-noise complaint list.
 
 ## Tables to open first
 
-Start with these Datasette views in this order:
+After `review_home` and `complaint_review_start_here`, use these Datasette views in this order:
 
-1. `complaint_review_summary` is the main review view. It combines facility number, facility name, complaint dates, finding, allegation count and summary, delay calculations, review flags, source URL, and raw path.
-2. `facility_complaint_summary` gives one row per facility with complaint count, allegation count, earliest and latest complaint received dates, and a count of records with delay review flags.
-3. `delay_review_flags` shows only complaint records with one or more delay or review flags. Use it as a triage list for closer review, not as proof that an investigation was delayed.
-4. `source_traceability_review` lists source URL, raw SHA-256 hash, raw path, connector name, connector version, retrieval time, and report index so reviewers can confirm where each record came from.
+1. `complaint_first_pass_review` is the low-noise first-pass review view. It combines facility number, facility name, complaint dates, finding, allegation count and summary, one review flag summary, source URL, raw SHA-256 hash, raw path, connector metadata, retrieval time, report index, and IDs for lower-level follow-up.
+2. `complaint_review_summary` is the fuller complaint review view. It adds detailed delay calculations, separate review flag columns, extraction confidence, and broader complaint review context.
+3. `facility_complaint_summary` gives one row per facility with complaint count, allegation count, earliest and latest complaint received dates, and a count of records with delay review flags.
+4. `delay_review_flags` shows only complaint records with one or more delay or review flags. Use it as a triage list for closer review, not as proof that an investigation was delayed.
+5. `source_traceability_review` lists source URL, raw SHA-256 hash, raw path, connector name, connector version, retrieval time, and report index so reviewers can confirm where each record came from.
 
 Then use these normalized tables when you need lower-level detail:
 

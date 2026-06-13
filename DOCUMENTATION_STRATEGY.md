@@ -37,6 +37,45 @@ End users need plain-language instructions for browsing, searching, filtering, u
 - If schema changes, update data dictionary and schemas.
 - If connector behavior changes, update connector docs and known limitations.
 - If accessibility behavior changes, update accessibility docs and test notes.
+- If milestones, implemented capabilities, workflow scope, or deferred work
+	changes, update `ROADMAP.md`.
+- If implemented capabilities or user-visible workflows change, update
+	`CHANGELOG.md` under Unreleased.
+
+## Documentation impact and currency
+
+Every feature, workflow, source connector, CLI or script, database or view, or
+user-facing behavior change must evaluate whether public, user, developer,
+contract, limitation, design, and decision documentation needs to change.
+
+At minimum, review these documentation surfaces for impact:
+
+- `README.md`
+- `ROADMAP.md`
+- `CHANGELOG.md`
+- `docs/user/*`
+- `docs/developer/*`
+- `DATA_CONTRACT.md`
+- `SOURCE_CONNECTOR_CONTRACT.md`
+- `KNOWN_LIMITATIONS.md`
+- `DESIGN_AND_USABILITY.md`
+- `DECISIONS.md and ADRs` in `docs/decisions/`
+
+Not every change requires every document to change. However, every pull request
+must either update affected documentation or explicitly state that no user-facing
+or documentation-impacting behavior changed. In PR text, use a clear statement
+such as: no user-facing or documentation-impacting behavior changed.
+
+Root public documentation must describe the active CCLD complaints proof of
+concept, not obsolete scaffold, template, or packaging language. The README must
+stay current with implemented project capabilities, including local SQLite and
+Datasette review, source traceability, fixture-backed tests, and controlled live
+fetch behavior.
+
+Documentation checks prevent stale, missing, or misleading documentation. They
+should not become the default next milestone when validation is passing and the
+documentation is current; future work should then come from the active roadmap
+backlog.
 
 ## Documentation impact and currency
 

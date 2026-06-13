@@ -2,69 +2,29 @@
 
 ## Recommended platform approach
 
-Use local VS Code, local Python, Git, and repository features available to your project. Avoid project dependencies on optional paid platform features unless the project explicitly approves them.
-
-## Create GitHub repository
-
-1. Sign in to GitHub with the account that owns `<your-github-org-or-user>`.
-2. Create a new repository in `<your-github-org-or-user>`.
-3. Do not enable optional paid add-ons unless the project explicitly approves them.
-4. Keep the repository private or internal unless public release is intentional.
-5. After local setup, push the local repo to GitHub.
+Use local VS Code, local Python, Git, SQLite, Datasette, and repository files.
+Avoid project dependencies on optional paid platform features unless the project
+explicitly approves and documents them.
 
 ## Local setup
 
-Run from the extracted governance pack folder:
+From the repository root, create or refresh the local environment:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\setup-project.ps1 -ProjectPath "<local-project-path>" -InitializeGit
+.\setup-project.ps1 -ProjectPath "<local-project-path>"
 ```
 
-## Connect local repo to GitHub
-
-Replace the URL with your repository URL:
-
-```powershell
-cd "<local-project-path>"
-git remote add origin https://github.com/<your-github-org-or-user>/<repository-name>.git
-git branch -M main
-git push -u origin main
-```
-
-## VS Code integration
-
-1. Open VS Code.
-2. Open the project folder.
-3. Install recommended extensions when prompted.
-4. Confirm VS Code is using `.venv\Scripts\python.exe`.
-5. Open GitHub Copilot Chat.
-6. Start with this prompt:
+Open the repository in VS Code and confirm the Python interpreter points to the
+local virtual environment, when present:
 
 ```text
-Read .github/copilot-instructions.md, PROJECT_CHARTER.md, DATA_CONTRACT.md, SOURCE_CONNECTOR_CONTRACT.md, TESTING_STRATEGY.md, DOCUMENTATION_STRATEGY.md, ACCESSIBILITY_REQUIREMENTS.md, and DECISIONS.md. Summarize the project rules you must follow before making code changes.
+.venv\Scripts\python.exe
 ```
 
-## SQLite and Datasette setup
+## Validate the repository
 
-The setup script creates:
-
-```text
-data\processed\ccld.sqlite
-```
-
-To browse the SQLite database with Datasette:
-
-```powershell
-cd "<local-project-path>"
-.\.venv\Scripts\datasette.exe data\processed\ccld.sqlite
-```
-
-Open the local URL shown by Datasette.
-
-## GitHub Actions
-
-The pack includes GitHub Actions workflows. They use standard hosted runners and lightweight validation. If project policy limits or disables Actions, keep using the same commands locally:
+Run the standard checks before completing a task:
 
 ```powershell
 .\scripts\lint.ps1
@@ -72,26 +32,78 @@ The pack includes GitHub Actions workflows. They use standard hosted runners and
 .\scripts\docs.ps1
 ```
 
-## Branch protection or rulesets
+## Run the fixture-backed sample workflow
 
-If available for the repository, configure `main` to require:
+Populate the local sample database from committed fixtures:
 
-- Pull request before merge
-- CI checks passing
-- No force pushes
-- No branch deletion
-- Code owner review for governance files
+```powershell
+.\scripts\run-ccld-sample.ps1
+```
 
-If rulesets are not available to you, use the same policy manually.
+The script prints the SQLite database path, generated Datasette metadata path,
+the Datasette command to open, and grouped next steps for what to open first,
+delay triage, source verification, and CSV export.
 
-## Avoid by default
+## Run controlled live fetch
 
-- GitHub Codespaces unless explicitly approved for the project.
-- GitHub Advanced Security or other optional paid platform features unless explicitly approved for the project.
-- Long-running GitHub Actions jobs.
-- Large workflow artifacts.
-- Optional paid external SaaS services.
+Live fetch must be explicitly invoked and scoped to provided facility numbers.
+Use request limits while testing:
 
-## First development task
+```powershell
+.\scripts\run-ccld-live-fetch.ps1 -FacilityNumber 157806098 -Limit 5 -MaxRequests 10
+```
 
-Ask Copilot to implement only Phase 1 discovery/fetch/storage for one CCLD facility, then require tests before extraction logic is expanded.
+For multiple explicitly provided facilities:
+
+```powershell
+.\scripts\run-ccld-live-fetch.ps1 -FacilityNumber 157806098,157806097 -Limit 5 -MaxRequests 20
+```
+
+The command prints facility identifier intake feedback before discovery,
+including accepted identifiers, duplicate identifiers ignored, and ignored
+blank, comment, or header values.
+
+Downloaded raw public report files are saved under the ignored local `data/raw`
+path by default. Treat public complaint narratives carefully because they may
+contain sensitive details even when publicly available.
+
+## Browse with Datasette
+
+Use the Datasette command printed by the sample or live fetch script when
+available. It includes generated metadata with labels, descriptions, and saved
+queries.
+
+If you need to run Datasette manually, include the generated metadata file:
+
+```powershell
+.\.venv\Scripts\datasette.exe data\processed\ccld.sqlite --metadata data\processed\ccld.datasette-metadata.json
+```
+
+Start with the grouped next steps printed by the sample or live fetch script:
+
+1. Open `review_home`, `complaint_review_start_here`, or `complaint_first_pass_review` first.
+2. Use `delay_review_flags` for delay triage; review flags are screening aids only.
+3. Use `source_traceability_review` to verify source URLs, raw hashes, connector details, and report index.
+4. Use `complaint_review_export_with_traceability` or `export-review-bundle.ps1` for source-traceable CSV export.
+
+## GitHub repository setup
+
+For a new remote repository, use placeholders in documentation and examples:
+
+```powershell
+git remote add origin https://github.com/<your-github-org-or-user>/<repository-name>.git
+git branch -M main
+git push -u origin main
+```
+
+Do not enable optional paid add-ons unless explicitly approved. If branch
+protection or rulesets are available, configure `main` to require pull requests,
+passing checks, no force pushes, no branch deletion, and review for governance
+files.
+
+## Copilot handoff expectation
+
+Future Copilot tasks should end with a self-contained handoff: summary of
+changes, validation results, exact commit and push commands, PR title, PR body,
+checks to wait for, post-merge cleanup commands, recommended next branch name,
+and the next Copilot prompt.

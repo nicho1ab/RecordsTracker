@@ -7,13 +7,28 @@ from typing import Any
 
 from ccld_complaints.connectors.base import SourceDocument, SourceDocumentCandidate
 from ccld_complaints.connectors.ccld import CcldFacilityReportsConnector, FacilityIngestionResult
-from ccld_complaints.connectors.ccld.facility_reports import ingest_facility_reports_for_facility
+from ccld_complaints.connectors.ccld.facility_reports import (
+    FacilityNumberIntakeResult,
+    MultiFacilityIngestionResult,
+    ingest_facility_reports_for_facilities,
+    ingest_facility_reports_for_facility,
+    inspect_facility_numbers,
+)
+from ccld_complaints.review_bundle import COMPLAINT_REVIEW_EXPORT_SQL
 from ccld_complaints.storage.sqlite import initialize_database
 from ccld_complaints.utils.hash import sha256_bytes
 
 DEFAULT_SAMPLE_DB_PATH = Path("data/processed/ccld.sqlite")
 DEFAULT_CCLD_FIXTURE_DIR = Path("tests/fixtures/ccld")
 DEFAULT_SAMPLE_FACILITY_NUMBER = "157806098"
+DEFAULT_MULTI_FACILITY_SAMPLE_INPUTS = (
+    "facility_number",
+    "157806098",
+    "157806097",
+    "157806098",
+    "# fixture corpus comment",
+    "",
+)
 DEFAULT_SAMPLE_RETRIEVED_AT = "2026-06-10T00:00:00+00:00"
 DATASSETTE_METADATA_SUFFIX = ".datasette-metadata.json"
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -23,6 +38,13 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 class SampleDatabaseResult:
     db_path: Path
     ingestion: FacilityIngestionResult
+
+
+@dataclass(frozen=True)
+class MultiFacilitySampleDatabaseResult:
+    db_path: Path
+    intake: FacilityNumberIntakeResult
+    ingestion: MultiFacilityIngestionResult
 
 
 def populate_sample_database(
@@ -45,6 +67,40 @@ def populate_sample_database(
     )
 
     return SampleDatabaseResult(db_path=db_path, ingestion=result)
+
+
+def populate_multi_facility_sample_database(
+    db_path: Path = DEFAULT_SAMPLE_DB_PATH,
+    *,
+    fixture_dir: Path = DEFAULT_CCLD_FIXTURE_DIR,
+    facility_inputs: tuple[str, ...] = DEFAULT_MULTI_FACILITY_SAMPLE_INPUTS,
+) -> MultiFacilitySampleDatabaseResult:
+    initialize_database(db_path)
+    intake = inspect_facility_numbers(list(facility_inputs))
+    if intake.invalid_values:
+        invalid_values = ", ".join(repr(value) for value in intake.invalid_values)
+        raise ValueError(
+            f"Fixture corpus facility input must contain digits only: {invalid_values}"
+        )
+    if not intake.facility_numbers:
+        raise ValueError("Fixture corpus requires at least one facility number.")
+
+    result = ingest_facility_reports_for_facilities(
+        intake.facility_numbers,
+        connector_factory=lambda facility_number: CcldFacilityReportsConnector(
+            facility_number=facility_number,
+            db_path=db_path,
+            schema_dir=_REPO_ROOT / "schemas",
+        ),
+        facility_detail_html_by_number=_facility_detail_html_by_number(
+            intake.facility_numbers,
+            fixture_dir,
+        ),
+        discovered_at=DEFAULT_SAMPLE_RETRIEVED_AT,
+        load_document=lambda candidate: _load_report_fixture(candidate, fixture_dir),
+    )
+
+    return MultiFacilitySampleDatabaseResult(db_path=db_path, intake=intake, ingestion=result)
 
 
 def datasette_command(db_path: Path) -> str:
@@ -77,8 +133,9 @@ def datasette_metadata(db_path: Path) -> dict[str, Any]:
             db_path.stem: {
                 "title": "CCLD Complaints Review Database",
                 "description": (
-                    "Start with the review views before opening normalized source tables. "
-                    "Keep source URL and raw hash fields when exporting review data."
+                    "Open the review_home saved query first, then use review views before "
+                    "opening normalized source tables. Keep source URL and raw hash fields "
+                    "when exporting review data."
                 ),
                 "tables": _datasette_table_metadata(),
                 "queries": _datasette_saved_queries(),
@@ -89,15 +146,83 @@ def datasette_metadata(db_path: Path) -> dict[str, Any]:
 
 def review_workflow_lines() -> list[str]:
     return [
-        "Open these Datasette views first:",
-        "1. complaint_review_summary - main complaint review across facilities.",
-        "2. facility_complaint_summary - facility-level counts and date range.",
-        "3. delay_review_flags - triage list for records with review flags.",
-        "4. source_traceability_review - source URLs, hashes, connector details, and report index.",
+        "Next review steps:",
+        "Open first:",
+        "- review_home saved query - start-here task menu for local review workflows.",
         (
-            "Saved queries to try: complaints_by_facility, records_with_delay_review_flags, "
-            "newest_reports, allegation_summary_by_facility, source_traceability_check."
+            "- complaint_review_start_here saved query - guided complaint review with source "
+            "traceability."
         ),
+        "- complaint_first_pass_review view - low-noise first-pass complaint review.",
+        "For public-record discovery:",
+        (
+            "- public_record_allegation_search saved query - search source-derived allegation "
+            "text, categories, and findings with traceability."
+        ),
+        "For timeline review:",
+        (
+            "- complaint_timeline_review view - complaint and event dates with source "
+            "traceability."
+        ),
+        "For delay triage:",
+        "- delay_review_flags view - records with review flags for closer review.",
+        (
+            "- records_with_delay_review_flags saved query - triage review flags as screening "
+            "aids only."
+        ),
+        "For source verification:",
+        (
+            "- source_traceability_review view - source URLs, raw hashes, connector details, "
+            "and report index."
+        ),
+        (
+            "- multi_facility_source_traceability_review view - source traceability status "
+            "and linked derived-record counts by facility."
+        ),
+        (
+            "- field_source_traceability_review view - extracted fields with audit source "
+            "text and source document traceability."
+        ),
+        "- source_traceability_by_facility saved query - check source provenance for one facility.",
+        (
+            "- multi_facility_source_traceability_by_facility saved query - filter source "
+            "traceability status and linked counts by facility number."
+        ),
+        "For CSV export:",
+        (
+            "- complaint_review_export_with_traceability saved query - export complaint fields "
+            "with source hashes."
+        ),
+        (
+            r"- .\scripts\export-review-bundle.ps1 - write complaint, delay triage, "
+            "source traceability, and facility comparison CSVs."
+        ),
+        "Other useful review paths:",
+        "- complaint_review_summary view - full complaint review across facilities.",
+        "- facility_complaint_summary view - facility-level counts and date range.",
+        (
+            "- facility_pattern_review view - facility-level finding mix, allegation "
+            "categories, missingness, and review flags."
+        ),
+        (
+            "- facility_comparison_review view - compare facility/category/finding rows "
+            "with source-document counts and cautious scope notes."
+        ),
+        (
+            "- repeated_facility_category_findings saved query - source-review queue "
+            "for category/finding rows present across multiple facilities."
+        ),
+        "- complaint_timeline_by_facility saved query - filter timeline rows by facility number.",
+        (
+            "- field_traceability_by_facility saved query - filter field-level extraction "
+            "audit context by facility number."
+        ),
+        "- complaints_by_facility saved query - filter complaint review by facility number.",
+        (
+            "- facilities_with_delay_review_flags - find facilities with records needing "
+            "closer review."
+        ),
+        "- newest_reports saved query - review most recently retrieved source documents.",
         "Delay flags are screening aids only; verify important details against source documents.",
     ]
 
@@ -112,12 +237,50 @@ def _datasette_table_metadata() -> dict[str, Any]:
         "reviewers trace each derived record back to public source evidence."
     )
     review_table_metadata = {
+        "complaint_first_pass_review": {
+            "title": "Complaint First-Pass Review",
+            "description": (
+                "Low-noise first-pass view with facility, complaint dates, finding, allegation "
+                "summary, a single review flag summary, source URL, raw SHA-256 hash, raw path, "
+                "connector metadata, retrieval time, report index, and IDs for lower-level "
+                "follow-up. Use this before the fuller complaint_review_summary; do not treat "
+                "the derived fields as official source records."
+            ),
+            "sort_desc": "report_date",
+            "columns": {
+                "facility_number": "Public CCLD facility number used for filtering.",
+                "facility_name": "Facility name extracted from source reports.",
+                "complaint_control_number": "Complaint control number when available.",
+                "complaint_received_date": "Date the complaint was reportedly received.",
+                "visit_date": "Visit date shown in the source report when available.",
+                "report_date": "Report date shown in the source report.",
+                "finding": "Normalized finding value from the data contract.",
+                "allegation_count": "Number of allegation rows linked to the complaint.",
+                "allegation_summary": "Combined allegation text for quick review.",
+                "review_flags_summary": (
+                    "Plain-language summary of delay or review flags. Review flags are "
+                    "screening aids, not conclusions."
+                ),
+                "source_url": "Public source URL for checking the derived record.",
+                "raw_sha256": "SHA-256 hash for the preserved raw source file.",
+                "raw_path": "Local raw file path for preserved source content.",
+                "connector_name": "Connector that retrieved and normalized the document.",
+                "connector_version": "Connector version used for extraction.",
+                "retrieved_at": "Timestamp when source content was retrieved.",
+                "report_index": "CCLD report index when available.",
+                "complaint_id": "Stable local complaint identifier for lower-level follow-up.",
+                "document_id": "Source document identifier for lower-level source checks.",
+            },
+        },
         "complaint_review_summary": {
             "title": "Complaint Review Summary",
             "description": (
                 "Main review view combining facility, complaint, allegation summary, delay fields, "
                 "review flags, source URL, and raw path. Sort by complaint_received_date or "
-                "report_date descending when reviewing newer records first. "
+                "report_date descending when reviewing newer records first. Use after "
+                "complaint_first_pass_review when detailed delay fields, separate flags, or "
+                "extraction confidence are needed; do not treat extracted rows as official "
+                "source records. Keep source URL and raw path when exporting. "
                 f"{delay_flag_caution}"
             ),
             "sort_desc": "report_date",
@@ -163,7 +326,9 @@ def _datasette_table_metadata() -> dict[str, Any]:
                 "One row per facility with complaint count, allegation count, complaint date "
                 "range, "
                 "and count of records with delay review flags. Sort by complaint_count descending "
-                "to find facilities with more reviewed records."
+                "to find facilities with more reviewed records. Use for local comparison, not as "
+                "a complete or official facility history; verify important counts against source "
+                "records before citing them."
             ),
             "sort_desc": "complaint_count",
             "columns": {
@@ -179,12 +344,146 @@ def _datasette_table_metadata() -> dict[str, Any]:
                 ),
             },
         },
+        "facility_pattern_review": {
+            "title": "Facility Pattern Review",
+            "description": (
+                "Facility-level pattern review over the local derived dataset. Use it to compare "
+                "complaint counts, source document counts, allegation categories, finding mix, "
+                "missing first activity dates, report-date proxy usage, review flags, and date "
+                "ranges. Counts are screening aids for closer source review, not findings about "
+                "the facility or the public source record."
+            ),
+            "sort_desc": "complaint_count",
+            "columns": {
+                "facility_number": "Public CCLD facility number.",
+                "facility_name": "Facility name extracted from source reports.",
+                "complaint_count": "Number of complaint records in the local derived dataset.",
+                "source_document_count": "Number of source documents linked to complaints.",
+                "allegation_count": "Number of allegation records linked to facility complaints.",
+                "allegation_categories": (
+                    "Distinct allegation categories, with unknown for missing values."
+                ),
+                "substantiated_complaint_count": "Complaint records with Substantiated finding.",
+                "unsubstantiated_complaint_count": (
+                    "Complaint records with Unsubstantiated finding."
+                ),
+                "inconclusive_complaint_count": "Complaint records with Inconclusive finding.",
+                "unknown_finding_complaint_count": (
+                    "Complaint records with missing or Unknown finding."
+                ),
+                "missing_first_activity_count": (
+                    "Complaint records where complaint received date exists but first activity "
+                    "date is missing."
+                ),
+                "report_date_proxy_count": (
+                    "Complaint records where report date is used as the delay review basis."
+                ),
+                "records_with_review_flags": (
+                    "Complaint records with at least one delay or review flag. "
+                    f"{delay_flag_caution}"
+                ),
+                "earliest_complaint_received_date": "Earliest complaint received date in the data.",
+                "latest_complaint_received_date": "Latest complaint received date in the data.",
+                "earliest_retrieved_at": (
+                    "Earliest source retrieval timestamp for linked documents."
+                ),
+                "latest_retrieved_at": "Latest source retrieval timestamp for linked documents.",
+            },
+        },
+        "facility_comparison_review": {
+            "title": "Facility Comparison Review",
+            "description": (
+                "Comparison-oriented review over the local derived dataset, grouped by "
+                "facility, allegation category, and finding. Use it to identify repeated "
+                "public-record categories across facilities for closer source review. Counts "
+                "and same-category/finding facility totals are screening aids, not findings "
+                "about a facility, the public source, or facility-wide conduct."
+            ),
+            "sort_desc": "facilities_with_same_category_finding",
+            "columns": {
+                "facility_number": "Public CCLD facility number.",
+                "facility_name": "Facility name extracted from source reports.",
+                "allegation_category": (
+                    "Derived allegation category, with Unknown for missing values."
+                ),
+                "finding": "Derived finding for the category row, with Unknown for missing values.",
+                "complaint_count": "Complaint records in this facility/category/finding row.",
+                "allegation_count": "Allegation records in this facility/category/finding row.",
+                "source_document_count": "Source documents linked to the row.",
+                "complete_source_traceability_document_count": (
+                    "Source documents in the row with required traceability fields present."
+                ),
+                "missing_source_traceability_document_count": (
+                    "Source documents in the row missing one or more required traceability fields."
+                ),
+                "records_with_review_flags": (
+                    "Complaint records in the row with at least one delay or review flag. "
+                    f"{delay_flag_caution}"
+                ),
+                "earliest_complaint_received_date": "Earliest complaint received date in the row.",
+                "latest_complaint_received_date": "Latest complaint received date in the row.",
+                "earliest_retrieved_at": "Earliest source retrieval timestamp for the row.",
+                "latest_retrieved_at": "Latest source retrieval timestamp for the row.",
+                "facilities_with_same_category_finding": (
+                    "Number of facility rows in the derived dataset with the same allegation "
+                    "category and finding."
+                ),
+                "comparison_scope_note": (
+                    "Reminder that the row is a screening aid and source records should be "
+                    "verified before citation."
+                ),
+            },
+        },
+        "complaint_timeline_review": {
+            "title": "Complaint Timeline Review",
+            "description": (
+                "Timeline-oriented view with one row per extracted complaint milestone date "
+                "or event date. Use it to see what happened and when according to the derived "
+                "dataset while preserving source URL, raw SHA-256 hash, raw path, connector "
+                "metadata, retrieval time, report index, and IDs for source checking. Missing "
+                "dates remain absent from this view; absence does not prove the event did not "
+                "occur."
+            ),
+            "sort_desc": "timeline_date",
+            "columns": {
+                "facility_number": "Public CCLD facility number used for filtering.",
+                "facility_name": "Facility name extracted from source reports.",
+                "complaint_control_number": "Complaint control number when available.",
+                "timeline_sequence": "Stable ordering for same-date timeline items.",
+                "timeline_item_type": "Plain-language type for the date row.",
+                "timeline_source_field": "Canonical field or event type that supplied the date.",
+                "timeline_date": "Extracted date for this timeline row.",
+                "timeline_note": "Short source-aware note for the timeline row.",
+                "finding": "Normalized finding value from the complaint record.",
+                "review_delay_over_30_days": delay_flag_caution,
+                "review_delay_over_60_days": delay_flag_caution,
+                "review_delay_over_90_days": delay_flag_caution,
+                "review_delay_over_120_days": delay_flag_caution,
+                "missing_first_activity_date": (
+                    "Set when complaint received date exists but first activity date is missing."
+                ),
+                "report_date_used_as_proxy": (
+                    "Set only when report date is used as the delay review basis."
+                ),
+                "source_url": "Public source URL for checking the derived record.",
+                "raw_sha256": "SHA-256 hash for the preserved raw source file.",
+                "raw_path": "Local path to preserved raw source content.",
+                "connector_name": "Connector that retrieved and normalized the document.",
+                "connector_version": "Connector version used for extraction.",
+                "retrieved_at": "Timestamp when source content was retrieved.",
+                "report_index": "CCLD report index when available.",
+                "event_id": "Event identifier when the row comes from an extracted event.",
+                "document_id": "Source document identifier for lower-level source checks.",
+            },
+        },
         "delay_review_flags": {
             "title": "Delay Review Flags",
             "description": (
                 "Filtered triage view showing records with one or more delay or review flags. "
                 "Sort by days_received_to_visit or days_received_to_report descending to review "
-                f"larger calculated intervals first. {delay_flag_caution}"
+                "larger calculated intervals first. Use for closer review, not as a list of "
+                "delayed investigations. Preserve source URL and raw path when exporting. "
+                f"{delay_flag_caution}"
             ),
             "sort_desc": "days_received_to_report",
             "columns": {
@@ -214,7 +513,8 @@ def _datasette_table_metadata() -> dict[str, Any]:
             "description": (
                 "Use this view to verify source provenance before relying on extracted fields. "
                 f"{source_traceability_note} Sort by retrieved_at or report_index descending "
-                "when checking newest retrieved reports first."
+                "when checking newest retrieved reports first. Use before citation or export; do "
+                "not use this view alone as a complaint summary."
             ),
             "sort_desc": "retrieved_at",
             "columns": {
@@ -230,6 +530,78 @@ def _datasette_table_metadata() -> dict[str, Any]:
                 "report_index": "CCLD report index when available.",
                 "document_type": "Document type extracted from the source report when available.",
                 "content_type": "Fetched source content type when available.",
+            },
+        },
+        "multi_facility_source_traceability_review": {
+            "title": "Multi-Facility Source Traceability Review",
+            "description": (
+                "One row per source document with facility context, source URL, raw SHA-256 "
+                "hash, raw path, connector metadata, retrieval time, report index, document "
+                "type, traceability status, and counts of linked complaints, allegations, "
+                "events, and extraction audit fields. Use before comparing facilities or "
+                "exporting multi-facility review outputs; counts are source-checking aids "
+                "over the derived dataset, not conclusions about the public source."
+            ),
+            "sort_desc": "retrieved_at",
+            "columns": {
+                "facility_number": "Public CCLD facility number.",
+                "facility_name": "Facility name extracted from source reports.",
+                "document_id": "Stable local source document identifier.",
+                "source_url": "Public source URL used for retrieval.",
+                "raw_sha256": "SHA-256 hash for the preserved raw source file.",
+                "raw_path": "Local path to preserved raw source content.",
+                "connector_name": "Connector that retrieved and normalized the document.",
+                "connector_version": "Connector version used for extraction.",
+                "retrieved_at": "Timestamp when source content was retrieved.",
+                "report_index": "CCLD report index when available.",
+                "document_type": "Document type extracted from the source report when available.",
+                "content_type": "Fetched source content type when available.",
+                "traceability_status": (
+                    "Complete when required source traceability fields are present; otherwise "
+                    "missing source traceability."
+                ),
+                "complaint_count": "Complaint records linked to this source document.",
+                "allegation_count": "Allegation records linked through complaints.",
+                "event_count": "Event records linked through complaints.",
+                "extraction_audit_field_count": (
+                    "Extraction audit records linked directly to this source document."
+                ),
+            },
+        },
+        "field_source_traceability_review": {
+            "title": "Field Source Traceability Review",
+            "description": (
+                "Field-level extraction audit view that keeps extracted values, source text, "
+                "source section, warnings, extraction method, extractor version, confidence, "
+                "complaint context, and source document traceability together. Use before "
+                "relying on a specific derived field; the public portal remains the source of "
+                "record."
+            ),
+            "sort_desc": "report_date",
+            "columns": {
+                "facility_number": "Public CCLD facility number used for filtering.",
+                "facility_name": "Facility name extracted from source reports.",
+                "complaint_id": "Stable local complaint identifier when available.",
+                "complaint_control_number": "Complaint control number when available.",
+                "complaint_received_date": "Date the complaint was reportedly received.",
+                "report_date": "Report date shown in the public source report.",
+                "field_name": "Canonical field name audited by the extractor.",
+                "extracted_value": "Extracted value stored or reviewed by the extractor.",
+                "source_text": "Source text used for field-level review when available.",
+                "source_section": "Source section used for field-level review when available.",
+                "warning": "Extraction warning when available.",
+                "confidence": "Extractor confidence value when available.",
+                "extraction_method": "Method used to extract the field.",
+                "extractor_version": "Extractor version that produced the audit record.",
+                "document_id": "Stable local source document identifier.",
+                "source_url": "Public source URL for checking the derived field.",
+                "raw_sha256": "SHA-256 hash for the preserved raw source file.",
+                "raw_path": "Local path to preserved raw source content.",
+                "connector_name": "Connector that retrieved and normalized the document.",
+                "connector_version": "Connector version used for extraction.",
+                "retrieved_at": "Timestamp when source content was retrieved.",
+                "report_index": "CCLD report index when available.",
+                "document_type": "Document type extracted from the source report when available.",
             },
         },
     }
@@ -361,9 +733,212 @@ def _normalized_table_metadata() -> dict[str, Any]:
 
 def _datasette_saved_queries() -> dict[str, Any]:
     return {
+        "review_home": {
+            "title": "Review Home: Start Here",
+            "description": (
+                "Open this first for task-based local review paths before using normalized "
+                "tables. Each row points to a review view or saved query and names the source "
+                "traceability fields to preserve. Use it to choose a task; do not treat it as "
+                "data output for citation."
+            ),
+            "sql": """
+SELECT
+    1 AS step,
+    'Complaint review' AS workflow_group,
+    'Review complaints' AS task,
+    'complaint_first_pass_review' AS open_first,
+    'Use for low-noise first-pass complaint review with source URL, raw hash, ' ||
+        'connector metadata, retrieval time, report index, and IDs for follow-up.' AS when_to_use,
+    'Treat extracted fields as derived review aids and keep source traceability ' ||
+        'columns when exporting.' AS caution
+UNION ALL
+SELECT
+    2,
+    'Public-record discovery',
+    'Search allegation text',
+    'public_record_allegation_search',
+    'Use a cautious keyword or phrase to search source-derived allegation text, ' ||
+        'categories, and findings while keeping complaint dates and source traceability visible.',
+    'Search results are screening aids over the derived dataset; verify important details ' ||
+        'against the public source.'
+UNION ALL
+SELECT
+    3,
+    'Timeline review',
+    'Review what happened and when',
+    'complaint_timeline_review',
+    'Use for complaint milestone dates and extracted event dates with source traceability.',
+    'Missing dates are unknown in the derived dataset; absence does not prove ' ||
+        'an event did not occur.'
+UNION ALL
+SELECT
+    4,
+    'Review flags',
+    'Find records needing closer review',
+    'records_with_delay_review_flags',
+    'Use for delay triage and records flagged for review based on available extracted dates.',
+    'Delay review flags are screening aids, not conclusions that an investigation was delayed.'
+UNION ALL
+SELECT
+    5,
+    'Facility comparison',
+    'Compare facilities',
+    'facility_complaint_summary',
+    'Use for facility-level complaint counts, allegation counts, date ranges, ' ||
+        'and counts of records with review flags.',
+    'Counts summarize the local derived dataset only; verify important findings ' ||
+        'against source records.'
+UNION ALL
+SELECT
+    6,
+    'Facility comparison',
+    'Review facility patterns',
+    'facility_pattern_review',
+    'Use for finding mix, allegation categories, missingness, proxy usage, and review flag counts.',
+    'Pattern counts are screening aids over the derived dataset, not facility findings.'
+UNION ALL
+SELECT
+    7,
+    'Facility comparison',
+    'Compare repeated categories',
+    'facility_comparison_review',
+    'Sort by same category/finding facility count, source document counts, and review flags.',
+    'Rows are screening aids for source review, not conclusions about a facility.'
+UNION ALL
+SELECT
+    8,
+    'Source verification',
+    'Verify sources',
+    'multi_facility_source_traceability_review',
+    'Use before relying on extracted fields; check source URL, raw SHA-256 hash, ' ||
+        'raw path, connector metadata, retrieval time, report index, traceability ' ||
+        'status, and linked derived-record counts.',
+    'The public portal remains the source of record.'
+UNION ALL
+SELECT
+    9,
+    'CSV export',
+    'Export CSVs',
+    'complaint_review_export_with_traceability',
+    'Use for accessible CSV exports with complaint review fields and source traceability columns.',
+    'Keep clear headers and source URL, raw hash, connector metadata, retrieval ' ||
+        'time, and report index when available.'
+ORDER BY step
+            """.strip(),
+        },
+        "public_record_allegation_search": {
+            "title": "Public-Record Allegation Search",
+            "description": (
+                "Search source-derived allegation text, allegation categories, and findings by "
+                "keyword or phrase while keeping facility context, complaint dates, review "
+                "flags, source URL, raw hash, connector metadata, retrieval time, and report "
+                "index visible. Use this as a discovery aid over the derived dataset, not as a "
+                "legal conclusion or complete public portal search. Enter a cautious public-record "
+                "term when Datasette prompts for search_term."
+            ),
+            "sql": """
+SELECT
+    f.external_facility_number AS facility_number,
+    f.facility_name,
+    c.complaint_control_number,
+    c.complaint_received_date,
+    c.visit_date,
+    c.report_date,
+    c.finding AS complaint_finding,
+    a.allegation_category,
+    a.finding AS allegation_finding,
+    a.allegation_text,
+    NULLIF(RTRIM(
+        CASE
+            WHEN LOWER(a.allegation_text) LIKE '%' || LOWER(:search_term) || '%'
+            THEN 'allegation text; '
+            ELSE ''
+        END ||
+        CASE
+            WHEN LOWER(COALESCE(a.allegation_category, '')) LIKE '%' || LOWER(:search_term) || '%'
+            THEN 'allegation category; '
+            ELSE ''
+        END ||
+        CASE
+            WHEN LOWER(COALESCE(a.finding, '')) LIKE '%' || LOWER(:search_term) || '%'
+              OR LOWER(COALESCE(c.finding, '')) LIKE '%' || LOWER(:search_term) || '%'
+            THEN 'finding; '
+            ELSE ''
+        END,
+        '; '
+    ), '') AS matched_fields,
+    c.review_delay_over_30_days,
+    c.review_delay_over_60_days,
+    c.review_delay_over_90_days,
+    c.review_delay_over_120_days,
+    c.missing_first_activity_date,
+    c.report_date_used_as_proxy,
+    sd.source_url,
+    sd.raw_sha256,
+    sd.raw_path,
+    sd.connector_name,
+    sd.connector_version,
+    sd.retrieved_at,
+    sd.report_index,
+    c.complaint_id,
+    a.allegation_id,
+    sd.document_id
+FROM allegations a
+JOIN complaints c ON c.complaint_id = a.complaint_id
+JOIN facilities f ON f.facility_id = c.facility_id
+JOIN source_documents sd ON sd.document_id = c.document_id
+WHERE NULLIF(TRIM(:search_term), '') IS NOT NULL
+  AND (
+      LOWER(a.allegation_text) LIKE '%' || LOWER(:search_term) || '%'
+      OR LOWER(COALESCE(a.allegation_category, '')) LIKE '%' || LOWER(:search_term) || '%'
+      OR LOWER(COALESCE(a.finding, '')) LIKE '%' || LOWER(:search_term) || '%'
+      OR LOWER(COALESCE(c.finding, '')) LIKE '%' || LOWER(:search_term) || '%'
+  )
+ORDER BY c.report_date DESC, c.complaint_received_date DESC, facility_number, allegation_id
+            """.strip(),
+        },
+        "complaint_review_start_here": {
+            "title": "Start Here: Complaint Review with Source Traceability",
+            "description": (
+                "Open this first for a review-ready complaint list with facility context, "
+                "a single review flag summary, source URL, raw SHA-256 hash, raw path, "
+                "connector metadata, retrieval time, report index, and IDs for follow-up. Use "
+                "for guided first-pass review; do not treat derived fields as source "
+                "conclusions. Preserve traceability columns when filtering or exporting."
+            ),
+            "sql": """
+SELECT
+    facility_number,
+    facility_name,
+    complaint_control_number,
+    complaint_received_date,
+    visit_date,
+    report_date,
+    finding,
+    allegation_count,
+    allegation_summary,
+    review_flags_summary,
+    source_url,
+    raw_sha256,
+    raw_path,
+    connector_name,
+    connector_version,
+    retrieved_at,
+    report_index,
+    complaint_id,
+    document_id
+FROM complaint_first_pass_review
+ORDER BY report_date DESC, complaint_received_date DESC, facility_number
+            """.strip(),
+        },
         "complaints_by_facility": {
             "title": "Complaints by Facility",
-            "description": "Filter the main review view by CCLD facility number.",
+            "description": (
+                "Filter the main review view by CCLD facility number. Enter the public "
+                "facility number, such as 157806098, when Datasette prompts for facility_number. "
+                "Use for narrowing review scope; do not assume omitted facilities have no "
+                "complaints in the public portal."
+            ),
             "sql": """
 SELECT *
 FROM complaint_review_summary
@@ -371,11 +946,36 @@ WHERE facility_number = :facility_number
 ORDER BY complaint_received_date DESC, report_date DESC
             """.strip(),
         },
+        "complaint_timeline_by_facility": {
+            "title": "Complaint Timeline by Facility",
+            "description": (
+                "Filter complaint timeline rows by public facility number. Use to review "
+                "complaint milestone dates and extracted event dates for one facility while "
+                "keeping source traceability visible. Missing dates are unknown in the derived "
+                "dataset and should be checked against the public source when important."
+            ),
+            "sql": """
+SELECT *
+FROM complaint_timeline_review
+WHERE facility_number = :facility_number
+ORDER BY timeline_date DESC, timeline_sequence, complaint_control_number
+            """.strip(),
+        },
+        "complaint_review_export_with_traceability": {
+            "title": "Complaint Review Export with Source Traceability",
+            "description": (
+                "Export complaint review fields with source URL, raw hash, connector metadata, "
+                "retrieval time, and report index. Use for accessible CSV review; keep clear "
+                "headers and do not remove traceability columns from research exports."
+            ),
+            "sql": COMPLAINT_REVIEW_EXPORT_SQL,
+        },
         "records_with_delay_review_flags": {
             "title": "Records with Delay Review Flags",
             "description": (
                 "Triage records with one or more delay or review flags. These are screening aids, "
-                "not conclusions."
+                "not conclusions. Use to decide what to inspect next; do not label the export as "
+                "delayed investigations."
             ),
             "sql": """
 SELECT *
@@ -383,15 +983,106 @@ FROM delay_review_flags
 ORDER BY days_received_to_report DESC, complaint_received_date DESC
             """.strip(),
         },
+        "facilities_with_delay_review_flags": {
+            "title": "Facilities with Delay Review Flags",
+            "description": (
+                "Rank facilities by records with delay or review flags. Counts are screening "
+                "aids, not conclusions about delays."
+            ),
+            "sql": """
+SELECT *
+FROM facility_complaint_summary
+WHERE records_with_delay_review_flags > 0
+ORDER BY records_with_delay_review_flags DESC, complaint_count DESC, facility_number
+            """.strip(),
+        },
+        "facility_patterns_with_review_flags": {
+            "title": "Facility Patterns with Review Flags",
+            "description": (
+                "Rank facilities with records flagged for review by complaint count, finding "
+                "mix, allegation categories, missingness, and report-date proxy usage. Counts "
+                "summarize the local derived dataset and are not conclusions."
+            ),
+            "sql": """
+SELECT *
+FROM facility_pattern_review
+WHERE records_with_review_flags > 0
+ORDER BY records_with_review_flags DESC, complaint_count DESC, facility_number
+            """.strip(),
+        },
+        "repeated_facility_category_findings": {
+            "title": "Repeated Facility Category Findings",
+            "description": (
+                "List facility/category/finding rows that appear across more than one facility "
+                "in the local derived dataset. Use as a source-review queue, not as a conclusion "
+                "about facilities or the public source."
+            ),
+            "sql": """
+SELECT *
+FROM facility_comparison_review
+WHERE facilities_with_same_category_finding > 1
+ORDER BY facilities_with_same_category_finding DESC,
+         source_document_count DESC,
+         records_with_review_flags DESC,
+         allegation_category,
+         finding,
+         facility_number
+            """.strip(),
+        },
         "source_traceability_check": {
             "title": "Source Traceability Review",
             "description": (
-                "Check source URLs, hashes, connector metadata, retrieval time, and report index."
+                "Check source URLs, hashes, connector metadata, retrieval time, and report index. "
+                "Use before relying on or citing extracted records; preserve these fields when "
+                "exporting."
             ),
             "sql": """
 SELECT *
 FROM source_traceability_review
 ORDER BY facility_number, report_index DESC
+            """.strip(),
+        },
+        "source_traceability_by_facility": {
+            "title": "Source Traceability by Facility",
+            "description": (
+                "Filter source provenance by facility number before relying on or exporting "
+                "derived complaint fields. Enter the public facility number when Datasette "
+                "prompts for facility_number."
+            ),
+            "sql": """
+SELECT *
+FROM source_traceability_review
+WHERE facility_number = :facility_number
+ORDER BY report_index DESC, retrieved_at DESC
+            """.strip(),
+        },
+        "multi_facility_source_traceability_by_facility": {
+            "title": "Multi-Facility Source Traceability by Facility",
+            "description": (
+                "Filter the source traceability matrix by public facility number. Use before "
+                "comparing or exporting multi-facility derived records; counts are "
+                "source-checking aids and not conclusions about a facility or the public source."
+            ),
+            "sql": """
+SELECT *
+FROM multi_facility_source_traceability_review
+WHERE facility_number = :facility_number
+ORDER BY retrieved_at DESC, report_index DESC
+            """.strip(),
+        },
+        "field_traceability_by_facility": {
+            "title": "Field Traceability by Facility",
+            "description": (
+                "Filter field-level extraction audit context by public facility number. Use "
+                "before relying on a specific extracted field; check source text, warnings, "
+                "confidence, source URL, raw hash, connector metadata, retrieval time, and "
+                "report index."
+            ),
+            "sql": """
+SELECT *
+FROM field_source_traceability_review
+WHERE facility_number = :facility_number
+ORDER BY report_date DESC, complaint_received_date DESC, field_name
             """.strip(),
         },
         "allegation_summary_by_facility": {
@@ -437,6 +1128,18 @@ def _load_report_fixture(
         retrieved_at=DEFAULT_SAMPLE_RETRIEVED_AT,
         content_type="text/html",
     )
+
+
+def _facility_detail_html_by_number(
+    facility_numbers: list[str],
+    fixture_dir: Path,
+) -> dict[str, str]:
+    return {
+        facility_number: _resolve_fixture_path(
+            fixture_dir / "raw" / f"{facility_number}_facility_detail.html"
+        ).read_text(encoding="utf-8")
+        for facility_number in facility_numbers
+    }
 
 
 def _resolve_fixture_path(path: Path) -> Path:

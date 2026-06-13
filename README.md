@@ -18,11 +18,16 @@ proof of concept.
    extraction audit records in SQLite.
 - Presents review views and saved query examples in Datasette for browsing,
    filtering, source checking, and CSV export.
+- Exports a local review bundle with complaint review, delay triage, source
+   traceability, multi-facility traceability, and comparison CSV files.
 - Preserves source traceability through source URL, raw SHA-256 hash, raw path,
    connector name, connector version, retrieval timestamp, and report index when
    available.
 - Uses fixture-backed tests to protect deterministic extraction and local review
    behavior from regressions.
+- Includes a small fixture-backed multi-facility corpus for offline tests of
+   intake diagnostics, fetch summaries, traceability views, comparison views,
+   and review-bundle exports without live public requests.
 - Supports a controlled live fetch workflow that is explicitly user-invoked,
    rate-limited by script options, and scoped to provided facility numbers.
 
@@ -46,12 +51,23 @@ After setup, populate a sample database:
 ```
 
 The script prints the SQLite database path, the generated Datasette metadata
-path, and the Datasette command to open. Start with these Datasette views:
+path, the Datasette command to open, and grouped next steps. Start with
+`review_home`, `complaint_review_start_here`, or `complaint_first_pass_review`;
+use `public_record_allegation_search` for cautious keyword discovery over
+source-derived allegation text, categories, and findings; use
+`complaint_timeline_review` for complaint milestone dates and extracted event
+dates; use `delay_review_flags` for delay triage; use
+`facility_pattern_review` for facility-level pattern comparison over the derived
+dataset; use `facility_comparison_review` for facility/category/finding rows
+with source-document counts and cautious comparison notes; use
+`source_traceability_review`, `multi_facility_source_traceability_review`, and
+`field_source_traceability_review` for source verification; and use
+`complaint_review_export_with_traceability` or `export-review-bundle.ps1` for
+source-traceable CSV export.
 
-1. `complaint_review_summary`
-2. `facility_complaint_summary`
-3. `delay_review_flags`
-4. `source_traceability_review`
+The developer test suite also includes a small two-facility fixture corpus that
+uses tracked source-shaped fixtures only. It is an offline regression aid for the
+multi-facility review paths, not an official or complete facility comparison.
 
 For live public data, use the controlled live fetch script with explicit facility
 numbers and request limits:
@@ -60,9 +76,29 @@ numbers and request limits:
 .\scripts\run-ccld-live-fetch.ps1 -FacilityNumber 157806098 -Limit 5 -MaxRequests 10
 ```
 
+The live fetch command prints a summary of facilities requested, report
+candidates discovered, selected, skipped by limit, fetched, written, and failed
+so reviewers can see the run outcome before opening logs or Datasette. The
+summary distinguishes facilities with records discovered, facilities with no
+records discovered, and discovery failures. It also prints facility identifier
+intake feedback, including accepted identifiers, duplicates ignored, and ignored
+blank, comment, or header values. It then prints the same grouped next steps for
+what to open first, delay triage, source verification, and CSV export.
+
 Downloaded live raw files are saved under the ignored local `data/raw` path by
 default. Treat public complaint narratives carefully because they may contain
 sensitive details even when publicly available.
+
+To export source-traceable CSV review outputs after populating the database:
+
+```powershell
+.\scripts\export-review-bundle.ps1
+```
+
+The review bundle writes complaint review, delay triage, source traceability,
+multi-facility source traceability, complaint timeline, field traceability,
+facility pattern, and facility comparison CSV files plus a README with cautious
+public-record review notes.
 
 ## Documentation
 

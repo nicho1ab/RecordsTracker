@@ -79,6 +79,27 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
         "source_url": FIXTURE_URL,
         "raw_path": RAW_FIXTURE.as_posix(),
     }
+    assert _complaint_first_pass_review(db_path) == {
+        "facility_number": "157806098",
+        "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+        "complaint_control_number": "32-CR-20220407124448",
+        "complaint_received_date": "2022-04-07",
+        "visit_date": "2022-08-24",
+        "report_date": "2022-08-24",
+        "finding": "Unsubstantiated",
+        "allegation_count": 2,
+        "review_flags_summary": (
+            "over 30 days; over 60 days; over 90 days; over 120 days; "
+            "missing first activity date"
+        ),
+        "source_url": FIXTURE_URL,
+        "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
+        "raw_path": RAW_FIXTURE.as_posix(),
+        "connector_name": "ccld_facility_reports",
+        "connector_version": "0.1.0",
+        "retrieved_at": RETRIEVED_AT,
+        "report_index": 3,
+    }
     allegation_summary = _view_value(
         db_path, "complaint_review_summary", "allegation_summary"
     )
@@ -96,6 +117,43 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
         "latest_complaint_received_date": "2022-04-07",
         "records_with_delay_review_flags": 1,
     }
+    assert _facility_pattern_review(db_path) == {
+        "facility_number": "157806098",
+        "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+        "complaint_count": 1,
+        "source_document_count": 1,
+        "allegation_count": 2,
+        "allegation_categories": "Unknown",
+        "substantiated_complaint_count": 0,
+        "unsubstantiated_complaint_count": 1,
+        "inconclusive_complaint_count": 0,
+        "unknown_finding_complaint_count": 0,
+        "missing_first_activity_count": 1,
+        "report_date_proxy_count": 0,
+        "records_with_review_flags": 1,
+        "earliest_complaint_received_date": "2022-04-07",
+        "latest_complaint_received_date": "2022-04-07",
+        "earliest_retrieved_at": RETRIEVED_AT,
+        "latest_retrieved_at": RETRIEVED_AT,
+    }
+    assert _facility_comparison_review(db_path) == {
+        "facility_number": "157806098",
+        "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+        "allegation_category": "Unknown",
+        "finding": "Unsubstantiated",
+        "complaint_count": 1,
+        "allegation_count": 2,
+        "source_document_count": 1,
+        "complete_source_traceability_document_count": 1,
+        "missing_source_traceability_document_count": 0,
+        "records_with_review_flags": 1,
+        "earliest_complaint_received_date": "2022-04-07",
+        "latest_complaint_received_date": "2022-04-07",
+        "earliest_retrieved_at": RETRIEVED_AT,
+        "latest_retrieved_at": RETRIEVED_AT,
+        "facilities_with_same_category_finding": 1,
+        "comparison_scope_note": "screening aid; verify source records before citing",
+    }
     assert _source_traceability_review(db_path) == {
         "facility_number": "157806098",
         "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
@@ -105,6 +163,77 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
         "connector_name": "ccld_facility_reports",
         "connector_version": "0.1.0",
         "retrieved_at": RETRIEVED_AT,
+        "report_index": 3,
+    }
+    assert _multi_facility_source_traceability_review(db_path) == {
+        "facility_number": "157806098",
+        "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+        "source_url": FIXTURE_URL,
+        "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
+        "raw_path": RAW_FIXTURE.as_posix(),
+        "connector_name": "ccld_facility_reports",
+        "connector_version": "0.1.0",
+        "retrieved_at": RETRIEVED_AT,
+        "report_index": 3,
+        "traceability_status": "complete",
+        "complaint_count": 1,
+        "allegation_count": 2,
+        "event_count": 0,
+        "extraction_audit_field_count": 21,
+    }
+    assert _complaint_timeline_review(db_path) == [
+        {
+            "timeline_sequence": 1,
+            "timeline_item_type": "complaint received",
+            "timeline_source_field": "complaint_received_date",
+            "timeline_date": "2022-04-07",
+            "source_url": FIXTURE_URL,
+            "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
+            "connector_name": "ccld_facility_reports",
+        },
+        {
+            "timeline_sequence": 3,
+            "timeline_item_type": "visit",
+            "timeline_source_field": "visit_date",
+            "timeline_date": "2022-08-24",
+            "source_url": FIXTURE_URL,
+            "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
+            "connector_name": "ccld_facility_reports",
+        },
+        {
+            "timeline_sequence": 4,
+            "timeline_item_type": "report",
+            "timeline_source_field": "report_date",
+            "timeline_date": "2022-08-24",
+            "source_url": FIXTURE_URL,
+            "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
+            "connector_name": "ccld_facility_reports",
+        },
+        {
+            "timeline_sequence": 5,
+            "timeline_item_type": "date signed",
+            "timeline_source_field": "date_signed",
+            "timeline_date": "2022-08-26",
+            "source_url": FIXTURE_URL,
+            "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
+            "connector_name": "ccld_facility_reports",
+        },
+    ]
+    assert _field_source_traceability_review(db_path) == {
+        "facility_number": "157806098",
+        "complaint_control_number": "32-CR-20220407124448",
+        "field_name": "facility_number",
+        "extracted_value": "157806098",
+        "source_text": None,
+        "source_section": None,
+        "warning": None,
+        "confidence": 1.0,
+        "extraction_method": "ccld_facility_report_html_labels",
+        "extractor_version": "0.1.0",
+        "source_url": FIXTURE_URL,
+        "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
+        "connector_name": "ccld_facility_reports",
+        "connector_version": "0.1.0",
         "report_index": 3,
     }
 
@@ -136,9 +265,15 @@ def test_review_views_do_not_duplicate_rows_on_rerun(tmp_path: Path) -> None:
     write_normalized_records(db_path, [normalized])
 
     assert _row_count(db_path, "complaint_review_summary") == 1
+    assert _row_count(db_path, "complaint_first_pass_review") == 1
+    assert _row_count(db_path, "complaint_timeline_review") == 4
+    assert _row_count(db_path, "field_source_traceability_review") == 21
     assert _row_count(db_path, "facility_complaint_summary") == 1
+    assert _row_count(db_path, "facility_pattern_review") == 1
+    assert _row_count(db_path, "facility_comparison_review") == 1
     assert _row_count(db_path, "delay_review_flags") == 1
     assert _row_count(db_path, "source_traceability_review") == 1
+    assert _row_count(db_path, "multi_facility_source_traceability_review") == 1
 
 
 def test_review_views_include_delay_review_flag_columns(tmp_path: Path) -> None:
@@ -157,6 +292,7 @@ def test_review_views_include_delay_review_flag_columns(tmp_path: Path) -> None:
     }
     assert expected_columns.issubset(_view_columns(db_path, "complaint_review_summary"))
     assert expected_columns.issubset(_view_columns(db_path, "delay_review_flags"))
+    assert expected_columns.issubset(_view_columns(db_path, "complaint_timeline_review"))
 
 
 def test_write_normalized_ccld_report_is_idempotent(tmp_path: Path) -> None:
@@ -319,6 +455,33 @@ def _complaint_review_summary(db_path: Path) -> dict[str, object]:
     return dict(row)
 
 
+def _complaint_first_pass_review(db_path: Path) -> dict[str, object]:
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            """
+            SELECT facility_number,
+                   facility_name,
+                   complaint_control_number,
+                   complaint_received_date,
+                   visit_date,
+                   report_date,
+                   finding,
+                   allegation_count,
+                   review_flags_summary,
+                   source_url,
+                   raw_sha256,
+                   raw_path,
+                   connector_name,
+                   connector_version,
+                   retrieved_at,
+                   report_index
+            FROM complaint_first_pass_review
+            """
+        ).fetchone()
+    return dict(row)
+
+
 def _facility_complaint_summary(db_path: Path) -> dict[str, object]:
     with sqlite3.connect(db_path) as conn:
         conn.row_factory = sqlite3.Row
@@ -332,6 +495,61 @@ def _facility_complaint_summary(db_path: Path) -> dict[str, object]:
                    latest_complaint_received_date,
                    records_with_delay_review_flags
             FROM facility_complaint_summary
+            """
+        ).fetchone()
+    return dict(row)
+
+
+def _facility_pattern_review(db_path: Path) -> dict[str, object]:
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            """
+            SELECT facility_number,
+                   facility_name,
+                   complaint_count,
+                   source_document_count,
+                   allegation_count,
+                   allegation_categories,
+                   substantiated_complaint_count,
+                   unsubstantiated_complaint_count,
+                   inconclusive_complaint_count,
+                   unknown_finding_complaint_count,
+                   missing_first_activity_count,
+                   report_date_proxy_count,
+                   records_with_review_flags,
+                   earliest_complaint_received_date,
+                   latest_complaint_received_date,
+                   earliest_retrieved_at,
+                   latest_retrieved_at
+            FROM facility_pattern_review
+            """
+        ).fetchone()
+    return dict(row)
+
+
+def _facility_comparison_review(db_path: Path) -> dict[str, object]:
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            """
+            SELECT facility_number,
+                   facility_name,
+                   allegation_category,
+                   finding,
+                   complaint_count,
+                   allegation_count,
+                   source_document_count,
+                   complete_source_traceability_document_count,
+                   missing_source_traceability_document_count,
+                   records_with_review_flags,
+                   earliest_complaint_received_date,
+                   latest_complaint_received_date,
+                   earliest_retrieved_at,
+                   latest_retrieved_at,
+                   facilities_with_same_category_finding,
+                   comparison_scope_note
+            FROM facility_comparison_review
             """
         ).fetchone()
     return dict(row)
@@ -372,6 +590,77 @@ def _source_traceability_review(db_path: Path) -> dict[str, object]:
                    retrieved_at,
                    report_index
             FROM source_traceability_review
+            """
+        ).fetchone()
+    return dict(row)
+
+
+def _multi_facility_source_traceability_review(db_path: Path) -> dict[str, object]:
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            """
+            SELECT facility_number,
+                   facility_name,
+                   source_url,
+                   raw_sha256,
+                   raw_path,
+                   connector_name,
+                   connector_version,
+                   retrieved_at,
+                   report_index,
+                   traceability_status,
+                   complaint_count,
+                   allegation_count,
+                   event_count,
+                   extraction_audit_field_count
+            FROM multi_facility_source_traceability_review
+            """
+        ).fetchone()
+    return dict(row)
+
+
+def _complaint_timeline_review(db_path: Path) -> list[dict[str, object]]:
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT timeline_sequence,
+                   timeline_item_type,
+                   timeline_source_field,
+                   timeline_date,
+                   source_url,
+                   raw_sha256,
+                   connector_name
+            FROM complaint_timeline_review
+            ORDER BY timeline_date, timeline_sequence
+            """
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def _field_source_traceability_review(db_path: Path) -> dict[str, object]:
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            """
+            SELECT facility_number,
+                   complaint_control_number,
+                   field_name,
+                   extracted_value,
+                   source_text,
+                   source_section,
+                   warning,
+                   confidence,
+                   extraction_method,
+                   extractor_version,
+                   source_url,
+                   raw_sha256,
+                   connector_name,
+                   connector_version,
+                   report_index
+            FROM field_source_traceability_review
+            WHERE field_name = 'facility_number'
             """
         ).fetchone()
     return dict(row)

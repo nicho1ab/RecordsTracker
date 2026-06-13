@@ -9,6 +9,12 @@
 - Narrative dates may require separate extraction and confidence scoring.
 - Some older reports may have different layouts or missing fields.
 - Live CCLD ingestion can persist normalized records to SQLite for one or more explicitly provided facility numbers when configured with a database path; it does not perform statewide crawling or automatic search expansion.
+- Live facility identifier intake accepts digit-only public facility numbers,
+  ignores duplicate, blank, comment, and header values, and rejects invalid
+  values before public report discovery begins.
+- Live fetch summaries distinguish no-record, skipped-by-limit, discovery
+    failure, report failure, and written-record run states. These are workflow
+    states in the derived dataset, not conclusions about the public source.
 - Fixture-backed ingestion only extracts discovered reports when matching raw report content is supplied by the test loader.
 - Live CCLD fetching is explicitly user-invoked through the local script and depends on the public site being available when the command runs.
 - Live fetched raw report files are saved under the local ignored `data/raw/ccld` path by default and should be treated carefully because public narrative content may be sensitive.

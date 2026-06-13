@@ -33,6 +33,12 @@ ALLOWED_FINDINGS = (
     "Deficiency cited",
     "Unknown",
 )
+NUMBERED_ALLEGATION_PREFIX_RE = re.compile(
+    r"^\s*(?:allegation\s*)?\d+\s*(?:[.)\-:]|$)\s*",
+    re.IGNORECASE,
+)
+FINDING_INLINE_LABEL_RE = re.compile(r"^finding\s*[-:]\s*(.+)$", re.IGNORECASE)
+SOURCE_DATE_TOKEN_RE = re.compile(r"\b\d{1,2}/\d{1,2}/\d{2,4}\b")
 
 ReportDocumentLoader = Callable[[SourceDocumentCandidate], SourceDocument | None]
 ReportFetcher = Callable[[str], bytes]
@@ -49,6 +55,8 @@ class IngestionFailure:
 
 @dataclass(frozen=True)
 class FacilityIngestionResult:
+    facility_number: str
+    discovered_count: int
     candidates: list[SourceDocumentCandidate]
     records: list[dict[str, object]]
     failures: list[IngestionFailure]
@@ -90,6 +98,20 @@ class MultiFacilityIngestionResult:
             for facility_result in self.facility_results
             for failure in facility_result.failures
         ]
+
+
+@dataclass(frozen=True)
+class FacilityNumberInputFile:
+    values: list[str]
+    ignored_value_count: int
+
+
+@dataclass(frozen=True)
+class FacilityNumberIntakeResult:
+    facility_numbers: list[str]
+    duplicate_facility_numbers: list[str]
+    ignored_value_count: int
+    invalid_values: list[str]
 
 
 class _HtmlTextParser(HTMLParser):
@@ -210,9 +232,24 @@ class CcldFacilityReportsConnector:
         source_url_fields = _source_url_fields(document.source_url)
 
         complaint_received_date = _iso_date(_complaint_received_date(lines))
-        report_date = _iso_date(_value_after_label(lines, "Report Date:"))
-        visit_date = _iso_date(_value_after_label(lines, "VISIT DATE:"))
-        date_signed = _iso_date(_value_after_label(lines, "Date Signed:"))
+        report_date = _iso_date(
+            _value_after_label(lines, "Report Date:")
+            or _value_after_exact_label(lines, "Report Date")
+            or _value_after_spaced_colon_label(lines, "Report Date")
+            or _value_after_punctuated_label(lines, "Report Date")
+        )
+        visit_date = _iso_date(
+            _value_after_label(lines, "VISIT DATE:")
+            or _value_after_exact_label(lines, "VISIT DATE")
+            or _value_after_spaced_colon_label(lines, "VISIT DATE")
+            or _value_after_punctuated_label(lines, "VISIT DATE")
+        )
+        date_signed = _iso_date(
+            _value_after_label(lines, "Date Signed:")
+            or _value_after_exact_label(lines, "Date Signed")
+            or _value_after_spaced_colon_label(lines, "Date Signed")
+            or _value_after_punctuated_label(lines, "Date Signed")
+        )
         first_activity_date = None
         delay_metrics = _delay_metrics(
             complaint_received_date=complaint_received_date,
@@ -229,14 +266,25 @@ class CcldFacilityReportsConnector:
             "retrieved_at": document.retrieved_at,
             "content_type": document.content_type,
             "report_index": source_url_fields["report_index"],
-            "facility_number": _value_after_label(lines, "FACILITY NUMBER:"),
-            "facility_name": _value_after_label(lines, "FACILITY NAME:"),
+            "facility_number": _value_after_label(lines, "FACILITY NUMBER:")
+            or _value_after_exact_label(lines, "FACILITY NUMBER")
+            or _value_after_spaced_colon_label(lines, "FACILITY NUMBER")
+            or _value_after_punctuated_label(lines, "FACILITY NUMBER"),
+            "facility_name": _value_after_label(lines, "FACILITY NAME:")
+            or _value_after_exact_label(lines, "FACILITY NAME")
+            or _value_after_spaced_colon_label(lines, "FACILITY NAME")
+            or _value_after_punctuated_label(lines, "FACILITY NAME"),
             "report_type": _report_type(lines),
             "report_date": report_date,
             "date_signed": date_signed,
             "complaint_received_date": complaint_received_date,
             "first_investigation_activity_date": first_activity_date,
-            "complaint_control_number": _value_after_label(lines, "COMPLAINT CONTROL NUMBER:"),
+            "complaint_control_number": _value_after_label(
+                lines, "COMPLAINT CONTROL NUMBER:"
+            )
+            or _value_after_exact_label(lines, "COMPLAINT CONTROL NUMBER")
+            or _value_after_spaced_colon_label(lines, "COMPLAINT CONTROL NUMBER")
+            or _value_after_punctuated_label(lines, "COMPLAINT CONTROL NUMBER"),
             "allegations": _allegations(lines),
             "finding": _finding(lines),
             "visit_date": visit_date,
@@ -368,10 +416,11 @@ def ingest_facility_reports_for_facility(
         raise ValueError("max_requests must be greater than or equal to 0.")
 
     active_connector = connector or CcldFacilityReportsConnector(facility_number=facility_number)
-    candidates = active_connector.discover(
+    discovered_candidates = active_connector.discover(
         facility_detail_html=facility_detail_html,
         discovered_at=discovered_at,
     )
+    candidates = discovered_candidates
     if limit is not None:
         candidates = candidates[:limit]
     if max_requests is not None and len(candidates) > max_requests:
@@ -383,6 +432,7 @@ def ingest_facility_reports_for_facility(
     return _ingest_selected_candidates(
         active_connector,
         candidates,
+        discovered_count=len(discovered_candidates),
         load_document=load_document,
         fetch_report=fetch_report,
     )
@@ -405,7 +455,7 @@ def ingest_facility_reports_for_facilities(
         raise ValueError("max_requests must be greater than or equal to 0.")
 
     normalized_facility_numbers = normalize_facility_numbers(facility_numbers)
-    selected: list[tuple[CcldFacilityReportsConnector, list[SourceDocumentCandidate]]] = []
+    selected: list[tuple[CcldFacilityReportsConnector, list[SourceDocumentCandidate], int]] = []
     facility_failures: list[FacilityWorkflowFailure] = []
 
     for facility_number in normalized_facility_numbers:
@@ -415,7 +465,7 @@ def ingest_facility_reports_for_facilities(
             else CcldFacilityReportsConnector(facility_number=facility_number)
         )
         try:
-            candidates = active_connector.discover(
+            discovered_candidates = active_connector.discover(
                 facility_detail_html=(facility_detail_html_by_number or {}).get(facility_number),
                 discovered_at=discovered_at,
             )
@@ -423,11 +473,12 @@ def ingest_facility_reports_for_facilities(
             facility_failures.append(_facility_workflow_failure(facility_number, "discover", exc))
             continue
 
+        candidates = discovered_candidates
         if per_facility_limit is not None:
             candidates = candidates[:per_facility_limit]
-        selected.append((active_connector, candidates))
+        selected.append((active_connector, candidates, len(discovered_candidates)))
 
-    selected_report_count = sum(len(candidates) for _, candidates in selected)
+    selected_report_count = sum(len(candidates) for _, candidates, _ in selected)
     if max_requests is not None and selected_report_count > max_requests:
         raise ValueError(
             "Selected report candidates exceed max_requests. "
@@ -438,10 +489,11 @@ def ingest_facility_reports_for_facilities(
         _ingest_selected_candidates(
             active_connector,
             candidates,
+            discovered_count=discovered_count,
             load_document=load_document,
             fetch_report=fetch_report,
         )
-        for active_connector, candidates in selected
+        for active_connector, candidates, discovered_count in selected
     ]
 
     return MultiFacilityIngestionResult(
@@ -451,41 +503,78 @@ def ingest_facility_reports_for_facilities(
 
 
 def normalize_facility_numbers(facility_numbers: list[str]) -> list[str]:
+    intake = inspect_facility_numbers(facility_numbers)
+    if intake.invalid_values:
+        invalid_values = ", ".join(repr(value) for value in intake.invalid_values)
+        raise ValueError(f"Facility number must contain digits only: {invalid_values}")
+    if not intake.facility_numbers:
+        raise ValueError("At least one facility number is required.")
+    return intake.facility_numbers
+
+
+def inspect_facility_numbers(facility_numbers: list[str]) -> FacilityNumberIntakeResult:
     normalized: list[str] = []
+    duplicates: list[str] = []
+    invalid_values: list[str] = []
     seen: set[str] = set()
+    ignored_value_count = 0
+
     for facility_number in facility_numbers:
         cleaned = facility_number.strip()
-        if not cleaned:
+        if _is_ignored_facility_number_value(cleaned):
+            ignored_value_count += 1
             continue
         if not cleaned.isdigit():
-            raise ValueError(f"Facility number must contain digits only: {facility_number!r}")
+            invalid_values.append(cleaned)
+            continue
         if cleaned in seen:
+            duplicates.append(cleaned)
             continue
         seen.add(cleaned)
         normalized.append(cleaned)
-    if not normalized:
-        raise ValueError("At least one facility number is required.")
-    return normalized
+
+    return FacilityNumberIntakeResult(
+        facility_numbers=normalized,
+        duplicate_facility_numbers=duplicates,
+        ignored_value_count=ignored_value_count,
+        invalid_values=invalid_values,
+    )
 
 
 def read_facility_numbers_file(path: Path) -> list[str]:
+    return normalize_facility_numbers(read_facility_number_input_file(path).values)
+
+
+def read_facility_number_input_file(path: Path) -> FacilityNumberInputFile:
     values: list[str] = []
+    ignored_value_count = 0
     with path.open(newline="", encoding="utf-8") as handle:
         for row in csv.reader(handle):
+            if not row:
+                ignored_value_count += 1
+                continue
             for value in row:
                 cleaned = value.strip()
-                if not cleaned or cleaned.startswith("#"):
-                    continue
-                if cleaned.casefold() in {"facility_number", "facilitynumber", "facnum"}:
+                if _is_ignored_facility_number_value(cleaned):
+                    ignored_value_count += 1
                     continue
                 values.append(cleaned)
-    return normalize_facility_numbers(values)
+    return FacilityNumberInputFile(values=values, ignored_value_count=ignored_value_count)
+
+
+def _is_ignored_facility_number_value(value: str) -> bool:
+    return (
+        not value
+        or value.startswith("#")
+        or value.casefold() in {"facility_number", "facilitynumber", "facnum"}
+    )
 
 
 def _ingest_selected_candidates(
     active_connector: CcldFacilityReportsConnector,
     candidates: list[SourceDocumentCandidate],
     *,
+    discovered_count: int,
     load_document: ReportDocumentLoader | None,
     fetch_report: ReportFetcher | None,
 ) -> FacilityIngestionResult:
@@ -530,7 +619,13 @@ def _ingest_selected_candidates(
 
         records.append(normalized)
 
-    return FacilityIngestionResult(candidates=candidates, records=records, failures=failures)
+    return FacilityIngestionResult(
+        facility_number=active_connector.facility_number,
+        discovered_count=discovered_count,
+        candidates=candidates,
+        records=records,
+        failures=failures,
+    )
 
 
 def _facility_workflow_failure(
@@ -706,6 +801,36 @@ def _value_after_label(lines: list[str], label: str) -> str | None:
     return None
 
 
+def _value_after_exact_label(lines: list[str], label: str) -> str | None:
+    normalized_label = label.casefold()
+    for index, line in enumerate(lines):
+        if line.casefold() == normalized_label:
+            return _next_value(lines, index)
+    return None
+
+
+def _value_after_spaced_colon_label(lines: list[str], label: str) -> str | None:
+    pattern = re.compile(rf"^{re.escape(label)}\s+:(.*)$", re.IGNORECASE)
+    for index, line in enumerate(lines):
+        match = pattern.match(line)
+        if match is None:
+            continue
+        value = _clean_text(match.group(1))
+        return value or _next_value(lines, index)
+    return None
+
+
+def _value_after_punctuated_label(lines: list[str], label: str) -> str | None:
+    pattern = re.compile(rf"^{re.escape(label)}\s*[;\-]\s*(.*)$", re.IGNORECASE)
+    for index, line in enumerate(lines):
+        match = pattern.match(line)
+        if match is None:
+            continue
+        value = _clean_text(match.group(1))
+        return value or _next_value(lines, index)
+    return None
+
+
 def _next_value(lines: list[str], index: int) -> str | None:
     for value in lines[index + 1 :]:
         if not value.endswith(":"):
@@ -715,29 +840,96 @@ def _next_value(lines: list[str], index: int) -> str | None:
 
 def _report_type(lines: list[str]) -> str | None:
     for line in lines:
-        if line == "COMPLAINT INVESTIGATION REPORT":
-            return line
+        if line.strip(" .:-").casefold() == "complaint investigation report":
+            return "COMPLAINT INVESTIGATION REPORT"
     return None
 
 
 def _complaint_received_date(lines: list[str]) -> str | None:
+    phrases = (
+        "complaint received in our office on",
+        "complaint was received in our office on",
+        "complaint received in our office",
+        "complaint was received in our office",
+    )
     for index, line in enumerate(lines):
-        if "complaint received in our office on" in line.casefold():
-            return _next_value(lines, index)
+        normalized_line = line.casefold()
+        for phrase in phrases:
+            if phrase in normalized_line:
+                inline_value = line[normalized_line.index(phrase) + len(phrase) :].strip(" .:-")
+                inline_date = _source_date_token(inline_value)
+                if inline_date is not None:
+                    return inline_date
+                if inline_value:
+                    return inline_value
+                return _next_value(lines, index)
     return None
 
 
+def _source_date_token(value: str) -> str | None:
+    match = SOURCE_DATE_TOKEN_RE.search(value)
+    if match is None:
+        return None
+    return match.group(0)
+
+
 def _allegations(lines: list[str]) -> list[str]:
-    start = _line_index(lines, "ALLEGATION(S):")
-    end = _line_index(lines, "INVESTIGATION FINDINGS:")
+    start = _line_index_any(
+        lines,
+        (
+            "ALLEGATION(S):",
+            "ALLEGATION(S) -",
+            "ALLEGATION(S)",
+            "ALLEGATION (S):",
+            "ALLEGATION (S) -",
+            "ALLEGATION (S)",
+            "ALLEGATIONS:",
+            "ALLEGATIONS -",
+            "ALLEGATIONS",
+            "ALLEGATION:",
+            "ALLEGATION -",
+            "ALLEGATION",
+        ),
+    )
+    end = _line_index_any(
+        lines,
+        (
+            "INVESTIGATION FINDINGS:",
+              "INVESTIGATION FINDINGS -",
+            "INVESTIGATION FINDINGS",
+            "INVESTIGATION FINDING:",
+              "INVESTIGATION FINDING -",
+            "INVESTIGATION FINDING",
+        ),
+    )
     if start is None or end is None:
         return []
 
     allegations: list[str] = []
     for line in lines[start + 1 : end]:
-        if not line.isdigit():
-            allegations.append(line)
+        allegation = _allegation_text(line)
+        if allegation is not None:
+            if _is_allegation_continuation(line) and allegations:
+                allegations[-1] = f"{allegations[-1]} {allegation}"
+            else:
+                allegations.append(allegation)
     return allegations
+
+
+def _allegation_text(line: str) -> str | None:
+    allegation = NUMBERED_ALLEGATION_PREFIX_RE.sub("", line).strip()
+    if not allegation:
+        return None
+    return " ".join(allegation.split())
+
+
+def _is_allegation_continuation(line: str) -> bool:
+    stripped = line.lstrip()
+    return (
+        bool(stripped)
+        and not NUMBERED_ALLEGATION_PREFIX_RE.match(stripped)
+        and stripped[0].islower()
+    )
 
 
 def _line_index(lines: list[str], value: str) -> int | None:
@@ -747,12 +939,58 @@ def _line_index(lines: list[str], value: str) -> int | None:
     return None
 
 
+def _line_index_any(lines: list[str], values: tuple[str, ...]) -> int | None:
+    normalized_values = {value.casefold() for value in values}
+    for index, line in enumerate(lines):
+        if line.casefold() in normalized_values:
+            return index
+    return None
+
+
 def _finding(lines: list[str]) -> str:
     for line in lines:
-        for finding in ALLOWED_FINDINGS:
-            if line.casefold() == finding.casefold():
+        finding = _normalized_finding(line)
+        if finding is not None:
+            return finding
+
+        inline_labeled_finding = _inline_labeled_finding(line)
+        if inline_labeled_finding is not None:
+            finding = _normalized_finding(inline_labeled_finding)
+            if finding is not None:
                 return finding
+
+    labeled_finding = _value_after_label(lines, "Finding:")
+    if labeled_finding is not None:
+        finding = _normalized_finding(labeled_finding)
+        if finding is not None:
+            return finding
+
+    split_label_finding = _value_after_exact_label(lines, "Finding")
+    if split_label_finding is not None:
+        finding = _normalized_finding(split_label_finding)
+        if finding is not None:
+            return finding
+
+    spaced_colon_finding = _value_after_spaced_colon_label(lines, "Finding")
+    if spaced_colon_finding is not None:
+        finding = _normalized_finding(spaced_colon_finding)
+        if finding is not None:
+            return finding
+
     return "Unknown"
+
+
+def _inline_labeled_finding(line: str) -> str | None:
+    match = FINDING_INLINE_LABEL_RE.match(line)
+    return match.group(1) if match is not None else None
+
+
+def _normalized_finding(value: str) -> str | None:
+    normalized_value = value.strip(" .:-")
+    for finding in ALLOWED_FINDINGS:
+        if normalized_value.casefold() == finding.casefold():
+            return finding
+    return None
 
 
 def _delay_metrics(

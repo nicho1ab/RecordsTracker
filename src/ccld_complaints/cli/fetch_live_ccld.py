@@ -7,10 +7,13 @@ from ccld_complaints.connectors.ccld import CcldFacilityReportsConnector
 from ccld_complaints.connectors.ccld.facility_reports import (
     LIVE_REQUEST_TIMEOUT_SECONDS,
     LIVE_USER_AGENT,
+    FacilityIngestionResult,
+    FacilityNumberIntakeResult,
+    FacilityWorkflowFailure,
     ingest_facility_reports_for_facilities,
     ingest_facility_reports_for_facility,
-    normalize_facility_numbers,
-    read_facility_numbers_file,
+    inspect_facility_numbers,
+    read_facility_number_input_file,
 )
 from ccld_complaints.local_sample import (
     DEFAULT_SAMPLE_DB_PATH,
@@ -90,12 +93,13 @@ def main() -> None:
         parser.error("--limit cannot exceed --max-requests.")
 
     try:
-        facility_numbers = _collect_facility_numbers(
+        facility_intake = _collect_facility_number_intake(
             args.facility_numbers,
             args.facility_input_path,
         )
     except ValueError as exc:
         parser.error(str(exc))
+    facility_numbers = facility_intake.facility_numbers
 
     limit = None if args.all else args.limit
     estimated_request_count = "discovery requests plus all discovered report requests"
@@ -107,7 +111,8 @@ def main() -> None:
 
     print("Warning: this command accesses the public CCLD external site.")
     print("Run it only when you intend to make live public web requests.")
-    print(f"Facility numbers: {', '.join(facility_numbers)}")
+    for line in facility_intake_summary_lines(facility_intake):
+        print(line)
     print(f"Raw files: {args.raw_dir.as_posix()}")
     print(f"SQLite database: {args.db_path.as_posix()}")
     print(f"Request policy: timeout {LIVE_REQUEST_TIMEOUT_SECONDS}s, user-agent {LIVE_USER_AGENT}")
@@ -128,8 +133,7 @@ def main() -> None:
             limit=limit,
             max_requests=args.max_requests,
         )
-        candidates = single_result.candidates
-        records = single_result.records
+        facility_results = [single_result]
         report_failures = single_result.failures
         facility_failures = []
     else:
@@ -143,14 +147,12 @@ def main() -> None:
             per_facility_limit=limit,
             max_requests=args.max_requests,
         )
-        candidates = multi_result.candidates
-        records = multi_result.records
+        facility_results = multi_result.facility_results
         report_failures = multi_result.failures
         facility_failures = multi_result.facility_failures
 
-    print(f"Discovered candidates selected: {len(candidates)}")
-    print(f"Records written: {len(records)}")
-    print(f"Failures recorded: {len(report_failures) + len(facility_failures)}")
+    for line in live_fetch_summary_lines(facility_results, facility_failures):
+        print(line)
     for facility_failure in facility_failures:
         print(
             "Facility failure: "
@@ -176,16 +178,135 @@ def main() -> None:
         print(line)
 
 
-def _collect_facility_numbers(
+def live_fetch_summary_lines(
+    facility_results: list[FacilityIngestionResult],
+    facility_failures: list[FacilityWorkflowFailure],
+) -> list[str]:
+    discovered = sum(result.discovered_count for result in facility_results)
+    facilities_with_records_discovered = sum(
+        1 for result in facility_results if result.discovered_count > 0
+    )
+    facilities_with_no_records_discovered = sum(
+        1 for result in facility_results if result.discovered_count == 0
+    )
+    selected = sum(len(result.candidates) for result in facility_results)
+    skipped = sum(
+        max(result.discovered_count - len(result.candidates), 0)
+        for result in facility_results
+    )
+    written = sum(len(result.records) for result in facility_results)
+    report_failures = sum(len(result.failures) for result in facility_results)
+    fetched = written + sum(
+        1
+        for result in facility_results
+        for failure in result.failures
+        if failure.stage in _POST_FETCH_FAILURE_STAGES
+    )
+
+    lines = [
+        "Live fetch summary:",
+        f"- Facilities requested: {len(facility_results) + len(facility_failures)}",
+        f"- Facilities with records discovered: {facilities_with_records_discovered}",
+        f"- Facilities with no records discovered: {facilities_with_no_records_discovered}",
+        f"- Facilities with discovery failures: {len(facility_failures)}",
+        f"- Report candidates discovered: {discovered}",
+        f"- Report candidates selected: {selected}",
+        f"- Reports skipped by limit: {skipped}",
+        f"- Reports fetched: {fetched}",
+        f"- Records written: {written}",
+        f"- Report failures: {report_failures}",
+    ]
+
+    if facility_results:
+        lines.append("Facility summary:")
+    for result in facility_results:
+        lines.append(_facility_summary_line(result))
+
+    if facility_failures:
+        lines.append("Facility failures:")
+    for failure in facility_failures:
+        lines.append(
+            "- "
+            f"{failure.facility_number}: stage={failure.stage}, "
+            f"error={failure.error_type}, message={failure.message}"
+        )
+
+    return lines
+
+
+def facility_intake_summary_lines(intake: FacilityNumberIntakeResult) -> list[str]:
+    lines = [
+        "Facility identifier intake:",
+        f"- Accepted facility identifiers: {', '.join(intake.facility_numbers)}",
+        f"- Duplicate identifiers ignored: {_summary_values(intake.duplicate_facility_numbers)}",
+        f"- Ignored blank, comment, or header values: {intake.ignored_value_count}",
+    ]
+    if intake.invalid_values:
+        lines.append(f"- Invalid identifiers rejected: {_summary_values(intake.invalid_values)}")
+    return lines
+
+
+_POST_FETCH_FAILURE_STAGES = {"extract", "normalize", "validate", "emit"}
+
+
+def _facility_summary_line(result: FacilityIngestionResult) -> str:
+    skipped = max(result.discovered_count - len(result.candidates), 0)
+    fetched = len(result.records) + sum(
+        1 for failure in result.failures if failure.stage in _POST_FETCH_FAILURE_STAGES
+    )
+    return (
+        "- "
+        f"{result.facility_number}: status={_facility_result_status(result)}, "
+        f"discovered={result.discovered_count}, "
+        f"selected={len(result.candidates)}, skipped={skipped}, "
+        f"fetched={fetched}, written={len(result.records)}, failed={len(result.failures)}"
+    )
+
+
+def _facility_result_status(result: FacilityIngestionResult) -> str:
+    if result.discovered_count == 0:
+        return "no records discovered"
+    if not result.candidates:
+        return "skipped by limit"
+    if result.failures and result.records:
+        return "partial report failures"
+    if result.failures:
+        return "report failures"
+    if result.records:
+        return "records written"
+    return "no records written"
+
+
+def _collect_facility_number_intake(
     facility_numbers: list[str] | None,
     facility_input_path: Path | None,
-) -> list[str]:
+) -> FacilityNumberIntakeResult:
     values = list(facility_numbers or [])
+    has_explicit_facility_input = bool(values) or facility_input_path is not None
+    ignored_value_count = 0
     if facility_input_path is not None:
-        values.extend(read_facility_numbers_file(facility_input_path))
-    if not values:
+        input_file = read_facility_number_input_file(facility_input_path)
+        values.extend(input_file.values)
+        ignored_value_count += input_file.ignored_value_count
+    if not values and not has_explicit_facility_input:
         values.append(DEFAULT_LIVE_FACILITY_NUMBER)
-    return normalize_facility_numbers(values)
+    intake = inspect_facility_numbers(values)
+    ignored_value_count += intake.ignored_value_count
+    if intake.invalid_values:
+        invalid_values = ", ".join(repr(value) for value in intake.invalid_values)
+        raise ValueError(f"Facility number must contain digits only: {invalid_values}")
+    if not intake.facility_numbers:
+        raise ValueError("At least one facility number is required.")
+    return FacilityNumberIntakeResult(
+        facility_numbers=intake.facility_numbers,
+        duplicate_facility_numbers=intake.duplicate_facility_numbers,
+        ignored_value_count=ignored_value_count,
+        invalid_values=[],
+    )
+
+
+def _summary_values(values: list[str]) -> str:
+    return ", ".join(values) if values else "none"
 
 
 if __name__ == "__main__":
