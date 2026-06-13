@@ -44,13 +44,70 @@ Validate documentation structure and run manual or automated checks for user-fac
 - Bug and CI-failure fixes include a root-cause governance review and update the relevant governance rule when a missing rule contributed to the failure.
 - Data contract changes include schema and documentation updates.
 - User-visible behavior changes include user documentation updates.
+- Implementation work uses focused validation first, then standard PR validation before opening a PR.
+- PR bodies include focused validation, why those focused checks matched the change, full local validation results, required remote check results, and any tests intentionally not run with the reason.
+
+## Validation tiers
+
+### Focused validation
+
+Run the smallest relevant tests for the changed area before broader validation.
+Focused validation should catch likely failures quickly and should be explained in
+the PR body or task handoff.
+
+Use focused validation such as:
+
+- Extraction changes: targeted extractor tests and related fixture regression tests.
+- Connector changes: targeted connector discovery, fetch, and raw storage tests using fixtures or mocks.
+- Data contract or schema changes: schema validation, init or migration SQL tests, persistence tests, and affected data dictionary checks.
+- Datasette, view, or export changes: affected SQL, view, export, metadata, and documentation checks.
+- Documentation-only changes: documentation validation and link or reference checks.
+- Security or privacy changes: security checks and any affected tests.
+- Accessibility-facing changes: documentation, export, view, or presentation accessibility checks.
+
+### Standard PR validation
+
+Run standard PR validation before every PR unless the change is analysis-only and
+no files were edited:
+
+```powershell
+.\scripts\lint.ps1
+```
+
+```powershell
+.\scripts\test.ps1
+```
+
+```powershell
+.\scripts\docs.ps1
+```
+
+```powershell
+git diff --check
+```
+
+### Required remote validation
+
+Before merge, verify the required GitHub status-check contexts pass:
+
+- `validate`
+- `docs-check`
+- `fixtures`
+- `security`
+
+### Full release validation
+
+Run or verify the full test suite before any release, production-readiness
+milestone, schema change, connector expansion, export-contract change, or
+production architecture transition.
 
 ## Commands
 
 ```powershell
-.\scripts\test.ps1
 .\scripts\lint.ps1
+.\scripts\test.ps1
 .\scripts\docs.ps1
+git diff --check
 ```
 
 For CI failures, also run the exact failing workflow command locally when it can be run without secrets or live external requests. For fixture hash failures, verify Git-normalized bytes with commands such as:

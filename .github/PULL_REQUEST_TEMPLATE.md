@@ -10,6 +10,14 @@ Describe which public, user, developer, contract, limitation, design, or decisio
 docs were updated. If none were updated, state why no user-facing or
 documentation-impacting behavior changed.
 
+## Validation summary
+
+- Focused validation run:
+- Why the focused validation matched this change:
+- Full local validation results:
+- Required remote check results:
+- Tests intentionally not run and why:
+
 ## Required checks
 
 - [ ] Tests added or updated.
