@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added data quality coverage that checks sample-derived canonical tables for
+  duplicate record identifiers and duplicate source URLs.
 - Updated the roadmap to remove a completed local review workflow grouping item
   from current priorities and hardened documentation validation against stale
   completed roadmap priorities.
