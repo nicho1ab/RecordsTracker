@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Hardened CCLD visit date extraction for source layouts that use a
+	`VISIT DATE :` spaced-colon label variant, with fixture-backed regression
+	coverage.
 - Hardened CCLD date signed extraction for source layouts that use a
 	`Date Signed :` spaced-colon label variant, with fixture-backed regression
 	coverage.

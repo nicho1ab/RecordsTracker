@@ -65,3 +65,5 @@ Raw fixtures and expected JSON are governed by `.gitattributes` line-ending rule
 - `expected/157806098_inx65_report_date_spaced_colon.json`: Expected normalized records for spaced-colon report date label extraction hardening.
 - `raw/157806098_inx66_date_signed_spaced_colon.html`: Source-shaped CCLD report fixture covering a `Date Signed :` spaced-colon label variant.
 - `expected/157806098_inx66_date_signed_spaced_colon.json`: Expected normalized records for spaced-colon date signed label extraction hardening.
+- `raw/157806098_inx67_visit_date_spaced_colon.html`: Source-shaped CCLD report fixture covering a `VISIT DATE :` spaced-colon label variant.
+- `expected/157806098_inx67_visit_date_spaced_colon.json`: Expected normalized records for spaced-colon visit date label extraction hardening.
