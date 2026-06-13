@@ -64,6 +64,8 @@ governance scaffold.
 - Added fixture-backed investigation finding heading variant extraction
 	hardening for CCLD report layouts that use an `INVESTIGATION FINDING:`
 	section heading.
+- Added fixture-backed no-colon allegation heading extraction hardening for CCLD
+	report layouts that use an `ALLEGATIONS` section heading.
 
 ## Completed governance and review experience improvements
 

@@ -760,7 +760,14 @@ def _complaint_received_date(lines: list[str]) -> str | None:
 def _allegations(lines: list[str]) -> list[str]:
     start = _line_index_any(
         lines,
-        ("ALLEGATION(S):", "ALLEGATIONS:", "ALLEGATION:"),
+        (
+            "ALLEGATION(S):",
+            "ALLEGATION(S)",
+            "ALLEGATIONS:",
+            "ALLEGATIONS",
+            "ALLEGATION:",
+            "ALLEGATION",
+        ),
     )
     end = _line_index_any(lines, ("INVESTIGATION FINDINGS:", "INVESTIGATION FINDING:"))
     if start is None or end is None:
