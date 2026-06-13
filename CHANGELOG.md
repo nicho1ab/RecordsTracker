@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Hardened CCLD finding extraction for source layouts where a standalone
+	`Finding` label is followed by the normalized finding value on the next line,
+	with fixture-backed regression coverage.
 - Hardened CCLD allegation extraction for source layouts where one allegation
 	wraps across adjacent lines, with fixture-backed regression coverage.
 - Hardened CCLD finding extraction for source layouts where the normalized
