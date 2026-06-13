@@ -14,3 +14,4 @@ See detailed ADRs in `docs/decisions/`.
 | ADR-0007 | Evaluate hosted tester MVP production stack direction | Accepted |
 | ADR-0008 | Define hosted tester MVP data and review-state model boundary | Accepted |
 | ADR-0009 | Define hosted tester MVP import and sync strategy | Accepted |
+| ADR-0010 | Define hosted tester MVP schema and migration strategy | Accepted |
