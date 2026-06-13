@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS extraction_audit (
 REVIEW_VIEWS_SQL = """
 DROP VIEW IF EXISTS delay_review_flags;
 DROP VIEW IF EXISTS facility_complaint_summary;
+DROP VIEW IF EXISTS complaint_first_pass_review;
 DROP VIEW IF EXISTS complaint_review_summary;
 DROP VIEW IF EXISTS source_traceability_review;
 
@@ -176,6 +177,67 @@ FROM facilities f
 LEFT JOIN complaints c ON c.facility_id = f.facility_id
 LEFT JOIN allegations a ON a.complaint_id = c.complaint_id
 GROUP BY f.external_facility_number, f.facility_name;
+
+CREATE VIEW complaint_first_pass_review AS
+SELECT
+    f.external_facility_number AS facility_number,
+    f.facility_name,
+    c.complaint_control_number,
+    c.complaint_received_date,
+    c.visit_date,
+    c.report_date,
+    c.finding,
+    COUNT(a.allegation_id) AS allegation_count,
+    GROUP_CONCAT(a.allegation_text, '; ') AS allegation_summary,
+    NULLIF(RTRIM(
+        CASE WHEN c.review_delay_over_30_days = 1 THEN 'over 30 days; ' ELSE '' END ||
+        CASE WHEN c.review_delay_over_60_days = 1 THEN 'over 60 days; ' ELSE '' END ||
+        CASE WHEN c.review_delay_over_90_days = 1 THEN 'over 90 days; ' ELSE '' END ||
+        CASE WHEN c.review_delay_over_120_days = 1 THEN 'over 120 days; ' ELSE '' END ||
+        CASE
+            WHEN c.missing_first_activity_date = 1
+            THEN 'missing first activity date; '
+            ELSE ''
+        END ||
+        CASE WHEN c.report_date_used_as_proxy = 1 THEN 'report date used as proxy; ' ELSE '' END,
+        '; '
+    ), '') AS review_flags_summary,
+    sd.source_url,
+    sd.raw_sha256,
+    sd.raw_path,
+    sd.connector_name,
+    sd.connector_version,
+    sd.retrieved_at,
+    sd.report_index,
+    c.complaint_id,
+    sd.document_id
+FROM complaints c
+JOIN facilities f ON f.facility_id = c.facility_id
+JOIN source_documents sd ON sd.document_id = c.document_id
+LEFT JOIN allegations a ON a.complaint_id = c.complaint_id
+GROUP BY
+    f.external_facility_number,
+    f.facility_name,
+    c.complaint_id,
+    c.complaint_control_number,
+    c.complaint_received_date,
+    c.visit_date,
+    c.report_date,
+    c.finding,
+    c.review_delay_over_30_days,
+    c.review_delay_over_60_days,
+    c.review_delay_over_90_days,
+    c.review_delay_over_120_days,
+    c.missing_first_activity_date,
+    c.report_date_used_as_proxy,
+    sd.source_url,
+    sd.raw_sha256,
+    sd.raw_path,
+    sd.connector_name,
+    sd.connector_version,
+    sd.retrieved_at,
+    sd.report_index,
+    sd.document_id;
 
 CREATE VIEW delay_review_flags AS
 SELECT
