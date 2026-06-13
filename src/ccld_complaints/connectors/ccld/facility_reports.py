@@ -252,7 +252,8 @@ class CcldFacilityReportsConnector:
             "facility_number": _value_after_label(lines, "FACILITY NUMBER:")
             or _value_after_exact_label(lines, "FACILITY NUMBER"),
             "facility_name": _value_after_label(lines, "FACILITY NAME:")
-            or _value_after_exact_label(lines, "FACILITY NAME"),
+            or _value_after_exact_label(lines, "FACILITY NAME")
+            or _value_after_spaced_colon_label(lines, "FACILITY NAME"),
             "report_type": _report_type(lines),
             "report_date": report_date,
             "date_signed": date_signed,
