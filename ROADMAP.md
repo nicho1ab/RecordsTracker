@@ -70,6 +70,8 @@ governance scaffold.
 	layouts where a normalized finding value includes trailing punctuation.
 - Added fixture-backed dashed finding label extraction hardening for CCLD report
 	layouts where an inline `Finding -` label precedes the normalized finding.
+- Added fixture-backed was-received complaint date extraction hardening for CCLD
+	report layouts that use a `complaint was received in our office on` phrase.
 
 ## Completed governance and review experience improvements
 
