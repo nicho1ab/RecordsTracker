@@ -446,6 +446,7 @@ def _datasette_saved_queries() -> dict[str, Any]:
             "sql": """
 SELECT
     1 AS step,
+    'Complaint review' AS workflow_group,
     'Review complaints' AS task,
     'complaint_first_pass_review' AS open_first,
     'Use for low-noise first-pass complaint review with source URL, raw hash, ' ||
@@ -455,6 +456,7 @@ SELECT
 UNION ALL
 SELECT
     2,
+    'Review flags',
     'Find records needing closer review',
     'records_with_delay_review_flags',
     'Use for delay triage and records flagged for review based on available extracted dates.',
@@ -462,6 +464,7 @@ SELECT
 UNION ALL
 SELECT
     3,
+    'Facility comparison',
     'Compare facilities',
     'facility_complaint_summary',
     'Use for facility-level complaint counts, allegation counts, date ranges, ' ||
@@ -471,6 +474,7 @@ SELECT
 UNION ALL
 SELECT
     4,
+    'Source verification',
     'Verify sources',
     'source_traceability_review',
     'Use before relying on extracted fields; check source URL, raw SHA-256 hash, ' ||
@@ -480,6 +484,7 @@ SELECT
 UNION ALL
 SELECT
     5,
+    'CSV export',
     'Export CSVs',
     'complaint_review_export_with_traceability',
     'Use for accessible CSV exports with complaint review fields and source traceability columns.',
