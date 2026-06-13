@@ -55,6 +55,8 @@ governance scaffold.
 	delay review behavior.
 - Added fixture-backed labeled finding extraction hardening for CCLD report
 	layouts that provide findings after an explicit `Finding:` label.
+- Added fixture-backed wrapped allegation extraction hardening for CCLD report
+	layouts where one allegation continues across adjacent lines.
 
 ## Completed governance and review experience improvements
 
