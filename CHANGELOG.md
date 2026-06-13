@@ -3,6 +3,9 @@
 ## Unreleased
 
 - Hardened CCLD allegation extraction for source layouts that use an
+	`ALLEGATION(S) -` section heading variant, with fixture-backed regression
+	coverage.
+- Hardened CCLD allegation extraction for source layouts that use an
 	`INVESTIGATION FINDINGS -` section heading variant, with fixture-backed
 	regression coverage.
 - Hardened CCLD report type extraction for source layouts where the complaint
