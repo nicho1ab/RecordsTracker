@@ -7,7 +7,13 @@ from typing import Any
 
 from ccld_complaints.connectors.base import SourceDocument, SourceDocumentCandidate
 from ccld_complaints.connectors.ccld import CcldFacilityReportsConnector, FacilityIngestionResult
-from ccld_complaints.connectors.ccld.facility_reports import ingest_facility_reports_for_facility
+from ccld_complaints.connectors.ccld.facility_reports import (
+    FacilityNumberIntakeResult,
+    MultiFacilityIngestionResult,
+    ingest_facility_reports_for_facilities,
+    ingest_facility_reports_for_facility,
+    inspect_facility_numbers,
+)
 from ccld_complaints.review_bundle import COMPLAINT_REVIEW_EXPORT_SQL
 from ccld_complaints.storage.sqlite import initialize_database
 from ccld_complaints.utils.hash import sha256_bytes
@@ -15,6 +21,14 @@ from ccld_complaints.utils.hash import sha256_bytes
 DEFAULT_SAMPLE_DB_PATH = Path("data/processed/ccld.sqlite")
 DEFAULT_CCLD_FIXTURE_DIR = Path("tests/fixtures/ccld")
 DEFAULT_SAMPLE_FACILITY_NUMBER = "157806098"
+DEFAULT_MULTI_FACILITY_SAMPLE_INPUTS = (
+    "facility_number",
+    "157806098",
+    "157806097",
+    "157806098",
+    "# fixture corpus comment",
+    "",
+)
 DEFAULT_SAMPLE_RETRIEVED_AT = "2026-06-10T00:00:00+00:00"
 DATASSETTE_METADATA_SUFFIX = ".datasette-metadata.json"
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -24,6 +38,13 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 class SampleDatabaseResult:
     db_path: Path
     ingestion: FacilityIngestionResult
+
+
+@dataclass(frozen=True)
+class MultiFacilitySampleDatabaseResult:
+    db_path: Path
+    intake: FacilityNumberIntakeResult
+    ingestion: MultiFacilityIngestionResult
 
 
 def populate_sample_database(
@@ -46,6 +67,40 @@ def populate_sample_database(
     )
 
     return SampleDatabaseResult(db_path=db_path, ingestion=result)
+
+
+def populate_multi_facility_sample_database(
+    db_path: Path = DEFAULT_SAMPLE_DB_PATH,
+    *,
+    fixture_dir: Path = DEFAULT_CCLD_FIXTURE_DIR,
+    facility_inputs: tuple[str, ...] = DEFAULT_MULTI_FACILITY_SAMPLE_INPUTS,
+) -> MultiFacilitySampleDatabaseResult:
+    initialize_database(db_path)
+    intake = inspect_facility_numbers(list(facility_inputs))
+    if intake.invalid_values:
+        invalid_values = ", ".join(repr(value) for value in intake.invalid_values)
+        raise ValueError(
+            f"Fixture corpus facility input must contain digits only: {invalid_values}"
+        )
+    if not intake.facility_numbers:
+        raise ValueError("Fixture corpus requires at least one facility number.")
+
+    result = ingest_facility_reports_for_facilities(
+        intake.facility_numbers,
+        connector_factory=lambda facility_number: CcldFacilityReportsConnector(
+            facility_number=facility_number,
+            db_path=db_path,
+            schema_dir=_REPO_ROOT / "schemas",
+        ),
+        facility_detail_html_by_number=_facility_detail_html_by_number(
+            intake.facility_numbers,
+            fixture_dir,
+        ),
+        discovered_at=DEFAULT_SAMPLE_RETRIEVED_AT,
+        load_document=lambda candidate: _load_report_fixture(candidate, fixture_dir),
+    )
+
+    return MultiFacilitySampleDatabaseResult(db_path=db_path, intake=intake, ingestion=result)
 
 
 def datasette_command(db_path: Path) -> str:
@@ -1073,6 +1128,18 @@ def _load_report_fixture(
         retrieved_at=DEFAULT_SAMPLE_RETRIEVED_AT,
         content_type="text/html",
     )
+
+
+def _facility_detail_html_by_number(
+    facility_numbers: list[str],
+    fixture_dir: Path,
+) -> dict[str, str]:
+    return {
+        facility_number: _resolve_fixture_path(
+            fixture_dir / "raw" / f"{facility_number}_facility_detail.html"
+        ).read_text(encoding="utf-8")
+        for facility_number in facility_numbers
+    }
 
 
 def _resolve_fixture_path(path: Path) -> Path:

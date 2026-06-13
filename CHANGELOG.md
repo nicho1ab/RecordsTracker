@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added a small fixture-backed multi-facility sample corpus that exercises
+	facility identifier intake diagnostics, controlled fetch summaries,
+	multi-facility source traceability, facility comparison, and review-bundle
+	export paths without live public requests.
 - Expanded the local review bundle with multi-facility source traceability and
 	facility comparison CSV files plus cautious README notes for attorney-review
 	handoff packets.

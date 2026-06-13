@@ -26,6 +26,8 @@ The export bundle workflow is covered by integration tests. To manually check it
 
 Confirm the generated CSV files keep clear headers and source traceability columns, and that the generated README describes delay flags, timeline rows, facility pattern counts, multi-facility traceability rows, and facility comparison rows as screening aids.
 
+The integration tests also build a small fixture-backed multi-facility corpus with `populate_multi_facility_sample_database`. That corpus uses tracked fixtures only and exercises facility identifier intake diagnostics, controlled fetch summary output, multi-facility source traceability, facility comparison, and review-bundle exports without live public requests. Keep it small and deterministic; do not treat fixture counts as public-source completeness or facility conclusions.
+
 ## Test design
 
 Prefer fixture-based tests over ad hoc manual verification. Every important source report should have:

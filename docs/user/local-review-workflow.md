@@ -18,6 +18,8 @@ Use the printed groups as quick navigation after each sample or live fetch run: 
 
 For multi-facility source verification, open `multi_facility_source_traceability_review`. It shows one row per source document with facility context, traceability status, source URL, raw SHA-256 hash, raw path, connector metadata, retrieval timestamp, report index, and counts of linked complaints, allegations, events, and extraction audit rows. Use the counts to find records for source checking, not as conclusions about any facility or public source record.
 
+The repository includes a small fixture-backed two-facility corpus for offline regression tests of the multi-facility review workflow. It exercises intake diagnostics, fetch summaries, source traceability, facility comparison, and review-bundle export paths without live public requests. Treat it as a deterministic test corpus only, not as an official or complete public-source comparison.
+
 Open these views first:
 
 1. `complaint_first_pass_review` for low-noise first-pass complaint review.

@@ -25,6 +25,9 @@ proof of concept.
    available.
 - Uses fixture-backed tests to protect deterministic extraction and local review
    behavior from regressions.
+- Includes a small fixture-backed multi-facility corpus for offline tests of
+   intake diagnostics, fetch summaries, traceability views, comparison views,
+   and review-bundle exports without live public requests.
 - Supports a controlled live fetch workflow that is explicitly user-invoked,
    rate-limited by script options, and scoped to provided facility numbers.
 
@@ -61,6 +64,10 @@ with source-document counts and cautious comparison notes; use
 `field_source_traceability_review` for source verification; and use
 `complaint_review_export_with_traceability` or `export-review-bundle.ps1` for
 source-traceable CSV export.
+
+The developer test suite also includes a small two-facility fixture corpus that
+uses tracked source-shaped fixtures only. It is an offline regression aid for the
+multi-facility review paths, not an official or complete facility comparison.
 
 For live public data, use the controlled live fetch script with explicit facility
 numbers and request limits:

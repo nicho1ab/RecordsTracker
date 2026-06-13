@@ -6,10 +6,15 @@ from typing import cast
 
 from pytest import MonkeyPatch
 
+from ccld_complaints.cli.fetch_live_ccld import (
+    facility_intake_summary_lines,
+    live_fetch_summary_lines,
+)
 from ccld_complaints.local_sample import (
     datasette_command,
     datasette_metadata,
     datasette_metadata_path,
+    populate_multi_facility_sample_database,
     populate_sample_database,
     review_workflow_lines,
     write_datasette_metadata,
@@ -54,6 +59,103 @@ def test_populate_sample_database_is_idempotent(tmp_path: Path) -> None:
     assert _row_count(db_path, "complaints") == 1
     assert _row_count(db_path, "allegations") == 2
     assert _row_count(db_path, "extraction_audit") == 21
+
+
+def test_populate_multi_facility_sample_database_exercises_fixture_corpus(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "ccld.sqlite"
+
+    result = populate_multi_facility_sample_database(db_path)
+
+    assert result.db_path == db_path
+    assert result.intake.facility_numbers == ["157806098", "157806097"]
+    assert result.intake.duplicate_facility_numbers == ["157806098"]
+    assert result.intake.ignored_value_count == 3
+    assert result.intake.invalid_values == []
+    assert len(result.ingestion.facility_results) == 2
+    assert len(result.ingestion.facility_failures) == 0
+    assert len(result.ingestion.records) == 2
+    assert _row_count(db_path, "facilities") == 2
+    assert _row_count(db_path, "source_documents") == 2
+    assert _row_count(db_path, "complaints") == 2
+    assert _row_count(db_path, "allegations") == 3
+
+    intake_lines = facility_intake_summary_lines(result.intake)
+    assert "- Accepted facility identifiers: 157806098, 157806097" in intake_lines
+    assert "- Duplicate identifiers ignored: 157806098" in intake_lines
+    assert "- Ignored blank, comment, or header values: 3" in intake_lines
+
+    summary_lines = live_fetch_summary_lines(
+        result.ingestion.facility_results,
+        result.ingestion.facility_failures,
+    )
+    assert "- Facilities requested: 2" in summary_lines
+    assert "- Facilities with records discovered: 2" in summary_lines
+    assert "- Records written: 2" in summary_lines
+    assert any("157806098: status=partial report failures" in line for line in summary_lines)
+    assert any("157806097: status=records written" in line for line in summary_lines)
+
+    source_rows = _view_rows(
+        db_path,
+        """
+        SELECT facility_number,
+               traceability_status,
+               complaint_count,
+               allegation_count
+        FROM multi_facility_source_traceability_review
+        ORDER BY facility_number
+        """,
+    )
+    assert source_rows == [
+        {
+            "facility_number": "157806097",
+            "traceability_status": "complete",
+            "complaint_count": 1,
+            "allegation_count": 1,
+        },
+        {
+            "facility_number": "157806098",
+            "traceability_status": "complete",
+            "complaint_count": 1,
+            "allegation_count": 2,
+        },
+    ]
+
+    comparison_rows = _view_rows(
+        db_path,
+        """
+        SELECT facility_number,
+               allegation_category,
+               finding,
+               source_document_count,
+               complete_source_traceability_document_count,
+               facilities_with_same_category_finding,
+               comparison_scope_note
+        FROM facility_comparison_review
+        ORDER BY facility_number
+        """,
+    )
+    assert comparison_rows == [
+        {
+            "facility_number": "157806097",
+            "allegation_category": "Unknown",
+            "finding": "Unsubstantiated",
+            "source_document_count": 1,
+            "complete_source_traceability_document_count": 1,
+            "facilities_with_same_category_finding": 2,
+            "comparison_scope_note": "screening aid; verify source records before citing",
+        },
+        {
+            "facility_number": "157806098",
+            "allegation_category": "Unknown",
+            "finding": "Unsubstantiated",
+            "source_document_count": 1,
+            "complete_source_traceability_document_count": 1,
+            "facilities_with_same_category_finding": 2,
+            "comparison_scope_note": "screening aid; verify source records before citing",
+        },
+    ]
 
 
 def test_populate_sample_database_uses_bundled_fixtures_from_other_cwd(
@@ -438,3 +540,10 @@ def _source_document(db_path: Path) -> dict[str, object]:
             """
         ).fetchone()
     return dict(row)
+
+
+def _view_rows(db_path: Path, sql: str) -> list[dict[str, object]]:
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(sql).fetchall()
+    return [dict(row) for row in rows]
