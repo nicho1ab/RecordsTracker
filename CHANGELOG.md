@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Hardened CCLD complaint received date extraction for source layouts that use a
+	`complaint was received in our office on` narrative phrase, with
+	fixture-backed regression coverage.
 - Hardened CCLD finding extraction for source layouts where an inline `Finding -`
 	label precedes the normalized finding value, with fixture-backed regression
 	coverage.
