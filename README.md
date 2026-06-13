@@ -48,13 +48,11 @@ After setup, populate a sample database:
 ```
 
 The script prints the SQLite database path, the generated Datasette metadata
-path, and the Datasette command to open. In Datasette, open the `review_home`
-saved query first for task-based review paths, then use these review views:
-
-1. `complaint_review_summary`
-2. `facility_complaint_summary`
-3. `delay_review_flags`
-4. `source_traceability_review`
+path, the Datasette command to open, and grouped next steps. Start with
+`review_home`, `complaint_review_start_here`, or `complaint_first_pass_review`;
+use `delay_review_flags` for delay triage; use `source_traceability_review` for
+source verification; and use `complaint_review_export_with_traceability` or
+`export-review-bundle.ps1` for source-traceable CSV export.
 
 For live public data, use the controlled live fetch script with explicit facility
 numbers and request limits:
@@ -65,7 +63,9 @@ numbers and request limits:
 
 The live fetch command prints a summary of facilities requested, report
 candidates discovered, selected, skipped by limit, fetched, written, and failed
-so reviewers can see the run outcome before opening logs or Datasette.
+so reviewers can see the run outcome before opening logs or Datasette. It then
+prints the same grouped next steps for what to open first, delay triage, source
+verification, and CSV export.
 
 Downloaded live raw files are saved under the ignored local `data/raw` path by
 default. Treat public complaint narratives carefully because they may contain

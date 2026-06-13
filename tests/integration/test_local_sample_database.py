@@ -225,9 +225,19 @@ def test_write_datasette_metadata_writes_json_next_to_database(tmp_path: Path) -
 def test_review_workflow_lines_name_first_views() -> None:
     lines = review_workflow_lines()
 
-    assert "Open the review_home saved query first for task-based review paths." in lines
-    assert "Open these Datasette review views first, in order:" in lines
-    assert "Saved queries for common workflows:" in lines
+    assert "Next review steps:" in lines
+    assert "Open first:" in lines
+    assert "For delay triage:" in lines
+    assert "For source verification:" in lines
+    assert "For CSV export:" in lines
+    assert "Other useful review paths:" in lines
+    assert any("start-here task menu" in line for line in lines)
+    assert any("guided complaint review with source traceability" in line for line in lines)
+    assert any("records with review flags for closer review" in line for line in lines)
+    assert any("screening aids only" in line for line in lines)
+    assert any("source URLs, raw hashes, connector details" in line for line in lines)
+    assert any("export complaint fields with source hashes" in line for line in lines)
+    assert any("export-review-bundle.ps1" in line for line in lines)
     assert any("complaint_review_summary" in line for line in lines)
     assert any("complaint_first_pass_review" in line for line in lines)
     assert any("facility_complaint_summary" in line for line in lines)

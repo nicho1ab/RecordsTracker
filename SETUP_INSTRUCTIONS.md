@@ -41,7 +41,8 @@ Populate the local sample database from committed fixtures:
 ```
 
 The script prints the SQLite database path, generated Datasette metadata path,
-and the Datasette command to open the local review workflow.
+the Datasette command to open, and grouped next steps for what to open first,
+delay triage, source verification, and CSV export.
 
 ## Run controlled live fetch
 
@@ -74,12 +75,12 @@ If you need to run Datasette manually, include the generated metadata file:
 .\.venv\Scripts\datasette.exe data\processed\ccld.sqlite --metadata data\processed\ccld.datasette-metadata.json
 ```
 
-Start with these review views:
+Start with the grouped next steps printed by the sample or live fetch script:
 
-1. `complaint_review_summary`
-2. `facility_complaint_summary`
-3. `delay_review_flags`
-4. `source_traceability_review`
+1. Open `review_home`, `complaint_review_start_here`, or `complaint_first_pass_review` first.
+2. Use `delay_review_flags` for delay triage; review flags are screening aids only.
+3. Use `source_traceability_review` to verify source URLs, raw hashes, connector details, and report index.
+4. Use `complaint_review_export_with_traceability` or `export-review-bundle.ps1` for source-traceable CSV export.
 
 ## GitHub repository setup
 

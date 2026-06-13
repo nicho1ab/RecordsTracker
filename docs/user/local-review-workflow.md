@@ -4,13 +4,15 @@ This guide describes the first local review workflow for non-technical reviewers
 
 ## What to open first
 
-After running the sample or live fetch script, open the Datasette command printed by the script. The command includes a metadata file that adds clearer labels, descriptions, column notes, and saved query examples.
+After running the sample or live fetch script, open the Datasette command printed by the script. The command includes a metadata file that adds clearer labels, descriptions, column notes, and saved query examples. The scripts also print grouped next steps for what to open first, delay triage, source verification, CSV export, and other useful review paths.
 
 On the Datasette database page, open the `review_home` saved query first. It gives one task-based starting place for the local review workflow and points to the complaint review, delay triage, facility comparison, source verification, and CSV export paths. This is an incremental Datasette review aid, not a dashboard or custom web application.
 
 Then open `complaint_review_start_here` or `complaint_first_pass_review` for a low-noise complaint list that preserves facility context, a single review flag summary, source URL, raw SHA-256 hash, raw path, connector metadata, retrieval time, report index, and lower-level IDs for follow-up.
 
 Use the review view titles and descriptions from the metadata as the next guide. The metadata gives short contextual help for when to use each primary view or saved query, what not to conclude from it, and which source traceability fields to preserve when exporting. The metadata also labels the normalized tables for lower-level checks, but routine browsing should begin with the review home, guided complaint query, and review views.
+
+Use the printed groups as quick navigation after each sample or live fetch run: open first with `review_home`, `complaint_review_start_here`, or `complaint_first_pass_review`; use `delay_review_flags` for delay triage; use `source_traceability_review` for source verification; and use `complaint_review_export_with_traceability` or `export-review-bundle.ps1` for source-traceable CSV export.
 
 Open these views first:
 

@@ -47,6 +47,8 @@ governance scaffold.
 	preserve when exporting.
 - Added a local review bundle export workflow for source-traceable complaint
 	review, delay triage, and source traceability CSV files.
+- Grouped sample and live fetch script next steps by reviewer task, including
+	what to open first, delay triage, source verification, and CSV export.
 
 ## Completed governance and review experience improvements
 
@@ -94,12 +96,9 @@ interface is justified.
 1. Group review workflows by user task rather than by implementation table,
 	using task labels such as review complaints, find records needing closer
 	review, compare facilities, verify sources, and export CSVs.
-2. Improve script output as navigation by grouping next steps after sample or
-	live fetch commands, including what to open first, what to use for delay
-	triage, what to use for source verification, and what to use for CSV export.
-3. Add additional CCLD fixtures and extraction hardening for representative
+2. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
-4. Evaluate persistent navigation, lightweight dashboard options, or a custom
+3. Evaluate persistent navigation, lightweight dashboard options, or a custom
 	web interface only after the task-based Datasette review workflow is validated
 	and documented as sufficient or insufficient for repeated review.
 

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Improved sample and live fetch script output by grouping next review steps by
+	task: what to open first, delay triage, source verification, CSV export, and
+	other useful review paths.
 - Established the governed CCLD complaints proof-of-concept structure, including
 	project charter, data contract, source connector contract, testing strategy,
 	documentation strategy, accessibility requirements, security rules, decision
