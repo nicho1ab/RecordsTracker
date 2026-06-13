@@ -252,7 +252,10 @@ class CcldFacilityReportsConnector:
             "date_signed": date_signed,
             "complaint_received_date": complaint_received_date,
             "first_investigation_activity_date": first_activity_date,
-            "complaint_control_number": _value_after_label(lines, "COMPLAINT CONTROL NUMBER:"),
+            "complaint_control_number": _value_after_label(
+                lines, "COMPLAINT CONTROL NUMBER:"
+            )
+            or _value_after_exact_label(lines, "COMPLAINT CONTROL NUMBER"),
             "allegations": _allegations(lines),
             "finding": _finding(lines),
             "visit_date": visit_date,

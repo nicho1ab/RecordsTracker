@@ -41,3 +41,5 @@ Raw fixtures and expected JSON are governed by `.gitattributes` line-ending rule
 - `expected/157806098_inx53_split_date_signed.json`: Expected normalized records for split date signed label extraction hardening.
 - `raw/157806098_inx54_split_visit_date.html`: Source-shaped CCLD report fixture covering a standalone `VISIT DATE` label followed by the visit date value.
 - `expected/157806098_inx54_split_visit_date.json`: Expected normalized records for split visit date label extraction hardening.
+- `raw/157806098_inx55_split_complaint_control.html`: Source-shaped CCLD report fixture covering a standalone `COMPLAINT CONTROL NUMBER` label followed by the complaint control number value.
+- `expected/157806098_inx55_split_complaint_control.json`: Expected normalized records for split complaint control number label extraction hardening.
