@@ -33,6 +33,7 @@ def test_initialize_database_creates_review_views(tmp_path: Path) -> None:
         "complaint_timeline_review",
         "field_source_traceability_review",
         "multi_facility_source_traceability_review",
+            "facility_comparison_review",
         "facility_pattern_review",
         "facility_complaint_summary",
         "delay_review_flags",
@@ -99,6 +100,7 @@ def test_initialize_database_recreates_review_views_on_rerun(tmp_path: Path) -> 
                   'field_source_traceability_review',
                   'multi_facility_source_traceability_review',
                   'facility_pattern_review',
+                      'facility_comparison_review',
                   'facility_complaint_summary',
                   'delay_review_flags',
                   'source_traceability_review'
@@ -106,4 +108,4 @@ def test_initialize_database_recreates_review_views_on_rerun(tmp_path: Path) -> 
             """
         ).fetchone()[0]
 
-    assert view_count == 9
+        assert view_count == 10

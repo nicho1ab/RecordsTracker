@@ -136,6 +136,24 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
         "earliest_retrieved_at": RETRIEVED_AT,
         "latest_retrieved_at": RETRIEVED_AT,
     }
+    assert _facility_comparison_review(db_path) == {
+        "facility_number": "157806098",
+        "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+        "allegation_category": "Unknown",
+        "finding": "Unsubstantiated",
+        "complaint_count": 1,
+        "allegation_count": 2,
+        "source_document_count": 1,
+        "complete_source_traceability_document_count": 1,
+        "missing_source_traceability_document_count": 0,
+        "records_with_review_flags": 1,
+        "earliest_complaint_received_date": "2022-04-07",
+        "latest_complaint_received_date": "2022-04-07",
+        "earliest_retrieved_at": RETRIEVED_AT,
+        "latest_retrieved_at": RETRIEVED_AT,
+        "facilities_with_same_category_finding": 1,
+        "comparison_scope_note": "screening aid; verify source records before citing",
+    }
     assert _source_traceability_review(db_path) == {
         "facility_number": "157806098",
         "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
@@ -252,6 +270,7 @@ def test_review_views_do_not_duplicate_rows_on_rerun(tmp_path: Path) -> None:
     assert _row_count(db_path, "field_source_traceability_review") == 21
     assert _row_count(db_path, "facility_complaint_summary") == 1
     assert _row_count(db_path, "facility_pattern_review") == 1
+    assert _row_count(db_path, "facility_comparison_review") == 1
     assert _row_count(db_path, "delay_review_flags") == 1
     assert _row_count(db_path, "source_traceability_review") == 1
     assert _row_count(db_path, "multi_facility_source_traceability_review") == 1
@@ -504,6 +523,33 @@ def _facility_pattern_review(db_path: Path) -> dict[str, object]:
                    earliest_retrieved_at,
                    latest_retrieved_at
             FROM facility_pattern_review
+            """
+        ).fetchone()
+    return dict(row)
+
+
+def _facility_comparison_review(db_path: Path) -> dict[str, object]:
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            """
+            SELECT facility_number,
+                   facility_name,
+                   allegation_category,
+                   finding,
+                   complaint_count,
+                   allegation_count,
+                   source_document_count,
+                   complete_source_traceability_document_count,
+                   missing_source_traceability_document_count,
+                   records_with_review_flags,
+                   earliest_complaint_received_date,
+                   latest_complaint_received_date,
+                   earliest_retrieved_at,
+                   latest_retrieved_at,
+                   facilities_with_same_category_finding,
+                   comparison_scope_note
+            FROM facility_comparison_review
             """
         ).fetchone()
     return dict(row)

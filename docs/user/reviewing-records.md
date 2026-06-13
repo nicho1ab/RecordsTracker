@@ -11,19 +11,22 @@ For a step-by-step reviewer workflow, start with [Local Review Workflow](local-r
 5. Open the `complaint_review_summary` view when you need detailed delay calculations, separate review flag columns, extraction confidence, or broader complaint review context.
 6. Open the `facility_complaint_summary` view to compare complaint counts, allegation counts, complaint date range, and delay review flag counts by facility.
 7. Open the `facility_pattern_review` view to compare finding mix, allegation categories, missing first activity dates, report-date proxy usage, review flag counts, and source document counts by facility.
-8. Open the `delay_review_flags` view to triage records with one or more delay or review flags.
-9. Open the `source_traceability_review` view to confirm source URL, raw file hash, raw path, connector name, connector version, retrieval time, and report index.
-10. Open the `multi_facility_source_traceability_review` view when you need traceability status and linked derived-record counts by source document across multiple facilities.
-11. Open the `field_source_traceability_review` view when you need extracted value, source text, source section, warnings, confidence, extraction method, extractor version, and source traceability together.
-12. Open the normalized `facilities`, `source_documents`, `complaints`, `allegations`, `events`, and `extraction_audit` tables when you need lower-level detail beyond the review views.
-13. Start with records flagged as low confidence when confidence fields are available.
-14. Note any extraction issue for correction.
+8. Open the `facility_comparison_review` view to compare facility/category/finding rows with source-document counts, traceability-completeness counts, same-category/finding facility counts, and cautious scope notes.
+9. Open the `delay_review_flags` view to triage records with one or more delay or review flags.
+10. Open the `source_traceability_review` view to confirm source URL, raw file hash, raw path, connector name, connector version, retrieval time, and report index.
+11. Open the `multi_facility_source_traceability_review` view when you need traceability status and linked derived-record counts by source document across multiple facilities.
+12. Open the `field_source_traceability_review` view when you need extracted value, source text, source section, warnings, confidence, extraction method, extractor version, and source traceability together.
+13. Open the normalized `facilities`, `source_documents`, `complaints`, `allegations`, `events`, and `extraction_audit` tables when you need lower-level detail beyond the review views.
+14. Start with records flagged as low confidence when confidence fields are available.
+15. Note any extraction issue for correction.
 
 The local database is a derived review aid. The public portal remains the source of record, and source reports may be incomplete, corrected later, removed, or formatted differently across time.
 
 Search matches from `public_record_allegation_search` are screening aids over the derived dataset. They do not prove harm, liability, rights deprivation, abuse, neglect, or any legal element. Verify important details against the public source before relying on them.
 
 Facility pattern counts summarize the local derived dataset only. Use them to choose records for closer source review, not as findings about a facility or the public source record.
+
+Facility comparison rows summarize local derived facility/category/finding groups only. Use same-category/finding facility counts to find records for closer source review, not as findings about a facility or facility-wide conduct.
 
 Source traceability counts summarize linked records in the local derived dataset only. Use them to find source documents that need checking, not as proof that the public source is complete or incomplete.
 
@@ -53,6 +56,7 @@ Avoid overstating what the local output can prove:
 - Treat extracted records as derived data that may contain extraction errors.
 - Confirm important findings against the source URL and raw hash in `source_documents`.
 - Use `multi_facility_source_traceability_review` when checking source traceability status and linked derived-record counts across multiple facilities.
+- Use `facility_comparison_review` when checking repeated category/finding rows across facilities; verify source records before citing any comparison.
 - Use `field_source_traceability_review` when checking a specific extracted field against source text and extraction audit context.
 - Do not treat missing dates as evidence that an event did not occur.
 - Do not redistribute raw narrative text unless it is needed for the review purpose.

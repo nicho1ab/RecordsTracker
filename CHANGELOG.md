@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added a facility comparison review view and repeated category/finding saved
+	query for cautious cross-facility source-review queues over the local derived
+	dataset.
 - Added a multi-facility source traceability review view and facility-filtered
 	saved query for checking source traceability status and linked derived-record
 	counts by source document across facilities.

@@ -149,6 +149,14 @@ def review_workflow_lines() -> list[str]:
             "- facility_pattern_review view - facility-level finding mix, allegation "
             "categories, missingness, and review flags."
         ),
+        (
+            "- facility_comparison_review view - compare facility/category/finding rows "
+            "with source-document counts and cautious scope notes."
+        ),
+        (
+            "- repeated_facility_category_findings saved query - source-review queue "
+            "for category/finding rows present across multiple facilities."
+        ),
         "- complaint_timeline_by_facility saved query - filter timeline rows by facility number.",
         (
             "- field_traceability_by_facility saved query - filter field-level extraction "
@@ -325,6 +333,50 @@ def _datasette_table_metadata() -> dict[str, Any]:
                     "Earliest source retrieval timestamp for linked documents."
                 ),
                 "latest_retrieved_at": "Latest source retrieval timestamp for linked documents.",
+            },
+        },
+        "facility_comparison_review": {
+            "title": "Facility Comparison Review",
+            "description": (
+                "Comparison-oriented review over the local derived dataset, grouped by "
+                "facility, allegation category, and finding. Use it to identify repeated "
+                "public-record categories across facilities for closer source review. Counts "
+                "and same-category/finding facility totals are screening aids, not findings "
+                "about a facility, the public source, or facility-wide conduct."
+            ),
+            "sort_desc": "facilities_with_same_category_finding",
+            "columns": {
+                "facility_number": "Public CCLD facility number.",
+                "facility_name": "Facility name extracted from source reports.",
+                "allegation_category": (
+                    "Derived allegation category, with Unknown for missing values."
+                ),
+                "finding": "Derived finding for the category row, with Unknown for missing values.",
+                "complaint_count": "Complaint records in this facility/category/finding row.",
+                "allegation_count": "Allegation records in this facility/category/finding row.",
+                "source_document_count": "Source documents linked to the row.",
+                "complete_source_traceability_document_count": (
+                    "Source documents in the row with required traceability fields present."
+                ),
+                "missing_source_traceability_document_count": (
+                    "Source documents in the row missing one or more required traceability fields."
+                ),
+                "records_with_review_flags": (
+                    "Complaint records in the row with at least one delay or review flag. "
+                    f"{delay_flag_caution}"
+                ),
+                "earliest_complaint_received_date": "Earliest complaint received date in the row.",
+                "latest_complaint_received_date": "Latest complaint received date in the row.",
+                "earliest_retrieved_at": "Earliest source retrieval timestamp for the row.",
+                "latest_retrieved_at": "Latest source retrieval timestamp for the row.",
+                "facilities_with_same_category_finding": (
+                    "Number of facility rows in the derived dataset with the same allegation "
+                    "category and finding."
+                ),
+                "comparison_scope_note": (
+                    "Reminder that the row is a screening aid and source records should be "
+                    "verified before citation."
+                ),
             },
         },
         "complaint_timeline_review": {
@@ -692,6 +744,14 @@ SELECT
 UNION ALL
 SELECT
     7,
+    'Facility comparison',
+    'Compare repeated categories',
+    'facility_comparison_review',
+    'Sort by same category/finding facility count, source document counts, and review flags.',
+    'Rows are screening aids for source review, not conclusions about a facility.'
+UNION ALL
+SELECT
+    8,
     'Source verification',
     'Verify sources',
     'multi_facility_source_traceability_review',
@@ -701,7 +761,7 @@ SELECT
     'The public portal remains the source of record.'
 UNION ALL
 SELECT
-    8,
+    9,
     'CSV export',
     'Export CSVs',
     'complaint_review_export_with_traceability',
@@ -893,6 +953,25 @@ SELECT *
 FROM facility_pattern_review
 WHERE records_with_review_flags > 0
 ORDER BY records_with_review_flags DESC, complaint_count DESC, facility_number
+            """.strip(),
+        },
+        "repeated_facility_category_findings": {
+            "title": "Repeated Facility Category Findings",
+            "description": (
+                "List facility/category/finding rows that appear across more than one facility "
+                "in the local derived dataset. Use as a source-review queue, not as a conclusion "
+                "about facilities or the public source."
+            ),
+            "sql": """
+SELECT *
+FROM facility_comparison_review
+WHERE facilities_with_same_category_finding > 1
+ORDER BY facilities_with_same_category_finding DESC,
+         source_document_count DESC,
+         records_with_review_flags DESC,
+         allegation_category,
+         finding,
+         facility_number
             """.strip(),
         },
         "source_traceability_check": {

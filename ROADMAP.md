@@ -58,6 +58,9 @@ governance scaffold.
 - Added a facility pattern review view and saved query for comparing finding mix,
 	allegation categories, missingness, report-date proxy usage, review flags, and
 	source document coverage across facilities.
+- Added a facility comparison review view and repeated category/finding saved
+  query for cautious cross-facility source-review queues over the local derived
+  dataset.
 - Added a `review_home` Datasette saved query as a task-based start-here surface
 	for complaint review, delay triage, facility comparison, source verification,
 	and CSV export paths before any dashboard or custom web interface decision.
