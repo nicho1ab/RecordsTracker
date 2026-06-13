@@ -59,3 +59,5 @@ Raw fixtures and expected JSON are governed by `.gitattributes` line-ending rule
 - `expected/157806098_inx62_report_type_punctuation.json`: Expected normalized records for punctuated report type heading extraction hardening.
 - `raw/157806098_inx63_findings_heading_dash.html`: Source-shaped CCLD report fixture covering an `INVESTIGATION FINDINGS -` section heading variant.
 - `expected/157806098_inx63_findings_heading_dash.json`: Expected normalized records for dashed investigation findings heading extraction hardening.
+- `raw/157806098_inx64_allegation_heading_dash.html`: Source-shaped CCLD report fixture covering an `ALLEGATION(S) -` section heading variant.
+- `expected/157806098_inx64_allegation_heading_dash.json`: Expected normalized records for dashed allegation heading extraction hardening.
