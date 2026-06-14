@@ -18,4 +18,11 @@
   states in the derived dataset, not conclusions about the public source.
 - Live fetched raw report files are saved under the local ignored `data/raw/ccld` path by default. Treat public narrative content carefully when sharing exports or raw files.
 - Live fetched records reflect the public response at retrieval time. Public reports may later change, be corrected, become unavailable, or use layouts the current extractor does not fully understand.
+- The local hosted scaffold `/facilities` pages are read-only fixture/sample
+  pages backed only by committed tiny public-source facility fixtures and
+  manifest placeholder metadata. They do not load live public-source data, read
+  ignored raw CSVs or generated profiling outputs, use SQLite or a hosted
+  database, run import/sync, authenticate users, persist reviewer-created state,
+  or prove statewide coverage, source completeness, official facility status,
+  or legal or facility-wide conclusions.
 - Datasette accessibility depends partly on the installed Datasette version, browser, and assistive technology. Validate keyboard navigation, table headers, focus visibility, and exported table usability before treating a release as stable.

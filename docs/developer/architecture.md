@@ -51,11 +51,20 @@ pattern. It does not read from SQLite or a hosted database, run import/sync,
 load live public-source data, authenticate users, or persist reviewer-created
 state.
 
-The current next hosted-view gap is another narrow fixture-backed source-view
-expansion after the sample filtering/search and source traceability summary
-shell. That work must preserve sample labeling, read-only behavior, source
-traceability, semantic structure, accessibility validation, and the no-database,
-no-import, no-authentication, no-reviewer-state, no-deployment boundary.
+The scaffold also includes a local-only read-only `/facilities` sample view and
+detail pages backed only by the committed tiny public-source facility fixtures
+under `tests/fixtures/public_source_facilities/`. The facility view displays
+source-shaped facility master fields and manifest placeholder metadata for
+traceability-style UI validation. It does not read ignored raw CSVs, generated
+profiling outputs, SQLite, a hosted database, live public-source data,
+import/sync output, authentication state, or reviewer-created state.
+
+The current next hosted-view gap should remain narrow and fixture-backed after
+the sample filtering/search, source traceability summary shell, and facility
+master sample view. That work must preserve sample labeling, read-only behavior,
+source traceability, semantic structure, accessibility validation, and the
+no-database, no-import, no-authentication, no-reviewer-state, no-deployment
+boundary.
 
 The scaffold does not implement authentication, authorization, production
 schema, migrations, import/sync, queues, annotations, corrections, exports,

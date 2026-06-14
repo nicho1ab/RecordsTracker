@@ -24,6 +24,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
             health_status, health_body = _read_url(f"{base_url}/health")
             root_status, root_body = _read_url(f"{base_url}/")
             records_status, records_body = _read_url(f"{base_url}/source-records")
+            facilities_status, facilities_body = _read_url(f"{base_url}/facilities")
         finally:
             server.shutdown()
             thread.join(timeout=5)
@@ -39,6 +40,12 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Sample source traceability summary" not in records_body
     ):
         raise RuntimeError("Hosted scaffold source-record shell did not return the sample list.")
+    if (
+        facilities_status != 200
+        or b"Read-only facility master sample view" not in facilities_body
+        or b"Committed tiny public-source facility fixture rows" not in facilities_body
+    ):
+        raise RuntimeError("Hosted scaffold facility sample shell did not return the fixture list.")
     return payload if isinstance(payload, dict) else {}
 
 
