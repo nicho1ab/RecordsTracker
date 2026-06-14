@@ -155,8 +155,11 @@ public-record review notes.
    live data, database, import/sync, authentication, or reviewer-created state
    persistence. The local `/facilities` route shows a read-only facility master
    sample view backed only by committed tiny public-source facility fixtures and
-   manifest placeholder metadata; it does not read ignored raw CSVs, generated
-   profiling outputs, SQLite, a hosted database, or live public-source data.
+   manifest placeholder metadata. Facility detail pages include fixture-only
+   source coverage indicators and related fixture/sample source-record links
+   where the local sample mapping exists; they do not read ignored raw CSVs,
+   generated profiling outputs, SQLite, a hosted database, or live
+   public-source data.
 
 ## Validation
 

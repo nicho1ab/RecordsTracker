@@ -14,11 +14,12 @@ APP_NAME = "CCLD Hosted Tester MVP Scaffold"
 SCAFFOLD_NOTICE = "Scaffold only: not a functioning reviewer workflow yet."
 SAMPLE_DATA_NOTICE = "Local sample source-derived data only; no live public-source data is loaded."
 PUBLIC_SOURCE_FACILITY_FIXTURE_DIR = (
-  Path(__file__).resolve().parents[3]
-  / "tests"
-  / "fixtures"
-  / "public_source_facilities"
+    Path(__file__).resolve().parents[3]
+    / "tests"
+    / "fixtures"
+    / "public_source_facilities"
 )
+SOURCE_COVERAGE_FACILITY_FIXTURE = "chhs_facility_master_tiny.csv"
 
 
 @dataclass(frozen=True)
@@ -100,8 +101,8 @@ SAMPLE_SOURCE_RECORDS = [
         jurisdiction="California",
         source_family="CCLD complaint reports",
         source_type="HTML portal/detail page",
-        facility_name="Sample Facility Alpha",
-        facility_number="000000001",
+        facility_name="Synthetic Orchard Child Care",
+        facility_number="900000001",
         complaint_id="sample-complaint-001",
         complaint_control_number="SAMPLE-CC-001",
         finding="Unknown",
@@ -117,8 +118,8 @@ SAMPLE_SOURCE_RECORDS = [
         jurisdiction="California",
         source_family="CCLD complaint reports",
         source_type="HTML portal/detail page",
-        facility_name="Sample Facility Beta",
-        facility_number="000000002",
+        facility_name="Synthetic Valley Family Agency",
+        facility_number="900000002",
         complaint_id="sample-complaint-002",
         complaint_control_number="SAMPLE-CC-002",
         finding="Unknown",
@@ -312,7 +313,7 @@ def build_source_traceability_summary(
                 ),
             )
             for field_name, label in TRACEABILITY_FIELDS
-          ),
+        ),
         jurisdictions=tuple(sorted({record.jurisdiction for record in records})),
         source_families=tuple(sorted({record.source_family for record in records})),
     )
@@ -351,6 +352,31 @@ def get_sample_facility_record(record_id: str) -> SampleFacilityRecord | None:
         if record.record_id == record_id:
             return record
     return None
+
+
+def related_sample_source_records_for_facility(
+    facility: SampleFacilityRecord,
+) -> list[SampleSourceRecord]:
+    if facility.source_fixture != SOURCE_COVERAGE_FACILITY_FIXTURE:
+        return []
+    return [
+        record
+        for record in SAMPLE_SOURCE_RECORDS
+        if record.facility_number == facility.facility_number
+        and record.jurisdiction == facility.jurisdiction
+    ]
+
+
+def related_sample_facility_records_for_source_record(
+    source_record: SampleSourceRecord,
+) -> list[SampleFacilityRecord]:
+    return [
+        facility
+        for facility in load_sample_facility_records()
+        if facility.source_fixture == SOURCE_COVERAGE_FACILITY_FIXTURE
+        and facility.facility_number == source_record.facility_number
+        and facility.jurisdiction == source_record.jurisdiction
+    ]
 
 
 def _render_filter_option(value: str, selected_value: str) -> str:
@@ -485,6 +511,121 @@ def render_source_traceability_detail(record: SampleSourceRecord) -> str:
       <p>These values are sample-only indicators for the local scaffold. They do
       not verify a live public-source record, source completeness, reviewer
       state, or import status.</p>
+    </section>"""
+
+
+def render_facility_source_coverage_panel(record: SampleFacilityRecord) -> str:
+    related_source_records = related_sample_source_records_for_facility(record)
+    related_status = (
+        "sample source-record context available"
+        if related_source_records
+        else "not represented in this fixture/sample mapping"
+    )
+    related_items = "\n".join(
+        f"""        <li><a href="/source-records/{html.escape(source_record.record_id)}">
+          {html.escape(source_record.complaint_control_number)} for
+          {html.escape(source_record.facility_name)}
+        </a></li>"""
+        for source_record in related_source_records
+    )
+    if not related_items:
+        related_items = """        <li>No related fixture/sample source-record context is
+          represented in this scaffold for this facility number.</li>"""
+    return f"""<section aria-labelledby="source-coverage-heading">
+      <h2 id="source-coverage-heading">Sample source coverage</h2>
+      <p>This read-only panel connects the selected facility fixture row to
+      fixture/sample source-record context when a local sample relationship is
+      available. It is local-only, fixture-backed, sample-only, and not live
+      public-source coverage.</p>
+      <p>Coverage indicators do not prove public-source completeness, statewide
+      coverage, official facility status, import status, database state,
+      reviewer-created state, or any legal, facility-wide, delay, harm, abuse,
+      neglect, liability, or rights-deprivation conclusion.</p>
+      <table>
+        <caption>Fixture source coverage indicators for this sample facility</caption>
+        <thead>
+          <tr>
+            <th scope="col">Coverage indicator</th>
+            <th scope="col">Fixture/sample status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Facility fixture metadata</th>
+            <td>fixture metadata available</td>
+          </tr>
+          <tr>
+            <th scope="row">Related sample source-record context</th>
+            <td>{html.escape(related_status)}</td>
+          </tr>
+          <tr>
+            <th scope="row">Live public-source coverage</th>
+            <td>unknown/not implemented; not live data</td>
+          </tr>
+          <tr>
+            <th scope="row">Database or import coverage</th>
+            <td>not implemented; not imported data and not database-backed</td>
+          </tr>
+          <tr>
+            <th scope="row">Source completeness</th>
+            <td>not assessed; no completeness conclusion</td>
+          </tr>
+        </tbody>
+      </table>
+      <dl>
+        <dt>Source family</dt>
+        <dd>{html.escape(record.source_family)}</dd>
+        <dt>Jurisdiction</dt>
+        <dd>{html.escape(record.jurisdiction)}</dd>
+        <dt>Source fixture</dt>
+        <dd>{html.escape(record.source_fixture)}</dd>
+        <dt>Profiled source shape</dt>
+        <dd>{html.escape(record.profiled_source_shape)}</dd>
+        <dt>Source dataset reference</dt>
+        <dd>{html.escape(record.source_dataset_reference)}</dd>
+        <dt>Source URL placeholder</dt>
+        <dd>{html.escape(record.source_url)}</dd>
+        <dt>Raw SHA-256 placeholder</dt>
+        <dd>{html.escape(record.raw_sha256)}</dd>
+        <dt>Retrieved at placeholder</dt>
+        <dd>{html.escape(record.retrieved_at)}</dd>
+      </dl>
+      <section aria-labelledby="related-source-records-heading">
+        <h3 id="related-source-records-heading">Related fixture/sample source-record context</h3>
+        <p>Related links use fixture/sample facility number and jurisdiction
+        only. They do not join live sources, imports, databases, or reviewer
+        workflow state.</p>
+        <ul>
+{related_items}
+        </ul>
+      </section>
+    </section>"""
+
+
+def render_related_facility_context(record: SampleSourceRecord) -> str:
+    related_facilities = related_sample_facility_records_for_source_record(record)
+    if not related_facilities:
+        return """<section aria-labelledby="related-facility-heading">
+      <h2 id="related-facility-heading">Related sample facility context</h2>
+      <p>No related fixture/sample facility context is represented in this local
+      scaffold for this source record. This is an unknown/not implemented sample
+      state, not a public-source completeness conclusion.</p>
+    </section>"""
+    related_items = "\n".join(
+        f"""        <li><a href="/facilities/{html.escape(facility.record_id)}">
+          {html.escape(facility.facility_name)} from {html.escape(facility.source_fixture)}
+        </a></li>"""
+        for facility in related_facilities
+    )
+    return f"""<section aria-labelledby="related-facility-heading">
+      <h2 id="related-facility-heading">Related sample facility context</h2>
+      <p>This read-only block links fixture/sample source-record context back to
+      committed tiny facility fixture rows by sample facility number and
+      jurisdiction. It is not imported data, not database-backed, not live
+      public-source coverage, and not reviewer-created state.</p>
+      <ul>
+{related_items}
+      </ul>
     </section>"""
 
 
@@ -640,6 +781,7 @@ def render_source_record_detail(record: SampleSourceRecord) -> str:
   <main>
     {render_scope_notice()}
     {render_source_traceability_detail(record)}
+    {render_related_facility_context(record)}
     <section aria-labelledby="detail-heading">
       <h2 id="detail-heading">Read-only sample source-derived detail</h2>
       <dl>
@@ -772,6 +914,7 @@ def render_facility_detail(record: SampleFacilityRecord) -> str:
   </nav>
   <main>
     {render_facility_fixture_scope_notice()}
+    {render_facility_source_coverage_panel(record)}
     <section aria-labelledby="facility-detail-heading">
       <h2 id="facility-detail-heading">Read-only facility fixture detail</h2>
       <dl>
@@ -814,34 +957,34 @@ def render_facility_detail(record: SampleFacilityRecord) -> str:
 
 
 def route_response(path: str) -> tuple[int, str, bytes]:
-  parsed_url = urlparse(path)
-  parsed_path = parsed_url.path
-  if parsed_path == "/":
-    return 200, "text/html; charset=utf-8", render_app_shell().encode("utf-8")
-  if parsed_path == "/source-records":
-    filters = source_record_filters_from_query(parsed_url.query)
-    body = render_source_record_list(filters).encode("utf-8")
-    return 200, "text/html; charset=utf-8", body
-  if parsed_path.startswith("/source-records/"):
-    record_id = parsed_path.removeprefix("/source-records/")
-    source_record = get_sample_source_record(record_id)
-    if source_record is not None:
-      body = render_source_record_detail(source_record).encode("utf-8")
-      return 200, "text/html; charset=utf-8", body
-  if parsed_path == "/facilities":
-    body = render_facility_list().encode("utf-8")
-    return 200, "text/html; charset=utf-8", body
-  if parsed_path.startswith("/facilities/"):
-    record_id = parsed_path.removeprefix("/facilities/")
-    facility_record = get_sample_facility_record(record_id)
-    if facility_record is not None:
-      body = render_facility_detail(facility_record).encode("utf-8")
-      return 200, "text/html; charset=utf-8", body
-  if parsed_path in {"/health", "/api/health"}:
-    body = json.dumps(health_response(), sort_keys=True).encode("utf-8")
-    return 200, "application/json; charset=utf-8", body
-  body = b"Not found"
-  return 404, "text/plain; charset=utf-8", body
+    parsed_url = urlparse(path)
+    parsed_path = parsed_url.path
+    if parsed_path == "/":
+        return 200, "text/html; charset=utf-8", render_app_shell().encode("utf-8")
+    if parsed_path == "/source-records":
+        filters = source_record_filters_from_query(parsed_url.query)
+        body = render_source_record_list(filters).encode("utf-8")
+        return 200, "text/html; charset=utf-8", body
+    if parsed_path.startswith("/source-records/"):
+        record_id = parsed_path.removeprefix("/source-records/")
+        source_record = get_sample_source_record(record_id)
+        if source_record is not None:
+            body = render_source_record_detail(source_record).encode("utf-8")
+            return 200, "text/html; charset=utf-8", body
+    if parsed_path == "/facilities":
+        body = render_facility_list().encode("utf-8")
+        return 200, "text/html; charset=utf-8", body
+    if parsed_path.startswith("/facilities/"):
+        record_id = parsed_path.removeprefix("/facilities/")
+        facility_record = get_sample_facility_record(record_id)
+        if facility_record is not None:
+            body = render_facility_detail(facility_record).encode("utf-8")
+            return 200, "text/html; charset=utf-8", body
+    if parsed_path in {"/health", "/api/health"}:
+        body = json.dumps(health_response(), sort_keys=True).encode("utf-8")
+        return 200, "application/json; charset=utf-8", body
+    body = b"Not found"
+    return 404, "text/plain; charset=utf-8", body
 
 
 class HostedScaffoldHandler(BaseHTTPRequestHandler):

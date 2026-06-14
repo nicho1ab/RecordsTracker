@@ -26,6 +26,8 @@
     completeness.
 - The local hosted scaffold `/facilities` list and detail pages use committed
     tiny public-source facility fixtures and manifest placeholder metadata only.
+    The facility detail source coverage panel and related source-record links
+    are fixture/sample display patterns only.
     They do not read ignored raw CSVs, generated profiling outputs, SQLite, a
     hosted database, live public-source data, import/sync output, authentication
     state, or reviewer-created state, and they do not prove source

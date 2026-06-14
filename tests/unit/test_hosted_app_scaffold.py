@@ -184,12 +184,12 @@ def test_load_sample_facility_records_uses_committed_public_source_fixtures() ->
 
 def test_source_record_filter_query_uses_sample_records_only() -> None:
     filters = source_record_filters_from_query(
-        "q=beta&jurisdiction=California&source_family=CCLD+complaint+reports"
+        "q=valley&jurisdiction=California&source_family=CCLD+complaint+reports"
     )
     filtered_records = filter_sample_source_records(filters)
 
     assert filters == SourceRecordFilters(
-        query="beta",
+        query="valley",
         jurisdiction="California",
         source_family="CCLD complaint reports",
     )
@@ -257,6 +257,35 @@ def test_facility_detail_route_displays_manifest_traceability_metadata() -> None
     assert "Retrieved at placeholder" in html
     assert "2026-06-07T00:00:00Z" in html
     assert "does not read ignored raw CSVs" in normalized_html
+    assert "Sample source coverage" in html
+    assert "Fixture source coverage indicators for this sample facility" in html
+    assert "fixture metadata available" in html
+    assert "sample source-record context available" in html
+    assert "unknown/not implemented; not live data" in html
+    assert "not imported data and not database-backed" in html
+    assert "not assessed; no completeness conclusion" in html
+    assert "do not prove public-source completeness" in normalized_html
+    assert "legal, facility-wide, delay, harm, abuse, neglect, liability" in normalized_html
+    assert "Related fixture/sample source-record context" in html
+    assert "/source-records/sample-complaint-001" in html
+    assert "SAMPLE-CC-001 for Synthetic Orchard Child Care" in normalized_html
+
+
+def test_facility_detail_route_shows_unmapped_fixture_sample_coverage_state() -> None:
+    status, content_type, body = route_response(
+        "/facilities/ccld-program-facilities-tiny-900000001"
+    )
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Sample source coverage" in html
+    assert "not represented in this fixture/sample mapping" in html
+    assert "No related fixture/sample source-record context" in normalized_html
+    assert "/source-records/sample-complaint-001" not in html
+    assert "not a public-source completeness conclusion" not in normalized_html
+    assert "do not prove public-source completeness" in normalized_html
 
 
 def test_unknown_facility_detail_returns_not_found() -> None:
@@ -269,7 +298,7 @@ def test_unknown_facility_detail_returns_not_found() -> None:
 
 
 def test_source_traceability_summary_uses_filtered_sample_records() -> None:
-    filters = SourceRecordFilters(query="beta")
+    filters = SourceRecordFilters(query="valley")
     filtered_records = filter_sample_source_records(filters)
     summary = build_source_traceability_summary(filtered_records)
 
@@ -290,12 +319,12 @@ def test_source_traceability_summary_uses_filtered_sample_records() -> None:
 
 
 def test_source_record_list_route_filters_by_query_parameter() -> None:
-    status, content_type, body = route_response("/source-records?q=beta")
+    status, content_type, body = route_response("/source-records?q=valley")
     html = body.decode("utf-8")
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "value=\"beta\"" in html
+    assert "value=\"valley\"" in html
     assert "Showing 1 of 2 fixture/sample records." in html
     assert "1 of 1 fixture/sample records" in html
     assert "SAMPLE-CC-002" in html
@@ -344,6 +373,12 @@ def test_source_record_detail_route_displays_traceability_fields() -> None:
     assert "Source-derived sample records and future reviewer-created state remain separate" in (
         normalized_html
     )
+    assert "Related sample facility context" in html
+    assert "not imported data, not database-backed, not live public-source coverage" in (
+        normalized_html
+    )
+    assert "/facilities/chhs-facility-master-tiny-900000001" in html
+    assert "Synthetic Orchard Child Care from chhs_facility_master_tiny.csv" in normalized_html
 
 
 def test_source_record_list_has_accessible_semantic_structure() -> None:
@@ -395,13 +430,21 @@ def test_source_record_detail_has_accessible_semantic_structure() -> None:
         html,
         expected_title="SAMPLE-CC-001 - CCLD Hosted Tester MVP Scaffold",
         expected_h1="SAMPLE-CC-001",
-        required_links={"/", "/source-records", "/health"},
+        required_links={
+            "/",
+            "/source-records",
+            "/facilities/chhs-facility-master-tiny-900000001",
+            "/health",
+        },
     )
 
     assert parser.tags.count("dl") == 1
     normalized_main = " ".join(parser.text_for("main").split())
 
     assert "Sample source traceability block" in parser.text_for("main")
+    assert "Related sample facility context" in parser.text_for("h2")
+    assert "not imported data" in normalized_main
+    assert "not live public-source coverage" in normalized_main
     assert "do not verify a live public-source record" in normalized_main
     assert "Read-only sample source-derived detail" in parser.text_for("main")
     for label in [
@@ -477,10 +520,21 @@ def test_facility_detail_has_accessible_semantic_structure() -> None:
         required_links={"/", "/facilities", "/source-records", "/health"},
     )
 
-    assert parser.tags.count("dl") == 1
+    assert parser.tags.count("dl") == 2
+    assert parser.tags.count("table") == 1
     normalized_main = " ".join(parser.text_for("main").split())
 
     assert "Read-only facility fixture detail" in parser.text_for("h2")
+    assert "Sample source coverage" in parser.text_for("h2")
+    assert "Related fixture/sample source-record context" in parser.text_for("h3")
+    assert "Fixture source coverage indicators for this sample facility" in parser.text_for(
+        "caption"
+    )
+    assert "Coverage indicator" in parser.text_for("th")
+    assert "Fixture/sample status" in parser.text_for("th")
+    assert "not represented in this fixture/sample mapping" in normalized_main
+    assert "No related fixture/sample source-record context" in normalized_main
+    assert "do not prove public-source completeness" in normalized_main
     for label in [
         "Facility name",
         "Facility number",
