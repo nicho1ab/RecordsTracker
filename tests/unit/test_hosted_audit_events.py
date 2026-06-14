@@ -22,6 +22,7 @@ from ccld_complaints.hosted_app.auth import (
 )
 from ccld_complaints.hosted_app.reviewer_created_state import (
     create_reviewer_created_state_scaffold,
+    create_reviewer_note_scaffold,
     hosted_reviewer_created_state,
     list_reviewer_created_state_scaffold,
 )
@@ -87,6 +88,38 @@ def test_audit_event_is_created_for_successful_reviewer_state_write_only() -> No
     assert audit_event.context_metadata == {
         "state_kind": "review_item_state_scaffold",
         "state_payload_keys": ["scaffold_state"],
+        "source_record_key": COMPLAINT_KEY,
+    }
+
+
+def test_audit_event_is_created_for_successful_reviewer_note_write() -> None:
+    with _seeded_connection() as connection:
+        created = create_reviewer_note_scaffold(
+            connection,
+            _reviewer_actor(),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            note_text="Audit this local test note.",
+        )
+
+        [audit_event] = list_hosted_audit_events_scaffold(
+            connection,
+            _operator_actor(),
+            scope=TEST_SCOPE,
+            target_reviewer_state_id=created.reviewer_state_id,
+        )
+
+    assert audit_event.action == "reviewer_created_state_scaffold.create"
+    assert audit_event.target_reviewer_state_id == created.reviewer_state_id
+    assert audit_event.context_metadata == {
+        "state_kind": "review_item_state_scaffold",
+        "state_payload_keys": [
+            "local_test_only",
+            "note_format",
+            "note_text",
+            "payload_kind",
+            "source_record_key",
+        ],
         "source_record_key": COMPLAINT_KEY,
     }
 

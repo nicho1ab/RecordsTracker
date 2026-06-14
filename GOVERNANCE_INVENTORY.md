@@ -30,6 +30,9 @@
   authenticated actor attribution and stable source-derived record references,
   a narrow local/test authenticated reviewer-created state read route seam over
   those persisted scaffold rows with schema-backed filters and bounded search,
+  a narrow local/test authenticated reviewer note creation route that stores
+  bounded non-secret note text as reviewer-created scaffold payload under the
+  existing state kind,
   a narrow local/test audit event persistence scaffold for successful reviewer-
   created state scaffold writes only, a narrow local/test authenticated audit
   history read route seam over those scaffold audit rows, a local/test authenticated reset/reload
@@ -218,6 +221,8 @@
   source-derived records, plus a narrow local/test audit event scaffold for
   successful reviewer-created state scaffold writes only, plus a narrow
   local/test audit history read route seam for those scaffold audit rows, plus a local/test
+  reviewer note creation route that writes bounded non-secret note payloads
+  through the existing reviewer-created scaffold write/audit path, plus a local/test
   authenticated dry-run seam that reports seeded corpus reset/reload impact and
   scoped reviewer-created scaffold and audit scaffold row counts without
   deleting, overwriting, archiving, importing, reloading, or creating new dry-run

@@ -58,6 +58,11 @@
     alone does not grant this reviewer-created state read access, including
     when the workflow shell composes associated state context and its derived
     summary for a selected source record.
+    A narrow local/test reviewer note creation route can write bounded non-
+    secret note text through the existing reviewer-created state scaffold and
+    audit path when explicit local/test code supplies reviewer-state write
+    context; it does not add a new schema kind, note editing/deletion, full
+    annotations, corrections, exports, or production auth behavior.
     The path does not run live crawling, execute connectors, automate production
     imports, execute reset/reload, delete or overwrite source-derived records,
     archive or clear reviewer-created state, execute persisted planning

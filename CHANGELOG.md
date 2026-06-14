@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Added a narrow local/test authenticated reviewer note creation route over the
+	existing reviewer-created state scaffold, storing bounded non-secret note text
+	as reviewer-created scaffold payload under the existing state kind, creating
+	the existing audit event on successful writes, and making notes visible through
+	the existing reviewer-created state read routes and workflow shell associated
+	state detail without adding schema changes, note editing/deletion, full
+	annotations, corrections, review status transitions, exports, reset/reload
+	execution, production auth, deployment, live crawling, or connector execution.
 - Added narrow local/test filtering/search support for persisted reviewer-created
 	state reads, with a bounded `q` search over existing non-secret scaffold fields
 	and workflow detail pass-through for associated state filters, plus focused

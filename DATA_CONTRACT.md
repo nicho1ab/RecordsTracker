@@ -62,13 +62,17 @@ and audit rows. A narrow local/test read-only route seam can list or fetch those
 planning metadata records by approved planning identifiers and schema-supported
 filters without mutating source-derived, reviewer-created, audit, or operational
 metadata rows.
-A narrow local/test
-reviewer-created state scaffold table can store review-item-state placeholder
-rows separately from source-derived rows, linked through staged source-derived
-record keys and attributed to authenticated actors. A narrow local/test audit
-event scaffold table can store audit rows for successful reviewer-created state
-scaffold writes only, separately from source-derived and reviewer-created rows.
-A narrow local/test authenticated reviewer-created state read route seam can
+A narrow local/test reviewer-created state scaffold table can store review-item-
+state placeholder rows separately from source-derived rows, linked through
+staged source-derived record keys and attributed to authenticated actors. A
+narrow local/test audit event scaffold table can store audit rows for successful
+reviewer-created state scaffold writes only, separately from source-derived and
+reviewer-created rows. A narrow local/test authenticated reviewer note creation
+route can write bounded non-secret note text as reviewer-created scaffold
+payload under the existing review-item-state scaffold kind, creating the same
+audit event as other successful reviewer-created scaffold writes. Reviewer notes
+are not canonical source-derived fields and do not require a schema change in
+this scaffold. A narrow local/test authenticated reviewer-created state read route seam can
 list or fetch those scaffold rows by approved reviewer state identifiers,
 schema-supported filters, and bounded search over existing non-secret scaffold
 fields without mutating source-derived, reviewer-created, audit, or operational

@@ -111,8 +111,10 @@ capture provider subject, provider issuer, display label, actor category, write
 permission, and generated timestamp for attribution. The scaffold does not
 store provider secrets, tokens, cookies, sessions, private headers, production
 roles, or user tables, and it does not implement real login flow, auth
-middleware, annotations, corrections, export decisions, tester feedback, or
-stateful reviewer workflows. Successful scaffold writes also create a narrow
+middleware, annotations, corrections, note editing or deletion, export decisions,
+tester feedback, or stateful reviewer workflows. The local/test reviewer note
+creation route stores only bounded non-secret note text as reviewer-created
+scaffold payload and rejects secret-like note text. Successful scaffold writes also create a narrow
 local/test audit event row in a separate table; if that audit row cannot be
 created, the reviewer-created scaffold write is rolled back rather than silently
 leaving unaudited reviewer-created state.
