@@ -156,7 +156,8 @@ public-record review notes.
    event scaffold for successful reviewer-created state scaffold writes only, a
    narrow local/test authenticated audit history read route seam for those audit
    rows, a narrow local/test authenticated reviewer-created state read route
-   seam for listing or fetching persisted scaffold rows, and a local/test
+   seam for listing, fetching, filtering, or bounded search over persisted
+   scaffold rows, and a local/test
    authenticated reset/reload dry-run route seam that reports
    what a future seeded corpus reset/reload would affect and can optionally
    persist a separate operational planning metadata record when explicitly
@@ -197,7 +198,8 @@ public-record review notes.
    derived, reviewer-created, or audit rows.
    The reviewer-created state read seam is local/test only, requires explicit
    database, actor, and scope context plus reviewer-state read permission, and
-   returns non-secret scaffold row fields without mutating source-derived,
+   returns non-secret scaffold row fields with schema-backed filters and bounded
+   search over existing fields without mutating source-derived,
    reviewer-created, audit, or operational metadata rows.
    Source-derived read access alone does not grant workflow-shell access to
    associated reviewer-created state context.

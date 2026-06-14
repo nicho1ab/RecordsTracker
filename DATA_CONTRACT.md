@@ -69,10 +69,11 @@ record keys and attributed to authenticated actors. A narrow local/test audit
 event scaffold table can store audit rows for successful reviewer-created state
 scaffold writes only, separately from source-derived and reviewer-created rows.
 A narrow local/test authenticated reviewer-created state read route seam can
-list or fetch those scaffold rows by approved reviewer state identifiers and
-schema-supported filters without mutating source-derived, reviewer-created,
-audit, or operational metadata rows. It returns only non-secret scaffold fields
-and remains separate from source-derived record reads.
+list or fetch those scaffold rows by approved reviewer state identifiers,
+schema-supported filters, and bounded search over existing non-secret scaffold
+fields without mutating source-derived, reviewer-created, audit, or operational
+metadata rows. It returns only non-secret scaffold fields and remains separate
+from source-derived record reads.
 A narrow local/test authenticated audit history read route seam can list or
 fetch those audit rows by approved audit identifiers and schema-supported
 filters without mutating source-derived, reviewer-created, or audit rows. Those

@@ -161,6 +161,7 @@ def test_reviewer_workflow_shell_fetches_authenticated_detail() -> None:
         "source_record_key": COMPLAINT_KEY,
         "state_kind": None,
         "actor_provider_subject": None,
+        "q": None,
     }
     assert associated_state["pagination"] == {
         "limit": 100,
@@ -296,6 +297,59 @@ def test_reviewer_workflow_shell_detail_summarizes_multiple_associated_state_row
             "does_not_mutate_operational_metadata": True,
         },
     }
+
+
+def test_reviewer_workflow_shell_detail_filters_associated_state_search() -> None:
+    with _seeded_connection() as connection:
+        create_reviewer_created_state_scaffold(
+            connection,
+            _actor(
+                roles=("tester_reviewer",),
+                provider_subject="fixture-subject-active-reviewer",
+                display_name="Fixture Active Reviewer",
+            ),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            state_payload={"scaffold_state": "source_check_needed"},
+        )
+        matched = create_reviewer_created_state_scaffold(
+            connection,
+            _actor(
+                roles=("admin",),
+                provider_subject="fixture-subject-admin-reviewer",
+                display_name="Fixture Admin Reviewer",
+                actor_category="admin",
+            ),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            state_payload={"scaffold_state": "source_checked"},
+        )
+
+        status, _content_type, body = route_response(
+            "/api/reviewer/source-derived-review/detail"
+            f"?source_record_key={quote(COMPLAINT_KEY)}"
+            "&q=fixture%20admin"
+            "&state_kind=review_item_state_scaffold",
+            reviewer_workflow_shell_context=_workflow_context(connection),
+        )
+
+    payload = _json_body(body)
+
+    assert status == 200
+    associated_state = payload["detail"]["associated_reviewer_created_state"]
+    assert associated_state["filters"] == {
+        "source_record_key": COMPLAINT_KEY,
+        "state_kind": "review_item_state_scaffold",
+        "actor_provider_subject": None,
+        "q": "fixture admin",
+    }
+    assert [
+        row["reviewer_state_id"]
+        for row in associated_state["reviewer_created_state"]
+    ] == [matched.reviewer_state_id]
+    assert payload["detail"]["associated_reviewer_created_state_summary"][
+        "total_associated_rows"
+    ] == 1
 
 
 def test_reviewer_workflow_shell_rejects_unauthenticated_actor() -> None:

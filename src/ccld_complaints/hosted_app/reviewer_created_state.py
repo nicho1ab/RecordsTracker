@@ -5,7 +5,18 @@ from dataclasses import dataclass
 from typing import Any, Literal, cast
 from uuid import uuid4
 
-from sqlalchemy import JSON, CheckConstraint, Column, ForeignKey, String, Table, Text, select
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    Column,
+    ForeignKey,
+    String,
+    Table,
+    Text,
+    func,
+    or_,
+    select,
+)
 from sqlalchemy.engine import Connection, RowMapping
 
 from ccld_complaints.hosted_app.audit_events import create_hosted_audit_event
@@ -161,6 +172,7 @@ def list_reviewer_created_state_scaffold(
     source_record_key: str | None = None,
     state_kind: ReviewerCreatedStateKind | None = None,
     actor_provider_subject: str | None = None,
+    search_query: str | None = None,
     limit: int = 100,
     offset: int = 0,
 ) -> tuple[ReviewerCreatedStateRead, ...]:
@@ -170,6 +182,7 @@ def list_reviewer_created_state_scaffold(
         raise ValueError("Reviewer-created state list offset must be at least 0.")
     if state_kind is not None and state_kind not in REVIEWER_CREATED_STATE_KINDS:
         raise ValueError("Reviewer-created state kind is not supported by this scaffold.")
+    normalized_search_query = _normalized_search_query(search_query)
     require_permission(
         actor,
         permission=REVIEWER_STATE_READ_PERMISSION,
@@ -192,6 +205,41 @@ def list_reviewer_created_state_scaffold(
             hosted_reviewer_created_state.c.created_by_provider_subject
             == actor_provider_subject
         )
+    if normalized_search_query is not None:
+        search_pattern = _like_search_pattern(normalized_search_query)
+        query = query.where(
+            or_(
+                func.lower(hosted_reviewer_created_state.c.reviewer_state_id).like(
+                    search_pattern,
+                    escape="\\",
+                ),
+                func.lower(hosted_reviewer_created_state.c.source_record_key).like(
+                    search_pattern,
+                    escape="\\",
+                ),
+                func.lower(hosted_reviewer_created_state.c.state_kind).like(
+                    search_pattern,
+                    escape="\\",
+                ),
+                func.lower(hosted_reviewer_created_state.c.created_at).like(
+                    search_pattern,
+                    escape="\\",
+                ),
+                func.lower(
+                    hosted_reviewer_created_state.c.created_by_provider_subject
+                ).like(search_pattern, escape="\\"),
+                func.lower(
+                    hosted_reviewer_created_state.c.created_by_display_name
+                ).like(search_pattern, escape="\\"),
+                func.lower(
+                    hosted_reviewer_created_state.c.created_by_actor_category
+                ).like(search_pattern, escape="\\"),
+                func.lower(hosted_reviewer_created_state.c.authorization_permission).like(
+                    search_pattern,
+                    escape="\\",
+                ),
+            )
+        )
     query = (
         query.order_by(
             hosted_reviewer_created_state.c.created_at,
@@ -201,6 +249,20 @@ def list_reviewer_created_state_scaffold(
         .offset(offset)
     )
     return tuple(_read_model_from_row(row) for row in connection.execute(query).mappings().all())
+
+
+def _normalized_search_query(search_query: str | None) -> str | None:
+    if search_query is None:
+        return None
+    normalized = " ".join(search_query.casefold().split())
+    return normalized or None
+
+
+def _like_search_pattern(search_query: str) -> str:
+    escaped = (
+        search_query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    )
+    return f"%{escaped}%"
 
 
 def get_reviewer_created_state_scaffold(

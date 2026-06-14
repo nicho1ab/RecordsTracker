@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added narrow local/test filtering/search support for persisted reviewer-created
+	state reads, with a bounded `q` search over existing non-secret scaffold fields
+	and workflow detail pass-through for associated state filters, plus focused
+	tests for search success, empty results, auth and scope rejection, and
+	no-mutation behavior without adding writes, schema changes, full workflow
+	execution, exports, reset/reload execution, production auth, deployment, live
+	crawling, or connector execution.
 - Added a narrow local/test reviewer workflow shell state summary on selected
 	detail responses, derived only from the already-composed associated reviewer-
 	created state read route output, with focused tests for empty state, one row,
