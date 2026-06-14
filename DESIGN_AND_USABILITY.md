@@ -78,9 +78,10 @@ harm beyond what qualified reviewers establish from source records.
 The first browser-accessible hosted reviewer UI shell is now a local/test,
 server-rendered HTML surface at `/reviewer` and `/reviewer/records`. Its design
 purpose is functional validation, not polish: local testers can list/search a
-seeded source-derived record, open detail, inspect safe source traceability
-fields and safe related seeded bundle context, add a reviewer note, set a
-reviewer status, and see read-after-write reviewer-created state. Narrative
+seeded source-derived record, see list-level reviewer-created note/status
+indicators, open detail, inspect safe source traceability fields and safe
+related seeded bundle context, add a reviewer note, set a reviewer status, and
+see read-after-write reviewer-created state. Narrative
 source fields are hidden in the browser shell. It must keep source-derived values visibly separate
 from reviewer-created notes/statuses, keep local/test limitations visible, use
 semantic headings, tables, labels, and accessible buttons, avoid color-only

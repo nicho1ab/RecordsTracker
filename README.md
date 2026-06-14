@@ -158,11 +158,12 @@ public-record review notes.
    selected source record. A browser-accessible local/test reviewer UI shell is
    available at `/reviewer` when the scaffold is running locally; it loads the
    tiny seeded fixture corpus into process-local test state, lets a local tester
-   search/select a source-derived record, view safe source traceability fields
-   plus safe related seeded bundle context, submit a bounded reviewer note,
-   submit a bounded reviewer status, and see read-after-write reviewer-created
-   state through those same existing workflow seams. Narrative source fields are
-   hidden in the browser shell. It also includes a narrow local/test reviewer-
+   search/select a source-derived record, see list-level reviewer-created
+   note/status indicators before opening detail, view safe source traceability
+   fields plus safe related seeded bundle context, submit a bounded reviewer
+   note, submit a bounded reviewer status, and see read-after-write reviewer-
+   created state through those same existing workflow seams. Narrative source
+   fields are hidden in the browser shell. It also includes a narrow local/test reviewer-
    created state persistence scaffold table/service, a narrow local/test audit
    event scaffold for successful reviewer-created state scaffold writes only, a
    narrow local/test authenticated audit history read route seam for those audit

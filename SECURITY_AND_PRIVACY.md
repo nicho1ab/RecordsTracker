@@ -92,7 +92,7 @@ status writes, reviewer-created state readback, and audit creation to the
 existing workflow, reviewer-created state, source-derived, and audit seams. The
 HTML output is limited to safe source traceability fields, safe scalar source-
 derived values, safe related seeded bundle context, reviewer-created note/status
-display values, non-secret actor display labels, and local/test boundary text.
+indicator/display values, non-secret actor display labels, and local/test boundary text.
 Narrative source fields are hidden in the browser shell. It must not expose provider
 subjects or issuers, email addresses, tokens, cookies, private headers,
 connection strings, client secrets, raw provider claims, hosted URLs, private

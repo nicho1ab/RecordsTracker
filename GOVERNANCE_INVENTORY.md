@@ -31,9 +31,10 @@
   note action and status action that resolve the selected source-derived detail
   context before delegating to existing reviewer-created write routes, a thin
   browser-accessible local/test reviewer UI shell that lets a local tester list/
-  search seeded source-derived records, open detail, view safe source
-  traceability fields and safe related seeded bundle context, submit note/status
-  forms through those existing workflow actions, and see read-after-write
+  search seeded source-derived records, see list-level reviewer-created
+  note/status indicators, open detail, view safe source traceability fields and
+  safe related seeded bundle context, submit note/status forms through those
+  existing workflow actions, and see read-after-write
   reviewer-created state without exposing sensitive narrative fields, a narrow
   local/test reviewer-created state persistence scaffold table/service with
   authenticated actor attribution and stable source-derived record references,

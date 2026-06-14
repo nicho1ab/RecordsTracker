@@ -69,9 +69,10 @@ migrations/
   resolving the selected source record.
 17. Use the hosted reviewer UI shell only as a local/test browser-accessible
   server-rendered HTML wrapper over the seeded fixture corpus and existing
-  workflow seams, allowing list/search/detail, safe source traceability display,
-  safe related seeded bundle context, note/status form submission, and read-
-  after-write reviewer-created state display without exposing sensitive
+  workflow seams, allowing list/search/detail, list-level reviewer-created
+  note/status indicators, safe source traceability display, safe related seeded
+  bundle context, note/status form submission, and read-after-write reviewer-
+  created state display without exposing sensitive
   narrative fields or adding production auth, schema changes, exports, reset/reload
   execution, live crawling, connector execution, or deployment.
 18. Use the hosted reviewer-created state scaffold only for local/test
