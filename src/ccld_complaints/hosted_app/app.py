@@ -45,6 +45,12 @@ from ccld_complaints.hosted_app.reviewer_created_state_routes import (
     ReviewerCreatedStateApiContext,
     route_reviewer_created_state_api_response,
 )
+from ccld_complaints.hosted_app.reviewer_ui import (
+    REVIEWER_UI_PREFIX,
+    ReviewerUiContext,
+    default_local_test_reviewer_ui_context,
+    route_reviewer_ui_response,
+)
 from ccld_complaints.hosted_app.reviewer_workflow_shell import (
     ReviewerWorkflowShellContext,
     route_reviewer_workflow_shell_response,
@@ -55,7 +61,7 @@ from ccld_complaints.hosted_app.source_derived_routes import (
 )
 
 APP_NAME = "CCLD Hosted Tester MVP Scaffold"
-SCAFFOLD_NOTICE = "Scaffold only: not a functioning reviewer workflow yet."
+SCAFFOLD_NOTICE = "Local/test scaffold only: not a production reviewer workflow."
 SAMPLE_DATA_NOTICE = "Local sample source-derived data only; no live public-source data is loaded."
 PUBLIC_SOURCE_FACILITY_FIXTURE_DIR = (
     Path(__file__).resolve().parents[3]
@@ -378,6 +384,7 @@ def health_response() -> dict[str, object]:
         "status": "ok",
         "service": "hosted-tester-mvp-scaffold",
         "scaffold_only": True,
+        "local_test_reviewer_ui_shell": True,
         "review_workflows_implemented": False,
         "authentication_implemented": False,
         "source_data_loaded": False,
@@ -693,6 +700,7 @@ def render_app_shell() -> str:
       <li><a href="#status">Scaffold status</a></li>
       <li><a href="/source-records">Sample source-derived records</a></li>
       <li><a href="/facilities">Sample facility master records</a></li>
+      <li><a href="/reviewer">Local/test reviewer UI shell</a></li>
       <li><a href="#boundaries">Not implemented yet</a></li>
       <li><a href="/health">Health check</a></li>
     </ul>
@@ -701,9 +709,15 @@ def render_app_shell() -> str:
     <section id="status" aria-labelledby="status-heading">
       <h2 id="status-heading">Local scaffold status</h2>
       <p>This local app shell is runnable on a Windows development workstation.</p>
-      <p>No records are loaded, no users are authenticated, and no reviewer
-      workflow behavior is active.</p>
+      <p>The root scaffold page does not load source records or authenticate
+      users. Local/test reviewer workflow behavior is available only through
+      the fixture-backed reviewer UI shell.</p>
       <p>The source-record and facility sample shells use fixture/sample data only.</p>
+      <p>The local/test reviewer UI shell at <a href="/reviewer">/reviewer</a>
+      loads a tiny seeded corpus into process-local test state and lets a local
+      tester view source-derived records, add reviewer notes, set reviewer
+      statuses, and see read-after-write reviewer-created state through the
+      existing workflow seams.</p>
     </section>
     <section id="boundaries" aria-labelledby="boundaries-heading">
       <h2 id="boundaries-heading">Intentionally not implemented</h2>
@@ -1003,6 +1017,7 @@ def render_facility_detail(record: SampleFacilityRecord) -> str:
 def route_response(
     path: str,
     *,
+  method: str = "GET",
     request_body: bytes | None = None,
     audit_coverage_plan_context: AuditCoveragePlanContext | None = None,
     auth_provider_integration_plan_context: (
@@ -1019,9 +1034,22 @@ def route_response(
     reset_reload_planning_metadata_api_context: (
         ResetReloadPlanningMetadataApiContext | None
     ) = None,
+    reviewer_ui_context: ReviewerUiContext | None = None,
 ) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
     parsed_path = parsed_url.path
+    if parsed_path.startswith(REVIEWER_UI_PREFIX):
+        active_reviewer_ui_context = (
+            default_local_test_reviewer_ui_context()
+            if reviewer_ui_context is None
+            else reviewer_ui_context
+        )
+        return route_reviewer_ui_response(
+            path,
+            active_reviewer_ui_context,
+            method=method,
+            request_body=request_body,
+        )
     if parsed_path.startswith("/api/reviewer/source-derived-review"):
         return route_reviewer_workflow_shell_response(
             path,
@@ -1095,7 +1123,21 @@ class HostedScaffoldHandler(BaseHTTPRequestHandler):
     server_version = "CCLDHostedScaffold/0.1"
 
     def do_GET(self) -> None:
-        status, content_type, body = route_response(self.path)
+        status, content_type, body = route_response(self.path, method="GET")
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_POST(self) -> None:
+        content_length = int(self.headers.get("Content-Length", "0"))
+        request_body = self.rfile.read(content_length) if content_length > 0 else b""
+        status, content_type, body = route_response(
+            self.path,
+            method="POST",
+            request_body=request_body,
+        )
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))

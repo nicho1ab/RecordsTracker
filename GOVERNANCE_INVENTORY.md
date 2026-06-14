@@ -29,7 +29,11 @@
   queue/detail payloads, associated reviewer-created state read output, a
   compact derived summary on selected detail responses, and a narrow local/test
   note action and status action that resolve the selected source-derived detail
-  context before delegating to existing reviewer-created write routes, a narrow
+  context before delegating to existing reviewer-created write routes, a thin
+  browser-accessible local/test reviewer UI shell that lets a local tester list/
+  search seeded source-derived records, open detail, view safe source
+  traceability fields, submit note/status forms through those existing workflow
+  actions, and see read-after-write reviewer-created state, a narrow
   local/test reviewer-created state persistence scaffold table/service with
   authenticated actor attribution and stable source-derived record references,
   a narrow local/test authenticated reviewer-created state read route seam over
@@ -66,10 +70,11 @@
   kept separate from reviewer-created state. The current scaffold is an
   implementation path toward that direction, not a final production framework or
   stateful reviewer workflow.
-- Local-only scaffold status: the scaffold is sample-only, read-only, local to a
+- Local-only scaffold status: the scaffold is local/test only, local to a
   development workstation, and not backed by live public data, ignored raw CSVs,
   generated profiling outputs, SQLite-backed sample UI routes, real provider
-  login, auth middleware, persistent authorization storage, full reviewer-
+  login, auth middleware, persistent authorization storage, production reviewer
+  UI behavior, full reviewer-
   created workflows, queues, annotations, corrections, exports, full audit trail, reset/reload
   execution, deployment, QNAP, Azure, AWS, or public URL behavior. Current API behavior is
   limited to local/test source-derived read handlers, reviewer workflow shell
@@ -77,7 +82,8 @@
   compact derived summary for selected details plus narrow note/status actions
   over the selected detail context, reviewer-created state scaffold service helpers,
   reviewer-created state read handlers with schema-backed filters and bounded
-  search, reset/reload dry-run and execution-plan handlers, and
+  search, the local/test browser reviewer UI shell over those existing seams,
+  reset/reload dry-run and execution-plan handlers, and
   explicit reset/reload planning metadata helpers and read handlers that require
   test database, actor, and scope context.
   Current auth

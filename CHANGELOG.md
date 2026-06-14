@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Added a thin browser-accessible local/test hosted reviewer UI shell at
+	`/reviewer` and `/reviewer/records`, backed by the existing seeded source-
+	derived read route, reviewer workflow shell, reviewer-created state route, and
+	audit scaffold. A local tester can open the page, search/select a seeded
+	source-derived complaint record, view safe source traceability fields, submit a
+	bounded reviewer note, submit a bounded reviewer status, and see read-after-
+	write reviewer-created state without mutating source-derived rows, adding
+	schema changes, production auth, cookies, sessions, exports, reset/reload
+	execution, live crawling, connector execution, deployment, hosted URLs, or a
+	frontend build pipeline.
 - Added a narrow local/test audit coverage planning seam that summarizes current
 	audit scaffold coverage, identifies deferred ADR-0013/ADR-0014 audit event
 	categories, and returns deterministic non-persistent readiness steps with

@@ -84,6 +84,22 @@ configuration.
 The associated state summary must remain non-secret and limited to fields
 already exposed by the reviewer-created state read route output.
 
+The current browser-accessible reviewer UI shell is local/test only and runs at
+`/reviewer` when the local scaffold process is started. It supplies a fixture
+local/test actor context from the scaffold process, loads only the tiny seeded
+fixture corpus into process-local test state, and delegates reads, note writes,
+status writes, reviewer-created state readback, and audit creation to the
+existing workflow, reviewer-created state, source-derived, and audit seams. The
+HTML output is limited to safe source traceability fields, safe scalar source-
+derived values, reviewer-created note/status display values, non-secret actor
+display labels, and local/test boundary text. It must not expose provider
+subjects or issuers, email addresses, tokens, cookies, private headers,
+connection strings, client secrets, raw provider claims, hosted URLs, private
+URLs, or unnecessary sensitive narrative content. It does not implement real
+login, sessions, cookies, token validation, auth middleware, anonymous writes,
+exports, reset/reload execution, hosted live crawling, connector execution,
+deployment, or public launch behavior.
+
 The current reset/reload dry-run seam is local/test only and must receive an
 explicit database, actor, and corpus scope context from tests or local callers.
 It reuses the auth boundary to require import/reload permission, reject

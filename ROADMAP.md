@@ -354,6 +354,14 @@ the governed primary future review experience.
 	engine behavior, annotations, corrections, exports, real login flow, auth
 	middleware, hosted live crawling, connector execution, deployment, or
 	production API behavior.
+- Added the first browser-accessible local/test reviewer UI shell at `/reviewer`
+	and `/reviewer/records`, letting a local tester open a seeded source-derived
+	record, inspect safe source traceability fields, submit reviewer note/status
+	forms through the existing workflow actions, and see read-after-write
+	reviewer-created state without mutating source-derived records, changing
+	schemas or migrations, adding production auth, exports, reset/reload
+	execution, hosted live crawling, connector execution, deployment, hosted URLs,
+	or a frontend build pipeline.
 - Added a minimal local/test audit event persistence scaffold with a separate
 	PostgreSQL/Alembic table and service boundary for successful reviewer-created
 	state scaffold writes only, preserving source-derived records and reviewer-
