@@ -47,6 +47,7 @@ def test_text_report_includes_commands_and_non_install_boundary() -> None:
     assert "tests/unit/test_hosted_auth_provider_integration_plan.py" in text
     assert "tests/unit/test_hosted_reviewer_created_state.py" in text
     assert "tests/unit/test_hosted_reviewer_created_state_routes.py" in text
+    assert "tests/unit/test_hosted_audit_coverage_plan.py" in text
     assert "tests/unit/test_hosted_audit_events.py" in text
     assert "tests/unit/test_hosted_audit_event_routes.py" in text
     assert "tests/unit/test_hosted_reset_reload_dry_run.py" in text

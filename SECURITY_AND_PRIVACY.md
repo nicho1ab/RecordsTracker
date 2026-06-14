@@ -175,6 +175,14 @@ role-denied, and out-of-scope actors, and serializes only non-secret audit row
 fields for the narrow scaffold table without creating, modifying, or deleting
 audit events, source-derived records, or reviewer-created rows.
 
+The current audit coverage planning seam is local/test only, must receive an
+explicit database, actor, and scope context, requires audit-read permission,
+and returns non-secret current/deferred audit coverage planning output without
+creating audit events, persisting planning records, mutating hosted scaffold
+tables, exposing raw provider claims, storing credentials, or implementing audit
+UI, audit export, production auth, provider login, reset/reload execution,
+export generation, retention automation, hosted URLs, or deployment.
+
 Identity storage, sessions, authorization middleware, user tables, role tables,
 invitation flow, account recovery, final multi-factor requirements, and user
 deprovisioning implementation remain deferred to later implementation

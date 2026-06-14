@@ -91,6 +91,7 @@ def test_api_boundaries_keep_source_records_and_reviewer_state_separate() -> Non
         "source_derived_records_api",
         "reviewer_created_state_api",
         "audit_events_api",
+        "audit_coverage_plan_api",
         "seeded_corpus_reset_reload_operations_api",
     }
     assert boundary_by_id["auth_provider_integration_plan_api"].domain == "auth"
@@ -151,6 +152,19 @@ def test_api_boundaries_keep_source_records_and_reviewer_state_separate() -> Non
         "audit_events_api"
     ].deferred
     assert "full audit policy coverage" in boundary_by_id["audit_events_api"].deferred
+    assert boundary_by_id["audit_coverage_plan_api"].domain == "audit"
+    assert "summarizes current scaffold audit coverage" in boundary_by_id[
+        "audit_coverage_plan_api"
+    ].intended_future_use
+    assert "no-persistence planning behavior" in boundary_by_id[
+        "audit_coverage_plan_api"
+    ].preserves
+    assert "new audit event write behavior" in boundary_by_id[
+        "audit_coverage_plan_api"
+    ].deferred
+    assert "audit schema changes or migrations" in boundary_by_id[
+        "audit_coverage_plan_api"
+    ].deferred
     assert boundary_by_id["seeded_corpus_reset_reload_operations_api"].domain == (
         "operational"
     )
@@ -204,6 +218,7 @@ def test_schema_api_scaffold_summary_reflects_seeded_import_without_reviewer_wor
     assert scaffold.reviewer_note_write_route_scaffold_implemented is True
     assert scaffold.reviewer_created_state_read_api_routes_implemented is True
     assert scaffold.reviewer_created_state_read_filter_search_implemented is True
+    assert scaffold.audit_coverage_plan_implemented is True
     assert scaffold.audit_event_persistence_scaffold_implemented is True
     assert scaffold.audit_event_read_api_routes_implemented is True
     assert scaffold.api_routes_implemented is True
@@ -211,7 +226,7 @@ def test_schema_api_scaffold_summary_reflects_seeded_import_without_reviewer_wor
     assert scaffold.reviewer_workflows_implemented is False
     assert scaffold.reset_reload_implemented is False
     assert len(scaffold.persistence_boundaries) >= 7
-    assert len(scaffold.api_boundaries) == 5
+    assert len(scaffold.api_boundaries) == 6
 
 
 def test_alembic_scaffold_has_seeded_import_domain_migration_only() -> None:

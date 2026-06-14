@@ -42,7 +42,8 @@
   state kind,
   a narrow local/test audit event persistence scaffold for successful reviewer-
   created state scaffold writes only, a narrow local/test authenticated audit
-  history read route seam over those scaffold audit rows, a local/test authenticated reset/reload
+  history read route seam over those scaffold audit rows, a narrow local/test
+  audit coverage planning seam over current and deferred audit categories, a local/test authenticated reset/reload
   dry-run seam that reports seeded import batch, source-derived record,
   reviewer-created scaffold row, and audit scaffold row impact without mutating
   data, a narrow local/test reset/reload execution-plan seam that turns those
@@ -235,7 +236,8 @@
   scaffold that can write and read attributed placeholder rows separately from
   source-derived records, plus a narrow local/test audit event scaffold for
   successful reviewer-created state scaffold writes only, plus a narrow
-  local/test audit history read route seam for those scaffold audit rows, plus a local/test
+  local/test audit history read route seam for those scaffold audit rows, plus a
+  narrow local/test audit coverage planning seam that creates no audit rows, plus a local/test
   reviewer note creation route that writes bounded non-secret note payloads
   through the existing reviewer-created scaffold write/audit path, plus a local/test
   reviewer status creation route that writes bounded status payloads through the

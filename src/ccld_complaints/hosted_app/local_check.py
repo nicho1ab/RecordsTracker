@@ -85,6 +85,10 @@ def build_local_check_report() -> list[LocalCheck]:
             "Hosted audit event scaffold package",
         ),
         check_importable(
+            "ccld_complaints.hosted_app.audit_coverage_plan",
+            "Hosted audit coverage planning package",
+        ),
+        check_importable(
             "ccld_complaints.hosted_app.audit_event_routes",
             "Hosted audit event API route package",
         ),
@@ -146,6 +150,7 @@ def format_text_report(report: list[LocalCheck]) -> str:
             "tests/unit/test_hosted_reviewer_workflow_shell.py "
             "tests/unit/test_hosted_reviewer_created_state.py "
             "tests/unit/test_hosted_reviewer_created_state_routes.py "
+            "tests/unit/test_hosted_audit_coverage_plan.py "
             "tests/unit/test_hosted_audit_events.py "
             "tests/unit/test_hosted_audit_event_routes.py "
             "tests/unit/test_hosted_reset_reload_dry_run.py "

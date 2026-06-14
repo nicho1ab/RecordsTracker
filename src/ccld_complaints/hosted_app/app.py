@@ -10,15 +10,20 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from ccld_complaints.hosted_app.audit_coverage_plan import (
+    AUDIT_COVERAGE_PLAN_API_PATH,
+    AuditCoveragePlanContext,
+    route_audit_coverage_plan_response,
+)
 from ccld_complaints.hosted_app.audit_event_routes import (
     AUDIT_EVENTS_API_PREFIX,
     AuditEventsApiContext,
     route_audit_events_api_response,
 )
 from ccld_complaints.hosted_app.auth_provider_integration_plan import (
-  AUTH_PROVIDER_INTEGRATION_PLAN_API_PATH,
-  AuthProviderIntegrationPlanContext,
-  route_auth_provider_integration_plan_response,
+    AUTH_PROVIDER_INTEGRATION_PLAN_API_PATH,
+    AuthProviderIntegrationPlanContext,
+    route_auth_provider_integration_plan_response,
 )
 from ccld_complaints.hosted_app.reset_reload_dry_run import (
     SEEDED_CORPUS_RESET_RELOAD_DRY_RUN_API_PATH,
@@ -26,9 +31,9 @@ from ccld_complaints.hosted_app.reset_reload_dry_run import (
     route_seeded_corpus_reset_reload_dry_run_response,
 )
 from ccld_complaints.hosted_app.reset_reload_execution_plan import (
-  SEEDED_CORPUS_RESET_RELOAD_EXECUTION_PLAN_API_PATH,
-  SeededCorpusResetReloadExecutionPlanContext,
-  route_seeded_corpus_reset_reload_execution_plan_response,
+    SEEDED_CORPUS_RESET_RELOAD_EXECUTION_PLAN_API_PATH,
+    SeededCorpusResetReloadExecutionPlanContext,
+    route_seeded_corpus_reset_reload_execution_plan_response,
 )
 from ccld_complaints.hosted_app.reset_reload_planning_routes import (
     RESET_RELOAD_PLANNING_METADATA_API_PREFIX,
@@ -36,13 +41,13 @@ from ccld_complaints.hosted_app.reset_reload_planning_routes import (
     route_reset_reload_planning_metadata_api_response,
 )
 from ccld_complaints.hosted_app.reviewer_created_state_routes import (
-  REVIEWER_CREATED_STATE_API_PREFIX,
-  ReviewerCreatedStateApiContext,
-  route_reviewer_created_state_api_response,
+    REVIEWER_CREATED_STATE_API_PREFIX,
+    ReviewerCreatedStateApiContext,
+    route_reviewer_created_state_api_response,
 )
 from ccld_complaints.hosted_app.reviewer_workflow_shell import (
-  ReviewerWorkflowShellContext,
-  route_reviewer_workflow_shell_response,
+    ReviewerWorkflowShellContext,
+    route_reviewer_workflow_shell_response,
 )
 from ccld_complaints.hosted_app.source_derived_routes import (
     SourceDerivedApiContext,
@@ -998,10 +1003,11 @@ def render_facility_detail(record: SampleFacilityRecord) -> str:
 def route_response(
     path: str,
     *,
-  request_body: bytes | None = None,
-  auth_provider_integration_plan_context: (
-    AuthProviderIntegrationPlanContext | None
-  ) = None,
+    request_body: bytes | None = None,
+    audit_coverage_plan_context: AuditCoveragePlanContext | None = None,
+    auth_provider_integration_plan_context: (
+        AuthProviderIntegrationPlanContext | None
+    ) = None,
     source_derived_api_context: SourceDerivedApiContext | None = None,
     audit_events_api_context: AuditEventsApiContext | None = None,
     reviewer_workflow_shell_context: ReviewerWorkflowShellContext | None = None,
@@ -1027,6 +1033,11 @@ def route_response(
             path,
             auth_provider_integration_plan_context,
         )
+    if parsed_path == AUDIT_COVERAGE_PLAN_API_PATH:
+      return route_audit_coverage_plan_response(
+        path,
+        audit_coverage_plan_context,
+      )
     if parsed_path.startswith(REVIEWER_CREATED_STATE_API_PREFIX):
         return route_reviewer_created_state_api_response(
             path,
