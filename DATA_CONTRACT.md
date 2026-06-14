@@ -44,6 +44,12 @@ route output for the selected source record when an explicit local/test
 reviewer-created state API context is supplied; that associated state remains
 non-canonical reviewer-created scaffold data and does not mutate source-derived,
 reviewer-created, audit, or operational metadata rows.
+The detail payload can additionally include a compact state summary derived only
+from that already-composed associated reviewer-created state route output, such
+as row counts, present state kinds, latest created timestamp, and non-secret
+actor attribution labels. That summary is not a canonical source-derived field
+and does not create a separate read path, write path, schema, migration, audit
+event, export behavior, or workflow status.
 A local/test reset/reload dry-run seam can inspect existing seeded import batch
 metadata, source-derived record counts by entity, and audit scaffold row counts
 for a requested corpus scope and report reviewer-created state handling options.

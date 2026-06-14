@@ -46,7 +46,10 @@ Reviewer workflow shell state-read integration tests must prove selected detail
 payloads compose associated reviewer-created state read route output only
 through authenticated, role/scope-allowed local/test contexts and remain
 non-secret and non-mutating across source-derived rows, reviewer-created rows,
-audit rows, and operational metadata.
+audit rows, and operational metadata. When the workflow shell derives a state
+summary from that associated route output, focused tests must cover empty state,
+one row, multiple rows, deterministic summary fields, permission separation,
+and no mutation without adding a separate state read path.
 
 ### Fixture hash and line-ending tests
 

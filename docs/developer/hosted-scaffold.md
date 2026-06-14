@@ -268,8 +268,9 @@ the reviewer-created state read route context. The shell consumes the
 authenticated source-derived route seam, returns read-only queue and detail
 payloads with source-derived record identity, original values, source
 traceability, source document metadata, and import batch context, and can
-compose associated reviewer-created state read route output for the selected
-source record on detail responses. Source-derived reads and associated
+compose associated reviewer-created state read route output plus a compact
+state summary derived from that output for the selected source record on detail
+responses. Source-derived reads and associated
 reviewer-created state reads each enforce their own authenticated, active,
 role/scope-allowed access. The shell marks reviewer-created state persistence
 and reviewer actions as deferred. It does not create queue state, review status,
@@ -500,8 +501,9 @@ paging, missing-record responses, explicit route-context requirements, and
 unauthenticated, disabled or revoked, role-denied, and out-of-scope rejections.
 The reviewer workflow shell tests verify local/test authenticated queue and
 detail payloads over the source-derived route seam, associated reviewer-created
-state read route output for selected detail responses, empty associated state,
-empty queue behavior, missing-detail behavior, explicit workflow context
+state read route output for selected detail responses, derived associated-state
+summary fields for empty, one-row, and multiple-row states, empty associated
+state, empty queue behavior, missing-detail behavior, explicit workflow context
 requirements, source traceability preservation, import batch context,
 source-derived read versus reviewer-state read permission separation,
 non-secret associated state payloads, and unauthenticated, disabled or revoked,

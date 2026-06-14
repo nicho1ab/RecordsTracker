@@ -70,12 +70,15 @@ basic scoped readback works where implemented.
 Hosted reviewer workflow shell state-read integration tests must prove selected
 source-record detail payloads can compose associated reviewer-created state read
 route output only through authenticated, active, role/scope-allowed local/test
-contexts. Tests should cover authorized detail readback, empty associated state,
-missing source records, unauthenticated actors, disabled or revoked actors,
-role-denied actors, out-of-scope actors, source-derived read versus reviewer-
-state read permission separation, non-secret associated state payloads, and
-before/after table counts proving detail reads do not mutate source-derived
-rows, reviewer-created rows, audit rows, or operational metadata.
+contexts. When detail payloads include a derived associated-state summary, tests
+should prove the summary comes from that route output and covers empty state,
+one row, multiple rows, deterministic summary fields, and non-secret actor
+attribution labels. Tests should cover authorized detail readback, empty
+associated state, missing source records, unauthenticated actors, disabled or
+revoked actors, role-denied actors, out-of-scope actors, source-derived read
+versus reviewer-state read permission separation, non-secret associated state
+payloads, and before/after table counts proving detail reads do not mutate
+source-derived rows, reviewer-created rows, audit rows, or operational metadata.
 
 Hosted reviewer-created state read route tests must prove persisted scaffold
 rows are readable only through authenticated, active, role/scope-allowed local/

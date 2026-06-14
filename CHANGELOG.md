@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added a narrow local/test reviewer workflow shell state summary on selected
+	detail responses, derived only from the already-composed associated reviewer-
+	created state read route output, with focused tests for empty state, one row,
+	multiple rows, deterministic summary fields, permission separation, non-secret
+	payloads, and no-mutation behavior without adding writes, schema changes, full
+	workflow execution, production auth, exports, reset/reload execution,
+	deployment, live crawling, or connector execution.
 - Added a narrow local/test reviewer workflow shell detail integration that
 	composes persisted reviewer-created state read route output for the selected
 	source-derived record, with focused tests proving authenticated success, empty
