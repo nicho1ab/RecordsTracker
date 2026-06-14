@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, cast
 
+import pytest
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.engine import Connection
 
@@ -17,8 +18,10 @@ from ccld_complaints.hosted_app.auth import (
 )
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_LOOKUP_PATH,
+    CCLD_FACILITY_REFERENCE_CSV_ENV,
     CCLD_RECORD_REQUEST_PATH,
     CcldFacilityLookupRecord,
+    load_active_ccld_facility_reference,
     load_ccld_facility_reference,
     search_ccld_facilities,
 )
@@ -61,6 +64,148 @@ def test_ccld_facility_reference_loads_safe_lookup_columns() -> None:
         closed_date="",
     )
     assert {record.facility_number for record in records} == {"900000001", "900000002"}
+
+
+def test_active_ccld_facility_reference_uses_tiny_fallback_when_full_csv_unset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv(CCLD_FACILITY_REFERENCE_CSV_ENV, raising=False)
+
+    source = load_active_ccld_facility_reference()
+
+    assert source.source_kind == "tiny_fixture_fallback"
+    assert source.label == "Tiny committed CCLD facility fixture fallback"
+    assert source.path_label == (
+        "tests/fixtures/public_source_facilities/ccld_program_facilities_tiny.csv"
+    )
+    assert len(source.records) == 2
+    assert source.warnings == (
+        "No full local/test CCLD facility reference CSV is configured or available. "
+        "Using tiny fixture fallback.",
+    )
+
+
+def test_active_ccld_facility_reference_uses_configured_full_local_csv(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    full_csv = tmp_path / "full-ccld-facilities.csv"
+    _write_facility_reference_csv(
+        full_csv,
+        rows=(
+            {
+                "Facility Type": "Adult Residential Facility",
+                "Facility Number": "910000001",
+                "Facility Name": "Full Reference Orchard Home",
+                "Facility City": "Fullerton",
+                "Facility Zip": "92832",
+                "County Name": "Orange",
+                "Facility Status": "Licensed",
+                "Closed Date": "",
+                "Licensee": "Do Not Display Licensee",
+                "Facility Administrator": "Do Not Display Admin",
+                "Facility Telephone Number": "555-0199",
+                "Facility Address": "1 Private Fixture Way",
+            },
+        ),
+    )
+    monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(full_csv))
+
+    source = load_active_ccld_facility_reference()
+    result = search_ccld_facilities(
+        "fullerton adult",
+        source.records,
+        reference_source=source,
+    )
+
+    assert source.source_kind == "full_local_test_csv"
+    assert source.label == "Full local/test CCLD facility reference CSV"
+    assert source.path_label == full_csv.name
+    assert source.warnings == ()
+    assert [record.facility_number for record in result.returned_records] == ["910000001"]
+    assert result.reference_source == source
+
+
+def test_ccld_facility_lookup_route_renders_configured_full_csv_source(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    full_csv = tmp_path / "full-ccld-facilities.csv"
+    _write_facility_reference_csv(
+        full_csv,
+        rows=(
+            {
+                "Facility Type": "Adult Residential Facility",
+                "Facility Number": "910000001",
+                "Facility Name": "Full Reference Orchard Home",
+                "Facility City": "Fullerton",
+                "Facility Zip": "92832",
+                "County Name": "Orange",
+                "Facility Status": "Licensed",
+                "Closed Date": "",
+                "Licensee": "Do Not Display Licensee",
+                "Facility Administrator": "Do Not Display Admin",
+                "Facility Telephone Number": "555-0199",
+                "Facility Address": "1 Private Fixture Way",
+            },
+        ),
+    )
+    monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(full_csv))
+
+    status, content_type, body = route_response(f"{CCLD_FACILITY_LOOKUP_PATH}?q=fullerton")
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Active source: Full local/test CCLD facility reference CSV." in html
+    assert full_csv.name in html
+    assert "Rows loaded for lookup" in html
+    assert "Full Reference Orchard Home" in html
+    assert "910000001" in html
+    assert "Do Not Display" not in html
+    assert "555-0199" not in html
+    assert "1 Private Fixture Way" not in html
+    assert_no_secret_html(html)
+
+
+def test_configured_missing_full_csv_falls_back_with_guidance(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    missing_path = tmp_path / "missing-ccld-facilities.csv"
+    monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(missing_path))
+
+    status, content_type, body = route_response(f"{CCLD_FACILITY_LOOKUP_PATH}?q=orchard")
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Active source: Tiny committed CCLD facility fixture fallback." in html
+    assert "Configured full local/test CCLD facility reference CSV was not found" in html
+    assert "Using tiny fixture fallback." in html
+    assert "Synthetic Orchard Child Care" in html
+    assert_no_secret_html(html)
+
+
+def test_configured_malformed_full_csv_falls_back_with_guidance(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    malformed_path = tmp_path / "malformed-ccld-facilities.csv"
+    malformed_path.write_text("Facility Name,Facility City\nBad Row,Nowhere\n", encoding="utf-8")
+    monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(malformed_path))
+
+    status, content_type, body = route_response(f"{CCLD_FACILITY_LOOKUP_PATH}?q=orchard")
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Active source: Tiny committed CCLD facility fixture fallback." in html
+    assert "could not be loaded" in html
+    assert "Facility Number" in html
+    assert "Using tiny fixture fallback." in html
+    assert "Synthetic Orchard Child Care" in html
+    assert_no_secret_html(html)
 
 
 def test_ccld_facility_search_matches_name_id_city_county_zip_type_and_status() -> None:
@@ -237,6 +382,37 @@ def _matching_facility_numbers(
         record.facility_number
         for record in search_ccld_facilities(query, records).returned_records
     ]
+
+
+def _write_facility_reference_csv(
+    path: Path,
+    *,
+    rows: tuple[dict[str, str], ...],
+) -> None:
+    fieldnames = (
+        "Facility Type",
+        "Facility Number",
+        "Facility Name",
+        "Licensee",
+        "Facility Administrator",
+        "Facility Telephone Number",
+        "Facility Address",
+        "Facility City",
+        "Facility State",
+        "Facility Zip",
+        "County Name",
+        "Regional Office",
+        "Facility Capacity",
+        "Facility Status",
+        "License First Date",
+        "Closed Date",
+    )
+    with path.open("w", encoding="utf-8", newline="") as fixture_file:
+        fixture_file.write(",".join(fieldnames) + "\n")
+        for row in rows:
+            fixture_file.write(
+                ",".join(row.get(fieldname, "") for fieldname in fieldnames) + "\n"
+            )
 
 
 def _seeded_connection() -> Connection:

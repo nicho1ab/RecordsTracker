@@ -124,16 +124,19 @@ page, create audit events from the request page, persist operational metadata,
 persist feedback, implement auth middleware, or support non-CCLD sources.
 
 The current browser-accessible CCLD facility lookup page is local/test only and
-runs at `/ccld/facilities` when the local scaffold process is started. It reads
-only the committed CCLD program facility reference CSV fixture, searches safe
-scalar fields such as facility/license number, facility name, city, county, ZIP
-code, facility type, and status, and carries a selected facility/license number
-into the request page. It must not expose unnecessary address, telephone,
-administrator, licensee, complaint-summary, private, token, cookie, provider,
-connection, hosted URL, or secret-like fields. It does not run live crawling,
-execute connectors, query external services, write source-derived records,
-write reviewer-created state, create audit events, persist lookup data, persist
-operational metadata, implement auth middleware, or support non-CCLD sources.
+runs at `/ccld/facilities` when the local scaffold process is started. It can
+read a configured full local/test CCLD program facility reference CSV, or fall
+back to the committed tiny fixture when the full CSV is not configured,
+unavailable, or malformed. It searches safe scalar fields such as
+facility/license number, facility name, city, county, ZIP code, facility type,
+and status, displays which reference source is active, and carries a selected
+facility/license number into the request page. It must not expose unnecessary
+address, telephone, administrator, licensee, complaint-summary, private, token,
+cookie, provider, connection, hosted URL, or secret-like fields. It does not run
+live crawling, execute connectors, query external services, write source-derived
+records, write reviewer-created state, create audit events, persist lookup data,
+persist operational metadata, implement auth middleware, or support non-CCLD
+sources. Raw/full facility CSV files must remain outside the repository.
 
 The local/test CCLD hosted artifact builder runs only as an explicit developer
 command or function outside browser requests. It converts already validated CCLD

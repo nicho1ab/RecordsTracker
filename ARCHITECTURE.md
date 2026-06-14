@@ -129,8 +129,10 @@ note action and status action over the selected source-derived detail context,
 a thin browser-accessible local/test reviewer UI shell at `/reviewer` and
 `/reviewer/records` over those existing seams, a thin browser-accessible
 local/test CCLD facility lookup page at `/ccld/facilities` that reads committed
-local/test CCLD program facility reference CSV rows, searches safe scalar fields,
-and carries a selected facility/license number into `/ccld/records/request`,
+or configured full local/test CCLD program facility reference CSV rows, searches
+safe scalar fields, shows the active reference source, falls back to the committed
+tiny fixture when needed, and carries a selected facility/license number into
+`/ccld/records/request`,
 a thin browser-accessible local/test CCLD record request page at `/ccld/records/request` that filters
 existing seeded source-derived rows by CCLD facility/license number and optional
 date range, can load or refresh matching rows from local validated hosted
