@@ -122,11 +122,13 @@ receive an explicit database, actor, and scope context from tests or local
 callers. It requires authenticated, active, reviewer-state-read-permitted, role
 and scope-allowed access before listing or fetching persisted scaffold rows.
 Read access to source-derived records alone does not grant reviewer-created
-state read access. The route serializes only non-secret scaffold fields and
-does not create, modify, delete, or execute reviewer-created state, source-
-derived records, audit rows, or operational metadata. It does not expose tokens,
-cookies, private headers, connection strings, raw provider claims, or
-unnecessary sensitive narrative content.
+state read access. The route supports only schema-backed filters and bounded
+search over existing non-secret scaffold fields already represented in the read
+payload. It serializes only non-secret scaffold fields and does not create,
+modify, delete, or execute reviewer-created state, source-derived records, audit
+rows, or operational metadata. It does not expose tokens, cookies, private
+headers, connection strings, raw provider claims, or unnecessary sensitive
+narrative content.
 
 The current audit event persistence scaffold is local/test only and covers
 successful reviewer-created state scaffold writes only. It captures provider

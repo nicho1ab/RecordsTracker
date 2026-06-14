@@ -29,7 +29,7 @@
   local/test reviewer-created state persistence scaffold table/service with
   authenticated actor attribution and stable source-derived record references,
   a narrow local/test authenticated reviewer-created state read route seam over
-  those persisted scaffold rows,
+  those persisted scaffold rows with schema-backed filters and bounded search,
   a narrow local/test audit event persistence scaffold for successful reviewer-
   created state scaffold writes only, a narrow local/test authenticated audit
   history read route seam over those scaffold audit rows, a local/test authenticated reset/reload
@@ -62,7 +62,8 @@
   limited to local/test source-derived read handlers, read-only reviewer
   workflow shell handlers that can compose associated reviewer-created state
   read output and a compact derived summary for selected details, reviewer-created state scaffold service helpers,
-  reviewer-created state read handlers, reset/reload dry-run handlers, and
+  reviewer-created state read handlers with schema-backed filters and bounded
+  search, reset/reload dry-run handlers, and
   explicit reset/reload planning metadata helpers and read handlers that require
   test database, actor, and scope context.
   Current auth

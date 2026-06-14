@@ -84,10 +84,11 @@ Hosted reviewer-created state read route tests must prove persisted scaffold
 rows are readable only through authenticated, active, role/scope-allowed local/
 test routes with reviewer-state read permission. Tests should cover authorized
 list and fetch paths, empty list, missing records, schema-supported filters,
-unauthenticated actors, disabled or revoked actors, role-denied actors, out-of-
-scope actors, invalid requests, non-secret payloads, and before/after table
-counts proving reads do not mutate source-derived rows, reviewer-created rows,
-audit rows, or operational metadata.
+bounded search success and empty search results, unauthenticated actors,
+disabled or revoked actors, role-denied actors, out-of-scope actors, invalid
+requests, non-secret payloads, and before/after table counts proving reads do
+not mutate source-derived rows, reviewer-created rows, audit rows, or
+operational metadata.
 
 Hosted audit event scaffold tests must prove successful reviewer-created state
 scaffold writes create separate audit rows with authenticated actor attribution,

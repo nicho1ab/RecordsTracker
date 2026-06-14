@@ -312,7 +312,8 @@ the governed primary future review experience.
 	crawling, connector execution, deployment, or production API behavior.
 - Added narrow local/test read-only reviewer-created state routes over persisted
 	scaffold rows, with JSON list and fetch-by-ID handlers, reviewer-state read
-	permission checks, schema-backed filters, and no-mutation coverage without
+	permission checks, schema-backed filters, bounded search over existing
+	non-secret fields, and no-mutation coverage without
 	adding reviewer-created state writes, full reviewer workflows, annotations,
 	corrections, exports, real login flow, auth middleware, hosted live crawling,
 	connector execution, deployment, or production API behavior.

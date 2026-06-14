@@ -37,11 +37,13 @@ class HostedSchemaApiScaffold:
     source_derived_read_api_routes_implemented: bool = True
     reviewer_workflow_shell_implemented: bool = True
     reviewer_workflow_shell_state_read_integration_implemented: bool = True
+    reviewer_workflow_shell_state_filter_search_implemented: bool = True
     reset_reload_dry_run_implemented: bool = True
     reset_reload_operational_metadata_scaffold_implemented: bool = True
     reset_reload_planning_metadata_read_api_routes_implemented: bool = True
     reviewer_created_state_persistence_scaffold_implemented: bool = True
     reviewer_created_state_read_api_routes_implemented: bool = True
+    reviewer_created_state_read_filter_search_implemented: bool = True
     audit_event_persistence_scaffold_implemented: bool = True
     audit_event_read_api_routes_implemented: bool = True
     api_routes_implemented: bool = True

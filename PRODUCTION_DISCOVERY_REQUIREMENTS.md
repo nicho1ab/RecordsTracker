@@ -48,7 +48,7 @@ persistence scaffold table and service boundary, a narrow local/test audit event
 persistence scaffold for successful reviewer-created state scaffold writes only,
 a local/test authenticated audit history read route seam over those audit rows,
 a narrow local/test authenticated reviewer-created state read route seam for
-persisted scaffold rows, a narrow local/test reviewer workflow shell detail
+persisted scaffold rows with schema-backed filters and bounded search, a narrow local/test reviewer workflow shell detail
 integration that composes associated reviewer-created state read output for a
 selected source-derived record, a compact workflow shell state summary derived
 from that associated state output, a local/test authenticated reset/reload dry-run route
@@ -78,11 +78,12 @@ feedback.
 Persisted reviewer-created state scaffold rows can now be read through a narrow
 local/test JSON route seam when tests or local callers provide an explicit
 database, authenticated actor, and scope context with reviewer-state read
-permission. That seam lists or fetches only non-secret scaffold fields, keeps
-reviewer-created state separate from source-derived records, audit rows, and
-operational metadata, and does not implement workflow writes, annotations,
-corrections, review status transitions, exports, real login, sessions, or
-production auth middleware.
+permission. That seam lists or fetches only non-secret scaffold fields, supports
+schema-backed filters and bounded search over existing non-secret scaffold
+fields, keeps reviewer-created state separate from source-derived records,
+audit rows, and operational metadata, and does not implement workflow writes,
+annotations, corrections, review status transitions, exports, real login,
+sessions, or production auth middleware.
 
 The reviewer workflow shell can now include associated reviewer-created state
 read route output in a selected source-record detail response when explicit
