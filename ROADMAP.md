@@ -250,6 +250,10 @@ the governed primary future review experience.
 	outputs for source discovery without importing data, adding connectors,
 	creating schemas or migrations, changing canonical fields, or loading hosted
 	app behavior.
+- Added tiny synthetic public-source facility fixtures selected from local CSV
+	profiling results for future fixture-backed source/facility view planning,
+	without committing raw files, generated profiling outputs, imports, schemas,
+	connectors, or hosted app behavior.
 
 ## Near-term milestones
 

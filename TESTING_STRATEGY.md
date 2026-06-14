@@ -39,6 +39,14 @@ behavior at the level of the implemented change.
 
 Raw fixtures with expected SHA-256 hashes must use the line endings required by `.gitattributes`. Expected fixture hashes must match Git-normalized bytes, not platform-specific working-tree bytes. When adding or changing raw fixtures that appear in expected JSON, verify line endings and hashes before committing.
 
+### Public-source planning fixtures
+
+Tiny public-source planning fixtures may be committed only when they are small,
+documented, safe to publish, and clearly separated from ignored raw source files
+and generated profiling outputs. Tests for those fixtures should verify that the
+files are present, tiny, traceability-shaped, synthetic or minimized, and not
+usable as full raw-source dumps or production imports.
+
 ### Accessibility tests
 
 Validate documentation structure and run manual or automated checks for user-facing pages before release.
