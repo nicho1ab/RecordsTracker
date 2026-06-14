@@ -39,6 +39,33 @@ class SourceRecordFilters:
     source_family: str = ""
 
 
+@dataclass(frozen=True)
+class TraceabilityFieldSummary:
+    label: str
+    present_count: int
+
+
+@dataclass(frozen=True)
+class SourceTraceabilitySummary:
+    total_records: int
+    complete_record_count: int
+    fields: tuple[TraceabilityFieldSummary, ...]
+    jurisdictions: tuple[str, ...]
+    source_families: tuple[str, ...]
+
+
+TRACEABILITY_FIELDS = (
+    ("source_url", "Sample source URL"),
+    ("raw_sha256", "Raw SHA-256"),
+    ("connector_name", "Connector name"),
+    ("retrieved_at", "Retrieved at"),
+    ("report_index", "Report index"),
+    ("extraction_warning", "Extraction warning"),
+    ("jurisdiction", "Jurisdiction"),
+    ("source_family", "Source family"),
+)
+
+
 SAMPLE_SOURCE_RECORDS = [
     SampleSourceRecord(
         record_id="sample-complaint-001",
@@ -128,6 +155,36 @@ def filter_sample_source_records(filters: SourceRecordFilters) -> list[SampleSou
     ]
 
 
+def _has_traceability_value(record: SampleSourceRecord, field_name: str) -> bool:
+    return bool(str(getattr(record, field_name)).strip())
+
+
+def _has_complete_traceability(record: SampleSourceRecord) -> bool:
+    return all(
+        _has_traceability_value(record, field_name) for field_name, _label in TRACEABILITY_FIELDS
+    )
+
+
+def build_source_traceability_summary(
+    records: list[SampleSourceRecord],
+) -> SourceTraceabilitySummary:
+    return SourceTraceabilitySummary(
+        total_records=len(records),
+        complete_record_count=sum(1 for record in records if _has_complete_traceability(record)),
+        fields=tuple(
+            TraceabilityFieldSummary(
+                label=label,
+                present_count=sum(
+                    1 for record in records if _has_traceability_value(record, field_name)
+                ),
+            )
+            for field_name, label in TRACEABILITY_FIELDS
+          ),
+        jurisdictions=tuple(sorted({record.jurisdiction for record in records})),
+        source_families=tuple(sorted({record.source_family for record in records})),
+    )
+
+
 def _unique_record_values(field_name: str) -> list[str]:
     return sorted({str(getattr(record, field_name)) for record in SAMPLE_SOURCE_RECORDS})
 
@@ -213,6 +270,65 @@ def render_scope_notice() -> str:
       <p>Source-derived sample records and future reviewer-created state remain
       separate. This shell does not create queues, annotations, corrections,
       exports, feedback, audit history, reset/reload behavior, or imports.</p>
+    </section>"""
+
+
+def _format_summary_values(values: tuple[str, ...]) -> str:
+    if not values:
+        return "None in the current fixture/sample result set"
+    return ", ".join(values)
+
+
+def render_source_traceability_summary(records: list[SampleSourceRecord]) -> str:
+    summary = build_source_traceability_summary(records)
+    field_rows = "\n".join(
+        f"""        <tr>
+          <th scope="row">{html.escape(field.label)}</th>
+          <td>{field.present_count} of {summary.total_records}</td>
+        </tr>"""
+        for field in summary.fields
+    )
+    return f"""<section aria-labelledby="traceability-summary-heading">
+      <h2 id="traceability-summary-heading">Sample source traceability summary</h2>
+      <p>This panel summarizes visible traceability-style metadata for the
+      current fixture/sample result set only. It does not verify live
+      public-source completeness and does not read from a database.</p>
+      <p>{summary.complete_record_count} of {summary.total_records} fixture/sample records
+      have all tracked sample traceability fields visible.</p>
+      <dl>
+        <dt>Jurisdictions represented</dt>
+        <dd>{html.escape(_format_summary_values(summary.jurisdictions))}</dd>
+        <dt>Source families represented</dt>
+        <dd>{html.escape(_format_summary_values(summary.source_families))}</dd>
+      </dl>
+      <table>
+        <caption>Visible sample traceability fields in the current result set</caption>
+        <thead>
+          <tr>
+            <th scope="col">Traceability-style field</th>
+            <th scope="col">Fixture/sample records with visible value</th>
+          </tr>
+        </thead>
+        <tbody>
+{field_rows}
+        </tbody>
+      </table>
+    </section>"""
+
+
+def render_source_traceability_detail(record: SampleSourceRecord) -> str:
+    visible_field_labels = ", ".join(
+        label
+        for field_name, label in TRACEABILITY_FIELDS
+        if _has_traceability_value(record, field_name)
+    )
+    return f"""<section aria-labelledby="traceability-detail-heading">
+      <h2 id="traceability-detail-heading">Sample source traceability block</h2>
+      <p>This fixture/sample record has visible sample traceability metadata for:
+      {html.escape(visible_field_labels)}.</p>
+      <p>These values are sample-only indicators for the local scaffold. They do
+      not verify a live public-source record, source completeness, reviewer
+      state, or import status.</p>
     </section>"""
 
 
@@ -311,6 +427,7 @@ def render_source_record_list(filters: SourceRecordFilters | None = None) -> str
   <main>
     {render_scope_notice()}
     {render_source_record_filters(active_filters)}
+    {render_source_traceability_summary(filtered_records)}
     <section aria-labelledby="records-heading">
       <h2 id="records-heading">Fixture/sample source record list</h2>
       <p>These rows are sample-only placeholders for a future read-only hosted
@@ -365,6 +482,7 @@ def render_source_record_detail(record: SampleSourceRecord) -> str:
   </nav>
   <main>
     {render_scope_notice()}
+    {render_source_traceability_detail(record)}
     <section aria-labelledby="detail-heading">
       <h2 id="detail-heading">Read-only sample source-derived detail</h2>
       <dl>

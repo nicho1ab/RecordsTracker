@@ -33,7 +33,11 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold health check did not return ok.")
     if root_status != 200 or b"not a functioning reviewer workflow yet" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return the placeholder notice.")
-    if records_status != 200 or b"Fixture/sample source record list" not in records_body:
+    if (
+        records_status != 200
+        or b"Fixture/sample source record list" not in records_body
+        or b"Sample source traceability summary" not in records_body
+    ):
         raise RuntimeError("Hosted scaffold source-record shell did not return the sample list.")
     return payload if isinstance(payload, dict) else {}
 
