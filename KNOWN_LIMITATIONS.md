@@ -18,5 +18,10 @@
 - Fixture-backed ingestion only extracts discovered reports when matching raw report content is supplied by the test loader.
 - Live CCLD fetching is explicitly user-invoked through the local script and depends on the public site being available when the command runs.
 - Live fetched raw report files are saved under the local ignored `data/raw/ccld` path by default and should be treated carefully because public narrative content may be sensitive.
+- The local hosted scaffold `/source-records` list uses fixture/sample records
+    and local sample filtering/search only. It does not load live public-source
+    data, read from SQLite or a hosted database, run import/sync, authenticate
+    users, persist reviewer-created state, deploy publicly, or prove source
+    completeness.
 - Accessibility of third-party presentation layers must be validated before release.
 - GitHub Actions availability and limits may depend on project policy and platform usage limits.

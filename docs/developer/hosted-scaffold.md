@@ -86,11 +86,20 @@ users, and does not persist reviewer-created state. Its source-traceability-styl
 fields are sample values that exist only to exercise the future read-only
 reviewer-app shape.
 
-The next safe expansion for this shell is local-only sample filtering/search or
-a similarly narrow fixture-backed source-view improvement. It must keep the
-fixture/sample labels, read-only behavior, source-derived versus
+The list includes local sample filtering/search controls for the query text,
+jurisdiction, and source family. These controls filter only the in-memory
+fixture/sample records shown by the shell. They do not query live public-source
+data, SQLite, a hosted database, an import process, or reviewer-created state.
+
+The filter shape is intentionally source-family and jurisdiction aware so future
+source-derived records from multiple jurisdictions and source families can be
+presented through the same list/filter pattern after the relevant source,
+import, schema, and hosted workflow decisions are approved. The current shell
+still keeps the fixture/sample labels, read-only behavior, source-derived versus
 reviewer-created state separation, semantic structure, accessibility validation,
 and no-database, no-import, no-authentication, no-deployment boundary.
+The source-derived versus reviewer-created state separation remains visible in
+the sample shell text and tests.
 
 ## Run the smoke check
 
@@ -118,7 +127,9 @@ pytest tests/unit/test_hosted_app_scaffold.py
 These tests include local-only semantic/accessibility validation for the sample
 source view shell. They use Python standard-library HTML parsing to verify one
 page-level heading, meaningful page titles, semantic main content, navigation
-links, fixture/sample caution text, read-only labels, source-derived versus reviewer-created state separation, and visible source-traceability-style fields.
+links, fixture/sample caution text, read-only labels, accessible filter labels,
+sample no-match behavior, source-derived versus reviewer-created state
+separation, and visible source-traceability-style fields.
 They do not require browser automation, Node.js, Playwright, Selenium, axe,
 Docker, cloud services, or public URLs.
 

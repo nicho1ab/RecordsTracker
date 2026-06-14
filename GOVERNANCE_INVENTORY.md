@@ -9,8 +9,10 @@
   preservation, source traceability, local validation and review support, and
   source-traceable exports. The hosted tester work currently consists of a
   local Python standard-library scaffold, health and smoke validation, local
-  setup checks, and a read-only `/source-records` list/detail shell over
-  fixture/sample records.
+  setup checks, and a read-only `/source-records` list/detail shell with local
+  sample filtering/search over fixture/sample records.
+- Local-only sample filtering/search: implemented for the hosted source-record
+  shell using in-memory fixture/sample records only.
 - Recent hosted sequence: PR #106 added the local hosted scaffold foundation,
   PR #107 added local setup checks, PR #108 added the first local-only read-only
   source-record view shell, and PR #109 added local-only semantic/accessibility
@@ -107,9 +109,9 @@
   source-derived canonical field changes, reviewer-created state persistence, or
   extraction behavior changes.
 - Roadmap items for the first hosted scaffold, local setup checks, local-only
-  read-only source-record shell, and semantic/accessibility validation are
-  complete. Next work should move to local-only sample filtering/search or
-  another approved roadmap milestone, not repeat those completed items.
+  read-only source-record shell, semantic/accessibility validation, and
+  local-only sample filtering/search are complete. Next work should move to an
+  approved roadmap milestone, not repeat those completed items.
 - Local-only/sample-only boundaries remain active. Sample records must stay
   clearly marked as fixture/sample records and must not be presented as live,
   database-backed, complete, statewide, official, or production data.
@@ -118,14 +120,10 @@
 
 ## Gap analysis
 
-- Local-only sample filtering/search: the next safe hosted-view increment is a
-  local-only, fixture/sample-backed filtering or search affordance that preserves
-  sample labeling, source-traceability-style fields, semantic structure,
-  keyboard usability, and the read-only boundary.
 - Future fixture-backed source view expansion: additional source-record fields,
-  list/detail states, empty states, and navigation states should be backed by
-  representative fixtures and semantic/accessibility validation before any live
-  or database-backed source is introduced.
+  list/detail states, empty states, navigation states, or filter facets should be
+  backed by representative fixtures and semantic/accessibility validation before
+  any live or database-backed source is introduced.
 - Future import path into hosted view: source-derived hosted records should come
   from a controlled snapshot import from validated pipeline output after the
   import artifact format, validation, stable identities, idempotency, reset/
