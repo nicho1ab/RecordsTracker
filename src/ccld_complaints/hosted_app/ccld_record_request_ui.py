@@ -9,6 +9,7 @@ from datetime import date
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
+from ccld_complaints.hosted_app.ccld_facility_lookup import CCLD_FACILITY_LOOKUP_PATH
 from ccld_complaints.hosted_app.ccld_import_reload import (
     CcldImportReloadContext,
     CcldImportReloadRequest,
@@ -184,7 +185,15 @@ def route_ccld_record_request_ui_response(
     if method == "GET" and parsed_url.path == CCLD_HELP_PATH:
         return _html_response(200, _render_help_page())
     if method == "GET":
-        return _html_response(200, _render_request_form())
+        query_values = parse_qs(parsed_url.query, keep_blank_values=True)
+        return _html_response(
+            200,
+            _render_request_form(
+                selected_facility_number=_first_form_value(query_values, "facility_number"),
+                selected_start_date=_first_form_value(query_values, "start_date"),
+                selected_end_date=_first_form_value(query_values, "end_date"),
+            ),
+        )
     if method == "POST":
         return _post_request_response(request_body, context)
     return _html_response(
@@ -374,7 +383,16 @@ def _reviewer_created_state_records(
     return _record_list(payload, "reviewer_created_state")
 
 
-def _render_request_form() -> str:
+def _render_request_form(
+    *,
+    selected_facility_number: str = "",
+    selected_start_date: str = "",
+    selected_end_date: str = "",
+) -> str:
+    selected_message = ""
+    if selected_facility_number:
+        selected_message = f"""      <p>Selected facility/license number from lookup:
+      {_escape(selected_facility_number)}. Confirm the date range, then request CCLD records.</p>"""
     return _page(
                 title="Request CCLD records",
                 heading="Request CCLD records",
@@ -386,6 +404,8 @@ def _render_request_form() -> str:
                     <p>The public CCLD portal remains the source of record. This page reads or
                     loads local/test source-derived records only; it does not run live crawling
                     or browser-triggered connector execution.</p>
+                    <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find a CCLD facility by name,
+                    city, county, ZIP code, type, status, or facility/license number</a></p>
                     <p><a href="{CCLD_HELP_PATH}">Read how this CCLD review workflow
                     works</a></p>
                 </section>
@@ -396,22 +416,26 @@ def _render_request_form() -> str:
             review. Use dates only when you want to narrow the request to complaint,
             visit, report, signed, or retrieval dates already represented in local/test
             source-derived records.</p>
+            {selected_message}
       <form action="{CCLD_RECORD_REQUEST_PATH}" method="post">
         <p>
           <label for="facility_number">CCLD facility/license number</label>
                     <input id="facility_number" name="facility_number" inputmode="numeric"
-                        aria-describedby="facility-number-help" required>
+                                                value="{_escape(selected_facility_number)}"
+                                                aria-describedby="facility-number-help" required>
                     <span id="facility-number-help">Enter digits only, for example 157806098.
                     This identifies the CCLD facility or license scope to review.</span>
         </p>
         <p>
           <label for="start_date">Start date (optional)</label>
                     <input id="start_date" name="start_date" type="date"
+                        value="{_escape(selected_start_date)}"
                         aria-describedby="date-range-help">
         </p>
         <p>
           <label for="end_date">End date (optional)</label>
                     <input id="end_date" name="end_date" type="date"
+                        value="{_escape(selected_end_date)}"
                         aria-describedby="date-range-help">
                     <span id="date-range-help">Dates narrow the local/test result set. Missing
                     records are not proof that CCLD has no records for that period.</span>
@@ -465,8 +489,10 @@ def _render_help_page() -> str:
         {_render_feedback_guidance_section()}
         <section aria-labelledby="help-next-action-heading">
             <h2 id="help-next-action-heading">Next action</h2>
-            <p>Start with a facility/license number request. After records are loaded, use
-            the review queue links to open each complaint record in the reviewer UI.</p>
+            <p>Start by looking up a facility or entering a facility/license number manually.
+            After records are loaded, use the review queue links to open each complaint record
+            in the reviewer UI.</p>
+            <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find a CCLD facility</a></p>
             <p><a href="{CCLD_RECORD_REQUEST_PATH}">Open the CCLD record request form</a></p>
         </section>""",
         )
@@ -476,7 +502,9 @@ def _render_workflow_overview() -> str:
         return """    <section aria-labelledby="workflow-overview-heading">
             <h2 id="workflow-overview-heading">Workflow overview</h2>
             <ol>
-                <li>Enter a CCLD facility/license number and optional date range.</li>
+                <li>Look up a CCLD facility in local/test reference data or enter a
+                facility/license number manually.</li>
+                <li>Enter or confirm the optional date range.</li>
                 <li>Use records already loaded locally or load validated CCLD records from a
                 hosted seeded-corpus JSON artifact.</li>
                 <li>Review the matching complaint records in the facility/date-scoped review
@@ -495,6 +523,9 @@ def _render_key_terms_section() -> str:
             <dl>
                 <dt>Facility/license number</dt>
                 <dd>The digit identifier CCLD uses for the facility or license record scope.</dd>
+                <dt>Facility lookup</dt>
+                <dd>A local/test search over committed CCLD facility reference CSV fields such
+                as facility/license number, name, city, county, ZIP code, type, and status.</dd>
                 <dt>Date range</dt>
                 <dd>An optional filter over dates already extracted into local/test CCLD records.
                 It is not a live public-source search.</dd>

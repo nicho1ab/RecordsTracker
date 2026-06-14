@@ -70,6 +70,12 @@ flow state only; they are not canonical source-derived fields and do not require
 schema or migration changes in this scaffold. Loaded rows remain ordinary hosted
 source-derived rows with existing source URL, raw SHA-256, raw path, connector
 metadata, original values, and source traceability.
+A local/test CCLD facility lookup page can read committed CCLD facility reference
+CSV fixture rows to help testers find a facility/license number by safe scalar
+fields and carry that number into the request page. Lookup values are UI helper
+state only; they are not canonical source-derived fields, do not persist new
+facility records, and do not require schema or migration changes in this
+scaffold.
 The page can also render a guided facility/date-scoped request result queue,
 first-time help, contextual field/action guidance, reviewer-state indicators,
 progress counts, reviewer-status filters, feedback guidance, and a structured

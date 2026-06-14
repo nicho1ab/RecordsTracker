@@ -180,18 +180,23 @@ public-record review notes.
    created state read route output, a compact summary derived from that output
    on selected detail responses, and narrow local/test note/status actions that
    delegate to existing reviewer-created write routes after resolving the
-   selected source record. A browser-accessible local/test CCLD record request
-   page is available at `/ccld/records/request` when the scaffold is running
-   locally; it accepts a CCLD facility/license number and optional date range,
-   reads existing seeded source-derived records, can load or refresh matching
-   CCLD rows from local validated hosted seeded-corpus output through the
-   existing source-derived import tables, links matching rows into the hosted
-   reviewer UI, shows a guided facility/date-scoped result queue with contextual
-   help, progress/status context, and a structured copyable feedback checklist
-   intended to be pasted into an external feedback channel manually, and explains
-   the explicit CCLD live-fetch command when broader retrieval is needed. It does
-   not run live crawling, execute connectors, mutate reviewer-created state, create
-   audit rows, persist feedback, or add non-CCLD sources from browser requests. A
+   selected source record. A browser-accessible local/test CCLD facility lookup
+   page is available at `/ccld/facilities` when the scaffold is running locally;
+   it searches committed local/test CCLD facility reference CSV fields such as
+   facility/license number, facility name, city, county, ZIP code, facility type,
+   and status, then carries the selected facility/license number into
+   `/ccld/records/request`. A browser-accessible local/test CCLD record request
+   page is available at `/ccld/records/request`; it still accepts manual
+   facility/license entry plus an optional date range, reads existing seeded
+   source-derived records, can load or refresh matching CCLD rows from local
+   validated hosted seeded-corpus output through the existing source-derived
+   import tables, links matching rows into the hosted reviewer UI, shows a guided
+   facility/date-scoped result queue with contextual help, progress/status
+   context, and a structured copyable feedback checklist intended to be pasted
+   into an external feedback channel manually, and explains the explicit CCLD
+   live-fetch command when broader retrieval is needed. It does not run live
+   crawling, execute connectors, mutate reviewer-created state, create audit
+   rows, persist lookup or feedback data, or add non-CCLD sources from browser requests. A
    browser-accessible local/test reviewer UI shell is
    available at `/reviewer` when the scaffold is running locally; it loads the
    tiny seeded fixture corpus into process-local test state, lets a local tester

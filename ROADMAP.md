@@ -396,6 +396,13 @@ the governed primary future review experience.
 	state without adding live browser crawling, connector execution, persisted
 	feedback, schema changes, non-CCLD sources, production auth, exports, audit UI,
 	or deployment.
+- Added a CCLD-only local/test facility lookup page at `/ccld/facilities` backed
+	by committed tiny CCLD facility reference CSV data so testers can search by
+	facility/license number, facility name, city, county, ZIP code, facility type,
+	or status, then carry the selected facility/license number into the existing
+	request, queue, review, and feedback checklist workflow without adding live
+	browser retrieval, connector execution, schema changes, persistence, non-CCLD
+	sources, or production auth.
 - Added a minimal local/test audit event persistence scaffold with a separate
 	PostgreSQL/Alembic table and service boundary for successful reviewer-created
 	state scaffold writes only, preserving source-derived records and reviewer-

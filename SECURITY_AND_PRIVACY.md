@@ -123,6 +123,18 @@ crawling, execute connectors, write reviewer-created state from the request
 page, create audit events from the request page, persist operational metadata,
 persist feedback, implement auth middleware, or support non-CCLD sources.
 
+The current browser-accessible CCLD facility lookup page is local/test only and
+runs at `/ccld/facilities` when the local scaffold process is started. It reads
+only the committed CCLD program facility reference CSV fixture, searches safe
+scalar fields such as facility/license number, facility name, city, county, ZIP
+code, facility type, and status, and carries a selected facility/license number
+into the request page. It must not expose unnecessary address, telephone,
+administrator, licensee, complaint-summary, private, token, cookie, provider,
+connection, hosted URL, or secret-like fields. It does not run live crawling,
+execute connectors, query external services, write source-derived records,
+write reviewer-created state, create audit events, persist lookup data, persist
+operational metadata, implement auth middleware, or support non-CCLD sources.
+
 The local/test CCLD hosted artifact builder runs only as an explicit developer
 command or function outside browser requests. It converts already validated CCLD
 SQLite output into hosted seeded-corpus JSON, rejects missing required
