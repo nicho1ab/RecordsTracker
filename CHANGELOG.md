@@ -7,9 +7,10 @@
 	the workflow and key terms, `/ccld/records/request` includes contextual field
 	help and feedback guidance, and matching request results render as a
 	facility/date-scoped complaint review queue with source traceability,
-	reviewer-state indicators, and clear reviewer-detail actions without adding
-	live browser crawling, connector execution, persisted feedback, schema changes,
-	non-CCLD sources, production auth, exports, audit UI, or deployment.
+	reviewer-state indicators, queue progress counts, status filtering, and clear
+	reviewer-detail actions without adding live browser crawling, connector
+	execution, persisted feedback, schema changes, non-CCLD sources, production
+	auth, exports, audit UI, or deployment.
 - Added a CCLD-only local/test hosted artifact builder that converts validated
 	CCLD SQLite pipeline output into hosted seeded-corpus JSON consumable by the
 	existing `/ccld/records/request` local validated import/reload action. The

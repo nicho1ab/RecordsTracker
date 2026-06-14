@@ -390,10 +390,11 @@ the governed primary future review experience.
 	starts from the CCLD records workflow, `/ccld/help` explains first-time tester
 	workflow terms and feedback guidance, and `/ccld/records/request` renders
 	matching complaint records as a facility/date-scoped review queue with source
-	traceability summaries, loaded-record context, reviewer-state indicators, and
-	reviewer-detail actions without adding live browser crawling, connector
-	execution, persisted feedback, schema changes, non-CCLD sources, production
-	auth, exports, audit UI, or deployment.
+	traceability summaries, loaded-record context, reviewer-state indicators,
+	progress counts, reviewer-status filtering, and reviewer-detail actions
+	without adding live browser crawling, connector execution, persisted feedback,
+	schema changes, non-CCLD sources, production auth, exports, audit UI, or
+	deployment.
 - Added a minimal local/test audit event persistence scaffold with a separate
 	PostgreSQL/Alembic table and service boundary for successful reviewer-created
 	state scaffold writes only, preserving source-derived records and reviewer-

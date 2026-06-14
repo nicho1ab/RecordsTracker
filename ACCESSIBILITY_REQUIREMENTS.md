@@ -52,7 +52,9 @@ Accessibility requirements apply to:
 	help pages must use semantic headings, table captions or clear section
 	headings, meaningful action link text, and plain-language definitions for
 	facility/license number, date range, loaded records, source records, review
-	queue, reviewer notes, and reviewer status.
+	queue, reviewer notes, and reviewer status. Queue progress summaries and status
+	filters must use text labels, form labels, and visible counts rather than
+	color-only indicators.
 
 ### Color and contrast
 

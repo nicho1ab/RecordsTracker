@@ -110,6 +110,10 @@ state reads, and include feedback guidance without adding feedback persistence.
 That UI must keep source-derived records visibly separate from reviewer-created
 notes/statuses and avoid implying production readiness or public-source
 completeness.
+The workflow-completion version can add progress counts and reviewer-status
+filters derived from existing reviewer-created state so testers can distinguish
+not-started, in-review, needs-follow-up, reviewed, and blocked records without
+adding persisted queue state.
 
 The hosted scaffold and first local-only read-only source-derived views now
 exist. Detailed hosted visual design may begin from that real shell, but early

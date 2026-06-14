@@ -153,9 +153,12 @@ records from local validated hosted seeded-corpus output into existing hosted
 source-derived rows. The page now includes first-time user workflow guidance,
 contextual help for facility/date/load/review terms, a `/ccld/help` page, and a
 facility/date-scoped complaint review queue with source traceability summaries,
-loaded-record context, reviewer-state indicators, and reviewer-detail actions.
+loaded-record context, reviewer-state indicators, progress counts, reviewer-
+status filtering, and reviewer-detail actions. Queue state is derived from
+existing source-derived records plus existing reviewer-created note/status rows;
+it is not persisted as a separate queue state model.
 It does not run hosted live crawling, execute connectors, mutate reviewer-
-created state, create audit rows, persist feedback, add non-CCLD source
+created state from the request page, create audit rows, persist feedback, add non-CCLD source
 selection, or prove public-source completeness. A local/test CCLD-only artifact
 builder now produces hosted seeded-corpus JSON from validated CCLD SQLite
 pipeline output outside browser requests; remaining gaps include real provider

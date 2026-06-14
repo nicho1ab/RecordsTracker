@@ -28,6 +28,8 @@ from ccld_complaints.hosted_app.reviewer_created_state import hosted_reviewer_cr
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
     REVIEWER_UI_DETAIL_PATH,
+    REVIEWER_UI_NOTE_PATH,
+    REVIEWER_UI_STATUS_PATH,
     reviewer_ui_context_for_connection,
 )
 from ccld_complaints.hosted_app.seeded_import import (
@@ -54,6 +56,8 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "CCLD-only local/test request" in html
     assert "CCLD facility/license number" in html
     assert "optional date range" in html
+    assert "Queue status filter" in html
+    assert "Records with no status are counted" in html
     assert "Workflow overview" in html
     assert "Key terms" in html
     assert "Feedback guidance" in html
@@ -147,6 +151,29 @@ def test_ccld_record_request_validates_date_format_and_order() -> None:
     assert_no_secret_html(reversed_html)
 
 
+def test_ccld_record_request_rejects_unknown_queue_status_filter() -> None:
+    with _seeded_connection() as connection:
+        status, _content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "facility_number": "157806098",
+                    "reviewer_status_filter": "source_checked",
+                }
+            ),
+            ccld_record_request_ui_context=_context(connection),
+        )
+        counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+
+    assert status == 400
+    assert "Choose a supported reviewer status queue filter." in html
+    assert counts == _empty_reviewer_counts()
+    assert_no_secret_html(html)
+
+
 def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detail() -> None:
     with _seeded_connection() as connection:
         before_source_rows = _source_rows(connection)
@@ -181,6 +208,13 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Date range: 2022-08-01 to 2022-08-31." in html
     assert "CCLD review queue" in html
     assert "Facility/date-scoped CCLD complaint records ready for review" in html
+    assert "Queue progress summary" in html
+    assert "Total matching complaint records" in html
+    assert "<dt>Not started</dt>" in html
+    assert "<dd>1</dd>" in html
+    assert "Filter queue by reviewer status" in html
+    assert "Apply queue status filter" in html
+    assert "Showing 1 of 1 matching complaint" in normalized_html
     assert "Review this complaint record" in html
     assert "A. MIRIAM JAMISON" in html
     assert "32-CR-20220407124448" in html
@@ -193,6 +227,99 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "did not run live retrieval" in html
     assert "run-ccld-live-fetch.ps1 -FacilityNumber 157806098" in html
     assert_no_secret_html(html)
+
+
+def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None:
+    with _seeded_connection() as connection:
+        reviewer_context = reviewer_ui_context_for_connection(
+            connection,
+            actor=_actor(roles=("tester_reviewer",), display_name="Fixture Queue Reviewer"),
+        )
+        note_status, _content_type, note_body = route_response(
+            REVIEWER_UI_NOTE_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "source_record_key": COMPLAINT_KEY,
+                    "note_text": "Queue filter note.",
+                }
+            ),
+            reviewer_ui_context=reviewer_context,
+        )
+        status_status, _content_type, status_body = route_response(
+            REVIEWER_UI_STATUS_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "source_record_key": COMPLAINT_KEY,
+                    "reviewer_status": "reviewed",
+                }
+            ),
+            reviewer_ui_context=reviewer_context,
+        )
+
+        reviewed_status, _content_type, reviewed_body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "facility_number": "157806098",
+                    "start_date": "2022-08-01",
+                    "end_date": "2022-08-31",
+                    "reviewer_status_filter": "reviewed",
+                }
+            ),
+            ccld_record_request_ui_context=_context(connection),
+        )
+        blocked_status, _content_type, blocked_body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "facility_number": "157806098",
+                    "start_date": "2022-08-01",
+                    "end_date": "2022-08-31",
+                    "reviewer_status_filter": "blocked",
+                }
+            ),
+            ccld_record_request_ui_context=_context(connection),
+        )
+        counts = _table_counts(connection)
+
+    note_html = note_body.decode("utf-8")
+    status_html = status_body.decode("utf-8")
+    reviewed_html = reviewed_body.decode("utf-8")
+    reviewed_normalized = " ".join(reviewed_html.split())
+    blocked_html = blocked_body.decode("utf-8")
+    blocked_normalized = " ".join(blocked_html.split())
+
+    assert note_status == 200
+    assert status_status == 200
+    assert "Reviewer note saved through the existing local/test workflow action." in note_html
+    assert "Reviewer status saved through the existing local/test workflow action." in status_html
+    assert reviewed_status == 200
+    assert "Latest reviewer status: Reviewed" in reviewed_html
+    assert "1 reviewer note(s)" in reviewed_html
+    assert "Showing 1 of 1 matching complaint record(s) for queue filter Reviewed." in (
+        reviewed_normalized
+    )
+    assert "Review this complaint record" in reviewed_html
+    assert blocked_status == 200
+    assert "Showing 0 of 1 matching complaint record(s) for queue filter Blocked." in (
+        blocked_normalized
+    )
+    assert "No complaint records are available in this CCLD request result." in blocked_html
+    assert counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 2,
+        "audit_events": 2,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert_no_secret_html(reviewed_html)
+    assert_no_secret_html(blocked_html)
+    assert_no_secret_html(note_html)
+    assert_no_secret_html(status_html)
 
 
 def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:

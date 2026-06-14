@@ -44,6 +44,22 @@ _DATE_FIELDS = (
     "date_signed",
     "retrieved_at",
 )
+_STATUS_FILTER_VALUES = (
+    "all",
+    "not_started",
+    "in_review",
+    "needs_follow_up",
+    "reviewed",
+    "blocked",
+)
+_STATUS_LABELS = {
+    "all": "All queue records",
+    "not_started": "Not started",
+    "in_review": "In review",
+    "needs_follow_up": "Needs follow-up",
+    "reviewed": "Reviewed",
+    "blocked": "Blocked",
+}
 _SECRET_HTML_MARKERS = (
     "authorization",
     "client_secret",
@@ -65,6 +81,7 @@ class CcldRecordRequest:
     facility_number: str
     start_date: str | None = None
     end_date: str | None = None
+    reviewer_status_filter: str = "all"
 
 
 @dataclass(frozen=True)
@@ -188,6 +205,7 @@ def validate_ccld_record_request(
     facility_number = _first_form_value(form_values, "facility_number")
     start_date = _optional_date_value(form_values, "start_date")
     end_date = _optional_date_value(form_values, "end_date")
+    reviewer_status_filter = _first_form_value(form_values, "reviewer_status_filter") or "all"
     errors: list[str] = []
     if not facility_number:
         errors.append("Facility/license number is required.")
@@ -203,6 +221,8 @@ def validate_ccld_record_request(
             errors.append(f"{label} must use YYYY-MM-DD format.")
     if start_date is not None and end_date is not None and end_date < start_date:
         errors.append("End date must not be before start date.")
+    if reviewer_status_filter not in _STATUS_FILTER_VALUES:
+        errors.append("Choose a supported reviewer status queue filter.")
     if errors:
         return CcldRecordRequestValidation(request=None, errors=tuple(errors))
     return CcldRecordRequestValidation(
@@ -210,6 +230,7 @@ def validate_ccld_record_request(
             facility_number=facility_number,
             start_date=start_date.isoformat() if start_date is not None else None,
             end_date=end_date.isoformat() if end_date is not None else None,
+            reviewer_status_filter=reviewer_status_filter,
         ),
         errors=(),
     )
@@ -395,6 +416,21 @@ def _render_request_form() -> str:
                     <span id="date-range-help">Dates narrow the local/test result set. Missing
                     records are not proof that CCLD has no records for that period.</span>
         </p>
+                <p>
+                    <label for="reviewer_status_filter">Queue status filter</label>
+                    <select id="reviewer_status_filter" name="reviewer_status_filter"
+                        aria-describedby="queue-status-filter-help">
+                        <option value="all">All queue records</option>
+                        <option value="not_started">Not started</option>
+                        <option value="in_review">In review</option>
+                        <option value="needs_follow_up">Needs follow-up</option>
+                        <option value="reviewed">Reviewed</option>
+                        <option value="blocked">Blocked</option>
+                    </select>
+                    <span id="queue-status-filter-help">Queue status is derived from existing
+                    local/test reviewer-created status rows. Records with no status are counted
+                    as not started.</span>
+                </p>
         <p><button type="submit">Request CCLD records</button></p>
       </form>
     </section>
@@ -540,7 +576,8 @@ def _render_matched_result(
     import_reload_available: bool,
 ) -> str:
     queue_items = _request_queue_items(result, state_summaries)
-    rows = "\n".join(_render_queue_row(request, item) for item in queue_items)
+    filtered_queue_items = _filtered_queue_items(queue_items, request.reviewer_status_filter)
+    rows = "\n".join(_render_queue_row(request, item) for item in filtered_queue_items)
     if not rows:
         rows = """          <tr>
             <td colspan="8">No complaint records are available in this CCLD request result.</td>
@@ -564,6 +601,12 @@ def _render_matched_result(
             <p>This queue is scoped to the requested facility/license number and date range.
             Open each complaint record to inspect source traceability, add a reviewer note,
             or set a reviewer status.</p>
+            <p>After reviewing a record, return here and submit the same request to see
+            progress and reviewer status updates from existing reviewer-created state.</p>
+            {_render_queue_progress_summary(queue_items)}
+            {_render_queue_filter_form(request)}
+            <p>Showing {len(filtered_queue_items)} of {len(queue_items)} matching complaint
+            record(s) for queue filter {_escape(_status_label(request.reviewer_status_filter))}.</p>
       <table>
                 <caption>Facility/date-scoped CCLD complaint records ready for review</caption>
         <thead>
@@ -708,6 +751,8 @@ def _render_import_reload_action(
                     value="{_escape(request.facility_number)}">
                 <input type="hidden" name="start_date" value="{_escape(request.start_date or "")}">
                 <input type="hidden" name="end_date" value="{_escape(request.end_date or "")}">
+                <input type="hidden" name="reviewer_status_filter"
+                    value="{_escape(request.reviewer_status_filter)}">
                 <input type="hidden" name="{_IMPORT_RELOAD_ACTION_FIELD}"
                     value="{_IMPORT_RELOAD_ACTION_VALUE}">
                 <p><button type="submit">{_escape(button_label)}</button></p>
@@ -721,6 +766,84 @@ def _safe_artifact_label(identity: str) -> str:
 
 def _yes_no(value: bool) -> str:
     return "yes" if value else "no"
+
+
+def _render_queue_progress_summary(items: tuple[CcldRequestQueueItem, ...]) -> str:
+    counts = _queue_status_counts(items)
+    return f"""<section aria-labelledby="queue-progress-heading">
+      <h3 id="queue-progress-heading">Queue progress summary</h3>
+      <dl>
+        <dt>Total matching complaint records</dt>
+        <dd>{len(items)}</dd>
+        <dt>Not started</dt>
+        <dd>{counts['not_started']}</dd>
+        <dt>In review</dt>
+        <dd>{counts['in_review']}</dd>
+        <dt>Needs follow-up</dt>
+        <dd>{counts['needs_follow_up']}</dd>
+        <dt>Reviewed</dt>
+        <dd>{counts['reviewed']}</dd>
+        <dt>Blocked</dt>
+        <dd>{counts['blocked']}</dd>
+      </dl>
+    </section>"""
+
+
+def _render_queue_filter_form(request: CcldRecordRequest) -> str:
+    options = "\n".join(
+        _status_filter_option(value, selected=value == request.reviewer_status_filter)
+        for value in _STATUS_FILTER_VALUES
+    )
+    return f"""<form action="{CCLD_RECORD_REQUEST_PATH}" method="post">
+      <input type="hidden" name="facility_number" value="{_escape(request.facility_number)}">
+      <input type="hidden" name="start_date" value="{_escape(request.start_date or '')}">
+      <input type="hidden" name="end_date" value="{_escape(request.end_date or '')}">
+      <p>
+        <label for="queue_status_filter_result">Filter queue by reviewer status</label>
+        <select id="queue_status_filter_result" name="reviewer_status_filter"
+          aria-describedby="queue-status-filter-result-help">
+{options}
+        </select>
+        <span id="queue-status-filter-result-help">Filtering uses existing reviewer-created
+        status rows. It does not change source-derived records or save queue state.</span>
+      </p>
+      <p><button type="submit">Apply queue status filter</button></p>
+    </form>"""
+
+
+def _status_filter_option(value: str, *, selected: bool) -> str:
+    selected_attribute = " selected" if selected else ""
+    return (
+        f'          <option value="{_escape(value)}"{selected_attribute}>'
+        f"{_escape(_status_label(value))}</option>"
+    )
+
+
+def _queue_status_counts(items: tuple[CcldRequestQueueItem, ...]) -> dict[str, int]:
+    counts = {status: 0 for status in _STATUS_FILTER_VALUES if status != "all"}
+    for item in items:
+        counts[_queue_status(item)] += 1
+    return counts
+
+
+def _filtered_queue_items(
+    items: tuple[CcldRequestQueueItem, ...],
+    reviewer_status_filter: str,
+) -> tuple[CcldRequestQueueItem, ...]:
+    if reviewer_status_filter == "all":
+        return items
+    return tuple(item for item in items if _queue_status(item) == reviewer_status_filter)
+
+
+def _queue_status(item: CcldRequestQueueItem) -> str:
+    latest_status = _summary_optional_string(item.reviewer_state, "latest_status")
+    if latest_status in {"in_review", "needs_follow_up", "reviewed", "blocked"}:
+        return latest_status
+    return "not_started"
+
+
+def _status_label(value: str) -> str:
+    return _STATUS_LABELS.get(value, value.replace("_", " "))
 
 
 def _request_queue_items(
@@ -972,7 +1095,7 @@ def _reviewer_state_text(summary: Mapping[str, Any]) -> str:
     if latest_status is None:
         parts.append("No reviewer status yet")
     else:
-        parts.append(f"Latest reviewer status: {latest_status}")
+        parts.append(f"Latest reviewer status: {_status_label(latest_status)}")
     return "; ".join(parts) + "."
 
 
