@@ -10,7 +10,7 @@ from ccld_complaints.hosted_app.persistence import (
     load_hosted_database_config,
 )
 
-ApiDomain = Literal["source-derived", "reviewer-created"]
+ApiDomain = Literal["source-derived", "reviewer-created", "operational"]
 ImplementationStatus = Literal["scaffold-only"]
 
 
@@ -36,9 +36,11 @@ class HostedSchemaApiScaffold:
     source_derived_read_service_implemented: bool = True
     source_derived_read_api_routes_implemented: bool = True
     reviewer_workflow_shell_implemented: bool = True
+    reset_reload_dry_run_implemented: bool = True
     api_routes_implemented: bool = True
     imports_implemented: bool = True
     reviewer_workflows_implemented: bool = False
+    reset_reload_implemented: bool = False
 
 
 HOSTED_API_BOUNDARIES = (
@@ -90,6 +92,32 @@ HOSTED_API_BOUNDARIES = (
             "stateful reviewer workflows",
             "audit logging",
             "export builder behavior",
+        ),
+    ),
+    HostedApiBoundary(
+        boundary_id="seeded_corpus_reset_reload_operations_api",
+        label="Seeded corpus reset/reload operations API boundary",
+        domain="operational",
+        implementation_status="scaffold-only",
+        intended_future_use=(
+            "Plan seeded corpus reset/reload impact before future execution. The "
+            "current implementation exposes only a local/test dry-run route seam "
+            "that inspects staged seeded corpus metadata and reports affected "
+            "source-derived and future reviewer-created state categories."
+        ),
+        requires_authenticated_actor_before_write=True,
+        preserves=(
+            "source-derived versus reviewer-created state separation",
+            "stable source-derived identities",
+            "source traceability",
+            "future audit requirements for operational changes",
+        ),
+        deferred=(
+            "destructive reset execution",
+            "seeded corpus reload execution",
+            "reviewer-created state archival or clearing",
+            "audit event persistence",
+            "operational/reset metadata persistence",
         ),
     ),
 )

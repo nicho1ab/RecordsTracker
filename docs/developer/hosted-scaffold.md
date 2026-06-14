@@ -30,7 +30,9 @@ only when a developer explicitly runs Alembic migrations or the seeded corpus
 import command. The database-backed read service and auth boundary scaffold can
 be exercised in unit tests against in-memory SQLite and fixture actors. The
 source-derived API route seam can also be exercised in unit tests with an
-explicit local/test route context. No cloud resources, public URLs, app
+explicit local/test route context. The reset/reload dry-run seam can be
+exercised in unit tests with an explicit database, actor, and corpus scope
+context. No cloud resources, public URLs, app
 registrations, cloud databases, DNS records, deployment credentials, secrets, or
 tokens are required.
 
@@ -181,6 +183,9 @@ wiring includes:
 - `ccld_complaints.hosted_app.reviewer_workflow_shell` for a local/test
   authenticated read-only review queue and detail shell over source-derived
   route responses.
+- `ccld_complaints.hosted_app.reset_reload_dry_run` for a local/test
+  authenticated seeded corpus reset/reload dry-run route seam that reports
+  future impact without mutating data.
 - `ccld_complaints.cli.import_hosted_seeded_corpus` as a minimal local command
   wrapper for operator-initiated test imports.
 
@@ -239,6 +244,18 @@ does not create queue state, review status, annotations, corrections, tester
 feedback, audit events, export packet state, sessions, cookies, production auth
 middleware, or a production API framework.
 
+The reset/reload dry-run seam is intentionally small. It exposes the local/test
+JSON handler `/api/operations/seeded-corpus-reset-reload/dry-run` only when the
+caller supplies an explicit dry-run context with a database connection,
+authenticated operator or admin-style actor, and seeded corpus scope. The
+handler requires import/reload permission, reports existing import batch
+metadata, source-derived record counts by entity, future reviewer-created state
+handling options, validation requirements, audit requirements, and deferred
+destructive actions. It performs read-only inspection queries only. It does not
+delete, truncate, overwrite, archive, import, reload, persist audit events,
+create reset metadata, run live crawling, execute connectors, or implement a
+production API framework.
+
 To run migrations or load a seeded corpus into a local PostgreSQL-compatible
 test database, set `CCLD_HOSTED_TESTER_DATABASE_URL` outside the repository and
 run Alembic before the import command:
@@ -257,7 +274,8 @@ private URLs, hosted URLs, tokens, or deployment-specific configuration.
 The current path does not implement stateful database-backed reviewer views, real
 provider login, token validation, sessions, cookies, auth middleware, user or
 role persistence, reviewer-created state persistence, stateful reviewer workflows, audit
-persistence, export builders, reset/reload behavior, production import
+persistence, export builders, reset/reload execution, reviewer-created state
+archive or clear behavior, production import
 automation, production API framework behavior, hosted live crawling, hosted
 connector execution, QNAP, Azure, AWS, public hosting, public URLs, or
 production deployment.
@@ -321,6 +339,12 @@ Run the focused hosted reviewer workflow shell tests:
 pytest tests/unit/test_hosted_reviewer_workflow_shell.py
 ```
 
+Run the focused hosted reset/reload dry-run tests:
+
+```powershell
+pytest tests/unit/test_hosted_reset_reload_dry_run.py
+```
+
 These tests include local-only semantic/accessibility validation for the sample
 source view shell and facility master sample view. They use Python standard-library HTML parsing
 to verify one page-level heading, meaningful page titles, semantic main content,
@@ -355,6 +379,12 @@ missing-detail behavior, explicit workflow context requirements, source
 traceability preservation, import batch context, and unauthenticated, disabled
 or revoked, role-denied, and out-of-scope rejections without reviewer-created
 state persistence.
+The reset/reload dry-run tests verify local/test authenticated planning payloads,
+seeded import batch and source-derived record impact counts, reviewer-created
+state handling options, invalid mode rejection, explicit dry-run context
+requirements, unauthenticated, disabled or revoked, role-denied, and
+out-of-scope rejections, and before/after row counts proving the dry-run does
+not mutate seeded import tables.
 They do not require browser automation, Node.js, Playwright, Selenium, axe,
 Docker, a running PostgreSQL server, cloud services, or public URLs.
 
@@ -389,8 +419,8 @@ The scaffold intentionally does not implement:
 - Persistent authorization, user, role, invitation, or scope storage.
 - Production schema beyond the seeded import table group.
 - Reviewer-created state, audit, export, feedback, auth, or reset/reload tables.
-- HTTP API routes outside the narrow local/test source-derived read route seam
-  and read-only reviewer workflow shell.
+- HTTP API routes outside the narrow local/test source-derived read route seam,
+  read-only reviewer workflow shell, and reset/reload dry-run seam.
 - Stateful database-backed reviewer views or workflows.
 - Production import/sync automation.
 - Queues.
@@ -399,7 +429,7 @@ The scaffold intentionally does not implement:
 - Exports.
 - Tester feedback.
 - Audit trail.
-- Reset/reload.
+- Reset/reload execution.
 - Hosted live crawling.
 - Hosted connector execution.
 - Reviewer-created state persistence.

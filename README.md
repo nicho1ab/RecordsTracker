@@ -149,10 +149,12 @@ public-record review notes.
    staged source-derived records. It also includes a local/test auth boundary
    scaffold for actor, role, scope, and account-status guards plus a narrow
    local/test authenticated source-derived read API route seam and read-only
-   reviewer workflow shell; it does not implement real login flow, auth
-   middleware, reviewer-created state persistence, annotations, corrections,
-   review status, production import automation, reset/reload, exports,
-   deployment, QNAP, Azure, or AWS.
+   reviewer workflow shell. It also includes a local/test authenticated
+   reset/reload dry-run route seam that reports what a future seeded corpus
+   reset/reload would affect without mutating data. It does not implement real
+   login flow, auth middleware, reviewer-created state persistence,
+   annotations, corrections, review status, production import automation,
+   reset/reload execution, exports, deployment, QNAP, Azure, or AWS.
    Start with `scripts/check-hosted-scaffold-local.ps1` to verify local Python
    and development-tool prerequisites without installing software or requiring
    admin rights.
@@ -163,6 +165,8 @@ public-record review notes.
    persistence. Database-backed service reads, auth boundary guards, the
    source-derived API route seam, and the read-only reviewer workflow shell are
    limited to local/test seams and are not wired into the sample UI routes.
+   The reset/reload dry-run seam is also local/test only and requires an
+   explicit database, actor, and scope context from tests or local callers.
    The local `/facilities` route shows a read-only facility master
    sample view backed only by committed tiny public-source facility fixtures and
    manifest placeholder metadata. Facility detail pages include fixture-only

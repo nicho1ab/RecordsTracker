@@ -12,6 +12,7 @@ src/ccld_complaints/
   hosted_app/
     auth.py
     persistence.py
+    reset_reload_dry_run.py
     reviewer_workflow_shell.py
     schema_api_scaffold.py
     seeded_import.py
@@ -54,7 +55,9 @@ migrations/
   JSON list and fetch access over staged seeded corpus records.
 15. Use the hosted reviewer workflow shell only for local/test authenticated
   read-only queue and detail payloads that consume the source-derived route seam.
-16. Keep reviewer-created state, reset/reload behavior, real login flow, auth
+16. Use the hosted reset/reload dry-run seam only for local/test authenticated
+  planning over staged seeded corpus metadata, without mutating data.
+17. Keep reviewer-created state, reset/reload execution, real login flow, auth
   middleware, provider integration, production API framework behavior, live
   crawling, connector execution, and production automation in future focused
   branches until those layers are implemented and tested.
@@ -110,18 +113,25 @@ list, fetch-by-key, and fetch-by-stable-identity handlers over those staged
 records. The reviewer workflow shell adds local/test authenticated read-only
 queue and detail payloads over those route responses while keeping review
 status, annotations, corrections, tester feedback, audit events, export packet
-state, and queue-state persistence deferred. The next hosted tester MVP work can
-move toward real provider integration, reset/reload planning, and stateful
-reviewer-created workflow layers when each branch validates its layer.
+state, and queue-state persistence deferred. The reset/reload dry-run seam adds
+local/test authenticated planning over seeded corpus metadata: it reports
+existing import batches, source-derived record counts by entity, future
+reviewer-created state handling options, required permissions, validation
+requirements, audit requirements, and deferred destructive actions without
+deleting, overwriting, archiving, importing, reloading, or persisting audit
+events. The next hosted tester MVP work can move toward real provider
+integration, reset/reload execution planning with persisted operational
+metadata, and stateful reviewer-created workflow layers when each branch
+validates its layer.
 
 The scaffold does not implement real provider login, token validation, sessions,
 cookies, auth middleware, role or user storage, production domain schema beyond
 the seeded import table group, production API framework behavior, production
 import automation, stateful queues, annotations, corrections, exports, tester feedback,
-audit trail, reset/reload, hosted live crawling, hosted connector execution,
+audit trail, reset/reload execution, hosted live crawling, hosted connector execution,
 deployment, source-derived canonical field changes, reviewer-created state
 persistence, or extraction behavior. Its database-backed reads, auth guards,
-source-derived read routes, and reviewer workflow shell are limited to local/test
+source-derived read routes, reviewer workflow shell, and reset/reload dry-run are limited to local/test
 service seams and do not persist reviewer-created workflow state. It does not require Docker, QNAP Container Station,
 Azure, AWS, a public URL, secrets, or cloud resources.
 
