@@ -1,0 +1,3 @@
+_id,FAC_LATITUDE,FAC_LONGITUDE,FAC_NBR,TYPE,PROGRAM_TYPE,STATUS,CLIENT_SERVED,CAPACITY,NAME,RES_STREET_ADDR,RES_CITY,RES_STATE,RES_ZIP_CODE,FAC_PHONE_NBR,FAC_CO_NBR,COUNTY,FAC_DO_DESC,FAC_TYPE_DESC,ObjectId,x,y
+1,34.000000,-118.000000,900000001,850,Child Care,Active,Children,24,Synthetic Orchard Child Care,100 Example Way,Sample City,CA,90001,555-0101,19,Los Angeles,South Regional Office,Child Care Center,1001,-118.000000,34.000000
+2,38.500000,-121.500000,900000002,430,Foster Family Agency,Pending,Youth,12,Synthetic Valley Family Agency,200 Fixture Road,Example City,CA,95814,555-0102,34,Sacramento,North Regional Office,Foster Family Agency,1002,-121.500000,38.500000
