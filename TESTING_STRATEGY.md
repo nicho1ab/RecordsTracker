@@ -86,12 +86,15 @@ workflow detail output show the status after write.
 Hosted reviewer UI shell tests must prove browser-accessible local/test landing
 and detail pages return usable semantic HTML over the seeded fixture corpus,
 list-level reviewer-created note/status indicators and latest reviewer-created
-timestamp are visible, safe source traceability fields and safe related seeded
-bundle context are visible, sensitive narrative fields remain hidden, note/status forms delegate to
-the existing workflow actions, read-after-write reviewer-created state appears
-in the page, unauthenticated, disabled or revoked, role-denied, and out-of-scope
+timestamp are visible, plain-language detail record summaries are visible, safe
+source traceability fields and safe related seeded bundle context are visible,
+sensitive narrative fields remain hidden, note/status forms delegate to the
+existing workflow actions, read-after-write reviewer-created state appears in
+the page, CCLD return navigation and record-specific feedback guidance are
+visible, unauthenticated, disabled or revoked, role-denied, and out-of-scope
 contexts are blocked with visible next steps, no-match search, missing-record,
-and invalid note/status form states show clear accessible guidance, source-derived rows are not mutated by UI actions,
+and invalid note/status form states show clear accessible guidance,
+source-derived rows are not mutated by UI actions,
 reviewer-created state and audit rows are created only through the existing
 services, and HTML does not expose secrets, tokens, cookies, private headers,
 raw provider claims, private URLs, hosted URLs, credentials, or unnecessary

@@ -206,10 +206,11 @@ public-record review notes.
    available at `/reviewer` when the scaffold is running locally; it loads the
    tiny seeded fixture corpus into process-local test state, lets a local tester
    search/select a source-derived record, see list-level reviewer-created
-   note/status indicators before opening detail, view safe source traceability
-   fields plus safe related seeded bundle context, submit a bounded reviewer
-   note, submit a bounded reviewer status, and see read-after-write reviewer-
-   created state through those same existing workflow seams. It also gives clear
+   note/status indicators before opening detail, view a plain-language record
+   summary, safe source traceability fields, safe related seeded bundle context,
+   existing reviewer notes/statuses, record-specific feedback clues, and CCLD
+   return links, submit a bounded reviewer note, submit a bounded reviewer status,
+   and see read-after-write reviewer-created state through those same existing workflow seams. It also gives clear
    browser guidance for no search results, missing seeded records, invalid note
    or status forms, and local/test permission blocks. Narrative source
    fields are hidden in the browser shell. It also includes a narrow local/test reviewer-

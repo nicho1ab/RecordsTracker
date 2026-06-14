@@ -134,10 +134,11 @@ A thin local/test browser reviewer UI shell now exists at `/reviewer` and
 the tiny seeded fixture corpus into process-local test state and gives a local
 tester a first browser path to list/search seeded source-derived records, open a
 source-derived detail page, see list-level reviewer-created note/status
-indicators, view safe source traceability fields and safe related seeded bundle
-context, submit a bounded reviewer note, submit a bounded reviewer status, and
-see read-after-write reviewer-created state. Narrative source fields are hidden
-in the browser shell. The UI delegates reads and writes to the existing
+indicators, view a plain-language record summary, safe source traceability
+fields, safe related seeded bundle context, reviewer-created notes/statuses,
+CCLD return links, and record-specific feedback clues, submit a bounded reviewer
+note, submit a bounded reviewer status, and see read-after-write reviewer-created
+state. Narrative source fields are hidden in the browser shell. The UI delegates reads and writes to the existing
 local/test workflow shell, reviewer-created state route, source-derived read
 route, and audit scaffold; it does not add schema changes, production auth,
 sessions, cookies, exports, reset/reload execution, hosted live crawling,

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Improved the local/test reviewer detail page with a plain-language record
+	summary, clearer CCLD return navigation, source-traceability explanation,
+	related context guidance, reviewer note/status help text, and record-specific
+	feedback clues without changing source-derived reads, reviewer-created
+	note/status writes, schema, persistence, live retrieval, or non-CCLD scope.
 - Added a deferred-readiness/product-benefit gate to existing governance and
 	roadmap docs so backend readiness, hardening, planning, and checklist work stays
 	tracked but does not automatically become the next branch unless it unlocks a

@@ -409,6 +409,12 @@ the governed primary future review experience.
 	back to the committed tiny fixture when the full CSV is not configured,
 	unavailable, or malformed without committing raw/full CSVs or mutating hosted
 	state.
+- Improved the local/test reviewer detail page so testers opening a CCLD queue
+	record see a plain-language record summary, clearer source-traceability and
+	related-context explanations, existing reviewer notes/statuses, easier note/
+	status help text, CCLD return navigation, and record-specific feedback clues
+	without adding persistence, schema changes, source-derived mutation, live
+	browser retrieval, connector execution, or non-CCLD scope.
 - Added a minimal local/test audit event persistence scaffold with a separate
 	PostgreSQL/Alembic table and service boundary for successful reviewer-created
 	state scaffold writes only, preserving source-derived records and reviewer-
