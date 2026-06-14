@@ -98,6 +98,14 @@ reviewer-created state is enabled, and capture identity context needed for
 ADR-0013 audit logging. It does not approve schemas, middleware, provider
 configuration, secrets, hosted URLs, or deployment.
 
+ADR-0015 chooses PostgreSQL as the hosted tester MVP database product and
+Alembic-managed migrations in the Python toolchain as the migration tooling
+direction. PostgreSQL is the target persistence store for hosted source-derived
+imports, reviewer-created state, audit events, export packet state, tester
+feedback, reset/reload metadata, and auth role/scope references. SQLite and
+Datasette remain retained for validation, inspection, debugging, local
+exploration, export support, and transition comparison.
+
 The current hosted scaffold state is local-only and sample-only. It includes a
 Python standard-library app shell, health and smoke validation, local setup
 checks, and a read-only `/source-records` list/detail shell over fixture/sample
@@ -127,9 +135,11 @@ Raw source files are stored in ordinary file storage under `data/raw/`. Each fil
 ### Structured storage
 
 SQLite is the initial validation database. A hosted relational database is the
-preferred future direction for hosted tester reviewer-created state and imported
-source-derived records. The specific database product, migration tool, table
-names, columns, indexes, constraints, and implementation remain deferred, but
+accepted future direction for hosted tester reviewer-created state and imported
+source-derived records. ADR-0015 chooses PostgreSQL as that database product and
+Alembic-managed migrations as the migration tooling direction. Table names,
+columns, indexes, constraints, migration files, ORM models, API behavior,
+deployment, connection configuration, and implementation remain deferred, and
 future hosted schema work must preserve the physical data-domain separation
 accepted by ADR-0010.
 
@@ -199,6 +209,10 @@ retention implementation PRs validate the concrete layer.
   import metadata, source-derived imported records, reviewer-created state,
   audit events, export packet state, tester feedback, and operational/reset
   metadata.
+- Hosted tester MVP persistence must use PostgreSQL and Alembic-managed
+  migrations for future schema implementation. SQLite and Datasette remain
+  retained validation and transition-comparison tools, not the hosted
+  reviewer-created state store.
 - Hosted tester MVP access must be authenticated and role-scoped; anonymous
   hosted tester access is not approved because the hosted app includes
   reviewer-created state, tester feedback, annotations, corrections, export
@@ -209,11 +223,12 @@ retention implementation PRs validate the concrete layer.
   enforce role, permission, and project/corpus scope before reviewer-created
   state is enabled.
 - Hosted tester MVP implementation may proceed from the ADR-0012 scaffold-first
-  sequence into the ADR-0013 and ADR-0014 product-enabling path. Hosted schemas,
-  concrete authentication implementation, correction workflows, queues,
-  annotations, import/sync, reset/reload commands or APIs, hosted deployment,
-  audit persistence, retention automation, and hosted export builders remain
-  unimplemented until focused implementation PRs validate the affected layer.
+  sequence into the ADR-0013, ADR-0014, and ADR-0015 product-enabling path.
+  Hosted schemas, concrete authentication implementation, correction workflows,
+  queues, annotations, import/sync, reset/reload commands or APIs, hosted
+  deployment, audit persistence, retention automation, and hosted export
+  builders remain unimplemented until focused implementation PRs validate the
+  affected layer.
 
 ## Accessibility
 

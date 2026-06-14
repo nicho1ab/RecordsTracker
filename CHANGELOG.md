@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Added ADR-0015 choosing PostgreSQL and Alembic-managed migrations for the
+	hosted tester MVP database and migration tooling direction, unblocking minimal
+	hosted schema/API scaffold, seeded corpus import/reset, reviewer-created state
+	persistence, audit event persistence, export packet state, tester feedback,
+	reset/reload metadata, and the first authenticated tester workflow without
+	adding app code, schemas, tables, migrations, API routes, import logic, reset
+	commands, auth middleware, secrets, provider configuration, hosted URLs,
+	deployment, live crawling, or connector execution.
 - Added ADR-0014 choosing a managed standards-based OpenID Connect/OAuth 2.0
 	provider class and hosted tester MVP role implementation direction, unblocking
 	focused authentication, database/migration, schema/API, and first

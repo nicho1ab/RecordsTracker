@@ -18,6 +18,23 @@ and caution language. Those inventory planning fields are not canonical
 source-derived fields unless a later data contract, schema, documentation, and
 test update explicitly adds them.
 
+## Hosted tester persistence boundary
+
+ADR-0015 chooses PostgreSQL and Alembic-managed migrations for future hosted
+tester MVP persistence. That decision does not add or change canonical
+source-derived fields. Hosted database tables for imports, reviewer-created
+state, audit events, export packet state, tester feedback, auth role/scope
+references, or reset/reload metadata are not canonical source-derived fields
+unless a later data contract, schema, documentation, migration, and test update
+explicitly adds them.
+
+Future hosted source-derived tables must preserve the canonical fields and
+source traceability required below. Reviewer-created state may link to
+source-derived records through stable identities, but it must not overwrite raw
+source files, source document metadata, extraction audit records, source URLs,
+raw hashes, connector metadata, retrieval timestamps, or original extracted
+values.
+
 ## Canonical entities
 
 ### facility
