@@ -182,10 +182,13 @@ public-record review notes.
    delegate to existing reviewer-created write routes after resolving the
    selected source record. A browser-accessible local/test CCLD facility lookup
    page is available at `/ccld/facilities` when the scaffold is running locally;
-   it searches committed local/test CCLD facility reference CSV fields such as
-   facility/license number, facility name, city, county, ZIP code, facility type,
-   and status, then carries the selected facility/license number into
-   `/ccld/records/request`. A browser-accessible local/test CCLD record request
+   it searches a full local/test CCLD facility reference CSV when configured via
+   `CCLD_FACILITY_REFERENCE_CSV` or present at ignored path
+   `data/raw/ccld/facility-reference.csv`, otherwise it falls back to the
+   committed tiny fixture CSV. Search fields include facility/license number,
+   facility name, city, county, ZIP code, facility type, and status. The page
+   shows which reference source is active and carries the selected
+   facility/license number into `/ccld/records/request`. A browser-accessible local/test CCLD record request
    page is available at `/ccld/records/request`; it still accepts manual
    facility/license entry plus an optional date range, reads existing seeded
    source-derived records, can load or refresh matching CCLD rows from local
@@ -196,7 +199,7 @@ public-record review notes.
    into an external feedback channel manually, and explains the explicit CCLD
    live-fetch command when broader retrieval is needed. It does not run live
    crawling, execute connectors, mutate reviewer-created state, create audit
-   rows, persist lookup or feedback data, or add non-CCLD sources from browser requests. A
+   rows, persist lookup or feedback data, commit raw/full facility CSV files, or add non-CCLD sources from browser requests. A
    browser-accessible local/test reviewer UI shell is
    available at `/reviewer` when the scaffold is running locally; it loads the
    tiny seeded fixture corpus into process-local test state, lets a local tester

@@ -59,7 +59,8 @@ Accessibility requirements apply to:
 	Facility lookup controls must have associated labels and help text, lookup
 	results must use table captions or equivalent result headings, selection links
 	must have meaningful text such as "Use this facility", and empty, no-match,
-	or too-many-results states must be visible without relying on color.
+	too-many-results, active-reference-source, fallback, and malformed-CSV states
+	must be visible without relying on color.
 
 ### Color and contrast
 

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added safe full local/test CCLD facility reference CSV support for
+	`/ccld/facilities`. The lookup now uses `CCLD_FACILITY_REFERENCE_CSV` or the
+	ignored `data/raw/ccld/facility-reference.csv` convention when available, shows
+	which reference source is active, falls back to the committed tiny fixture when
+	the full CSV is unavailable or malformed, and keeps lookup read-only,
+	CCLD-only, non-persistent, and limited to safe scalar display fields.
 - Added a CCLD-only local/test facility lookup page at `/ccld/facilities` backed
 	by the committed CCLD program facility reference CSV fixture. Local testers can
 	search by facility/license number, facility name, city, county, ZIP code,

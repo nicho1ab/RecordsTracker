@@ -120,11 +120,15 @@ CCLD-only request page:
 .\scripts\run-hosted-scaffold.ps1 -Port 8000
 ```
 
-Then open `http://127.0.0.1:8000/ccld/facilities` to search the local/test CCLD
-facility reference CSV by facility/license number, facility name, city, county,
-ZIP code, facility type, or status. Use a matching facility to carry the
-facility/license number into the request form. Manual entry is still available
-at `http://127.0.0.1:8000/ccld/records/request` when you already know the number.
+Then open `http://127.0.0.1:8000/ccld/facilities` to search local/test CCLD
+facility reference data by facility/license number, facility name, city, county,
+ZIP code, facility type, or status. To use a full local/test facility CSV, set
+`CCLD_FACILITY_REFERENCE_CSV` or place the file at the ignored local path
+`data/raw/ccld/facility-reference.csv`. If no full CSV is configured or available,
+the lookup falls back to the committed tiny fixture CSV. The page shows which
+reference source is active. Use a matching facility to carry the facility/license
+number into the request form. Manual entry is still available at
+`http://127.0.0.1:8000/ccld/records/request` when you already know the number.
 
 The request page accepts a CCLD facility/license number and optional date range,
 reads existing seeded
@@ -137,9 +141,10 @@ review queue with one row per matching complaint record, progress counts, and a
 reviewer-status filter. After adding a note or status in reviewer detail, return
 to the CCLD request page and submit the same request to see updated progress.
 The feedback checklist is not saved by the app; copy it into the agreed external
-feedback channel manually. The lookup and request pages do not run live CCLD
-retrieval, execute connectors, persist lookup or feedback data, or mutate reviewer
-notes/statuses from the browser request page. When matching local validated records are
+feedback channel manually. Full/raw facility CSV files must stay out of the
+repository. The lookup and request pages do not run live CCLD retrieval, execute
+connectors, persist lookup or feedback data, or mutate reviewer notes/statuses
+from the browser request page. When matching local validated records are
 unavailable, it shows the explicit live-fetch command that must be run outside
 the hosted UI. After that outside-browser CCLD pipeline output is validated, a
 developer/tester can build the local/test hosted seeded-corpus JSON artifact with:

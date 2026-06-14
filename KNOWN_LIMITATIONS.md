@@ -137,14 +137,16 @@
     SQLite pipeline output into hosted seeded-corpus JSON outside browser
     requests, but it is still a local/test step and does not prove public-source
     completeness or automate production imports.
-- The local hosted scaffold `/ccld/facilities` lookup page reads only the
-    committed tiny CCLD program facility reference CSV fixture and displays a
-    bounded safe subset of fields for lookup assistance. It does not read ignored
-    raw CSVs, generated profiling outputs, SQLite, a hosted database, live
-    public-source data, import output, authentication state, or reviewer-created
-    state, and it does not prove source completeness, statewide coverage,
-    official facility status, complaint availability, or legal or facility-wide
-    conclusions.
+- The local hosted scaffold `/ccld/facilities` lookup page can read a full
+    local/test CCLD facility reference CSV from `CCLD_FACILITY_REFERENCE_CSV` or
+    ignored local path `data/raw/ccld/facility-reference.csv`; otherwise it falls
+    back to the committed tiny CCLD program facility reference CSV fixture. It
+    displays a bounded safe subset of fields for lookup assistance. It does not
+    read generated profiling outputs, SQLite, a hosted database, live public-
+    source data, import output, authentication state, or reviewer-created state,
+    and it does not prove source completeness, statewide coverage, official
+    facility status, complaint availability, or legal or facility-wide
+    conclusions. Full/raw facility CSV files must not be committed.
 - The local hosted scaffold `/facilities` list and detail pages use committed
     tiny public-source facility fixtures and manifest placeholder metadata only.
     The facility detail source coverage panel and related source-record links

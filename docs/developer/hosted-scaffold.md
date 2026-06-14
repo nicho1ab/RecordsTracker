@@ -101,18 +101,23 @@ The scaffold includes a browser-accessible local/test CCLD facility lookup page 
 http://127.0.0.1:8000/ccld/facilities
 ```
 
-The lookup is CCLD-only. It reads the committed local/test CCLD program facility
-reference CSV fixture and lets a tester search by facility/license number,
+The lookup is CCLD-only. It reads a full local/test CCLD program facility
+reference CSV when `CCLD_FACILITY_REFERENCE_CSV` points to one or when a file is
+available at the ignored local path `data/raw/ccld/facility-reference.csv`. When
+that full CSV is not configured, unavailable, or malformed, the lookup falls back
+to the committed tiny fixture CSV. Testers can search by facility/license number,
 facility name, city, county, ZIP code, facility type, or status when those fields
-are present. Results are bounded and display safe scalar fields only. The “Use
-this facility” link carries the selected facility/license number into
-`/ccld/records/request`. Manual facility/license entry on the request page
-remains available.
+are present. Results are bounded and display safe scalar fields only. The active
+reference source and any fallback guidance are visible on the page. The “Use this
+facility” link carries the selected facility/license number into
+`/ccld/records/request`. Manual facility/license entry on the request page remains
+available.
 
-The lookup does not run live CCLD retrieval, execute connectors, read ignored raw
-CSVs or generated profiling outputs, persist lookup data, mutate source-derived
-records, mutate reviewer-created state, create audit rows, persist operational
-metadata, prove public-source completeness, or support non-CCLD sources.
+The lookup does not run live CCLD retrieval, execute connectors, persist lookup
+data, mutate source-derived records, mutate reviewer-created state, create audit
+rows, persist operational metadata, prove public-source completeness, or support
+non-CCLD sources. Full/raw facility CSV files must remain ignored local files and
+must not be committed.
 
 The scaffold includes a browser-accessible local/test CCLD record request page at:
 
