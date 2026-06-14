@@ -119,7 +119,8 @@ The hosted scaffold now also includes minimal PostgreSQL/Alembic project wiring,
 the first controlled seeded corpus import path, a narrow database-backed
 source-derived read service, a local/test auth/authz boundary scaffold, a
 narrow local/test authenticated source-derived HTTP/API read route seam, and a
-first local/test authenticated reviewer workflow shell: a
+first local/test authenticated reviewer workflow shell, and a local/test
+authenticated reset/reload dry-run route seam: a
 no-secret database URL configuration seam, an Alembic script location, one
 domain migration for import batch metadata and source-derived record staging,
 scaffold/API boundary descriptors, a local JSON artifact importer for validated
@@ -128,13 +129,16 @@ records, managed OIDC/OAuth2 provider-class configuration validation, actor/
 role/scope/target models, protected read-service guards, and JSON handlers for
 listing staged source-derived records or fetching one staged record by key or
 stable identity, plus read-only queue and detail shell payloads over those route
-responses. This path preserves import batch identity, source traceability,
+responses, plus a dry-run handler that reports seeded import batch counts,
+source-derived record counts by entity, future reviewer-created state handling
+options, required permissions, validation requirements, audit requirements, and
+deferred destructive actions without mutating data. This path preserves import batch identity, source traceability,
 original source-derived values, and the separation from reviewer-created state.
 It does not implement real login flow, provider registration, sessions, cookies,
 tokens, auth middleware, reviewer-created state persistence, stateful reviewer
-workflows, reset/reload behavior, hosted live crawling, hosted connector
-execution, production import automation, production API framework behavior, or
-deployment.
+workflows, reset/reload execution, reviewer-created state archive or clear
+behavior, audit persistence, hosted live crawling, hosted connector execution,
+production import automation, production API framework behavior, or deployment.
 
 ## Components
 
@@ -161,9 +165,9 @@ source-derived records. ADR-0015 chooses PostgreSQL as that database product and
 Alembic-managed migrations as the migration tooling direction. The current
 hosted scaffold adds local/test configuration validation, an Alembic script
 location, and a first narrow domain migration for seeded import batch metadata
-and source-derived record staging. The current auth boundary and
-source-derived read route seam, and read-only reviewer workflow shell are
-schema-free; reviewer-created state tables, auth tables, audit tables, export
+and source-derived record staging. The current auth boundary, source-derived
+read route seam, read-only reviewer workflow shell, and reset/reload dry-run
+seam are schema-free; reviewer-created state tables, auth tables, audit tables, export
 tables, feedback tables, reset/reload metadata tables, ORM models, stateful
 reviewer workflow API behavior, deployment, hosted
 connection configuration, and production import automation remain deferred, and
@@ -242,10 +246,11 @@ retention implementation PRs validate the concrete layer.
   a controlled validated seeded artifact, and describe separated persistence and
   API boundaries, expose a local/test database-backed read service over the
   staged source-derived records, and expose a narrow local/test authenticated
-  source-derived read route seam and read-only reviewer workflow shell, but it
+  source-derived read route seam, read-only reviewer workflow shell, and
+  reset/reload dry-run route seam, but it
   must not imply stateful database-backed reviewer views, reviewer-state
   persistence, production import automation, production API framework behavior,
-  or operational reset/reload behavior are implemented.
+  or operational reset/reload execution are implemented.
   SQLite and Datasette remain retained validation and transition-comparison
   tools, not the hosted reviewer-created state store.
 - Hosted tester MVP access must be authenticated and role-scoped; anonymous
@@ -265,7 +270,8 @@ retention implementation PRs validate the concrete layer.
   current seeded corpus import path is limited to controlled validated artifact
   imports into import batch and source-derived staging tables plus local/test
   service reads over those staged records plus local/test auth guards for those
-  reads. Real provider authentication implementation, persistent authorization
+  reads, and a non-mutating reset/reload dry-run plan over staged seeded corpus
+  metadata. Real provider authentication implementation, persistent authorization
   storage, production API framework behavior, correction workflows, queues,
   annotations, reviewer-created state persistence, reset/reload commands or
   APIs, hosted deployment, audit persistence, retention automation, production

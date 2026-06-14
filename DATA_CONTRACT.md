@@ -39,10 +39,14 @@ seam can serialize those read models for list and fetch access. A narrow
 local/test reviewer workflow shell can wrap those route responses into read-only
 queue and detail payloads that repeat source-derived record identity, original
 values, source traceability, source document metadata, and import batch context.
-Those import, read, route, and workflow-shell mechanics do not add canonical
-source-derived fields, create reviewer-created state, run live crawling, run
-connector execution, implement a production API framework, or make the hosted
-database the public source of record.
+A local/test reset/reload dry-run seam can inspect existing seeded import batch
+metadata and source-derived record counts by entity for a requested corpus scope
+and report future reviewer-created state handling options. Those import, read,
+route, workflow-shell, and dry-run mechanics do not add canonical source-derived
+fields, create reviewer-created state, mutate source-derived records, run live
+crawling, run connector execution, implement a production API framework,
+execute reset/reload behavior, or make the hosted database the public source of
+record.
 
 Future hosted source-derived tables must preserve the canonical fields and
 source traceability required below. Reviewer-created state may link to

@@ -43,12 +43,17 @@ importer, a local/test database-backed read service over staged source-derived
 records, a local/test auth boundary scaffold with actor, role, scope, target,
 and audit-context models, a narrow local/test authenticated source-derived
 HTTP/API read route seam, a narrow local/test authenticated read-only reviewer
-workflow shell over the route seam, and scaffold/API boundary descriptors. This path does
+workflow shell over the route seam, a local/test authenticated reset/reload
+dry-run route seam, and scaffold/API boundary descriptors. The dry-run reports
+what a future seeded corpus reset/reload would affect, including existing import
+batch metadata, source-derived record counts by entity, future reviewer-created
+state handling modes, required permissions, validation requirements, audit
+requirements, and deferred destructive actions, without mutating data. This path does
 not implement real login flow, provider registration, tokens, cookies, auth
 middleware, production API framework behavior, run migrations against a local
 database during scaffold tests, load live public data, run connector execution,
-automate production imports, implement reset/reload, create stateful queues, or
-persist reviewer-created state.
+automate production imports, execute reset/reload, archive or clear reviewer-
+created state, persist audit events, create stateful queues, or persist reviewer-created state.
 
 The next safe hosted-view increment should remain similarly narrow and
 fixture-backed, preserving fixture/sample labels, read-only behavior,
@@ -296,8 +301,10 @@ start from a known baseline.
 ADR-0013 defines the operational reset/reload boundary: seeded source-derived
 data must reload from validated pipeline output, reviewer-created state must be
 preserved, archived, or explicitly cleared only through an elevated audited mode,
-and reset/reload implementation remains deferred until schema, API, permission,
-and import artifact decisions are implemented.
+and reset/reload execution remains deferred until schema, API, permission,
+audit persistence, reviewer-created state, operational metadata, and import
+artifact decisions are implemented. The current local/test dry-run seam supports
+planning only and does not execute reset/reload or persist operational state.
 
 ### Operational boundaries
 

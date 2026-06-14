@@ -67,6 +67,16 @@ production auth middleware, create anonymous reviewer-created state, persist
 audit events, or commit provider, tenant, callback, hosted URL, or secret
 configuration.
 
+The current reset/reload dry-run seam is local/test only and must receive an
+explicit database, actor, and corpus scope context from tests or local callers.
+It reuses the auth boundary to require import/reload permission, reject
+unauthenticated, disabled or revoked, role-denied, and out-of-scope actors, and
+report what a future seeded corpus reset/reload would affect. It performs
+read-only inspection queries only. It does not delete, truncate, overwrite,
+archive, import, reload, persist audit events, parse or store provider tokens,
+create sessions or cookies, add production auth middleware, or commit provider,
+tenant, callback, hosted URL, or secret configuration.
+
 Identity storage, sessions, authorization middleware, user tables, role tables,
 invitation flow, account recovery, final multi-factor requirements, and user
 deprovisioning implementation remain deferred to later implementation
