@@ -90,6 +90,14 @@ database, migration, schema, API, import/reset, export builder, audit
 persistence, retention automation, and deployment implementation deferred to
 focused branches.
 
+ADR-0014 chooses the hosted tester MVP authentication provider and role
+implementation direction. The hosted tester MVP will use a managed
+standards-based OpenID Connect/OAuth 2.0 identity provider class, preserve the
+ADR-0011 minimum roles, require project or corpus-scoped authorization before
+reviewer-created state is enabled, and capture identity context needed for
+ADR-0013 audit logging. It does not approve schemas, middleware, provider
+configuration, secrets, hosted URLs, or deployment.
+
 The current hosted scaffold state is local-only and sample-only. It includes a
 Python standard-library app shell, health and smoke validation, local setup
 checks, and a read-only `/source-records` list/detail shell over fixture/sample
@@ -195,11 +203,16 @@ retention implementation PRs validate the concrete layer.
   hosted tester access is not approved because the hosted app includes
   reviewer-created state, tester feedback, annotations, corrections, export
   decisions, audit history, and sensitive review context.
+- Hosted tester MVP authentication must use a managed standards-based OpenID
+  Connect/OAuth 2.0 provider class, with provider secrets and environment
+  configuration kept out of the repository. Application authorization must still
+  enforce role, permission, and project/corpus scope before reviewer-created
+  state is enabled.
 - Hosted tester MVP implementation may proceed from the ADR-0012 scaffold-first
-  sequence into the ADR-0013 product-enabling path. Hosted schemas,
-  authentication implementation, correction workflows, queues, annotations,
-  import/sync, reset/reload commands or APIs, hosted deployment, audit
-  persistence, retention automation, and hosted export builders remain
+  sequence into the ADR-0013 and ADR-0014 product-enabling path. Hosted schemas,
+  concrete authentication implementation, correction workflows, queues,
+  annotations, import/sync, reset/reload commands or APIs, hosted deployment,
+  audit persistence, retention automation, and hosted export builders remain
   unimplemented until focused implementation PRs validate the affected layer.
 
 ## Accessibility

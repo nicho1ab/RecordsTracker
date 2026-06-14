@@ -32,11 +32,19 @@ tester access is not allowed because the hosted workflow includes
 reviewer-created state, tester feedback, annotations, proposed corrections,
 export decisions, audit history, and potentially sensitive review context.
 
-Authentication provider details, identity storage, sessions, authorization
-middleware, user tables, role tables, invitation flow, account recovery,
-multi-factor requirements, and user deprovisioning implementation remain
-deferred to later implementation decisions. Secrets, tokens, private URLs, and
-account-specific configuration must not be committed.
+ADR-0014 selects a managed standards-based OpenID Connect/OAuth 2.0 identity
+provider class for the hosted tester MVP. The project must not build custom
+password storage for the tester MVP. Provider secrets, client credentials,
+tenant IDs, app registrations, callback URLs, hosted URLs, private URLs, tokens,
+and account-specific configuration must not be committed.
+
+Identity storage, sessions, authorization middleware, user tables, role tables,
+invitation flow, account recovery, final multi-factor requirements, and user
+deprovisioning implementation remain deferred to later implementation
+decisions. Future implementation must enforce role, permission, and
+project/corpus scope before reviewer-created state is enabled and must preserve
+audit identity context without logging credentials, cookies, tokens, private
+headers, or unnecessary sensitive narrative content.
 
 ## Public repository hygiene
 

@@ -83,13 +83,17 @@
   product-moving implementation path without implementing schemas, APIs,
   imports, exports, audit persistence, reset commands, retention automation, or
   deployment.
+- ADR-0014 accepted a managed standards-based OpenID Connect/OAuth 2.0 provider
+  class and hosted tester MVP role implementation direction without
+  implementing auth middleware, schemas, API routes, provider configuration,
+  secrets, hosted URLs, or deployment.
 
 ## Remaining deferred decisions
 
 - Concrete frontend framework, API framework, database product, migration tool,
-  authentication provider, hosting platform, deployment pipeline, retention
-  durations and automation, backup/restore policy, final design system, and
-  production operations model.
+  concrete auth provider instance and configuration, hosting platform,
+  deployment pipeline, retention durations and automation, backup/restore
+  policy, final design system, and production operations model.
 - Controlled import artifact format, import command or API implementation,
   import validation, idempotency, reset/reload behavior, and comparison against
   retained SQLite/Datasette validation output.
@@ -97,8 +101,8 @@
   imported records, reviewer-created state, audit events, export packet state,
   tester feedback, and operational/reset metadata.
 - Authentication, authorization, role storage, invitation flow, account
-  lifecycle, access revocation, audit schema, and user deprovisioning
-  implementation.
+  lifecycle, access revocation, access review, audit schema, and user
+  deprovisioning implementation.
 - Audit persistence implementation, export builder implementation,
   reset/reload command or API implementation, tester feedback persistence,
   reviewer-created state persistence, annotations, corrections, queues, and
@@ -128,10 +132,11 @@
   local-only sample filtering/search, and fixture/sample-only source
   traceability summary panels, local CSV profiling, tiny public-source facility
   fixtures, the first fixture-backed facility master sample view, and the
-  fixture-only facility source coverage panel are complete. ADR-0013 has also
-  completed the operational boundary decision for audit, export, reset/reload,
-  and retention planning. Next work should move to the approved product-moving
-  implementation path, not repeat those completed items.
+  fixture-only facility source coverage panel are complete. ADR-0013 completed
+  the operational boundary decision for audit, export, reset/reload, and
+  retention planning. ADR-0014 completed the auth provider-class and role
+  implementation direction decision. Next work should move to the approved
+  product-moving implementation path, not repeat those completed items.
 - Local-only/sample-only boundaries remain active. Sample records must stay
   clearly marked as fixture/sample records and must not be presented as live,
   database-backed, complete, statewide, official, or production data.
@@ -155,9 +160,11 @@
   table groups for source-derived imported records, reviewer-created state,
   import metadata, audit events, export packet state, tester feedback, and
   operational/reset metadata.
-- Future auth/access implementation: hosted tester access must be authenticated,
-  explicitly invited or provisioned, role-scoped, revocable, and auditable where
-  feasible before tester workflows expose reviewer-created state.
+- Future auth/access implementation: hosted tester access must use the
+  ADR-0014 managed OpenID Connect/OAuth 2.0 provider class, remain explicitly
+  invited or provisioned, role-scoped, project/corpus-scoped, revocable,
+  reviewable, and auditable where feasible before tester workflows expose
+  reviewer-created state.
 - Future deployment/hosting decision: QNAP, Azure, AWS, public URL, cloud
   deployment, DNS, app registration, cloud database, and deployment credential
   choices remain deferred and must not be implied by local scaffold tooling.
