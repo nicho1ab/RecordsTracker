@@ -97,6 +97,20 @@ create new dry-run audit events, parse or store provider tokens, create sessions
 or cookies, add production auth middleware, store connection strings, or commit
 provider, tenant, callback, hosted URL, or secret configuration.
 
+The current reset/reload execution-plan seam is local/test only and must receive
+an explicit database, actor, and corpus scope context from tests or local
+callers. It reuses the dry-run permission and scope checks, summarizes existing
+seeded import, source-derived, reviewer-created, audit, and planning metadata
+context, and returns ordered bounded non-destructive action steps. When local/
+test code explicitly requests persistence, it stores only a non-secret
+operational planning metadata record that identifies the artifact as an
+execution plan and records that no reset/reload data mutation was performed. It
+does not execute reset/reload, archive, clear, relink, reload, run live
+crawling, execute connectors, create audit events, parse or store provider
+tokens, create sessions or cookies, add production auth middleware, store
+connection strings, or commit provider, tenant, callback, hosted URL, or secret
+configuration.
+
 The current reset/reload planning metadata read route seam is local/test only
 and must receive an explicit database, actor, and corpus scope context from
 tests or local callers. It requires import/reload permission, rejects

@@ -54,6 +54,11 @@ when explicitly requested, remain separate from source-derived, reviewer-created
 and audit rows, reject unauthenticated, disabled or revoked, role-denied, and
 out-of-scope actors, reject secret-like planning context, and never execute
 reset/reload.
+Execution-plan tests should prove the action plan is ordered, bounded,
+permissioned, non-secret, and non-executing; rejects invalid requested mode and
+reviewer-created state handling options; persists planning metadata only when
+explicitly requested; and does not mutate import, source-derived, reviewer-
+created, audit, or operational rows except for the optional planning metadata row.
 Planning metadata read route tests should prove persisted planning rows are
 readable only through authenticated, role/scope-allowed local/test routes,
 support approved schema-backed filters, return non-secret payloads, and do not

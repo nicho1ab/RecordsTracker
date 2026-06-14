@@ -41,6 +41,7 @@ class HostedSchemaApiScaffold:
     reviewer_workflow_shell_note_action_implemented: bool = True
     reviewer_workflow_shell_status_action_implemented: bool = True
     reset_reload_dry_run_implemented: bool = True
+    reset_reload_execution_plan_implemented: bool = True
     reset_reload_operational_metadata_scaffold_implemented: bool = True
     reset_reload_planning_metadata_read_api_routes_implemented: bool = True
     reviewer_created_state_persistence_scaffold_implemented: bool = True
@@ -155,7 +156,9 @@ HOSTED_API_BOUNDARIES = (
             "Plan seeded corpus reset/reload impact before future execution. The "
             "current implementation exposes only a local/test dry-run route seam "
             "that inspects staged seeded corpus metadata and reports affected "
-            "source-derived and future reviewer-created state categories. It can "
+            "source-derived and future reviewer-created state categories, plus a "
+            "local/test execution-plan route seam that converts those summaries "
+            "into an ordered bounded non-destructive action plan. It can "
             "optionally persist a separate local/test operational planning metadata "
             "record when explicitly requested, and exposes a read-only local/test "
             "route seam to list or fetch those persisted planning records."
@@ -166,6 +169,7 @@ HOSTED_API_BOUNDARIES = (
             "stable source-derived identities",
             "source traceability",
             "future audit requirements for operational changes",
+            "ordered non-destructive execution-plan steps",
             "read-only access to persisted planning metadata",
         ),
         deferred=(

@@ -46,10 +46,15 @@
     reviewer-created scaffold row counts, future reviewer-created state handling
     modes, permissions, validation requirements, audit requirements, and
     deferred destructive actions when tests provide an explicit dry-run context.
-    It can persist a separate operational planning metadata record only when
-    local/test code explicitly requests it; that record is planning metadata
-    only and is stored separately from source-derived, reviewer-created, and
-    audit rows. A narrow local/test read-only route can list or fetch those
+    A narrow local/test reset/reload execution-plan seam can turn those summaries
+    into ordered bounded non-destructive action steps when tests or local callers
+    provide explicit database, actor, and scope context. It can persist a
+    separate operational planning metadata record only when local/test code
+    explicitly requests it; that record is planning metadata only and is stored
+    separately from source-derived, reviewer-created, and audit rows. The
+    execution-plan seam can also persist an execution-plan artifact through that
+    same planning metadata table only when explicitly requested. A narrow
+    local/test read-only route can list or fetch those
     planning records when tests or local callers provide explicit database,
     actor, and scope context with import/reload permission. A narrow local/test
     read-only reviewer-created state route can list or fetch persisted scaffold
@@ -72,7 +77,7 @@
     exports, or production auth behavior.
     The path does not run live crawling, execute connectors, automate production
     imports, execute reset/reload, delete or overwrite source-derived records,
-    archive or clear reviewer-created state, execute persisted planning
+    archive or clear reviewer-created state, execute persisted planning or execution-plan
     metadata, mutate planning metadata or reviewer-created state through reads,
     persist audit events beyond
     successful reviewer-created state scaffold writes, authenticate browser

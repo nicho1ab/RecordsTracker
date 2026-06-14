@@ -39,6 +39,11 @@ operational metadata tests must prove any persisted planning record remains
 separate, permissioned, non-secret, and non-executing. Reset/reload planning
 metadata read route tests must prove authorized readback remains scoped,
 non-secret, and non-mutating.
+Reset/reload execution-plan tests must prove the plan is authenticated,
+role/scope-checked, ordered, bounded, non-destructive, optionally persisted only
+through operational planning metadata, and non-mutating across source-derived,
+reviewer-created, audit, import, and operational rows except for the explicitly
+requested planning metadata row.
 Reviewer-created state read route tests must prove authorized readback remains
 scoped, non-secret, separated from source-derived reads, and non-mutating across
 source-derived rows, reviewer-created rows, audit rows, and operational metadata.

@@ -80,11 +80,16 @@ migrations/
   planning over staged seeded corpus metadata, with optional persisted
   operational planning metadata when explicitly requested, without mutating
   source-derived, reviewer-created, or audit data.
-21. Use the hosted reset/reload planning metadata read route seam only for
+21. Use the hosted reset/reload execution-plan seam only for local/test
+  authenticated, ordered, bounded non-destructive action plans over existing
+  dry-run summaries and planning metadata context, with optional persisted
+  operational planning metadata when explicitly requested, without mutating
+  source-derived, reviewer-created, or audit data.
+22. Use the hosted reset/reload planning metadata read route seam only for
   local/test authenticated JSON list and fetch access over persisted planning
   rows, without mutating operational, source-derived, reviewer-created, or audit
   data.
-21. Keep full reviewer-created workflows, annotations, corrections, exports,
+23. Keep full reviewer-created workflows, annotations, corrections, exports,
   full audit coverage, audit UI, audit export, reset/reload execution, real login flow, auth
   middleware, provider integration, production API framework behavior, live
   crawling, connector execution, and production automation in future focused
@@ -156,8 +161,10 @@ created scaffold row counts, scoped audit scaffold row counts, future reviewer-
 created state handling options, required permissions, validation requirements,
 audit requirements, and deferred destructive actions without deleting,
 overwriting, archiving, importing, reloading, or creating new dry-run audit
-events; it can optionally persist a separate non-secret planning metadata record
-when explicitly requested by local/test code. The planning metadata read route
+events. The reset/reload execution-plan seam converts the same summaries and
+planning metadata context into ordered bounded non-destructive action steps and
+can optionally persist one non-secret planning metadata record when explicitly
+requested by local/test code. The planning metadata read route
 seam can list or fetch those persisted rows with schema-backed filters after
 import/reload authorization, without executing reset/reload. The reviewer-created state scaffold service can create and read
 placeholder review-item-state rows only after authenticated actor, role, account
@@ -172,8 +179,8 @@ create a separate audit scaffold row with actor, permission, scope, target, and
 source-derived context; if the audit row cannot be created, the reviewer-created
 state write is rolled back. The local/test audit history read route seam can list
 or fetch those audit rows only after audit-read authorization passes. The next hosted tester MVP work can move toward real
-provider integration, fuller reset/reload execution planning beyond persisted
-planning metadata, fuller audit coverage, and stateful reviewer-created workflow layers
+provider integration, later reset/reload execution behavior beyond this
+non-destructive execution-plan seam, fuller audit coverage, and stateful reviewer-created workflow layers
 when each branch validates its layer.
 
 The scaffold does not implement real provider login, token validation, sessions,
