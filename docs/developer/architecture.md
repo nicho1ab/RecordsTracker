@@ -55,9 +55,11 @@ The scaffold also includes a local-only read-only `/facilities` sample view and
 detail pages backed only by the committed tiny public-source facility fixtures
 under `tests/fixtures/public_source_facilities/`. The facility view displays
 source-shaped facility master fields and manifest placeholder metadata for
-traceability-style UI validation. It does not read ignored raw CSVs, generated
-profiling outputs, SQLite, a hosted database, live public-source data,
-import/sync output, authentication state, or reviewer-created state.
+traceability-style UI validation. Facility detail pages also show fixture-only
+source coverage indicators and related fixture/sample source-record context
+where the local sample mapping exists. The view does not read ignored raw CSVs,
+generated profiling outputs, SQLite, a hosted database, live public-source
+data, import/sync output, authentication state, or reviewer-created state.
 
 The current next hosted-view gap should remain narrow and fixture-backed after
 the sample filtering/search, source traceability summary shell, and facility

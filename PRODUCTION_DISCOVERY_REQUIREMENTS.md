@@ -24,7 +24,9 @@ list/detail shell with local sample filtering/search and fixture/sample-only
 source traceability summary panels over fixture/sample records with
 semantic/accessibility validation. It also includes a read-only `/facilities`
 list/detail sample view backed only by committed tiny public-source facility
-fixtures and manifest placeholder metadata.
+fixtures and manifest placeholder metadata, with fixture-only source coverage
+indicators and related fixture/sample source-record context on facility detail
+pages where the local sample mapping exists.
 
 This scaffold is not a hosted tester-ready reviewer workflow. It does not load
 live public data, read from SQLite or a hosted database, run import/sync,

@@ -13,7 +13,9 @@
   sample filtering/search and fixture/sample-only source traceability summary
   panels over fixture/sample records, plus a read-only `/facilities` list/detail
   sample view backed by committed tiny public-source facility fixtures and
-  manifest placeholder metadata.
+  manifest placeholder metadata. Facility detail pages now include fixture-only
+  source coverage indicators and related fixture/sample source-record context
+  where the local sample mapping exists.
 - Local-only sample filtering/search: implemented for the hosted source-record
   shell using in-memory fixture/sample records only.
 - Fixture/sample-only source traceability summary panels: implemented for the
@@ -119,9 +121,9 @@
   read-only source-record shell, semantic/accessibility validation, and
   local-only sample filtering/search, and fixture/sample-only source
   traceability summary panels, local CSV profiling, tiny public-source facility
-  fixtures, and the first fixture-backed facility master sample view are
-  complete. Next work should move to an approved roadmap milestone, not repeat
-  those completed items.
+  fixtures, the first fixture-backed facility master sample view, and the
+  fixture-only facility source coverage panel are complete. Next work should
+  move to an approved roadmap milestone, not repeat those completed items.
 - Local-only/sample-only boundaries remain active. Sample records must stay
   clearly marked as fixture/sample records and must not be presented as live,
   database-backed, complete, statewide, official, or production data.

@@ -259,6 +259,11 @@ the governed primary future review experience.
 	preserving fixture/sample labels, semantic/accessibility validation,
 	manifest-backed traceability placeholders, and the no-database, no-import,
 	no-authentication, no-reviewer-state, no-deployment boundary.
+- Added a local-only hosted scaffold facility source coverage panel that links
+	facility-master fixture detail pages to related fixture/sample source-record
+	context where the sample mapping exists, while preserving unmapped fixture
+	states and the no-live-source, no-database, no-import, no-authentication,
+	no-reviewer-state, no-schema-change, no-deployment boundary.
 
 ## Near-term milestones
 

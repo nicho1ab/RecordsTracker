@@ -107,7 +107,9 @@ only for a read-only sample facility master view and detail pages. The fixtures
 include manifest placeholders for source family, jurisdiction, source
 reference, raw hash, and retrieval timestamp so tests can exercise
 source-traceability-style display without committing raw source files or
-generated profiling outputs.
+generated profiling outputs. Facility detail pages also use the fixture rows to
+show local-only source coverage indicators and related fixture/sample
+source-record context where the sample mapping exists.
 
 These fixtures do not approve CSV import, connector implementation, schema or
 migration work, database-backed hosted app behavior, live source loading,
