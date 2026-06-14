@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Added a browser-accessible local/test CCLD record request page at
+	`/ccld/records/request` where a local tester can enter a CCLD
+	facility/license number and optional date range, read matching records from
+	the existing seeded source-derived corpus, and open matching rows in the
+	hosted reviewer UI. The page validates CCLD-only digit input and date ranges,
+	shows no-match guidance with the existing explicit CCLD live-fetch command,
+	and does not mutate source-derived, reviewer-created, audit, or operational
+	metadata rows; run live crawling, execute connectors, import data, add schema
+	changes, add production auth, deploy, or add a frontend build pipeline.
 - Added a thin browser-accessible local/test hosted reviewer UI shell at
 	`/reviewer` and `/reviewer/records`, backed by the existing seeded source-
 	derived read route, reviewer workflow shell, reviewer-created state route, and

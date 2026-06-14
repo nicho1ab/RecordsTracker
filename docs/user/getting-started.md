@@ -111,6 +111,22 @@ Downloaded report files are saved under `data/raw/ccld` by default. The `data/ra
 
 Rerunning the same command updates existing SQLite rows by stable identifiers rather than duplicating the same source documents.
 
+## Local hosted CCLD request page
+
+Developers and local testers can also run the hosted scaffold and open the
+CCLD-only request page:
+
+```powershell
+.\scripts\run-hosted-scaffold.ps1 -Port 8000
+```
+
+Then open `http://127.0.0.1:8000/ccld/records/request`. The page accepts a
+CCLD facility/license number and optional date range, reads existing seeded
+source-derived records, and links matching rows into the hosted reviewer UI. It
+does not run live CCLD retrieval or import records from the browser. When
+matching seeded records are unavailable, it shows the explicit live-fetch
+command that must be run outside the hosted UI.
+
 ## Start Datasette
 
 After the sample or live database is populated, run the command printed by the script:

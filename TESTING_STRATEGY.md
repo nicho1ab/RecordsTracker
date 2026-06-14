@@ -96,6 +96,16 @@ reviewer-created state and audit rows are created only through the existing
 services, and HTML does not expose secrets, tokens, cookies, private headers,
 raw provider claims, private URLs, hosted URLs, credentials, or unnecessary
 sensitive narrative content.
+Hosted CCLD record request UI tests must prove the browser-accessible local/test
+request page accepts only CCLD digit facility/license numbers plus optional
+valid date ranges, returns accessible validation guidance for missing or invalid
+requests, reads matching rows only from the seeded source-derived route seam,
+links matching seeded complaint records into the hosted reviewer UI, shows a
+clear no-match and external pipeline plan when seeded records do not match, does
+not run live crawling, execute connectors, import data, or mutate source-derived,
+reviewer-created, audit, import, or operational metadata rows, and does not
+expose secrets, private URLs, provider claims, credentials, or unnecessary
+sensitive narrative content.
 
 ### Fixture hash and line-ending tests
 

@@ -12,6 +12,7 @@ Accessibility requirements apply to:
 - Datasette presentation pages
 - Exports intended for end users
 - The local/test hosted reviewer UI shell
+- The local/test hosted CCLD record request page
 - Future dashboards
 - Future review interfaces
 - Generated reports
@@ -41,6 +42,11 @@ Accessibility requirements apply to:
 	context, safe related seeded context, list-level reviewer-created state
 	indicators, and reviewer-created state, and visible error or blocked-request
 	messages with useful next-step links.
+- The local/test hosted CCLD record request page must use semantic headings,
+	labeled facility/license number and date controls, accessible validation
+	messages, table captions/headings for matched seeded records, descriptive
+	reviewer links, and visible no-match guidance that does not rely on color or
+	position alone.
 
 ### Color and contrast
 
