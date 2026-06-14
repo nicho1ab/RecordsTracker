@@ -32,7 +32,11 @@ from ccld_complaints.hosted_app.seeded_import import (
     import_seeded_corpus_artifact,
     load_seeded_corpus_artifact,
 )
-from ccld_complaints.hosted_app.source_derived_routes import SourceDerivedApiContext
+from ccld_complaints.hosted_app.source_derived_routes import (
+    SOURCE_DERIVED_API_PREFIX,
+    SourceDerivedApiContext,
+    route_source_derived_api_response,
+)
 
 REVIEWER_UI_PREFIX = "/reviewer"
 REVIEWER_UI_RECORDS_PATH = f"{REVIEWER_UI_PREFIX}/records"
@@ -66,6 +70,65 @@ _SAFE_ORIGINAL_VALUE_DENYLIST = (
     "event_text",
     "source_text",
 )
+_SAFE_CONTEXT_FIELDS_BY_ENTITY: Mapping[str, tuple[str, ...]] = {
+    "facility": (
+        "facility_name",
+        "external_facility_number",
+        "facility_type",
+        "county",
+        "source_id",
+    ),
+    "source_document": (
+        "document_type",
+        "report_index",
+        "content_type",
+        "source_id",
+        "facility_id",
+    ),
+    "complaint": (
+        "complaint_control_number",
+        "complaint_received_date",
+        "visit_date",
+        "report_date",
+        "date_signed",
+        "finding",
+        "review_delay_over_30_days",
+        "review_delay_over_60_days",
+        "review_delay_over_90_days",
+        "review_delay_over_120_days",
+        "missing_first_activity_date",
+        "report_date_used_as_proxy",
+        "extraction_confidence",
+    ),
+    "allegation": (
+        "allegation_category",
+        "finding",
+        "extraction_confidence",
+    ),
+    "event": (
+        "event_date",
+        "event_type",
+        "extracted_from_section",
+        "extraction_confidence",
+    ),
+    "extraction_audit": (
+        "field_name",
+        "extraction_method",
+        "extracted_value",
+        "confidence",
+        "source_section",
+        "extractor_version",
+        "warning",
+    ),
+}
+_SOURCE_CONTEXT_ENTITY_ORDER = {
+    "facility": 0,
+    "source_document": 1,
+    "complaint": 2,
+    "allegation": 3,
+    "event": 4,
+    "extraction_audit": 5,
+}
 _DEFAULT_ACTOR = object()
 
 
@@ -262,7 +325,7 @@ def _detail_response(
     if status != 200:
         return _workflow_error_page(status, body)
     payload = _json_object(body)
-    return _html_response(status, _render_detail(payload, notice=None))
+    return _detail_html_response(status, payload, context, notice=None)
 
 
 def _note_form_response(
@@ -280,14 +343,13 @@ def _note_form_response(
     if status != 201:
         return _workflow_error_page(status, body)
     payload = _json_object(body)
-    return _html_response(
+    return _detail_html_response(
         200,
-        _render_detail(
-            payload,
-            notice=(
-                "Reviewer note saved through the existing local/test "
-                "workflow action."
-            ),
+        payload,
+        context,
+        notice=(
+            "Reviewer note saved through the existing local/test "
+            "workflow action."
         ),
     )
 
@@ -310,16 +372,53 @@ def _status_form_response(
     if status != 201:
         return _workflow_error_page(status, body)
     payload = _json_object(body)
-    return _html_response(
+    return _detail_html_response(
         200,
-        _render_detail(
-            payload,
-            notice=(
-                "Reviewer status saved through the existing local/test "
-                "workflow action."
-            ),
+        payload,
+        context,
+        notice=(
+            "Reviewer status saved through the existing local/test "
+            "workflow action."
         ),
     )
+
+
+def _detail_html_response(
+    status: int,
+    payload: Mapping[str, Any],
+    context: ReviewerUiContext,
+    *,
+    notice: str | None,
+) -> tuple[int, str, bytes]:
+    bundle_status, bundle_body = _related_source_derived_context(payload, context)
+    if bundle_status != 200:
+        if not isinstance(bundle_body, bytes):
+            raise ValueError("Expected related source-derived error body to be bytes.")
+        return _workflow_error_page(bundle_status, bundle_body)
+    if isinstance(bundle_body, bytes):
+        raise ValueError("Expected related source-derived context records.")
+    return _html_response(
+        status,
+        _render_detail(payload, notice=notice, related_records=bundle_body),
+    )
+
+
+def _related_source_derived_context(
+    payload: Mapping[str, Any],
+    context: ReviewerUiContext,
+) -> tuple[int, list[Mapping[str, Any]] | bytes]:
+    detail = _mapping(payload, "detail")
+    source_record = _mapping(detail, "source_record")
+    source_status, _content_type, source_body = route_source_derived_api_response(
+        f"{SOURCE_DERIVED_API_PREFIX}?limit=100",
+        context.workflow_shell_context.source_derived_api_context,
+    )
+    if source_status != 200:
+        return source_status, source_body
+    source_payload = _json_object(source_body)
+    records = _record_list(source_payload, "records")
+    related_records = _related_source_records(source_record, records)
+    return 200, related_records
 
 
 def _workflow_detail_path(source_record_key: str) -> str:
@@ -426,7 +525,12 @@ def _reviewer_state_summary_for_item(item: Mapping[str, Any]) -> str:
     return "Open detail to inspect"
 
 
-def _render_detail(payload: Mapping[str, Any], *, notice: str | None) -> str:
+def _render_detail(
+    payload: Mapping[str, Any],
+    *,
+    notice: str | None,
+    related_records: list[Mapping[str, Any]],
+) -> str:
     detail = _mapping(payload, "detail")
     source_record = _mapping(detail, "source_record")
     identity = _mapping(source_record, "identity")
@@ -441,6 +545,7 @@ def _render_detail(payload: Mapping[str, Any], *, notice: str | None) -> str:
         main=f"""
     {_render_notice(notice)}
     {_render_scope_notice(_mapping(payload, 'workflow_shell'))}
+    {_render_detail_navigation(source_record_key)}
     <section aria-labelledby="source-derived-heading">
       <h2 id="source-derived-heading">Source-derived record</h2>
       <dl>
@@ -490,11 +595,233 @@ def _render_detail(payload: Mapping[str, Any], *, notice: str | None) -> str:
         <dt>Import validation status</dt>
         <dd>{_escape(_string(import_batch, 'validation_status'))}</dd>
       </dl>
+            {_render_traceability_summary(source_document, source_traceability, import_batch)}
     </section>
+        {_render_source_context_section(related_records, source_record_key)}
     {_render_reviewer_state_section(detail)}
-    {_render_note_form(source_record_key)}
-    {_render_status_form(source_record_key)}""",
+        {_render_review_actions(source_record_key)}""",
     )
+
+
+def _render_detail_navigation(source_record_key: str) -> str:
+    detail_href = (
+        f"{REVIEWER_UI_DETAIL_PATH}?"
+        f"{urlencode({'source_record_key': source_record_key})}"
+    )
+    return f"""<section aria-labelledby="detail-navigation-heading">
+      <h2 id="detail-navigation-heading">Detail navigation</h2>
+            <ul>
+                <li><a href="{REVIEWER_UI_RECORDS_PATH}">Back to reviewer records</a></li>
+                <li><a href="{_escape(detail_href)}">Refresh this seeded detail</a></li>
+                <li><a href="#source-context-heading">Review source-derived context</a></li>
+                <li><a href="#reviewer-state-heading">Review notes and statuses</a></li>
+                <li><a href="#review-actions-heading">Add note or status</a></li>
+            </ul>
+        </section>"""
+
+
+def _render_traceability_summary(
+        source_document: Mapping[str, Any],
+        source_traceability: Mapping[str, Any],
+        import_batch: Mapping[str, Any],
+) -> str:
+        rows = "\n".join(
+                _render_traceability_summary_row(label, value)
+                for label, value in (
+                        ("Source URL", source_document.get("source_url")),
+                        ("Raw SHA-256", source_document.get("raw_sha256")),
+                        ("Raw artifact path", source_document.get("raw_path")),
+                        ("Connector", source_document.get("connector_name")),
+                        ("Retrieved at", source_document.get("retrieved_at")),
+                        ("Report index", source_traceability.get("report_index")),
+                        ("Import validation", import_batch.get("validation_status")),
+                        ("Raw hash validation", import_batch.get("raw_hash_validation_status")),
+                )
+        )
+        return f"""<table>
+                <caption>Visible source traceability summary</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Traceability field</th>
+                        <th scope="col">Visibility</th>
+                    </tr>
+                </thead>
+                <tbody>
+{rows}
+                </tbody>
+            </table>"""
+
+
+def _render_traceability_summary_row(label: str, value: object) -> str:
+        visibility = "available" if _has_display_value(value) else "unknown or unavailable"
+        return f"""          <tr>
+                        <th scope="row">{_escape(label)}</th>
+                        <td>{_escape(visibility)}</td>
+                    </tr>"""
+
+
+def _render_source_context_section(
+        related_records: list[Mapping[str, Any]],
+        selected_source_record_key: str,
+) -> str:
+        rows = "\n".join(
+                _render_related_source_record_row(record, selected_source_record_key)
+                for record in related_records
+        )
+        if not rows:
+                rows = """        <tr>
+                    <td colspan="5">No related seeded source-derived rows are available.</td>
+                </tr>"""
+        return f"""<section id="source-context-heading" aria-labelledby="source-context-title">
+            <h2 id="source-context-title">Related seeded source-derived context</h2>
+            <p>This context comes from the same authenticated local/test source-derived
+            read seam as the selected record. Narrative fields are not shown in this
+            browser shell.</p>
+            {_render_source_context_summary(related_records)}
+            <table>
+                <caption>Safe related source-derived rows in the selected seeded bundle</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Entity type</th>
+                        <th scope="col">Stable source ID</th>
+                        <th scope="col">Source document ID</th>
+                        <th scope="col">Relationship</th>
+                        <th scope="col">Safe context shown</th>
+                    </tr>
+                </thead>
+                <tbody>
+{rows}
+                </tbody>
+            </table>
+        </section>"""
+
+
+def _render_source_context_summary(related_records: list[Mapping[str, Any]]) -> str:
+        counts = _related_entity_counts(related_records)
+        rows = "\n".join(
+                f"""        <tr>
+                    <th scope="row">{_escape(entity_type)}</th>
+                    <td>{count}</td>
+                </tr>"""
+                for entity_type, count in counts.items()
+        )
+        if not rows:
+                rows = """        <tr>
+                    <td colspan="2">No related source-derived rows are available.</td>
+                </tr>"""
+        return f"""<table>
+                <caption>Selected source-derived bundle summary</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Entity type</th>
+                        <th scope="col">Related rows</th>
+                    </tr>
+                </thead>
+                <tbody>
+{rows}
+                </tbody>
+            </table>"""
+
+
+def _render_related_source_record_row(
+        record: Mapping[str, Any],
+        selected_source_record_key: str,
+) -> str:
+    source_record_key = _string(record, "source_record_key")
+    entity_type = _string(record, "entity_type")
+    relationship = (
+        "Selected record"
+        if source_record_key == selected_source_record_key
+        else "Same seeded bundle"
+    )
+    return f"""        <tr>
+                    <th scope="row">{_escape(entity_type)}</th>
+                    <td>{_escape(_string(record, 'stable_source_id'))}</td>
+                    <td>{_escape(_string(record, 'source_document_id'))}</td>
+                    <td>{_escape(relationship)}</td>
+                    <td>{_escape(_safe_context_summary(record))}</td>
+                </tr>"""
+
+
+def _related_source_records(
+    selected_source_record: Mapping[str, Any],
+    records: list[Mapping[str, Any]],
+) -> list[Mapping[str, Any]]:
+    identity = _mapping(selected_source_record, "identity")
+    selected_source_record_key = _string(identity, "source_record_key")
+    selected_source_document = _mapping(selected_source_record, "source_document")
+    selected_source_document_id = _string(selected_source_document, "source_document_id")
+    selected_facility_id = _optional_string(identity, "facility_id")
+    related_records = [
+        record
+        for record in records
+        if _is_related_source_record(
+            record,
+            selected_source_record_key=selected_source_record_key,
+            selected_source_document_id=selected_source_document_id,
+            selected_facility_id=selected_facility_id,
+        )
+    ]
+    return sorted(
+        related_records,
+        key=lambda record: (
+            _SOURCE_CONTEXT_ENTITY_ORDER.get(_string(record, "entity_type"), 99),
+            _string(record, "stable_source_id"),
+        ),
+    )
+
+
+def _is_related_source_record(
+    record: Mapping[str, Any],
+    *,
+    selected_source_record_key: str,
+    selected_source_document_id: str,
+    selected_facility_id: str,
+) -> bool:
+    if _string(record, "source_record_key") == selected_source_record_key:
+        return True
+    if _optional_string(record, "source_document_id") == selected_source_document_id:
+        return True
+    if selected_facility_id != "unknown":
+        return _optional_string(record, "facility_id") == selected_facility_id
+    return False
+
+
+def _related_entity_counts(records: list[Mapping[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for record in records:
+        entity_type = _string(record, "entity_type")
+        counts[entity_type] = counts.get(entity_type, 0) + 1
+    return dict(
+        sorted(
+            counts.items(),
+            key=lambda item: (_SOURCE_CONTEXT_ENTITY_ORDER.get(item[0], 99), item[0]),
+        )
+    )
+
+
+def _safe_context_summary(record: Mapping[str, Any]) -> str:
+    entity_type = _string(record, "entity_type")
+    original_values = _mapping(record, "original_values")
+    fields = _SAFE_CONTEXT_FIELDS_BY_ENTITY.get(entity_type, ())
+    values = [
+        f"{field}: {_display_value(original_values[field])}"
+        for field in fields
+        if field in original_values and _has_display_value(original_values[field])
+    ]
+    if entity_type == "allegation":
+        values.append("allegation_text: hidden in this local/test UI")
+    if not values:
+        return "No safe scalar context fields available"
+    return "; ".join(values)
+
+
+def _has_display_value(value: object) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    return True
 
 
 def _render_reviewer_state_section(detail: Mapping[str, Any]) -> str:
@@ -511,14 +838,27 @@ def _render_reviewer_state_section(detail: Mapping[str, Any]) -> str:
     statuses = ", ".join(_string_items(summary.get("reviewer_statuses_present", [])))
     if not statuses:
         statuses = "None recorded"
+    payload_kinds = ", ".join(_string_items(summary.get("payload_kinds_present", [])))
+    if not payload_kinds:
+        payload_kinds = "None recorded"
+    latest_created_at = summary.get("latest_created_at")
+    latest_display = (
+        latest_created_at if isinstance(latest_created_at, str) else "None recorded"
+    )
     return f"""<section aria-labelledby="reviewer-state-heading">
       <h2 id="reviewer-state-heading">Reviewer-created state</h2>
       <p>Reviewer-created state is stored separately from the selected source-derived record.</p>
+      <p>UI actions add reviewer-created rows and audit rows; they do not edit
+      source-derived fields.</p>
       <dl>
         <dt>Total associated rows</dt>
         <dd>{_escape(str(_int_value(summary, 'total_associated_rows')))}</dd>
         <dt>Reviewer statuses present</dt>
         <dd>{_escape(statuses)}</dd>
+                <dt>Reviewer-created payload kinds present</dt>
+                <dd>{_escape(payload_kinds)}</dd>
+                <dt>Latest reviewer-created row</dt>
+                <dd>{_escape(latest_display)}</dd>
       </dl>
       <table>
         <caption>Reviewer-created notes and statuses for this source-derived record</caption>
@@ -536,6 +876,17 @@ def _render_reviewer_state_section(detail: Mapping[str, Any]) -> str:
         </tbody>
       </table>
     </section>"""
+
+
+def _render_review_actions(source_record_key: str) -> str:
+        return f"""<section id="review-actions-heading" aria-labelledby="review-actions-title">
+            <h2 id="review-actions-title">Reviewer actions</h2>
+            <p>These local/test actions write reviewer-created state through the
+            existing authenticated workflow actions. They do not edit source-derived
+            fields.</p>
+            {_render_note_form(source_record_key)}
+            {_render_status_form(source_record_key)}
+        </section>"""
 
 
 def _render_reviewer_state_row(record: Mapping[str, Any]) -> str:
@@ -573,7 +924,7 @@ def _actor_label(created_by: Mapping[str, Any]) -> str:
 
 def _render_note_form(source_record_key: str) -> str:
     return f"""<section aria-labelledby="note-form-heading">
-      <h2 id="note-form-heading">Add reviewer note</h2>
+    <h3 id="note-form-heading">Add reviewer note</h3>
       <form action="{REVIEWER_UI_NOTE_PATH}" method="post">
         <input type="hidden" name="source_record_key" value="{_escape(source_record_key)}">
         <p>
@@ -591,7 +942,7 @@ def _render_status_form(source_record_key: str) -> str:
         for status in REVIEWER_STATUS_VALUES
     )
     return f"""<section aria-labelledby="status-form-heading">
-      <h2 id="status-form-heading">Set reviewer status</h2>
+            <h3 id="status-form-heading">Set reviewer status</h3>
       <form action="{REVIEWER_UI_STATUS_PATH}" method="post">
         <input type="hidden" name="source_record_key" value="{_escape(source_record_key)}">
         <p>

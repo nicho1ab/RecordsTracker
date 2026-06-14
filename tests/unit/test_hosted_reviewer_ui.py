@@ -103,11 +103,15 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Local/test reviewer detail" in html
+    assert "Detail navigation" in html
+    assert "Back to reviewer records" in html
+    assert "Review source-derived context" in html
     assert "Source-derived record" in html
     assert "Safe source-derived values for the selected seeded record" in html
     assert "complaint_control_number" in html
     assert "32-CR-20220407124448" in html
     assert "Source traceability" in html
+    assert "Visible source traceability summary" in html
     assert "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports" in html
     assert "Raw SHA-256" in html
     assert "6088c9627374baac647e2f2a54f6e389cb68c1b92db42da00020aaf508a853bd" in html
@@ -117,8 +121,31 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "ccld:document:157806098:3" in html
     assert "Import batch ID" in html
     assert TEST_SCOPE.scope_id in html
+    assert "Selected source-derived bundle summary" in html
+    assert "Related seeded source-derived context" in html
+    assert "Safe related source-derived rows in the selected seeded bundle" in html
+    assert "facility" in html
+    assert "source_document" in html
+    assert "complaint" in html
+    assert "allegation" in html
+    assert "extraction_audit" in html
+    assert "facility_name: A. MIRIAM JAMISON" in html
+    assert "external_facility_number: 157806098" in html
+    assert "county: Kern" in html
+    assert "document_type: complaint_investigation_report" in html
+    assert "allegation_category: Staff conduct" in html
+    assert "allegation_category: Inadequate supervision" in html
+    assert "allegation_text: hidden in this local/test UI" in html
+    assert "field_name: facility_number" in html
+    assert "extraction_method: ccld_facility_report_html_labels" in html
+    assert "Facility clients are being mistreated" not in html
+    assert "adequate supervision to the facility clients" not in html
     assert "Reviewer-created state" in html
+    assert "UI actions add reviewer-created rows and audit rows" in normalized_html
+    assert "Reviewer-created payload kinds present" in html
+    assert "Latest reviewer-created row" in html
     assert "No reviewer-created state has been recorded" in html
+    assert "Reviewer actions" in html
     assert "Add reviewer note" in html
     assert f"action=\"{REVIEWER_UI_NOTE_PATH}\"" in html
     assert "Set reviewer status" in html
@@ -169,6 +196,9 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert "Reviewer note saved through the existing local/test workflow action." in html
     assert "Review source traceability before export." in html
     assert "reviewer_note_scaffold" in html
+    assert "Reviewer-created payload kinds present" in html
+    assert "Latest reviewer-created row" in html
+    assert "Related seeded source-derived context" in html
     assert "Fixture UI Note Reviewer (tester)" in html
     assert "Reviewer-created; source-derived record unchanged" in html
     assert audit_event["source_record_key"] == COMPLAINT_KEY
@@ -225,6 +255,9 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "reviewer_status_scaffold" in html
     assert "needs_follow_up" in html
     assert "Reviewer statuses present" in html
+    assert "Reviewer-created payload kinds present" in html
+    assert "Latest reviewer-created row" in html
+    assert "Related seeded source-derived context" in html
     assert "Fixture UI Status Reviewer (tester)" in html
     assert audit_event["source_record_key"] == COMPLAINT_KEY
     assert audit_event["context_metadata"]["state_payload_keys"] == [
