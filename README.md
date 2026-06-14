@@ -145,17 +145,20 @@ public-record review notes.
 - Use [docs/developer/hosted-scaffold.md](docs/developer/hosted-scaffold.md) to
    run the local hosted tester MVP scaffold. The scaffold is a placeholder app
    shell with a controlled seeded corpus import path for validated local
-   pipeline-output artifacts; it does not implement reviewer workflows,
-   authentication, production import automation, reset/reload, exports,
-   deployment, QNAP, Azure, or AWS.
+   pipeline-output artifacts and a local/test database-backed read service for
+   staged source-derived records; it does not implement HTTP API routes,
+   reviewer workflows, authentication, production import automation,
+   reset/reload, exports, deployment, QNAP, Azure, or AWS.
    Start with `scripts/check-hosted-scaffold-local.ps1` to verify local Python
    and development-tool prerequisites without installing software or requiring
    admin rights.
    The local `/source-records` route shows fixture/sample source-derived records
    only, with local sample filtering/search controls, sample
    source-traceability summary panels, sample traceability-style fields, and no
-   live data, database-backed API reads, authentication, or reviewer-created
-   state persistence. The local `/facilities` route shows a read-only facility master
+   live data, HTTP API route reads, authentication, or reviewer-created state
+   persistence. Database-backed service reads are limited to staged seeded
+   corpus records and are not wired into the sample routes. The local
+   `/facilities` route shows a read-only facility master
    sample view backed only by committed tiny public-source facility fixtures and
    manifest placeholder metadata. Facility detail pages include fixture-only
    source coverage indicators and related fixture/sample source-record links

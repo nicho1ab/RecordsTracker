@@ -13,6 +13,7 @@ src/ccld_complaints/
     persistence.py
     schema_api_scaffold.py
     seeded_import.py
+    source_derived_reads.py
   storage/
   quality/
   utils/
@@ -40,9 +41,12 @@ migrations/
 11. Use the hosted seeded import path only to stage source-derived records from
   controlled validated pipeline-output artifacts into PostgreSQL/Alembic import
   batch and source-derived tables.
-12. Keep reviewer-created state, reset/reload behavior, auth, API routes, live
-  crawling, connector execution, and production automation in future focused
-  branches until those layers are implemented and tested.
+12. Use the hosted source-derived read service only for local/test list and
+  fetch access to staged seeded corpus records with import batch context and
+  preserved source traceability.
+13. Keep reviewer-created state, reset/reload behavior, auth, HTTP API routes,
+  live crawling, connector execution, and production automation in future
+  focused branches until those layers are implemented and tested.
 
 ## Hosted scaffold boundary
 
@@ -83,20 +87,23 @@ The scaffold now includes minimal PostgreSQL/Alembic wiring and a controlled
 seeded corpus import path: no-secret database URL configuration validation, an
 Alembic script location, a narrow domain migration for import batch metadata and
 source-derived record staging, a local validated JSON artifact importer, and
-scaffold/API boundary descriptors for future source-derived API reads and
-reviewer-created state. The next hosted tester MVP work can move toward
-database-backed source-derived API reads, focused auth integration,
-reset/reload planning, and the first authenticated tester workflow when each
-branch validates its layer.
+scaffold/API boundary descriptors for future source-derived API routes and
+reviewer-created state. It also includes a narrow database-backed
+source-derived read service for local/test list and fetch access to staged
+records while preserving import batch context, original source-derived values,
+and source traceability. The next hosted tester MVP work can move toward focused
+auth integration, HTTP/API route decisions, reset/reload planning, and the first
+authenticated tester workflow when each branch validates its layer.
 
 The scaffold does not implement authentication, authorization, production
 domain schema beyond the seeded import table group, API routes,
-database-backed reads, production import automation, queues, annotations,
-corrections, exports, tester feedback, audit trail, reset/reload, hosted live
-crawling, hosted connector execution, deployment, source-derived canonical
-field changes, reviewer-created state persistence, or extraction behavior. It
-does not require Docker, QNAP Container Station, Azure, AWS, a public URL,
-secrets, or cloud resources.
+production import automation, queues, annotations, corrections, exports, tester
+feedback, audit trail, reset/reload, hosted live crawling, hosted connector
+execution, deployment, source-derived canonical field changes,
+reviewer-created state persistence, or extraction behavior. Its database-backed
+reads are limited to the staged seeded corpus service seam and are not wired to
+HTTP routes or reviewer workflows. It does not require Docker, QNAP Container
+Station, Azure, AWS, a public URL, secrets, or cloud resources.
 
 See `docs/developer/hosted-scaffold.md` for local run and smoke-check commands.
 
