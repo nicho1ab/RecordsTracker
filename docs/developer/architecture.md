@@ -67,7 +67,9 @@ migrations/
 18. Use the hosted audit history read route seam only for local/test
   authenticated JSON list and fetch access over those scaffold audit rows.
 19. Use the hosted reset/reload dry-run seam only for local/test authenticated
-  planning over staged seeded corpus metadata, without mutating data.
+  planning over staged seeded corpus metadata, with optional persisted
+  operational planning metadata when explicitly requested, without mutating
+  source-derived, reviewer-created, or audit data.
 20. Keep full reviewer-created workflows, annotations, corrections, exports,
   full audit coverage, audit UI, audit export, reset/reload execution, real login flow, auth
   middleware, provider integration, production API framework behavior, live
@@ -114,7 +116,8 @@ seeded corpus import path: no-secret database URL configuration validation, an
 Alembic script location, a narrow domain migration for import batch metadata and
 source-derived record staging, a second narrow domain migration for one
 reviewer-created state scaffold table, a third narrow domain migration for one
-audit event scaffold table, a local validated JSON artifact importer,
+audit event scaffold table, a fourth narrow domain migration for one reset/reload
+operational planning metadata scaffold table, a local validated JSON artifact importer,
 and scaffold/API boundary descriptors for future source-derived API routes and
 reviewer-created state. It also includes a narrow database-backed
 source-derived read service for local/test list and fetch access to staged
@@ -134,7 +137,8 @@ created scaffold row counts, scoped audit scaffold row counts, future reviewer-
 created state handling options, required permissions, validation requirements,
 audit requirements, and deferred destructive actions without deleting,
 overwriting, archiving, importing, reloading, or creating new dry-run audit
-events. The reviewer-created state scaffold service can create and read
+events; it can optionally persist a separate non-secret planning metadata record
+when explicitly requested by local/test code. The reviewer-created state scaffold service can create and read
 placeholder review-item-state rows only after authenticated actor, role, account
 status, scope, and source-derived reference checks pass; it does not implement
 full reviewer workflows. Successful reviewer-created state scaffold writes also
@@ -142,8 +146,8 @@ create a separate audit scaffold row with actor, permission, scope, target, and
 source-derived context; if the audit row cannot be created, the reviewer-created
 state write is rolled back. The local/test audit history read route seam can list
 or fetch those audit rows only after audit-read authorization passes. The next hosted tester MVP work can move toward real
-provider integration, reset/reload execution planning with persisted operational
-metadata, fuller audit coverage, and stateful reviewer-created workflow layers
+provider integration, fuller reset/reload execution planning beyond persisted
+planning metadata, fuller audit coverage, and stateful reviewer-created workflow layers
 when each branch validates its layer.
 
 The scaffold does not implement real provider login, token validation, sessions,

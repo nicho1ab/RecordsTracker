@@ -47,14 +47,17 @@ workflow shell over the route seam, a narrow local/test reviewer-created state
 persistence scaffold table and service boundary, a narrow local/test audit event
 persistence scaffold for successful reviewer-created state scaffold writes only,
 a local/test authenticated audit history read route seam over those audit rows,
-a local/test authenticated reset/reload dry-run route seam, and scaffold/API
+a local/test authenticated reset/reload dry-run route seam, a separate
+local/test reset/reload operational planning metadata scaffold, and scaffold/API
 boundary descriptors. The dry-run reports
 what a future seeded corpus reset/reload would affect, including existing import
 batch metadata, source-derived record counts by entity, future reviewer-created
 state handling modes, required permissions, validation requirements, audit
 requirements, scoped reviewer-created scaffold row counts, scoped audit scaffold
 row counts, and deferred
-destructive actions, without mutating data. This path does
+destructive actions, without mutating data. When explicitly requested by
+local/test code, it can persist one non-secret planning metadata record without
+executing reset/reload. This path does
 not implement real login flow, provider registration, tokens, cookies, auth
 middleware, production API framework behavior, run migrations against a local
 database during scaffold tests, load live public data, run connector execution,
@@ -317,10 +320,12 @@ ADR-0013 defines the operational reset/reload boundary: seeded source-derived
 data must reload from validated pipeline output, reviewer-created state must be
 preserved, archived, or explicitly cleared only through an elevated audited mode,
 and reset/reload execution remains deferred until schema, API, permission,
-audit persistence, reviewer-created state, operational metadata, and import
-artifact decisions are implemented. The current local/test dry-run seam supports
-planning only and does not execute reset/reload or persist operational state; it
-counts existing audit scaffold rows but does not create new audit events.
+audit persistence, reviewer-created state, broader operational metadata, and
+import artifact decisions are implemented. The current local/test dry-run seam
+supports planning only and does not execute reset/reload. It can persist a
+separate planning metadata record only when explicitly requested by local/test
+code, and it counts existing audit scaffold rows but does not create new audit
+events.
 
 ### Operational boundaries
 

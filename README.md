@@ -154,7 +154,9 @@ public-record review notes.
    event scaffold for successful reviewer-created state scaffold writes only, a
    narrow local/test authenticated audit history read route seam for those audit
    rows, and a local/test authenticated reset/reload dry-run route seam that reports
-   what a future seeded corpus reset/reload would affect without mutating data. It does not
+   what a future seeded corpus reset/reload would affect and can optionally
+   persist a separate operational planning metadata record when explicitly
+   requested by local/test code. It does not
    implement real login flow, auth middleware, full reviewer workflows,
    annotations, corrections, review status UI, production import automation,
    full audit coverage, audit UI, audit export, reset/reload execution, exports,
@@ -170,7 +172,10 @@ public-record review notes.
    source-derived API route seam, and the read-only reviewer workflow shell are
    limited to local/test seams and are not wired into the sample UI routes.
    The reset/reload dry-run seam is also local/test only and requires an
-   explicit database, actor, and scope context from tests or local callers. The
+   explicit database, actor, and scope context from tests or local callers. Its
+   operational metadata scaffold stores dry-run planning metadata only, requires
+   import/reload permission, rejects unauthenticated, disabled or revoked,
+   role-denied, and out-of-scope actors, and does not execute reset/reload. The
    reviewer-created state scaffold is also local/test only, requires explicit
    authenticated actor context and reviewer-state write permission for writes,
    and stores scaffold rows separately from source-derived records. The audit

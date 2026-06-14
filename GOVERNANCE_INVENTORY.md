@@ -28,10 +28,12 @@
   authenticated actor attribution and stable source-derived record references,
   a narrow local/test audit event persistence scaffold for successful reviewer-
   created state scaffold writes only, a narrow local/test authenticated audit
-  history read route seam over those scaffold audit rows, and a local/test authenticated reset/reload
+  history read route seam over those scaffold audit rows, a local/test authenticated reset/reload
   dry-run seam that reports seeded import batch, source-derived record,
   reviewer-created scaffold row, and audit scaffold row impact without mutating
-  data, plus source-derived versus reviewer-created state boundary descriptors.
+  data, and a narrow local/test reset/reload operational planning metadata
+  scaffold that persists explicit dry-run planning records only, plus source-
+  derived versus reviewer-created state boundary descriptors.
 - Local-only sample filtering/search: implemented for the hosted source-record
   shell using in-memory fixture/sample records only.
 - Fixture/sample-only source traceability summary panels: implemented for the
@@ -53,11 +55,12 @@
   created workflows, queues, annotations, corrections, exports, full audit trail, reset/reload
   execution, deployment, QNAP, Azure, AWS, or public URL behavior. Current API behavior is
   limited to local/test source-derived read handlers, read-only reviewer
-  workflow shell handlers, reviewer-created state scaffold service helpers, and
-  reset/reload dry-run handlers that require explicit test database, actor, and
-  scope context. Current auth behavior is limited to local/test service, route,
-  workflow-shell, reviewer-created state, and dry-run guards over fixture actor
-  contexts.
+  workflow shell handlers, reviewer-created state scaffold service helpers,
+  reset/reload dry-run handlers, and explicit reset/reload planning metadata
+  helpers that require test database, actor, and scope context. Current auth
+  behavior is limited to local/test service, route, workflow-shell,
+  reviewer-created state, audit, dry-run, and planning-metadata guards over
+  fixture actor contexts.
 - Datasette role: Datasette remains retained for validation, inspection,
   debugging, local exploration, export support, and transition comparison. It is
   not the governed primary future reviewer UX.
@@ -172,10 +175,11 @@
   database-backed source-derived read service, local/test auth boundary
   scaffold, local/test source-derived read route seam, and first local/test
   read-only authenticated tester workflow shell, reviewer-created state
-  persistence scaffold, narrow audit event scaffold, and local/test
-  reset/reload dry-run planning seam are now in place. Next work should move to
-  real provider integration, reset/reload execution planning with persisted
-  operational metadata, export/feedback persistence, fuller audit coverage, or
+  persistence scaffold, narrow audit event scaffold, local/test reset/reload
+  dry-run planning seam, and opt-in reset/reload operational metadata scaffold
+  are now in place. Next work should move to real provider integration, fuller
+  reset/reload execution planning beyond persisted planning metadata,
+  export/feedback persistence, fuller audit coverage, or
   stateful reviewer-created workflow layers, not repeat those completed items.
 - Local-only/sample-only boundaries remain active. Sample records must stay
   clearly marked as fixture/sample records and must not be presented as live,
@@ -206,7 +210,8 @@
   authenticated dry-run seam that reports seeded corpus reset/reload impact and
   scoped reviewer-created scaffold and audit scaffold row counts without
   deleting, overwriting, archiving, importing, reloading, or creating new dry-run
-  audit events. ADR-0013 still defines reset/reload and audit expectations at
+  audit events, plus an opt-in operational metadata scaffold for persisted
+  dry-run planning records. ADR-0013 still defines reset/reload and audit expectations at
   the operational boundary;
   implementation still needs
   comparison against retained SQLite/Datasette validation output, production
