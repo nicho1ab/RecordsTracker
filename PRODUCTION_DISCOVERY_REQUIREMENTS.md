@@ -212,6 +212,12 @@ ADR-0011 defines the hosted tester MVP authentication and access boundary.
 Anonymous hosted tester access is not allowed; tester access must be explicitly
 invited or provisioned, role-scoped, auditable where feasible, and revocable.
 
+ADR-0014 chooses a managed standards-based OpenID Connect/OAuth 2.0 provider
+class for the hosted tester MVP. Before reviewer-created state is enabled,
+implementation must enforce authenticated access, role and permission checks,
+project or corpus scope, disabled-account rejection, and actor identity context
+needed for audit logging.
+
 ### Seeded test corpus
 
 The tester environment must use a seeded, documented test corpus with source
@@ -281,11 +287,12 @@ ADR-0006 defines the hosted tester MVP architecture boundary and confirms that a
 primary reviewer application layer must remain separate from Datasette.
 ADR-0012 allows hosted tester MVP implementation to begin through a
 scaffold-first sequence after the accepted data-domain, import/sync,
-schema/migration, and authentication/access boundaries. ADR-0013 now defines
-the operational boundaries for audit logging, export generation, reset/reload,
-and tester data retention. Before hosted tester MVP implementation expands into
-external tester use, implementation PRs or equivalent governance updates must
-define the concrete affected layer:
+schema/migration, and authentication/access boundaries. ADR-0013 defines the
+operational boundaries for audit logging, export generation, reset/reload, and
+tester data retention. ADR-0014 chooses the authentication provider class and
+role implementation direction. Before hosted tester MVP implementation expands
+into external tester use, implementation PRs or equivalent governance updates
+must define the concrete affected layer:
 
 - Where review state, annotations, correction proposals, feedback, and export
   packet decisions are persisted.
@@ -306,6 +313,10 @@ define the concrete affected layer:
 - How ADR-0011's admin, tester reviewer, read-only tester, and
   developer/operator role boundaries are mapped into implementation without
   exposing reviewer-created state as public-source facts.
+- How ADR-0014's managed OpenID Connect/OAuth 2.0 provider class, identity
+  claims, actor categories, project/corpus scope, access approval, disablement,
+  and access review boundaries are mapped into the implementation layer.
 - Which accessibility checks are required before tester access is enabled.
-- Which provider, database product, migration tooling, API framework, and
-  storage choices are selected for the hosted tester MVP layer being built.
+- Which concrete provider instance, database product, migration tooling, API
+  framework, and storage choices are selected for the hosted tester MVP layer
+  being built.

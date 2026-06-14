@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added ADR-0014 choosing a managed standards-based OpenID Connect/OAuth 2.0
+	provider class and hosted tester MVP role implementation direction, unblocking
+	focused authentication, database/migration, schema/API, and first
+	authenticated tester workflow branches without adding app code, auth
+	middleware, API routes, schemas, tables, migrations, secrets, provider
+	configuration, hosted URLs, deployment, imports, live crawling, or connector
+	execution.
 - Added ADR-0013 defining hosted tester MVP operational boundaries for audit
 	logging, export generation, reset/reload, and tester data retention,
 	unblocking the next product-moving implementation path toward provider-specific

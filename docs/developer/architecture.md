@@ -63,10 +63,11 @@ data, import/sync output, authentication state, or reviewer-created state.
 
 ADR-0013 now defines the product-enabling operational boundaries for audit
 logging, export generation, reset/reload, and tester data retention. The next
-hosted tester MVP work can move toward provider-specific authentication,
-database/migration selection, minimal hosted schema/API scaffolding, seeded
-corpus import/reset, and the first authenticated tester workflow when each
-branch validates its layer.
+ADR-0014 now chooses a managed standards-based OpenID Connect/OAuth 2.0
+provider class and role implementation direction. The next hosted tester MVP
+work can move toward database/migration selection, minimal hosted schema/API
+scaffolding, focused auth integration, seeded corpus import/reset, and the
+first authenticated tester workflow when each branch validates its layer.
 
 The scaffold does not implement authentication, authorization, production
 schema, migrations, import/sync, queues, annotations, corrections, exports,
