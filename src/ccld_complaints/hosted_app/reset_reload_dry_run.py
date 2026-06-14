@@ -5,8 +5,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal
 from urllib.parse import parse_qs, urlparse
+from uuid import uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import JSON, Boolean, CheckConstraint, Column, String, Table, Text, func, select
 from sqlalchemy.engine import Connection, RowMapping
 
 from ccld_complaints.hosted_app.audit_events import hosted_audit_events
@@ -29,6 +30,7 @@ from ccld_complaints.hosted_app.seeded_import import (
     SOURCE_DERIVED_ENTITY_TYPES,
     SourceDerivedEntityType,
     hosted_import_batches,
+    hosted_seeded_import_metadata,
     hosted_source_derived_records,
 )
 
@@ -42,6 +44,61 @@ REVIEWER_STATE_HANDLING_OPTIONS: tuple[ReviewerStateHandlingMode, ...] = (
     "clear",
 )
 DEFAULT_REVIEWER_STATE_HANDLING_MODE: ReviewerStateHandlingMode = "preserve"
+ResetReloadRequestedOperationMode = Literal["dry_run"]
+
+hosted_reset_reload_planning_metadata = Table(
+    "hosted_reset_reload_planning_metadata",
+    hosted_seeded_import_metadata,
+    Column("planning_record_id", String(96), primary_key=True),
+    Column("generated_at", String(40), nullable=False),
+    Column("operation", String(80), nullable=False),
+    Column("requested_operation_mode", String(32), nullable=False),
+    Column("source_scope_type", String(32), nullable=False),
+    Column("source_scope_id", String(96), nullable=False),
+    Column("reviewer_state_handling_mode", String(16), nullable=False),
+    Column("actor_provider_subject", Text, nullable=False),
+    Column("actor_provider_issuer", Text, nullable=False),
+    Column("actor_display_name", Text, nullable=True),
+    Column("actor_category", String(32), nullable=False),
+    Column("authorization_permission", String(64), nullable=False),
+    Column("source_derived_summary", JSON, nullable=False),
+    Column("reviewer_created_state_summary", JSON, nullable=False),
+    Column("audit_event_summary", JSON, nullable=False),
+    Column("validation_summary", JSON, nullable=False),
+    Column("planning_context", JSON, nullable=False),
+    Column("future_execution_permissions", JSON, nullable=False),
+    Column("deferred_actions", JSON, nullable=False),
+    Column("data_mutations_performed", Boolean, nullable=False),
+    CheckConstraint(
+        "operation = 'seeded_corpus_reset_reload_dry_run'",
+        name="ck_hosted_reset_reload_planning_metadata_operation",
+    ),
+    CheckConstraint(
+        "requested_operation_mode = 'dry_run'",
+        name="ck_hosted_reset_reload_planning_metadata_requested_mode",
+    ),
+    CheckConstraint(
+        "reviewer_state_handling_mode IN ('preserve', 'archive', 'clear')",
+        name="ck_hosted_reset_reload_planning_metadata_state_mode",
+    ),
+    CheckConstraint(
+        "authorization_permission = 'import_reload'",
+        name="ck_hosted_reset_reload_planning_metadata_permission",
+    ),
+)
+
+SECRET_CONTEXT_MARKERS = (
+    "authorization",
+    "client_secret",
+    "connection string",
+    "connection_string",
+    "cookie",
+    "password",
+    "private_header",
+    "private header",
+    "secret",
+    "token",
+)
 
 
 @dataclass(frozen=True)
@@ -105,6 +162,29 @@ class SeededCorpusResetReloadDryRunPlan:
     data_mutations_performed: bool = False
 
 
+@dataclass(frozen=True)
+class ResetReloadPlanningMetadataRead:
+    planning_record_id: str
+    generated_at: str
+    operation: str
+    requested_operation_mode: ResetReloadRequestedOperationMode
+    scope: HostedAccessScope
+    reviewer_state_handling_mode: ReviewerStateHandlingMode
+    actor_provider_subject: str
+    actor_provider_issuer: str
+    actor_display_name: str | None
+    actor_category: str
+    authorization_permission: str
+    source_derived_summary: Mapping[str, Any]
+    reviewer_created_state_summary: Mapping[str, Any]
+    audit_event_summary: Mapping[str, Any]
+    validation_summary: Mapping[str, Any]
+    planning_context: Mapping[str, Any]
+    future_execution_permissions: tuple[str, ...]
+    deferred_actions: tuple[str, ...]
+    data_mutations_performed: bool
+
+
 def route_seeded_corpus_reset_reload_dry_run_response(
     path: str,
     context: SeededCorpusResetReloadDryRunContext | None,
@@ -125,13 +205,24 @@ def route_seeded_corpus_reset_reload_dry_run_response(
                 "Reset/reload dry-run route not found.",
             )
         reviewer_state_mode = _reviewer_state_mode(query_values)
+        persist_planning_metadata = _persist_planning_metadata(query_values)
         plan = plan_seeded_corpus_reset_reload_dry_run(
             context.connection,
             context.actor,
             scope=context.scope,
             reviewer_state_mode=reviewer_state_mode,
         )
-        return _json_response(200, _plan_payload(plan))
+        persisted_metadata = None
+        if persist_planning_metadata:
+            persisted_metadata = persist_seeded_corpus_reset_reload_planning_metadata(
+                context.connection,
+                plan,
+                planning_context={
+                    "persisted_from": "reset_reload_dry_run_route",
+                    "route_path": parsed_url.path,
+                },
+            )
+        return _json_response(200, _plan_payload(plan, persisted_metadata))
     except HostedAuthenticationRequiredError as error:
         return _json_error(401, "authentication_required", str(error))
     except HostedAccountDisabledError as error:
@@ -166,7 +257,7 @@ def plan_seeded_corpus_reset_reload_dry_run(
         reviewer_created_state_impact=_reviewer_created_state_impact(
             connection,
             scope,
-            reviewer_state_mode
+            reviewer_state_mode,
         ),
         audit_event_impact=_audit_event_impact(connection, scope),
         future_execution_permissions=_future_execution_permissions(reviewer_state_mode),
@@ -198,9 +289,153 @@ def plan_seeded_corpus_reset_reload_dry_run(
             "clear reviewer-created state",
             "import or reload seeded corpus artifacts",
             "run live crawling or hosted connector execution",
-            "persist audit events or operational reset metadata",
+            "persist audit events for reset/reload planning",
+            "execute reset/reload from persisted operational metadata",
         ),
     )
+
+
+def create_seeded_corpus_reset_reload_planning_metadata(
+    connection: Connection,
+    actor: AuthenticatedActor | None,
+    *,
+    scope: HostedAccessScope,
+    reviewer_state_mode: ReviewerStateHandlingMode = DEFAULT_REVIEWER_STATE_HANDLING_MODE,
+    planning_context: Mapping[str, Any] | None = None,
+) -> ResetReloadPlanningMetadataRead:
+    plan = plan_seeded_corpus_reset_reload_dry_run(
+        connection,
+        actor,
+        scope=scope,
+        reviewer_state_mode=reviewer_state_mode,
+    )
+    return persist_seeded_corpus_reset_reload_planning_metadata(
+        connection,
+        plan,
+        planning_context={} if planning_context is None else planning_context,
+    )
+
+
+def persist_seeded_corpus_reset_reload_planning_metadata(
+    connection: Connection,
+    plan: SeededCorpusResetReloadDryRunPlan,
+    *,
+    planning_context: Mapping[str, Any],
+) -> ResetReloadPlanningMetadataRead:
+    _require_non_secret_mapping(planning_context, "planning_context")
+    planning_record_id = f"reset-reload-plan:{uuid4().hex}"
+    values = {
+        "planning_record_id": planning_record_id,
+        "generated_at": plan.authorized.authorized_at,
+        "operation": plan.operation,
+        "requested_operation_mode": "dry_run",
+        "source_scope_type": plan.scope.scope_type,
+        "source_scope_id": plan.scope.scope_id,
+        "reviewer_state_handling_mode": (
+            plan.reviewer_created_state_impact.selected_handling_mode
+        ),
+        "actor_provider_subject": plan.authorized.actor.provider_subject,
+        "actor_provider_issuer": plan.authorized.actor.provider_issuer,
+        "actor_display_name": plan.authorized.actor.display_name,
+        "actor_category": plan.authorized.actor.actor_category,
+        "authorization_permission": plan.authorized.permission,
+        "source_derived_summary": _source_derived_impact_payload(
+            plan.source_derived_impact
+        ),
+        "reviewer_created_state_summary": _reviewer_created_state_impact_payload(
+            plan.reviewer_created_state_impact
+        ),
+        "audit_event_summary": _audit_event_impact_payload(plan.audit_event_impact),
+        "validation_summary": {
+            "validation_requirements": list(plan.validation_requirements),
+            "audit_requirements": list(plan.audit_requirements),
+        },
+        "planning_context": dict(planning_context),
+        "future_execution_permissions": list(plan.future_execution_permissions),
+        "deferred_actions": list(plan.deferred_actions),
+        "data_mutations_performed": plan.data_mutations_performed,
+    }
+    connection.execute(hosted_reset_reload_planning_metadata.insert().values(**values))
+    return _planning_metadata_from_row(
+        connection.execute(
+            select(hosted_reset_reload_planning_metadata).where(
+                hosted_reset_reload_planning_metadata.c.planning_record_id
+                == planning_record_id
+            )
+        )
+        .mappings()
+        .one()
+    )
+
+
+def list_seeded_corpus_reset_reload_planning_metadata(
+    connection: Connection,
+    actor: AuthenticatedActor | None,
+    *,
+    scope: HostedAccessScope,
+    limit: int = 100,
+    offset: int = 0,
+) -> tuple[ResetReloadPlanningMetadataRead, ...]:
+    if limit < 1:
+        raise ValueError("Reset/reload planning metadata list limit must be at least 1.")
+    if offset < 0:
+        raise ValueError("Reset/reload planning metadata list offset must be at least 0.")
+    require_permission(
+        actor,
+        permission=IMPORT_RELOAD_PERMISSION,
+        scope=scope,
+        target=AuthorizationTarget("import_batch", scope.scope_id),
+    )
+    query = (
+        select(hosted_reset_reload_planning_metadata)
+        .where(
+            hosted_reset_reload_planning_metadata.c.source_scope_type == scope.scope_type,
+            hosted_reset_reload_planning_metadata.c.source_scope_id == scope.scope_id,
+        )
+        .order_by(
+            hosted_reset_reload_planning_metadata.c.generated_at,
+            hosted_reset_reload_planning_metadata.c.planning_record_id,
+        )
+        .limit(limit)
+        .offset(offset)
+    )
+    return tuple(
+        _planning_metadata_from_row(row)
+        for row in connection.execute(query).mappings().all()
+    )
+
+
+def get_seeded_corpus_reset_reload_planning_metadata(
+    connection: Connection,
+    actor: AuthenticatedActor | None,
+    *,
+    scope: HostedAccessScope,
+    planning_record_id: str,
+) -> ResetReloadPlanningMetadataRead | None:
+    if not planning_record_id.strip():
+        raise ValueError("Reset/reload planning metadata ID is required.")
+    require_permission(
+        actor,
+        permission=IMPORT_RELOAD_PERMISSION,
+        scope=scope,
+        target=AuthorizationTarget("import_batch", planning_record_id),
+    )
+    row = (
+        connection.execute(
+            select(hosted_reset_reload_planning_metadata).where(
+                hosted_reset_reload_planning_metadata.c.source_scope_type
+                == scope.scope_type,
+                hosted_reset_reload_planning_metadata.c.source_scope_id == scope.scope_id,
+                hosted_reset_reload_planning_metadata.c.planning_record_id
+                == planning_record_id,
+            )
+        )
+        .mappings()
+        .one_or_none()
+    )
+    if row is None:
+        return None
+    return _planning_metadata_from_row(row)
 
 
 def _source_derived_impact(
@@ -278,7 +513,7 @@ def _reviewer_created_state_impact(
         planning_note=(
             "A narrow reviewer-created state scaffold table is implemented, so this "
             "dry-run counts scoped scaffold rows but does not archive, clear, relink, "
-            "or persist operational reset/reload state."
+            "or execute reset/reload."
         ),
     )
 
@@ -328,6 +563,19 @@ def _reviewer_state_mode(
     return "clear"
 
 
+def _persist_planning_metadata(
+    query_values: Mapping[str, list[str]],
+) -> bool:
+    raw_value = _optional_query_value(query_values, "persist_planning_metadata")
+    if raw_value is None:
+        return False
+    if raw_value == "true":
+        return True
+    if raw_value == "false":
+        return False
+    raise ValueError("persist_planning_metadata must be 'true' or 'false'.")
+
+
 def _optional_query_value(
     query_values: Mapping[str, list[str]],
     key: str,
@@ -341,8 +589,11 @@ def _optional_query_value(
     return value
 
 
-def _plan_payload(plan: SeededCorpusResetReloadDryRunPlan) -> dict[str, Any]:
-    return {
+def _plan_payload(
+    plan: SeededCorpusResetReloadDryRunPlan,
+    persisted_metadata: ResetReloadPlanningMetadataRead | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
         "dry_run": plan.dry_run,
         "operation": plan.operation,
         "scope": {
@@ -367,6 +618,17 @@ def _plan_payload(plan: SeededCorpusResetReloadDryRunPlan) -> dict[str, Any]:
             "dry_run_does_not_execute_reset_reload": True,
         },
     }
+    if persisted_metadata is not None:
+        payload["operational_metadata"] = {
+            "persisted": True,
+            "planning_record_id": persisted_metadata.planning_record_id,
+            "generated_at": persisted_metadata.generated_at,
+            "requested_operation_mode": persisted_metadata.requested_operation_mode,
+            "reviewer_state_handling_mode": (
+                persisted_metadata.reviewer_state_handling_mode
+            ),
+        }
+    return payload
 
 
 def _authorization_payload(decision: AuthorizationDecision) -> dict[str, Any]:
@@ -432,6 +694,59 @@ def _audit_event_impact_payload(impact: AuditEventImpact) -> dict[str, Any]:
         "current_event_count": impact.current_event_count,
         "planning_note": impact.planning_note,
     }
+
+
+def _planning_metadata_from_row(row: RowMapping) -> ResetReloadPlanningMetadataRead:
+    return ResetReloadPlanningMetadataRead(
+        planning_record_id=_string_value(row, "planning_record_id"),
+        generated_at=_string_value(row, "generated_at"),
+        operation=_string_value(row, "operation"),
+        requested_operation_mode=_requested_operation_mode(row),
+        scope=HostedAccessScope(
+            _scope_type(row),
+            _string_value(row, "source_scope_id"),
+        ),
+        reviewer_state_handling_mode=_planning_reviewer_state_mode(row),
+        actor_provider_subject=_string_value(row, "actor_provider_subject"),
+        actor_provider_issuer=_string_value(row, "actor_provider_issuer"),
+        actor_display_name=_optional_string_value(row, "actor_display_name"),
+        actor_category=_string_value(row, "actor_category"),
+        authorization_permission=_string_value(row, "authorization_permission"),
+        source_derived_summary=_mapping_value(row, "source_derived_summary"),
+        reviewer_created_state_summary=_mapping_value(
+            row, "reviewer_created_state_summary"
+        ),
+        audit_event_summary=_mapping_value(row, "audit_event_summary"),
+        validation_summary=_mapping_value(row, "validation_summary"),
+        planning_context=_mapping_value(row, "planning_context"),
+        future_execution_permissions=_string_tuple_value(
+            row, "future_execution_permissions"
+        ),
+        deferred_actions=_string_tuple_value(row, "deferred_actions"),
+        data_mutations_performed=_bool_value(row, "data_mutations_performed"),
+    )
+
+
+def _requested_operation_mode(row: RowMapping) -> ResetReloadRequestedOperationMode:
+    value = _string_value(row, "requested_operation_mode")
+    if value == "dry_run":
+        return "dry_run"
+    raise ValueError(f"Unknown reset/reload requested operation mode: {value}")
+
+
+def _planning_reviewer_state_mode(row: RowMapping) -> ReviewerStateHandlingMode:
+    value = _string_value(row, "reviewer_state_handling_mode")
+    if value == "preserve":
+        return "preserve"
+    if value == "archive":
+        return "archive"
+    if value == "clear":
+        return "clear"
+    raise ValueError(f"Unknown reset/reload reviewer state handling mode: {value}")
+
+
+def _scope_type(row: RowMapping) -> Any:
+    return _string_value(row, "source_scope_type")
 
 
 def _import_batch_impact(row: RowMapping) -> ImportBatchImpact:
@@ -500,6 +815,20 @@ def _int_mapping_value(row: RowMapping, key: str) -> Mapping[str, int]:
     return counts
 
 
+def _mapping_value(row: RowMapping, key: str) -> Mapping[str, Any]:
+    value = row[key]
+    if not isinstance(value, Mapping):
+        raise TypeError(f"Expected {key} to be an object.")
+    return dict(value)
+
+
+def _bool_value(row: RowMapping, key: str) -> bool:
+    value = row[key]
+    if not isinstance(value, bool):
+        raise TypeError(f"Expected {key} to be a boolean.")
+    return value
+
+
 def _string_tuple_value(row: RowMapping, key: str) -> tuple[str, ...]:
     value = row[key]
     if not isinstance(value, list):
@@ -510,6 +839,28 @@ def _string_tuple_value(row: RowMapping, key: str) -> tuple[str, ...]:
             raise TypeError(f"Expected {key} to contain strings.")
         strings.append(item)
     return tuple(strings)
+
+
+def _require_non_secret_mapping(value: Mapping[str, Any], field_name: str) -> None:
+    for context_key, context_value in value.items():
+        _require_non_secret_text(str(context_key), field_name)
+        _require_non_secret_value(context_value, field_name)
+
+
+def _require_non_secret_value(value: object, field_name: str) -> None:
+    if isinstance(value, str):
+        _require_non_secret_text(value, field_name)
+    elif isinstance(value, Mapping):
+        _require_non_secret_mapping(value, field_name)
+    elif isinstance(value, list | tuple):
+        for item in value:
+            _require_non_secret_value(item, field_name)
+
+
+def _require_non_secret_text(value: str, field_name: str) -> None:
+    normalized = value.casefold()
+    if any(marker in normalized for marker in SECRET_CONTEXT_MARKERS):
+        raise ValueError(f"Reset/reload {field_name} must not include secret-like data.")
 
 
 def _json_response(status: int, payload: Mapping[str, Any]) -> tuple[int, str, bytes]:

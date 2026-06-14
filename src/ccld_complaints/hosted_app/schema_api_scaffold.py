@@ -37,6 +37,7 @@ class HostedSchemaApiScaffold:
     source_derived_read_api_routes_implemented: bool = True
     reviewer_workflow_shell_implemented: bool = True
     reset_reload_dry_run_implemented: bool = True
+    reset_reload_operational_metadata_scaffold_implemented: bool = True
     reviewer_created_state_persistence_scaffold_implemented: bool = True
     audit_event_persistence_scaffold_implemented: bool = True
     audit_event_read_api_routes_implemented: bool = True
@@ -133,7 +134,9 @@ HOSTED_API_BOUNDARIES = (
             "Plan seeded corpus reset/reload impact before future execution. The "
             "current implementation exposes only a local/test dry-run route seam "
             "that inspects staged seeded corpus metadata and reports affected "
-            "source-derived and future reviewer-created state categories."
+            "source-derived and future reviewer-created state categories. It can "
+            "optionally persist a separate local/test operational planning metadata "
+            "record when explicitly requested."
         ),
         requires_authenticated_actor_before_write=True,
         preserves=(
@@ -147,7 +150,7 @@ HOSTED_API_BOUNDARIES = (
             "seeded corpus reload execution",
             "reviewer-created state archival or clearing",
             "audit event persistence",
-            "operational/reset metadata persistence",
+            "production reset/reload operational framework",
         ),
     ),
 )

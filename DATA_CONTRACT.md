@@ -42,6 +42,12 @@ values, source traceability, source document metadata, and import batch context.
 A local/test reset/reload dry-run seam can inspect existing seeded import batch
 metadata, source-derived record counts by entity, and audit scaffold row counts
 for a requested corpus scope and report reviewer-created state handling options.
+When explicitly requested by local/test code, it can persist a separate
+operational planning metadata record with actor attribution, permission used,
+scope, requested dry-run mode, validation summary, non-secret planning context,
+and impact summaries. That operational metadata is not a canonical
+source-derived field and remains separate from source-derived, reviewer-created,
+and audit rows.
 A narrow local/test
 reviewer-created state scaffold table can store review-item-state placeholder
 rows separately from source-derived rows, linked through staged source-derived
@@ -51,7 +57,8 @@ scaffold writes only, separately from source-derived and reviewer-created rows.
 A narrow local/test authenticated audit history read route seam can list or
 fetch those audit rows by approved audit identifiers and schema-supported
 filters without mutating source-derived, reviewer-created, or audit rows. Those
-import, read, route, workflow-shell, dry-run, reviewer-created state, and audit
+import, read, route, workflow-shell, dry-run, operational metadata,
+reviewer-created state, and audit
 scaffold mechanics do not
 add canonical source-derived fields, mutate source-derived records, run full
 reviewer workflows, implement annotations or corrections, run live crawling, run

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added a minimal local/test PostgreSQL/Alembic-backed reset/reload operational
+	metadata scaffold, with one separate planning table, opt-in dry-run persistence,
+	operator/admin-style import/reload authorization, safe readback helpers, and
+	focused tests proving unauthorized actors, invalid options, secret-like context,
+	and all destructive reset/reload behavior remain rejected without mutating
+	source-derived, reviewer-created, or audit rows.
 - Added a narrow local/test authenticated audit history read route seam for the
 	first audit event scaffold, with JSON list and fetch-by-ID handlers, scoped
 	filters, audit-read authorization, and focused tests proving empty history,
@@ -31,7 +37,8 @@
 	validation requirements, audit requirements, and explicitly deferred destructive
 	actions without deleting, truncating, overwriting, archiving, importing,
 	reloading, persisting audit events, running live crawling, executing connectors,
-	deploying, or changing schemas.
+	deploying, or changing schemas outside the narrow opt-in operational planning
+	metadata scaffold.
 - Added the first narrow local/test authenticated reviewer-facing workflow shell
 	over staged seeded corpus source-derived records, with JSON queue and detail
 	handlers that consume the authenticated source-derived read route seam and

@@ -32,7 +32,7 @@ be exercised in unit tests against in-memory SQLite and fixture actors. The
 source-derived API route seam can also be exercised in unit tests with an
 explicit local/test route context. The reset/reload dry-run seam can be
 exercised in unit tests with an explicit database, actor, and corpus scope
-context. No cloud resources, public URLs, app
+context, including optional persisted planning metadata. No cloud resources, public URLs, app
 registrations, cloud databases, DNS records, deployment credentials, secrets, or
 tokens are required.
 
@@ -172,6 +172,9 @@ wiring includes:
 - `migrations/versions/20260614_0003_audit_event_scaffold.py` with one separate
   audit event scaffold table for successful reviewer-created state scaffold
   writes only.
+- `migrations/versions/20260614_0004_reset_reload_operational_metadata.py` with
+  one separate reset/reload operational planning metadata scaffold table for
+  explicitly requested dry-run planning records only.
 - `ccld_complaints.hosted_app.persistence` for no-secret database URL validation
   and ADR-0010 persistence boundary descriptors.
 - `ccld_complaints.hosted_app.auth` for managed OIDC/OAuth2 provider-class
@@ -200,7 +203,8 @@ wiring includes:
   staged source-derived, reviewer-created, or audit records.
 - `ccld_complaints.hosted_app.reset_reload_dry_run` for a local/test
   authenticated seeded corpus reset/reload dry-run route seam that reports
-  future impact without mutating data.
+  future impact without mutating data and can optionally persist a non-secret
+  planning metadata record when explicitly requested.
 - `ccld_complaints.cli.import_hosted_seeded_corpus` as a minimal local command
   wrapper for operator-initiated test imports.
 
@@ -300,10 +304,13 @@ handler requires import/reload permission, reports existing import batch
 metadata, source-derived record counts by entity, scoped reviewer-created
 scaffold row counts, scoped audit scaffold row counts, future reviewer-created
 state handling options, validation requirements, audit requirements, and deferred destructive actions. It performs
-read-only inspection queries only. It does not
-delete, truncate, overwrite, archive, import, reload, create new dry-run audit events,
-create reset metadata, run live crawling, execute connectors, or implement a
-production API framework.
+read-only inspection queries by default. When local/test code adds
+`persist_planning_metadata=true`, it persists one separate operational planning
+metadata record with actor attribution, permission used, scope, generated
+timestamp, validation summary, impact summaries, and non-secret planning context.
+It does not delete, truncate, overwrite, archive, import, reload, create new
+dry-run audit events, execute persisted metadata, run live crawling, execute
+connectors, or implement a production API framework.
 
 To run migrations or load a seeded corpus into a local PostgreSQL-compatible
 test database, set `CCLD_HOSTED_TESTER_DATABASE_URL` outside the repository and
@@ -393,6 +400,12 @@ Run the focused hosted reset/reload dry-run tests:
 pytest tests/unit/test_hosted_reset_reload_dry_run.py
 ```
 
+Run the focused hosted reset/reload operational metadata tests:
+
+```powershell
+pytest tests/unit/test_hosted_reset_reload_operational_metadata.py
+```
+
 Run the focused hosted reviewer-created state scaffold tests:
 
 ```powershell
@@ -470,6 +483,12 @@ explicit dry-run context requirements, unauthenticated, disabled or revoked,
 role-denied, and out-of-scope rejections, and before/after row counts proving
 the dry-run does not mutate seeded import, reviewer-created scaffold, or audit
 scaffold tables.
+The reset/reload operational metadata tests verify explicitly requested planning
+metadata persistence, scoped readback, non-secret planning context, invalid
+option rejection, unauthenticated, disabled or revoked, role-denied, and out-of-
+scope rejection, and before/after row counts proving persisted planning metadata
+does not mutate seeded import, reviewer-created scaffold, or audit scaffold
+tables or execute reset/reload.
 They do not require browser automation, Node.js, Playwright, Selenium, axe,
 Docker, a running PostgreSQL server, cloud services, or public URLs.
 
@@ -507,7 +526,7 @@ The scaffold intentionally does not implement:
   table.
 - Full reviewer-created workflow, full audit coverage, audit UI, audit export,
   export, feedback, auth, or
-  reset/reload tables.
+  reset/reload execution tables beyond the narrow planning metadata scaffold.
 - HTTP API routes outside the narrow local/test source-derived read route seam,
   read-only reviewer workflow shell, and reset/reload dry-run seam.
 - Stateful database-backed reviewer views or workflows.

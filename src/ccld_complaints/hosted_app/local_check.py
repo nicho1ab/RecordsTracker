@@ -130,7 +130,8 @@ def format_text_report(report: list[LocalCheck]) -> str:
             "tests/unit/test_hosted_reviewer_created_state.py "
             "tests/unit/test_hosted_audit_events.py "
             "tests/unit/test_hosted_audit_event_routes.py "
-            "tests/unit/test_hosted_reset_reload_dry_run.py",
+            "tests/unit/test_hosted_reset_reload_dry_run.py "
+            "tests/unit/test_hosted_reset_reload_operational_metadata.py",
         ]
     )
     return "\n".join(lines)
