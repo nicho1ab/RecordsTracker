@@ -192,8 +192,10 @@ The page loads only the tiny seeded fixture corpus into process-local test state
 and supplies a fixture local/test reviewer actor from the scaffold process. It
 lets a local tester search/select a seeded source-derived complaint record, see
 list-level reviewer-created note/status indicators before opening detail, open
-detail, view safe source traceability fields and safe related seeded bundle context, submit a bounded reviewer note, submit a bounded reviewer status, and
-see read-after-write reviewer-created state on the page. No-search-results,
+detail, view a plain-language record summary, safe source traceability fields,
+safe related seeded bundle context, reviewer-created notes/statuses, CCLD return
+links, and record-specific feedback clues, submit a bounded reviewer note, submit
+a bounded reviewer status, and see read-after-write reviewer-created state on the page. No-search-results,
 missing-record, invalid-form, and permission-blocked states include clear
 browser guidance and links back to useful local/test next steps. Narrative source fields are hidden in the browser shell.
 

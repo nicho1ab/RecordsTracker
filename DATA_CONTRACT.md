@@ -55,7 +55,8 @@ action stores only bounded local/test reviewer status values such as
 A thin browser-accessible local/test reviewer UI shell can wrap those existing
 read and write seams for the tiny seeded fixture corpus so a local tester can
 see list-level reviewer-created note/status indicators, view safe source
-traceability fields, view safe related seeded bundle context, submit reviewer
+traceability fields, view safe related seeded bundle context, understand a
+plain-language record summary and record-specific feedback clues, submit reviewer
 note/status forms, and see read-after-write reviewer-created state. Narrative
 source fields remain hidden in the browser shell. That UI shell does not add
 canonical source-derived fields, schema changes, migrations, or a separate

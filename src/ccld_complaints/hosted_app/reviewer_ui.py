@@ -18,6 +18,10 @@ from ccld_complaints.hosted_app.auth import (
     HostedAccountStatus,
     HostedTesterRole,
 )
+from ccld_complaints.hosted_app.ccld_facility_lookup import (
+    CCLD_FACILITY_LOOKUP_PATH,
+    CCLD_RECORD_REQUEST_PATH,
+)
 from ccld_complaints.hosted_app.reviewer_created_state import REVIEWER_STATUS_VALUES
 from ccld_complaints.hosted_app.reviewer_created_state_routes import (
     REVIEWER_CREATED_STATE_API_PREFIX,
@@ -45,6 +49,7 @@ REVIEWER_UI_RECORDS_PATH = f"{REVIEWER_UI_PREFIX}/records"
 REVIEWER_UI_DETAIL_PATH = f"{REVIEWER_UI_RECORDS_PATH}/detail"
 REVIEWER_UI_NOTE_PATH = f"{REVIEWER_UI_RECORDS_PATH}/note"
 REVIEWER_UI_STATUS_PATH = f"{REVIEWER_UI_RECORDS_PATH}/status"
+CCLD_HELP_PATH = "/ccld/help"
 LOCAL_REVIEWER_UI_SCOPE = HostedAccessScope(
     "seeded_corpus",
     "seeded-ccld-fixture-2026-06-13",
@@ -760,9 +765,12 @@ def _render_detail(
         main=f"""
     {_render_notice(notice)}
     {_render_scope_notice(_mapping(payload, 'workflow_shell'))}
-    {_render_detail_navigation(source_record_key)}
+        {_render_detail_navigation(source_record_key, related_records)}
+        {_render_record_summary_section(source_record, related_records, detail)}
     <section aria-labelledby="source-derived-heading">
       <h2 id="source-derived-heading">Source-derived record</h2>
+            <p>These are safe scalar fields from the selected source-derived row. Narrative
+            source text is hidden in this local/test browser UI.</p>
       <dl>
         <dt>Source record key</dt>
         <dd>{_escape(source_record_key)}</dd>
@@ -814,25 +822,75 @@ def _render_detail(
     </section>
         {_render_source_context_section(related_records, source_record_key)}
     {_render_reviewer_state_section(detail)}
-        {_render_review_actions(source_record_key)}""",
+        {_render_review_actions(source_record_key)}
+        {_render_detail_feedback_guidance(source_record, related_records)}""",
     )
 
 
-def _render_detail_navigation(source_record_key: str) -> str:
+def _render_detail_navigation(
+    source_record_key: str,
+    related_records: list[Mapping[str, Any]],
+) -> str:
     detail_href = (
         f"{REVIEWER_UI_DETAIL_PATH}?"
         f"{urlencode({'source_record_key': source_record_key})}"
     )
+    ccld_request_href = _ccld_request_href(related_records)
     return f"""<section aria-labelledby="detail-navigation-heading">
       <h2 id="detail-navigation-heading">Detail navigation</h2>
             <ul>
+                <li><a href="{_escape(ccld_request_href)}">Return to CCLD request or queue</a></li>
+                <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find another CCLD facility</a></li>
+                <li><a href="{CCLD_HELP_PATH}">Open CCLD workflow help</a></li>
                 <li><a href="{REVIEWER_UI_RECORDS_PATH}">Back to reviewer records</a></li>
                 <li><a href="{_escape(detail_href)}">Refresh this seeded detail</a></li>
+                <li><a href="#record-summary-heading">Review record summary</a></li>
                 <li><a href="#source-context-heading">Review source-derived context</a></li>
                 <li><a href="#reviewer-state-heading">Review notes and statuses</a></li>
                 <li><a href="#review-actions-heading">Add note or status</a></li>
+                <li><a href="#detail-feedback-heading">Prepare tester feedback</a></li>
             </ul>
         </section>"""
+
+
+def _render_record_summary_section(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+    detail: Mapping[str, Any],
+) -> str:
+    identity = _mapping(source_record, "identity")
+    source_document = _mapping(source_record, "source_document")
+    original_values = _mapping(source_record, "original_values")
+    state_summary = _mapping(detail, "associated_reviewer_created_state_summary")
+    facility = _facility_context(related_records)
+    facility_number = _facility_context_value(facility, "external_facility_number")
+    facility_name = _facility_context_value(facility, "facility_name")
+    reviewer_statuses = ", ".join(_string_items(state_summary.get("reviewer_statuses_present", [])))
+    if not reviewer_statuses:
+        reviewer_statuses = "None recorded"
+    return f"""<section aria-labelledby="record-summary-heading">
+      <h2 id="record-summary-heading">Record summary</h2>
+      <p>This summary orients the selected local/test CCLD complaint record before a tester
+      reviews source traceability, related context, and reviewer-created notes or status.</p>
+      <dl>
+        <dt>Complaint control number</dt>
+        <dd>{_escape(_optional_string(original_values, 'complaint_control_number'))}</dd>
+        <dt>Finding</dt>
+        <dd>{_escape(_optional_string(original_values, 'finding'))}</dd>
+        <dt>Complaint and report dates</dt>
+        <dd>{_escape(_date_summary(original_values))}</dd>
+        <dt>Facility/license number</dt>
+        <dd>{_escape(facility_number)}</dd>
+        <dt>Facility name</dt>
+        <dd>{_escape(facility_name)}</dd>
+        <dt>Selected source record key</dt>
+        <dd>{_escape(_string(identity, 'source_record_key'))}</dd>
+        <dt>Source document ID</dt>
+        <dd>{_escape(_string(source_document, 'source_document_id'))}</dd>
+        <dt>Reviewer status recorded</dt>
+        <dd>{_escape(reviewer_statuses)}</dd>
+      </dl>
+    </section>"""
 
 
 def _render_traceability_summary(
@@ -853,7 +911,10 @@ def _render_traceability_summary(
                         ("Raw hash validation", import_batch.get("raw_hash_validation_status")),
                 )
         )
-        return f"""<table>
+        return f"""<p>Use these fields to confirm that the selected record remains tied to
+            preserved public-source material. This summary reports whether each field is
+            visible; it is not a legal or completeness conclusion.</p>
+            <table>
                 <caption>Visible source traceability summary</caption>
                 <thead>
                     <tr>
@@ -892,6 +953,9 @@ def _render_source_context_section(
             <p>This context comes from the same authenticated local/test source-derived
             read seam as the selected record. Narrative fields are not shown in this
             browser shell.</p>
+            <p>Use this section to distinguish the selected complaint from related facility,
+            source document, allegation, event, and extraction-audit rows already present in
+            the seeded bundle.</p>
             {_render_source_context_summary(related_records)}
             <table>
                 <caption>Safe related source-derived rows in the selected seeded bundle</caption>
@@ -1031,6 +1095,53 @@ def _safe_context_summary(record: Mapping[str, Any]) -> str:
     return "; ".join(values)
 
 
+def _facility_context(
+    related_records: list[Mapping[str, Any]],
+) -> Mapping[str, Any] | None:
+    for record in related_records:
+        if _string(record, "entity_type") == "facility":
+            return _mapping(record, "original_values")
+    return None
+
+
+def _facility_context_value(
+    facility: Mapping[str, Any] | None,
+    key: str,
+) -> str:
+    if facility is None:
+        return "unknown"
+    value = facility.get(key)
+    if value is None:
+        return "unknown"
+    if isinstance(value, str) and not value.strip():
+        return "unknown"
+    return _display_value(value)
+
+
+def _ccld_request_href(related_records: list[Mapping[str, Any]]) -> str:
+    facility = _facility_context(related_records)
+    facility_number = _facility_context_value(facility, "external_facility_number")
+    if facility_number == "unknown":
+        return CCLD_RECORD_REQUEST_PATH
+    return f"{CCLD_RECORD_REQUEST_PATH}?{urlencode({'facility_number': facility_number})}"
+
+
+def _date_summary(values: Mapping[str, Any]) -> str:
+    parts = []
+    for field_name in (
+        "complaint_received_date",
+        "visit_date",
+        "report_date",
+        "date_signed",
+    ):
+        value = values.get(field_name)
+        if _has_display_value(value):
+            parts.append(f"{field_name}: {_display_value(value)}")
+    if not parts:
+        return "No complaint or report dates listed"
+    return "; ".join(parts)
+
+
 def _has_display_value(value: object) -> bool:
     if value is None:
         return False
@@ -1065,6 +1176,8 @@ def _render_reviewer_state_section(detail: Mapping[str, Any]) -> str:
       <p>Reviewer-created state is stored separately from the selected source-derived record.</p>
       <p>UI actions add reviewer-created rows and audit rows; they do not edit
       source-derived fields.</p>
+    <p>Use this section to see whether another local/test reviewer has already left a
+    note or status for the selected record.</p>
       <dl>
         <dt>Total associated rows</dt>
         <dd>{_escape(str(_int_value(summary, 'total_associated_rows')))}</dd>
@@ -1099,6 +1212,8 @@ def _render_review_actions(source_record_key: str) -> str:
             <p>These local/test actions write reviewer-created state through the
             existing authenticated workflow actions. They do not edit source-derived
             fields.</p>
+            <p>Add a short note when source traceability, wording, missing values, or review
+            context needs follow-up. Set a status to keep queue progress understandable.</p>
             {_render_note_form(source_record_key)}
             {_render_status_form(source_record_key)}
         </section>"""
@@ -1144,7 +1259,10 @@ def _render_note_form(source_record_key: str) -> str:
         <input type="hidden" name="source_record_key" value="{_escape(source_record_key)}">
         <p>
           <label for="note_text">Reviewer note</label>
-          <textarea id="note_text" name="note_text" rows="4" required></textarea>
+                    <textarea id="note_text" name="note_text" rows="4" required
+                        aria-describedby="note-text-help"></textarea>
+                      <span id="note-text-help">Use safe plain text. Notes are reviewer-created
+                    local/test state and do not change the source-derived record.</span>
         </p>
         <p><button type="submit">Save reviewer note</button></p>
       </form>
@@ -1162,13 +1280,47 @@ def _render_status_form(source_record_key: str) -> str:
         <input type="hidden" name="source_record_key" value="{_escape(source_record_key)}">
         <p>
           <label for="reviewer_status">Reviewer status</label>
-          <select id="reviewer_status" name="reviewer_status" required>
+                    <select id="reviewer_status" name="reviewer_status" required
+                        aria-describedby="reviewer-status-help">
 {options}
           </select>
+                    <span id="reviewer-status-help">Status is reviewer-created local/test state for
+                    queue progress. It is not a public-source finding.</span>
         </p>
         <p><button type="submit">Save reviewer status</button></p>
       </form>
     </section>"""
+
+
+def _render_detail_feedback_guidance(
+        source_record: Mapping[str, Any],
+        related_records: list[Mapping[str, Any]],
+) -> str:
+        identity = _mapping(source_record, "identity")
+        original_values = _mapping(source_record, "original_values")
+        source_document = _mapping(source_record, "source_document")
+        facility = _facility_context(related_records)
+        ccld_request_href = _ccld_request_href(related_records)
+        return f"""<section id="detail-feedback-heading" aria-labelledby="detail-feedback-title">
+            <h2 id="detail-feedback-title">Feedback clues for this record</h2>
+            <p>If this detail looks wrong or incomplete, return to the CCLD request page and copy
+            the tester feedback checklist. Include the record identifiers below and describe what
+            looked missing, confusing, or unexpected.</p>
+            <dl>
+                <dt>Facility/license number</dt>
+                <dd>{_escape(_facility_context_value(facility, 'external_facility_number'))}</dd>
+                <dt>Complaint control number</dt>
+                <dd>{_escape(_optional_string(original_values, 'complaint_control_number'))}</dd>
+                <dt>Source record key</dt>
+                <dd>{_escape(_string(identity, 'source_record_key'))}</dd>
+                <dt>Source document ID</dt>
+                <dd>{_escape(_string(source_document, 'source_document_id'))}</dd>
+            </dl>
+            <ul>
+                <li><a href="{_escape(ccld_request_href)}">Return to CCLD request or queue</a></li>
+                <li><a href="{CCLD_HELP_PATH}">Open CCLD workflow help</a></li>
+            </ul>
+        </section>"""
 
 
 def _render_status_option(status: str) -> str:
