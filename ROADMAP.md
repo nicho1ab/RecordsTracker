@@ -240,6 +240,14 @@ the governed primary future review experience.
 	dependency declarations, local setup checks, and focused tests without adding
 	domain tables, API routes, imports, reset/reload commands, auth middleware,
 	secrets, deployment, live crawling, or connector execution.
+- Added the first controlled hosted tester seeded corpus import path, including
+	a PostgreSQL/Alembic migration for import batch metadata and source-derived
+	record staging, a local validated JSON artifact importer, a tiny fixture
+	artifact, and focused tests for import batch identity, stable source-derived
+	identity, source traceability, idempotent staging, and no reviewer-created
+	state writes without adding reset/reload behavior, API routes, auth
+	middleware, reviewer workflows, production automation, hosted live crawling,
+	or connector execution.
 - Added the first local hosted tester MVP scaffold with a Python standard-library
 	app shell, health route, smoke check, focused tests, and local Windows
 	PowerShell run documentation without adding cloud, QNAP, Docker, schema,
@@ -295,11 +303,10 @@ the governed primary future review experience.
 	and clear about sample-only read-only source-derived views while the next
 	hosted implementation decisions are made.
 - Use the accepted audit, export, reset/reload, tester retention, auth
-	provider-class, role, scope, audit-identity, PostgreSQL, and Alembic migration
-	boundaries plus the minimal PostgreSQL/Alembic scaffold wiring to move the
-	next hosted tester MVP branches toward a first concrete domain migration/API
-	contract, focused auth integration, seeded corpus import/reset, and the first
-	authenticated tester workflow.
+	provider-class, role, scope, audit-identity, PostgreSQL, Alembic migration,
+	and controlled seeded import boundaries to move the next hosted tester MVP
+	branches toward database-backed source-derived API reads, focused auth
+	integration, reset/reload planning, and the first authenticated tester workflow.
 - Preserve Datasette, SQLite views, and review-bundle exports where they support
 	validation, inspection, debugging, local exploration, and export workflows.
 - Harden extraction with additional representative fixtures and edge-case tests.
@@ -321,14 +328,15 @@ has been outgrown as the primary future review experience and should be extended
 only where it remains useful for validation, inspection, debugging, local
 exploration, or export support.
 
-1. Implement the first narrow PostgreSQL/Alembic domain migration and API
-	contract for seeded source-derived records and reviewer-created state using
-	the accepted auth provider-class, role/scope, and operational boundaries.
+1. Implement database-backed API reads for the seeded source-derived records now
+	staged by the controlled import path, while keeping reviewer-created state
+	separate and preserving source traceability.
 2. Implement focused auth integration against the managed OpenID Connect/OAuth
 	2.0 provider class with role, scope, disabled-account, unauthenticated, and
 	role-denied path validation.
-3. Implement seeded corpus import/reset from validated pipeline output before
-	enabling tester workflows that depend on hosted source-derived records.
+3. Implement reset/reload planning and later reset/reload behavior for the
+	seeded corpus only after reviewer-created state preservation, audit, and
+	permission boundaries are tested.
 4. Implement reviewer-created state persistence, audit event persistence,
 	export packet state, tester feedback, and reset/reload metadata in focused
 	PostgreSQL/Alembic-backed branches.
@@ -356,8 +364,9 @@ define the smallest useful product shape:
 	ADR-0011's authenticated access boundary, ADR-0012's scaffold-first sequence,
 	ADR-0013's operational boundaries, and ADR-0014's auth provider-class and role
 	implementation direction, and ADR-0015's PostgreSQL/Alembic direction plus the
-	minimal scaffold wiring to move into a first concrete domain migration/API
-	contract, focused auth integration, seeded import/reset,
+	minimal scaffold wiring and controlled seeded import path to move into
+	database-backed source-derived API reads, focused auth integration,
+	reset/reload planning,
 	reviewer-created state persistence, audit/export/feedback/reset metadata, and
 	first authenticated tester workflow implementation.
 

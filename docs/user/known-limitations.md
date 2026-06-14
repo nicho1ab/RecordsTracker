@@ -23,8 +23,14 @@
   manifest placeholder metadata. Source coverage panels and related
   source-record links on those pages are fixture/sample display patterns only.
   They do not load live public-source data, read ignored raw CSVs or generated
-  profiling outputs, use SQLite or a hosted database, run import/sync,
+  profiling outputs, use SQLite or a hosted database through API routes,
   authenticate users, persist reviewer-created state, or prove statewide
   coverage, source completeness, official facility status, or legal or
   facility-wide conclusions.
+- The hosted seeded corpus import path is controlled and local/test-oriented.
+  It stages source-derived records from a validated JSON artifact into the
+  PostgreSQL/Alembic import batch and source-derived table group only. It does
+  not run live crawling, execute connectors, automate production imports,
+  implement reset/reload, authenticate users, create reviewer-created state,
+  expose database-backed API reads, or prove source completeness.
 - Datasette accessibility depends partly on the installed Datasette version, browser, and assistive technology. Validate keyboard navigation, table headers, focus visibility, and exported table usability before treating a release as stable.
