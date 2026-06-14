@@ -730,8 +730,8 @@ def render_app_shell() -> str:
         <li>Open the facility/date-scoped review queue.</li>
         <li>Review source traceability, then add reviewer notes or status in the
         reviewer UI.</li>
-        <li>Capture feedback about missing records, confusing wording, friction, or
-        desired features.</li>
+        <li>Copy the request-result checklist and add feedback about missing records,
+        confusing wording, friction, or desired features.</li>
       </ol>
     </section>
     <section id="terms" aria-labelledby="terms-heading">
@@ -749,10 +749,12 @@ def render_app_shell() -> str:
     </section>
     <section id="feedback" aria-labelledby="feedback-heading">
       <h2 id="feedback-heading">Feedback guidance</h2>
-      <p>This local/test slice does not store feedback. Useful feedback includes the
-      facility/license number, date range, what felt confusing, whether expected
-      records seemed missing from the local/test artifact, and what would make the
-      review workflow easier.</p>
+      <p>This local/test slice does not store feedback. After submitting a CCLD
+      request, the result page shows a structured copyable checklist with the
+      facility/license number, date range, matching record counts, queue status
+      counts, reviewer note/status context, and blank prompts for missing records,
+      confusing wording, queue surprises, workflow friction, and suggested
+      enhancements. Copy it into the agreed external feedback channel manually.</p>
     </section>
     <section id="boundaries" aria-labelledby="boundaries-heading">
       <h2 id="boundaries-heading">Local/test boundaries</h2>

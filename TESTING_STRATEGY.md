@@ -108,10 +108,11 @@ guided facility/date-scoped request result queue with first-time workflow help,
 contextual field/action help, source traceability summaries, reviewer-state
 indicators, progress counts, reviewer-status filtering, meaningful reviewer
 links, read-after-write queue updates after reviewer note/status actions, and
-feedback guidance without persistence, does not run live crawling, execute
-connectors, mutate reviewer-created state from the request page, create audit
-rows, mutate operational metadata rows, or persist feedback, and does not expose secrets, private URLs, provider claims,
-credentials, or unnecessary sensitive narrative content.
+deterministic copyable feedback checklist guidance without persistence, does not
+run live crawling, execute connectors, mutate reviewer-created state from the
+request page, create audit rows, mutate operational metadata rows, or persist
+feedback, and does not expose secrets, private URLs, provider claims, credentials,
+or unnecessary sensitive narrative content.
 Hosted CCLD import/reload tests must prove local validated artifacts are
 validated before load, source URL/raw SHA-256/raw path/connector traceability is
 preserved, existing source-derived keys are refreshed without duplicates,

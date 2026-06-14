@@ -54,7 +54,8 @@ Accessibility requirements apply to:
 	facility/license number, date range, loaded records, source records, review
 	queue, reviewer notes, and reviewer status. Queue progress summaries and status
 	filters must use text labels, form labels, and visible counts rather than
-	color-only indicators.
+	color-only indicators. Feedback checklists must have an associated label and
+	help text and must be presented in a copyable control or equivalent plain text.
 
 ### Color and contrast
 

@@ -130,8 +130,12 @@ live fetch command when live public requests are intended, validate the SQLite
 output, run the local/test artifact builder, then return to the request page to
 load or refresh the generated hosted seeded-corpus JSON.
 The feedback section is guidance-only; it explains what a tester should capture
-about missing records, confusing wording, workflow friction, or desired features
-without adding feedback persistence.
+about missing records, confusing wording, unexpected queue or filter behavior,
+workflow friction, or desired features. Request results also include a structured
+copyable checklist with the facility/date request, matching record counts, queue
+status counts, local validated load context, and reviewer note/status context.
+The app does not save or send that checklist; testers must copy it into the
+agreed external feedback channel manually.
 
 To build that local/test hosted seeded-corpus JSON from validated CCLD SQLite
 output, run:
