@@ -124,6 +124,15 @@ facility/license number into the request form, preserve manual entry, and clearl
 state that lookup rows are local/test reference assistance rather than complaint
 source truth or completeness proof.
 
+Near-term hosted work should pass the deferred-readiness/product-benefit gate in
+`GOVERNANCE_INVENTORY.md`. MVP usability is not cosmetic polish: user-friendly
+layout, clear forms, contextual help, efficient facility lookup, understandable
+results, accessible structure, and low-friction reviewer actions are product
+requirements when they help local/test CCLD testers complete the workflow without
+creating avoidable rework. Backend readiness, hardening, or checklist work should
+be sequenced when it unlocks that workflow or removes a concrete MVP-blocking
+risk.
+
 The hosted scaffold and first local-only read-only source-derived views now
 exist. Detailed hosted visual design may begin from that real shell, but early
 design work must stay inside local-only, fixture/sample, read-only boundaries

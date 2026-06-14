@@ -93,6 +93,12 @@ itself as a local/test scaffold. It may link to the local/test reviewer UI shell
 but must not imply that production authentication, full reviewer workflows,
 cloud hosting, QNAP, Azure, AWS, or public URLs are available.
 
+When selecting the next hosted scaffold task, apply the product-benefit gate in
+`GOVERNANCE_INVENTORY.md`. Backend readiness, hardening, planning, or checklist
+work should be next only when it directly improves the CCLD local/test tester
+workflow or removes a concrete MVP-blocking risk; otherwise keep it tracked as
+deferred readiness.
+
 ## Open the CCLD record request page
 
 The scaffold includes a browser-accessible local/test CCLD facility lookup page at:

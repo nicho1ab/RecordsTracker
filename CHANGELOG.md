@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added a deferred-readiness/product-benefit gate to existing governance and
+	roadmap docs so backend readiness, hardening, planning, and checklist work stays
+	tracked but does not automatically become the next branch unless it unlocks a
+	user-facing CCLD MVP capability or resolves a concrete MVP-blocking risk.
 - Added safe full local/test CCLD facility reference CSV support for
 	`/ccld/facilities`. The lookup now uses `CCLD_FACILITY_REFERENCE_CSV` or the
 	ignored `data/raw/ccld/facility-reference.csv` convention when available, shows

@@ -163,7 +163,9 @@ public-record review notes.
 - Review [GOVERNANCE_INVENTORY.md](GOVERNANCE_INVENTORY.md) for the current
    production-discovery phase, hosted scaffold status, completed ADR decisions,
    remaining deferred decisions, stale-guidance assessment, and next-phase gap
-   analysis.
+   analysis. It also defines the deferred-readiness/product-benefit gate used to
+   decide whether future backend readiness, hardening, planning, or checklist
+   work should happen now or remain deferred behind user-facing CCLD MVP value.
 - Review [PUBLIC_SOURCE_DATA_INVENTORY.md](PUBLIC_SOURCE_DATA_INVENTORY.md)
    before planning public-source expansion, uploaded CSV profiling,
    multi-source adapters, attorney focus areas, or feedback intake paths.
