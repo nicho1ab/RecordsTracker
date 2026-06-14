@@ -152,10 +152,11 @@ state read route output and a compact derived summary for a selected source reco
 plus workflow-shell note and status actions that resolve the selected source-
 derived detail context before delegating to reviewer-created write routes,
 plus simple server-rendered HTML pages that let a local tester list/search a
-seeded complaint record, open detail, view safe source traceability fields and
-safe related seeded bundle context, submit reviewer note/status forms through
-the existing workflow actions, and see read-after-write reviewer-created state
-without exposing sensitive narrative fields,
+seeded complaint record, see list-level reviewer-created note/status indicators,
+open detail, view safe source traceability fields and safe related seeded bundle
+context, submit reviewer note/status forms through the existing workflow
+actions, and see read-after-write reviewer-created state without exposing
+sensitive narrative fields,
 plus a JSON handler that stores bounded non-secret reviewer note text as reviewer-created
 scaffold payload under the existing state kind,
 plus a JSON handler that stores bounded reviewer status values as reviewer-created

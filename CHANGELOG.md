@@ -6,7 +6,8 @@
 	`/reviewer` and `/reviewer/records`, backed by the existing seeded source-
 	derived read route, reviewer workflow shell, reviewer-created state route, and
 	audit scaffold. A local tester can open the page, search/select a seeded
-	source-derived complaint record, view safe source traceability fields and safe
+	source-derived complaint record, see list-level reviewer-created note/status
+	indicators before opening detail, view safe source traceability fields and safe
 	related seeded bundle context, submit a bounded reviewer note, submit a
 	bounded reviewer status, and see read-after-write reviewer-created state
 	without mutating source-derived rows, exposing sensitive narrative fields, adding
