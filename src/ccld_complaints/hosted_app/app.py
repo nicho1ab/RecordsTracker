@@ -10,14 +10,19 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from ccld_complaints.hosted_app.audit_event_routes import (
+    AUDIT_EVENTS_API_PREFIX,
+    AuditEventsApiContext,
+    route_audit_events_api_response,
+)
 from ccld_complaints.hosted_app.reset_reload_dry_run import (
-    SEEDED_CORPUS_RESET_RELOAD_DRY_RUN_API_PATH,
-    SeededCorpusResetReloadDryRunContext,
-    route_seeded_corpus_reset_reload_dry_run_response,
+  SEEDED_CORPUS_RESET_RELOAD_DRY_RUN_API_PATH,
+  SeededCorpusResetReloadDryRunContext,
+  route_seeded_corpus_reset_reload_dry_run_response,
 )
 from ccld_complaints.hosted_app.reviewer_workflow_shell import (
-  ReviewerWorkflowShellContext,
-  route_reviewer_workflow_shell_response,
+    ReviewerWorkflowShellContext,
+    route_reviewer_workflow_shell_response,
 )
 from ccld_complaints.hosted_app.source_derived_routes import (
     SourceDerivedApiContext,
@@ -974,6 +979,7 @@ def route_response(
     path: str,
     *,
     source_derived_api_context: SourceDerivedApiContext | None = None,
+    audit_events_api_context: AuditEventsApiContext | None = None,
     reviewer_workflow_shell_context: ReviewerWorkflowShellContext | None = None,
     reset_reload_dry_run_context: SeededCorpusResetReloadDryRunContext | None = None,
 ) -> tuple[int, str, bytes]:
@@ -989,6 +995,8 @@ def route_response(
             path,
             reset_reload_dry_run_context,
         )
+    if parsed_path.startswith(AUDIT_EVENTS_API_PREFIX):
+        return route_audit_events_api_response(path, audit_events_api_context)
     if parsed_path.startswith("/api/source-derived-records"):
         return route_source_derived_api_response(path, source_derived_api_context)
     if parsed_path == "/":

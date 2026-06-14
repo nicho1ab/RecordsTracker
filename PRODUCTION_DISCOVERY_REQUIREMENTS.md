@@ -46,6 +46,7 @@ HTTP/API read route seam, a narrow local/test authenticated read-only reviewer
 workflow shell over the route seam, a narrow local/test reviewer-created state
 persistence scaffold table and service boundary, a narrow local/test audit event
 persistence scaffold for successful reviewer-created state scaffold writes only,
+a local/test authenticated audit history read route seam over those audit rows,
 a local/test authenticated reset/reload dry-run route seam, and scaffold/API
 boundary descriptors. The dry-run reports
 what a future seeded corpus reset/reload would affect, including existing import
@@ -59,7 +60,8 @@ middleware, production API framework behavior, run migrations against a local
 database during scaffold tests, load live public data, run connector execution,
 automate production imports, execute reset/reload, archive or clear reviewer-
 created state, persist audit events beyond the narrow reviewer-created state
-write scaffold, create stateful queues, implement full
+write scaffold, expose audit history beyond that narrow local/test read seam,
+create stateful queues, implement full
 reviewer workflows, annotations, corrections, export packet behavior, or tester
 feedback.
 

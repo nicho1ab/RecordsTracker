@@ -27,7 +27,8 @@
   local/test reviewer-created state persistence scaffold table/service with
   authenticated actor attribution and stable source-derived record references,
   a narrow local/test audit event persistence scaffold for successful reviewer-
-  created state scaffold writes only, and a local/test authenticated reset/reload
+  created state scaffold writes only, a narrow local/test authenticated audit
+  history read route seam over those scaffold audit rows, and a local/test authenticated reset/reload
   dry-run seam that reports seeded import batch, source-derived record,
   reviewer-created scaffold row, and audit scaffold row impact without mutating
   data, plus source-derived versus reviewer-created state boundary descriptors.
@@ -200,7 +201,8 @@
   over that route seam, plus a narrow local/test reviewer-created state
   scaffold that can write and read attributed placeholder rows separately from
   source-derived records, plus a narrow local/test audit event scaffold for
-  successful reviewer-created state scaffold writes only, plus a local/test
+  successful reviewer-created state scaffold writes only, plus a narrow
+  local/test audit history read route seam for those scaffold audit rows, plus a local/test
   authenticated dry-run seam that reports seeded corpus reset/reload impact and
   scoped reviewer-created scaffold and audit scaffold row counts without
   deleting, overwriting, archiving, importing, reloading, or creating new dry-run

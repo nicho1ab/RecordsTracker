@@ -195,6 +195,9 @@ wiring includes:
 - `ccld_complaints.hosted_app.audit_events` for local/test audit rows tied to
   successful reviewer-created state scaffold writes without mutating staged
   source-derived or reviewer-created records.
+- `ccld_complaints.hosted_app.audit_event_routes` for local/test authenticated
+  JSON list and fetch access over those scaffold audit rows without mutating
+  staged source-derived, reviewer-created, or audit records.
 - `ccld_complaints.hosted_app.reset_reload_dry_run` for a local/test
   authenticated seeded corpus reset/reload dry-run route seam that reports
   future impact without mutating data.
@@ -276,10 +279,18 @@ for successful reviewer-created state scaffold writes, using a separate audit
 table linked to the reviewer-created scaffold target and source-derived context.
 It does not store provider secrets, tokens, cookies, sessions, private headers,
 connection strings, raw provider claims, or unnecessary sensitive narrative
-content. It does not implement full audit policy coverage, audit API routes,
-audit UI, audit export, retention automation, or audit coverage for reset/reload,
-exports, feedback, annotations, corrections, provider login, role changes, or
-operational actions.
+content. The audit history route seam exposes local/test JSON handlers for
+`/api/audit-events` and `/api/audit-events/by-id` only when the caller supplies
+an explicit route context with a database connection, authenticated actor or
+unauthenticated test actor state, and seeded corpus scope. The handlers require
+audit-read permission, support schema-backed filters, serialize non-secret audit
+fields, and reject unauthenticated, disabled or revoked, role-denied,
+out-of-scope, invalid filter, invalid paging, and missing-event paths. They do
+not mutate staged source-derived, reviewer-created, or audit rows. The scaffold
+does not implement full audit policy coverage, production audit API framework,
+audit UI, audit export, retention automation, or audit coverage for
+reset/reload, exports, feedback, annotations, corrections, provider login, role
+changes, or operational actions.
 
 The reset/reload dry-run seam is intentionally small. It exposes the local/test
 JSON handler `/api/operations/seeded-corpus-reset-reload/dry-run` only when the
@@ -394,6 +405,12 @@ Run the focused hosted audit event scaffold tests:
 pytest tests/unit/test_hosted_audit_events.py
 ```
 
+Run the focused hosted audit history route tests:
+
+```powershell
+pytest tests/unit/test_hosted_audit_event_routes.py
+```
+
 These tests include local-only semantic/accessibility validation for the sample
 source view shell and facility master sample view. They use Python standard-library HTML parsing
 to verify one page-level heading, meaningful page titles, semantic main content,
@@ -440,6 +457,12 @@ failure rolls back the reviewer-created state write, source-derived rows remain
 unchanged, reviewer-created rows are not modified by audit persistence, audit
 read permission is required, and secret-like values are not stored in audit
 context metadata.
+The audit history route tests verify local/test authenticated list and fetch
+handlers over scaffold audit rows, schema-backed filters, empty history,
+missing-event responses, explicit route-context requirements, unauthenticated,
+disabled or revoked, role-denied, and out-of-scope rejections, non-secret JSON
+payloads, and before/after row counts proving reads do not mutate seeded import,
+reviewer-created scaffold, or audit scaffold tables.
 The reset/reload dry-run tests verify local/test authenticated planning payloads,
 seeded import batch, source-derived record, reviewer-created scaffold, and audit
 scaffold impact counts, reviewer-created state handling options, invalid mode rejection,

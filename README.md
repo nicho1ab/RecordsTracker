@@ -151,8 +151,9 @@ public-record review notes.
    local/test authenticated source-derived read API route seam and read-only
    reviewer workflow shell. It also includes a narrow local/test reviewer-
    created state persistence scaffold table/service, a narrow local/test audit
-   event scaffold for successful reviewer-created state scaffold writes only,
-   and a local/test authenticated reset/reload dry-run route seam that reports
+   event scaffold for successful reviewer-created state scaffold writes only, a
+   narrow local/test authenticated audit history read route seam for those audit
+   rows, and a local/test authenticated reset/reload dry-run route seam that reports
    what a future seeded corpus reset/reload would affect without mutating data. It does not
    implement real login flow, auth middleware, full reviewer workflows,
    annotations, corrections, review status UI, production import automation,
@@ -175,7 +176,10 @@ public-record review notes.
    and stores scaffold rows separately from source-derived records. The audit
    event scaffold is also local/test only and records successful reviewer-
    created state scaffold writes separately from both source-derived and
-   reviewer-created rows.
+   reviewer-created rows. The audit history read seam is local/test only,
+   requires explicit database, actor, and scope context plus audit-read
+   permission, and returns non-secret audit row fields without mutating source-
+   derived, reviewer-created, or audit rows.
    The local `/facilities` route shows a read-only facility master
    sample view backed only by committed tiny public-source facility fixtures and
    manifest placeholder metadata. Facility detail pages include fixture-only

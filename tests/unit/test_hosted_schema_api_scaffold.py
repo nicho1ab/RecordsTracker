@@ -111,6 +111,12 @@ def test_api_boundaries_keep_source_records_and_reviewer_state_separate() -> Non
     assert "successful reviewer-created state scaffold writes" in boundary_by_id[
         "audit_events_api"
     ].intended_future_use
+    assert "listing or fetching those rows" in boundary_by_id[
+        "audit_events_api"
+    ].intended_future_use
+    assert "production audit API framework" in boundary_by_id[
+        "audit_events_api"
+    ].deferred
     assert "full audit policy coverage" in boundary_by_id["audit_events_api"].deferred
     assert boundary_by_id["seeded_corpus_reset_reload_operations_api"].domain == (
         "operational"
@@ -137,6 +143,7 @@ def test_schema_api_scaffold_summary_reflects_seeded_import_without_reviewer_wor
     assert scaffold.reset_reload_dry_run_implemented is True
     assert scaffold.reviewer_created_state_persistence_scaffold_implemented is True
     assert scaffold.audit_event_persistence_scaffold_implemented is True
+    assert scaffold.audit_event_read_api_routes_implemented is True
     assert scaffold.api_routes_implemented is True
     assert scaffold.imports_implemented is True
     assert scaffold.reviewer_workflows_implemented is False

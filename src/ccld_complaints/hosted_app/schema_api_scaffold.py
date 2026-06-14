@@ -39,6 +39,7 @@ class HostedSchemaApiScaffold:
     reset_reload_dry_run_implemented: bool = True
     reviewer_created_state_persistence_scaffold_implemented: bool = True
     audit_event_persistence_scaffold_implemented: bool = True
+    audit_event_read_api_routes_implemented: bool = True
     api_routes_implemented: bool = True
     imports_implemented: bool = True
     reviewer_workflows_implemented: bool = False
@@ -106,7 +107,8 @@ HOSTED_API_BOUNDARIES = (
             "Persist audit events for hosted tester state-changing operations after "
             "future branches define full coverage. The current implementation adds "
             "only local/test audit rows for successful reviewer-created state "
-            "scaffold writes."
+            "scaffold writes and a local/test authenticated read route seam for "
+            "listing or fetching those rows."
         ),
         requires_authenticated_actor_before_write=True,
         preserves=(
@@ -116,7 +118,7 @@ HOSTED_API_BOUNDARIES = (
             "target and source-derived context",
         ),
         deferred=(
-            "audit API routes",
+            "production audit API framework",
             "full audit policy coverage",
             "audit UI or export behavior",
             "retention automation",
