@@ -25,9 +25,14 @@ from ccld_complaints.hosted_app.reset_reload_planning_routes import (
     ResetReloadPlanningMetadataApiContext,
     route_reset_reload_planning_metadata_api_response,
 )
+from ccld_complaints.hosted_app.reviewer_created_state_routes import (
+  REVIEWER_CREATED_STATE_API_PREFIX,
+  ReviewerCreatedStateApiContext,
+  route_reviewer_created_state_api_response,
+)
 from ccld_complaints.hosted_app.reviewer_workflow_shell import (
-    ReviewerWorkflowShellContext,
-    route_reviewer_workflow_shell_response,
+  ReviewerWorkflowShellContext,
+  route_reviewer_workflow_shell_response,
 )
 from ccld_complaints.hosted_app.source_derived_routes import (
     SourceDerivedApiContext,
@@ -986,6 +991,7 @@ def route_response(
     source_derived_api_context: SourceDerivedApiContext | None = None,
     audit_events_api_context: AuditEventsApiContext | None = None,
     reviewer_workflow_shell_context: ReviewerWorkflowShellContext | None = None,
+    reviewer_created_state_api_context: ReviewerCreatedStateApiContext | None = None,
     reset_reload_dry_run_context: SeededCorpusResetReloadDryRunContext | None = None,
     reset_reload_planning_metadata_api_context: (
         ResetReloadPlanningMetadataApiContext | None
@@ -998,6 +1004,11 @@ def route_response(
             path,
             reviewer_workflow_shell_context,
         )
+    if parsed_path.startswith(REVIEWER_CREATED_STATE_API_PREFIX):
+      return route_reviewer_created_state_api_response(
+        path,
+        reviewer_created_state_api_context,
+      )
     if parsed_path == SEEDED_CORPUS_RESET_RELOAD_DRY_RUN_API_PATH:
         return route_seeded_corpus_reset_reload_dry_run_response(
             path,

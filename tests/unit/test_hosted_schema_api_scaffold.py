@@ -101,6 +101,12 @@ def test_api_boundaries_keep_source_records_and_reviewer_state_separate() -> Non
         "reviewer_created_state_api"
     ].requires_authenticated_actor_before_write is True
     assert "auth middleware" in boundary_by_id["reviewer_created_state_api"].deferred
+    assert "listing or fetching those rows" in boundary_by_id[
+        "reviewer_created_state_api"
+    ].intended_future_use
+    assert "read-only access to persisted reviewer-created scaffold rows" in boundary_by_id[
+        "reviewer_created_state_api"
+    ].preserves
     assert "production API framework" in boundary_by_id[
         "source_derived_records_api"
     ].deferred
@@ -156,6 +162,7 @@ def test_schema_api_scaffold_summary_reflects_seeded_import_without_reviewer_wor
     assert scaffold.reset_reload_operational_metadata_scaffold_implemented is True
     assert scaffold.reset_reload_planning_metadata_read_api_routes_implemented is True
     assert scaffold.reviewer_created_state_persistence_scaffold_implemented is True
+    assert scaffold.reviewer_created_state_read_api_routes_implemented is True
     assert scaffold.audit_event_persistence_scaffold_implemented is True
     assert scaffold.audit_event_read_api_routes_implemented is True
     assert scaffold.api_routes_implemented is True

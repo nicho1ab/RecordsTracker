@@ -304,6 +304,12 @@ the governed primary future review experience.
 	adding full reviewer workflows, annotations, corrections, audit persistence,
 	exports, reset/reload execution, real login flow, auth middleware, hosted live
 	crawling, connector execution, deployment, or production API behavior.
+- Added narrow local/test read-only reviewer-created state routes over persisted
+	scaffold rows, with JSON list and fetch-by-ID handlers, reviewer-state read
+	permission checks, schema-backed filters, and no-mutation coverage without
+	adding reviewer-created state writes, full reviewer workflows, annotations,
+	corrections, exports, real login flow, auth middleware, hosted live crawling,
+	connector execution, deployment, or production API behavior.
 - Added a minimal local/test audit event persistence scaffold with a separate
 	PostgreSQL/Alembic table and service boundary for successful reviewer-created
 	state scaffold writes only, preserving source-derived records and reviewer-
@@ -378,7 +384,8 @@ the governed primary future review experience.
 	controlled seeded import, database-backed source-derived read, auth boundary
 	scaffold, local/test source-derived read route seam, first read-only
 	authenticated tester workflow shell, reviewer-created state persistence
-	scaffold, audit event persistence scaffold, audit history read route seam, and
+	scaffold, reviewer-created state read route seam, audit event persistence
+	scaffold, audit history read route seam, and
 	reset/reload dry-run planning seam with opt-in operational metadata persistence
 	and read-only planning metadata routes to
 	move the next hosted tester MVP branches toward real provider integration,
@@ -443,8 +450,9 @@ define the smallest useful product shape:
 	minimal scaffold wiring, controlled seeded import path, database-backed
 	source-derived read service, local/test auth boundary scaffold, local/test
 	source-derived read route seam, and first read-only authenticated workflow
-	shell, reviewer-created state persistence scaffold, first audit event
-	persistence scaffold, local/test audit history read route seam, reset/reload
+	shell, reviewer-created state persistence scaffold, reviewer-created state
+	read route seam, first audit event persistence scaffold, local/test audit
+	history read route seam, reset/reload
 	planning metadata scaffold, and read-only planning metadata route seam to move into real
 	provider integration, fuller reset/reload planning,
 	fuller audit coverage, export/feedback metadata, and stateful authenticated tester

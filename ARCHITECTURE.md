@@ -122,7 +122,8 @@ narrow local/test authenticated source-derived HTTP/API read route seam, and a
 first local/test authenticated reviewer workflow shell, a narrow local/test
 reviewer-created state persistence scaffold, a narrow local/test audit event
 persistence scaffold, a narrow local/test authenticated audit history read
-route seam, and a local/test authenticated reset/reload dry-run route seam: a
+route seam, a narrow local/test authenticated reviewer-created state read route
+seam, and a local/test authenticated reset/reload dry-run route seam: a
 no-secret database URL configuration seam, an Alembic script location, one
 domain migration for import batch metadata and source-derived record staging,
 one domain migration for a separate reviewer-created state scaffold table, one
@@ -134,10 +135,12 @@ records, managed OIDC/OAuth2 provider-class configuration validation, actor/
 role/scope/target models, protected read-service guards, and JSON handlers for
 listing staged source-derived records or fetching one staged record by key or
 stable identity, plus read-only queue and detail shell payloads over those route
-responses, plus JSON handlers for listing or fetching scaffold audit rows by
-approved audit identifiers and schema-supported filters, plus JSON handlers for
-listing or fetching persisted reset/reload planning metadata rows by approved
-planning identifiers and schema-supported filters, plus a dry-run handler
+responses, plus JSON handlers for listing or fetching scaffold reviewer-created
+state rows by approved reviewer state identifiers and schema-supported filters,
+plus JSON handlers for listing or fetching scaffold audit rows by approved audit
+identifiers and schema-supported filters, plus JSON handlers for listing or
+fetching persisted reset/reload planning metadata rows by approved planning
+identifiers and schema-supported filters, plus a dry-run handler
 that reports seeded import batch counts,
 source-derived record counts by entity, scoped reviewer-created state scaffold
 counts, scoped audit scaffold counts, future reviewer-created state handling options, required permissions,
@@ -184,9 +187,9 @@ reviewer-created state scaffold table, plus a third narrow migration for one
 audit event scaffold table, plus a fourth narrow migration for one reset/reload
 operational planning metadata scaffold table. The current auth boundary,
 source-derived read route seam, read-only reviewer workflow shell,
-reviewer-created state scaffold service, audit history read route seam,
-reset/reload dry-run seam, opt-in reset/reload planning metadata scaffold, and
-read-only reset/reload planning metadata route seam
+reviewer-created state scaffold service, reviewer-created state read route seam,
+audit history read route seam, reset/reload dry-run seam, opt-in reset/reload
+planning metadata scaffold, and read-only reset/reload planning metadata route seam
 are local/test only; auth tables, export tables, feedback tables, broader
 reset/reload metadata tables, ORM models, stateful reviewer workflow API behavior,
 deployment, hosted
@@ -292,9 +295,11 @@ retention implementation PRs validate the concrete layer.
   imports into import batch and source-derived staging tables plus local/test
   service reads over those staged records plus local/test auth guards for those
   reads, a narrow local/test reviewer-created state scaffold table linked to
-  staged source-derived records, a narrow local/test audit event scaffold table
-  tied to successful reviewer-created state scaffold writes only, a narrow
-  local/test authenticated audit history read route seam over those audit rows, and a
+  staged source-derived records, a narrow local/test authenticated reviewer-
+  created state read route seam over those scaffold rows, a narrow local/test
+  audit event scaffold table tied to successful reviewer-created state scaffold
+  writes only, a narrow local/test authenticated audit history read route seam
+  over those audit rows, and a
   non-mutating reset/reload dry-run plan over staged seeded corpus metadata,
   scoped reviewer-created scaffold and audit scaffold row counts, and explicit
   dry-run planning metadata when requested, with read-only planning metadata

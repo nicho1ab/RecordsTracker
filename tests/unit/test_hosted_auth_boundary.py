@@ -11,6 +11,7 @@ from ccld_complaints.hosted_app.auth import (
     AUTH_PROVIDER_CLASS_ENV,
     IMPORT_RELOAD_PERMISSION,
     MANAGED_OIDC_OAUTH2_PROVIDER_CLASS,
+    REVIEWER_STATE_READ_PERMISSION,
     REVIEWER_STATE_WRITE_PERMISSION,
     SOURCE_DERIVED_READ_PERMISSION,
     USER_ROLE_ADMIN_PERMISSION,
@@ -168,6 +169,29 @@ def test_read_only_access_does_not_grant_reviewer_or_operator_permissions() -> N
                 scope=TEST_SCOPE,
                 target=target,
             )
+
+
+def test_source_derived_read_permission_does_not_grant_reviewer_state_read() -> None:
+    actor = _actor(
+        roles=("developer_operator",),
+        scopes=(TEST_SCOPE,),
+        actor_category="operator",
+    )
+
+    require_permission(
+        actor,
+        permission=SOURCE_DERIVED_READ_PERMISSION,
+        scope=TEST_SCOPE,
+        target=SOURCE_LIST_TARGET,
+    )
+
+    with pytest.raises(HostedRoleDeniedError, match="reviewer_state_read"):
+        require_permission(
+            actor,
+            permission=REVIEWER_STATE_READ_PERMISSION,
+            scope=TEST_SCOPE,
+            target=REVIEWER_STATE_TARGET,
+        )
 
 
 def test_authorized_source_derived_read_service_returns_staged_records_only() -> None:

@@ -40,6 +40,7 @@ class HostedSchemaApiScaffold:
     reset_reload_operational_metadata_scaffold_implemented: bool = True
     reset_reload_planning_metadata_read_api_routes_implemented: bool = True
     reviewer_created_state_persistence_scaffold_implemented: bool = True
+    reviewer_created_state_read_api_routes_implemented: bool = True
     audit_event_persistence_scaffold_implemented: bool = True
     audit_event_read_api_routes_implemented: bool = True
     api_routes_implemented: bool = True
@@ -82,8 +83,9 @@ HOSTED_API_BOUNDARIES = (
             "Persist review status, notes, annotations, correction proposals, feedback, "
             "and export packet decisions after future focused branches define each layer. "
             "The current implementation adds only a local/test reviewer-created state "
-            "persistence scaffold table and service boundary, plus a read-only reviewer "
-            "workflow shell over source-derived route responses."
+            "persistence scaffold table and service boundary, a narrow local/test "
+            "authenticated read route seam for listing or fetching those rows, plus "
+            "a read-only reviewer workflow shell over source-derived route responses."
         ),
         requires_authenticated_actor_before_write=True,
         preserves=(
@@ -91,6 +93,7 @@ HOSTED_API_BOUNDARIES = (
             "future authenticated actor attribution",
             "future audit event support",
             "stable links to source-derived identities",
+            "read-only access to persisted reviewer-created scaffold rows",
         ),
         deferred=(
             "auth middleware",
