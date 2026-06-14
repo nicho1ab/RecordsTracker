@@ -44,6 +44,7 @@ def test_text_report_includes_commands_and_non_install_boundary() -> None:
     assert ".\\scripts\\run-hosted-scaffold.ps1 -Port 8000" in text
     assert ".\\scripts\\smoke-hosted-scaffold.ps1" in text
     assert "pytest tests/unit/test_hosted_app_scaffold.py" in text
+    assert "tests/unit/test_hosted_auth_provider_integration_plan.py" in text
     assert "tests/unit/test_hosted_reviewer_created_state.py" in text
     assert "tests/unit/test_hosted_reviewer_created_state_routes.py" in text
     assert "tests/unit/test_hosted_audit_events.py" in text

@@ -261,6 +261,13 @@ the governed primary future review experience.
 	provider registration, secrets, tokens, cookies, auth middleware, user tables,
 	reviewer-created state, audit persistence, API routes, deployment, live
 	crawling, or connector execution.
+- Added a narrow local/test auth provider integration planning seam that
+	validates the ADR-0014 managed OpenID Connect/OAuth 2.0 provider class,
+	accepts only non-secret readiness inputs, summarizes claim, role/scope, and
+	audit attribution planning, and returns deterministic no-persistence output
+	without adding real login flow, provider registration, secrets, tokens,
+	cookies, sessions, auth middleware, user tables, role persistence, hosted URLs,
+	deployment, live crawling, or connector execution.
 - Added a narrow local/test authenticated source-derived HTTP/API read route
 	seam over staged seeded corpus records, with JSON list, fetch-by-key, and
 	fetch-by-stable-identity handlers that preserve source traceability, original
@@ -419,7 +426,8 @@ the governed primary future review experience.
 - Use the accepted audit, export, reset/reload, tester retention, auth
 	provider-class, role, scope, audit-identity, PostgreSQL, Alembic migration,
 	controlled seeded import, database-backed source-derived read, auth boundary
-	scaffold, local/test source-derived read route seam, first read-only
+	scaffold, auth provider integration planning seam, local/test source-derived
+	read route seam, first read-only
 	authenticated tester workflow shell, reviewer workflow shell associated-state
 	read integration and derived state summary, reviewer-created state persistence scaffold, reviewer-created state read route seam, audit event persistence
 	scaffold, audit history read route seam, and
@@ -486,8 +494,8 @@ define the smallest useful product shape:
 	ADR-0013's operational boundaries, ADR-0014's auth provider-class and role
 	implementation direction, and ADR-0015's PostgreSQL/Alembic direction plus the
 	minimal scaffold wiring, controlled seeded import path, database-backed
-	source-derived read service, local/test auth boundary scaffold, local/test
-	source-derived read route seam, and first read-only authenticated workflow
+	source-derived read service, local/test auth boundary scaffold, auth provider
+	integration planning seam, local/test source-derived read route seam, and first read-only authenticated workflow
 	shell, reviewer-created state persistence scaffold, reviewer-created state
 	read route seam, first audit event persistence scaffold, local/test audit
 	history read route seam, reset/reload

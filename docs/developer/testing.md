@@ -42,6 +42,13 @@ At minimum, complaints, allegations, events, and extraction audit rows should
 trace back to a source document with source URL, raw SHA-256 hash, connector
 metadata, and retrieval timestamp.
 
+Hosted auth provider integration planning tests must prove the accepted managed
+OpenID Connect/OAuth 2.0 provider class is enforced, readiness inputs are
+non-secret and deterministic, unsupported providers and missing readiness fields
+are rejected, secret-like values and real URLs are rejected without being echoed,
+user-role-admin permission and scope are required, no provider configuration is
+persisted, and existing hosted scaffold tables are not mutated.
+
 Hosted reset/reload planning tests must prove the implemented layer is
 non-mutating. Dry-run tests should check affected seeded import batches,
 source-derived record counts, scoped reviewer-created scaffold counts, scoped

@@ -41,7 +41,8 @@ location, one domain migration for controlled seeded corpus import batch
 metadata and source-derived record staging, a local validated JSON artifact
 importer, a local/test database-backed read service over staged source-derived
 records, a local/test auth boundary scaffold with actor, role, scope, target,
-and audit-context models, a narrow local/test authenticated source-derived
+and audit-context models, a narrow local/test auth provider integration
+planning seam for non-secret readiness/configuration planning, a narrow local/test authenticated source-derived
 HTTP/API read route seam, a narrow local/test authenticated read-only reviewer
 workflow shell over the route seam, a narrow local/test reviewer-created state
 persistence scaffold table and service boundary, a narrow local/test audit event
@@ -60,7 +61,11 @@ delegating to reviewer-created write routes, a local/test authenticated reset/re
 seam, a separate local/test reset/reload operational planning metadata
 scaffold, a narrow local/test read-only planning metadata route seam, a narrow
 local/test reset/reload execution-plan route seam, and
-scaffold/API boundary descriptors. The dry-run reports
+scaffold/API boundary descriptors. The provider integration planning seam
+validates the accepted managed OpenID Connect/OAuth 2.0 provider class,
+summarizes existing auth boundary models, accepts only non-secret readiness
+inputs, and does not persist configuration, users, roles, claims, sessions, or
+credentials. The dry-run reports
 what a future seeded corpus reset/reload would affect, including existing import
 batch metadata, source-derived record counts by entity, future reviewer-created
 state handling modes, required permissions, validation requirements, audit
@@ -312,10 +317,12 @@ project or corpus scope, disabled-account rejection, and actor identity context
 needed for audit logging.
 
 The current auth boundary scaffold implements those checks only for local/test
-service seams. It establishes authenticated actor, role, permission, scope,
-target, account-status, and audit-context models, but it does not authenticate
-browser users, validate provider tokens, store sessions, persist role/scope
-assignments, or by itself create reviewer-created state. The narrow reviewer-
+service seams and provider integration planning. It establishes authenticated
+actor, role, permission, scope, target, account-status, and audit-context
+models, and can return a bounded non-secret provider readiness plan, but it does
+not authenticate browser users, validate provider tokens, store sessions,
+persist role/scope assignments, register a provider, create hosted URLs, or by
+itself create reviewer-created state. The narrow reviewer-
 created state scaffold reuses those local/test checks for attributed placeholder
 state writes, but it does not implement browser authentication, persistent
 authorization storage, full review workflows, annotations, corrections,

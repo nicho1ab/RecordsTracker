@@ -44,6 +44,12 @@ role/scope-checked, ordered, bounded, non-destructive, optionally persisted only
 through operational planning metadata, and non-mutating across source-derived,
 reviewer-created, audit, import, and operational rows except for the explicitly
 requested planning metadata row.
+Auth provider integration planning tests must prove the accepted provider class
+is enforced, unsupported provider classes and missing readiness inputs are
+rejected, secret-like inputs and real URLs are rejected without echoing values,
+user-role-admin permission and scope are required, ordering is deterministic,
+and no hosted scaffold tables are mutated or persisted auth configuration is
+created.
 Reviewer-created state read route tests must prove authorized readback remains
 scoped, non-secret, separated from source-derived reads, and non-mutating across
 source-derived rows, reviewer-created rows, audit rows, and operational metadata.

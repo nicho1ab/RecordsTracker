@@ -15,6 +15,11 @@ from ccld_complaints.hosted_app.audit_event_routes import (
     AuditEventsApiContext,
     route_audit_events_api_response,
 )
+from ccld_complaints.hosted_app.auth_provider_integration_plan import (
+  AUTH_PROVIDER_INTEGRATION_PLAN_API_PATH,
+  AuthProviderIntegrationPlanContext,
+  route_auth_provider_integration_plan_response,
+)
 from ccld_complaints.hosted_app.reset_reload_dry_run import (
     SEEDED_CORPUS_RESET_RELOAD_DRY_RUN_API_PATH,
     SeededCorpusResetReloadDryRunContext,
@@ -994,13 +999,16 @@ def route_response(
     path: str,
     *,
   request_body: bytes | None = None,
+  auth_provider_integration_plan_context: (
+    AuthProviderIntegrationPlanContext | None
+  ) = None,
     source_derived_api_context: SourceDerivedApiContext | None = None,
     audit_events_api_context: AuditEventsApiContext | None = None,
     reviewer_workflow_shell_context: ReviewerWorkflowShellContext | None = None,
     reviewer_created_state_api_context: ReviewerCreatedStateApiContext | None = None,
     reset_reload_dry_run_context: SeededCorpusResetReloadDryRunContext | None = None,
     reset_reload_execution_plan_context: (
-      SeededCorpusResetReloadExecutionPlanContext | None
+        SeededCorpusResetReloadExecutionPlanContext | None
     ) = None,
     reset_reload_planning_metadata_api_context: (
         ResetReloadPlanningMetadataApiContext | None
@@ -1012,7 +1020,12 @@ def route_response(
         return route_reviewer_workflow_shell_response(
             path,
             reviewer_workflow_shell_context,
-          request_body=request_body,
+            request_body=request_body,
+        )
+    if parsed_path == AUTH_PROVIDER_INTEGRATION_PLAN_API_PATH:
+        return route_auth_provider_integration_plan_response(
+            path,
+            auth_provider_integration_plan_context,
         )
     if parsed_path.startswith(REVIEWER_CREATED_STATE_API_PREFIX):
         return route_reviewer_created_state_api_response(
@@ -1026,10 +1039,10 @@ def route_response(
             reset_reload_dry_run_context,
         )
     if parsed_path == SEEDED_CORPUS_RESET_RELOAD_EXECUTION_PLAN_API_PATH:
-      return route_seeded_corpus_reset_reload_execution_plan_response(
-        path,
-        reset_reload_execution_plan_context,
-      )
+        return route_seeded_corpus_reset_reload_execution_plan_response(
+            path,
+            reset_reload_execution_plan_context,
+        )
     if parsed_path.startswith(RESET_RELOAD_PLANNING_METADATA_API_PREFIX):
         return route_reset_reload_planning_metadata_api_response(
             path,
