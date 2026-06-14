@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Added a narrow local/test reviewer workflow shell action for creating reviewer
+	notes from the selected source-derived detail context, delegating to the
+	existing reviewer note creation route so source-record binding, auth/scope
+	checks, reviewer-created state persistence, audit creation, read-after-write
+	visibility, and source-derived no-mutation behavior stay on the existing
+	service boundary without adding schema changes, note editing/deletion, full
+	annotations, corrections, review status transitions, exports, reset/reload
+	execution, production auth, deployment, live crawling, or connector execution.
 - Added a narrow local/test authenticated reviewer note creation route over the
 	existing reviewer-created state scaffold, storing bounded non-secret note text
 	as reviewer-created scaffold payload under the existing state kind, creating

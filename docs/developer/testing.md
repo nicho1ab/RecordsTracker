@@ -79,6 +79,12 @@ revoked actors, role-denied actors, out-of-scope actors, source-derived read
 versus reviewer-state read permission separation, non-secret associated state
 payloads, and before/after table counts proving detail reads do not mutate
 source-derived rows, reviewer-created rows, audit rows, or operational metadata.
+Workflow shell note action tests should also cover successful note creation from
+the selected detail context, forced source-record binding from that selected
+context, permission failures, invalid or missing source records, invalid note
+payloads, successful audit creation, no audit/state mutation on failure,
+read-after-write visibility through existing read routes and workflow detail
+output, and no source-derived mutation.
 
 Hosted reviewer-created state read route tests must prove persisted scaffold
 rows are readable only through authenticated, active, role/scope-allowed local/

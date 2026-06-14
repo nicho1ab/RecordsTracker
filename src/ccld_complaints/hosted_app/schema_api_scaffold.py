@@ -38,6 +38,7 @@ class HostedSchemaApiScaffold:
     reviewer_workflow_shell_implemented: bool = True
     reviewer_workflow_shell_state_read_integration_implemented: bool = True
     reviewer_workflow_shell_state_filter_search_implemented: bool = True
+    reviewer_workflow_shell_note_action_implemented: bool = True
     reset_reload_dry_run_implemented: bool = True
     reset_reload_operational_metadata_scaffold_implemented: bool = True
     reset_reload_planning_metadata_read_api_routes_implemented: bool = True
@@ -91,7 +92,9 @@ HOSTED_API_BOUNDARIES = (
             "authenticated read route seam for listing or fetching those rows, a narrow "
             "local/test reviewer note creation route over the existing state scaffold, plus "
             "a read-only reviewer workflow shell detail seam that composes associated "
-            "reviewer-created state read route output for a selected source record."
+            "reviewer-created state read route output for a selected source record, and a "
+            "narrow workflow-shell note action that resolves the selected detail context "
+            "before delegating to the existing reviewer note route."
         ),
         requires_authenticated_actor_before_write=True,
         preserves=(
@@ -101,13 +104,14 @@ HOSTED_API_BOUNDARIES = (
             "stable links to source-derived identities",
             "read-only access to persisted reviewer-created scaffold rows",
             "bounded non-secret reviewer note payloads under the existing state kind",
+            "workflow-shell source-record binding from selected detail context",
         ),
         deferred=(
             "auth middleware",
             "full reviewer-created workflow persistence",
             "stateful reviewer workflows",
             "note editing or deletion",
-            "audit logging",
+            "full audit policy coverage",
             "export builder behavior",
         ),
     ),

@@ -32,10 +32,11 @@
     protect those service reads by actor role, account status, and scope. A
     narrow local/test HTTP/API route seam can serialize those authenticated
     source-derived reads when tests provide an explicit route context, and a
-    narrow local/test read-only reviewer workflow shell can return queue and
-    detail payloads over that route seam and compose associated reviewer-created
-    state read route output plus a compact summary derived from that output on
-    selected detail responses when tests provide an explicit workflow context.
+    narrow local/test reviewer workflow shell can return read-only queue/detail
+    payloads over that route seam, compose associated reviewer-created state read
+    route output plus a compact summary derived from that output on selected
+    detail responses, and expose a narrow note action when tests provide an
+    explicit workflow context.
     A narrow local/test reviewer-created state
     persistence scaffold can
     store attributed placeholder rows separately from source-derived records
@@ -57,7 +58,9 @@
     reviewer-state read permission. Source-derived read permission
     alone does not grant this reviewer-created state read access, including
     when the workflow shell composes associated state context and its derived
-    summary for a selected source record.
+    summary for a selected source record. Reviewer note creation through the
+    workflow shell separately requires reviewer-state write permission and forces
+    source-record binding from the selected detail context.
     A narrow local/test reviewer note creation route can write bounded non-
     secret note text through the existing reviewer-created state scaffold and
     audit path when explicit local/test code supplies reviewer-state write

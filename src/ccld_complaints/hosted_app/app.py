@@ -1004,6 +1004,7 @@ def route_response(
         return route_reviewer_workflow_shell_response(
             path,
             reviewer_workflow_shell_context,
+          request_body=request_body,
         )
     if parsed_path.startswith(REVIEWER_CREATED_STATE_API_PREFIX):
         return route_reviewer_created_state_api_response(
