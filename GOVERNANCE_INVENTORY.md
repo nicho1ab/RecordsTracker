@@ -87,19 +87,25 @@
   class and hosted tester MVP role implementation direction without
   implementing auth middleware, schemas, API routes, provider configuration,
   secrets, hosted URLs, or deployment.
+- ADR-0015 accepted PostgreSQL as the hosted tester MVP database product and
+  Alembic-managed migrations as the migration tooling direction without
+  implementing schemas, tables, migrations, API routes, imports, reset commands,
+  auth middleware, secrets, provider configuration, hosted URLs, deployment, or
+  CI configuration.
 
 ## Remaining deferred decisions
 
-- Concrete frontend framework, API framework, database product, migration tool,
-  concrete auth provider instance and configuration, hosting platform,
-  deployment pipeline, retention durations and automation, backup/restore
-  policy, final design system, and production operations model.
+- Concrete frontend framework, API framework, concrete auth provider instance
+  and configuration, hosting platform, deployment pipeline, retention durations
+  and automation, backup/restore policy, final design system, and production
+  operations model.
 - Controlled import artifact format, import command or API implementation,
   import validation, idempotency, reset/reload behavior, and comparison against
   retained SQLite/Datasette validation output.
-- Physical hosted schemas and migrations for import metadata, source-derived
+- Physical hosted schemas, Alembic migration files, PostgreSQL table groups,
+  indexes, constraints, and ORM models for import metadata, source-derived
   imported records, reviewer-created state, audit events, export packet state,
-  tester feedback, and operational/reset metadata.
+  tester feedback, auth role/scope references, and operational/reset metadata.
 - Authentication, authorization, role storage, invitation flow, account
   lifecycle, access revocation, access review, audit schema, and user
   deprovisioning implementation.
@@ -135,7 +141,8 @@
   fixture-only facility source coverage panel are complete. ADR-0013 completed
   the operational boundary decision for audit, export, reset/reload, and
   retention planning. ADR-0014 completed the auth provider-class and role
-  implementation direction decision. Next work should move to the approved
+  implementation direction decision. ADR-0015 completed the database and
+  migration tooling decision. Next work should move to the approved
   product-moving implementation path, not repeat those completed items.
 - Local-only/sample-only boundaries remain active. Sample records must stay
   clearly marked as fixture/sample records and must not be presented as live,
@@ -156,10 +163,11 @@
   implementation still needs import artifact format, validation, stable
   identities, idempotency, schema/API behavior, and comparison details.
 - Future database/schema implementation: no schema changes are approved by the
-  current scaffold. Future schema work must preserve separate physical areas or
-  table groups for source-derived imported records, reviewer-created state,
-  import metadata, audit events, export packet state, tester feedback, and
-  operational/reset metadata.
+  current scaffold or ADR-0015. Future schema work must use PostgreSQL and
+  Alembic-managed migrations while preserving separate physical areas or table
+  groups for source-derived imported records, reviewer-created state, import
+  metadata, audit events, export packet state, tester feedback, auth role/scope
+  references, and operational/reset metadata.
 - Future auth/access implementation: hosted tester access must use the
   ADR-0014 managed OpenID Connect/OAuth 2.0 provider class, remain explicitly
   invited or provisioned, role-scoped, project/corpus-scoped, revocable,

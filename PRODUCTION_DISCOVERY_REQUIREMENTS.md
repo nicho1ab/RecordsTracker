@@ -229,6 +229,12 @@ the controlled import/sync boundary accepted by ADR-0009, starting with
 snapshot imports from validated pipeline output unless a later ADR approves a
 different import mechanism.
 
+ADR-0015 chooses PostgreSQL as the hosted tester MVP persistence store and
+Alembic-managed migrations as the migration tooling direction. Future seeded
+corpus implementation must preserve source-derived and reviewer-created state
+separation in PostgreSQL and must use migrations that are repeatable and
+reviewable before external tester use.
+
 ### Known limitations visible
 
 Known limitations must be visible in the hosted workflow at points where testers
@@ -290,9 +296,10 @@ scaffold-first sequence after the accepted data-domain, import/sync,
 schema/migration, and authentication/access boundaries. ADR-0013 defines the
 operational boundaries for audit logging, export generation, reset/reload, and
 tester data retention. ADR-0014 chooses the authentication provider class and
-role implementation direction. Before hosted tester MVP implementation expands
-into external tester use, implementation PRs or equivalent governance updates
-must define the concrete affected layer:
+role implementation direction. ADR-0015 chooses PostgreSQL and Alembic-managed
+migrations for hosted tester MVP persistence. Before hosted tester MVP
+implementation expands into external tester use, implementation PRs or
+equivalent governance updates must define the concrete affected layer:
 
 - Where review state, annotations, correction proposals, feedback, and export
   packet decisions are persisted.
@@ -305,6 +312,10 @@ must define the concrete affected layer:
 - How the ADR-0010 physical schema and migration strategy is mapped into
   separated schema areas or table groups, migration validation, and future
   implementation tests without weakening traceability or mixing data domains.
+- How ADR-0015's PostgreSQL and Alembic migration direction is mapped into
+  local/test/hosted configuration, migration review, rollback or recovery
+  guidance, and validation without committing secrets, connection strings, or
+  deployment configuration.
 - How source traceability and extraction audit context remain available to the
   hosted reviewer application.
 - How authenticated tester access, audit history, reset/reload, export
@@ -317,6 +328,6 @@ must define the concrete affected layer:
   claims, actor categories, project/corpus scope, access approval, disablement,
   and access review boundaries are mapped into the implementation layer.
 - Which accessibility checks are required before tester access is enabled.
-- Which concrete provider instance, database product, migration tooling, API
-  framework, and storage choices are selected for the hosted tester MVP layer
-  being built.
+- Which concrete provider instance, API framework, storage, backup/restore,
+  retention automation, and deployment choices are selected for the hosted
+  tester MVP layer being built.

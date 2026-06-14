@@ -62,10 +62,11 @@ generated profiling outputs, SQLite, a hosted database, live public-source
 data, import/sync output, authentication state, or reviewer-created state.
 
 ADR-0013 now defines the product-enabling operational boundaries for audit
-logging, export generation, reset/reload, and tester data retention. The next
-ADR-0014 now chooses a managed standards-based OpenID Connect/OAuth 2.0
-provider class and role implementation direction. The next hosted tester MVP
-work can move toward database/migration selection, minimal hosted schema/API
+logging, export generation, reset/reload, and tester data retention. ADR-0014
+now chooses a managed standards-based OpenID Connect/OAuth 2.0
+provider class and role implementation direction. ADR-0015 now chooses
+PostgreSQL and Alembic-managed migrations for hosted tester MVP persistence.
+The next hosted tester MVP work can move toward minimal hosted schema/API
 scaffolding, focused auth integration, seeded corpus import/reset, and the
 first authenticated tester workflow when each branch validates its layer.
 
