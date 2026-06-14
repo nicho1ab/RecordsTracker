@@ -15,6 +15,7 @@ src/ccld_complaints/
     schema_api_scaffold.py
     seeded_import.py
     source_derived_reads.py
+    source_derived_routes.py
   storage/
   quality/
   utils/
@@ -48,10 +49,12 @@ migrations/
 13. Use the hosted auth boundary scaffold only for local/test actor, role,
   account-status, scope, and authorization-target checks before protected
   service reads.
-14. Keep reviewer-created state, reset/reload behavior, real login flow, auth
-  middleware, provider integration, HTTP API routes, live crawling, connector
-  execution, and production automation in future focused branches until those
-  layers are implemented and tested.
+14. Use the hosted source-derived route seam only for local/test authenticated
+  JSON list and fetch access over staged seeded corpus records.
+15. Keep reviewer-created state, reset/reload behavior, real login flow, auth
+  middleware, provider integration, production API framework behavior, live
+  crawling, connector execution, and production automation in future focused
+  branches until those layers are implemented and tested.
 
 ## Hosted scaffold boundary
 
@@ -99,20 +102,22 @@ records while preserving import batch context, original source-derived values,
 and source traceability. The auth boundary scaffold adds managed OIDC/OAuth2
 provider-class configuration validation plus local/test authenticated actor,
 role, scope, account-status, target, and audit-context models for protected
-service seams. The next hosted tester MVP work can move toward HTTP/API route
-decisions, real provider integration, reset/reload planning, and the first
-authenticated tester workflow when each branch validates its layer.
+service seams. The source-derived route seam adds local/test authenticated JSON
+list, fetch-by-key, and fetch-by-stable-identity handlers over those staged
+records. The next hosted tester MVP work can move toward real provider
+integration, reset/reload planning, and the first authenticated tester workflow
+when each branch validates its layer.
 
 The scaffold does not implement real provider login, token validation, sessions,
 cookies, auth middleware, role or user storage, production domain schema beyond
-the seeded import table group, API routes, production import automation, queues,
-annotations, corrections, exports, tester feedback, audit trail, reset/reload,
-hosted live crawling, hosted connector execution, deployment, source-derived
-canonical field changes, reviewer-created state persistence, or extraction
-behavior. Its database-backed reads and auth guards are limited to local/test
-service seams and are not wired to HTTP routes or reviewer workflows. It does
-not require Docker, QNAP Container Station, Azure, AWS, a public URL, secrets,
-or cloud resources.
+the seeded import table group, production API framework behavior, production
+import automation, queues, annotations, corrections, exports, tester feedback,
+audit trail, reset/reload, hosted live crawling, hosted connector execution,
+deployment, source-derived canonical field changes, reviewer-created state
+persistence, or extraction behavior. Its database-backed reads, auth guards,
+and source-derived read routes are limited to local/test service seams and are
+not reviewer workflows. It does not require Docker, QNAP Container Station,
+Azure, AWS, a public URL, secrets, or cloud resources.
 
 See `docs/developer/hosted-scaffold.md` for local run and smoke-check commands.
 

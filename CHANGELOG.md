@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Added a narrow local/test authenticated HTTP/API route seam for staged
+	source-derived reads, with JSON list, fetch-by-key, and fetch-by-stable-
+	identity handlers that reuse the hosted auth boundary and database-backed read
+	service while preserving import batch context, source traceability, original
+	source-derived values, and the source-derived versus reviewer-created state
+	boundary without adding real login flow, tokens, cookies, sessions, auth
+	middleware, reviewer-created state, audit persistence, exports, reset/reload,
+	production automation, hosted live crawling, connector execution, deployment,
+	or schema changes.
 - Added a focused hosted tester auth/authz boundary scaffold with managed
 	OIDC/OAuth2 provider-class configuration validation, immutable actor, role,
 	scope, target, and audit-context models, and protected source-derived read

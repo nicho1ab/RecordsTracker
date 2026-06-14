@@ -32,9 +32,11 @@
   PostgreSQL/Alembic import batch and source-derived table group only. A narrow
   local/test read service can list and fetch those staged records with import
   batch context and source traceability, and local/test auth guards can protect
-  those service reads by actor role, account status, and scope. The path does
-  not run live crawling, execute connectors, automate production imports,
+  those service reads by actor role, account status, and scope. A narrow
+  local/test HTTP/API route seam can serialize those authenticated
+  source-derived reads when tests provide an explicit route context. The path
+  does not run live crawling, execute connectors, automate production imports,
   implement reset/reload, authenticate browser users, validate real provider
-  tokens, create reviewer-created state, expose HTTP API routes or
-  database-backed reviewer views, or prove source completeness.
+  tokens, create reviewer-created state, expose database-backed reviewer views
+  or production API framework behavior, or prove source completeness.
 - Datasette accessibility depends partly on the installed Datasette version, browser, and assistive technology. Validate keyboard navigation, table headers, focus visibility, and exported table usability before treating a release as stable.
