@@ -36,6 +36,7 @@ class HostedSchemaApiScaffold:
     source_derived_read_service_implemented: bool = True
     source_derived_read_api_routes_implemented: bool = True
     reviewer_workflow_shell_implemented: bool = True
+    reviewer_workflow_shell_state_read_integration_implemented: bool = True
     reset_reload_dry_run_implemented: bool = True
     reset_reload_operational_metadata_scaffold_implemented: bool = True
     reset_reload_planning_metadata_read_api_routes_implemented: bool = True
@@ -85,7 +86,8 @@ HOSTED_API_BOUNDARIES = (
             "The current implementation adds only a local/test reviewer-created state "
             "persistence scaffold table and service boundary, a narrow local/test "
             "authenticated read route seam for listing or fetching those rows, plus "
-            "a read-only reviewer workflow shell over source-derived route responses."
+            "a read-only reviewer workflow shell detail seam that composes associated "
+            "reviewer-created state read route output for a selected source record."
         ),
         requires_authenticated_actor_before_write=True,
         preserves=(

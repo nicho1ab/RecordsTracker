@@ -57,15 +57,20 @@ middleware, persist audit events, expose reviewer-created state, or commit
 provider, tenant, callback, hosted URL, or secret configuration.
 
 The current reviewer workflow shell is also local/test only and must receive an
-explicit workflow shell context backed by the source-derived route context. It
-consumes the authenticated source-derived route seam for read-only queue and
-detail payloads, preserves the same unauthenticated, disabled or revoked,
+explicit workflow shell context backed by source-derived and reviewer-created
+state read route contexts. It consumes the authenticated source-derived route
+seam for read-only queue and detail payloads, and the detail payload can compose
+associated reviewer-created state read route output for the selected source
+record. Source-derived record reads still require source-derived read access,
+and associated reviewer-created state reads separately require reviewer-state
+read access; source-derived read permission alone does not grant the associated
+state context. The shell preserves unauthenticated, disabled or revoked,
 role-denied, and out-of-scope rejection behavior, and marks reviewer-created
 state persistence and reviewer actions as deferred. It does not authenticate
 browser users, parse or store provider tokens, create sessions or cookies, add
-production auth middleware, create anonymous reviewer-created state, persist
-audit events, or commit provider, tenant, callback, hosted URL, or secret
-configuration.
+production auth middleware, create anonymous reviewer-created state, create or
+modify reviewer-created state, persist new audit events through reads, or commit
+provider, tenant, callback, hosted URL, or secret configuration.
 
 The current reset/reload dry-run seam is local/test only and must receive an
 explicit database, actor, and corpus scope context from tests or local callers.
