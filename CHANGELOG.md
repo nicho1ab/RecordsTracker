@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added tiny synthetic public-source facility fixtures, fixture documentation,
+	and tests for future fixture-backed source/facility view planning, without
+	committing raw source files, generated profiling outputs, imports, schemas,
+	connectors, or hosted app behavior.
 - Added local-only public-source CSV profiling tooling with synthetic fixtures,
 	focused tests, ignored JSON/CSV/log outputs, and documentation of the boundary
 	that raw files and generated profiles stay ignored and no imports, connectors,

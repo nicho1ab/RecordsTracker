@@ -96,6 +96,23 @@ Local CDE HTML captures may be CAPTCHA or access-block pages. Treat those as
 source-access issues for later discovery notes, not as valid data pages or
 approved HTML scraping inputs.
 
+## Tiny fixture selection
+
+The committed fixtures under `tests/fixtures/public_source_facilities/` are
+tiny, synthetic representatives selected from local profiling results. They
+cover the CCLD program-specific facility download shape and the CalHHS/CHHS
+facility-master shape for future fixture-backed source/facility view planning.
+The fixtures include manifest placeholders for source family, jurisdiction,
+source reference, raw hash, and retrieval timestamp so future tests can exercise
+source-traceability-style display without committing raw source files or
+generated profiling outputs.
+
+These fixtures do not approve CSV import, connector implementation, schema or
+migration work, hosted app behavior, canonical field changes, source
+completeness claims, or legal conclusions. The metadata CSV that produced a
+parser warning in profiling is intentionally deferred from this tiny fixture set
+until a later task defines metadata warning expectations.
+
 ## Multi-source expansion model
 
 Future source adapters should be planned through a source registry entry before
