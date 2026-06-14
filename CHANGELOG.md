@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added the first local-only read-only source-derived hosted view shell with
+	fixture/sample records, sample source-traceability-style fields, and explicit
+	labels that no live data, database, import/sync, authentication, or
+	reviewer-created state persistence is active.
 - Added local hosted scaffold setup-check tooling for verifying Python and
 	development-tool prerequisites on Windows without installing software,
 	requiring admin rights, or requiring Node, Docker, QNAP, cloud resources, or a

@@ -40,6 +40,12 @@ Python and development-tool prerequisites without installing software, requiring
 admin rights, or requiring Node, Docker, QNAP, Azure, AWS, cloud resources, or a
 public URL.
 
+The scaffold also includes a local-only read-only source-derived view shell over
+fixture/sample records. This view is an app-facing placeholder for source record
+list and detail navigation only. It does not read from SQLite or a hosted
+database, run import/sync, load live public-source data, authenticate users, or
+persist reviewer-created state.
+
 The scaffold does not implement authentication, authorization, production
 schema, migrations, import/sync, queues, annotations, corrections, exports,
 tester feedback, audit trail, reset/reload, hosted live crawling, hosted
