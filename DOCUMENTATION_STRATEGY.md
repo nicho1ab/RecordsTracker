@@ -33,9 +33,13 @@ End users need plain-language instructions for browsing, searching, filtering, u
 ## Required production-discovery docs
 
 - `PRODUCTION_DISCOVERY_REQUIREMENTS.md`
+- `GOVERNANCE_INVENTORY.md`
 
 Future hosted primary reviewer application work must keep this requirements
 document current until ADRs and implementation docs supersede specific sections.
+The governance inventory must stay current when the active phase, hosted
+scaffold state, completed ADR assessment, deferred decisions, stale-guidance
+assessment, or next-phase gap analysis changes.
 
 ## Update rules
 
@@ -61,6 +65,7 @@ contract, limitation, design, and decision documentation needs to change.
 At minimum, review these documentation surfaces for impact:
 
 - `README.md`
+- `GOVERNANCE_INVENTORY.md`
 - `ROADMAP.md`
 - `CHANGELOG.md`
 - `docs/user/*`
@@ -87,35 +92,6 @@ Documentation checks prevent stale, missing, or misleading documentation. They
 should not become the default next milestone when validation is passing and the
 documentation is current; future work should then come from the active roadmap
 backlog.
-
-## Documentation impact and currency
-
-Every feature, workflow, source connector, CLI or script, database or view, or
-user-facing behavior change must evaluate whether public, user, developer,
-contract, limitation, design, and decision documentation needs to change.
-
-At minimum, review these documentation surfaces for impact:
-
-- `README.md`
-- `docs/user/*`
-- `docs/developer/*`
-- `DATA_CONTRACT.md`
-- `SOURCE_CONNECTOR_CONTRACT.md`
-- `KNOWN_LIMITATIONS.md`
-- `DESIGN_AND_USABILITY.md`
-- `DECISIONS.md and ADRs` in `docs/decisions/`
-
-Not every change requires every document to change. However, every pull request
-must either update affected documentation or explicitly state that no user-facing
-or documentation-impacting behavior changed. In PR text, use a clear statement
-such as: no user-facing or documentation-impacting behavior changed.
-
-Root public documentation must describe the active CCLD complaints project and
-its current phase, not obsolete scaffold, template, packaging, or stale
-Datasette-primary POC language. The README must stay current with implemented
-project capabilities, including local SQLite and Datasette validation/review
-support, source traceability, fixture-backed tests, controlled live fetch
-behavior, source-traceable exports, and production-discovery governance.
 
 ## Public documentation hygiene
 

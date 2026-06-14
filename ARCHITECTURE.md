@@ -55,7 +55,8 @@ Python ingestion and extraction pipeline as the source-derived data producer,
 starts the tester MVP with controlled snapshot imports from validated pipeline
 output, preserves stable source-derived identities and traceability fields, and
 does not approve hosted live crawling, hosted connector execution, import code,
-schemas, migrations, reset/reload implementation, or app scaffold work.
+schemas, migrations, or reset/reload implementation. ADR-0012 later separately
+approved scaffold-first sequencing only; it did not approve import/sync behavior.
 
 ADR-0010 defines the hosted tester MVP physical schema and migration strategy
 boundary. Future hosted schema work must separate import/batch metadata,
@@ -63,14 +64,16 @@ source-derived imported records, reviewer-created state, audit events, export
 packet state, tester feedback, and operational/reset metadata through separate
 physical schema areas or clearly separated table groups. It does not approve
 schema files, migration files, a database product, a migration tool, import
-implementation, reset/reload implementation, or app scaffold work.
+implementation, or reset/reload implementation. ADR-0012 later separately
+approved scaffold-first sequencing only; it did not approve schema work.
 
 ADR-0011 defines the hosted tester MVP authentication and access boundary. The
 hosted tester MVP must require authenticated, explicitly provisioned or invited
 tester access, use simple role-based boundaries, and prevent anonymous hosted
 tester access. It does not approve an authentication provider, identity storage,
-authorization middleware, role schema, user tables, app scaffold, or hosted
-deployment.
+authorization middleware, role schema, user tables, or hosted deployment.
+ADR-0012 later separately approved scaffold-first sequencing only; it did not
+approve authentication or authorization implementation.
 
 ADR-0012 defines the hosted tester MVP scope and scaffold sequencing boundary.
 Hosted implementation may begin after ADR-0012, but only through a sequenced
@@ -79,6 +82,14 @@ testable hosted app scaffold with smoke validation and local development docs;
 it must not implement business workflows, domain schema, authentication,
 authorization, import/sync, review queues, annotations, corrections, exports,
 reset/reload, hosted deployment, or extraction behavior.
+
+The current hosted scaffold state is local-only and sample-only. It includes a
+Python standard-library app shell, health and smoke validation, local setup
+checks, and a read-only `/source-records` list/detail shell over fixture/sample
+records with semantic/accessibility validation. It does not read from SQLite or
+a hosted database, load live public-source data, run import/sync, authenticate
+users, persist reviewer-created state, deploy to QNAP/Azure/AWS, or expose a
+public URL.
 
 ## Components
 

@@ -26,6 +26,13 @@ boundary for the hosted tester MVP. This ADR defines that boundary only. It does
 not implement schemas, migrations, queues, annotations, corrections, hosted
 exports, authentication, app scaffolding, or extraction behavior.
 
+Current note: ADR-0012 later approved scaffold-first sequencing, and later local
+implementation PRs added only the local scaffold, setup checks, read-only sample
+source-record shell, and semantic/accessibility validation. This ADR still does
+not approve data schemas, migrations, reviewer-created state persistence,
+queues, annotations, corrections, exports, authentication, or extraction
+behavior.
+
 ## Decision
 
 The hosted tester MVP must use two distinct data domains:

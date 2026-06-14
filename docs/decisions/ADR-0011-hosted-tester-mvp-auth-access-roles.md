@@ -32,6 +32,12 @@ correction decisions, export packet decisions, audit history, and potentially
 sensitive review context. That hosted context must not be exposed anonymously or
 treated as official public-source content.
 
+Current note: ADR-0012 later approved scaffold-first sequencing, and later local
+implementation PRs added only the local scaffold, setup checks, read-only sample
+source-record shell, and semantic/accessibility validation. This ADR still does
+not approve authentication, authorization, user tables, role tables, invitation
+flows, audit schema, hosted deployment, or anonymous hosted tester access.
+
 This ADR defines the conceptual authentication, access-control, and tester-role
 boundary only. It does not choose an authentication provider, implement access
 control, define user tables, create role schemas, add authorization middleware,

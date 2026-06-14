@@ -32,6 +32,12 @@ schemas, alter extraction behavior, add connectors, implement authentication,
 implement review queues, implement annotations, implement corrections, implement
 hosted exports, or modify Datasette-primary UX.
 
+Current note: ADR-0012 later approved scaffold-first sequencing, and later local
+implementation PRs added only the local scaffold, setup checks, read-only sample
+source-record shell, and semantic/accessibility validation. This ADR still does
+not approve production stack selection, schemas, authentication, reviewer
+workflows, hosted exports, deployment, or Datasette-primary UX expansion.
+
 ## Decision Drivers
 
 - Preserve source traceability through source URL, raw hash, raw path where

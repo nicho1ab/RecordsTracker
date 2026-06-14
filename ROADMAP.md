@@ -228,6 +228,11 @@ the governed primary future review experience.
 	fixture/sample records, sample source-traceability-style fields, and clear
 	labels that no live data, database, import/sync, authentication, or
 	reviewer-created state persistence is active.
+- Added local-only semantic/accessibility validation coverage for the hosted
+	source-record list/detail shell using Python standard-library HTML parsing.
+- Added a governance inventory and gap analysis for the production-discovery
+	state, local hosted scaffold implementation, completed ADRs, deferred
+	decisions, stale-guidance assessment, and next implementation phase.
 
 ## Near-term milestones
 
@@ -265,8 +270,9 @@ exploration, or export support.
 3. Decide concrete database product and migration tooling for the hosted tester
   MVP only after the remaining access, audit, reset/reload, export, retention,
   and operations constraints are understood.
-4. Decide the next read-only hosted source-detail boundary only after the import,
-	schema, authentication, and sample-shell limits remain clear.
+4. Add local-only sample filtering/search to the hosted source-record shell only
+	within the fixture/sample, read-only, no-database, no-import, no-authentication,
+	no-reviewer-state boundary.
 5. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
 
