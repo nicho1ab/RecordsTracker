@@ -37,6 +37,13 @@
     route output plus a compact summary derived from that output on selected
     detail responses, and expose narrow note/status actions when tests provide
     an explicit workflow context.
+    A narrow local/test auth provider integration planning seam can validate the
+    accepted managed OpenID Connect/OAuth 2.0 provider class and return
+    deterministic non-secret readiness steps when tests or local callers provide
+    explicit actor and scope context. It does not persist provider
+    configuration, register a provider, create hosted URLs, handle callbacks,
+    exchange or validate tokens, create sessions or cookies, or implement
+    production auth.
     A narrow local/test reviewer-created state
     persistence scaffold can
     store attributed placeholder rows separately from source-derived records

@@ -55,9 +55,12 @@ migrations/
 13. Use the hosted auth boundary scaffold only for local/test actor, role,
   account-status, scope, and authorization-target checks before protected
   service reads.
-14. Use the hosted source-derived route seam only for local/test authenticated
+14. Use the hosted auth provider integration planning seam only for local/test
+  user-role-admin readiness planning over the accepted managed OpenID Connect/
+  OAuth 2.0 provider class, without storing configuration or implementing login.
+15. Use the hosted source-derived route seam only for local/test authenticated
   JSON list and fetch access over staged seeded corpus records.
-15. Use the hosted reviewer workflow shell only for local/test authenticated
+16. Use the hosted reviewer workflow shell only for local/test authenticated
   read-only queue and detail payloads that consume the source-derived route seam,
   compose associated reviewer-created state read route output plus a compact
   summary on selected detail responses, and expose narrow reviewer note/status
@@ -144,7 +147,9 @@ records while preserving import batch context, original source-derived values,
 and source traceability. The auth boundary scaffold adds managed OIDC/OAuth2
 provider-class configuration validation plus local/test authenticated actor,
 role, scope, account-status, target, and audit-context models for protected
-service seams. The source-derived route seam adds local/test authenticated JSON
+service seams. The auth provider integration planning seam adds local/test
+user-role-admin readiness planning over non-secret provider inputs without
+persisting configuration or implementing login. The source-derived route seam adds local/test authenticated JSON
 list, fetch-by-key, and fetch-by-stable-identity handlers over those staged
 records. The reviewer workflow shell adds local/test authenticated read-only
 queue and detail payloads over those route responses, and detail payloads can

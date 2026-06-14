@@ -61,6 +61,10 @@ def build_local_check_report() -> list[LocalCheck]:
         check_importable("ccld_complaints.hosted_app", "Hosted scaffold package"),
         check_importable("ccld_complaints.hosted_app.auth", "Hosted auth boundary package"),
         check_importable(
+            "ccld_complaints.hosted_app.auth_provider_integration_plan",
+            "Hosted auth provider integration planning package",
+        ),
+        check_importable(
             "ccld_complaints.hosted_app.source_derived_routes",
             "Hosted source-derived API route package",
         ),
@@ -137,6 +141,7 @@ def format_text_report(report: list[LocalCheck]) -> str:
             "tests/unit/test_hosted_seeded_corpus_import.py "
             "tests/unit/test_hosted_source_derived_reads.py "
             "tests/unit/test_hosted_auth_boundary.py "
+            "tests/unit/test_hosted_auth_provider_integration_plan.py "
             "tests/unit/test_hosted_source_derived_routes.py "
             "tests/unit/test_hosted_reviewer_workflow_shell.py "
             "tests/unit/test_hosted_reviewer_created_state.py "

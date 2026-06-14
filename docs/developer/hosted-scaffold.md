@@ -29,7 +29,9 @@ No local PostgreSQL server is required for scaffold smoke, boundary tests, or
 seeded artifact parsing tests. A PostgreSQL-compatible database URL is required
 only when a developer explicitly runs Alembic migrations or the seeded corpus
 import command. The database-backed read service and auth boundary scaffold can
-be exercised in unit tests against in-memory SQLite and fixture actors. The
+be exercised in unit tests against in-memory SQLite and fixture actors. The auth
+provider integration planning seam can be exercised in unit tests with explicit
+local/test actor and scope context and non-secret readiness inputs. The
 source-derived API route seam can also be exercised in unit tests with an
 explicit local/test route context. The reset/reload dry-run seam can be
 exercised in unit tests with an explicit database, actor, and corpus scope
@@ -184,6 +186,10 @@ wiring includes:
 - `ccld_complaints.hosted_app.auth` for managed OIDC/OAuth2 provider-class
   configuration validation, local/test actor context, role and scope guards, and
   protected source-derived read service helpers.
+- `ccld_complaints.hosted_app.auth_provider_integration_plan` for local/test
+  user-role-admin readiness planning over the accepted managed OIDC/OAuth2
+  provider class, accepting only non-secret planning inputs and performing no
+  persistence, provider registration, token handling, or network calls.
 - `ccld_complaints.hosted_app.schema_api_scaffold` for scaffold-only source-
   derived and reviewer-created state API boundary descriptors.
 - `ccld_complaints.hosted_app.seeded_import` for loading a controlled validated
@@ -444,6 +450,12 @@ Run the focused hosted auth boundary tests:
 pytest tests/unit/test_hosted_auth_boundary.py
 ```
 
+Run the focused hosted auth provider integration planning tests:
+
+```powershell
+pytest tests/unit/test_hosted_auth_provider_integration_plan.py
+```
+
 Run the focused hosted source-derived API route tests:
 
 ```powershell
@@ -529,6 +541,12 @@ source-derived read helpers, disabled-account rejection, role-denied rejection,
 out-of-scope rejection, and that source-derived read access alone does not imply
 reviewer-created state read, reviewer-created state write, import/reload, or
 user-administration permissions.
+The auth provider integration planning tests verify accepted provider-class
+planning, unsupported provider-class rejection, required non-secret readiness
+inputs, secret-like input and real URL rejection without echoing values,
+user-role-admin permission and scope checks, deterministic plan ordering, no
+persistence, and before/after row counts proving existing hosted scaffold tables
+are not mutated.
 The source-derived API route tests verify local/test JSON list and fetch
 handlers, source traceability and import batch serialization, entity filtering,
 paging, missing-record responses, explicit route-context requirements, and
@@ -634,6 +652,8 @@ The scaffold intentionally does not implement:
 
 - Real authentication.
 - Real provider token validation, sessions, cookies, or auth middleware.
+- Real provider registration, callback handling, hosted URLs, or persisted auth
+  configuration.
 - Persistent authorization, user, role, invitation, or scope storage.
 - Production schema beyond the seeded import table group, the narrow
   reviewer-created state scaffold table, the narrow audit event scaffold table,
