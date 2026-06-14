@@ -107,15 +107,18 @@ accepts only a digit CCLD facility/license number and optional date range, reads
 existing seeded source-derived rows through the same local/test route seams, and
 can load or refresh matching records from local validated hosted seeded-corpus
 output through the existing source-derived import path, and links matching
-seeded complaint rows into the reviewer UI. Its HTML output must remain limited
-to safe scalar source-derived context, source traceability-style identifiers,
-local/test boundary text, local validated load counts, and the explicit external
-live-fetch command shape. It must not expose narrative source text, provider
+seeded complaint rows into the reviewer UI. The page can also render first-time
+workflow help, feedback guidance without persistence, and a guided request
+result queue over safe CCLD complaint context. Its HTML output must remain
+limited to safe scalar source-derived context, source traceability-style
+identifiers, reviewer-state indicators, local/test boundary text, local
+validated load counts, and the explicit external live-fetch command shape. It
+must not expose narrative source text, provider
 claims, email addresses, tokens, cookies, private headers, connection strings,
 client secrets, hosted URLs, private URLs, or credentials. It does not run live
 crawling, execute connectors, write reviewer-created state, create audit events,
-persist operational metadata, implement auth middleware, or support non-CCLD
-sources.
+persist operational metadata, persist feedback, implement auth middleware, or
+support non-CCLD sources.
 
 The local/test CCLD hosted artifact builder runs only as an explicit developer
 command or function outside browser requests. It converts already validated CCLD

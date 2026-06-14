@@ -26,10 +26,12 @@ from ccld_complaints.hosted_app.auth_provider_integration_plan import (
     route_auth_provider_integration_plan_response,
 )
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
-  CCLD_UI_PREFIX,
-  CcldRecordRequestUiContext,
-  default_ccld_record_request_ui_context,
-  route_ccld_record_request_ui_response,
+    CCLD_HELP_PATH,
+    CCLD_RECORD_REQUEST_PATH,
+    CCLD_UI_PREFIX,
+    CcldRecordRequestUiContext,
+    default_ccld_record_request_ui_context,
+    route_ccld_record_request_ui_response,
 )
 from ccld_complaints.hosted_app.reset_reload_dry_run import (
     SEEDED_CORPUS_RESET_RELOAD_DRY_RUN_API_PATH,
@@ -66,7 +68,7 @@ from ccld_complaints.hosted_app.source_derived_routes import (
     route_source_derived_api_response,
 )
 
-APP_NAME = "CCLD Hosted Tester MVP Scaffold"
+APP_NAME = "CCLD Records Review"
 SCAFFOLD_NOTICE = "Local/test scaffold only: not a production reviewer workflow."
 SAMPLE_DATA_NOTICE = "Local sample source-derived data only; no live public-source data is loaded."
 PUBLIC_SOURCE_FACILITY_FIXTURE_DIR = (
@@ -700,44 +702,67 @@ def render_app_shell() -> str:
   <header>
     <p>{notice}</p>
     <h1>{page_title}</h1>
+    <p>Request CCLD facility records, load validated local/test records, and review
+    source-derived complaint records with notes and status.</p>
   </header>
-  <nav aria-label="Placeholder hosted scaffold navigation">
+  <nav aria-label="CCLD records review navigation">
     <ul>
-      <li><a href="#status">Scaffold status</a></li>
-      <li><a href="/source-records">Sample source-derived records</a></li>
-      <li><a href="/facilities">Sample facility master records</a></li>
-      <li><a href="/ccld/records/request">CCLD record request</a></li>
-      <li><a href="/reviewer">Local/test reviewer UI shell</a></li>
-      <li><a href="#boundaries">Not implemented yet</a></li>
+      <li><a href="{CCLD_RECORD_REQUEST_PATH}">Request CCLD records</a></li>
+      <li><a href="{CCLD_HELP_PATH}">How this works</a></li>
+      <li><a href="/reviewer">Review loaded records</a></li>
+      <li><a href="#feedback">Feedback guidance</a></li>
+      <li><a href="#boundaries">Local/test boundaries</a></li>
       <li><a href="/health">Health check</a></li>
     </ul>
   </nav>
   <main>
-    <section id="status" aria-labelledby="status-heading">
-      <h2 id="status-heading">Local scaffold status</h2>
-      <p>This local app shell is runnable on a Windows development workstation.</p>
-      <p>The root scaffold page does not load source records or authenticate
-      users. Local/test reviewer workflow behavior is available only through
-      the fixture-backed reviewer UI shell.</p>
-      <p>The source-record and facility sample shells use fixture/sample data only.</p>
-      <p>The CCLD record request page at <a href="/ccld/records/request">/ccld/records/request</a>
-      accepts a CCLD facility/license number and optional date range, reads existing
-      seeded source-derived records, and links matching rows into the hosted reviewer UI.</p>
-      <p>The local/test reviewer UI shell at <a href="/reviewer">/reviewer</a>
-      loads a tiny seeded corpus into process-local test state and lets a local
-      tester view source-derived records, add reviewer notes, set reviewer
-      statuses, and see read-after-write reviewer-created state through the
-      existing workflow seams.</p>
+    <section id="start" aria-labelledby="start-heading">
+      <h2 id="start-heading">Start with a CCLD facility request</h2>
+      <p>Enter a CCLD facility/license number and optional date range, then review
+      matching source-derived complaint records in a guided local/test queue.</p>
+      <p><a href="{CCLD_RECORD_REQUEST_PATH}">Request CCLD records</a></p>
+    </section>
+    <section id="workflow" aria-labelledby="workflow-heading">
+      <h2 id="workflow-heading">Workflow overview</h2>
+      <ol>
+        <li>Request records for one CCLD facility/license number.</li>
+        <li>Use already loaded records or load validated local/test CCLD output.</li>
+        <li>Open the facility/date-scoped review queue.</li>
+        <li>Review source traceability, then add reviewer notes or status in the
+        reviewer UI.</li>
+        <li>Capture feedback about missing records, confusing wording, friction, or
+        desired features.</li>
+      </ol>
+    </section>
+    <section id="terms" aria-labelledby="terms-heading">
+      <h2 id="terms-heading">What the main words mean</h2>
+      <dl>
+        <dt>Loaded records</dt>
+        <dd>Validated local/test CCLD source-derived records staged from hosted
+        seeded-corpus JSON.</dd>
+        <dt>Review queue</dt>
+        <dd>A facility/date-scoped list of matching complaint records ready for review.</dd>
+        <dt>Reviewer notes and status</dt>
+        <dd>Reviewer-created local/test state stored separately from source-derived records.</dd>
+      </dl>
+      <p><a href="{CCLD_HELP_PATH}">Read the full CCLD workflow help</a></p>
+    </section>
+    <section id="feedback" aria-labelledby="feedback-heading">
+      <h2 id="feedback-heading">Feedback guidance</h2>
+      <p>This local/test slice does not store feedback. Useful feedback includes the
+      facility/license number, date range, what felt confusing, whether expected
+      records seemed missing from the local/test artifact, and what would make the
+      review workflow easier.</p>
     </section>
     <section id="boundaries" aria-labelledby="boundaries-heading">
-      <h2 id="boundaries-heading">Intentionally not implemented</h2>
+      <h2 id="boundaries-heading">Local/test boundaries</h2>
       <ul>
-        <li>Authentication and authorization.</li>
-        <li>Production schema, migrations, or domain tables.</li>
-        <li>Import/sync, queues, annotations, corrections, exports, feedback,
-        audit trail, or reset/reload.</li>
-        <li>Hosted live crawling, hosted connector execution, QNAP, Azure, AWS,
-        public URLs, or deployment.</li>
+        <li>CCLD public portal material remains the source of record.</li>
+        <li>Browser pages do not run live CCLD retrieval, connector execution, or
+        SQLite conversion.</li>
+        <li>Reviewer notes and reviewer status do not change source-derived records.</li>
+        <li>Production sign-in, sessions, cookies, exports, deployment, and public
+        launch behavior remain deferred.</li>
       </ul>
     </section>
   </main>
@@ -1049,18 +1074,21 @@ def route_response(
 ) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
     parsed_path = parsed_url.path
+    if parsed_path == "/help":
+        path = CCLD_HELP_PATH
+        parsed_path = CCLD_HELP_PATH
     if parsed_path.startswith(CCLD_UI_PREFIX):
-      active_ccld_context = (
-        default_ccld_record_request_ui_context()
-        if ccld_record_request_ui_context is None
-        else ccld_record_request_ui_context
-      )
-      return route_ccld_record_request_ui_response(
-        path,
-        active_ccld_context,
-        method=method,
-        request_body=request_body,
-      )
+        active_ccld_context = (
+            default_ccld_record_request_ui_context()
+            if ccld_record_request_ui_context is None
+            else ccld_record_request_ui_context
+        )
+        return route_ccld_record_request_ui_response(
+            path,
+            active_ccld_context,
+            method=method,
+            request_body=request_body,
+        )
     if parsed_path.startswith(REVIEWER_UI_PREFIX):
         active_reviewer_ui_context = (
             default_local_test_reviewer_ui_context()

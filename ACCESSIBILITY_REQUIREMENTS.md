@@ -48,7 +48,11 @@ Accessibility requirements apply to:
 	matched seeded records, descriptive reviewer links, and visible no-match or
 	load-result guidance that does not rely on color or position alone. Outside-
 	browser live-fetch and artifact-builder handoff guidance must remain visible
-	plain text or code text with surrounding explanation.
+	plain text or code text with surrounding explanation. Guided result queues and
+	help pages must use semantic headings, table captions or clear section
+	headings, meaningful action link text, and plain-language definitions for
+	facility/license number, date range, loaded records, source records, review
+	queue, reviewer notes, and reviewer status.
 
 ### Color and contrast
 
