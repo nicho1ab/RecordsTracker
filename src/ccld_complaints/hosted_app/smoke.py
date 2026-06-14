@@ -27,6 +27,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
             facilities_status, facilities_body = _read_url(f"{base_url}/facilities")
             ccld_status, ccld_body = _read_url(f"{base_url}/ccld/records/request")
             reviewer_status, reviewer_body = _read_url(f"{base_url}/reviewer")
+            help_status, help_body = _read_url(f"{base_url}/ccld/help")
         finally:
             server.shutdown()
             thread.join(timeout=5)
@@ -52,9 +53,17 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         ccld_status != 200
         or b"CCLD record request" not in ccld_body
         or b"CCLD facility/license number" not in ccld_body
+        or b"Workflow overview" not in ccld_body
         or b"validated CCLD load" not in ccld_body
     ):
         raise RuntimeError("Hosted scaffold CCLD request shell did not return the request page.")
+    if (
+        help_status != 200
+        or b"How CCLD review works" not in help_body
+        or b"Review queue" not in help_body
+        or b"Feedback guidance" not in help_body
+    ):
+        raise RuntimeError("Hosted scaffold CCLD help page did not return guided help.")
     if (
         reviewer_status != 200
         or b"Local/test reviewer records" not in reviewer_body

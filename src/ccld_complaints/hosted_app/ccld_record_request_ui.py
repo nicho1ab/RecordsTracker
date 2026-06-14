@@ -16,6 +16,10 @@ from ccld_complaints.hosted_app.ccld_import_reload import (
     ccld_import_reload_context_for_connection,
     import_reload_validated_ccld_records,
 )
+from ccld_complaints.hosted_app.reviewer_created_state_routes import (
+    REVIEWER_CREATED_STATE_API_PREFIX,
+    route_reviewer_created_state_api_response,
+)
 from ccld_complaints.hosted_app.reviewer_ui import (
     REVIEWER_UI_DETAIL_PATH,
     REVIEWER_UI_RECORDS_PATH,
@@ -29,6 +33,7 @@ from ccld_complaints.hosted_app.source_derived_routes import (
 
 CCLD_UI_PREFIX = "/ccld"
 CCLD_RECORD_REQUEST_PATH = f"{CCLD_UI_PREFIX}/records/request"
+CCLD_HELP_PATH = f"{CCLD_UI_PREFIX}/help"
 _IMPORT_RELOAD_ACTION_FIELD = "ccld_import_reload_action"
 _IMPORT_RELOAD_ACTION_VALUE = "load_local_validated_ccld_records"
 _FACILITY_NUMBER_RE = re.compile(r"^\d+$")
@@ -73,6 +78,17 @@ class CcldRequestSearchResult:
     matched_records: tuple[Mapping[str, Any], ...]
     matched_complaint_keys: tuple[str, ...]
     all_facility_records: tuple[Mapping[str, Any], ...]
+
+
+@dataclass(frozen=True)
+class CcldRequestQueueItem:
+    complaint_record: Mapping[str, Any]
+    source_document_record: Mapping[str, Any] | None
+    facility_name: str | None
+    related_record_count: int
+    allegation_count: int
+    extraction_audit_count: int
+    reviewer_state: Mapping[str, Any]
 
 
 @dataclass(frozen=True)
@@ -137,7 +153,7 @@ def route_ccld_record_request_ui_response(
                 links=(("Hosted scaffold home", "/"),),
             ),
         )
-    if parsed_url.path not in {CCLD_UI_PREFIX, CCLD_RECORD_REQUEST_PATH}:
+    if parsed_url.path not in {CCLD_UI_PREFIX, CCLD_RECORD_REQUEST_PATH, CCLD_HELP_PATH}:
         return _html_response(
             404,
             _render_message_page(
@@ -148,6 +164,8 @@ def route_ccld_record_request_ui_response(
                 links=(("Open CCLD record request", CCLD_RECORD_REQUEST_PATH),),
             ),
         )
+    if method == "GET" and parsed_url.path == CCLD_HELP_PATH:
+        return _html_response(200, _render_help_page())
     if method == "GET":
         return _html_response(200, _render_request_form())
     if method == "POST":
@@ -295,11 +313,14 @@ def _post_request_response(
     if isinstance(source_records_or_body, bytes):
         raise ValueError("Expected source-derived records.")
     result = find_ccld_records_for_request(validation.request, source_records_or_body)
+    reviewer_state_records = _reviewer_created_state_records(context)
+    state_summaries = _state_summaries_by_source_record(reviewer_state_records)
     return _html_response(
         200,
         _render_request_result(
             validation.request,
             result,
+            state_summaries=state_summaries,
             import_reload_result=import_reload_result,
             import_reload_available=context.import_reload_context is not None,
         ),
@@ -319,42 +340,154 @@ def _source_derived_records(
     return 200, _record_list(payload, "records")
 
 
+def _reviewer_created_state_records(
+    context: CcldRecordRequestUiContext,
+) -> list[Mapping[str, Any]]:
+    status, _content_type, body = route_reviewer_created_state_api_response(
+        REVIEWER_CREATED_STATE_API_PREFIX,
+        context.reviewer_ui_context.workflow_shell_context.reviewer_created_state_api_context,
+    )
+    if status != 200:
+        return []
+    payload = _json_object(body)
+    return _record_list(payload, "reviewer_created_state")
+
+
 def _render_request_form() -> str:
     return _page(
-        title="CCLD record request",
-        heading="CCLD record request",
+                title="Request CCLD records",
+                heading="Request CCLD records",
         main=f"""    <section aria-labelledby="request-scope-heading">
       <h2 id="request-scope-heading">CCLD-only local/test request</h2>
-            <p>Enter a CCLD facility/license number and optional date range. This
-            local/test page reads existing seeded source-derived records and does not
-            run live crawling or imports.</p>
-    </section>
+                    <p>This local/test app helps a tester request CCLD public complaint records
+                    for one facility/license number, load validated local CCLD output when it is
+                    available, and continue into a reviewer queue for notes and status.</p>
+                    <p>The public CCLD portal remains the source of record. This page reads or
+                    loads local/test source-derived records only; it does not run live crawling
+                    or browser-triggered connector execution.</p>
+                    <p><a href="{CCLD_HELP_PATH}">Read how this CCLD review workflow
+                    works</a></p>
+                </section>
+                {_render_workflow_overview()}
     <section aria-labelledby="request-form-heading">
       <h2 id="request-form-heading">Request CCLD records</h2>
+            <p>Use the facility/license number printed by CCLD for the facility you want to
+            review. Use dates only when you want to narrow the request to complaint,
+            visit, report, signed, or retrieval dates already represented in local/test
+            source-derived records.</p>
       <form action="{CCLD_RECORD_REQUEST_PATH}" method="post">
         <p>
           <label for="facility_number">CCLD facility/license number</label>
-          <input id="facility_number" name="facility_number" inputmode="numeric" required>
+                    <input id="facility_number" name="facility_number" inputmode="numeric"
+                        aria-describedby="facility-number-help" required>
+                    <span id="facility-number-help">Enter digits only, for example 157806098.
+                    This identifies the CCLD facility or license scope to review.</span>
         </p>
         <p>
           <label for="start_date">Start date (optional)</label>
-          <input id="start_date" name="start_date" type="date">
+                    <input id="start_date" name="start_date" type="date"
+                        aria-describedby="date-range-help">
         </p>
         <p>
           <label for="end_date">End date (optional)</label>
-          <input id="end_date" name="end_date" type="date">
+                    <input id="end_date" name="end_date" type="date"
+                        aria-describedby="date-range-help">
+                    <span id="date-range-help">Dates narrow the local/test result set. Missing
+                    records are not proof that CCLD has no records for that period.</span>
         </p>
         <p><button type="submit">Request CCLD records</button></p>
       </form>
     </section>
+    {_render_key_terms_section()}
+    {_render_feedback_guidance_section()}
     <section aria-labelledby="request-boundary-heading">
       <h2 id="request-boundary-heading">What happens next</h2>
-            <p>If matching seeded CCLD records are already available, this page links
-            to reviewer list/detail pages. If not, it can offer a bounded local
-            validated CCLD load from committed local/test output, then explains the
-            existing CCLD pipeline command that must run outside the hosted UI.</p>
+            <p>If matching CCLD source records are already loaded, this page shows a
+            review queue with one row per matching complaint record. If not, it can
+            offer a bounded local validated CCLD load, then explain the outside-browser
+            live-fetch and artifact-builder handoff.</p>
     </section>""",
     )
+
+
+def _render_help_page() -> str:
+        return _page(
+                title="How CCLD review works",
+                heading="How CCLD review works",
+                main=f"""    <section aria-labelledby="help-purpose-heading">
+            <h2 id="help-purpose-heading">What this local/test app does</h2>
+            <p>The app helps a tester find CCLD source-derived complaint records for one
+            facility/license number and optional date range, then continue into the reviewer
+            UI to inspect source traceability, add reviewer notes, and set a reviewer
+            status.</p>
+            <p>It is CCLD-only and local/test only. It does not prove public-source
+            completeness, make legal or facility-wide conclusions, or run live CCLD fetching
+            from browser pages.</p>
+        </section>
+        {_render_workflow_overview()}
+        {_render_key_terms_section()}
+        {_render_feedback_guidance_section()}
+        <section aria-labelledby="help-next-action-heading">
+            <h2 id="help-next-action-heading">Next action</h2>
+            <p>Start with a facility/license number request. After records are loaded, use
+            the review queue links to open each complaint record in the reviewer UI.</p>
+            <p><a href="{CCLD_RECORD_REQUEST_PATH}">Open the CCLD record request form</a></p>
+        </section>""",
+        )
+
+
+def _render_workflow_overview() -> str:
+        return """    <section aria-labelledby="workflow-overview-heading">
+            <h2 id="workflow-overview-heading">Workflow overview</h2>
+            <ol>
+                <li>Enter a CCLD facility/license number and optional date range.</li>
+                <li>Use records already loaded locally or load validated CCLD records from a
+                hosted seeded-corpus JSON artifact.</li>
+                <li>Review the matching complaint records in the facility/date-scoped review
+                queue.</li>
+                <li>Open a record in the reviewer UI, then add a reviewer note or reviewer
+                status when helpful.</li>
+                <li>Provide feedback about missing records, confusing wording, friction, or
+                desired features.</li>
+            </ol>
+        </section>"""
+
+
+def _render_key_terms_section() -> str:
+        return """    <section aria-labelledby="key-terms-heading">
+            <h2 id="key-terms-heading">Key terms</h2>
+            <dl>
+                <dt>Facility/license number</dt>
+                <dd>The digit identifier CCLD uses for the facility or license record scope.</dd>
+                <dt>Date range</dt>
+                <dd>An optional filter over dates already extracted into local/test CCLD records.
+                It is not a live public-source search.</dd>
+                <dt>Loaded records</dt>
+                <dd>Validated local/test CCLD records staged from hosted seeded-corpus JSON into
+                hosted source-derived rows.</dd>
+                <dt>Source records</dt>
+                <dd>Source-derived facility, source document, complaint, allegation, event, or
+                extraction audit rows that preserve original values and source traceability.</dd>
+                <dt>Review queue</dt>
+                <dd>The facility/date-scoped list of matching complaint records to review next.</dd>
+                <dt>Reviewer notes</dt>
+                <dd>Reviewer-created local/test notes stored separately from source-derived
+                records.</dd>
+                <dt>Reviewer status</dt>
+                <dd>A bounded local/test review state such as needs review, in review, reviewed,
+                blocked, or needs follow-up. It is not a public-source finding.</dd>
+            </dl>
+        </section>"""
+
+
+def _render_feedback_guidance_section() -> str:
+        return """    <section aria-labelledby="feedback-guidance-heading">
+            <h2 id="feedback-guidance-heading">Feedback guidance</h2>
+            <p>This branch does not store feedback. Useful tester feedback includes the
+            facility/license number, requested date range, what record or step was confusing,
+            whether expected records seemed missing from the local/test artifact, and what
+            workflow improvement would make review easier.</p>
+        </section>"""
 
 
 def _render_invalid_request(errors: tuple[str, ...]) -> str:
@@ -378,6 +511,7 @@ def _render_request_result(
     request: CcldRecordRequest,
     result: CcldRequestSearchResult,
     *,
+    state_summaries: Mapping[str, Mapping[str, Any]],
     import_reload_result: CcldImportReloadResult | None = None,
     import_reload_available: bool = False,
 ) -> str:
@@ -385,6 +519,7 @@ def _render_request_result(
         return _render_matched_result(
             request,
             result,
+            state_summaries=state_summaries,
             import_reload_result=import_reload_result,
             import_reload_available=import_reload_available,
         )
@@ -400,13 +535,17 @@ def _render_matched_result(
     request: CcldRecordRequest,
     result: CcldRequestSearchResult,
     *,
+    state_summaries: Mapping[str, Mapping[str, Any]],
     import_reload_result: CcldImportReloadResult | None,
     import_reload_available: bool,
 ) -> str:
-    rows = "\n".join(
-        _render_result_row(record, result.matched_complaint_keys)
-        for record in result.matched_records
-    )
+    queue_items = _request_queue_items(result, state_summaries)
+    rows = "\n".join(_render_queue_row(request, item) for item in queue_items)
+    if not rows:
+        rows = """          <tr>
+            <td colspan="8">No complaint records are available in this CCLD request result.</td>
+          </tr>"""
+    load_text = _load_status_text(import_reload_result)
     return _page(
         title="CCLD request results",
         heading="CCLD request results",
@@ -415,20 +554,28 @@ def _render_matched_result(
             <p>Found {len(result.matched_records)} local/test CCLD source-derived
             row(s) for facility/license number {_escape(request.facility_number)}.</p>
       {_render_date_scope(request)}
-            <p>These records are already staged in the local/test hosted seeded corpus.
-            The hosted UI did not run live retrieval or import.</p>
+                        <p>{_escape(load_text)}</p>
+                        <p>The hosted UI did not run live retrieval, browser connector execution,
+                        or SQLite conversion.</p>
     </section>
     {_render_import_reload_summary(import_reload_result)}
-    <section aria-labelledby="matching-records-heading">
-      <h2 id="matching-records-heading">Matching imported CCLD records</h2>
+        <section aria-labelledby="review-queue-heading">
+            <h2 id="review-queue-heading">CCLD review queue</h2>
+            <p>This queue is scoped to the requested facility/license number and date range.
+            Open each complaint record to inspect source traceability, add a reviewer note,
+            or set a reviewer status.</p>
       <table>
-        <caption>Matching local/test CCLD source-derived records</caption>
+                <caption>Facility/date-scoped CCLD complaint records ready for review</caption>
         <thead>
           <tr>
-            <th scope="col">Entity type</th>
-            <th scope="col">Stable source ID</th>
-            <th scope="col">Safe context</th>
-            <th scope="col">Reviewer link</th>
+                        <th scope="col">Review action</th>
+                        <th scope="col">Facility/license number</th>
+                        <th scope="col">Request date range</th>
+                        <th scope="col">Complaint and report dates</th>
+                        <th scope="col">Source document/report</th>
+                        <th scope="col">Source traceability summary</th>
+                        <th scope="col">Reviewer state indicator</th>
+                        <th scope="col">Loaded record context</th>
           </tr>
         </thead>
         <tbody>
@@ -437,6 +584,7 @@ def _render_matched_result(
       </table>
       <p><a href="{REVIEWER_UI_RECORDS_PATH}">Open reviewer records</a></p>
     </section>
+        {_render_feedback_guidance_section()}
         {_render_import_reload_action(request, import_reload_available, refresh=True)}
     {_render_pipeline_plan(request)}""",
     )
@@ -553,6 +701,8 @@ def _render_import_reload_action(
             <p>This action reads committed local/test validated CCLD output and stages
             matching source-derived records through the existing hosted seeded import path.
             It does not run live public web requests.</p>
+            <p id="local-load-help">Use this only after the CCLD pipeline output has been
+            validated and converted into hosted seeded-corpus JSON outside the browser.</p>
             <form action="{CCLD_RECORD_REQUEST_PATH}" method="post">
                 <input type="hidden" name="facility_number"
                     value="{_escape(request.facility_number)}">
@@ -573,16 +723,71 @@ def _yes_no(value: bool) -> str:
     return "yes" if value else "no"
 
 
-def _render_result_row(
-    record: Mapping[str, Any],
-    matched_complaint_keys: tuple[str, ...],
-) -> str:
-    entity_type = _string(record, "entity_type")
+def _request_queue_items(
+    result: CcldRequestSearchResult,
+    state_summaries: Mapping[str, Mapping[str, Any]],
+) -> tuple[CcldRequestQueueItem, ...]:
+    source_documents = {
+        _string(record, "source_document_id"): record
+        for record in result.matched_records
+        if _string(record, "entity_type") == "source_document"
+    }
+    items: list[CcldRequestQueueItem] = []
+    for complaint_key in result.matched_complaint_keys:
+        complaint_record = _record_by_key(result.matched_records, complaint_key)
+        if complaint_record is None:
+            continue
+        source_document_id = _string(complaint_record, "source_document_id")
+        related_records = _related_records_for_complaint(complaint_record, result.matched_records)
+        facility_record = next(
+            (
+                record
+                for record in related_records
+                if _string(record, "entity_type") == "facility"
+            ),
+            None,
+        )
+        allegation_count = sum(
+            1
+            for record in related_records
+            if _string(record, "entity_type") == "allegation"
+        )
+        items.append(
+            CcldRequestQueueItem(
+                complaint_record=complaint_record,
+                source_document_record=source_documents.get(source_document_id),
+                facility_name=_facility_name(facility_record),
+                related_record_count=len(related_records),
+                allegation_count=allegation_count,
+                extraction_audit_count=sum(
+                    1
+                    for record in related_records
+                    if _string(record, "entity_type") == "extraction_audit"
+                ),
+                reviewer_state=state_summaries.get(complaint_key, _empty_state_summary()),
+            )
+        )
+    return tuple(items)
+
+
+def _render_queue_row(request: CcldRecordRequest, item: CcldRequestQueueItem) -> str:
+    complaint = _mapping(item.complaint_record, "original_values")
+    source_document = (
+        _mapping(item.source_document_record, "original_values")
+        if item.source_document_record is not None
+        else {}
+    )
+    source_record_key = _string(item.complaint_record, "source_record_key")
+    detail_href = f"{REVIEWER_UI_DETAIL_PATH}?{urlencode({'source_record_key': source_record_key})}"
     return f"""          <tr>
-            <th scope="row">{_escape(entity_type)}</th>
-            <td>{_escape(_string(record, "stable_source_id"))}</td>
-            <td>{_escape(_safe_result_context(record))}</td>
-            <td>{_render_reviewer_link(record, matched_complaint_keys)}</td>
+            <td><a href="{_escape(detail_href)}">Review this complaint record</a></td>
+            <td>{_escape(_facility_scope_text(request.facility_number, item.facility_name))}</td>
+            <td>{_escape(_date_scope_text(request))}</td>
+            <td>{_escape(_complaint_date_summary(complaint))}</td>
+            <td>{_escape(_source_document_summary(item.complaint_record, source_document))}</td>
+            <td>{_escape(_traceability_summary(item.complaint_record))}</td>
+            <td>{_escape(_reviewer_state_text(item.reviewer_state))}</td>
+            <td>{_escape(_loaded_context_text(item))}</td>
           </tr>"""
 
 
@@ -601,6 +806,174 @@ def _render_reviewer_link(
         )
         return f'<a href="{_escape(href)}">Open matching complaint detail</a>'
     return f'<a href="{REVIEWER_UI_RECORDS_PATH}">Open reviewer records</a>'
+
+
+def _record_by_key(
+    records: tuple[Mapping[str, Any], ...],
+    source_record_key: str,
+) -> Mapping[str, Any] | None:
+    for record in records:
+        if _string(record, "source_record_key") == source_record_key:
+            return record
+    return None
+
+
+def _related_records_for_complaint(
+    complaint_record: Mapping[str, Any],
+    records: tuple[Mapping[str, Any], ...],
+) -> tuple[Mapping[str, Any], ...]:
+    source_document_id = _string(complaint_record, "source_document_id")
+    facility_id = _optional_string(complaint_record, "facility_id")
+    return tuple(
+        record
+        for record in records
+        if _string(record, "source_document_id") == source_document_id
+        or (
+            facility_id is not None
+            and _optional_string(record, "facility_id") == facility_id
+            and _string(record, "entity_type") == "facility"
+        )
+    )
+
+
+def _facility_name(record: Mapping[str, Any] | None) -> str | None:
+    if record is None:
+        return None
+    original_values = _mapping(record, "original_values")
+    facility_name = original_values.get("facility_name")
+    if isinstance(facility_name, str) and facility_name.strip():
+        return facility_name.strip()
+    return None
+
+
+def _facility_scope_text(facility_number: str, facility_name: str | None) -> str:
+    if facility_name is None:
+        return facility_number
+    return f"{facility_number}; {facility_name}"
+
+
+def _complaint_date_summary(values: Mapping[str, Any]) -> str:
+    return _join_context(
+        values,
+        (
+            "complaint_received_date",
+            "visit_date",
+            "report_date",
+            "date_signed",
+        ),
+    )
+
+
+def _source_document_summary(
+    complaint_record: Mapping[str, Any],
+    source_document: Mapping[str, Any],
+) -> str:
+    document_parts = []
+    document_id = _string(complaint_record, "source_document_id")
+    document_parts.append(f"document: {document_id}")
+    report_index = source_document.get("report_index")
+    if _has_display_value(report_index):
+        document_parts.append(f"report index: {_display_value(report_index)}")
+    document_type = source_document.get("document_type")
+    if _has_display_value(document_type):
+        document_parts.append(f"type: {_display_value(document_type)}")
+    return "; ".join(document_parts)
+
+
+def _traceability_summary(record: Mapping[str, Any]) -> str:
+    fields = (
+        ("source URL", _optional_string(record, "source_url")),
+        ("raw SHA-256", _optional_string(record, "raw_sha256")),
+        ("raw path", _optional_string(record, "raw_path")),
+        ("connector", _optional_string(record, "connector_name")),
+        ("retrieved", _optional_string(record, "retrieved_at")),
+    )
+    present = [label for label, value in fields if value]
+    if len(present) == len(fields):
+        return (
+            "Complete source traceability: source URL, raw SHA-256, raw path, "
+            "connector, retrieval time."
+        )
+    if present:
+        return "Partial source traceability: " + ", ".join(present) + "."
+    return "Source traceability not available in this local/test row."
+
+
+def _loaded_context_text(item: CcldRequestQueueItem) -> str:
+    return (
+        f"{item.related_record_count} loaded source records in bundle; "
+        f"{item.allegation_count} allegation rows; "
+        f"{item.extraction_audit_count} extraction audit rows."
+    )
+
+
+def _load_status_text(result: CcldImportReloadResult | None) -> str:
+    if result is None:
+        return "These records are already staged in the local/test hosted seeded corpus."
+    if result.import_executed:
+        return "These records were loaded or refreshed from local validated CCLD output."
+    return "No local validated CCLD load was executed for this request."
+
+
+def _state_summaries_by_source_record(
+    state_records: list[Mapping[str, Any]],
+) -> dict[str, Mapping[str, Any]]:
+    grouped: dict[str, list[Mapping[str, Any]]] = {}
+    for record in state_records:
+        source_record_key = _string(record, "source_record_key")
+        grouped.setdefault(source_record_key, []).append(record)
+    return {
+        source_record_key: _state_summary_for_records(records)
+        for source_record_key, records in grouped.items()
+    }
+
+
+def _state_summary_for_records(records: list[Mapping[str, Any]]) -> Mapping[str, Any]:
+    note_count = 0
+    latest_status: str | None = None
+    latest_created_at: str | None = None
+    for record in records:
+        created_at = _string(record, "created_at")
+        state_payload = _mapping(record, "state_payload")
+        payload_kind = _optional_string(state_payload, "payload_kind")
+        if payload_kind == "reviewer_note_scaffold":
+            note_count += 1
+        reviewer_status = state_payload.get("reviewer_status")
+        if isinstance(reviewer_status, str) and reviewer_status.strip():
+            if latest_created_at is None or created_at >= latest_created_at:
+                latest_status = reviewer_status.strip()
+        if latest_created_at is None or created_at >= latest_created_at:
+            latest_created_at = created_at
+    return {
+        "total_rows": len(records),
+        "note_count": note_count,
+        "latest_status": latest_status,
+        "latest_created_at": latest_created_at,
+    }
+
+
+def _empty_state_summary() -> Mapping[str, Any]:
+    return {
+        "total_rows": 0,
+        "note_count": 0,
+        "latest_status": None,
+        "latest_created_at": None,
+    }
+
+
+def _reviewer_state_text(summary: Mapping[str, Any]) -> str:
+    total_rows = _summary_int(summary, "total_rows")
+    note_count = _summary_int(summary, "note_count")
+    latest_status = _summary_optional_string(summary, "latest_status")
+    if total_rows == 0:
+        return "No reviewer notes or status yet."
+    parts = [f"{total_rows} reviewer-created row(s)"]
+    parts.append(f"{note_count} reviewer note(s)")
+    if latest_status is None:
+        parts.append("No reviewer status yet")
+    else:
+        parts.append(f"Latest reviewer status: {latest_status}")
+    return "; ".join(parts) + "."
 
 
 def _safe_result_context(record: Mapping[str, Any]) -> str:
@@ -649,6 +1022,14 @@ def _render_date_scope(request: CcldRecordRequest) -> str:
     start_date = request.start_date or "earliest available"
     end_date = request.end_date or "latest available"
     return f"<p>Date range: {_escape(start_date)} to {_escape(end_date)}.</p>"
+
+
+def _date_scope_text(request: CcldRecordRequest) -> str:
+    if request.start_date is None and request.end_date is None:
+        return "not provided"
+    start_date = request.start_date or "earliest available"
+    end_date = request.end_date or "latest available"
+    return f"{start_date} to {end_date}"
 
 
 def _is_ccld_record(record: Mapping[str, Any]) -> bool:
@@ -799,6 +1180,22 @@ def _has_display_value(value: object) -> bool:
     return True
 
 
+def _summary_int(summary: Mapping[str, Any], key: str) -> int:
+    value = summary[key]
+    if not isinstance(value, int):
+        raise ValueError(f"Expected {key} to be an integer.")
+    return value
+
+
+def _summary_optional_string(summary: Mapping[str, Any], key: str) -> str | None:
+    value = summary.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"Expected {key} to be a string or null.")
+    return value
+
+
 def _escape(value: str) -> str:
     return html.escape(value, quote=True)
 
@@ -916,6 +1313,7 @@ def _page(*, title: str, heading: str, main: str) -> str:
             <ul>
                 <li><a href="/">Home</a></li>
                 <li><a href="{CCLD_RECORD_REQUEST_PATH}">CCLD record request</a></li>
+                <li><a href="{CCLD_HELP_PATH}">How this works</a></li>
                 <li><a href="{REVIEWER_UI_RECORDS_PATH}">Reviewer records</a></li>
             </ul>
         </nav>

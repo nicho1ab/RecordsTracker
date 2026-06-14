@@ -103,10 +103,14 @@ requests, reads matching rows only from the seeded source-derived route seam,
 can load or refresh matching CCLD rows from local validated hosted seeded-corpus
 output through the existing source-derived import path, links matching seeded
 complaint records into the hosted reviewer UI, shows a clear no-match and
-external pipeline plan when local validated records do not match, does not run
-live crawling, execute connectors, mutate reviewer-created state, create audit
-rows, or mutate operational metadata rows, and does not expose secrets, private
-URLs, provider claims, credentials, or unnecessary sensitive narrative content.
+external pipeline plan when local validated records do not match, renders a
+guided facility/date-scoped request result queue with first-time workflow help,
+contextual field/action help, source traceability summaries, reviewer-state
+indicators, meaningful reviewer links, and feedback guidance without
+persistence, does not run live crawling, execute connectors, mutate reviewer-
+created state, create audit rows, mutate operational metadata rows, or persist
+feedback, and does not expose secrets, private URLs, provider claims,
+credentials, or unnecessary sensitive narrative content.
 Hosted CCLD import/reload tests must prove local validated artifacts are
 validated before load, source URL/raw SHA-256/raw path/connector traceability is
 preserved, existing source-derived keys are refreshed without duplicates,
