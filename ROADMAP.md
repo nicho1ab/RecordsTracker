@@ -254,6 +254,11 @@ the governed primary future review experience.
 	profiling results for future fixture-backed source/facility view planning,
 	without committing raw files, generated profiling outputs, imports, schemas,
 	connectors, or hosted app behavior.
+- Added a local-only hosted scaffold `/facilities` read-only sample view and
+	detail pages backed by the committed tiny public-source facility fixtures,
+	preserving fixture/sample labels, semantic/accessibility validation,
+	manifest-backed traceability placeholders, and the no-database, no-import,
+	no-authentication, no-reviewer-state, no-deployment boundary.
 
 ## Near-term milestones
 
@@ -294,11 +299,7 @@ exploration, or export support.
 3. Decide concrete database product and migration tooling for the hosted tester
   MVP only after the remaining access, audit, reset/reload, export, retention,
   and operations constraints are understood.
-4. Add another narrow fixture-backed source-view expansion after the local-only
-	sample filtering/search and source traceability summary shell, preserving the
-	fixture/sample, read-only, no-database, no-import, no-authentication,
-	no-reviewer-state boundary.
-5. Add additional CCLD fixtures and extraction hardening for representative
+4. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
 
 ## Production-discovery transition path

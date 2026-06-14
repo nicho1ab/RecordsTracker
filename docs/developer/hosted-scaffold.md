@@ -115,6 +115,27 @@ future source-derived records from multiple jurisdictions and source families ca
 use the same list/filter/summary pattern after the relevant source, import,
 schema, and hosted workflow decisions are approved.
 
+## Open the sample facility master view
+
+The scaffold also includes a local-only sample facility master view at:
+
+```text
+http://127.0.0.1:8000/facilities
+```
+
+The page displays read-only fixture/sample facility rows loaded only from the
+committed tiny public-source facility fixtures under
+`tests/fixtures/public_source_facilities/`. Detail pages are available from the
+facility number links and show source-family, jurisdiction, profiled source
+shape, source dataset reference, source URL placeholder, raw SHA-256 placeholder,
+and retrieval-time placeholder metadata from the committed fixture manifest.
+
+The facility sample view does not load live public-source data, read ignored raw
+CSVs, read generated profiling outputs, read SQLite or a hosted database, run
+import/sync, authenticate users, persist reviewer-created state, or prove source
+completeness, statewide coverage, official facility status, or legal or
+facility-wide conclusions.
+
 ## Run the smoke check
 
 The smoke check starts an in-process local scaffold server, checks the health
@@ -139,12 +160,12 @@ pytest tests/unit/test_hosted_app_scaffold.py
 ```
 
 These tests include local-only semantic/accessibility validation for the sample
-source view shell. They use Python standard-library HTML parsing to verify one
-page-level heading, meaningful page titles, semantic main content, navigation
-links, fixture/sample caution text, read-only labels, accessible filter labels,
-sample no-match behavior, source traceability summary panels, source-derived
-versus reviewer-created state separation, and visible
-source-traceability-style fields.
+source view shell and facility master sample view. They use Python standard-library HTML parsing
+to verify one page-level heading, meaningful page titles, semantic main content,
+navigation links, fixture/sample caution text, read-only labels, accessible
+filter labels, sample no-match behavior, source traceability summary panels,
+source-derived versus reviewer-created state separation, visible
+source-traceability-style fields, and manifest-backed facility fixture metadata.
 They do not require browser automation, Node.js, Playwright, Selenium, axe,
 Docker, cloud services, or public URLs.
 
@@ -196,6 +217,10 @@ The scaffold intentionally does not implement:
 The sample source-derived view shell is also local-only and read-only. It is not
 an import workflow, a database-backed source record view, a queue, a correction
 workflow, or a reviewer-created state surface.
+
+The sample facility master view is also local-only and read-only. It is not a
+CSV import, source connector, database-backed facility search, official facility
+master, reviewer queue, correction workflow, or reviewer-created state surface.
 
 Those layers remain deferred to later ADRs or implementation PRs with focused
 validation for the affected boundary.

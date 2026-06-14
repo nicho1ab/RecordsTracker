@@ -153,7 +153,10 @@ public-record review notes.
    only, with local sample filtering/search controls, sample
    source-traceability summary panels, sample traceability-style fields, and no
    live data, database, import/sync, authentication, or reviewer-created state
-   persistence.
+   persistence. The local `/facilities` route shows a read-only facility master
+   sample view backed only by committed tiny public-source facility fixtures and
+   manifest placeholder metadata; it does not read ignored raw CSVs, generated
+   profiling outputs, SQLite, a hosted database, or live public-source data.
 
 ## Validation
 

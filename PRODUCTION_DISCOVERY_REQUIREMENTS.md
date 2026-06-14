@@ -22,17 +22,20 @@ implementation is limited to a local Python standard-library app shell, health
 and smoke validation, local setup checks, and a read-only `/source-records`
 list/detail shell with local sample filtering/search and fixture/sample-only
 source traceability summary panels over fixture/sample records with
-semantic/accessibility validation.
+semantic/accessibility validation. It also includes a read-only `/facilities`
+list/detail sample view backed only by committed tiny public-source facility
+fixtures and manifest placeholder metadata.
 
 This scaffold is not a hosted tester-ready reviewer workflow. It does not load
 live public data, read from SQLite or a hosted database, run import/sync,
 authenticate users, authorize roles, persist reviewer-created state, create
 queues, support annotations, corrections, exports, feedback, audit trail,
-reset/reload, hosted live crawling, hosted connector execution, deployment,
-QNAP, Azure, AWS, or public URL behavior.
+reset/reload, hosted live crawling, hosted connector execution, read ignored raw
+CSVs or generated profiling outputs, deployment, QNAP, Azure, AWS, or public
+URL behavior.
 
-The next safe hosted-view increment is a similarly narrow fixture-backed
-source-view expansion that preserves fixture/sample labels, read-only behavior,
+The next safe hosted-view increment should remain similarly narrow and
+fixture-backed, preserving fixture/sample labels, read-only behavior,
 source-derived versus reviewer-created state separation, semantic structure,
 accessibility validation, and the no-database, no-import, no-authentication,
 no-deployment boundary.

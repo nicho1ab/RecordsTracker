@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added a local-only hosted scaffold `/facilities` read-only sample view and
+	detail pages backed by the committed tiny public-source facility fixtures,
+	showing facility master fields and manifest traceability placeholders without
+	adding live data loading, ignored raw CSV access, generated profiling output
+	access, database access, import/sync, authentication, reviewer-created state,
+	schema changes, or deployment behavior.
 - Added tiny synthetic public-source facility fixtures, fixture documentation,
 	and tests for future fixture-backed source/facility view planning, without
 	committing raw source files, generated profiling outputs, imports, schemas,
