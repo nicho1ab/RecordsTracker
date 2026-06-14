@@ -91,10 +91,11 @@
   exports, or production auth behavior. A browser-accessible local/test reviewer
   UI shell at `/reviewer` and `/reviewer/records` now wraps those existing seams
   for the tiny seeded fixture corpus only: a local tester can list/search a
-  seeded source-derived complaint record, open detail, view safe source
-  traceability fields plus safe related seeded bundle context, submit a bounded
-  reviewer note, submit a bounded reviewer status, and see read-after-write
-  reviewer-created state. Narrative source fields are hidden in the browser
+  seeded source-derived complaint record, see list-level reviewer-created
+  note/status indicators, open detail, view safe source traceability fields plus
+  safe related seeded bundle context, submit a bounded reviewer note, submit a
+  bounded reviewer status, and see read-after-write reviewer-created state.
+  Narrative source fields are hidden in the browser
   shell. The UI uses process-local seeded test state and a fixture actor context; it is not production
   authentication, durable hosted deployment, full reviewer workflow behavior, or
   complete public-source coverage. The path does not run live crawling,

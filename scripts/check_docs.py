@@ -338,6 +338,7 @@ REQUIRED_CONTENT = {
         "Open the local/test reviewer UI shell",
         "http://127.0.0.1:8000/reviewer",
         "read-after-write reviewer-created state",
+        "list-level reviewer-created note/status indicators",
         "safe related seeded bundle context",
         "Narrative source fields are hidden in the browser shell",
         "UI actions do not mutate source-derived records",

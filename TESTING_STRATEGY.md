@@ -85,8 +85,9 @@ rows, source-derived rows are not mutated, and existing read routes plus
 workflow detail output show the status after write.
 Hosted reviewer UI shell tests must prove browser-accessible local/test landing
 and detail pages return usable semantic HTML over the seeded fixture corpus,
-safe source traceability fields and safe related seeded bundle context are
-visible, sensitive narrative fields remain hidden, note/status forms delegate to
+list-level reviewer-created note/status indicators and latest reviewer-created
+timestamp are visible, safe source traceability fields and safe related seeded
+bundle context are visible, sensitive narrative fields remain hidden, note/status forms delegate to
 the existing workflow actions, read-after-write reviewer-created state appears
 in the page, unauthenticated, disabled or revoked, role-denied, and out-of-scope
 contexts are blocked, source-derived rows are not mutated by UI actions,

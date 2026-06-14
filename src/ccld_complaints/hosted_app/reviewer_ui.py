@@ -20,7 +20,9 @@ from ccld_complaints.hosted_app.auth import (
 )
 from ccld_complaints.hosted_app.reviewer_created_state import REVIEWER_STATUS_VALUES
 from ccld_complaints.hosted_app.reviewer_created_state_routes import (
+    REVIEWER_CREATED_STATE_API_PREFIX,
     ReviewerCreatedStateApiContext,
+    route_reviewer_created_state_api_response,
 )
 from ccld_complaints.hosted_app.reviewer_workflow_shell import (
     REVIEWER_WORKFLOW_API_PREFIX,
@@ -128,6 +130,13 @@ _SOURCE_CONTEXT_ENTITY_ORDER = {
     "allegation": 3,
     "event": 4,
     "extraction_audit": 5,
+}
+_REVIEWER_STATUS_LABELS = {
+    "not_started": "Needs review",
+    "in_review": "In review",
+    "needs_follow_up": "Needs review",
+    "reviewed": "Reviewed",
+    "blocked": "Blocked",
 }
 _DEFAULT_ACTOR = object()
 
@@ -299,7 +308,36 @@ def _record_list_response(
     queue = _mapping(payload, "queue")
     records = _record_list(queue, "records")
     filtered_records = _filter_review_items(records, search_query)
-    return _html_response(status, _render_record_list(payload, filtered_records, search_query))
+    state_status, state_body = _reviewer_created_state_records(context)
+    if state_status != 200:
+        if not isinstance(state_body, bytes):
+            raise ValueError("Expected reviewer-created state error body to be bytes.")
+        return _workflow_error_page(state_status, state_body)
+    if isinstance(state_body, bytes):
+        raise ValueError("Expected reviewer-created state records.")
+    state_summaries = _state_summaries_by_source_record(state_body)
+    return _html_response(
+        status,
+        _render_record_list(
+            payload,
+            filtered_records,
+            search_query,
+            state_summaries,
+        ),
+    )
+
+
+def _reviewer_created_state_records(
+    context: ReviewerUiContext,
+) -> tuple[int, list[Mapping[str, Any]] | bytes]:
+    state_status, _content_type, state_body = route_reviewer_created_state_api_response(
+        REVIEWER_CREATED_STATE_API_PREFIX,
+        context.workflow_shell_context.reviewer_created_state_api_context,
+    )
+    if state_status != 200:
+        return state_status, state_body
+    state_payload = _json_object(state_body)
+    return 200, _record_list(state_payload, "reviewer_created_state")
 
 
 def _detail_response(
@@ -446,14 +484,17 @@ def _render_record_list(
     payload: Mapping[str, Any],
     records: list[Mapping[str, Any]],
     search_query: str,
+    state_summaries: Mapping[str, Mapping[str, Any]],
 ) -> str:
     queue = _mapping(payload, "queue")
     workflow = _mapping(payload, "workflow_shell")
     returned_count = _int_value(_mapping(queue, "pagination"), "returned_count")
-    rows = "\n".join(_render_review_item_row(record) for record in records)
+    rows = "\n".join(
+        _render_review_item_row(record, state_summaries) for record in records
+    )
     if not rows:
         rows = """        <tr>
-                    <td colspan="7">No seeded source-derived review records match the
+                    <td colspan="10">No seeded source-derived review records match the
                     current search.</td>
         </tr>"""
         returned_count = _int_value(_mapping(queue, "pagination"), "returned_count")
@@ -488,7 +529,10 @@ def _render_record_list(
             <th scope="col">Facility ID</th>
             <th scope="col">Finding</th>
             <th scope="col">Raw SHA-256</th>
-            <th scope="col">Reviewer state rows</th>
+                        <th scope="col">Reviewer state</th>
+                        <th scope="col">Notes</th>
+                        <th scope="col">Latest status</th>
+                        <th scope="col">Latest reviewer state at</th>
           </tr>
         </thead>
         <tbody>
@@ -499,30 +543,129 @@ def _render_record_list(
     )
 
 
-def _render_review_item_row(item: Mapping[str, Any]) -> str:
+def _render_review_item_row(
+    item: Mapping[str, Any],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+) -> str:
     source_record = _mapping(item, "source_record")
     identity = _mapping(source_record, "identity")
     source_document = _mapping(source_record, "source_document")
     original_values = _mapping(source_record, "original_values")
     source_record_key = _string(identity, "source_record_key")
-    detail_href = f"{REVIEWER_UI_DETAIL_PATH}?{urlencode({'source_record_key': source_record_key})}"
-    state_summary = _reviewer_state_summary_for_item(item)
+    detail_href = (
+        f"{REVIEWER_UI_DETAIL_PATH}?"
+        f"{urlencode({'source_record_key': source_record_key})}"
+    )
+    state_summary = state_summaries.get(source_record_key, _empty_state_summary())
     return f"""        <tr>
           <td><a href="{_escape(detail_href)}">Open detail</a></td>
-            <td>{_escape(source_record_key)}</td>
+          <td>{_escape(source_record_key)}</td>
           <td>{_escape(_optional_string(original_values, 'complaint_control_number'))}</td>
           <td>{_escape(_optional_string(identity, 'facility_id'))}</td>
           <td>{_escape(_optional_string(original_values, 'finding'))}</td>
           <td>{_escape(_optional_string(source_document, 'raw_sha256'))}</td>
-          <td>{state_summary}</td>
+          <td>{_escape(_state_summary_text(state_summary))}</td>
+          <td>{_escape(_notes_indicator_text(state_summary))}</td>
+          <td>{_escape(_latest_status_text(state_summary))}</td>
+          <td>{_escape(_latest_created_at_text(state_summary))}</td>
         </tr>"""
 
 
-def _reviewer_state_summary_for_item(item: Mapping[str, Any]) -> str:
-    associated_state = item.get("associated_reviewer_created_state")
-    if isinstance(associated_state, Mapping):
-        return _escape(str(_int_value(_mapping(associated_state, "pagination"), "returned_count")))
-    return "Open detail to inspect"
+def _state_summaries_by_source_record(
+    state_records: list[Mapping[str, Any]],
+) -> dict[str, Mapping[str, Any]]:
+    grouped: dict[str, list[Mapping[str, Any]]] = {}
+    for record in state_records:
+        source_record_key = _string(record, "source_record_key")
+        grouped.setdefault(source_record_key, []).append(record)
+    return {
+        source_record_key: _state_summary_for_records(records)
+        for source_record_key, records in grouped.items()
+    }
+
+
+def _state_summary_for_records(records: list[Mapping[str, Any]]) -> Mapping[str, Any]:
+    note_count = 0
+    latest_status: str | None = None
+    latest_created_at: str | None = None
+    for record in records:
+        created_at = _string(record, "created_at")
+        state_payload = _mapping(record, "state_payload")
+        payload_kind = _optional_string(state_payload, "payload_kind")
+        if payload_kind == "reviewer_note_scaffold":
+            note_count += 1
+        reviewer_status = state_payload.get("reviewer_status")
+        if isinstance(reviewer_status, str) and reviewer_status.strip():
+            if latest_created_at is None or created_at >= latest_created_at:
+                latest_status = reviewer_status.strip()
+        if latest_created_at is None or created_at >= latest_created_at:
+            latest_created_at = created_at
+    return {
+        "total_rows": len(records),
+        "note_count": note_count,
+        "has_status": latest_status is not None,
+        "latest_status": latest_status,
+        "latest_created_at": latest_created_at,
+    }
+
+
+def _empty_state_summary() -> Mapping[str, Any]:
+    return {
+        "total_rows": 0,
+        "note_count": 0,
+        "has_status": False,
+        "latest_status": None,
+        "latest_created_at": None,
+    }
+
+
+def _state_summary_text(summary: Mapping[str, Any]) -> str:
+    total_rows = _summary_int(summary, "total_rows")
+    latest_status = _summary_optional_string(summary, "latest_status")
+    if total_rows == 0:
+        return "No reviewer state yet"
+    if latest_status is None:
+        return "Needs review"
+    return _REVIEWER_STATUS_LABELS.get(latest_status, latest_status.replace("_", " "))
+
+
+def _notes_indicator_text(summary: Mapping[str, Any]) -> str:
+    note_count = _summary_int(summary, "note_count")
+    if note_count == 0:
+        return "No reviewer notes"
+    if note_count == 1:
+        return "1 reviewer note"
+    return f"{note_count} reviewer notes"
+
+
+def _latest_status_text(summary: Mapping[str, Any]) -> str:
+    latest_status = _summary_optional_string(summary, "latest_status")
+    if latest_status is None:
+        return "No reviewer status"
+    return latest_status
+
+
+def _latest_created_at_text(summary: Mapping[str, Any]) -> str:
+    latest_created_at = _summary_optional_string(summary, "latest_created_at")
+    if latest_created_at is None:
+        return "No reviewer-created state yet"
+    return latest_created_at
+
+
+def _summary_int(summary: Mapping[str, Any], key: str) -> int:
+    value = summary[key]
+    if not isinstance(value, int):
+        raise ValueError(f"Expected {key} to be an integer.")
+    return value
+
+
+def _summary_optional_string(summary: Mapping[str, Any], key: str) -> str | None:
+    value = summary.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"Expected {key} to be a string or null.")
+    return value
 
 
 def _render_detail(

@@ -20,7 +20,11 @@ from ccld_complaints.hosted_app.auth import (
 from ccld_complaints.hosted_app.reset_reload_dry_run import (
     hosted_reset_reload_planning_metadata,
 )
-from ccld_complaints.hosted_app.reviewer_created_state import hosted_reviewer_created_state
+from ccld_complaints.hosted_app.reviewer_created_state import (
+    create_reviewer_note_scaffold,
+    create_reviewer_status_scaffold,
+    hosted_reviewer_created_state,
+)
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
     REVIEWER_UI_DETAIL_PATH,
@@ -58,12 +62,55 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert "Local/test reviewer UI shell" in html
     assert "Search seeded review records" in html
     assert "Seeded source-derived review list" in html
+    assert "Reviewer state" in html
+    assert "Notes" in html
+    assert "Latest status" in html
+    assert "Latest reviewer state at" in html
+    assert "No reviewer state yet" in html
+    assert "No reviewer notes" in html
+    assert "No reviewer status" in html
+    assert "No reviewer-created state yet" in html
     assert "32-CR-20220407124448" in html
     assert COMPLAINT_KEY in html
     assert "6088c9627374baac647e2f2a54f6e389cb68c1b92db42da00020aaf508a853bd" in html
     assert "Source-derived records remain separate from reviewer-created notes" in normalized_html
     assert "This shell does not implement production sign-in" in normalized_html
     assert "Open detail" in html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_landing_shows_reviewer_created_state_indicators() -> None:
+    with _seeded_connection() as connection:
+        note = create_reviewer_note_scaffold(
+            connection,
+            _actor(roles=("tester_reviewer",), display_name="Fixture List Note Reviewer"),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            note_text="List indicator note.",
+        )
+        status_row = create_reviewer_status_scaffold(
+            connection,
+            _actor(roles=("tester_reviewer",), display_name="Fixture List Status Reviewer"),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            reviewer_status="reviewed",
+        )
+
+        status, content_type, body = route_response(
+            "/reviewer/records",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Reviewed" in html
+    assert "1 reviewer note" in html
+    assert "reviewed" in html
+    assert status_row.created_at in html
+    assert note.created_at in html or status_row.created_at in html
+    assert "No reviewer state yet" not in html
     assert_no_secret_html(html)
 
 
@@ -269,6 +316,70 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert_no_secret_html(html)
 
 
+def test_reviewer_ui_note_status_writes_are_visible_on_list_after_write() -> None:
+    with _seeded_connection() as connection:
+        before_source_rows = _source_rows(connection)
+        reviewer_context = reviewer_ui_context_for_connection(
+            connection,
+            actor=_actor(
+                roles=("tester_reviewer",),
+                provider_subject="fixture-ui-list-after-write-reviewer",
+                display_name="Fixture UI List After Write Reviewer",
+            ),
+        )
+
+        note_status, _content_type, _note_body = route_response(
+            REVIEWER_UI_NOTE_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "source_record_key": COMPLAINT_KEY,
+                    "note_text": "Visible from the list after write.",
+                }
+            ),
+            reviewer_ui_context=reviewer_context,
+        )
+        status_status, _content_type, status_body = route_response(
+            REVIEWER_UI_STATUS_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "source_record_key": COMPLAINT_KEY,
+                    "reviewer_status": "blocked",
+                }
+            ),
+            reviewer_ui_context=reviewer_context,
+        )
+        list_status, list_content_type, list_body = route_response(
+            "/reviewer/records",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+        after_source_rows = _source_rows(connection)
+        counts = _table_counts(connection)
+
+    status_html = status_body.decode("utf-8")
+    list_html = list_body.decode("utf-8")
+
+    assert note_status == 200
+    assert status_status == 200
+    assert list_status == 200
+    assert list_content_type == "text/html; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 2,
+        "audit_events": 2,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert "blocked" in status_html
+    assert "Blocked" in list_html
+    assert "1 reviewer note" in list_html
+    assert "blocked" in list_html
+    assert "No reviewer state yet" not in list_html
+    assert_no_secret_html(list_html)
+
+
 @pytest.mark.parametrize(
     ("actor_case", "expected_status", "expected_text"),
     [
@@ -318,6 +429,24 @@ def test_reviewer_ui_rejects_source_read_without_reviewer_state_read_on_detail()
     with _seeded_connection() as connection:
         status, _content_type, body = route_response(
             f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(roles=("developer_operator",), actor_category="operator"),
+            ),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 403
+    assert "Reviewer request blocked" in html
+    assert "reviewer_state_read" in html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_rejects_source_read_without_reviewer_state_read_on_list() -> None:
+    with _seeded_connection() as connection:
+        status, _content_type, body = route_response(
+            "/reviewer/records",
             reviewer_ui_context=reviewer_ui_context_for_connection(
                 connection,
                 actor=_actor(roles=("developer_operator",), actor_category="operator"),
