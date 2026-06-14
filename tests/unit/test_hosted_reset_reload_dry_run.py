@@ -20,6 +20,7 @@ from ccld_complaints.hosted_app.auth import (
 from ccld_complaints.hosted_app.reset_reload_dry_run import (
     SEEDED_CORPUS_RESET_RELOAD_DRY_RUN_API_PATH,
     SeededCorpusResetReloadDryRunContext,
+    hosted_reset_reload_planning_metadata,
     plan_seeded_corpus_reset_reload_dry_run,
 )
 from ccld_complaints.hosted_app.reviewer_created_state import (
@@ -59,6 +60,7 @@ def test_reset_reload_dry_run_reports_seeded_corpus_impact_without_mutation() ->
         "source_records": 6,
         "reviewer_created_state": 0,
         "audit_events": 0,
+        "reset_reload_planning_metadata": 0,
     }
     assert payload["dry_run"] is True
     assert payload["operation"] == "seeded_corpus_reset_reload_dry_run"
@@ -119,6 +121,7 @@ def test_reset_reload_dry_run_reports_seeded_corpus_impact_without_mutation() ->
         "dry_run_does_not_execute_reset_reload": True,
     }
     assert "import or reload seeded corpus artifacts" in payload["deferred_actions"]
+    assert "operational_metadata" not in payload
     assert (
         "this dry-run counts existing audit scaffold rows but does not persist a new audit event"
         in payload["audit_requirements"]
@@ -332,9 +335,13 @@ def _table_counts(connection: Connection) -> dict[str, int]:
     audit_events = connection.execute(
         select(func.count()).select_from(hosted_audit_events)
     ).scalar_one()
+    reset_reload_planning_metadata = connection.execute(
+        select(func.count()).select_from(hosted_reset_reload_planning_metadata)
+    ).scalar_one()
     return {
         "import_batches": import_batches,
         "source_records": source_records,
         "reviewer_created_state": reviewer_created_state,
         "audit_events": audit_events,
+        "reset_reload_planning_metadata": reset_reload_planning_metadata,
     }

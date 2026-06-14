@@ -74,10 +74,15 @@ unauthenticated, disabled or revoked, role-denied, and out-of-scope actors, and
 report what a future seeded corpus reset/reload would affect. It performs
 read-only inspection queries only, including a scoped count of the narrow
 reviewer-created state scaffold table and audit event scaffold table when
-present. It does not delete, truncate, overwrite, archive, import, reload,
+present. When local/test code explicitly requests persistence, it can store a
+separate operational planning metadata record with non-secret actor attribution,
+permission used, scope, generated timestamp, validation summary, impact summary,
+and planning context. That metadata path rejects unauthenticated, disabled or
+revoked, role-denied, and out-of-scope actors, and rejects secret-like planning
+context. It does not delete, truncate, overwrite, archive, import, reload,
 create new dry-run audit events, parse or store provider tokens, create sessions
-or cookies, add production auth middleware, or commit provider, tenant,
-callback, hosted URL, or secret configuration.
+or cookies, add production auth middleware, store connection strings, or commit
+provider, tenant, callback, hosted URL, or secret configuration.
 
 The current reviewer-created state persistence scaffold is local/test only. It
 requires an explicit authenticated actor context, reviewer-state write

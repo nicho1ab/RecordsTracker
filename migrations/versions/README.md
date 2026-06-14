@@ -2,7 +2,8 @@
 
 This directory contains the hosted tester domain migrations for controlled
 seeded corpus import tables, the first narrow reviewer-created state persistence
-scaffold table, and the first narrow audit event scaffold table.
+scaffold table, the first narrow audit event scaffold table, and the first
+narrow reset/reload operational planning metadata scaffold table.
 
 Add future revisions here only in focused schema branches that create tested
 PostgreSQL table groups for approved hosted tester MVP layers while preserving
@@ -11,6 +12,10 @@ state scaffold revision must remain narrow: it links to staged source-derived
 records and requires authenticated actor attribution. The audit event scaffold
 revision must also remain narrow: it records successful reviewer-created state
 scaffold writes only, separately from source-derived and reviewer-created rows.
+The reset/reload operational metadata revision must remain narrow: it stores
+explicitly requested dry-run planning records only, separately from source-
+derived, reviewer-created, and audit rows.
 These revisions do not implement full review workflows, annotations,
 corrections, full audit policy coverage, audit UI, audit export, export state,
-feedback, retention automation, or reset/reload execution.
+feedback, retention automation, destructive reset, reload execution, archive
+execution, clear execution, relinking, or connector execution.

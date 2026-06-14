@@ -34,7 +34,9 @@ validation for review-state separation, annotation and correction traceability,
 source-traceable export packet behavior, accessibility expectations,
 authentication and access governance, audit event attribution and no-secret
 metadata where audit persistence is implemented, feedback collection, and
-reset/reload behavior at the level of the implemented change.
+reset/reload behavior at the level of the implemented change. Reset/reload
+operational metadata tests must prove any persisted planning record remains
+separate, permissioned, non-secret, and non-executing.
 
 ### Fixture hash and line-ending tests
 

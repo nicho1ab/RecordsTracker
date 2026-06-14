@@ -49,6 +49,11 @@ audit scaffold counts,
 reviewer-created state handling options, permission failures, invalid requests,
 and before/after table counts without executing imports, reloads, archives,
 clears, truncates, deletes, overwrites, or new dry-run audit-event persistence.
+Operational metadata tests should also prove planning records are persisted only
+when explicitly requested, remain separate from source-derived, reviewer-created,
+and audit rows, reject unauthenticated, disabled or revoked, role-denied, and
+out-of-scope actors, reject secret-like planning context, and never execute
+reset/reload.
 
 Hosted reviewer-created state scaffold tests must prove reviewer-created rows
 are stored separately from source-derived rows, source-derived records and

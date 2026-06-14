@@ -126,7 +126,8 @@ route seam, and a local/test authenticated reset/reload dry-run route seam: a
 no-secret database URL configuration seam, an Alembic script location, one
 domain migration for import batch metadata and source-derived record staging,
 one domain migration for a separate reviewer-created state scaffold table, one
-domain migration for a separate audit event scaffold table,
+domain migration for a separate audit event scaffold table, one domain migration
+for a separate reset/reload operational planning metadata scaffold table,
 scaffold/API boundary descriptors, a local JSON artifact importer for validated
 pipeline-output-shaped fixtures, list/fetch helpers over staged source-derived
 records, managed OIDC/OAuth2 provider-class configuration validation, actor/
@@ -139,10 +140,11 @@ that reports seeded import batch counts,
 source-derived record counts by entity, scoped reviewer-created state scaffold
 counts, scoped audit scaffold counts, future reviewer-created state handling options, required permissions,
 validation requirements, audit requirements, and deferred destructive actions
-without mutating data. This path preserves import batch identity, source traceability,
+without mutating data, and can optionally persist one non-secret operational
+planning metadata record when explicitly requested by local/test code. This path preserves import batch identity, source traceability,
 original source-derived values, authenticated attribution for scaffold rows,
 audit rows for successful reviewer-created state scaffold writes only, and the
-separation from reviewer-created state.
+separation from reviewer-created state, audit rows, and operational metadata.
 It does not implement real login flow, provider registration, sessions, cookies,
 tokens, auth middleware, full reviewer-created workflows, annotations,
 corrections, export packet decisions, tester feedback, reset/reload execution,
@@ -177,11 +179,13 @@ hosted scaffold adds local/test configuration validation, an Alembic script
 location, and a first narrow domain migration for seeded import batch metadata
 and source-derived record staging, plus a second narrow migration for one
 reviewer-created state scaffold table, plus a third narrow migration for one
-audit event scaffold table. The current auth boundary, source-derived read route
-seam, read-only reviewer workflow shell, reviewer-created state scaffold
-service, audit history read route seam, and reset/reload dry-run seam are
-local/test only; auth tables, export tables, feedback tables, reset/reload
-metadata tables, ORM models, stateful reviewer workflow API behavior,
+audit event scaffold table, plus a fourth narrow migration for one reset/reload
+operational planning metadata scaffold table. The current auth boundary,
+source-derived read route seam, read-only reviewer workflow shell,
+reviewer-created state scaffold service, audit history read route seam,
+reset/reload dry-run seam, and opt-in reset/reload planning metadata scaffold
+are local/test only; auth tables, export tables, feedback tables, broader
+reset/reload metadata tables, ORM models, stateful reviewer workflow API behavior,
 deployment, hosted
 connection configuration, and production import automation remain deferred, and
 future hosted schema work must preserve the physical data-domain separation
@@ -260,7 +264,8 @@ retention implementation PRs validate the concrete layer.
   API boundaries, expose a local/test database-backed read service over the
   staged source-derived records, and expose a narrow local/test authenticated
   source-derived read route seam, read-only reviewer workflow shell, and
-  reset/reload dry-run route seam, but it
+  reset/reload dry-run route seam with opt-in operational planning metadata
+  persistence, but it
   must not imply stateful database-backed reviewer views, reviewer-state
   persistence, production import automation, production API framework behavior,
   or operational reset/reload execution are implemented.
@@ -287,8 +292,9 @@ retention implementation PRs validate the concrete layer.
   staged source-derived records, a narrow local/test audit event scaffold table
   tied to successful reviewer-created state scaffold writes only, a narrow
   local/test authenticated audit history read route seam over those audit rows, and a
-  non-mutating reset/reload dry-run plan over staged seeded corpus metadata and
-  scoped reviewer-created scaffold and audit scaffold row counts. Real provider
+  non-mutating reset/reload dry-run plan over staged seeded corpus metadata,
+  scoped reviewer-created scaffold and audit scaffold row counts, and explicit
+  dry-run planning metadata when requested. Real provider
   authentication implementation, persistent authorization storage, production
   API framework behavior, correction workflows, queues, annotations, full
   reviewer-created workflow persistence, reset/reload commands or APIs, hosted
