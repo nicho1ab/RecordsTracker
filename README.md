@@ -151,9 +151,9 @@ public-record review notes.
    local/test authenticated source-derived read API route seam and reviewer
    workflow shell with read-only queue/detail payloads, associated reviewer-
    created state read route output, a compact summary derived from that output
-   on selected detail responses, and a narrow local/test note action that
-   delegates to the existing reviewer note route after resolving the selected
-   source record. It also includes a narrow local/test reviewer-
+   on selected detail responses, and narrow local/test note/status actions that
+   delegate to existing reviewer-created write routes after resolving the
+   selected source record. It also includes a narrow local/test reviewer-
    created state persistence scaffold table/service, a narrow local/test audit
    event scaffold for successful reviewer-created state scaffold writes only, a
    narrow local/test authenticated audit history read route seam for those audit
@@ -182,10 +182,10 @@ public-record review notes.
    Workflow shell detail payloads can compose associated reviewer-created state
    read output and a compact summary derived from that output only when tests or
    local callers provide explicit source-derived and reviewer-created state
-   route contexts. The workflow shell note action is also local/test only,
-   forces source-record binding from the selected detail context, requires
-   reviewer-state write permission, and writes through the existing reviewer-
-   created state and audit path.
+   route contexts. The workflow shell note and status actions are also
+   local/test only, force source-record binding from the selected detail context,
+   require reviewer-state write permission, and write through the existing
+   reviewer-created state and audit path.
    The reset/reload dry-run seam is also local/test only and requires an
    explicit database, actor, and scope context from tests or local callers. Its
    operational metadata scaffold stores dry-run planning metadata only, requires
@@ -197,7 +197,9 @@ public-record review notes.
    stores scaffold rows separately from source-derived records, and exposes a
    narrow local/test reviewer note creation route that stores bounded non-secret
    note text as reviewer-created scaffold payload under the existing state kind
-   without changing the schema. The audit
+   plus a narrow local/test reviewer status creation route that stores bounded
+   status values as reviewer-created scaffold payload under the existing state
+   kind without changing the schema. The audit
    event scaffold is also local/test only and records successful reviewer-
    created state scaffold writes separately from both source-derived and
    reviewer-created rows. The audit history read seam is local/test only,

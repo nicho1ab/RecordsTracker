@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Added a narrow local/test reviewer workflow shell action for recording bounded
+	reviewer status values from the selected source-derived detail context,
+	delegating to the existing reviewer-created state write/audit path so source-
+	record binding, auth/scope checks, audit creation, read-after-write visibility,
+	and source-derived no-mutation behavior stay centralized without adding schema
+	changes, status editing/deletion, queues, full workflow engine, exports,
+	reset/reload execution, production auth, deployment, live crawling, or
+	connector execution.
 - Added a narrow local/test reviewer workflow shell action for creating reviewer
 	notes from the selected source-derived detail context, delegating to the
 	existing reviewer note creation route so source-record binding, auth/scope

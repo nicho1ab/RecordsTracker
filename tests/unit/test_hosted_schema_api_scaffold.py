@@ -107,7 +107,13 @@ def test_api_boundaries_keep_source_records_and_reviewer_state_separate() -> Non
     assert "workflow-shell note action" in boundary_by_id[
         "reviewer_created_state_api"
     ].intended_future_use
+    assert "status action" in boundary_by_id[
+        "reviewer_created_state_api"
+    ].intended_future_use
     assert "read-only access to persisted reviewer-created scaffold rows" in boundary_by_id[
+        "reviewer_created_state_api"
+    ].preserves
+    assert "bounded reviewer status payloads under the existing state kind" in boundary_by_id[
         "reviewer_created_state_api"
     ].preserves
     assert any(
@@ -168,6 +174,7 @@ def test_schema_api_scaffold_summary_reflects_seeded_import_without_reviewer_wor
     assert scaffold.reviewer_workflow_shell_state_read_integration_implemented is True
     assert scaffold.reviewer_workflow_shell_state_filter_search_implemented is True
     assert scaffold.reviewer_workflow_shell_note_action_implemented is True
+    assert scaffold.reviewer_workflow_shell_status_action_implemented is True
     assert scaffold.reset_reload_dry_run_implemented is True
     assert scaffold.reset_reload_operational_metadata_scaffold_implemented is True
     assert scaffold.reset_reload_planning_metadata_read_api_routes_implemented is True

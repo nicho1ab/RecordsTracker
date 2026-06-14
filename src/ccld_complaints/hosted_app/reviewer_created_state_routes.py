@@ -21,6 +21,7 @@ from ccld_complaints.hosted_app.reviewer_created_state import (
     ReviewerCreatedStateKind,
     ReviewerCreatedStateRead,
     create_reviewer_note_scaffold,
+    create_reviewer_status_scaffold,
     get_reviewer_created_state_scaffold,
     list_reviewer_created_state_scaffold,
 )
@@ -56,6 +57,8 @@ def route_reviewer_created_state_api_response(
             return _list_reviewer_created_state(query_values, context)
         if parsed_url.path == f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-note":
             return _create_reviewer_note(query_values, context, request_body)
+        if parsed_url.path == f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-status":
+            return _create_reviewer_status(query_values, context, request_body)
         if parsed_url.path == f"{REVIEWER_CREATED_STATE_API_PREFIX}/by-id":
             return _get_reviewer_created_state_by_id(query_values, context)
         return _json_error(
@@ -144,6 +147,37 @@ def _create_reviewer_note(
                 "created_reviewer_note": True,
                 "local_test_only": True,
                 "route_source": f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-note",
+                "writes_create_audit_event": True,
+                "source_of_record": "public portal",
+                "does_not_mutate_source_derived_records": True,
+            },
+        },
+    )
+
+
+def _create_reviewer_status(
+    query_values: Mapping[str, list[str]],
+    context: ReviewerCreatedStateApiContext,
+    request_body: bytes | None,
+) -> tuple[int, str, bytes]:
+    source_record_key = _required_query_value(query_values, "source_record_key")
+    body = _required_json_body(request_body)
+    reviewer_status = _required_body_string(body, "reviewer_status")
+    created = create_reviewer_status_scaffold(
+        context.connection,
+        context.actor,
+        scope=context.scope,
+        source_record_key=source_record_key,
+        reviewer_status=reviewer_status,
+    )
+    return _json_response(
+        201,
+        {
+            "reviewer_created_state": _reviewer_created_state_payload(created),
+            "workflow": {
+                "created_reviewer_status": True,
+                "local_test_only": True,
+                "route_source": f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-status",
                 "writes_create_audit_event": True,
                 "source_of_record": "public portal",
                 "does_not_mutate_source_derived_records": True,

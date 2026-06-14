@@ -332,6 +332,14 @@ the governed primary future review experience.
 	schema changes, note editing/deletion, full annotations, corrections, exports,
 	real login flow, auth middleware, hosted live crawling, connector execution,
 	deployment, or production API behavior.
+- Added a narrow local/test reviewer workflow shell status action that resolves
+	the selected source-derived detail context, forces the source-record binding
+	from that context, delegates to the existing reviewer-created status route,
+	and returns created status metadata plus refreshed workflow detail context with
+	no schema changes, status editing/deletion, queue assignment, full workflow
+	engine behavior, annotations, corrections, exports, real login flow, auth
+	middleware, hosted live crawling, connector execution, deployment, or
+	production API behavior.
 - Added a minimal local/test audit event persistence scaffold with a separate
 	PostgreSQL/Alembic table and service boundary for successful reviewer-created
 	state scaffold writes only, preserving source-derived records and reviewer-

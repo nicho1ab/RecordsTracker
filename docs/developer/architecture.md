@@ -60,13 +60,13 @@ migrations/
 15. Use the hosted reviewer workflow shell only for local/test authenticated
   read-only queue and detail payloads that consume the source-derived route seam,
   compose associated reviewer-created state read route output plus a compact
-  summary on selected detail responses, and expose a narrow reviewer note action
-  that delegates to the existing reviewer note route after resolving the
-  selected source record.
+  summary on selected detail responses, and expose narrow reviewer note/status
+  actions that delegate to existing reviewer-created write routes after
+  resolving the selected source record.
 16. Use the hosted reviewer-created state scaffold only for local/test
   authenticated placeholder state rows linked to staged source-derived record
-  keys, including bounded non-secret reviewer note payloads, without modifying
-  source-derived records.
+  keys, including bounded non-secret reviewer note payloads and bounded reviewer
+  status payloads, without modifying source-derived records.
 17. Use the hosted reviewer-created state read route seam only for local/test
   authenticated JSON list, fetch, filter, and bounded search access over those
   scaffold rows without mutating reviewer-created, source-derived, audit, or
@@ -145,10 +145,11 @@ records. The reviewer workflow shell adds local/test authenticated read-only
 queue and detail payloads over those route responses, and detail payloads can
 include associated reviewer-created state read route output and a compact
 summary derived from that output for the selected source record. It also exposes
-a narrow local/test reviewer note action that resolves the selected detail
-source record before delegating to the existing reviewer note route, while
-keeping review status, full annotations, corrections, tester feedback, export
-packet state, and queue-state persistence deferred. The reset/reload dry-run seam adds
+narrow local/test reviewer note/status actions that resolve the selected detail
+source record before delegating to existing reviewer-created write routes, while
+keeping status editing/deletion, queue assignment, full annotations,
+corrections, tester feedback, export packet state, and queue-state persistence
+deferred. The reset/reload dry-run seam adds
 local/test authenticated planning over seeded corpus metadata: it reports
 existing import batches, source-derived record counts by entity, scoped reviewer-
 created scaffold row counts, scoped audit scaffold row counts, future reviewer-

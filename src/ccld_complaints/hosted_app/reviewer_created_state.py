@@ -40,6 +40,14 @@ REVIEWER_CREATED_STATE_KINDS: tuple[ReviewerCreatedStateKind, ...] = (
     "review_item_state_scaffold",
 )
 REVIEWER_NOTE_PAYLOAD_KIND = "reviewer_note_scaffold"
+REVIEWER_STATUS_PAYLOAD_KIND = "reviewer_status_scaffold"
+REVIEWER_STATUS_VALUES: tuple[str, ...] = (
+    "not_started",
+    "in_review",
+    "needs_follow_up",
+    "reviewed",
+    "blocked",
+)
 MAX_REVIEWER_NOTE_TEXT_LENGTH = 2_000
 SECRET_NOTE_MARKERS = (
     "authorization",
@@ -122,6 +130,29 @@ def create_reviewer_note_scaffold(
             "payload_kind": REVIEWER_NOTE_PAYLOAD_KIND,
             "note_text": normalized_note_text,
             "note_format": "plain_text",
+            "source_record_key": source_record_key,
+            "local_test_only": True,
+        },
+    )
+
+
+def create_reviewer_status_scaffold(
+    connection: Connection,
+    actor: AuthenticatedActor | None,
+    *,
+    scope: HostedAccessScope,
+    source_record_key: str,
+    reviewer_status: str,
+) -> ReviewerCreatedStateRead:
+    normalized_reviewer_status = _validated_reviewer_status(reviewer_status)
+    return create_reviewer_created_state_scaffold(
+        connection,
+        actor,
+        scope=scope,
+        source_record_key=source_record_key,
+        state_payload={
+            "payload_kind": REVIEWER_STATUS_PAYLOAD_KIND,
+            "reviewer_status": normalized_reviewer_status,
             "source_record_key": source_record_key,
             "local_test_only": True,
         },
@@ -315,6 +346,14 @@ def _validated_reviewer_note_text(note_text: str) -> str:
     if any(marker in lowered_note_text for marker in SECRET_NOTE_MARKERS):
         raise ValueError("Reviewer note text must not include secret-like data.")
     return normalized_note_text
+
+
+def _validated_reviewer_status(reviewer_status: str) -> str:
+    normalized_reviewer_status = reviewer_status.strip().casefold()
+    if normalized_reviewer_status not in REVIEWER_STATUS_VALUES:
+        allowed_values = ", ".join(REVIEWER_STATUS_VALUES)
+        raise ValueError(f"reviewer_status must be one of: {allowed_values}.")
+    return normalized_reviewer_status
 
 
 def get_reviewer_created_state_scaffold(
