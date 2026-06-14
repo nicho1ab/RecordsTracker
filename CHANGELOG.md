@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added a governance inventory and gap analysis for the current
+	production-discovery phase, local hosted scaffold state, completed ADRs,
+	deferred decisions, stale-guidance assessment, and next hosted implementation
+	gaps without changing product behavior.
 - Added local-only semantic/accessibility validation coverage for the hosted
 	scaffold source-record list and detail shell using Python standard-library
 	HTML parsing, without browser automation or frontend test dependencies.

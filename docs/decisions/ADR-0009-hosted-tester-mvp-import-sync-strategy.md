@@ -32,6 +32,12 @@ drift between the validated source-derived pipeline output and hosted review
 records, while also keeping reviewer-created state separate from imported
 source-derived values.
 
+Current note: ADR-0012 later approved scaffold-first sequencing, and later local
+implementation PRs added only the local scaffold, setup checks, read-only sample
+source-record shell, and semantic/accessibility validation. This ADR still does
+not approve import/sync implementation, hosted live crawling, hosted connector
+execution, reset/reload implementation, or production data population.
+
 ## Decision
 
 The hosted tester MVP will treat the existing Python ingestion and extraction

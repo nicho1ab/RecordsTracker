@@ -23,6 +23,11 @@ the hosted tester MVP. It does not select a production stack, add dependencies,
 change schemas, alter extraction behavior, add connectors, or implement hosted
 application behavior.
 
+Current note: ADR-0012 later approved scaffold-first sequencing, and later local
+implementation PRs added only the local scaffold, setup checks, read-only sample
+source-record shell, and semantic/accessibility validation. The non-scaffold
+implementation limits in this ADR remain in force.
+
 ## Decision
 
 The hosted tester MVP requires a primary reviewer application layer separate from Datasette.
