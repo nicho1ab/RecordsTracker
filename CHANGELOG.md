@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added a narrow local/test authenticated audit history read route seam for the
+	first audit event scaffold, with JSON list and fetch-by-ID handlers, scoped
+	filters, audit-read authorization, and focused tests proving empty history,
+	missing-event, auth rejection, filtering, and no-mutation behavior without
+	adding audit UI, audit export, full audit coverage, retention automation, real
+	login flow, auth middleware, deployment, live crawling, or connector execution.
 - Added a minimal local/test audit event persistence scaffold for successful
 	reviewer-created state scaffold writes only, with a separate audit table,
 	authenticated actor attribution, source-derived target context, atomic

@@ -46,6 +46,7 @@ def test_text_report_includes_commands_and_non_install_boundary() -> None:
     assert "pytest tests/unit/test_hosted_app_scaffold.py" in text
     assert "tests/unit/test_hosted_reviewer_created_state.py" in text
     assert "tests/unit/test_hosted_audit_events.py" in text
+    assert "tests/unit/test_hosted_audit_event_routes.py" in text
     assert "tests/unit/test_hosted_reset_reload_dry_run.py" in text
 
 

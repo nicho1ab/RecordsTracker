@@ -54,8 +54,10 @@
   behavior, or prove source completeness. The audit event scaffold is local/test
   only, stored separately, and records only successful reviewer-created state
   scaffold writes with actor, permission, scope, action, target, and source-
-  derived context. It does not provide full audit coverage, audit UI, audit
-  export, retention automation, or audit coverage for reset/reload, exports,
-  feedback, annotations, corrections, provider login, role changes, or
-  operational actions.
+  derived context. A narrow local/test audit history read route can list or
+  fetch those scaffold audit rows when tests or local callers provide explicit
+  database, actor, and scope context with audit-read permission. It does not
+  provide full audit coverage, audit UI, audit export, retention automation, or
+  audit coverage for reset/reload, exports, feedback, annotations, corrections,
+  provider login, role changes, or operational actions.
 - Datasette accessibility depends partly on the installed Datasette version, browser, and assistive technology. Validate keyboard navigation, table headers, focus visibility, and exported table usability before treating a release as stable.

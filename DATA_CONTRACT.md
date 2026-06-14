@@ -48,8 +48,11 @@ rows separately from source-derived rows, linked through staged source-derived
 record keys and attributed to authenticated actors. A narrow local/test audit
 event scaffold table can store audit rows for successful reviewer-created state
 scaffold writes only, separately from source-derived and reviewer-created rows.
-Those import, read, route, workflow-shell, dry-run, reviewer-created state, and
-audit scaffold mechanics do not
+A narrow local/test authenticated audit history read route seam can list or
+fetch those audit rows by approved audit identifiers and schema-supported
+filters without mutating source-derived, reviewer-created, or audit rows. Those
+import, read, route, workflow-shell, dry-run, reviewer-created state, and audit
+scaffold mechanics do not
 add canonical source-derived fields, mutate source-derived records, run full
 reviewer workflows, implement annotations or corrections, run live crawling, run
 connector execution, implement a production API framework, execute reset/reload

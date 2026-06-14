@@ -10,6 +10,7 @@ src/ccld_complaints/
   connectors/
   extraction/
   hosted_app/
+    audit_event_routes.py
     audit_events.py
     auth.py
     persistence.py
@@ -63,9 +64,11 @@ migrations/
 17. Use the hosted audit event scaffold only for local/test audit rows created
   for successful reviewer-created state scaffold writes, without modifying
   source-derived or reviewer-created rows.
-18. Use the hosted reset/reload dry-run seam only for local/test authenticated
+18. Use the hosted audit history read route seam only for local/test
+  authenticated JSON list and fetch access over those scaffold audit rows.
+19. Use the hosted reset/reload dry-run seam only for local/test authenticated
   planning over staged seeded corpus metadata, without mutating data.
-19. Keep full reviewer-created workflows, annotations, corrections, exports,
+20. Keep full reviewer-created workflows, annotations, corrections, exports,
   full audit coverage, audit UI, audit export, reset/reload execution, real login flow, auth
   middleware, provider integration, production API framework behavior, live
   crawling, connector execution, and production automation in future focused
@@ -137,7 +140,8 @@ status, scope, and source-derived reference checks pass; it does not implement
 full reviewer workflows. Successful reviewer-created state scaffold writes also
 create a separate audit scaffold row with actor, permission, scope, target, and
 source-derived context; if the audit row cannot be created, the reviewer-created
-state write is rolled back. The next hosted tester MVP work can move toward real
+state write is rolled back. The local/test audit history read route seam can list
+or fetch those audit rows only after audit-read authorization passes. The next hosted tester MVP work can move toward real
 provider integration, reset/reload execution planning with persisted operational
 metadata, fuller audit coverage, and stateful reviewer-created workflow layers
 when each branch validates its layer.
@@ -151,7 +155,7 @@ execution, hosted live crawling, hosted connector execution, deployment,
 source-derived canonical field changes, full reviewer-created workflow
 persistence, or extraction behavior. Its database-backed reads, auth guards,
 source-derived read routes, reviewer workflow shell, reviewer-created state
-scaffold service, audit event scaffold service, and reset/reload dry-run are limited to local/test service seams. It does not require Docker, QNAP Container Station,
+scaffold service, audit event scaffold service, audit history read routes, and reset/reload dry-run are limited to local/test service seams. It does not require Docker, QNAP Container Station,
 Azure, AWS, a public URL, secrets, or cloud resources.
 
 See `docs/developer/hosted-scaffold.md` for local run and smoke-check commands.

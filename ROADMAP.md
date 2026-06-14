@@ -301,6 +301,12 @@ the governed primary future review experience.
 	automation, full reviewer workflows, annotations, corrections, real login flow,
 	auth middleware, hosted live crawling, connector execution, deployment, or
 	production API behavior.
+- Added a narrow local/test authenticated audit history read route seam over the
+	first audit event scaffold, with JSON list and fetch-by-ID handlers, scoped
+	filters, audit-read permission checks, and no-mutation coverage without adding
+	audit UI, audit export, full audit coverage, retention automation, real login
+	flow, auth middleware, hosted live crawling, connector execution, deployment,
+	or production API behavior.
 - Added the first local hosted tester MVP scaffold with a Python standard-library
 	app shell, health route, smoke check, focused tests, and local Windows
 	PowerShell run documentation without adding cloud, QNAP, Docker, schema,
@@ -360,7 +366,8 @@ the governed primary future review experience.
 	controlled seeded import, database-backed source-derived read, auth boundary
 	scaffold, local/test source-derived read route seam, first read-only
 	authenticated tester workflow shell, reviewer-created state persistence
-	scaffold, and reset/reload dry-run planning seam to
+	scaffold, audit event persistence scaffold, audit history read route seam, and
+	reset/reload dry-run planning seam to
 	move the next hosted tester MVP branches toward real provider integration,
 	reset/reload execution planning with persisted operational metadata, and
 	stateful reviewer-created workflow layers.
@@ -422,8 +429,8 @@ define the smallest useful product shape:
 	minimal scaffold wiring, controlled seeded import path, database-backed
 	source-derived read service, local/test auth boundary scaffold, local/test
 	source-derived read route seam, and first read-only authenticated workflow
-	shell, reviewer-created state persistence scaffold, and first audit event
-	persistence scaffold to move into real
+	shell, reviewer-created state persistence scaffold, first audit event
+	persistence scaffold, and local/test audit history read route seam to move into real
 	provider integration, reset/reload planning,
 	fuller audit coverage, export/feedback/reset metadata, and stateful authenticated tester
 	workflow implementation.

@@ -147,6 +147,11 @@ def list_hosted_audit_events_scaffold(
     scope: HostedAccessScope,
     target_reviewer_state_id: str | None = None,
     source_record_key: str | None = None,
+    action: HostedAuditAction | None = None,
+    actor_provider_subject: str | None = None,
+    source_entity_type: str | None = None,
+    source_stable_source_id: str | None = None,
+    source_document_id: str | None = None,
     limit: int = 100,
     offset: int = 0,
 ) -> tuple[HostedAuditEventRead, ...]:
@@ -154,6 +159,8 @@ def list_hosted_audit_events_scaffold(
         raise ValueError("Hosted audit event list limit must be at least 1.")
     if offset < 0:
         raise ValueError("Hosted audit event list offset must be at least 0.")
+    if action is not None and action not in HOSTED_AUDIT_ACTIONS:
+        raise ValueError("Hosted audit event action is not supported by this scaffold.")
     require_permission(
         actor,
         permission=AUDIT_READ_PERMISSION,
@@ -171,8 +178,63 @@ def list_hosted_audit_events_scaffold(
         )
     if source_record_key is not None:
         query = query.where(hosted_audit_events.c.source_record_key == source_record_key)
-    query = query.order_by(hosted_audit_events.c.occurred_at).limit(limit).offset(offset)
-    return tuple(_read_model_from_row(row) for row in connection.execute(query).mappings().all())
+    if action is not None:
+        query = query.where(hosted_audit_events.c.action == action)
+    if actor_provider_subject is not None:
+        query = query.where(
+            hosted_audit_events.c.actor_provider_subject == actor_provider_subject
+        )
+    if source_entity_type is not None:
+        query = query.where(hosted_audit_events.c.source_entity_type == source_entity_type)
+    if source_stable_source_id is not None:
+        query = query.where(
+            hosted_audit_events.c.source_stable_source_id == source_stable_source_id
+        )
+    if source_document_id is not None:
+        query = query.where(hosted_audit_events.c.source_document_id == source_document_id)
+    query = (
+        query.order_by(
+            hosted_audit_events.c.occurred_at,
+            hosted_audit_events.c.audit_event_id,
+        )
+        .limit(limit)
+        .offset(offset)
+    )
+    return tuple(
+        _read_model_from_row(row) for row in connection.execute(query).mappings().all()
+    )
+
+
+def get_hosted_audit_event_scaffold(
+    connection: Connection,
+    actor: AuthenticatedActor | None,
+    *,
+    scope: HostedAccessScope,
+    audit_event_id: str,
+) -> HostedAuditEventRead | None:
+    if not audit_event_id.strip():
+        raise ValueError("Hosted audit event ID is required.")
+    require_permission(
+        actor,
+        permission=AUDIT_READ_PERMISSION,
+        scope=scope,
+        target=AuthorizationTarget("audit_event", audit_event_id),
+    )
+
+    row = (
+        connection.execute(
+            select(hosted_audit_events).where(
+                hosted_audit_events.c.scope_type == scope.scope_type,
+                hosted_audit_events.c.scope_id == scope.scope_id,
+                hosted_audit_events.c.audit_event_id == audit_event_id,
+            )
+        )
+        .mappings()
+        .one_or_none()
+    )
+    if row is None:
+        return None
+    return _read_model_from_row(row)
 
 
 def _read_model_from_row(row: RowMapping) -> HostedAuditEventRead:
