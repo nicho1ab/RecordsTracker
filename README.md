@@ -155,7 +155,13 @@ public-record review notes.
    created state read route output, a compact summary derived from that output
    on selected detail responses, and narrow local/test note/status actions that
    delegate to existing reviewer-created write routes after resolving the
-   selected source record. It also includes a narrow local/test reviewer-
+   selected source record. A browser-accessible local/test reviewer UI shell is
+   available at `/reviewer` when the scaffold is running locally; it loads the
+   tiny seeded fixture corpus into process-local test state, lets a local tester
+   search/select a source-derived record, view safe source traceability fields,
+   submit a bounded reviewer note, submit a bounded reviewer status, and see
+   read-after-write reviewer-created state through those same existing workflow
+   seams. It also includes a narrow local/test reviewer-
    created state persistence scaffold table/service, a narrow local/test audit
    event scaffold for successful reviewer-created state scaffold writes only, a
    narrow local/test authenticated audit history read route seam for those audit
@@ -172,7 +178,7 @@ public-record review notes.
    for listing or fetching those persisted planning records. It does not
    implement real login flow, auth middleware, provider registration, hosted
    URLs, user tables, role persistence, full reviewer workflows,
-   annotations, corrections, review status UI, production import automation,
+   annotations, corrections, production review status UI, production import automation,
    full audit coverage, new audit writes, audit UI, audit export, reset/reload execution, exports,
    deployment, QNAP, Azure, or AWS.
    Start with `scripts/check-hosted-scaffold-local.ps1` to verify local Python
@@ -182,9 +188,9 @@ public-record review notes.
    only, with local sample filtering/search controls, sample
    source-traceability summary panels, sample traceability-style fields, and no
    live data, database-backed reads, real login flow, or reviewer-created state
-   persistence. Database-backed service reads, auth boundary guards, the
-   source-derived API route seam, and the reviewer workflow shell are
-   limited to local/test seams and are not wired into the sample UI routes.
+   persistence. The separate `/reviewer` route is the local/test browser UI
+   shell over the seeded database-backed route seams; `/source-records` remains
+   the fixture/sample read-only display shell.
    Workflow shell detail payloads can compose associated reviewer-created state
    read output and a compact summary derived from that output only when tests or
    local callers provide explicit source-derived and reviewer-created state

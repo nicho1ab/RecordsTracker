@@ -3,10 +3,10 @@
 ## Purpose
 
 This document explains how to run the first local hosted tester MVP scaffold.
-The scaffold is a runnable placeholder app shell and smoke route only. It is not
-a functioning reviewer workflow yet; the current reviewer workflow shell is a
-local/test seam with read-only queue/detail payloads and narrow reviewer
-note/status actions, not a stateful hosted tester workflow.
+The scaffold is a runnable local/test app shell. It now includes a thin
+browser-accessible reviewer UI shell over the seeded fixture corpus and existing
+workflow seams; it is still not a production reviewer application or stateful
+hosted tester workflow.
 
 The scaffold is local-first and must run on a Windows development workstation
 before any QNAP, Azure, AWS, public hosting, or public URL work is attempted.
@@ -89,9 +89,35 @@ Run the scaffold from the repository root:
 ```
 
 Open `http://127.0.0.1:8000/` on the same workstation. The page must identify
-itself as a scaffold and not a functioning reviewer workflow yet. It must not imply
-that authentication, records, workflows, cloud hosting, QNAP, Azure, or AWS are
-available.
+itself as a local/test scaffold. It may link to the local/test reviewer UI shell
+but must not imply that production authentication, full reviewer workflows,
+cloud hosting, QNAP, Azure, AWS, or public URLs are available.
+
+## Open the local/test reviewer UI shell
+
+The scaffold includes a browser-accessible local/test reviewer UI shell at:
+
+```text
+http://127.0.0.1:8000/reviewer
+```
+
+The page loads only the tiny seeded fixture corpus into process-local test state
+and supplies a fixture local/test reviewer actor from the scaffold process. It
+lets a local tester search/select a seeded source-derived complaint record, open
+detail, view safe source traceability fields, submit a bounded reviewer note,
+submit a bounded reviewer status, and see read-after-write reviewer-created
+state on the page.
+
+The UI is intentionally plain server-rendered HTML. It reuses the existing
+source-derived route seam, reviewer workflow shell, reviewer-created state
+write/read routes, and audit scaffold. UI actions do not mutate source-derived records; successful note/status writes create reviewer-created scaffold rows and
+the existing audit scaffold row through the existing services.
+
+The UI does not implement production sign-in, real OpenID Connect login, auth
+middleware, token validation, sessions, cookies, provider registration, client
+secrets, hosted URLs, deployment, exports, reset/reload execution, live
+crawling, connector execution, note/status editing or deletion, corrections,
+tester feedback, audit UI/export, or a frontend build pipeline.
 
 ## Open the sample read-only source view shell
 
@@ -398,7 +424,9 @@ python -m ccld_complaints.cli.import_hosted_seeded_corpus tests\fixtures\hosted_
 Do not commit connection strings, usernames, passwords, provider settings,
 private URLs, hosted URLs, tokens, or deployment-specific configuration.
 
-The current path does not implement stateful database-backed reviewer views, real
+The current path implements only a local/test browser reviewer UI shell over the
+tiny seeded fixture corpus and existing workflow seams. It does not implement
+production reviewer views, real
 provider login, token validation, sessions, cookies, auth middleware, user or
 role persistence, full reviewer-created workflows, full audit coverage, audit UI,
 audit export, export builders, reset/reload execution, reviewer-created state archive or clear behavior, production import
@@ -475,6 +503,12 @@ Run the focused hosted reviewer workflow shell tests:
 
 ```powershell
 pytest tests/unit/test_hosted_reviewer_workflow_shell.py
+```
+
+Run the focused hosted reviewer UI shell tests:
+
+```powershell
+pytest tests/unit/test_hosted_reviewer_ui.py
 ```
 
 Run the focused hosted reset/reload dry-run tests:
@@ -579,6 +613,13 @@ workflow shell action, forced source-record binding from the selected detail
 context, invalid source or note payload rejection, audit creation on success,
 no audit/state mutation on failure, read-after-write visibility, and no source-
 derived mutation.
+The reviewer UI shell tests verify local/test browser-accessible landing and
+detail HTML pages over the seeded fixture corpus, safe source traceability
+display, semantic form controls, note/status form delegation to the existing
+workflow actions, read-after-write reviewer-created state display,
+unauthenticated, disabled or revoked, role-denied, out-of-scope, and permission-
+separation blocking, no-secret HTML output, successful audit creation, and no
+source-derived mutation from UI actions.
 The reviewer-created state scaffold tests verify separate storage from staged
 source-derived records, source-derived records are not modified, authenticated
 actor attribution is captured, reviewer-state write permission is required,
@@ -679,7 +720,8 @@ The scaffold intentionally does not implement:
   reviewer workflow shell queue/detail/note-action seam, reviewer-created state
   read route seam, reset/reload dry-run seam, reset/reload execution-plan seam,
   audit history read route seam, and reset/reload planning metadata read route seam.
-- Stateful database-backed reviewer views or workflows.
+- Production reviewer views or full reviewer workflows beyond the local/test
+  browser UI shell over the tiny seeded fixture corpus.
 - Production import/sync automation.
 - Queues.
 - Annotations.

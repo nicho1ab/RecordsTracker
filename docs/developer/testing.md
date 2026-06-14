@@ -110,6 +110,13 @@ that selected context, permission failures, invalid or missing source records,
 invalid status payloads, successful audit creation, no audit/state mutation on
 failure, read-after-write visibility through existing read routes and workflow
 detail output, and no source-derived mutation.
+Hosted reviewer UI shell tests should cover browser-accessible local/test
+landing and detail HTML pages over the seeded fixture corpus, safe source
+traceability display, labeled search/note/status controls, note/status form
+delegation to the existing workflow actions, read-after-write reviewer-created
+state display, unauthenticated, disabled or revoked, role-denied, out-of-scope,
+and source-read-versus-reviewer-state permission separation blocking, no-secret
+HTML output, successful audit creation, and no source-derived mutation.
 
 Hosted reviewer-created state read route tests must prove persisted scaffold
 rows are readable only through authenticated, active, role/scope-allowed local/

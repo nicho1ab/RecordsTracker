@@ -75,6 +75,17 @@ tester feedback, and export packet inclusion decisions. Status labels must not
 imply source facts, legal conclusions, facility-wide conclusions, or verified
 harm beyond what qualified reviewers establish from source records.
 
+The first browser-accessible hosted reviewer UI shell is now a local/test,
+server-rendered HTML surface at `/reviewer` and `/reviewer/records`. Its design
+purpose is functional validation, not polish: local testers can list/search a
+seeded source-derived record, open detail, inspect safe source traceability
+fields, add a reviewer note, set a reviewer status, and see read-after-write
+reviewer-created state. It must keep source-derived values visibly separate
+from reviewer-created notes/statuses, keep local/test limitations visible, use
+semantic headings, tables, labels, and accessible buttons, avoid color-only
+meaning, and avoid unsupported legal, facility-wide, completeness, harm, abuse,
+neglect, liability, or rights-deprivation conclusions.
+
 The hosted scaffold and first local-only read-only source-derived views now
 exist. Detailed hosted visual design may begin from that real shell, but early
 design work must stay inside local-only, fixture/sample, read-only boundaries
