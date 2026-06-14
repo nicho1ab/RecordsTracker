@@ -100,8 +100,9 @@ corpus output when needed, and continue into the hosted reviewer UI. Empty,
 invalid, and load-result states should use plain language that distinguishes
 missing local/test validated records from public-source completeness. The page
 must not offer non-CCLD source selection, imply hosted live crawling, imply
-generic connector execution, or hide the remaining pipeline gap when broader
-retrieval requires an explicit command outside the browser UI.
+generic connector execution, or hide the required outside-browser handoff when
+broader retrieval requires an explicit live-fetch command and local/test
+artifact build command before browser load/refresh.
 
 The hosted scaffold and first local-only read-only source-derived views now
 exist. Detailed hosted visual design may begin from that real shell, but early

@@ -112,6 +112,12 @@ validated before load, source URL/raw SHA-256/raw path/connector traceability is
 preserved, existing source-derived keys are refreshed without duplicates,
 facility/date no-match requests defer without writes, and browser request paths
 do not invoke live public web requests.
+Hosted CCLD artifact builder tests must prove fixture-backed validated SQLite
+output converts into deterministic hosted seeded-corpus JSON, validates through
+the existing hosted seeded parser, preserves source-derived bundles and source
+traceability, rejects missing or unsafe traceability fields, remains no-secret,
+and is compatible with the existing hosted seeded import and CCLD import/reload
+path without running live crawling or browser-triggered connector execution.
 
 ### Fixture hash and line-ending tests
 

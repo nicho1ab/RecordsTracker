@@ -46,7 +46,9 @@ Accessibility requirements apply to:
 	labeled facility/license number and date controls, accessible validation
 	messages, labeled local validated load controls, table captions/headings for
 	matched seeded records, descriptive reviewer links, and visible no-match or
-	load-result guidance that does not rely on color or position alone.
+	load-result guidance that does not rely on color or position alone. Outside-
+	browser live-fetch and artifact-builder handoff guidance must remain visible
+	plain text or code text with surrounding explanation.
 
 ### Color and contrast
 

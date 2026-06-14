@@ -482,13 +482,13 @@ def _render_pipeline_plan(request: CcldRecordRequest) -> str:
         <li>Run <code>{live_fetch_command}</code>
                 when live public requests are intended.</li>
         <li>Validate the generated SQLite/Datasette output and source traceability.</li>
-                <li>Prepare or import a controlled validated hosted seeded corpus
-                artifact before exposing additional records in the hosted reviewer UI.</li>
+            <li>Run <code>.\\scripts\\build-hosted-ccld-artifact.ps1</code> against
+            the validated SQLite output to create local/test hosted seeded-corpus JSON.</li>
+            <li>Return to this page and use the local validated CCLD load action.</li>
       </ol>
-            <p>The missing hosted execution seam is a safe CCLD-only import/reload path
-            from validated pipeline output into hosted source-derived records. That
-            should be handled in a separate branch with tests and no live crawling
-            from browser requests.</p>
+            <p>The remaining gap is production-ready automation around the validated
+            artifact handoff. Browser requests still do not run live CCLD retrieval,
+            connector execution, or SQLite conversion.</p>
     </section>"""
 
 

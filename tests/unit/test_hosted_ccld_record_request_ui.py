@@ -193,7 +193,8 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert "Rows for this facility currently available before date filtering: 6" in html
     assert "CCLD pipeline step still required" in html
     assert "does not run live CCLD retrieval or import" in html
-    assert "safe CCLD-only import/reload path" in html
+    assert "build-hosted-ccld-artifact.ps1" in html
+    assert "Browser requests still do not run live CCLD retrieval" in html
     assert_no_secret_html(html)
 
 

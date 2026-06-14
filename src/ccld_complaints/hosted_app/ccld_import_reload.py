@@ -10,6 +10,9 @@ from typing import Any
 from sqlalchemy.engine import Connection
 
 from ccld_complaints.hosted_app.auth import HostedAccessScope
+from ccld_complaints.hosted_app.ccld_hosted_artifact_builder import (
+    DEFAULT_GENERATED_CCLD_HOSTED_ARTIFACT,
+)
 from ccld_complaints.hosted_app.seeded_import import (
     SeededSourceDerivedRecord,
     flatten_seeded_corpus_records,
@@ -20,6 +23,10 @@ from ccld_complaints.hosted_app.source_derived_reads import list_source_derived_
 
 DEFAULT_LOCAL_VALIDATED_CCLD_ARTIFACT = Path(
     "tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json"
+)
+DEFAULT_LOCAL_VALIDATED_CCLD_ARTIFACT_PATHS = (
+    DEFAULT_GENERATED_CCLD_HOSTED_ARTIFACT,
+    DEFAULT_LOCAL_VALIDATED_CCLD_ARTIFACT,
 )
 _FACILITY_NUMBER_RE = re.compile(r"^\d+$")
 _CCLD_CONNECTOR_NAME = "ccld_facility_reports"
@@ -43,7 +50,7 @@ class CcldImportReloadRequest:
 class CcldImportReloadContext:
     connection: Connection
     scope: HostedAccessScope
-    artifact_paths: tuple[Path, ...] = (DEFAULT_LOCAL_VALIDATED_CCLD_ARTIFACT,)
+    artifact_paths: tuple[Path, ...]
 
 
 @dataclass(frozen=True)
@@ -66,13 +73,20 @@ def ccld_import_reload_context_for_connection(
     connection: Connection,
     *,
     scope: HostedAccessScope,
-    artifact_paths: tuple[Path, ...] = (DEFAULT_LOCAL_VALIDATED_CCLD_ARTIFACT,),
+    artifact_paths: tuple[Path, ...] | None = None,
 ) -> CcldImportReloadContext:
     return CcldImportReloadContext(
         connection=connection,
         scope=scope,
-        artifact_paths=artifact_paths,
+        artifact_paths=artifact_paths or _default_local_validated_ccld_artifact_paths(),
     )
+
+
+def _default_local_validated_ccld_artifact_paths() -> tuple[Path, ...]:
+    generated_path = _resolve_artifact_path(DEFAULT_GENERATED_CCLD_HOSTED_ARTIFACT)
+    if generated_path.exists():
+        return (DEFAULT_GENERATED_CCLD_HOSTED_ARTIFACT,)
+    return (DEFAULT_LOCAL_VALIDATED_CCLD_ARTIFACT,)
 
 
 def import_reload_validated_ccld_records(
