@@ -222,6 +222,11 @@ the governed primary future review experience.
   database/migration decisions, minimal hosted schema/API scaffold, seeded
   corpus import/reset, and the first authenticated tester workflow without
   implementing those layers prematurely.
+- Accepted the hosted tester MVP auth provider and role implementation
+	direction, choosing a managed standards-based OpenID Connect/OAuth 2.0
+	provider class and minimum role/scope/audit-identity boundaries without
+	adding auth middleware, schemas, API routes, provider configuration, secrets,
+	hosted URLs, deployment, live crawling, or connector execution.
 - Added the first local hosted tester MVP scaffold with a Python standard-library
 	app shell, health route, smoke check, focused tests, and local Windows
 	PowerShell run documentation without adding cloud, QNAP, Docker, schema,
@@ -276,14 +281,14 @@ the governed primary future review experience.
 - Keep the local hosted scaffold runnable, prerequisite-checked, smoke-tested,
 	and clear about sample-only read-only source-derived views while the next
 	hosted implementation decisions are made.
-- Use the accepted audit, export, reset/reload, and tester retention boundaries
-	to move the next hosted tester MVP branches toward provider-specific
-	authentication, database/migration selection, minimal hosted schema/API
-	scaffolding, seeded corpus import/reset, and the first authenticated tester
-	workflow.
+- Use the accepted audit, export, reset/reload, tester retention, auth
+	provider-class, role, scope, and audit-identity boundaries to move the next
+	hosted tester MVP branches toward database/migration selection, minimal
+	hosted schema/API scaffolding, focused auth integration, seeded corpus
+	import/reset, and the first authenticated tester workflow.
 - Decide concrete database product and migration tooling only after the accepted
-	schema/migration strategy, authentication/access needs, and ADR-0013
-	operational constraints are clear.
+	schema/migration strategy, ADR-0014 auth provider-class direction, and
+	ADR-0013 operational constraints are clear.
 - Preserve Datasette, SQLite views, and review-bundle exports where they support
 	validation, inspection, debugging, local exploration, and export workflows.
 - Harden extraction with additional representative fixtures and edge-case tests.
@@ -305,14 +310,15 @@ has been outgrown as the primary future review experience and should be extended
 only where it remains useful for validation, inspection, debugging, local
 exploration, or export support.
 
-1. Decide provider-specific authentication and authorization implementation
-	details before implementing real authentication or authorization.
-2. Decide concrete database product and migration tooling for the hosted tester
-	MVP using the accepted access, schema/migration, and ADR-0013 operational
-	constraints.
-3. Implement a minimal hosted schema/API scaffold for seeded source-derived
+1. Decide concrete database product and migration tooling for the hosted tester
+	MVP using the accepted access, auth provider-class, schema/migration, and
+	ADR-0013 operational constraints.
+2. Implement a minimal hosted schema/API scaffold for seeded source-derived
 	records and reviewer-created state after provider and database/migration
 	decisions are accepted.
+3. Implement focused auth integration against the managed OpenID Connect/OAuth
+	2.0 provider class with role, scope, disabled-account, unauthenticated, and
+	role-denied path validation.
 4. Implement seeded corpus import/reset from validated pipeline output before
 	enabling tester workflows that depend on hosted source-derived records.
 5. Implement the first authenticated tester workflow over a seeded,
@@ -337,9 +343,10 @@ define the smallest useful product shape:
 3. Use ADR-0007's hybrid direction, ADR-0008's data-domain boundary, ADR-0009's
 	controlled import boundary, ADR-0010's physical separation strategy,
 	ADR-0011's authenticated access boundary, ADR-0012's scaffold-first sequence,
-	and ADR-0013's operational boundaries to move into provider-specific
-	authentication, database/migration, schema/API, seeded import/reset, and first
-	authenticated tester workflow implementation.
+	ADR-0013's operational boundaries, and ADR-0014's auth provider-class and role
+	implementation direction to move into database/migration, schema/API, focused
+	auth integration, seeded import/reset, and first authenticated tester workflow
+	implementation.
 
 ## Decision points
 
