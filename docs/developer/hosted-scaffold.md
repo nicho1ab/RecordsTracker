@@ -23,6 +23,23 @@ Node.js is not required. Docker is not required. QNAP Container Station is not r
 No cloud resources, public URLs, app registrations, cloud databases, DNS records,
 deployment credentials, secrets, or tokens are required.
 
+## Verify local prerequisites
+
+Run the local setup check from the repository root after installing project
+dependencies:
+
+```powershell
+.\scripts\check-hosted-scaffold-local.ps1
+```
+
+The check verifies the Python version, hosted scaffold package import, and local
+development tools used for focused tests, lint, and type checks. It also reports
+that Node/npm, Docker, QNAP, cloud resources, and a public URL are not required
+for the Python standard-library scaffold.
+
+The local setup check does not install software, does not require admin rights,
+does not create secrets, and does not contact cloud services.
+
 ## Install dependencies
 
 From the repository root, create and activate a local virtual environment if one
@@ -79,6 +96,10 @@ pytest tests/unit/test_hosted_app_scaffold.py
 ```
 
 Run the standard project validation before opening a PR:
+
+```powershell
+.\scripts\check-hosted-scaffold-local.ps1
+```
 
 ```powershell
 .\scripts\lint.ps1

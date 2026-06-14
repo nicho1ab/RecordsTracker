@@ -220,11 +220,15 @@ the governed primary future review experience.
 	app shell, health route, smoke check, focused tests, and local Windows
 	PowerShell run documentation without adding cloud, QNAP, Docker, schema,
 	authentication, authorization, import/sync, or reviewer workflow behavior.
+- Added local hosted scaffold setup-check tooling so developers can verify
+  Python and development-tool prerequisites on Windows without installing
+  software, requiring admin rights, or requiring Node, Docker, QNAP, cloud
+  resources, or a public URL.
 
 ## Near-term milestones
 
-- Keep the local hosted scaffold runnable and smoke-tested while the next
-	hosted implementation decisions are made.
+- Keep the local hosted scaffold runnable, prerequisite-checked, and
+  smoke-tested while the next hosted implementation decisions are made.
 - Decide audit logging, export generation, reset/reload, tester data retention,
   provider-specific authentication details, and concrete framework/tooling
   choices before implementing the affected hosted workflow layers.
