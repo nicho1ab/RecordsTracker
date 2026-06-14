@@ -43,17 +43,21 @@ importer, a local/test database-backed read service over staged source-derived
 records, a local/test auth boundary scaffold with actor, role, scope, target,
 and audit-context models, a narrow local/test authenticated source-derived
 HTTP/API read route seam, a narrow local/test authenticated read-only reviewer
-workflow shell over the route seam, a local/test authenticated reset/reload
-dry-run route seam, and scaffold/API boundary descriptors. The dry-run reports
+workflow shell over the route seam, a narrow local/test reviewer-created state
+persistence scaffold table and service boundary, a local/test authenticated
+reset/reload dry-run route seam, and scaffold/API boundary descriptors. The dry-run reports
 what a future seeded corpus reset/reload would affect, including existing import
 batch metadata, source-derived record counts by entity, future reviewer-created
 state handling modes, required permissions, validation requirements, audit
-requirements, and deferred destructive actions, without mutating data. This path does
+requirements, scoped reviewer-created scaffold row counts, and deferred
+destructive actions, without mutating data. This path does
 not implement real login flow, provider registration, tokens, cookies, auth
 middleware, production API framework behavior, run migrations against a local
 database during scaffold tests, load live public data, run connector execution,
 automate production imports, execute reset/reload, archive or clear reviewer-
-created state, persist audit events, create stateful queues, or persist reviewer-created state.
+created state, persist audit events, create stateful queues, implement full
+reviewer workflows, annotations, corrections, export packet behavior, or tester
+feedback.
 
 The next safe hosted-view increment should remain similarly narrow and
 fixture-backed, preserving fixture/sample labels, read-only behavior,
@@ -241,7 +245,11 @@ The current auth boundary scaffold implements those checks only for local/test
 service seams. It establishes authenticated actor, role, permission, scope,
 target, account-status, and audit-context models, but it does not authenticate
 browser users, validate provider tokens, store sessions, persist role/scope
-assignments, or create reviewer-created state.
+assignments, or by itself create reviewer-created state. The narrow reviewer-
+created state scaffold reuses those local/test checks for attributed placeholder
+state writes, but it does not implement browser authentication, persistent
+authorization storage, full review workflows, annotations, corrections,
+exports, feedback, or audit persistence.
 
 ### Seeded test corpus
 

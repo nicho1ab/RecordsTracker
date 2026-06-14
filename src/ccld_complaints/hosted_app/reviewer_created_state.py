@@ -1,0 +1,218 @@
+from __future__ import annotations
+
+from collections.abc import Mapping
+from dataclasses import dataclass
+from typing import Any, Literal, cast
+from uuid import uuid4
+
+from sqlalchemy import JSON, CheckConstraint, Column, ForeignKey, String, Table, Text, select
+from sqlalchemy.engine import Connection, RowMapping
+
+from ccld_complaints.hosted_app.auth import (
+    REVIEWER_STATE_WRITE_PERMISSION,
+    SOURCE_DERIVED_READ_PERMISSION,
+    AuthenticatedActor,
+    AuthorizationTarget,
+    HostedAccessScope,
+    HostedScopeDeniedError,
+    require_permission,
+)
+from ccld_complaints.hosted_app.seeded_import import (
+    hosted_seeded_import_metadata,
+    hosted_source_derived_records,
+)
+from ccld_complaints.hosted_app.source_derived_reads import get_source_derived_record_by_key
+
+ReviewerCreatedStateKind = Literal["review_item_state_scaffold"]
+REVIEWER_CREATED_STATE_KINDS: tuple[ReviewerCreatedStateKind, ...] = (
+    "review_item_state_scaffold",
+)
+
+hosted_reviewer_created_state = Table(
+    "hosted_reviewer_created_state",
+    hosted_seeded_import_metadata,
+    Column("reviewer_state_id", String(96), primary_key=True),
+    Column(
+        "source_record_key",
+        String(160),
+        ForeignKey(hosted_source_derived_records.c.source_record_key),
+        nullable=False,
+    ),
+    Column("scope_type", String(32), nullable=False),
+    Column("scope_id", String(96), nullable=False),
+    Column("state_kind", String(48), nullable=False),
+    Column("state_payload", JSON, nullable=False),
+    Column("created_at", String(40), nullable=False),
+    Column("created_by_provider_subject", Text, nullable=False),
+    Column("created_by_provider_issuer", Text, nullable=False),
+    Column("created_by_display_name", Text, nullable=True),
+    Column("created_by_actor_category", String(32), nullable=False),
+    Column("authorization_permission", String(64), nullable=False),
+    CheckConstraint(
+        "state_kind IN ('review_item_state_scaffold')",
+        name="ck_hosted_reviewer_created_state_kind",
+    ),
+    CheckConstraint(
+        "authorization_permission = 'reviewer_state_write'",
+        name="ck_hosted_reviewer_created_state_write_permission",
+    ),
+)
+
+
+@dataclass(frozen=True)
+class ReviewerCreatedStateRead:
+    reviewer_state_id: str
+    source_record_key: str
+    scope: HostedAccessScope
+    state_kind: ReviewerCreatedStateKind
+    state_payload: Mapping[str, Any]
+    created_at: str
+    created_by_provider_subject: str
+    created_by_provider_issuer: str
+    created_by_display_name: str | None
+    created_by_actor_category: str
+    authorization_permission: str
+
+
+class ReviewerCreatedStateReferenceError(ValueError):
+    pass
+
+
+def create_reviewer_created_state_scaffold(
+    connection: Connection,
+    actor: AuthenticatedActor | None,
+    *,
+    scope: HostedAccessScope,
+    source_record_key: str,
+    state_payload: Mapping[str, Any],
+    state_kind: ReviewerCreatedStateKind = "review_item_state_scaffold",
+) -> ReviewerCreatedStateRead:
+    if state_kind not in REVIEWER_CREATED_STATE_KINDS:
+        raise ValueError("Reviewer-created state kind is not supported by this scaffold.")
+    if not source_record_key.strip():
+        raise ValueError("Source-derived record key is required.")
+    if not state_payload:
+        raise ValueError("Reviewer-created state payload must not be empty.")
+
+    authorized = require_permission(
+        actor,
+        permission=REVIEWER_STATE_WRITE_PERMISSION,
+        scope=scope,
+        target=AuthorizationTarget("reviewer_created_state", source_record_key),
+    )
+    source_record = get_source_derived_record_by_key(connection, source_record_key)
+    if source_record is None:
+        raise ReviewerCreatedStateReferenceError(
+            "Reviewer-created state must reference an existing staged source-derived record."
+        )
+    if source_record.import_batch.import_batch_id != scope.scope_id:
+        raise HostedScopeDeniedError(
+            "Reviewer-created state source-derived reference is outside the authorized scope."
+        )
+
+    reviewer_state_id = f"reviewer-state:{uuid4().hex}"
+    values = {
+        "reviewer_state_id": reviewer_state_id,
+        "source_record_key": source_record_key,
+        "scope_type": scope.scope_type,
+        "scope_id": scope.scope_id,
+        "state_kind": state_kind,
+        "state_payload": dict(state_payload),
+        "created_at": authorized.authorized_at,
+        "created_by_provider_subject": authorized.actor.provider_subject,
+        "created_by_provider_issuer": authorized.actor.provider_issuer,
+        "created_by_display_name": authorized.actor.display_name,
+        "created_by_actor_category": authorized.actor.actor_category,
+        "authorization_permission": authorized.permission,
+    }
+    connection.execute(hosted_reviewer_created_state.insert().values(**values))
+    return _read_model_from_row(
+        connection.execute(
+            select(hosted_reviewer_created_state).where(
+                hosted_reviewer_created_state.c.reviewer_state_id == reviewer_state_id
+            )
+        )
+        .mappings()
+        .one()
+    )
+
+
+def list_reviewer_created_state_scaffold(
+    connection: Connection,
+    actor: AuthenticatedActor | None,
+    *,
+    scope: HostedAccessScope,
+    source_record_key: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> tuple[ReviewerCreatedStateRead, ...]:
+    if limit < 1:
+        raise ValueError("Reviewer-created state list limit must be at least 1.")
+    if offset < 0:
+        raise ValueError("Reviewer-created state list offset must be at least 0.")
+    require_permission(
+        actor,
+        permission=SOURCE_DERIVED_READ_PERMISSION,
+        scope=scope,
+        target=AuthorizationTarget("reviewer_created_state", scope.scope_id),
+    )
+
+    query = select(hosted_reviewer_created_state).where(
+        hosted_reviewer_created_state.c.scope_type == scope.scope_type,
+        hosted_reviewer_created_state.c.scope_id == scope.scope_id,
+    )
+    if source_record_key is not None:
+        query = query.where(
+            hosted_reviewer_created_state.c.source_record_key == source_record_key
+        )
+    query = query.order_by(hosted_reviewer_created_state.c.created_at).limit(limit).offset(offset)
+    return tuple(_read_model_from_row(row) for row in connection.execute(query).mappings().all())
+
+
+def _read_model_from_row(row: RowMapping) -> ReviewerCreatedStateRead:
+    return ReviewerCreatedStateRead(
+        reviewer_state_id=_string_value(row, "reviewer_state_id"),
+        source_record_key=_string_value(row, "source_record_key"),
+        scope=HostedAccessScope(
+            cast(Any, _string_value(row, "scope_type")),
+            _string_value(row, "scope_id"),
+        ),
+        state_kind=_state_kind(row),
+        state_payload=_mapping_value(row, "state_payload"),
+        created_at=_string_value(row, "created_at"),
+        created_by_provider_subject=_string_value(row, "created_by_provider_subject"),
+        created_by_provider_issuer=_string_value(row, "created_by_provider_issuer"),
+        created_by_display_name=_optional_string_value(row, "created_by_display_name"),
+        created_by_actor_category=_string_value(row, "created_by_actor_category"),
+        authorization_permission=_string_value(row, "authorization_permission"),
+    )
+
+
+def _state_kind(row: RowMapping) -> ReviewerCreatedStateKind:
+    value = _string_value(row, "state_kind")
+    if value not in REVIEWER_CREATED_STATE_KINDS:
+        raise ValueError(f"Unknown reviewer-created state kind: {value}")
+    return value
+
+
+def _string_value(row: RowMapping, key: str) -> str:
+    value = row[key]
+    if not isinstance(value, str):
+        raise TypeError(f"Expected {key} to be a string.")
+    return value
+
+
+def _optional_string_value(row: RowMapping, key: str) -> str | None:
+    value = row[key]
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise TypeError(f"Expected {key} to be a string or null.")
+    return value
+
+
+def _mapping_value(row: RowMapping, key: str) -> Mapping[str, Any]:
+    value = row[key]
+    if not isinstance(value, Mapping):
+        raise TypeError(f"Expected {key} to be an object.")
+    return dict(value)

@@ -21,6 +21,9 @@ from ccld_complaints.hosted_app.auth import (
     HostedScopeDeniedError,
     require_permission,
 )
+from ccld_complaints.hosted_app.reviewer_created_state import (
+    hosted_reviewer_created_state,
+)
 from ccld_complaints.hosted_app.seeded_import import (
     SOURCE_DERIVED_ENTITY_TYPES,
     SourceDerivedEntityType,
@@ -152,6 +155,8 @@ def plan_seeded_corpus_reset_reload_dry_run(
         authorized=authorized,
         source_derived_impact=_source_derived_impact(connection, scope),
         reviewer_created_state_impact=_reviewer_created_state_impact(
+            connection,
+            scope,
             reviewer_state_mode
         ),
         future_execution_permissions=_future_execution_permissions(reviewer_state_mode),
@@ -231,10 +236,18 @@ def _source_derived_impact(
 
 
 def _reviewer_created_state_impact(
+    connection: Connection,
+    scope: HostedAccessScope,
     reviewer_state_mode: ReviewerStateHandlingMode,
 ) -> ReviewerCreatedStateImpact:
+    current_state_count = connection.execute(
+        select(func.count()).select_from(hosted_reviewer_created_state).where(
+            hosted_reviewer_created_state.c.scope_type == scope.scope_type,
+            hosted_reviewer_created_state.c.scope_id == scope.scope_id,
+        )
+    ).scalar_one()
     return ReviewerCreatedStateImpact(
-        persistence_implemented=False,
+        persistence_implemented=True,
         selected_handling_mode=reviewer_state_mode,
         handling_options=REVIEWER_STATE_HANDLING_OPTIONS,
         affected_state_categories=(
@@ -250,11 +263,11 @@ def _reviewer_created_state_impact(
             "audit events",
             "operational reset/reload metadata",
         ),
-        current_state_count=None,
+        current_state_count=current_state_count,
         planning_note=(
-            "Reviewer-created state tables are not implemented yet, so this dry-run "
-            "reports the future affected categories but does not inspect, persist, "
-            "archive, clear, or relink reviewer-created state."
+            "A narrow reviewer-created state scaffold table is implemented, so this "
+            "dry-run counts scoped scaffold rows but does not archive, clear, relink, "
+            "or persist operational reset/reload state."
         ),
     )
 

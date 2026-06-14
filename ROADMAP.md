@@ -285,6 +285,13 @@ the governed primary future review experience.
 	without deleting, truncating, overwriting, archiving, importing, reloading,
 	persisting audit events, running hosted live crawling, executing connectors,
 	deploying, or changing schemas.
+- Added a minimal local/test reviewer-created state persistence scaffold with a
+	separate PostgreSQL/Alembic table and service boundary for authenticated
+	review-item-state placeholder rows linked to staged source-derived record
+	keys, preserving source-derived records and original extracted values without
+	adding full reviewer workflows, annotations, corrections, audit persistence,
+	exports, reset/reload execution, real login flow, auth middleware, hosted live
+	crawling, connector execution, deployment, or production API behavior.
 - Added the first local hosted tester MVP scaffold with a Python standard-library
 	app shell, health route, smoke check, focused tests, and local Windows
 	PowerShell run documentation without adding cloud, QNAP, Docker, schema,
@@ -343,7 +350,8 @@ the governed primary future review experience.
 	provider-class, role, scope, audit-identity, PostgreSQL, Alembic migration,
 	controlled seeded import, database-backed source-derived read, auth boundary
 	scaffold, local/test source-derived read route seam, first read-only
-	authenticated tester workflow shell, and reset/reload dry-run planning seam to
+	authenticated tester workflow shell, reviewer-created state persistence
+	scaffold, and reset/reload dry-run planning seam to
 	move the next hosted tester MVP branches toward real provider integration,
 	reset/reload execution planning with persisted operational metadata, and
 	stateful reviewer-created workflow layers.
@@ -374,9 +382,9 @@ exploration, or export support.
 2. Expand reset/reload planning into later reset/reload behavior for the seeded
 	corpus only after reviewer-created state preservation, audit persistence,
 	operational metadata, and permission boundaries are tested.
-3. Implement reviewer-created state persistence, audit event persistence,
-	export packet state, tester feedback, and reset/reload metadata in focused
-	PostgreSQL/Alembic-backed branches.
+3. Expand beyond the reviewer-created state scaffold into focused audit event
+	persistence, export packet state, tester feedback, reset/reload metadata, and
+	stateful reviewer-created workflow branches.
 4. Implement stateful reviewer-created workflow layers over a seeded,
 	source-traceable corpus after auth, schema, audit, and permission boundaries
 	are ready.
@@ -405,8 +413,8 @@ define the smallest useful product shape:
 	minimal scaffold wiring, controlled seeded import path, database-backed
 	source-derived read service, local/test auth boundary scaffold, local/test
 	source-derived read route seam, and first read-only authenticated workflow
-	shell to move into real provider integration, reset/reload planning,
-	reviewer-created state persistence,
+	shell, and reviewer-created state persistence scaffold to move into real
+	provider integration, reset/reload planning,
 	audit/export/feedback/reset metadata, and stateful authenticated tester
 	workflow implementation.
 
