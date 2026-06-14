@@ -241,6 +241,10 @@ the governed primary future review experience.
   using query, jurisdiction, and source-family controls over fixture/sample
   records only, preserving the no-database, no-import, no-authentication,
   no-reviewer-state, and no-deployment boundary.
+- Added fixture/sample-only source traceability summary panels to the hosted
+	source-record list/detail shell using visible sample metadata indicators only,
+	preserving the no-database, no-import, no-authentication, no-reviewer-state,
+	and no-deployment boundary.
 
 ## Near-term milestones
 
@@ -281,9 +285,10 @@ exploration, or export support.
 3. Decide concrete database product and migration tooling for the hosted tester
   MVP only after the remaining access, audit, reset/reload, export, retention,
   and operations constraints are understood.
-4. Add the next narrow fixture-backed source-view expansion after the local-only
-  sample filtering/search shell, preserving the fixture/sample, read-only,
-  no-database, no-import, no-authentication, no-reviewer-state boundary.
+4. Add another narrow fixture-backed source-view expansion after the local-only
+	sample filtering/search and source traceability summary shell, preserving the
+	fixture/sample, read-only, no-database, no-import, no-authentication,
+	no-reviewer-state boundary.
 5. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
 

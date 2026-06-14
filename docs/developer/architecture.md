@@ -42,18 +42,20 @@ public URL.
 
 The scaffold also includes a local-only read-only source-derived view shell over
 fixture/sample records. This view is an app-facing placeholder for source-record
-list, local sample filtering/search, and detail navigation only. Its sample list
-supports query, jurisdiction, and source-family filtering against in-memory
-fixture/sample records so future source-derived records from multiple
-jurisdictions and source families can use the same list/filter pattern. It does
-not read from SQLite or a hosted database, run import/sync, load live
-public-source data, authenticate users, or persist reviewer-created state.
+list, local sample filtering/search, fixture/sample-only source traceability
+summary panels, and detail navigation only. Its sample list supports query,
+jurisdiction, source-family filtering, and traceability summary indicators
+against in-memory fixture/sample records so future source-derived records from
+multiple jurisdictions and source families can use the same list/filter/summary
+pattern. It does not read from SQLite or a hosted database, run import/sync,
+load live public-source data, authenticate users, or persist reviewer-created
+state.
 
-The current next hosted-view gap is an additional narrow fixture-backed
-source-view expansion after the sample filtering/search shell. That work must
-preserve sample labeling, read-only behavior, source traceability, semantic
-structure, accessibility validation, and the no-database, no-import,
-no-authentication, no-reviewer-state, no-deployment boundary.
+The current next hosted-view gap is another narrow fixture-backed source-view
+expansion after the sample filtering/search and source traceability summary
+shell. That work must preserve sample labeling, read-only behavior, source
+traceability, semantic structure, accessibility validation, and the no-database,
+no-import, no-authentication, no-reviewer-state, no-deployment boundary.
 
 The scaffold does not implement authentication, authorization, production
 schema, migrations, import/sync, queues, annotations, corrections, exports,

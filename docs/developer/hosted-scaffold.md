@@ -101,6 +101,20 @@ and no-database, no-import, no-authentication, no-deployment boundary.
 The source-derived versus reviewer-created state separation remains visible in
 the sample shell text and tests.
 
+The list also includes a fixture/sample-only source traceability summary panel.
+It counts whether the current sample result set has visible sample source URL,
+raw SHA-256, connector name, retrieval timestamp, report index, extraction
+warning, jurisdiction, and source-family values. Detail pages include a matching
+sample traceability block for the selected record. These panels are indicators
+over in-memory fixture/sample records only. They do not verify live public-source
+records, prove source completeness, read from SQLite or a hosted database, run
+import/sync, or expose reviewer-created state.
+
+The summary shape is intentionally jurisdiction and source-family aware so
+future source-derived records from multiple jurisdictions and source families can
+use the same list/filter/summary pattern after the relevant source, import,
+schema, and hosted workflow decisions are approved.
+
 ## Run the smoke check
 
 The smoke check starts an in-process local scaffold server, checks the health
@@ -128,8 +142,9 @@ These tests include local-only semantic/accessibility validation for the sample
 source view shell. They use Python standard-library HTML parsing to verify one
 page-level heading, meaningful page titles, semantic main content, navigation
 links, fixture/sample caution text, read-only labels, accessible filter labels,
-sample no-match behavior, source-derived versus reviewer-created state
-separation, and visible source-traceability-style fields.
+sample no-match behavior, source traceability summary panels, source-derived
+versus reviewer-created state separation, and visible
+source-traceability-style fields.
 They do not require browser automation, Node.js, Playwright, Selenium, axe,
 Docker, cloud services, or public URLs.
 

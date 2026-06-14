@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added fixture/sample-only source traceability summary panels to the hosted
+	scaffold `/source-records` list and detail shell, showing visible sample
+	source URL, raw SHA-256, connector, retrieval timestamp, report index,
+	extraction warning, jurisdiction, and source-family indicators without adding
+	live source loading, database access, import/sync, authentication,
+	reviewer-created state, schema changes, or deployment behavior.
 - Added local-only sample filtering/search to the hosted scaffold
 	`/source-records` shell using query, jurisdiction, and source-family controls
 	over fixture/sample records only, without adding live source loading,
