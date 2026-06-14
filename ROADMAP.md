@@ -216,6 +216,12 @@ the governed primary future review experience.
   while keeping schemas, authentication, authorization, import/sync, queues,
   annotations, corrections, exports, reset/reload, hosted deployment, and
   extraction behavior out of the first scaffold branch.
+- Accepted the hosted tester MVP operational boundaries for audit logging,
+  export generation, reset/reload, and tester data retention, clearing the next
+  product-moving path toward provider-specific authentication, concrete
+  database/migration decisions, minimal hosted schema/API scaffold, seeded
+  corpus import/reset, and the first authenticated tester workflow without
+  implementing those layers prematurely.
 - Added the first local hosted tester MVP scaffold with a Python standard-library
 	app shell, health route, smoke check, focused tests, and local Windows
 	PowerShell run documentation without adding cloud, QNAP, Docker, schema,
@@ -270,12 +276,14 @@ the governed primary future review experience.
 - Keep the local hosted scaffold runnable, prerequisite-checked, smoke-tested,
 	and clear about sample-only read-only source-derived views while the next
 	hosted implementation decisions are made.
-- Decide audit logging, export generation, reset/reload, tester data retention,
-  provider-specific authentication details, and concrete framework/tooling
-  choices before implementing the affected hosted workflow layers.
+- Use the accepted audit, export, reset/reload, and tester retention boundaries
+	to move the next hosted tester MVP branches toward provider-specific
+	authentication, database/migration selection, minimal hosted schema/API
+	scaffolding, seeded corpus import/reset, and the first authenticated tester
+	workflow.
 - Decide concrete database product and migration tooling only after the accepted
-  schema/migration strategy, authentication/access needs, reset/reload needs,
-  audit requirements, and hosted operations constraints are clear.
+	schema/migration strategy, authentication/access needs, and ADR-0013
+	operational constraints are clear.
 - Preserve Datasette, SQLite views, and review-bundle exports where they support
 	validation, inspection, debugging, local exploration, and export workflows.
 - Harden extraction with additional representative fixtures and edge-case tests.
@@ -297,14 +305,19 @@ has been outgrown as the primary future review experience and should be extended
 only where it remains useful for validation, inspection, debugging, local
 exploration, or export support.
 
-1. Draft audit log, export generation, reset/reload, and tester retention ADRs
-	before implementing those hosted workflow layers.
-2. Decide provider-specific authentication and authorization implementation
+1. Decide provider-specific authentication and authorization implementation
 	details before implementing real authentication or authorization.
-3. Decide concrete database product and migration tooling for the hosted tester
-  MVP only after the remaining access, audit, reset/reload, export, retention,
-  and operations constraints are understood.
-4. Add additional CCLD fixtures and extraction hardening for representative
+2. Decide concrete database product and migration tooling for the hosted tester
+	MVP using the accepted access, schema/migration, and ADR-0013 operational
+	constraints.
+3. Implement a minimal hosted schema/API scaffold for seeded source-derived
+	records and reviewer-created state after provider and database/migration
+	decisions are accepted.
+4. Implement seeded corpus import/reset from validated pipeline output before
+	enabling tester workflows that depend on hosted source-derived records.
+5. Implement the first authenticated tester workflow over a seeded,
+	source-traceable corpus.
+6. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
 
 ## Production-discovery transition path
@@ -322,12 +335,11 @@ define the smallest useful product shape:
 	validation, review state, correction state, export generation, and future
 	presentation.
 3. Use ADR-0007's hybrid direction, ADR-0008's data-domain boundary, ADR-0009's
-	controlled import boundary, ADR-0010's physical separation strategy, and
-	ADR-0011's authenticated access boundary together with ADR-0012's
-	scaffold-first sequence to begin hosted scaffold implementation while deciding
-	audit log, export generation, reset/reload, retention, concrete
-	database/migration tooling, and provider-specific authentication
-	implementation before the affected layers are built.
+	controlled import boundary, ADR-0010's physical separation strategy,
+	ADR-0011's authenticated access boundary, ADR-0012's scaffold-first sequence,
+	and ADR-0013's operational boundaries to move into provider-specific
+	authentication, database/migration, schema/API, seeded import/reset, and first
+	authenticated tester workflow implementation.
 
 ## Decision points
 

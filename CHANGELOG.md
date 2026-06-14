@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added ADR-0013 defining hosted tester MVP operational boundaries for audit
+	logging, export generation, reset/reload, and tester data retention,
+	unblocking the next product-moving implementation path toward provider-specific
+	authentication, concrete database/migration decisions, minimal hosted
+	schema/API scaffold, seeded corpus import/reset, and the first authenticated
+	tester workflow without adding schemas, APIs, app code, imports, exports,
+	audit tables, reset commands, retention automation, or deployment behavior.
 - Added a local-only facility source coverage panel to hosted scaffold facility
 	detail pages, linking committed tiny facility-master fixture rows to related
 	fixture/sample source-record context where the sample mapping exists while

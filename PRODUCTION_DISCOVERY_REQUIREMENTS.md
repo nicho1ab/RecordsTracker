@@ -261,16 +261,31 @@ The hosted tester environment must have a documented process for resetting
 reviewer-created state and reloading the seeded corpus so repeated tests can
 start from a known baseline.
 
+ADR-0013 defines the operational reset/reload boundary: seeded source-derived
+data must reload from validated pipeline output, reviewer-created state must be
+preserved, archived, or explicitly cleared only through an elevated audited mode,
+and reset/reload implementation remains deferred until schema, API, permission,
+and import artifact decisions are implemented.
+
+### Operational boundaries
+
+ADR-0013 defines the hosted tester MVP operational boundaries for audit logging,
+export generation, reset/reload, and tester data retention. Before external
+tester use, implementation must map those boundaries into concrete schema, API,
+permission, export, reset/reload, and retention behavior with tests for the
+affected layer.
+
 ## Architecture decision prerequisites
 
 ADR-0006 defines the hosted tester MVP architecture boundary and confirms that a
 primary reviewer application layer must remain separate from Datasette.
 ADR-0012 allows hosted tester MVP implementation to begin through a
 scaffold-first sequence after the accepted data-domain, import/sync,
-schema/migration, and authentication/access boundaries. Before hosted tester
-MVP implementation expands beyond scaffold or placeholder shell work, future
-ADRs, implementation PRs, or equivalent governance updates must define the
-affected layer:
+schema/migration, and authentication/access boundaries. ADR-0013 now defines
+the operational boundaries for audit logging, export generation, reset/reload,
+and tester data retention. Before hosted tester MVP implementation expands into
+external tester use, implementation PRs or equivalent governance updates must
+define the concrete affected layer:
 
 - Where review state, annotations, correction proposals, feedback, and export
   packet decisions are persisted.
@@ -285,11 +300,12 @@ affected layer:
   implementation tests without weakening traceability or mixing data domains.
 - How source traceability and extraction audit context remain available to the
   hosted reviewer application.
-- How authenticated tester access, audit history, reset/reload, and export
-  restrictions are handled without storing secrets in the repository.
+- How authenticated tester access, audit history, reset/reload, export
+  restrictions, and tester data retention are implemented without storing
+  secrets in the repository.
 - How ADR-0011's admin, tester reviewer, read-only tester, and
   developer/operator role boundaries are mapped into implementation without
   exposing reviewer-created state as public-source facts.
 - Which accessibility checks are required before tester access is enabled.
-- Which production stack, if any, is selected after these requirements are
-  reviewed.
+- Which provider, database product, migration tooling, API framework, and
+  storage choices are selected for the hosted tester MVP layer being built.

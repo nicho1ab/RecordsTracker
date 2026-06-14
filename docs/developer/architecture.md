@@ -27,7 +27,7 @@ src/ccld_complaints/
 8. Expose SQLite through Datasette for validation, inspection, debugging, local
   exploration, and export support.
 9. Keep future primary reviewer UX work behind production-discovery requirements
-  and architecture decisions.
+  and accepted architecture decisions.
 10. Run the local hosted tester MVP scaffold only as a placeholder app shell and
   smoke route until later implementation PRs add approved hosted behavior.
 
@@ -61,12 +61,12 @@ where the local sample mapping exists. The view does not read ignored raw CSVs,
 generated profiling outputs, SQLite, a hosted database, live public-source
 data, import/sync output, authentication state, or reviewer-created state.
 
-The current next hosted-view gap should remain narrow and fixture-backed after
-the sample filtering/search, source traceability summary shell, and facility
-master sample view. That work must preserve sample labeling, read-only behavior,
-source traceability, semantic structure, accessibility validation, and the
-no-database, no-import, no-authentication, no-reviewer-state, no-deployment
-boundary.
+ADR-0013 now defines the product-enabling operational boundaries for audit
+logging, export generation, reset/reload, and tester data retention. The next
+hosted tester MVP work can move toward provider-specific authentication,
+database/migration selection, minimal hosted schema/API scaffolding, seeded
+corpus import/reset, and the first authenticated tester workflow when each
+branch validates its layer.
 
 The scaffold does not implement authentication, authorization, production
 schema, migrations, import/sync, queues, annotations, corrections, exports,
