@@ -38,7 +38,8 @@ Accessibility requirements apply to:
 - Form fields must have accessible names.
 - The local/test hosted reviewer UI shell must use semantic headings, labeled
 	search, note, and status controls, table captions/headings for source-derived
-	and reviewer-created state, and visible error or blocked-request messages.
+	context, safe related seeded context, and reviewer-created state, and visible
+	error or blocked-request messages.
 
 ### Color and contrast
 

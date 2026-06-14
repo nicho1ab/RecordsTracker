@@ -104,9 +104,9 @@ http://127.0.0.1:8000/reviewer
 The page loads only the tiny seeded fixture corpus into process-local test state
 and supplies a fixture local/test reviewer actor from the scaffold process. It
 lets a local tester search/select a seeded source-derived complaint record, open
-detail, view safe source traceability fields, submit a bounded reviewer note,
-submit a bounded reviewer status, and see read-after-write reviewer-created
-state on the page.
+detail, view safe source traceability fields and safe related seeded bundle
+context, submit a bounded reviewer note, submit a bounded reviewer status, and
+see read-after-write reviewer-created state on the page. Narrative source fields are hidden in the browser shell.
 
 The UI is intentionally plain server-rendered HTML. It reuses the existing
 source-derived route seam, reviewer workflow shell, reviewer-created state
@@ -615,7 +615,8 @@ no audit/state mutation on failure, read-after-write visibility, and no source-
 derived mutation.
 The reviewer UI shell tests verify local/test browser-accessible landing and
 detail HTML pages over the seeded fixture corpus, safe source traceability
-display, semantic form controls, note/status form delegation to the existing
+display, safe related seeded bundle context with narrative fields hidden,
+semantic form controls, note/status form delegation to the existing
 workflow actions, read-after-write reviewer-created state display,
 unauthenticated, disabled or revoked, role-denied, out-of-scope, and permission-
 separation blocking, no-secret HTML output, successful audit creation, and no

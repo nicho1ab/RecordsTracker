@@ -91,8 +91,9 @@ fixture corpus into process-local test state, and delegates reads, note writes,
 status writes, reviewer-created state readback, and audit creation to the
 existing workflow, reviewer-created state, source-derived, and audit seams. The
 HTML output is limited to safe source traceability fields, safe scalar source-
-derived values, reviewer-created note/status display values, non-secret actor
-display labels, and local/test boundary text. It must not expose provider
+derived values, safe related seeded bundle context, reviewer-created note/status
+display values, non-secret actor display labels, and local/test boundary text.
+Narrative source fields are hidden in the browser shell. It must not expose provider
 subjects or issuers, email addresses, tokens, cookies, private headers,
 connection strings, client secrets, raw provider claims, hosted URLs, private
 URLs, or unnecessary sensitive narrative content. It does not implement real
