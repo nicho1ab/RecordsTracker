@@ -25,6 +25,9 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
             root_status, root_body = _read_url(f"{base_url}/")
             records_status, records_body = _read_url(f"{base_url}/source-records")
             facilities_status, facilities_body = _read_url(f"{base_url}/facilities")
+            ccld_facilities_status, ccld_facilities_body = _read_url(
+                f"{base_url}/ccld/facilities?q=orchard"
+            )
             ccld_status, ccld_body = _read_url(f"{base_url}/ccld/records/request")
             reviewer_status, reviewer_body = _read_url(f"{base_url}/reviewer")
             help_status, help_body = _read_url(f"{base_url}/ccld/help")
@@ -53,12 +56,20 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         ccld_status != 200
         or b"CCLD record request" not in ccld_body
         or b"CCLD facility/license number" not in ccld_body
+        or b"Find a CCLD facility" not in ccld_body
         or b"Workflow overview" not in ccld_body
         or b"Queue status filter" not in ccld_body
         or b"validated CCLD load" not in ccld_body
         or b"Feedback guidance" not in ccld_body
     ):
         raise RuntimeError("Hosted scaffold CCLD request shell did not return the request page.")
+    if (
+        ccld_facilities_status != 200
+        or b"Find CCLD facility" not in ccld_facilities_body
+        or b"Synthetic Orchard Child Care" not in ccld_facilities_body
+        or b"Use this facility for CCLD request" not in ccld_facilities_body
+    ):
+        raise RuntimeError("Hosted scaffold CCLD facility lookup did not return results.")
     if (
         help_status != 200
         or b"How CCLD review works" not in help_body

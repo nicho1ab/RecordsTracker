@@ -211,6 +211,7 @@ def test_schema_api_scaffold_summary_reflects_seeded_import_without_reviewer_wor
     assert scaffold.reviewer_workflow_shell_note_action_implemented is True
     assert scaffold.reviewer_workflow_shell_status_action_implemented is True
     assert scaffold.reviewer_ui_shell_implemented is True
+    assert scaffold.ccld_facility_lookup_ui_implemented is True
     assert scaffold.ccld_record_request_ui_shell_implemented is True
     assert scaffold.ccld_request_result_queue_guidance_implemented is True
     assert scaffold.ccld_request_queue_status_progress_implemented is True

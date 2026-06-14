@@ -36,6 +36,10 @@
   safe related seeded bundle context, submit note/status forms through those
   existing workflow actions, and see read-after-write
   reviewer-created state without exposing sensitive narrative fields, a browser-
+  accessible local/test CCLD facility lookup page at `/ccld/facilities` that
+  reads committed local/test CCLD program facility reference CSV rows, searches
+  safe scalar fields, and carries a selected facility/license number into the
+  request workflow without persistence, a browser-
   accessible local/test CCLD record request page at `/ccld/records/request` that
   accepts a CCLD facility/license number and optional date range, reads matching
   seeded source-derived rows, can load or refresh matching rows from local

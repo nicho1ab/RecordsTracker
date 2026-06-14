@@ -17,6 +17,7 @@ from ccld_complaints.hosted_app.auth import (
     HostedActorCategory,
     HostedTesterRole,
 )
+from ccld_complaints.hosted_app.ccld_facility_lookup import CCLD_FACILITY_LOOKUP_PATH
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     CCLD_RECORD_REQUEST_PATH,
     CcldRecordRequestUiContext,
@@ -57,6 +58,8 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "CCLD-only local/test request" in html
     assert "CCLD facility/license number" in html
     assert "optional date range" in html
+    assert "Find a CCLD facility by name" in html
+    assert CCLD_FACILITY_LOOKUP_PATH in html
     assert "Queue status filter" in html
     assert "Records with no status are counted" in html
     assert "Workflow overview" in html
@@ -89,6 +92,20 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "Useful tester feedback includes" in normalized_html
     assert "copy the structured checklist" in normalized_html
     assert "Open the CCLD record request form" in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_record_request_prefills_selected_facility_from_lookup() -> None:
+    status, content_type, body = route_response(
+        f"{CCLD_RECORD_REQUEST_PATH}?facility_number=900000001"
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Selected facility/license number from lookup" in html
+    assert "value=\"900000001\"" in html
+    assert "Find a CCLD facility by name" in html
     assert_no_secret_html(html)
 
 

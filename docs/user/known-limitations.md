@@ -136,4 +136,12 @@
   output into hosted seeded-corpus JSON outside browser requests, but it is
   still a local/test step and does not prove public-source completeness or
   automate production imports.
+- The local hosted scaffold `/ccld/facilities` lookup page reads only the
+  committed tiny CCLD program facility reference CSV fixture and displays a
+  bounded safe subset of fields for lookup assistance. It does not read ignored
+  raw CSVs, generated profiling outputs, SQLite, a hosted database, live
+  public-source data, import output, authentication state, or reviewer-created
+  state, and it does not prove source completeness, statewide coverage,
+  official facility status, complaint availability, or legal or facility-wide
+  conclusions.
 - Datasette accessibility depends partly on the installed Datasette version, browser, and assistive technology. Validate keyboard navigation, table headers, focus visibility, and exported table usability before treating a release as stable.
