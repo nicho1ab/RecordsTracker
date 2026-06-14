@@ -10,6 +10,7 @@ src/ccld_complaints/
   connectors/
   extraction/
   hosted_app/
+    audit_events.py
     auth.py
     persistence.py
     reviewer_created_state.py
@@ -59,10 +60,13 @@ migrations/
 16. Use the hosted reviewer-created state scaffold only for local/test
   authenticated placeholder state rows linked to staged source-derived record
   keys without modifying source-derived records.
-17. Use the hosted reset/reload dry-run seam only for local/test authenticated
+17. Use the hosted audit event scaffold only for local/test audit rows created
+  for successful reviewer-created state scaffold writes, without modifying
+  source-derived or reviewer-created rows.
+18. Use the hosted reset/reload dry-run seam only for local/test authenticated
   planning over staged seeded corpus metadata, without mutating data.
-18. Keep full reviewer-created workflows, annotations, corrections, exports,
-  audit persistence, reset/reload execution, real login flow, auth
+19. Keep full reviewer-created workflows, annotations, corrections, exports,
+  full audit coverage, audit UI, audit export, reset/reload execution, real login flow, auth
   middleware, provider integration, production API framework behavior, live
   crawling, connector execution, and production automation in future focused
   branches until those layers are implemented and tested.
@@ -106,7 +110,8 @@ The scaffold now includes minimal PostgreSQL/Alembic wiring and a controlled
 seeded corpus import path: no-secret database URL configuration validation, an
 Alembic script location, a narrow domain migration for import batch metadata and
 source-derived record staging, a second narrow domain migration for one
-reviewer-created state scaffold table, a local validated JSON artifact importer,
+reviewer-created state scaffold table, a third narrow domain migration for one
+audit event scaffold table, a local validated JSON artifact importer,
 and scaffold/API boundary descriptors for future source-derived API routes and
 reviewer-created state. It also includes a narrow database-backed
 source-derived read service for local/test list and fetch access to staged
@@ -122,27 +127,31 @@ status, annotations, corrections, tester feedback, audit events, export packet
 state, and queue-state persistence deferred. The reset/reload dry-run seam adds
 local/test authenticated planning over seeded corpus metadata: it reports
 existing import batches, source-derived record counts by entity, scoped reviewer-
-created scaffold row counts, future reviewer-created state handling options,
-required permissions, validation requirements, audit requirements, and deferred destructive actions without
-deleting, overwriting, archiving, importing, reloading, or persisting audit
+created scaffold row counts, scoped audit scaffold row counts, future reviewer-
+created state handling options, required permissions, validation requirements,
+audit requirements, and deferred destructive actions without deleting,
+overwriting, archiving, importing, reloading, or creating new dry-run audit
 events. The reviewer-created state scaffold service can create and read
 placeholder review-item-state rows only after authenticated actor, role, account
 status, scope, and source-derived reference checks pass; it does not implement
-full reviewer workflows. The next hosted tester MVP work can move toward real provider
-integration, reset/reload execution planning with persisted operational
-metadata, and stateful reviewer-created workflow layers when each branch
-validates its layer.
+full reviewer workflows. Successful reviewer-created state scaffold writes also
+create a separate audit scaffold row with actor, permission, scope, target, and
+source-derived context; if the audit row cannot be created, the reviewer-created
+state write is rolled back. The next hosted tester MVP work can move toward real
+provider integration, reset/reload execution planning with persisted operational
+metadata, fuller audit coverage, and stateful reviewer-created workflow layers
+when each branch validates its layer.
 
 The scaffold does not implement real provider login, token validation, sessions,
 cookies, auth middleware, role or user storage, production domain schema beyond
-the seeded import table group and reviewer-created state scaffold table,
-production API framework behavior, production import automation, stateful queues,
-annotations, corrections, exports, tester feedback, audit trail, reset/reload
+the seeded import table group, reviewer-created state scaffold table, and audit
+event scaffold table, production API framework behavior, production import automation, stateful queues,
+annotations, corrections, exports, tester feedback, full audit trail, reset/reload
 execution, hosted live crawling, hosted connector execution, deployment,
 source-derived canonical field changes, full reviewer-created workflow
 persistence, or extraction behavior. Its database-backed reads, auth guards,
 source-derived read routes, reviewer workflow shell, reviewer-created state
-scaffold service, and reset/reload dry-run are limited to local/test service seams. It does not require Docker, QNAP Container Station,
+scaffold service, audit event scaffold service, and reset/reload dry-run are limited to local/test service seams. It does not require Docker, QNAP Container Station,
 Azure, AWS, a public URL, secrets, or cloud resources.
 
 See `docs/developer/hosted-scaffold.md` for local run and smoke-check commands.

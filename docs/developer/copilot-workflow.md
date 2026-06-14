@@ -241,7 +241,7 @@ gh pr view --json number,state,isDraft,mergeStateStatus,url,statusCheckRollup
 ```
 
 ```powershell
-gh pr checks --watch
+gh pr view --json number,state,isDraft,mergeStateStatus,url,statusCheckRollup
 ```
 
 The `main` branch must be protected by a GitHub branch protection rule or repository ruleset

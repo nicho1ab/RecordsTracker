@@ -9,6 +9,7 @@ from urllib.parse import parse_qs, urlparse
 from sqlalchemy import func, select
 from sqlalchemy.engine import Connection, RowMapping
 
+from ccld_complaints.hosted_app.audit_events import hosted_audit_events
 from ccld_complaints.hosted_app.auth import (
     IMPORT_RELOAD_PERMISSION,
     AuthenticatedActor,
@@ -82,6 +83,13 @@ class ReviewerCreatedStateImpact:
 
 
 @dataclass(frozen=True)
+class AuditEventImpact:
+    persistence_implemented: bool
+    current_event_count: int
+    planning_note: str
+
+
+@dataclass(frozen=True)
 class SeededCorpusResetReloadDryRunPlan:
     dry_run: bool
     operation: str
@@ -89,6 +97,7 @@ class SeededCorpusResetReloadDryRunPlan:
     authorized: AuthorizationDecision
     source_derived_impact: SourceDerivedImpact
     reviewer_created_state_impact: ReviewerCreatedStateImpact
+    audit_event_impact: AuditEventImpact
     future_execution_permissions: tuple[str, ...]
     validation_requirements: tuple[str, ...]
     audit_requirements: tuple[str, ...]
@@ -159,6 +168,7 @@ def plan_seeded_corpus_reset_reload_dry_run(
             scope,
             reviewer_state_mode
         ),
+        audit_event_impact=_audit_event_impact(connection, scope),
         future_execution_permissions=_future_execution_permissions(reviewer_state_mode),
         validation_requirements=(
             "validated pipeline output or approved export artifact",
@@ -177,7 +187,8 @@ def plan_seeded_corpus_reset_reload_dry_run(
             "future execution must persist source-derived counts affected",
             "future execution must persist reviewer-created state preserved, "
             "archived, or cleared counts where implemented",
-            "this dry-run does not persist an audit event",
+            "this dry-run counts existing audit scaffold rows but does not persist "
+            "a new audit event",
         ),
         deferred_actions=(
             "delete source-derived records",
@@ -272,6 +283,27 @@ def _reviewer_created_state_impact(
     )
 
 
+def _audit_event_impact(
+    connection: Connection,
+    scope: HostedAccessScope,
+) -> AuditEventImpact:
+    current_event_count = connection.execute(
+        select(func.count()).select_from(hosted_audit_events).where(
+            hosted_audit_events.c.scope_type == scope.scope_type,
+            hosted_audit_events.c.scope_id == scope.scope_id,
+        )
+    ).scalar_one()
+    return AuditEventImpact(
+        persistence_implemented=True,
+        current_event_count=current_event_count,
+        planning_note=(
+            "A narrow audit event scaffold table is implemented for successful "
+            "reviewer-created state scaffold writes only; this dry-run reports "
+            "scoped rows but does not create, archive, clear, or export audit events."
+        ),
+    )
+
+
 def _future_execution_permissions(
     reviewer_state_mode: ReviewerStateHandlingMode,
 ) -> tuple[str, ...]:
@@ -324,6 +356,7 @@ def _plan_payload(plan: SeededCorpusResetReloadDryRunPlan) -> dict[str, Any]:
         "reviewer_created_state_impact": _reviewer_created_state_impact_payload(
             plan.reviewer_created_state_impact
         ),
+        "audit_event_impact": _audit_event_impact_payload(plan.audit_event_impact),
         "future_execution_permissions": list(plan.future_execution_permissions),
         "validation_requirements": list(plan.validation_requirements),
         "audit_requirements": list(plan.audit_requirements),
@@ -389,6 +422,14 @@ def _reviewer_created_state_impact_payload(
         "handling_options": list(impact.handling_options),
         "affected_state_categories": list(impact.affected_state_categories),
         "current_state_count": impact.current_state_count,
+        "planning_note": impact.planning_note,
+    }
+
+
+def _audit_event_impact_payload(impact: AuditEventImpact) -> dict[str, Any]:
+    return {
+        "persistence_implemented": impact.persistence_implemented,
+        "current_event_count": impact.current_event_count,
         "planning_note": impact.planning_note,
     }
 

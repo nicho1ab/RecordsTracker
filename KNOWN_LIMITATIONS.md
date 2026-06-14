@@ -44,10 +44,17 @@
     deferred destructive actions when tests provide an explicit dry-run context.
     The path does not run live crawling, execute connectors, automate production
     imports, execute reset/reload, delete or overwrite source-derived records,
-    archive or clear reviewer-created state, persist audit events, authenticate
-    browser users, validate real provider tokens, implement full reviewer
+    archive or clear reviewer-created state, persist audit events beyond
+    successful reviewer-created state scaffold writes, authenticate browser
+    users, validate real provider tokens, implement full reviewer
     workflows, expose stateful database-backed reviewer views or production API
-    framework behavior, or prove source completeness.
+    framework behavior, or prove source completeness. The audit event scaffold
+    is local/test only, stored separately, and records only successful reviewer-
+    created state scaffold writes with actor, permission, scope, action, target,
+    and source-derived context. It does not provide full audit coverage, audit
+    UI, audit export, retention automation, or audit coverage for reset/reload,
+    exports, feedback, annotations, corrections, provider login, role changes,
+    or operational actions.
 - The local hosted scaffold `/facilities` list and detail pages use committed
     tiny public-source facility fixtures and manifest placeholder metadata only.
     The facility detail source coverage panel and related source-record links
