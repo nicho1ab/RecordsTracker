@@ -121,7 +121,8 @@ source-derived read service, a local/test auth/authz boundary scaffold, a
 narrow local/test authenticated source-derived HTTP/API read route seam, and a
 first local/test authenticated reviewer workflow shell, a narrow local/test
 reviewer-created state persistence scaffold, a narrow local/test audit event
-persistence scaffold, and a local/test authenticated reset/reload dry-run route seam: a
+persistence scaffold, a narrow local/test authenticated audit history read
+route seam, and a local/test authenticated reset/reload dry-run route seam: a
 no-secret database URL configuration seam, an Alembic script location, one
 domain migration for import batch metadata and source-derived record staging,
 one domain migration for a separate reviewer-created state scaffold table, one
@@ -132,7 +133,9 @@ records, managed OIDC/OAuth2 provider-class configuration validation, actor/
 role/scope/target models, protected read-service guards, and JSON handlers for
 listing staged source-derived records or fetching one staged record by key or
 stable identity, plus read-only queue and detail shell payloads over those route
-responses, plus a dry-run handler that reports seeded import batch counts,
+responses, plus JSON handlers for listing or fetching scaffold audit rows by
+approved audit identifiers and schema-supported filters, plus a dry-run handler
+that reports seeded import batch counts,
 source-derived record counts by entity, scoped reviewer-created state scaffold
 counts, scoped audit scaffold counts, future reviewer-created state handling options, required permissions,
 validation requirements, audit requirements, and deferred destructive actions
@@ -173,10 +176,11 @@ Alembic-managed migrations as the migration tooling direction. The current
 hosted scaffold adds local/test configuration validation, an Alembic script
 location, and a first narrow domain migration for seeded import batch metadata
 and source-derived record staging, plus a second narrow migration for one
-reviewer-created state scaffold table. The current auth boundary,
-source-derived read route seam, read-only reviewer workflow shell, reviewer-
-created state scaffold service, and reset/reload dry-run seam are local/test
-only; auth tables, audit tables, export tables, feedback tables, reset/reload
+reviewer-created state scaffold table, plus a third narrow migration for one
+audit event scaffold table. The current auth boundary, source-derived read route
+seam, read-only reviewer workflow shell, reviewer-created state scaffold
+service, audit history read route seam, and reset/reload dry-run seam are
+local/test only; auth tables, export tables, feedback tables, reset/reload
 metadata tables, ORM models, stateful reviewer workflow API behavior,
 deployment, hosted
 connection configuration, and production import automation remain deferred, and
@@ -281,7 +285,8 @@ retention implementation PRs validate the concrete layer.
   service reads over those staged records plus local/test auth guards for those
   reads, a narrow local/test reviewer-created state scaffold table linked to
   staged source-derived records, a narrow local/test audit event scaffold table
-  tied to successful reviewer-created state scaffold writes only, and a
+  tied to successful reviewer-created state scaffold writes only, a narrow
+  local/test authenticated audit history read route seam over those audit rows, and a
   non-mutating reset/reload dry-run plan over staged seeded corpus metadata and
   scoped reviewer-created scaffold and audit scaffold row counts. Real provider
   authentication implementation, persistent authorization storage, production

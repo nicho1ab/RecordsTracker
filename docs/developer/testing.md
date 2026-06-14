@@ -67,6 +67,13 @@ permission is enforced; and audit context metadata does not store secrets,
 tokens, cookies, private headers, connection strings, or unnecessary sensitive
 narrative content.
 
+Hosted audit history route tests must prove the implemented read seam is scoped,
+authenticated, role-allowed, non-mutating, and limited to non-secret audit row
+fields. Tests should cover authorized list and fetch paths, empty history,
+missing events, schema-supported filters, unauthenticated actors, disabled or
+revoked actors, role-denied actors, out-of-scope actors, invalid requests, and
+before/after table counts.
+
 ## Regression rule
 
 When fixing extraction behavior, add the failing case as a fixture before changing parser code.

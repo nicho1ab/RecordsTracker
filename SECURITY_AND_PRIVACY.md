@@ -105,7 +105,12 @@ claims, or unnecessary sensitive narrative content. It does not implement full
 audit policy coverage, audit UI, audit export, retention automation,
 production auth middleware, real login flow, or audit coverage for reset/reload,
 exports, feedback, annotations, corrections, provider login, role changes, or
-operational actions.
+operational actions. The current audit history read route seam is also
+local/test only, must receive an explicit database, actor, and scope context,
+requires audit-read permission, rejects unauthenticated, disabled or revoked,
+role-denied, and out-of-scope actors, and serializes only non-secret audit row
+fields for the narrow scaffold table without creating, modifying, or deleting
+audit events, source-derived records, or reviewer-created rows.
 
 Identity storage, sessions, authorization middleware, user tables, role tables,
 invitation flow, account recovery, final multi-factor requirements, and user

@@ -51,10 +51,13 @@
     framework behavior, or prove source completeness. The audit event scaffold
     is local/test only, stored separately, and records only successful reviewer-
     created state scaffold writes with actor, permission, scope, action, target,
-    and source-derived context. It does not provide full audit coverage, audit
-    UI, audit export, retention automation, or audit coverage for reset/reload,
-    exports, feedback, annotations, corrections, provider login, role changes,
-    or operational actions.
+    and source-derived context. A narrow local/test audit history read route can
+    list or fetch those scaffold audit rows when tests or local callers provide
+    explicit database, actor, and scope context with audit-read permission. It
+    does not provide full audit coverage, audit UI, audit export, retention
+    automation, or audit coverage for reset/reload, exports, feedback,
+    annotations, corrections, provider login, role changes, or operational
+    actions.
 - The local hosted scaffold `/facilities` list and detail pages use committed
     tiny public-source facility fixtures and manifest placeholder metadata only.
     The facility detail source coverage panel and related source-record links
