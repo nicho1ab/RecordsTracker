@@ -520,21 +520,28 @@ has been outgrown as the primary future review experience and should be extended
 only where it remains useful for validation, inspection, debugging, local
 exploration, or export support.
 
-1. Implement real provider integration against the managed OpenID Connect/OAuth
-	2.0 provider class after the CCLD request flow, local/test auth boundary,
-	callback/session, and configuration decisions are clear.
-2. Expand reset/reload planning into later reset/reload behavior for the seeded
-	corpus only after reviewer-created state preservation, fuller audit coverage,
-	operational metadata, and permission boundaries are broadened beyond this
-	local/test dry-run, execution-plan, and planning metadata scaffold.
-3. Expand beyond the reviewer-created state and first audit event scaffolds into
-	export packet state, tester feedback, reset/reload metadata, fuller audit
-	coverage, and stateful reviewer-created workflow branches.
-4. Implement stateful reviewer-created workflow layers over a seeded,
-	source-traceable corpus after auth, schema, audit, and permission boundaries
-	are ready.
-5. Add additional CCLD fixtures and extraction hardening for representative
-	report layouts, missing fields, and edge cases.
+Before selecting the next branch, apply the product-benefit gate in
+`GOVERNANCE_INVENTORY.md`: the work should directly improve the local/test
+CCLD user's ability to find a facility, request records, review results, use
+reviewer detail, add notes/status, understand the workflow, provide feedback, or
+resolve a concrete MVP-blocking risk. Deferred readiness work stays tracked, but
+it should be sequenced by user value and MVP risk rather than by implementation
+convenience.
+
+1. Improve reviewer detail usability for the CCLD local/test review loop,
+	including source-traceability clarity only when it directly helps testers
+	verify records.
+2. Improve the CCLD request, queue, status/progress, accessibility, and feedback
+	workflow where tester confusion or friction remains.
+3. Add additional CCLD fixtures and extraction hardening for representative
+	report layouts, missing fields, and edge cases when they protect the CCLD MVP
+	from extraction or validation regressions.
+4. Expand reviewer-created workflow layers only after the current notes/status
+	loop proves what additional reviewer state testers need.
+5. Sequence production auth/provider integration, audit/export, reset/reload
+	execution, deployment, database-backed lookup, persisted feedback, live browser
+	retrieval, connector execution, and non-CCLD sources only when they unlock a
+	user-facing milestone or remove a concrete MVP-blocking risk.
 
 ## Production-discovery transition path
 
@@ -601,3 +608,9 @@ define the smallest useful product shape:
 - Optional paid platform dependencies unless explicitly approved and documented.
 - Statewide crawling or automatic search expansion beyond explicitly provided
 	facility numbers.
+- Source-verification planning/checklists, production auth/provider readiness,
+	audit UI/export, export packet generation, reset/reload execution, production
+	deployment, database-backed facility lookup, production facility reference
+	import/sync, browser live retrieval, connector execution, non-CCLD sources,
+	persisted tester feedback, and broader reviewer workflow layers remain tracked
+	but deferred until the product-benefit gate says they are needed.

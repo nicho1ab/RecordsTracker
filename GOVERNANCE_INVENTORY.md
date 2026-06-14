@@ -37,9 +37,10 @@
   existing workflow actions, and see read-after-write
   reviewer-created state without exposing sensitive narrative fields, a browser-
   accessible local/test CCLD facility lookup page at `/ccld/facilities` that
-  reads committed local/test CCLD program facility reference CSV rows, searches
-  safe scalar fields, and carries a selected facility/license number into the
-  request workflow without persistence, a browser-
+  reads configured full local/test or committed tiny CCLD program facility
+  reference CSV rows, searches safe scalar fields, shows the active reference
+  source and fallback guidance, and carries a selected facility/license number
+  into the request workflow without persistence, a browser-
   accessible local/test CCLD record request page at `/ccld/records/request` that
   accepts a CCLD facility/license number and optional date range, reads matching
   seeded source-derived rows, can load or refresh matching rows from local
@@ -196,6 +197,43 @@
 - QNAP, Azure, AWS, cloud deployment, public URL behavior, hosted live crawling,
   hosted connector execution, production monitoring, incident response, and
   operational support.
+
+## Deferred readiness and product-benefit gate
+
+Deferred readiness items must stay visible, but they should not automatically
+become the next implementation branch. Future Copilot tasks should pass this
+product-benefit gate before adding backend readiness, hardening, planning, or
+checklist work:
+
+1. What user-facing CCLD MVP capability, tester productivity improvement, or
+  concrete MVP-blocking risk does this branch address?
+2. Why is it needed now rather than after the next facility lookup, request,
+  queue, reviewer-detail, accessibility, or feedback improvement?
+3. What becomes possible for a local/test CCLD tester after the branch that is
+  not possible today?
+
+If the answer is only that a future backend, audit, auth, export, deployment, or
+readiness layer is theoretically important, keep the item deferred. A readiness
+branch is appropriate when it directly unlocks the CCLD local/test user workflow
+or removes a concrete MVP-blocking risk. MVP usability is not cosmetic polish:
+clear forms, efficient facility lookup, understandable result states,
+accessible structure, contextual help, low-friction reviewer actions, and useful
+feedback capture are product requirements when they reduce tester confusion
+without creating avoidable rework.
+
+| Deferred item | Why deferred | User-facing milestone first | Necessary when | Needed before |
+|---|---|---|---|---|
+| Reviewer detail source-verification planning/checklist | Current detail pages already show safe source context; more planning should not displace lookup/request/queue usability unless testers cannot verify records. | Improve reviewer detail usability for actual CCLD complaint review. | Testers cannot reliably confirm source URL, raw hash, raw path/artifact reference, connector metadata, retrieval time, source document ID, report index/type, or visible extraction-audit context. | Local tester MVP if verification blocks useful review; otherwise pilot. |
+| Production auth/provider integration | Local/test actor boundaries are enough for current workstation-only testing. | Finish the CCLD local/test request, review, notes/status, accessibility, and feedback loop. | External testers need individual access, revocation, attribution, or scoped collaboration. | Pilot. |
+| Audit UI/export and fuller audit coverage | Current audit scaffold covers successful reviewer-created state writes only and no tester-facing audit UI is needed for the first local loop. | Stabilize reviewer actions and feedback context that would later need audit visibility. | Testers or operators need to inspect audit history to resolve review-state trust, support, or accountability issues. | Pilot or production, depending on use. |
+| Export packet generation | Existing Datasette/review-bundle exports remain retained for validation and local handoff support. | Make CCLD review queues and detail pages useful enough to decide what should be exported. | Review handoff requires curated packet membership, source traceability, reviewer-created context, and accessible output beyond retained CSV exports. | Pilot. |
+| Reset/reload execution | Dry-run and execution-plan seams exist; destructive or state-changing behavior needs stronger reviewer-created state handling and audit policy. | Prove local validated load/refresh and reviewer state are useful in repeated CCLD sessions. | Test data must be repeatedly refreshed while preserving, archiving, or explicitly clearing reviewer-created state. | Pilot. |
+| Production deployment | The scaffold is local/test only and should not be hosted before the product loop is useful and access boundaries are implemented. | Complete a useful local/test CCLD review loop with accessible pages and feedback. | External tester access, secure hosting, monitoring, and support are approved and necessary. | Pilot/production. |
+| Database-backed facility lookup or production facility reference import/sync | CSV-backed lookup is sufficient for local/test facility selection and avoids premature schema work. | Validate that full local/test facility CSV lookup materially helps testers find records. | Facility reference data needs refresh history, reconciliation, permissions, provenance, or query scale beyond local CSV. | Pilot or production. |
+| Live browser retrieval or connector execution | Browser-triggered crawling is explicitly out of scope and raises rate-limit, audit, error, and source-preservation risks. | Keep live fetch explicit through scripts and local validated artifacts. | A later approved architecture defines safe execution, rate limits, audit, source preservation, and tester messaging. | Not needed for local tester MVP. |
+| Non-CCLD sources | The first MVP remains CCLD-only. | Complete the CCLD request, review, feedback, accessibility, and validation loop. | CCLD MVP learning has stabilized and a new source has inventory, fixtures, connector contract, limitations, and governance approval. | After CCLD MVP. |
+| Persisted tester feedback | Copyable checklist is enough for first local/test feedback without schema work. | Learn what feedback testers actually provide through the external channel. | Feedback volume, triage, linkage to source records, or accountability requires app-managed state. | Pilot. |
+| Broader reviewer workflow layers | Current notes/status are intentionally narrow. | Validate that facility lookup, request queue, detail pages, and feedback checklist support the first review loop. | Testers need assignments, richer statuses, annotations, corrections, review history, or collaboration to continue. | Pilot. |
 
 ## Stale guidance assessment
 

@@ -146,4 +146,10 @@
   does not prove source completeness, statewide coverage, official facility
   status, complaint availability, or legal or facility-wide conclusions. Full/raw
   facility CSV files must not be committed.
+- Production-readiness items such as source-verification planning, auth provider
+  integration, audit UI/export, export packet generation, reset/reload execution,
+  deployment, database-backed lookup, live browser retrieval, connector
+  execution, non-CCLD sources, and persisted tester feedback remain deferred
+  unless they directly unlock tester value or resolve a concrete MVP-blocking
+  risk.
 - Datasette accessibility depends partly on the installed Datasette version, browser, and assistive technology. Validate keyboard navigation, table headers, focus visibility, and exported table usability before treating a release as stable.
