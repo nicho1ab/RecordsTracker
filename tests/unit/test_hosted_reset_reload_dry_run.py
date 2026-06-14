@@ -9,6 +9,7 @@ from sqlalchemy import create_engine, func, select
 from sqlalchemy.engine import Connection
 
 from ccld_complaints.hosted_app.app import route_response
+from ccld_complaints.hosted_app.audit_events import hosted_audit_events
 from ccld_complaints.hosted_app.auth import (
     AuthenticatedActor,
     HostedAccessScope,
@@ -57,6 +58,7 @@ def test_reset_reload_dry_run_reports_seeded_corpus_impact_without_mutation() ->
         "import_batches": 1,
         "source_records": 6,
         "reviewer_created_state": 0,
+        "audit_events": 0,
     }
     assert payload["dry_run"] is True
     assert payload["operation"] == "seeded_corpus_reset_reload_dry_run"
@@ -108,6 +110,8 @@ def test_reset_reload_dry_run_reports_seeded_corpus_impact_without_mutation() ->
     assert reviewer_impact["handling_options"] == ["preserve", "archive", "clear"]
     assert reviewer_impact["current_state_count"] == 0
     assert "annotations" in reviewer_impact["affected_state_categories"]
+    assert payload["audit_event_impact"]["persistence_implemented"] is True
+    assert payload["audit_event_impact"]["current_event_count"] == 0
     assert payload["future_execution_permissions"] == ["import_reload"]
     assert payload["safety"] == {
         "data_mutations_performed": False,
@@ -115,7 +119,10 @@ def test_reset_reload_dry_run_reports_seeded_corpus_impact_without_mutation() ->
         "dry_run_does_not_execute_reset_reload": True,
     }
     assert "import or reload seeded corpus artifacts" in payload["deferred_actions"]
-    assert "this dry-run does not persist an audit event" in payload["audit_requirements"]
+    assert (
+        "this dry-run counts existing audit scaffold rows but does not persist a new audit event"
+        in payload["audit_requirements"]
+    )
 
 
 def test_reset_reload_dry_run_supports_future_clear_mode_planning_only() -> None:
@@ -322,8 +329,12 @@ def _table_counts(connection: Connection) -> dict[str, int]:
     reviewer_created_state = connection.execute(
         select(func.count()).select_from(hosted_reviewer_created_state)
     ).scalar_one()
+    audit_events = connection.execute(
+        select(func.count()).select_from(hosted_audit_events)
+    ).scalar_one()
     return {
         "import_batches": import_batches,
         "source_records": source_records,
         "reviewer_created_state": reviewer_created_state,
+        "audit_events": audit_events,
     }

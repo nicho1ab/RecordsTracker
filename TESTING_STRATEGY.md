@@ -32,8 +32,9 @@ Production-discovery requirements changes must run documentation validation and
 affected documentation-check tests. Hosted tester MVP implementation must add
 validation for review-state separation, annotation and correction traceability,
 source-traceable export packet behavior, accessibility expectations,
-authentication and access governance, feedback collection, and reset/reload
-behavior at the level of the implemented change.
+authentication and access governance, audit event attribution and no-secret
+metadata where audit persistence is implemented, feedback collection, and
+reset/reload behavior at the level of the implemented change.
 
 ### Fixture hash and line-ending tests
 
@@ -126,7 +127,11 @@ production architecture transition.
 git diff --check
 ```
 
-For CI failures, also run the exact failing workflow command locally when it can be run without secrets or live external requests. For fixture hash failures, verify Git-normalized bytes with commands such as:
+For CI failures, also run the exact failing workflow command locally when it can
+be run without secrets or live external requests. If local and CI results differ,
+check cross-platform behavior such as line endings, path separators, filesystem
+glob ordering, locale-sensitive output, and Git-normalized fixture bytes. For
+fixture hash failures, verify Git-normalized bytes with commands such as:
 
 ```powershell
 git ls-files --eol tests\fixtures\ccld\raw\<fixture-name>.html

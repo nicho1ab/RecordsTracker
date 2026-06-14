@@ -10,7 +10,7 @@ from ccld_complaints.hosted_app.persistence import (
     load_hosted_database_config,
 )
 
-ApiDomain = Literal["source-derived", "reviewer-created", "operational"]
+ApiDomain = Literal["source-derived", "reviewer-created", "audit", "operational"]
 ImplementationStatus = Literal["scaffold-only"]
 
 
@@ -38,6 +38,7 @@ class HostedSchemaApiScaffold:
     reviewer_workflow_shell_implemented: bool = True
     reset_reload_dry_run_implemented: bool = True
     reviewer_created_state_persistence_scaffold_implemented: bool = True
+    audit_event_persistence_scaffold_implemented: bool = True
     api_routes_implemented: bool = True
     imports_implemented: bool = True
     reviewer_workflows_implemented: bool = False
@@ -94,6 +95,31 @@ HOSTED_API_BOUNDARIES = (
             "stateful reviewer workflows",
             "audit logging",
             "export builder behavior",
+        ),
+    ),
+    HostedApiBoundary(
+        boundary_id="audit_events_api",
+        label="Audit events API boundary",
+        domain="audit",
+        implementation_status="scaffold-only",
+        intended_future_use=(
+            "Persist audit events for hosted tester state-changing operations after "
+            "future branches define full coverage. The current implementation adds "
+            "only local/test audit rows for successful reviewer-created state "
+            "scaffold writes."
+        ),
+        requires_authenticated_actor_before_write=True,
+        preserves=(
+            "source-derived versus reviewer-created state separation",
+            "authenticated actor attribution",
+            "project or corpus scope",
+            "target and source-derived context",
+        ),
+        deferred=(
+            "audit API routes",
+            "full audit policy coverage",
+            "audit UI or export behavior",
+            "retention automation",
         ),
     ),
     HostedApiBoundary(

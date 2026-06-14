@@ -54,6 +54,7 @@ AuthorizationTargetType = Literal[
     "source_derived_record_list",
     "source_derived_record",
     "reviewer_created_state",
+    "audit_event",
     "import_batch",
     "export_packet",
     "auth_access",
@@ -63,6 +64,7 @@ SOURCE_DERIVED_READ_PERMISSION: HostedPermission = "source_derived_read"
 REVIEWER_STATE_WRITE_PERMISSION: HostedPermission = "reviewer_state_write"
 IMPORT_RELOAD_PERMISSION: HostedPermission = "import_reload"
 USER_ROLE_ADMIN_PERMISSION: HostedPermission = "user_role_admin"
+AUDIT_READ_PERMISSION: HostedPermission = "audit_read"
 
 ROLE_PERMISSIONS: Mapping[HostedTesterRole, frozenset[HostedPermission]] = {
     "admin": frozenset(

@@ -169,6 +169,9 @@ wiring includes:
 - `migrations/versions/20260614_0002_reviewer_created_state_scaffold.py` with
   one separate reviewer-created state scaffold table linked to staged
   source-derived record keys.
+- `migrations/versions/20260614_0003_audit_event_scaffold.py` with one separate
+  audit event scaffold table for successful reviewer-created state scaffold
+  writes only.
 - `ccld_complaints.hosted_app.persistence` for no-secret database URL validation
   and ADR-0010 persistence boundary descriptors.
 - `ccld_complaints.hosted_app.auth` for managed OIDC/OAuth2 provider-class
@@ -189,6 +192,9 @@ wiring includes:
 - `ccld_complaints.hosted_app.reviewer_created_state` for local/test
   authenticated reviewer-created state scaffold writes and scoped reads without
   mutating staged source-derived records.
+- `ccld_complaints.hosted_app.audit_events` for local/test audit rows tied to
+  successful reviewer-created state scaffold writes without mutating staged
+  source-derived or reviewer-created records.
 - `ccld_complaints.hosted_app.reset_reload_dry_run` for a local/test
   authenticated seeded corpus reset/reload dry-run route seam that reports
   future impact without mutating data.
@@ -259,8 +265,21 @@ Rows are stored in a separate reviewer-created table with actor attribution and
 do not overwrite source-derived records, original extracted values, raw source
 metadata, import metadata, or source traceability. The scaffold does not
 implement annotations, corrections, review status workflows, tester feedback,
-export packet decisions, audit event persistence, sessions, cookies, production
-auth middleware, or a production API framework.
+export packet decisions, sessions, cookies, production auth middleware, or a
+production API framework. Successful writes also create a separate local/test
+audit event scaffold row with actor, permission, scope, action, target, and
+source-derived context. If the audit row cannot be created, the reviewer-created
+state write is rolled back.
+
+The audit event persistence scaffold is intentionally small. It stores rows only
+for successful reviewer-created state scaffold writes, using a separate audit
+table linked to the reviewer-created scaffold target and source-derived context.
+It does not store provider secrets, tokens, cookies, sessions, private headers,
+connection strings, raw provider claims, or unnecessary sensitive narrative
+content. It does not implement full audit policy coverage, audit API routes,
+audit UI, audit export, retention automation, or audit coverage for reset/reload,
+exports, feedback, annotations, corrections, provider login, role changes, or
+operational actions.
 
 The reset/reload dry-run seam is intentionally small. It exposes the local/test
 JSON handler `/api/operations/seeded-corpus-reset-reload/dry-run` only when the
@@ -268,10 +287,10 @@ caller supplies an explicit dry-run context with a database connection,
 authenticated operator or admin-style actor, and seeded corpus scope. The
 handler requires import/reload permission, reports existing import batch
 metadata, source-derived record counts by entity, scoped reviewer-created
-scaffold row counts, future reviewer-created state handling options, validation
-requirements, audit requirements, and deferred destructive actions. It performs
+scaffold row counts, scoped audit scaffold row counts, future reviewer-created
+state handling options, validation requirements, audit requirements, and deferred destructive actions. It performs
 read-only inspection queries only. It does not
-delete, truncate, overwrite, archive, import, reload, persist audit events,
+delete, truncate, overwrite, archive, import, reload, create new dry-run audit events,
 create reset metadata, run live crawling, execute connectors, or implement a
 production API framework.
 
@@ -292,8 +311,8 @@ private URLs, hosted URLs, tokens, or deployment-specific configuration.
 
 The current path does not implement stateful database-backed reviewer views, real
 provider login, token validation, sessions, cookies, auth middleware, user or
-role persistence, full reviewer-created workflows, audit persistence, export
-builders, reset/reload execution, reviewer-created state archive or clear behavior, production import
+role persistence, full reviewer-created workflows, full audit coverage, audit UI,
+audit export, export builders, reset/reload execution, reviewer-created state archive or clear behavior, production import
 automation, production API framework behavior, hosted live crawling, hosted
 connector execution, QNAP, Azure, AWS, public hosting, public URLs, or
 production deployment.
@@ -369,6 +388,12 @@ Run the focused hosted reviewer-created state scaffold tests:
 pytest tests/unit/test_hosted_reviewer_created_state.py
 ```
 
+Run the focused hosted audit event scaffold tests:
+
+```powershell
+pytest tests/unit/test_hosted_audit_events.py
+```
+
 These tests include local-only semantic/accessibility validation for the sample
 source view shell and facility master sample view. They use Python standard-library HTML parsing
 to verify one page-level heading, meaningful page titles, semantic main content,
@@ -408,12 +433,20 @@ source-derived records, source-derived records are not modified, authenticated
 actor attribution is captured, reviewer-state write permission is required,
 disabled or revoked, role-denied, out-of-scope, and invalid source-derived
 reference writes are rejected, and scoped readback works where implemented.
+The audit event scaffold tests verify that successful reviewer-created state
+scaffold writes create separate audit rows with actor attribution and target
+context, failed writes do not create successful audit rows, audit persistence
+failure rolls back the reviewer-created state write, source-derived rows remain
+unchanged, reviewer-created rows are not modified by audit persistence, audit
+read permission is required, and secret-like values are not stored in audit
+context metadata.
 The reset/reload dry-run tests verify local/test authenticated planning payloads,
-seeded import batch, source-derived record, and reviewer-created scaffold impact
-counts, reviewer-created state handling options, invalid mode rejection,
+seeded import batch, source-derived record, reviewer-created scaffold, and audit
+scaffold impact counts, reviewer-created state handling options, invalid mode rejection,
 explicit dry-run context requirements, unauthenticated, disabled or revoked,
 role-denied, and out-of-scope rejections, and before/after row counts proving
-the dry-run does not mutate seeded import or reviewer-created scaffold tables.
+the dry-run does not mutate seeded import, reviewer-created scaffold, or audit
+scaffold tables.
 They do not require browser automation, Node.js, Playwright, Selenium, axe,
 Docker, a running PostgreSQL server, cloud services, or public URLs.
 
@@ -446,9 +479,11 @@ The scaffold intentionally does not implement:
 - Real authentication.
 - Real provider token validation, sessions, cookies, or auth middleware.
 - Persistent authorization, user, role, invitation, or scope storage.
-- Production schema beyond the seeded import table group and the narrow
-  reviewer-created state scaffold table.
-- Full reviewer-created workflow, audit, export, feedback, auth, or
+- Production schema beyond the seeded import table group, the narrow
+  reviewer-created state scaffold table, and the narrow audit event scaffold
+  table.
+- Full reviewer-created workflow, full audit coverage, audit UI, audit export,
+  export, feedback, auth, or
   reset/reload tables.
 - HTTP API routes outside the narrow local/test source-derived read route seam,
   read-only reviewer workflow shell, and reset/reload dry-run seam.
@@ -459,7 +494,7 @@ The scaffold intentionally does not implement:
 - Corrections.
 - Exports.
 - Tester feedback.
-- Audit trail.
+- Audit trail beyond successful reviewer-created state scaffold writes.
 - Reset/reload execution.
 - Hosted live crawling.
 - Hosted connector execution.

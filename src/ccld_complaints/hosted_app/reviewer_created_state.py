@@ -8,6 +8,7 @@ from uuid import uuid4
 from sqlalchemy import JSON, CheckConstraint, Column, ForeignKey, String, Table, Text, select
 from sqlalchemy.engine import Connection, RowMapping
 
+from ccld_complaints.hosted_app.audit_events import create_hosted_audit_event
 from ccld_complaints.hosted_app.auth import (
     REVIEWER_STATE_WRITE_PERMISSION,
     SOURCE_DERIVED_READ_PERMISSION,
@@ -125,16 +126,31 @@ def create_reviewer_created_state_scaffold(
         "created_by_actor_category": authorized.actor.actor_category,
         "authorization_permission": authorized.permission,
     }
-    connection.execute(hosted_reviewer_created_state.insert().values(**values))
-    return _read_model_from_row(
-        connection.execute(
-            select(hosted_reviewer_created_state).where(
-                hosted_reviewer_created_state.c.reviewer_state_id == reviewer_state_id
+    with connection.begin_nested():
+        connection.execute(hosted_reviewer_created_state.insert().values(**values))
+        created = _read_model_from_row(
+            connection.execute(
+                select(hosted_reviewer_created_state).where(
+                    hosted_reviewer_created_state.c.reviewer_state_id == reviewer_state_id
+                )
             )
+            .mappings()
+            .one()
         )
-        .mappings()
-        .one()
-    )
+        create_hosted_audit_event(
+            connection,
+            authorized=authorized,
+            action="reviewer_created_state_scaffold.create",
+            target_type="reviewer_created_state",
+            target_reviewer_state_id=reviewer_state_id,
+            source_record=source_record,
+            context_metadata={
+                "state_kind": state_kind,
+                "state_payload_keys": sorted(state_payload.keys()),
+                "source_record_key": source_record_key,
+            },
+        )
+    return created
 
 
 def list_reviewer_created_state_scaffold(
@@ -190,9 +206,9 @@ def _read_model_from_row(row: RowMapping) -> ReviewerCreatedStateRead:
 
 def _state_kind(row: RowMapping) -> ReviewerCreatedStateKind:
     value = _string_value(row, "state_kind")
-    if value not in REVIEWER_CREATED_STATE_KINDS:
-        raise ValueError(f"Unknown reviewer-created state kind: {value}")
-    return value
+    if value == "review_item_state_scaffold":
+        return "review_item_state_scaffold"
+    raise ValueError(f"Unknown reviewer-created state kind: {value}")
 
 
 def _string_value(row: RowMapping, key: str) -> str:
