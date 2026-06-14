@@ -132,6 +132,14 @@ rendering, help page rendering, contextual facility/date/load/review help,
 first-time workflow overview, deterministic copyable feedback checklist guidance
 without persistence, accessibility-oriented headings/labels/captions/link text,
 and no-secret HTML output.
+Hosted CCLD facility lookup tests should cover committed CCLD facility reference
+CSV loading, safe scalar field display, partial and case-insensitive matching by
+facility/license number, facility name, city, county, ZIP code, facility type,
+and status, bounded result lists, empty-search and no-match guidance, selected
+facility carry-forward into `/ccld/records/request`, manual entry preservation,
+no browser live retrieval, no connector execution, no persistence, no source-
+derived/reviewer-created/audit/import/operational metadata mutation, accessible
+headings/labels/captions/link text, and no-secret HTML output.
 Hosted CCLD artifact builder tests should build fixture-backed validated SQLite
 output, convert it into hosted seeded-corpus JSON, validate the JSON through the
 existing hosted seeded parser, import it through the existing hosted seeded

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Added a CCLD-only local/test facility lookup page at `/ccld/facilities` backed
+	by the committed CCLD program facility reference CSV fixture. Local testers can
+	search by facility/license number, facility name, city, county, ZIP code,
+	facility type, or status, see a bounded safe result list, and use a selected
+	facility to prefill `/ccld/records/request` while manual facility/license entry
+	remains available. The lookup does not run live CCLD retrieval, execute
+	connectors, persist lookup data, mutate source-derived/reviewer-created/audit
+	or operational rows, add schema changes, or add non-CCLD sources.
 - Added a CCLD-only local/test guided request/result queue UI: the home page now
 	points first-time testers into the CCLD request flow, `/ccld/help` explains
 	the workflow and key terms, `/ccld/records/request` includes contextual field

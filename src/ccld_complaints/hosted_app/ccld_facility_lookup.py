@@ -1,0 +1,410 @@
+from __future__ import annotations
+
+import csv
+import html
+from collections.abc import Iterable
+from dataclasses import dataclass
+from pathlib import Path
+from urllib.parse import parse_qs, urlencode, urlparse
+
+CCLD_FACILITY_LOOKUP_PATH = "/ccld/facilities"
+CCLD_RECORD_REQUEST_PATH = "/ccld/records/request"
+DEFAULT_CCLD_FACILITY_REFERENCE_PATH = Path(
+    "tests/fixtures/public_source_facilities/ccld_program_facilities_tiny.csv"
+)
+MAX_FACILITY_LOOKUP_RESULTS = 25
+_REQUIRED_COLUMNS = (
+    "Facility Number",
+    "Facility Name",
+    "Facility City",
+    "County Name",
+    "Facility Zip",
+    "Facility Type",
+    "Facility Status",
+    "Closed Date",
+)
+_SECRET_HTML_MARKERS = (
+    "authorization",
+    "client_secret",
+    "connection string",
+    "connection_string",
+    "cookie",
+    "password",
+    "private_header",
+    "private header",
+    "provider_issuer",
+    "provider_subject",
+    "secret",
+    "token",
+)
+
+
+@dataclass(frozen=True)
+class CcldFacilityLookupRecord:
+    facility_number: str
+    facility_name: str
+    city: str
+    county: str
+    zip_code: str
+    facility_type: str
+    status: str
+    closed_date: str
+
+
+@dataclass(frozen=True)
+class CcldFacilityLookupResult:
+    query: str
+    total_match_count: int
+    returned_records: tuple[CcldFacilityLookupRecord, ...]
+    result_limit: int
+
+    @property
+    def empty_search(self) -> bool:
+        return not self.query.strip()
+
+    @property
+    def has_more_matches(self) -> bool:
+        return self.total_match_count > len(self.returned_records)
+
+
+def load_ccld_facility_reference(
+    path: Path = DEFAULT_CCLD_FACILITY_REFERENCE_PATH,
+) -> tuple[CcldFacilityLookupRecord, ...]:
+    with path.open("r", encoding="utf-8", newline="") as fixture_file:
+        reader = csv.DictReader(fixture_file)
+        fieldnames = tuple(reader.fieldnames or ())
+        missing_columns = [
+            column for column in _REQUIRED_COLUMNS if column not in fieldnames
+        ]
+        if missing_columns:
+            raise ValueError(
+                "CCLD facility reference CSV is missing required column(s): "
+                + ", ".join(missing_columns)
+            )
+        records = tuple(_record_from_row(row) for row in reader)
+    return tuple(
+        sorted(records, key=lambda record: (record.facility_name, record.facility_number))
+    )
+
+
+def search_ccld_facilities(
+    query: str,
+    records: Iterable[CcldFacilityLookupRecord] | None = None,
+    *,
+    result_limit: int = MAX_FACILITY_LOOKUP_RESULTS,
+) -> CcldFacilityLookupResult:
+    if result_limit < 1:
+        raise ValueError("result_limit must be at least 1.")
+    normalized_query = _normalized_text(query)
+    if not normalized_query:
+        return CcldFacilityLookupResult(
+            query=query.strip(),
+            total_match_count=0,
+            returned_records=(),
+            result_limit=result_limit,
+        )
+    active_records = tuple(records) if records is not None else load_ccld_facility_reference()
+    query_tokens = tuple(normalized_query.split())
+    matches = tuple(
+        record for record in active_records if _record_matches_query(record, query_tokens)
+    )
+    return CcldFacilityLookupResult(
+        query=query.strip(),
+        total_match_count=len(matches),
+        returned_records=matches[:result_limit],
+        result_limit=result_limit,
+    )
+
+
+def route_ccld_facility_lookup_response(path: str) -> tuple[int, str, bytes]:
+    parsed_url = urlparse(path)
+    if parsed_url.path != CCLD_FACILITY_LOOKUP_PATH:
+        return _html_response(
+            404,
+            _render_message_page(
+                title="CCLD facility lookup not found",
+                heading="CCLD facility lookup not found",
+                message="The requested local/test CCLD facility lookup page was not found.",
+            ),
+        )
+    query_values = parse_qs(parsed_url.query, keep_blank_values=True)
+    query = _first_query_value(query_values, "q")
+    return _html_response(200, render_ccld_facility_lookup_page(query))
+
+
+def render_ccld_facility_lookup_page(query: str = "") -> str:
+    result = search_ccld_facilities(query)
+    return _page(
+        title="Find CCLD facility",
+        heading="Find CCLD facility",
+        main=f"""    <section aria-labelledby="facility-lookup-scope-heading">
+      <h2 id="facility-lookup-scope-heading">CCLD-only local/test facility lookup</h2>
+      <p>This lookup reads the committed local/test CCLD program facility reference CSV.
+      It helps carry a public facility/license number into the CCLD request workflow.</p>
+      <p>The lookup does not run live CCLD retrieval, query the public portal, import records,
+      persist data, or prove public-source completeness.</p>
+    </section>
+    {_render_lookup_form(result.query)}
+    {_render_lookup_results(result)}
+    <section aria-labelledby="manual-entry-heading">
+      <h2 id="manual-entry-heading">Manual facility/license entry</h2>
+      <p>If you already know the CCLD facility/license number, you can still type it directly
+      on the request form.</p>
+      <p><a href="{CCLD_RECORD_REQUEST_PATH}">Open manual CCLD request form</a></p>
+    </section>""",
+    )
+
+
+def _record_from_row(row: dict[str, str]) -> CcldFacilityLookupRecord:
+    facility_number = _clean_value(row["Facility Number"])
+    if not facility_number.isdigit():
+        raise ValueError("CCLD facility reference facility numbers must contain digits only.")
+    return CcldFacilityLookupRecord(
+        facility_number=facility_number,
+        facility_name=_clean_value(row["Facility Name"]),
+        city=_clean_value(row["Facility City"]),
+        county=_clean_value(row["County Name"]),
+        zip_code=_clean_value(row["Facility Zip"]),
+        facility_type=_clean_value(row["Facility Type"]),
+        status=_clean_value(row["Facility Status"]),
+        closed_date=_clean_value(row["Closed Date"]),
+    )
+
+
+def _record_matches_query(
+    record: CcldFacilityLookupRecord,
+    query_tokens: tuple[str, ...],
+) -> bool:
+    search_text = _normalized_text(
+        " ".join(
+            (
+                record.facility_number,
+                record.facility_name,
+                record.city,
+                record.county,
+                record.zip_code,
+                record.facility_type,
+                record.status,
+                record.closed_date,
+            )
+        )
+    )
+    return all(token in search_text for token in query_tokens)
+
+
+def _render_lookup_form(query: str) -> str:
+    return f"""    <section aria-labelledby="facility-search-heading">
+      <h2 id="facility-search-heading">Search local/test facility reference</h2>
+      <p id="facility-search-help">Search by facility/license number, facility name, city,
+      county, ZIP code, facility type, or status when those fields are present in the local
+      reference CSV.</p>
+      <form action="{CCLD_FACILITY_LOOKUP_PATH}" method="get">
+        <p>
+          <label for="facility_lookup_query">Facility search</label>
+          <input id="facility_lookup_query" name="q" type="search"
+            value="{_escape(query)}" aria-describedby="facility-search-help">
+        </p>
+        <p><button type="submit">Search CCLD facilities</button></p>
+      </form>
+    </section>"""
+
+
+def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
+    if result.empty_search:
+        return """    <section aria-labelledby="facility-results-heading">
+      <h2 id="facility-results-heading">Facility lookup results</h2>
+      <p>Enter a facility name, facility/license number, city, county, ZIP code, facility type,
+      or status to search the local/test CCLD facility reference.</p>
+    </section>"""
+    if not result.returned_records:
+        return f"""    <section aria-labelledby="facility-results-heading">
+      <h2 id="facility-results-heading">Facility lookup results</h2>
+      <p>No local/test CCLD facility reference rows matched {_escape(result.query)}.</p>
+      <p>Try a shorter name, facility/license number, city, county, ZIP code, or facility type.
+      You can also continue with manual facility/license number entry.</p>
+      <p><a href="{CCLD_RECORD_REQUEST_PATH}">Open manual CCLD request form</a></p>
+    </section>"""
+    rows = "\n".join(_render_result_row(record) for record in result.returned_records)
+    more_guidance = ""
+    if result.has_more_matches:
+        more_guidance = f"""      <p>Showing the first {len(result.returned_records)} of
+      {result.total_match_count} matching local/test facility reference rows. Add more search
+      detail to narrow the list.</p>"""
+    else:
+        more_guidance = f"""      <p>Showing {len(result.returned_records)} of
+      {result.total_match_count} matching local/test facility reference row(s).</p>"""
+    return f"""    <section aria-labelledby="facility-results-heading">
+      <h2 id="facility-results-heading">Facility lookup results</h2>
+{more_guidance}
+      <table>
+        <caption>Local/test CCLD facility reference matches</caption>
+        <thead>
+          <tr>
+            <th scope="col">Request action</th>
+            <th scope="col">Facility/license number</th>
+            <th scope="col">Facility name</th>
+            <th scope="col">City</th>
+            <th scope="col">County</th>
+            <th scope="col">ZIP code</th>
+            <th scope="col">Facility type</th>
+            <th scope="col">Status</th>
+            <th scope="col">Closed date in reference file</th>
+          </tr>
+        </thead>
+        <tbody>
+{rows}
+        </tbody>
+      </table>
+    </section>"""
+
+
+def _render_result_row(record: CcldFacilityLookupRecord) -> str:
+    href = f"{CCLD_RECORD_REQUEST_PATH}?{urlencode({'facility_number': record.facility_number})}"
+    return f"""          <tr>
+            <td><a href="{_escape(href)}">Use this facility for CCLD request</a></td>
+            <td>{_escape(record.facility_number)}</td>
+            <td>{_escape(record.facility_name)}</td>
+            <td>{_escape(_display_value(record.city))}</td>
+            <td>{_escape(_display_value(record.county))}</td>
+            <td>{_escape(_display_value(record.zip_code))}</td>
+            <td>{_escape(_display_value(record.facility_type))}</td>
+            <td>{_escape(_display_value(record.status))}</td>
+            <td>{_escape(_display_value(record.closed_date))}</td>
+          </tr>"""
+
+
+def _render_message_page(*, title: str, heading: str, message: str) -> str:
+    return _page(
+        title=title,
+        heading=heading,
+        main=f"""    <section aria-labelledby="message-heading">
+      <h2 id="message-heading">{_escape(heading)}</h2>
+      <p>{_escape(message)}</p>
+      <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Open CCLD facility lookup</a></p>
+    </section>""",
+    )
+
+
+def _page(*, title: str, heading: str, main: str) -> str:
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{_escape(title)}</title>
+  <style>
+    body {{
+      color: #1f2937;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+      margin: 0;
+    }}
+    header, main, footer {{
+      margin: 0 auto;
+      max-width: 72rem;
+      padding: 1rem;
+    }}
+    header {{
+      border-bottom: 1px solid #d1d5db;
+    }}
+    nav ul {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      list-style: none;
+      padding: 0;
+    }}
+    section {{
+      border-bottom: 1px solid #e5e7eb;
+      padding: 1rem 0;
+    }}
+    label {{
+      display: block;
+      font-weight: 650;
+      margin-bottom: 0.25rem;
+    }}
+    input {{
+      box-sizing: border-box;
+      font: inherit;
+      max-width: 24rem;
+      padding: 0.45rem;
+      width: 100%;
+    }}
+    button {{
+      font: inherit;
+      padding: 0.55rem 0.8rem;
+    }}
+    table {{
+      border-collapse: collapse;
+      width: 100%;
+    }}
+    caption {{
+      font-weight: 650;
+      margin-bottom: 0.5rem;
+      text-align: left;
+    }}
+    th, td {{
+      border: 1px solid #d1d5db;
+      padding: 0.5rem;
+      text-align: left;
+      vertical-align: top;
+    }}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>{_escape(heading)}</h1>
+    <nav aria-label="Hosted scaffold navigation">
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find CCLD facility</a></li>
+        <li><a href="{CCLD_RECORD_REQUEST_PATH}">CCLD record request</a></li>
+        <li><a href="/ccld/help">How this works</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main>
+{main}
+  </main>
+  <footer>
+    <p>Local/test hosted reviewer scaffold.</p>
+  </footer>
+</body>
+</html>"""
+
+
+def _first_query_value(query_values: dict[str, list[str]], key: str) -> str:
+    values = query_values.get(key, [])
+    if not values:
+        return ""
+    return values[0].strip()
+
+
+def _clean_value(value: str | None) -> str:
+    if value is None:
+        return ""
+    return " ".join(value.split())
+
+
+def _normalized_text(value: str) -> str:
+    return _clean_value(value).casefold()
+
+
+def _display_value(value: str) -> str:
+    return value if value else "not listed"
+
+
+def _escape(value: str) -> str:
+    return html.escape(value, quote=True)
+
+
+def _html_response(status: int, markup: str) -> tuple[int, str, bytes]:
+    _assert_no_secret_markers(markup)
+    return status, "text/html; charset=utf-8", markup.encode("utf-8")
+
+
+def _assert_no_secret_markers(markup: str) -> None:
+    lowered = markup.casefold()
+    for marker in _SECRET_HTML_MARKERS:
+        if marker in lowered:
+            raise ValueError(f"CCLD facility lookup HTML contains blocked marker: {marker}")

@@ -159,9 +159,13 @@ feedback checklist for manual external sharing. Queue state is derived from
 existing source-derived records plus existing reviewer-created note/status rows;
 it is not persisted as a separate queue state model. Feedback is not persisted by
 the app in this slice.
+The local/test CCLD facility lookup page at `/ccld/facilities` reads committed
+CCLD program facility reference CSV fixture rows, searches safe scalar fields,
+shows bounded results, and carries the selected facility/license number into the
+request page without persisting lookup data.
 It does not run hosted live crawling, execute connectors, mutate reviewer-
 created state from the request page, create audit rows, persist feedback, add non-CCLD source
-selection, or prove public-source completeness. A local/test CCLD-only artifact
+selection, persist lookup data, or prove public-source completeness. A local/test CCLD-only artifact
 builder now produces hosted seeded-corpus JSON from validated CCLD SQLite
 pipeline output outside browser requests; remaining gaps include real provider
 integration, production automation, persisted feedback, and deeper stateful

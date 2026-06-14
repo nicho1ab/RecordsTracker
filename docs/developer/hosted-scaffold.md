@@ -95,6 +95,25 @@ cloud hosting, QNAP, Azure, AWS, or public URLs are available.
 
 ## Open the CCLD record request page
 
+The scaffold includes a browser-accessible local/test CCLD facility lookup page at:
+
+```text
+http://127.0.0.1:8000/ccld/facilities
+```
+
+The lookup is CCLD-only. It reads the committed local/test CCLD program facility
+reference CSV fixture and lets a tester search by facility/license number,
+facility name, city, county, ZIP code, facility type, or status when those fields
+are present. Results are bounded and display safe scalar fields only. The “Use
+this facility” link carries the selected facility/license number into
+`/ccld/records/request`. Manual facility/license entry on the request page
+remains available.
+
+The lookup does not run live CCLD retrieval, execute connectors, read ignored raw
+CSVs or generated profiling outputs, persist lookup data, mutate source-derived
+records, mutate reviewer-created state, create audit rows, persist operational
+metadata, prove public-source completeness, or support non-CCLD sources.
+
 The scaffold includes a browser-accessible local/test CCLD record request page at:
 
 ```text

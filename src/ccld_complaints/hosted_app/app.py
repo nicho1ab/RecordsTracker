@@ -25,6 +25,10 @@ from ccld_complaints.hosted_app.auth_provider_integration_plan import (
     AuthProviderIntegrationPlanContext,
     route_auth_provider_integration_plan_response,
 )
+from ccld_complaints.hosted_app.ccld_facility_lookup import (
+  CCLD_FACILITY_LOOKUP_PATH,
+  route_ccld_facility_lookup_response,
+)
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     CCLD_HELP_PATH,
     CCLD_RECORD_REQUEST_PATH,
@@ -708,6 +712,7 @@ def render_app_shell() -> str:
   <nav aria-label="CCLD records review navigation">
     <ul>
       <li><a href="{CCLD_RECORD_REQUEST_PATH}">Request CCLD records</a></li>
+      <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find CCLD facility</a></li>
       <li><a href="{CCLD_HELP_PATH}">How this works</a></li>
       <li><a href="/reviewer">Review loaded records</a></li>
       <li><a href="#feedback">Feedback guidance</a></li>
@@ -718,13 +723,17 @@ def render_app_shell() -> str:
   <main>
     <section id="start" aria-labelledby="start-heading">
       <h2 id="start-heading">Start with a CCLD facility request</h2>
-      <p>Enter a CCLD facility/license number and optional date range, then review
+      <p>Find a CCLD facility in the local/test reference CSV or enter a
+      facility/license number manually, then add an optional date range and review
       matching source-derived complaint records in a guided local/test queue.</p>
+      <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find CCLD facility</a></p>
       <p><a href="{CCLD_RECORD_REQUEST_PATH}">Request CCLD records</a></p>
     </section>
     <section id="workflow" aria-labelledby="workflow-heading">
       <h2 id="workflow-heading">Workflow overview</h2>
       <ol>
+        <li>Look up a CCLD facility by local/test reference fields or enter a
+        facility/license number manually.</li>
         <li>Request records for one CCLD facility/license number.</li>
         <li>Use already loaded records or load validated local/test CCLD output.</li>
         <li>Open the facility/date-scoped review queue.</li>
@@ -1079,6 +1088,8 @@ def route_response(
     if parsed_path == "/help":
         path = CCLD_HELP_PATH
         parsed_path = CCLD_HELP_PATH
+    if parsed_path == CCLD_FACILITY_LOOKUP_PATH:
+      return route_ccld_facility_lookup_response(path)
     if parsed_path.startswith(CCLD_UI_PREFIX):
         active_ccld_context = (
             default_ccld_record_request_ui_context()

@@ -48,6 +48,7 @@ class HostedSchemaApiScaffold:
     reviewer_workflow_shell_note_action_implemented: bool = True
     reviewer_workflow_shell_status_action_implemented: bool = True
     reviewer_ui_shell_implemented: bool = True
+    ccld_facility_lookup_ui_implemented: bool = True
     ccld_record_request_ui_shell_implemented: bool = True
     ccld_request_result_queue_guidance_implemented: bool = True
     ccld_request_queue_status_progress_implemented: bool = True

@@ -113,6 +113,15 @@ run live crawling, execute connectors, mutate reviewer-created state from the
 request page, create audit rows, mutate operational metadata rows, or persist
 feedback, and does not expose secrets, private URLs, provider claims, credentials,
 or unnecessary sensitive narrative content.
+Hosted CCLD facility lookup tests should cover committed CCLD facility reference
+CSV loading, required column mapping, safe scalar display fields, partial and
+case-insensitive matching by facility/license number, facility name, city,
+county, ZIP code, facility type, and status when present, bounded result lists,
+empty-search guidance, no-match guidance, selected facility carry-forward into
+`/ccld/records/request`, manual facility/license entry preservation, no live
+browser retrieval, no connector execution, no persistence, no source-derived,
+reviewer-created, audit, import, or operational metadata mutation, accessible
+headings/labels/captions/link text, and no-secret HTML output.
 Hosted CCLD import/reload tests must prove local validated artifacts are
 validated before load, source URL/raw SHA-256/raw path/connector traceability is
 preserved, existing source-derived keys are refreshed without duplicates,
