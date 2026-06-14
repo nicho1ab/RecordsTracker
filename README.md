@@ -95,6 +95,19 @@ Downloaded live raw files are saved under the ignored local `data/raw` path by
 default. Treat public complaint narratives carefully because they may contain
 sensitive details even when publicly available.
 
+To profile ignored local public-source CSV examples before any source expansion
+implementation is proposed, run:
+
+```powershell
+.\scripts\profile-public-source-csvs.ps1
+```
+
+The profiler reads CSV files from `data\raw\source-profiling`, skips non-CSV
+files, and writes ignored local summaries under `data\processed\source-profiling`
+and `data\logs\source-profiling.log`. It does not import data, modify raw files,
+create canonical fields, approve schemas or migrations, add connectors, or load
+anything into the hosted scaffold.
+
 To export source-traceable CSV review outputs after populating the database:
 
 ```powershell

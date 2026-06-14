@@ -245,6 +245,11 @@ the governed primary future review experience.
 	source-record list/detail shell using visible sample metadata indicators only,
 	preserving the no-database, no-import, no-authentication, no-reviewer-state,
 	and no-deployment boundary.
+- Added local-only public-source CSV profiling tooling for ignored
+	`data/raw/source-profiling/` CSV files, writing ignored JSON, CSV, and log
+	outputs for source discovery without importing data, adding connectors,
+	creating schemas or migrations, changing canonical fields, or loading hosted
+	app behavior.
 
 ## Near-term milestones
 
