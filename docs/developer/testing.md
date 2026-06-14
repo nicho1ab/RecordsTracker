@@ -116,7 +116,8 @@ reviewer-created note/status indicators and latest reviewer-created timestamp,
 safe source traceability display, safe related seeded bundle context with
 sensitive narrative fields hidden, labeled search/note/status controls,
 note/status form delegation to the existing workflow actions, read-after-write
-reviewer-created state display, unauthenticated, disabled or revoked, role-denied, out-of-scope,
+reviewer-created state display, no-match search, missing-record, invalid note/
+status form, and blocked-request next-step guidance, unauthenticated, disabled or revoked, role-denied, out-of-scope,
 and source-read-versus-reviewer-state permission separation blocking, no-secret
 HTML output, successful audit creation, and no source-derived mutation.
 

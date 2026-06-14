@@ -40,7 +40,7 @@ Accessibility requirements apply to:
 	search, note, and status controls, table captions/headings for source-derived
 	context, safe related seeded context, list-level reviewer-created state
 	indicators, and reviewer-created state, and visible error or blocked-request
-	messages.
+	messages with useful next-step links.
 
 ### Color and contrast
 
