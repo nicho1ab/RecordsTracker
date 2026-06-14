@@ -6,10 +6,11 @@ from typing import Any, cast
 from urllib.parse import quote
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func, select
 from sqlalchemy.engine import Connection
 
 from ccld_complaints.hosted_app.app import route_response
+from ccld_complaints.hosted_app.audit_events import hosted_audit_events
 from ccld_complaints.hosted_app.auth import (
     AuthenticatedActor,
     HostedAccessScope,
@@ -17,11 +18,23 @@ from ccld_complaints.hosted_app.auth import (
     HostedActorCategory,
     HostedTesterRole,
 )
+from ccld_complaints.hosted_app.reset_reload_dry_run import (
+    hosted_reset_reload_planning_metadata,
+)
+from ccld_complaints.hosted_app.reviewer_created_state import (
+    create_reviewer_created_state_scaffold,
+    hosted_reviewer_created_state,
+)
+from ccld_complaints.hosted_app.reviewer_created_state_routes import (
+    ReviewerCreatedStateApiContext,
+)
 from ccld_complaints.hosted_app.reviewer_workflow_shell import (
     ReviewerWorkflowShellContext,
 )
 from ccld_complaints.hosted_app.seeded_import import (
+    hosted_import_batches,
     hosted_seeded_import_metadata,
+    hosted_source_derived_records,
     import_seeded_corpus_artifact,
     load_seeded_corpus_artifact,
 )
@@ -54,6 +67,10 @@ def test_reviewer_workflow_shell_lists_authenticated_review_queue() -> None:
         "scope_id": TEST_SCOPE.scope_id,
     }
     assert payload["workflow_shell"]["reviewer_created_state_persistence"] is False
+    assert payload["workflow_shell"]["reviewer_created_state_reads_enabled"] is True
+    assert payload["workflow_shell"]["reviewer_created_state_read_route_source"] == (
+        "/api/reviewer-created-state"
+    )
     assert payload["workflow_shell"]["reviewer_actions_enabled"] == []
     assert payload["queue"]["empty"] is False
     assert payload["queue"]["pagination"] == {
@@ -87,6 +104,9 @@ def test_reviewer_workflow_shell_lists_authenticated_review_queue() -> None:
     assert source_record["import_batch"]["import_batch_id"] == TEST_SCOPE.scope_id
     assert item["reviewer_created_state_boundary"] == {
         "persistence_enabled": False,
+        "associated_state_reads_enabled": True,
+        "associated_state_read_route_source": "/api/reviewer-created-state",
+        "associated_state_reads_require_reviewer_state_read_permission": True,
         "reads_create_or_modify_state": False,
         "anonymous_reviewer_created_state_allowed": False,
         "available_actions": [],
@@ -105,6 +125,14 @@ def test_reviewer_workflow_shell_lists_authenticated_review_queue() -> None:
 
 def test_reviewer_workflow_shell_fetches_authenticated_detail() -> None:
     with _seeded_connection() as connection:
+        created = create_reviewer_created_state_scaffold(
+            connection,
+            _actor(roles=("tester_reviewer",)),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            state_payload={"scaffold_state": "source_check_needed"},
+        )
+
         status, _content_type, body = route_response(
             "/api/reviewer/source-derived-review/detail"
             f"?source_record_key={quote(COMPLAINT_KEY)}",
@@ -126,6 +154,46 @@ def test_reviewer_workflow_shell_fetches_authenticated_detail() -> None:
     assert payload["detail"]["reviewer_created_state_boundary"][
         "persistence_enabled"
     ] is False
+    associated_state = payload["detail"]["associated_reviewer_created_state"]
+    assert associated_state["route_source"] == "/api/reviewer-created-state"
+    assert associated_state["empty"] is False
+    assert associated_state["filters"] == {
+        "source_record_key": COMPLAINT_KEY,
+        "state_kind": None,
+        "actor_provider_subject": None,
+    }
+    assert associated_state["pagination"] == {
+        "limit": 100,
+        "offset": 0,
+        "returned_count": 1,
+    }
+    [state_row] = associated_state["reviewer_created_state"]
+    assert state_row["reviewer_state_id"] == created.reviewer_state_id
+    assert state_row["source_record_key"] == COMPLAINT_KEY
+    assert state_row["state_payload"] == {"scaffold_state": "source_check_needed"}
+    assert "email" not in json.dumps(associated_state).casefold()
+    assert "token" not in json.dumps(associated_state).casefold()
+
+
+def test_reviewer_workflow_shell_detail_includes_empty_associated_state() -> None:
+    with _seeded_connection() as connection:
+        status, _content_type, body = route_response(
+            "/api/reviewer/source-derived-review/detail"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_workflow_shell_context=_workflow_context(connection),
+        )
+
+    payload = _json_body(body)
+
+    assert status == 200
+    associated_state = payload["detail"]["associated_reviewer_created_state"]
+    assert associated_state["empty"] is True
+    assert associated_state["reviewer_created_state"] == []
+    assert associated_state["pagination"] == {
+        "limit": 100,
+        "offset": 0,
+        "returned_count": 0,
+    }
 
 
 def test_reviewer_workflow_shell_rejects_unauthenticated_actor() -> None:
@@ -167,6 +235,23 @@ def test_reviewer_workflow_shell_rejects_role_without_read_permission() -> None:
             reviewer_workflow_shell_context=_workflow_context(
                 connection,
                 actor=_actor(roles=()),
+            ),
+        )
+
+    payload = _json_body(body)
+
+    assert status == 403
+    assert payload["error"]["code"] == "role_denied"
+
+
+def test_reviewer_workflow_shell_rejects_source_read_without_reviewer_state_read() -> None:
+    with _seeded_connection() as connection:
+        status, _content_type, body = route_response(
+            "/api/reviewer/source-derived-review/detail"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_workflow_shell_context=_workflow_context(
+                connection,
+                actor=_actor(roles=("developer_operator",), actor_category="operator"),
             ),
         )
 
@@ -224,6 +309,34 @@ def test_reviewer_workflow_shell_returns_not_found_for_missing_detail() -> None:
     assert payload["error"]["code"] == "source_derived_record_not_found"
 
 
+def test_reviewer_workflow_shell_detail_reads_do_not_mutate_persisted_tables() -> None:
+    with _seeded_connection() as connection:
+        create_reviewer_created_state_scaffold(
+            connection,
+            _actor(roles=("tester_reviewer",)),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            state_payload={"scaffold_state": "in_review"},
+        )
+        before_counts = _table_counts(connection)
+
+        status, _content_type, _body = route_response(
+            "/api/reviewer/source-derived-review/detail"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_workflow_shell_context=_workflow_context(connection),
+        )
+        after_counts = _table_counts(connection)
+
+    assert status == 200
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 1,
+        "audit_events": 1,
+        "reset_reload_planning_metadata": 0,
+    }
+
+
 def test_reviewer_workflow_shell_requires_explicit_local_test_context() -> None:
     status, _content_type, body = route_response("/api/reviewer/source-derived-review/queue")
 
@@ -251,7 +364,12 @@ def _workflow_context(
             connection=connection,
             actor=cast(AuthenticatedActor | None, context_actor),
             scope=scope,
-        )
+        ),
+        reviewer_created_state_api_context=ReviewerCreatedStateApiContext(
+            connection=connection,
+            actor=cast(AuthenticatedActor | None, context_actor),
+            scope=scope,
+        ),
     )
 
 
@@ -287,3 +405,28 @@ def _empty_connection() -> Connection:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     hosted_seeded_import_metadata.create_all(engine)
     return engine.connect()
+
+
+def _table_counts(connection: Connection) -> dict[str, int]:
+    import_batches = connection.execute(
+        select(func.count()).select_from(hosted_import_batches)
+    ).scalar_one()
+    source_records = connection.execute(
+        select(func.count()).select_from(hosted_source_derived_records)
+    ).scalar_one()
+    reviewer_created_state = connection.execute(
+        select(func.count()).select_from(hosted_reviewer_created_state)
+    ).scalar_one()
+    audit_events = connection.execute(
+        select(func.count()).select_from(hosted_audit_events)
+    ).scalar_one()
+    reset_reload_planning_metadata = connection.execute(
+        select(func.count()).select_from(hosted_reset_reload_planning_metadata)
+    ).scalar_one()
+    return {
+        "import_batches": import_batches,
+        "source_records": source_records,
+        "reviewer_created_state": reviewer_created_state,
+        "audit_events": audit_events,
+        "reset_reload_planning_metadata": reset_reload_planning_metadata,
+    }

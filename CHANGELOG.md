@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Added a narrow local/test reviewer workflow shell detail integration that
+	composes persisted reviewer-created state read route output for the selected
+	source-derived record, with focused tests proving authenticated success, empty
+	associated state, missing source records, auth rejection, source-read versus
+	reviewer-state-read permission separation, non-secret payloads, and no-mutation
+	behavior without adding reviewer-created state writes, full workflow execution,
+	annotations UI, corrections UI, audit UI, export behavior, real login flow,
+	auth middleware, deployment, live crawling, or connector execution.
 - Added narrow local/test read-only reviewer-created state routes for persisted
 	scaffold rows, with JSON list and fetch-by-ID handlers, schema-backed filters,
 	reviewer-state read authorization, and focused tests proving empty list,

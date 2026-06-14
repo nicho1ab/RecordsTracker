@@ -149,7 +149,8 @@ public-record review notes.
    staged source-derived records. It also includes a local/test auth boundary
    scaffold for actor, role, scope, and account-status guards plus a narrow
    local/test authenticated source-derived read API route seam and read-only
-   reviewer workflow shell. It also includes a narrow local/test reviewer-
+   reviewer workflow shell that can include associated reviewer-created state
+   read route output on selected detail responses. It also includes a narrow local/test reviewer-
    created state persistence scaffold table/service, a narrow local/test audit
    event scaffold for successful reviewer-created state scaffold writes only, a
    narrow local/test authenticated audit history read route seam for those audit
@@ -174,6 +175,9 @@ public-record review notes.
    persistence. Database-backed service reads, auth boundary guards, the
    source-derived API route seam, and the read-only reviewer workflow shell are
    limited to local/test seams and are not wired into the sample UI routes.
+   Workflow shell detail payloads can compose associated reviewer-created state
+   read output only when tests or local callers provide explicit source-derived
+   and reviewer-created state route contexts.
    The reset/reload dry-run seam is also local/test only and requires an
    explicit database, actor, and scope context from tests or local callers. Its
    operational metadata scaffold stores dry-run planning metadata only, requires
@@ -193,6 +197,8 @@ public-record review notes.
    database, actor, and scope context plus reviewer-state read permission, and
    returns non-secret scaffold row fields without mutating source-derived,
    reviewer-created, audit, or operational metadata rows.
+   Source-derived read access alone does not grant workflow-shell access to
+   associated reviewer-created state context.
    The local `/facilities` route shows a read-only facility master
    sample view backed only by committed tiny public-source facility fixtures and
    manifest placeholder metadata. Facility detail pages include fixture-only

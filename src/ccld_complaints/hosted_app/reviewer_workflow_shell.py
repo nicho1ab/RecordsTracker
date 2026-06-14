@@ -6,6 +6,11 @@ from dataclasses import dataclass
 from typing import Any, cast
 from urllib.parse import parse_qs, urlencode, urlparse
 
+from ccld_complaints.hosted_app.reviewer_created_state_routes import (
+    REVIEWER_CREATED_STATE_API_PREFIX,
+    ReviewerCreatedStateApiContext,
+    route_reviewer_created_state_api_response,
+)
 from ccld_complaints.hosted_app.source_derived_routes import (
     SourceDerivedApiContext,
     route_source_derived_api_response,
@@ -18,6 +23,7 @@ DEFAULT_REVIEW_QUEUE_ENTITY_TYPE = "complaint"
 @dataclass(frozen=True)
 class ReviewerWorkflowShellContext:
     source_derived_api_context: SourceDerivedApiContext
+    reviewer_created_state_api_context: ReviewerCreatedStateApiContext
 
 
 def route_reviewer_workflow_shell_response(
@@ -104,6 +110,15 @@ def _review_detail_response(
 
     source_payload = _json_object(body)
     record = _record_object(source_payload, "record")
+    state_query = urlencode({"source_record_key": record["source_record_key"]})
+    state_status, state_content_type, state_body = route_reviewer_created_state_api_response(
+        f"{REVIEWER_CREATED_STATE_API_PREFIX}?{state_query}",
+        context.reviewer_created_state_api_context,
+    )
+    if state_status != 200:
+        return state_status, state_content_type, state_body
+
+    state_payload = _json_object(state_body)
     return _json_response(
         200,
         {
@@ -111,6 +126,9 @@ def _review_detail_response(
             "detail": {
                 "detail_id": f"source-derived-review-detail-shell:{record['source_record_key']}",
                 "source_record": _source_record_payload(record),
+                "associated_reviewer_created_state": (
+                    _associated_reviewer_created_state_payload(state_payload)
+                ),
                 "reviewer_created_state_boundary": _reviewer_state_boundary_payload(),
             },
         },
@@ -127,6 +145,8 @@ def _workflow_shell_payload(context: ReviewerWorkflowShellContext) -> dict[str, 
         "scope": {"scope_type": scope.scope_type, "scope_id": scope.scope_id},
         "source_of_record": "public portal",
         "reviewer_created_state_persistence": False,
+        "reviewer_created_state_reads_enabled": True,
+        "reviewer_created_state_read_route_source": REVIEWER_CREATED_STATE_API_PREFIX,
         "reviewer_actions_enabled": [],
         "deferred_actions": [
             "review status persistence",
@@ -173,6 +193,9 @@ def _source_record_payload(record: Mapping[str, Any]) -> dict[str, Any]:
 def _reviewer_state_boundary_payload() -> dict[str, Any]:
     return {
         "persistence_enabled": False,
+        "associated_state_reads_enabled": True,
+        "associated_state_read_route_source": REVIEWER_CREATED_STATE_API_PREFIX,
+        "associated_state_reads_require_reviewer_state_read_permission": True,
         "reads_create_or_modify_state": False,
         "anonymous_reviewer_created_state_allowed": False,
         "available_actions": [],
@@ -184,6 +207,26 @@ def _reviewer_state_boundary_payload() -> dict[str, Any]:
             "tester feedback",
             "export packet decisions",
         ],
+    }
+
+
+def _associated_reviewer_created_state_payload(
+    payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    records = _record_list(payload, "reviewer_created_state")
+    return {
+        "route_source": REVIEWER_CREATED_STATE_API_PREFIX,
+        "empty": len(records) == 0,
+        "reviewer_created_state": records,
+        "filters": payload["filters"],
+        "pagination": payload["pagination"],
+        "safety": {
+            "read_only_route": True,
+            "does_not_mutate_source_derived_records": True,
+            "does_not_mutate_reviewer_created_state": True,
+            "does_not_mutate_audit_events": True,
+            "does_not_mutate_operational_metadata": True,
+        },
     }
 
 

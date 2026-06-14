@@ -39,6 +39,11 @@ seam can serialize those read models for list and fetch access. A narrow
 local/test reviewer workflow shell can wrap those route responses into read-only
 queue and detail payloads that repeat source-derived record identity, original
 values, source traceability, source document metadata, and import batch context.
+The detail payload can also compose the existing reviewer-created state read
+route output for the selected source record when an explicit local/test
+reviewer-created state API context is supplied; that associated state remains
+non-canonical reviewer-created scaffold data and does not mutate source-derived,
+reviewer-created, audit, or operational metadata rows.
 A local/test reset/reload dry-run seam can inspect existing seeded import batch
 metadata, source-derived record counts by entity, and audit scaffold row counts
 for a requested corpus scope and report reviewer-created state handling options.

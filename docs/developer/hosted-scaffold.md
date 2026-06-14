@@ -192,7 +192,8 @@ wiring includes:
   handlers over staged source-derived records.
 - `ccld_complaints.hosted_app.reviewer_workflow_shell` for a local/test
   authenticated read-only review queue and detail shell over source-derived
-  route responses.
+  route responses, with selected detail payloads able to compose associated
+  reviewer-created state read route output.
 - `ccld_complaints.hosted_app.reviewer_created_state` for local/test
   authenticated reviewer-created state scaffold writes and scoped reads without
   mutating staged source-derived records.
@@ -262,14 +263,18 @@ state, or a production API framework.
 The reviewer workflow shell is intentionally small. It exposes local/test JSON
 handlers for `/api/reviewer/source-derived-review/queue` and
 `/api/reviewer/source-derived-review/detail` only when the caller supplies an
-explicit workflow shell context backed by the source-derived route context. The
-shell consumes the authenticated source-derived route seam, returns read-only
-queue and detail payloads with source-derived record identity, original values,
-source traceability, source document metadata, and import batch context, and
-marks reviewer-created state persistence and reviewer actions as deferred. It
-does not create queue state, review status, annotations, corrections, tester
-feedback, audit events, export packet state, sessions, cookies, production auth
-middleware, or a production API framework.
+explicit workflow shell context backed by the source-derived route context and
+the reviewer-created state read route context. The shell consumes the
+authenticated source-derived route seam, returns read-only queue and detail
+payloads with source-derived record identity, original values, source
+traceability, source document metadata, and import batch context, and can
+compose associated reviewer-created state read route output for the selected
+source record on detail responses. Source-derived reads and associated
+reviewer-created state reads each enforce their own authenticated, active,
+role/scope-allowed access. The shell marks reviewer-created state persistence
+and reviewer actions as deferred. It does not create queue state, review status,
+annotations, corrections, tester feedback, audit events, export packet state,
+sessions, cookies, production auth middleware, or a production API framework.
 
 The reviewer-created state persistence scaffold is intentionally small. It can
 create and read only local/test review-item-state scaffold rows after the caller
@@ -494,10 +499,13 @@ handlers, source traceability and import batch serialization, entity filtering,
 paging, missing-record responses, explicit route-context requirements, and
 unauthenticated, disabled or revoked, role-denied, and out-of-scope rejections.
 The reviewer workflow shell tests verify local/test authenticated queue and
-detail payloads over the source-derived route seam, empty queue behavior,
-missing-detail behavior, explicit workflow context requirements, source
-traceability preservation, import batch context, and unauthenticated, disabled
-or revoked, role-denied, and out-of-scope rejections without reviewer-created
+detail payloads over the source-derived route seam, associated reviewer-created
+state read route output for selected detail responses, empty associated state,
+empty queue behavior, missing-detail behavior, explicit workflow context
+requirements, source traceability preservation, import batch context,
+source-derived read versus reviewer-state read permission separation,
+non-secret associated state payloads, and unauthenticated, disabled or revoked,
+role-denied, out-of-scope, and no-mutation behavior without reviewer-created
 state persistence.
 The reviewer-created state scaffold tests verify separate storage from staged
 source-derived records, source-derived records are not modified, authenticated
