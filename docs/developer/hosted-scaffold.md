@@ -107,13 +107,21 @@ records through the local/test hosted route seams, shows matching seeded CCLD
 rows, and links matching complaint records into the hosted reviewer UI detail or
 list pages.
 
-The page does not run live crawling, execute connectors, import new records,
-write reviewer-created state, create audit rows, persist operational metadata,
-or modify source-derived rows. When no matching seeded records are available,
-or when broader retrieval is needed, it shows the existing explicit CCLD live
-fetch command to run outside the hosted UI and labels the remaining gap as a
-future safe CCLD-only import/reload path from validated pipeline output into
-hosted source-derived records.
+When no matching hosted rows are available, the page can offer a bounded local
+validated CCLD load action. That action reads committed local/test hosted
+seeded-corpus JSON output, validates the CCLD facility/date request, and stages
+matching CCLD source-derived rows through the existing idempotent hosted seeded
+import path. The result page reports matching rows before and after the load,
+new source-derived rows staged, existing rows refreshed, duplicate rows avoided,
+local validated rows outside the request, and any deferred reason.
+
+The page does not run live crawling, execute connectors, write reviewer-created
+state, create audit rows, persist operational metadata, destructively delete or
+overwrite source-derived rows, or support non-CCLD sources. When broader retrieval
+is needed, it still shows the existing explicit CCLD live fetch command to run
+outside the hosted UI. The remaining gap is a controlled artifact builder that
+converts validated CCLD SQLite pipeline output into hosted seeded-corpus JSON
+outside browser requests.
 
 ## Open the local/test reviewer UI shell
 

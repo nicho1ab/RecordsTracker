@@ -49,6 +49,7 @@ class HostedSchemaApiScaffold:
     reviewer_workflow_shell_status_action_implemented: bool = True
     reviewer_ui_shell_implemented: bool = True
     ccld_record_request_ui_shell_implemented: bool = True
+    ccld_validated_import_reload_implemented: bool = True
     reset_reload_dry_run_implemented: bool = True
     reset_reload_execution_plan_implemented: bool = True
     reset_reload_operational_metadata_scaffold_implemented: bool = True

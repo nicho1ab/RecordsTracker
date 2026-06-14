@@ -18,6 +18,7 @@ from ccld_complaints.hosted_app.auth import (
 )
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     CCLD_RECORD_REQUEST_PATH,
+    CcldRecordRequestUiContext,
     ccld_record_request_context_for_reviewer_context,
 )
 from ccld_complaints.hosted_app.reset_reload_dry_run import (
@@ -196,7 +197,106 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert_no_secret_html(html)
 
 
-def _context(connection: Connection):
+def test_ccld_record_request_empty_hosted_records_offers_local_validated_load() -> None:
+    with _empty_connection() as connection:
+        status, content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "facility_number": "157806098",
+                    "start_date": "2022-08-01",
+                    "end_date": "2022-08-31",
+                }
+            ),
+            ccld_record_request_ui_context=_context(connection),
+        )
+        counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert counts == _empty_unloaded_counts()
+    assert "No matching local/test CCLD records found" in html
+    assert "Load local validated CCLD records" in html
+    assert "does not run live public web requests" in html
+    assert "ccld_import_reload_action" in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_record_request_loads_local_validated_output_then_shows_matches() -> None:
+    with _empty_connection() as connection:
+        before_source_rows = _source_rows(connection)
+
+        status, content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "facility_number": "157806098",
+                    "start_date": "2022-08-01",
+                    "end_date": "2022-08-31",
+                    "ccld_import_reload_action": "load_local_validated_ccld_records",
+                }
+            ),
+            ccld_record_request_ui_context=_context(connection),
+        )
+
+        after_source_rows = _source_rows(connection)
+        counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+    detail_href = f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}"
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_source_rows == []
+    assert len(after_source_rows) == 6
+    assert counts == _empty_reviewer_counts()
+    assert "Local validated CCLD load result" in html
+    assert "Load executed: yes." in html
+    assert "New source-derived rows staged" in html
+    assert "validated_seeded_corpus.json" in html
+    assert "CCLD request accepted" in html
+    assert "Found 6 local/test CCLD source-derived row(s)" in normalized_html
+    assert detail_href in html
+    assert "Refresh from local validated CCLD output" in html
+    assert "run live public web requests" in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_record_request_local_validated_load_defers_when_dates_do_not_match() -> None:
+    with _empty_connection() as connection:
+        status, content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "facility_number": "157806098",
+                    "start_date": "2023-01-01",
+                    "end_date": "2023-12-31",
+                    "ccld_import_reload_action": "load_local_validated_ccld_records",
+                }
+            ),
+            ccld_record_request_ui_context=_context(connection),
+        )
+        counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert counts == _empty_unloaded_counts()
+    assert "Local validated CCLD load result" in html
+    assert "Load executed: no." in html
+    assert "No local validated CCLD records matched" in html
+    assert "No matching local/test CCLD records found" in html
+    assert_no_secret_html(html)
+
+
+def _context(connection: Connection) -> CcldRecordRequestUiContext:
     return ccld_record_request_context_for_reviewer_context(
         reviewer_ui_context_for_connection(
             connection,
@@ -239,6 +339,12 @@ def _seeded_connection() -> Connection:
     import_seeded_corpus_artifact(connection, artifact)
     transaction.commit()
     return connection
+
+
+def _empty_connection() -> Connection:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+    return engine.connect()
 
 
 def _actor(
@@ -300,6 +406,16 @@ def _empty_reviewer_counts() -> dict[str, int]:
     return {
         "import_batches": 1,
         "source_records": 6,
+        "reviewer_created_state": 0,
+        "audit_events": 0,
+        "reset_reload_planning_metadata": 0,
+    }
+
+
+def _empty_unloaded_counts() -> dict[str, int]:
+    return {
+        "import_batches": 0,
+        "source_records": 0,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,

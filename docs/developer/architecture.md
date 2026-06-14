@@ -78,9 +78,11 @@ migrations/
 18. Use the hosted CCLD record request page only as a local/test browser-
   accessible server-rendered HTML wrapper over existing seeded source-derived
   reads, allowing CCLD digit facility/license number and optional date-range
-  filtering plus reviewer UI links without running live crawling, executing
-  connectors, importing data, mutating hosted scaffold tables, supporting non-
-  CCLD sources, or adding production auth, schema changes, or deployment.
+  filtering, local validated hosted seeded-corpus load/refresh into existing
+  source-derived records, and reviewer UI links without running live crawling,
+  executing connectors, mutating reviewer-created state, creating audit rows,
+  supporting non-CCLD sources, or adding production auth, schema changes, or
+  deployment.
 19. Use the hosted reviewer-created state scaffold only for local/test
   authenticated placeholder state rows linked to staged source-derived record
   keys, including bounded non-secret reviewer note payloads and bounded reviewer

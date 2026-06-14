@@ -9,6 +9,13 @@ from datetime import date
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
+from ccld_complaints.hosted_app.ccld_import_reload import (
+    CcldImportReloadContext,
+    CcldImportReloadRequest,
+    CcldImportReloadResult,
+    ccld_import_reload_context_for_connection,
+    import_reload_validated_ccld_records,
+)
 from ccld_complaints.hosted_app.reviewer_ui import (
     REVIEWER_UI_DETAIL_PATH,
     REVIEWER_UI_RECORDS_PATH,
@@ -22,6 +29,8 @@ from ccld_complaints.hosted_app.source_derived_routes import (
 
 CCLD_UI_PREFIX = "/ccld"
 CCLD_RECORD_REQUEST_PATH = f"{CCLD_UI_PREFIX}/records/request"
+_IMPORT_RELOAD_ACTION_FIELD = "ccld_import_reload_action"
+_IMPORT_RELOAD_ACTION_VALUE = "load_local_validated_ccld_records"
 _FACILITY_NUMBER_RE = re.compile(r"^\d+$")
 _DATE_FIELDS = (
     "complaint_received_date",
@@ -69,6 +78,7 @@ class CcldRequestSearchResult:
 @dataclass(frozen=True)
 class CcldRecordRequestUiContext:
     reviewer_ui_context: ReviewerUiContext
+    import_reload_context: CcldImportReloadContext | None = None
 
 
 _DEFAULT_CCLD_RECORD_REQUEST_CONTEXT: CcldRecordRequestUiContext | None = None
@@ -77,8 +87,12 @@ _DEFAULT_CCLD_RECORD_REQUEST_CONTEXT: CcldRecordRequestUiContext | None = None
 def default_ccld_record_request_ui_context() -> CcldRecordRequestUiContext:
     global _DEFAULT_CCLD_RECORD_REQUEST_CONTEXT
     if _DEFAULT_CCLD_RECORD_REQUEST_CONTEXT is None:
+        reviewer_ui_context = default_local_test_reviewer_ui_context()
         _DEFAULT_CCLD_RECORD_REQUEST_CONTEXT = CcldRecordRequestUiContext(
-            reviewer_ui_context=default_local_test_reviewer_ui_context()
+            reviewer_ui_context=reviewer_ui_context,
+            import_reload_context=_import_reload_context_for_reviewer_ui_context(
+                reviewer_ui_context
+            ),
         )
     return _DEFAULT_CCLD_RECORD_REQUEST_CONTEXT
 
@@ -86,7 +100,20 @@ def default_ccld_record_request_ui_context() -> CcldRecordRequestUiContext:
 def ccld_record_request_context_for_reviewer_context(
     reviewer_ui_context: ReviewerUiContext,
 ) -> CcldRecordRequestUiContext:
-    return CcldRecordRequestUiContext(reviewer_ui_context=reviewer_ui_context)
+    return CcldRecordRequestUiContext(
+        reviewer_ui_context=reviewer_ui_context,
+        import_reload_context=_import_reload_context_for_reviewer_ui_context(reviewer_ui_context),
+    )
+
+
+def _import_reload_context_for_reviewer_ui_context(
+    reviewer_ui_context: ReviewerUiContext,
+) -> CcldImportReloadContext:
+    source_context = reviewer_ui_context.workflow_shell_context.source_derived_api_context
+    return ccld_import_reload_context_for_connection(
+        source_context.connection,
+        scope=source_context.scope,
+    )
 
 
 def route_ccld_record_request_ui_response(
@@ -221,6 +248,36 @@ def _post_request_response(
     validation = validate_ccld_record_request(form_values)
     if validation.request is None:
         return _html_response(400, _render_invalid_request(validation.errors))
+    import_reload_result: CcldImportReloadResult | None = None
+    action = _first_form_value(form_values, _IMPORT_RELOAD_ACTION_FIELD)
+    if action and action != _IMPORT_RELOAD_ACTION_VALUE:
+        return _html_response(
+            400,
+            _render_invalid_request(("Choose a supported CCLD local/test action.",)),
+        )
+    if action == _IMPORT_RELOAD_ACTION_VALUE:
+        if context.import_reload_context is None:
+            return _html_response(
+                503,
+                _render_message_page(
+                    title="CCLD local validated load unavailable",
+                    heading="CCLD local validated load unavailable",
+                    message="Local/test CCLD import/reload context is not configured.",
+                    guidance="Return to the request page and retry the local/test request.",
+                    links=(("Return to CCLD request", CCLD_RECORD_REQUEST_PATH),),
+                ),
+            )
+        try:
+            import_reload_result = import_reload_validated_ccld_records(
+                context.import_reload_context,
+                CcldImportReloadRequest(
+                    facility_number=validation.request.facility_number,
+                    start_date=validation.request.start_date,
+                    end_date=validation.request.end_date,
+                ),
+            )
+        except ValueError as error:
+            return _html_response(400, _render_invalid_request((str(error),)))
     source_status, source_records_or_body = _source_derived_records(context)
     if source_status != 200:
         return _html_response(
@@ -238,7 +295,15 @@ def _post_request_response(
     if isinstance(source_records_or_body, bytes):
         raise ValueError("Expected source-derived records.")
     result = find_ccld_records_for_request(validation.request, source_records_or_body)
-    return _html_response(200, _render_request_result(validation.request, result))
+    return _html_response(
+        200,
+        _render_request_result(
+            validation.request,
+            result,
+            import_reload_result=import_reload_result,
+            import_reload_available=context.import_reload_context is not None,
+        ),
+    )
 
 
 def _source_derived_records(
@@ -285,8 +350,9 @@ def _render_request_form() -> str:
     <section aria-labelledby="request-boundary-heading">
       <h2 id="request-boundary-heading">What happens next</h2>
             <p>If matching seeded CCLD records are already available, this page links
-            to reviewer list/detail pages. If not, it explains the existing CCLD
-            pipeline command that must run outside the hosted UI.</p>
+            to reviewer list/detail pages. If not, it can offer a bounded local
+            validated CCLD load from committed local/test output, then explains the
+            existing CCLD pipeline command that must run outside the hosted UI.</p>
     </section>""",
     )
 
@@ -311,15 +377,31 @@ def _render_invalid_request(errors: tuple[str, ...]) -> str:
 def _render_request_result(
     request: CcldRecordRequest,
     result: CcldRequestSearchResult,
+    *,
+    import_reload_result: CcldImportReloadResult | None = None,
+    import_reload_available: bool = False,
 ) -> str:
     if result.matched_records:
-        return _render_matched_result(request, result)
-    return _render_no_match_result(request, result)
+        return _render_matched_result(
+            request,
+            result,
+            import_reload_result=import_reload_result,
+            import_reload_available=import_reload_available,
+        )
+    return _render_no_match_result(
+        request,
+        result,
+        import_reload_result=import_reload_result,
+        import_reload_available=import_reload_available,
+    )
 
 
 def _render_matched_result(
     request: CcldRecordRequest,
     result: CcldRequestSearchResult,
+    *,
+    import_reload_result: CcldImportReloadResult | None,
+    import_reload_available: bool,
 ) -> str:
     rows = "\n".join(
         _render_result_row(record, result.matched_complaint_keys)
@@ -336,6 +418,7 @@ def _render_matched_result(
             <p>These records are already staged in the local/test hosted seeded corpus.
             The hosted UI did not run live retrieval or import.</p>
     </section>
+    {_render_import_reload_summary(import_reload_result)}
     <section aria-labelledby="matching-records-heading">
       <h2 id="matching-records-heading">Matching imported CCLD records</h2>
       <table>
@@ -354,6 +437,7 @@ def _render_matched_result(
       </table>
       <p><a href="{REVIEWER_UI_RECORDS_PATH}">Open reviewer records</a></p>
     </section>
+        {_render_import_reload_action(request, import_reload_available, refresh=True)}
     {_render_pipeline_plan(request)}""",
     )
 
@@ -361,6 +445,9 @@ def _render_matched_result(
 def _render_no_match_result(
     request: CcldRecordRequest,
     result: CcldRequestSearchResult,
+    *,
+    import_reload_result: CcldImportReloadResult | None,
+    import_reload_available: bool,
 ) -> str:
     local_count = len(result.all_facility_records)
     return _page(
@@ -374,6 +461,8 @@ def _render_no_match_result(
       <p>Rows for this facility currently available before date filtering: {local_count}.</p>
       <p><a href="{CCLD_RECORD_REQUEST_PATH}">Return to CCLD request</a></p>
     </section>
+        {_render_import_reload_summary(import_reload_result)}
+        {_render_import_reload_action(request, import_reload_available, refresh=False)}
     {_render_pipeline_plan(request)}""",
     )
 
@@ -401,6 +490,87 @@ def _render_pipeline_plan(request: CcldRecordRequest) -> str:
             should be handled in a separate branch with tests and no live crawling
             from browser requests.</p>
     </section>"""
+
+
+def _render_import_reload_summary(result: CcldImportReloadResult | None) -> str:
+    if result is None:
+        return ""
+    deferred_items = ""
+    if result.deferred_reasons:
+        deferred_items = "\n".join(
+            f"        <li>{_escape(reason)}</li>" for reason in result.deferred_reasons
+        )
+        deferred_items = f"""      <h3>Deferred local validated rows</h3>
+            <ul>
+{deferred_items}
+            </ul>"""
+    artifact_text = "none"
+    if result.source_artifact_identities:
+        artifact_text = ", ".join(
+            _safe_artifact_label(identity) for identity in result.source_artifact_identities
+        )
+    return f"""    <section aria-labelledby="import-reload-summary-heading">
+            <h2 id="import-reload-summary-heading">Local validated CCLD load result</h2>
+            <p>Load executed: {_yes_no(result.import_executed)}.</p>
+            <dl>
+                <dt>Matching rows before load</dt>
+                <dd>{result.available_before_count}</dd>
+                <dt>Matching rows after load</dt>
+                <dd>{result.available_after_count}</dd>
+                <dt>New source-derived rows staged</dt>
+                <dd>{result.imported_source_record_count}</dd>
+                <dt>Existing source-derived rows refreshed</dt>
+                <dd>{result.refreshed_source_record_count}</dd>
+                <dt>Duplicate source-derived rows avoided</dt>
+                <dd>{result.skipped_duplicate_source_record_count}</dd>
+                <dt>Local validated rows outside this request</dt>
+                <dd>{result.skipped_non_matching_source_record_count}</dd>
+                <dt>Validated artifact used</dt>
+                <dd>{_escape(artifact_text)}</dd>
+            </dl>
+{deferred_items}
+        </section>"""
+
+
+def _render_import_reload_action(
+    request: CcldRecordRequest,
+    import_reload_available: bool,
+    *,
+    refresh: bool,
+) -> str:
+    if not import_reload_available:
+        return """    <section aria-labelledby="import-reload-action-heading">
+            <h2 id="import-reload-action-heading">Local validated CCLD load unavailable</h2>
+            <p>This local/test process does not have a validated CCLD import/reload context.</p>
+        </section>"""
+    button_label = (
+        "Refresh from local validated CCLD output"
+        if refresh
+        else "Load local validated CCLD records"
+    )
+    return f"""    <section aria-labelledby="import-reload-action-heading">
+            <h2 id="import-reload-action-heading">Local validated CCLD load</h2>
+            <p>This action reads committed local/test validated CCLD output and stages
+            matching source-derived records through the existing hosted seeded import path.
+            It does not run live public web requests.</p>
+            <form action="{CCLD_RECORD_REQUEST_PATH}" method="post">
+                <input type="hidden" name="facility_number"
+                    value="{_escape(request.facility_number)}">
+                <input type="hidden" name="start_date" value="{_escape(request.start_date or "")}">
+                <input type="hidden" name="end_date" value="{_escape(request.end_date or "")}">
+                <input type="hidden" name="{_IMPORT_RELOAD_ACTION_FIELD}"
+                    value="{_IMPORT_RELOAD_ACTION_VALUE}">
+                <p><button type="submit">{_escape(button_label)}</button></p>
+            </form>
+        </section>"""
+
+
+def _safe_artifact_label(identity: str) -> str:
+    return identity.rsplit("/", maxsplit=1)[-1]
+
+
+def _yes_no(value: bool) -> str:
+    return "yes" if value else "no"
 
 
 def _render_result_row(
