@@ -269,6 +269,15 @@ the governed primary future review experience.
 	middleware, reviewer-created state, audit persistence, exports, reset/reload,
 	production automation, hosted live crawling, connector execution, deployment,
 	or schema changes.
+- Added the first narrow local/test authenticated reviewer-facing workflow shell
+	over the source-derived read route seam, with read-only queue and detail JSON
+	payloads that preserve record identity, original values, source traceability,
+	source document metadata, import batch context, auth guard behavior, and the
+	source-derived versus reviewer-created state boundary without adding real
+	login flow, auth middleware, reviewer-created state persistence, annotations,
+	corrections, review status, audit persistence, exports, reset/reload,
+	production automation, hosted live crawling, connector execution, deployment,
+	or schema changes.
 - Added the first local hosted tester MVP scaffold with a Python standard-library
 	app shell, health route, smoke check, focused tests, and local Windows
 	PowerShell run documentation without adding cloud, QNAP, Docker, schema,
@@ -326,9 +335,10 @@ the governed primary future review experience.
 - Use the accepted audit, export, reset/reload, tester retention, auth
 	provider-class, role, scope, audit-identity, PostgreSQL, Alembic migration,
 	controlled seeded import, database-backed source-derived read, auth boundary
-	scaffold, and local/test source-derived read route seam to move the next
-	hosted tester MVP branches toward real provider integration, reset/reload
-	planning, and the first authenticated tester workflow.
+	scaffold, local/test source-derived read route seam, and first read-only
+	authenticated tester workflow shell to move the next hosted tester MVP
+	branches toward real provider integration, reset/reload planning, and
+	stateful reviewer-created workflow layers.
 - Preserve Datasette, SQLite views, and review-bundle exports where they support
 	validation, inspection, debugging, local exploration, and export workflows.
 - Harden extraction with additional representative fixtures and edge-case tests.
@@ -359,8 +369,9 @@ exploration, or export support.
 3. Implement reviewer-created state persistence, audit event persistence,
 	export packet state, tester feedback, and reset/reload metadata in focused
 	PostgreSQL/Alembic-backed branches.
-4. Implement the first authenticated tester workflow over a seeded,
-	source-traceable corpus.
+4. Implement stateful reviewer-created workflow layers over a seeded,
+	source-traceable corpus after auth, schema, audit, and permission boundaries
+	are ready.
 5. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
 
@@ -383,12 +394,13 @@ define the smallest useful product shape:
 	ADR-0011's authenticated access boundary, ADR-0012's scaffold-first sequence,
 	ADR-0013's operational boundaries, ADR-0014's auth provider-class and role
 	implementation direction, and ADR-0015's PostgreSQL/Alembic direction plus the
-	minimal scaffold wiring, controlled seeded import path, and database-backed
-	source-derived read service, local/test auth boundary scaffold, and local/test
-	source-derived read route seam to move into real provider integration,
-	reset/reload planning, reviewer-created state persistence,
-	audit/export/feedback/reset metadata, and first authenticated tester workflow
-	implementation.
+	minimal scaffold wiring, controlled seeded import path, database-backed
+	source-derived read service, local/test auth boundary scaffold, local/test
+	source-derived read route seam, and first read-only authenticated workflow
+	shell to move into real provider integration, reset/reload planning,
+	reviewer-created state persistence,
+	audit/export/feedback/reset metadata, and stateful authenticated tester
+	workflow implementation.
 
 ## Decision points
 

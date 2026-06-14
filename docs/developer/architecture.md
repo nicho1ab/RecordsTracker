@@ -12,6 +12,7 @@ src/ccld_complaints/
   hosted_app/
     auth.py
     persistence.py
+    reviewer_workflow_shell.py
     schema_api_scaffold.py
     seeded_import.py
     source_derived_reads.py
@@ -51,7 +52,9 @@ migrations/
   service reads.
 14. Use the hosted source-derived route seam only for local/test authenticated
   JSON list and fetch access over staged seeded corpus records.
-15. Keep reviewer-created state, reset/reload behavior, real login flow, auth
+15. Use the hosted reviewer workflow shell only for local/test authenticated
+  read-only queue and detail payloads that consume the source-derived route seam.
+16. Keep reviewer-created state, reset/reload behavior, real login flow, auth
   middleware, provider integration, production API framework behavior, live
   crawling, connector execution, and production automation in future focused
   branches until those layers are implemented and tested.
@@ -104,19 +107,22 @@ provider-class configuration validation plus local/test authenticated actor,
 role, scope, account-status, target, and audit-context models for protected
 service seams. The source-derived route seam adds local/test authenticated JSON
 list, fetch-by-key, and fetch-by-stable-identity handlers over those staged
-records. The next hosted tester MVP work can move toward real provider
-integration, reset/reload planning, and the first authenticated tester workflow
-when each branch validates its layer.
+records. The reviewer workflow shell adds local/test authenticated read-only
+queue and detail payloads over those route responses while keeping review
+status, annotations, corrections, tester feedback, audit events, export packet
+state, and queue-state persistence deferred. The next hosted tester MVP work can
+move toward real provider integration, reset/reload planning, and stateful
+reviewer-created workflow layers when each branch validates its layer.
 
 The scaffold does not implement real provider login, token validation, sessions,
 cookies, auth middleware, role or user storage, production domain schema beyond
 the seeded import table group, production API framework behavior, production
-import automation, queues, annotations, corrections, exports, tester feedback,
+import automation, stateful queues, annotations, corrections, exports, tester feedback,
 audit trail, reset/reload, hosted live crawling, hosted connector execution,
 deployment, source-derived canonical field changes, reviewer-created state
 persistence, or extraction behavior. Its database-backed reads, auth guards,
-and source-derived read routes are limited to local/test service seams and are
-not reviewer workflows. It does not require Docker, QNAP Container Station,
+source-derived read routes, and reviewer workflow shell are limited to local/test
+service seams and do not persist reviewer-created workflow state. It does not require Docker, QNAP Container Station,
 Azure, AWS, a public URL, secrets, or cloud resources.
 
 See `docs/developer/hosted-scaffold.md` for local run and smoke-check commands.
