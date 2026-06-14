@@ -37,6 +37,7 @@ class HostedSchemaApiScaffold:
     source_derived_read_api_routes_implemented: bool = True
     reviewer_workflow_shell_implemented: bool = True
     reset_reload_dry_run_implemented: bool = True
+    reviewer_created_state_persistence_scaffold_implemented: bool = True
     api_routes_implemented: bool = True
     imports_implemented: bool = True
     reviewer_workflows_implemented: bool = False
@@ -75,8 +76,9 @@ HOSTED_API_BOUNDARIES = (
         implementation_status="scaffold-only",
         intended_future_use=(
             "Persist review status, notes, annotations, correction proposals, feedback, "
-            "and export packet decisions after auth and schema branches define the layer. "
-            "The current implementation exposes only a local/test read-only reviewer "
+            "and export packet decisions after future focused branches define each layer. "
+            "The current implementation adds only a local/test reviewer-created state "
+            "persistence scaffold table and service boundary, plus a read-only reviewer "
             "workflow shell over source-derived route responses."
         ),
         requires_authenticated_actor_before_write=True,
@@ -88,7 +90,7 @@ HOSTED_API_BOUNDARIES = (
         ),
         deferred=(
             "auth middleware",
-            "reviewer-created state persistence",
+            "full reviewer-created workflow persistence",
             "stateful reviewer workflows",
             "audit logging",
             "export builder behavior",

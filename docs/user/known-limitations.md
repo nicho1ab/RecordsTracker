@@ -37,14 +37,18 @@
   source-derived reads when tests provide an explicit route context, and a
   narrow local/test read-only reviewer workflow shell can return queue and
   detail payloads over that route seam when tests provide an explicit workflow
-  context. A local/test reset/reload dry-run seam can report seeded import batch
-  metadata, source-derived record counts, future reviewer-created state handling
-  modes, permissions, validation requirements, audit requirements, and deferred
+  context. A narrow local/test reviewer-created state persistence scaffold can
+  store attributed placeholder rows separately from source-derived records only
+  when tests or local callers provide an explicit database, authenticated actor,
+  and corpus scope context. A local/test reset/reload dry-run seam can report
+  seeded import batch metadata, source-derived record counts, scoped reviewer-
+  created scaffold row counts, future reviewer-created state handling modes,
+  permissions, validation requirements, audit requirements, and deferred
   destructive actions when tests provide an explicit dry-run context. The path
   does not run live crawling, execute connectors, automate production imports,
   execute reset/reload, delete or overwrite source-derived records, archive or
   clear reviewer-created state, persist audit events, authenticate browser
-  users, validate real provider tokens, create reviewer-created state, expose
-  stateful database-backed reviewer views or production API framework behavior,
-  or prove source completeness.
+  users, validate real provider tokens, implement full reviewer workflows,
+  expose stateful database-backed reviewer views or production API framework
+  behavior, or prove source completeness.
 - Datasette accessibility depends partly on the installed Datasette version, browser, and assistive technology. Validate keyboard navigation, table headers, focus visibility, and exported table usability before treating a release as stable.

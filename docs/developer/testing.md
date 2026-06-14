@@ -44,10 +44,17 @@ metadata, and retrieval timestamp.
 
 Hosted reset/reload planning tests must prove the implemented layer is
 non-mutating. Dry-run tests should check affected seeded import batches,
-source-derived record counts, reviewer-created state handling options,
-permission failures, invalid requests, and before/after table counts without
-executing imports, reloads, archives, clears, truncates, deletes, overwrites, or
-audit-event persistence.
+source-derived record counts, scoped reviewer-created scaffold counts,
+reviewer-created state handling options, permission failures, invalid requests,
+and before/after table counts without executing imports, reloads, archives,
+clears, truncates, deletes, overwrites, or audit-event persistence.
+
+Hosted reviewer-created state scaffold tests must prove reviewer-created rows
+are stored separately from source-derived rows, source-derived records and
+original extracted values are not modified, authenticated actor context is
+required, write permission and project/corpus scope are enforced, disabled or
+revoked actors are rejected, invalid source-derived references are rejected, and
+basic scoped readback works where implemented.
 
 ## Regression rule
 

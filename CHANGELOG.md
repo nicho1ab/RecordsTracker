@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Added a minimal local/test PostgreSQL/Alembic-backed reviewer-created state
+	persistence scaffold, with one separate table linked to staged source-derived
+	record keys, authenticated actor attribution, role/scope write guards,
+	invalid-reference rejection, scoped readback, reset/reload dry-run counting,
+	and focused tests proving source-derived rows are not modified, without adding
+	full reviewer workflows, annotations UI, corrections UI, audit persistence,
+	exports, reset/reload execution, real login flow, auth middleware, deployment,
+	live crawling, or connector execution.
 - Added a local/test authenticated seeded corpus reset/reload dry-run seam that
 	reports existing seeded import batches, source-derived record counts by entity,
 	future reviewer-created state handling modes, required permissions,

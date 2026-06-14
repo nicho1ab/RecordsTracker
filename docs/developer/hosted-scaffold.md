@@ -165,7 +165,10 @@ wiring includes:
 - `alembic.ini` with an empty committed database URL setting.
 - `migrations/` as the Alembic script location.
 - `migrations/versions/20260613_0001_seeded_corpus_import.py` with import batch
-  metadata and source-derived record staging tables only.
+  metadata and source-derived record staging tables.
+- `migrations/versions/20260614_0002_reviewer_created_state_scaffold.py` with
+  one separate reviewer-created state scaffold table linked to staged
+  source-derived record keys.
 - `ccld_complaints.hosted_app.persistence` for no-secret database URL validation
   and ADR-0010 persistence boundary descriptors.
 - `ccld_complaints.hosted_app.auth` for managed OIDC/OAuth2 provider-class
@@ -183,6 +186,9 @@ wiring includes:
 - `ccld_complaints.hosted_app.reviewer_workflow_shell` for a local/test
   authenticated read-only review queue and detail shell over source-derived
   route responses.
+- `ccld_complaints.hosted_app.reviewer_created_state` for local/test
+  authenticated reviewer-created state scaffold writes and scoped reads without
+  mutating staged source-derived records.
 - `ccld_complaints.hosted_app.reset_reload_dry_run` for a local/test
   authenticated seeded corpus reset/reload dry-run route seam that reports
   future impact without mutating data.
@@ -244,14 +250,27 @@ does not create queue state, review status, annotations, corrections, tester
 feedback, audit events, export packet state, sessions, cookies, production auth
 middleware, or a production API framework.
 
+The reviewer-created state persistence scaffold is intentionally small. It can
+create and read only local/test review-item-state scaffold rows after the caller
+supplies an explicit database connection, authenticated actor context, and
+seeded corpus scope. Writes require reviewer-state write permission, active
+account status, matching scope, and an existing staged source-derived record key.
+Rows are stored in a separate reviewer-created table with actor attribution and
+do not overwrite source-derived records, original extracted values, raw source
+metadata, import metadata, or source traceability. The scaffold does not
+implement annotations, corrections, review status workflows, tester feedback,
+export packet decisions, audit event persistence, sessions, cookies, production
+auth middleware, or a production API framework.
+
 The reset/reload dry-run seam is intentionally small. It exposes the local/test
 JSON handler `/api/operations/seeded-corpus-reset-reload/dry-run` only when the
 caller supplies an explicit dry-run context with a database connection,
 authenticated operator or admin-style actor, and seeded corpus scope. The
 handler requires import/reload permission, reports existing import batch
-metadata, source-derived record counts by entity, future reviewer-created state
-handling options, validation requirements, audit requirements, and deferred
-destructive actions. It performs read-only inspection queries only. It does not
+metadata, source-derived record counts by entity, scoped reviewer-created
+scaffold row counts, future reviewer-created state handling options, validation
+requirements, audit requirements, and deferred destructive actions. It performs
+read-only inspection queries only. It does not
 delete, truncate, overwrite, archive, import, reload, persist audit events,
 create reset metadata, run live crawling, execute connectors, or implement a
 production API framework.
@@ -273,9 +292,8 @@ private URLs, hosted URLs, tokens, or deployment-specific configuration.
 
 The current path does not implement stateful database-backed reviewer views, real
 provider login, token validation, sessions, cookies, auth middleware, user or
-role persistence, reviewer-created state persistence, stateful reviewer workflows, audit
-persistence, export builders, reset/reload execution, reviewer-created state
-archive or clear behavior, production import
+role persistence, full reviewer-created workflows, audit persistence, export
+builders, reset/reload execution, reviewer-created state archive or clear behavior, production import
 automation, production API framework behavior, hosted live crawling, hosted
 connector execution, QNAP, Azure, AWS, public hosting, public URLs, or
 production deployment.
@@ -345,6 +363,12 @@ Run the focused hosted reset/reload dry-run tests:
 pytest tests/unit/test_hosted_reset_reload_dry_run.py
 ```
 
+Run the focused hosted reviewer-created state scaffold tests:
+
+```powershell
+pytest tests/unit/test_hosted_reviewer_created_state.py
+```
+
 These tests include local-only semantic/accessibility validation for the sample
 source view shell and facility master sample view. They use Python standard-library HTML parsing
 to verify one page-level heading, meaningful page titles, semantic main content,
@@ -379,12 +403,17 @@ missing-detail behavior, explicit workflow context requirements, source
 traceability preservation, import batch context, and unauthenticated, disabled
 or revoked, role-denied, and out-of-scope rejections without reviewer-created
 state persistence.
+The reviewer-created state scaffold tests verify separate storage from staged
+source-derived records, source-derived records are not modified, authenticated
+actor attribution is captured, reviewer-state write permission is required,
+disabled or revoked, role-denied, out-of-scope, and invalid source-derived
+reference writes are rejected, and scoped readback works where implemented.
 The reset/reload dry-run tests verify local/test authenticated planning payloads,
-seeded import batch and source-derived record impact counts, reviewer-created
-state handling options, invalid mode rejection, explicit dry-run context
-requirements, unauthenticated, disabled or revoked, role-denied, and
-out-of-scope rejections, and before/after row counts proving the dry-run does
-not mutate seeded import tables.
+seeded import batch, source-derived record, and reviewer-created scaffold impact
+counts, reviewer-created state handling options, invalid mode rejection,
+explicit dry-run context requirements, unauthenticated, disabled or revoked,
+role-denied, and out-of-scope rejections, and before/after row counts proving
+the dry-run does not mutate seeded import or reviewer-created scaffold tables.
 They do not require browser automation, Node.js, Playwright, Selenium, axe,
 Docker, a running PostgreSQL server, cloud services, or public URLs.
 
@@ -417,8 +446,10 @@ The scaffold intentionally does not implement:
 - Real authentication.
 - Real provider token validation, sessions, cookies, or auth middleware.
 - Persistent authorization, user, role, invitation, or scope storage.
-- Production schema beyond the seeded import table group.
-- Reviewer-created state, audit, export, feedback, auth, or reset/reload tables.
+- Production schema beyond the seeded import table group and the narrow
+  reviewer-created state scaffold table.
+- Full reviewer-created workflow, audit, export, feedback, auth, or
+  reset/reload tables.
 - HTTP API routes outside the narrow local/test source-derived read route seam,
   read-only reviewer workflow shell, and reset/reload dry-run seam.
 - Stateful database-backed reviewer views or workflows.
@@ -432,7 +463,7 @@ The scaffold intentionally does not implement:
 - Reset/reload execution.
 - Hosted live crawling.
 - Hosted connector execution.
-- Reviewer-created state persistence.
+- Full reviewer-created state workflow persistence.
 - Source-derived canonical field changes.
 - Extraction behavior changes.
 - QNAP, Azure, AWS, public hosting, public URLs, or production deployment.
