@@ -114,6 +114,13 @@ Audit persistence implementation remains deferred until schema and API work
 define the audit table or event store, stable identifiers, permissions,
 retention behavior, and validation tests.
 
+Current note: a later local/test scaffold PR added only a narrow audit event
+table and service for successful reviewer-created state scaffold writes. That
+scaffold validates the first audit persistence boundary but does not implement
+full audit policy coverage, audit UI, audit export, retention automation, or
+audit coverage for reset/reload, exports, feedback, annotations, corrections,
+provider login, role changes, or operational actions.
+
 ## Export Generation Boundary
 
 An export packet is reviewer-created/export workflow state. It is not a

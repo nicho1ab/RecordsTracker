@@ -44,18 +44,22 @@ records, a local/test auth boundary scaffold with actor, role, scope, target,
 and audit-context models, a narrow local/test authenticated source-derived
 HTTP/API read route seam, a narrow local/test authenticated read-only reviewer
 workflow shell over the route seam, a narrow local/test reviewer-created state
-persistence scaffold table and service boundary, a local/test authenticated
-reset/reload dry-run route seam, and scaffold/API boundary descriptors. The dry-run reports
+persistence scaffold table and service boundary, a narrow local/test audit event
+persistence scaffold for successful reviewer-created state scaffold writes only,
+a local/test authenticated reset/reload dry-run route seam, and scaffold/API
+boundary descriptors. The dry-run reports
 what a future seeded corpus reset/reload would affect, including existing import
 batch metadata, source-derived record counts by entity, future reviewer-created
 state handling modes, required permissions, validation requirements, audit
-requirements, scoped reviewer-created scaffold row counts, and deferred
+requirements, scoped reviewer-created scaffold row counts, scoped audit scaffold
+row counts, and deferred
 destructive actions, without mutating data. This path does
 not implement real login flow, provider registration, tokens, cookies, auth
 middleware, production API framework behavior, run migrations against a local
 database during scaffold tests, load live public data, run connector execution,
 automate production imports, execute reset/reload, archive or clear reviewer-
-created state, persist audit events, create stateful queues, implement full
+created state, persist audit events beyond the narrow reviewer-created state
+write scaffold, create stateful queues, implement full
 reviewer workflows, annotations, corrections, export packet behavior, or tester
 feedback.
 
@@ -249,7 +253,8 @@ assignments, or by itself create reviewer-created state. The narrow reviewer-
 created state scaffold reuses those local/test checks for attributed placeholder
 state writes, but it does not implement browser authentication, persistent
 authorization storage, full review workflows, annotations, corrections,
-exports, feedback, or audit persistence.
+exports, feedback, or audit persistence beyond the narrow reviewer-created
+state write scaffold.
 
 ### Seeded test corpus
 
@@ -312,7 +317,8 @@ preserved, archived, or explicitly cleared only through an elevated audited mode
 and reset/reload execution remains deferred until schema, API, permission,
 audit persistence, reviewer-created state, operational metadata, and import
 artifact decisions are implemented. The current local/test dry-run seam supports
-planning only and does not execute reset/reload or persist operational state.
+planning only and does not execute reset/reload or persist operational state; it
+counts existing audit scaffold rows but does not create new audit events.
 
 ### Operational boundaries
 

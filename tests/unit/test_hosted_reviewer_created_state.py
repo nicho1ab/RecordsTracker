@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.engine import Connection
 
+from ccld_complaints.hosted_app.audit_events import hosted_audit_events
 from ccld_complaints.hosted_app.auth import (
     AuthenticatedActor,
     HostedAccessScope,
@@ -55,9 +56,13 @@ def test_reviewer_created_state_is_stored_separately_without_source_mutation() -
         reviewer_state_count = connection.execute(
             select(func.count()).select_from(hosted_reviewer_created_state)
         ).scalar_one()
+        audit_event_count = connection.execute(
+            select(func.count()).select_from(hosted_audit_events)
+        ).scalar_one()
 
     assert before_source_rows == after_source_rows
     assert reviewer_state_count == 1
+    assert audit_event_count == 1
     assert created.reviewer_state_id.startswith("reviewer-state:")
     assert created.source_record_key == COMPLAINT_KEY
     assert created.scope == TEST_SCOPE
@@ -171,8 +176,12 @@ def test_reviewer_created_state_write_rejects_invalid_source_reference() -> None
         reviewer_state_count = connection.execute(
             select(func.count()).select_from(hosted_reviewer_created_state)
         ).scalar_one()
+        audit_event_count = connection.execute(
+            select(func.count()).select_from(hosted_audit_events)
+        ).scalar_one()
 
     assert reviewer_state_count == 0
+    assert audit_event_count == 0
 
 
 def test_reviewer_created_state_read_requires_scope() -> None:

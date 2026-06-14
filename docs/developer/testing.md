@@ -44,10 +44,11 @@ metadata, and retrieval timestamp.
 
 Hosted reset/reload planning tests must prove the implemented layer is
 non-mutating. Dry-run tests should check affected seeded import batches,
-source-derived record counts, scoped reviewer-created scaffold counts,
+source-derived record counts, scoped reviewer-created scaffold counts, scoped
+audit scaffold counts,
 reviewer-created state handling options, permission failures, invalid requests,
 and before/after table counts without executing imports, reloads, archives,
-clears, truncates, deletes, overwrites, or audit-event persistence.
+clears, truncates, deletes, overwrites, or new dry-run audit-event persistence.
 
 Hosted reviewer-created state scaffold tests must prove reviewer-created rows
 are stored separately from source-derived rows, source-derived records and
@@ -56,13 +57,27 @@ required, write permission and project/corpus scope are enforced, disabled or
 revoked actors are rejected, invalid source-derived references are rejected, and
 basic scoped readback works where implemented.
 
+Hosted audit event scaffold tests must prove successful reviewer-created state
+scaffold writes create separate audit rows with authenticated actor attribution,
+permission, project/corpus scope, action, target, and source-derived context;
+failed reviewer-created writes do not create successful audit rows; audit
+persistence failure rolls back the reviewer-created write; source-derived and
+reviewer-created rows are not modified by audit persistence; audit read
+permission is enforced; and audit context metadata does not store secrets,
+tokens, cookies, private headers, connection strings, or unnecessary sensitive
+narrative content.
+
 ## Regression rule
 
 When fixing extraction behavior, add the failing case as a fixture before changing parser code.
 
 ## CI failure rule
 
-When fixing a CI failure, identify the exact failing workflow command and run it locally when it does not require secrets or live external requests. If local and CI results differ, check cross-platform behavior such as line endings, path separators, locale-sensitive output, and Git-normalized fixture bytes.
+When fixing a CI failure, identify the exact failing workflow command and run it
+locally when it does not require secrets or live external requests. If local and
+CI results differ, check cross-platform behavior such as line endings, path
+separators, filesystem glob ordering, locale-sensitive output, and Git-
+normalized fixture bytes.
 
 Every bug or CI-failure fix must include a root-cause governance review. If a missing or unclear rule contributed to the failure, update the relevant governance, testing, fixture, connector, or workflow documentation in the same change. If no governance rule is needed, state why in the PR or handoff.
 

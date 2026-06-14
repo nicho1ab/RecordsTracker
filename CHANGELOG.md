@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Added a minimal local/test audit event persistence scaffold for successful
+	reviewer-created state scaffold writes only, with a separate audit table,
+	authenticated actor attribution, source-derived target context, atomic
+	reviewer-state-plus-audit write behavior, reset/reload dry-run counting, and
+	focused tests proving source-derived rows and reviewer-created rows are not
+	modified by audit persistence, without adding full audit coverage, audit UI,
+	audit export, retention automation, full reviewer workflows, annotations UI,
+	corrections UI, real login flow, auth middleware, deployment, live crawling, or
+	connector execution.
 - Added a minimal local/test PostgreSQL/Alembic-backed reviewer-created state
 	persistence scaffold, with one separate table linked to staged source-derived
 	record keys, authenticated actor attribution, role/scope write guards,

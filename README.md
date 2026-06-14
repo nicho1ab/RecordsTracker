@@ -150,12 +150,14 @@ public-record review notes.
    scaffold for actor, role, scope, and account-status guards plus a narrow
    local/test authenticated source-derived read API route seam and read-only
    reviewer workflow shell. It also includes a narrow local/test reviewer-
-   created state persistence scaffold table/service and a local/test
-   authenticated reset/reload dry-run route seam that reports what a future
-   seeded corpus reset/reload would affect without mutating data. It does not
+   created state persistence scaffold table/service, a narrow local/test audit
+   event scaffold for successful reviewer-created state scaffold writes only,
+   and a local/test authenticated reset/reload dry-run route seam that reports
+   what a future seeded corpus reset/reload would affect without mutating data. It does not
    implement real login flow, auth middleware, full reviewer workflows,
    annotations, corrections, review status UI, production import automation,
-   reset/reload execution, exports, deployment, QNAP, Azure, or AWS.
+   full audit coverage, audit UI, audit export, reset/reload execution, exports,
+   deployment, QNAP, Azure, or AWS.
    Start with `scripts/check-hosted-scaffold-local.ps1` to verify local Python
    and development-tool prerequisites without installing software or requiring
    admin rights.
@@ -170,7 +172,10 @@ public-record review notes.
    explicit database, actor, and scope context from tests or local callers. The
    reviewer-created state scaffold is also local/test only, requires explicit
    authenticated actor context and reviewer-state write permission for writes,
-   and stores scaffold rows separately from source-derived records.
+   and stores scaffold rows separately from source-derived records. The audit
+   event scaffold is also local/test only and records successful reviewer-
+   created state scaffold writes separately from both source-derived and
+   reviewer-created rows.
    The local `/facilities` route shows a read-only facility master
    sample view backed only by committed tiny public-source facility fixtures and
    manifest placeholder metadata. Facility detail pages include fixture-only

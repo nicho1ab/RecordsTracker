@@ -40,12 +40,16 @@ local/test reviewer workflow shell can wrap those route responses into read-only
 queue and detail payloads that repeat source-derived record identity, original
 values, source traceability, source document metadata, and import batch context.
 A local/test reset/reload dry-run seam can inspect existing seeded import batch
-metadata and source-derived record counts by entity for a requested corpus scope
-and report reviewer-created state handling options. A narrow local/test
+metadata, source-derived record counts by entity, and audit scaffold row counts
+for a requested corpus scope and report reviewer-created state handling options.
+A narrow local/test
 reviewer-created state scaffold table can store review-item-state placeholder
 rows separately from source-derived rows, linked through staged source-derived
-record keys and attributed to authenticated actors. Those import, read, route,
-workflow-shell, dry-run, and reviewer-created state scaffold mechanics do not
+record keys and attributed to authenticated actors. A narrow local/test audit
+event scaffold table can store audit rows for successful reviewer-created state
+scaffold writes only, separately from source-derived and reviewer-created rows.
+Those import, read, route, workflow-shell, dry-run, reviewer-created state, and
+audit scaffold mechanics do not
 add canonical source-derived fields, mutate source-derived records, run full
 reviewer workflows, implement annotations or corrections, run live crawling, run
 connector execution, implement a production API framework, execute reset/reload

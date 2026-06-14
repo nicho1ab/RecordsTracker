@@ -26,10 +26,11 @@
   authenticated read-only reviewer workflow shell over that route seam, a narrow
   local/test reviewer-created state persistence scaffold table/service with
   authenticated actor attribution and stable source-derived record references,
-  and a local/test authenticated reset/reload dry-run seam that reports seeded
-  import batch, source-derived record, and reviewer-created scaffold row impact
-  without mutating data, plus source-derived versus reviewer-created state
-  boundary descriptors.
+  a narrow local/test audit event persistence scaffold for successful reviewer-
+  created state scaffold writes only, and a local/test authenticated reset/reload
+  dry-run seam that reports seeded import batch, source-derived record,
+  reviewer-created scaffold row, and audit scaffold row impact without mutating
+  data, plus source-derived versus reviewer-created state boundary descriptors.
 - Local-only sample filtering/search: implemented for the hosted source-record
   shell using in-memory fixture/sample records only.
 - Fixture/sample-only source traceability summary panels: implemented for the
@@ -48,7 +49,7 @@
   development workstation, and not backed by live public data, ignored raw CSVs,
   generated profiling outputs, SQLite-backed sample UI routes, real provider
   login, auth middleware, persistent authorization storage, full reviewer-
-  created workflows, queues, annotations, corrections, exports, audit trail, reset/reload
+  created workflows, queues, annotations, corrections, exports, full audit trail, reset/reload
   execution, deployment, QNAP, Azure, AWS, or public URL behavior. Current API behavior is
   limited to local/test source-derived read handlers, read-only reviewer
   workflow shell handlers, reviewer-created state scaffold service helpers, and
@@ -101,7 +102,7 @@
 - ADR-0013 accepted hosted tester MVP operational boundaries for audit logging,
   export generation, reset/reload, and tester data retention, clearing the next
   product-moving implementation path without implementing schemas, APIs,
-  imports, exports, audit persistence, reset commands, retention automation, or
+  imports, exports, full audit persistence coverage, reset commands, retention automation, or
   deployment.
 - ADR-0014 accepted a managed standards-based OpenID Connect/OAuth 2.0 provider
   class and hosted tester MVP role implementation direction without
@@ -124,15 +125,15 @@
   reset/reload behavior, and richer import validation beyond the current tiny
   validated JSON artifact path.
 - Physical hosted schemas, Alembic migration files, PostgreSQL table groups,
-  indexes, constraints, and ORM models beyond the current seeded import and
-  reviewer-created state scaffold tables, including audit events, export packet
-  state, tester feedback, auth role/scope references, and operational/reset
-  metadata.
+  indexes, constraints, and ORM models beyond the current seeded import,
+  reviewer-created state scaffold, and audit event scaffold tables, including
+  export packet state, tester feedback, auth role/scope references, and
+  operational/reset metadata.
 - Real provider authentication, token validation, session handling, auth
   middleware, role storage, invitation flow, account lifecycle, access
   revocation, access review, audit schema, and user deprovisioning
   implementation.
-- Audit persistence implementation, export builder implementation,
+- Full audit persistence coverage, export builder implementation,
   reset/reload command or API implementation, tester feedback persistence,
   full reviewer-created state workflows, annotations, corrections, queues, and
   review-state behavior beyond the narrow scaffold table.
@@ -170,11 +171,11 @@
   database-backed source-derived read service, local/test auth boundary
   scaffold, local/test source-derived read route seam, and first local/test
   read-only authenticated tester workflow shell, reviewer-created state
-  persistence scaffold, and local/test reset/reload dry-run planning seam are
-  now in place. Next work should move to real provider integration,
-  reset/reload execution planning with persisted operational metadata,
-  audit/export/feedback persistence, or stateful reviewer-created workflow
-  layers, not repeat those completed items.
+  persistence scaffold, narrow audit event scaffold, and local/test
+  reset/reload dry-run planning seam are now in place. Next work should move to
+  real provider integration, reset/reload execution planning with persisted
+  operational metadata, export/feedback persistence, fuller audit coverage, or
+  stateful reviewer-created workflow layers, not repeat those completed items.
 - Local-only/sample-only boundaries remain active. Sample records must stay
   clearly marked as fixture/sample records and must not be presented as live,
   database-backed, complete, statewide, official, or production data.
@@ -198,15 +199,18 @@
   authenticated read-only reviewer workflow shell for queue and detail payloads
   over that route seam, plus a narrow local/test reviewer-created state
   scaffold that can write and read attributed placeholder rows separately from
-  source-derived records, plus a local/test authenticated dry-run seam that reports
-  seeded corpus reset/reload impact and scoped reviewer-created scaffold row
-  counts without deleting, overwriting, archiving, importing, reloading, or
-  persisting audit events. ADR-0013 still defines
-  reset/reload and audit expectations at the operational boundary;
+  source-derived records, plus a narrow local/test audit event scaffold for
+  successful reviewer-created state scaffold writes only, plus a local/test
+  authenticated dry-run seam that reports seeded corpus reset/reload impact and
+  scoped reviewer-created scaffold and audit scaffold row counts without
+  deleting, overwriting, archiving, importing, reloading, or creating new dry-run
+  audit events. ADR-0013 still defines reset/reload and audit expectations at
+  the operational boundary;
   implementation still needs
   comparison against retained SQLite/Datasette validation output, production
   import operations, stateful reviewer-created workflow layers, and
-  reset/reload execution behavior.
+  reset/reload execution behavior and full audit coverage beyond the scaffolded
+  reviewer-created state write event.
 - Future database/schema implementation: the current domain schema is limited to
   seeded import batch metadata and source-derived staging. Future schema work
   must use PostgreSQL and Alembic-managed migrations while preserving separate

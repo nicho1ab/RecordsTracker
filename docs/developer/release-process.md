@@ -56,10 +56,11 @@ pull request.
 - Wait for Required GitHub checks to pass before merge. The required checks are
 	`validate`, `docs-check`, `fixtures`, and `security` when the project workflows
 	are enabled.
-- When GitHub CLI is installed and authenticated, use `gh pr view` and
-	`gh pr checks --watch` to verify PR status instead of relying on memory or
-	manual browser refreshes. Do not include token values or authentication secrets
-	in PR bodies, docs, handoffs, logs, or commits.
+- When GitHub CLI is installed and authenticated, use non-interactive
+	`gh pr view --json ...` snapshots to verify PR status instead of relying on
+	memory or manual browser refreshes. Avoid watch commands in the VS Code
+	terminal. Do not include token values or authentication secrets in PR bodies,
+	docs, handoffs, logs, or commits.
 - If GitHub allows a PR to merge before the required check contexts pass, stop
 	and fix the repository branch protection rule or ruleset before the next merge.
 	Governance documentation is not a substitute for GitHub-side enforcement.
@@ -81,14 +82,15 @@ Useful status command:
 gh pr view --json number,state,isDraft,mergeStateStatus,url,statusCheckRollup
 ```
 
-Useful checks command:
+Useful checks snapshot command:
 
 ```powershell
-gh pr checks --watch
+gh pr view --json number,state,isDraft,mergeStateStatus,url,statusCheckRollup
 ```
 
 The checks output must show passing `validate`, `docs-check`, `fixtures`, and
-`security` contexts before a squash merge.
+`security` contexts before a squash merge. Refresh by rerunning the JSON
+snapshot command rather than using a watch command.
 
 ### Squash merge automation
 

@@ -194,15 +194,16 @@ Check the active PR state:
 gh pr view --json number,state,isDraft,mergeStateStatus,baseRefName,headRefName,url,statusCheckRollup
 ```
 
-Wait for required checks:
+Check required checks with a non-interactive snapshot:
 
 ```powershell
-gh pr checks --watch
+gh pr view --json number,state,isDraft,mergeStateStatus,baseRefName,headRefName,url,statusCheckRollup
 ```
 
 The checks output must include passing `validate`, `docs-check`, `fixtures`, and
 `security` contexts before merge. Do not rely only on local validation when
-deciding whether the PR is merge-ready.
+deciding whether the PR is merge-ready. Avoid watch commands in the VS Code
+terminal; refresh with another JSON snapshot instead.
 
 Squash merge after required checks pass and no conflicts remain:
 
