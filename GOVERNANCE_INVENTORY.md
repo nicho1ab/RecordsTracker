@@ -78,13 +78,18 @@
   implementation PRs used that approval only for the local scaffold, setup
   checks, read-only sample source-record shell, and semantic/accessibility
   validation.
+- ADR-0013 accepted hosted tester MVP operational boundaries for audit logging,
+  export generation, reset/reload, and tester data retention, clearing the next
+  product-moving implementation path without implementing schemas, APIs,
+  imports, exports, audit persistence, reset commands, retention automation, or
+  deployment.
 
 ## Remaining deferred decisions
 
 - Concrete frontend framework, API framework, database product, migration tool,
-  authentication provider, hosting platform, deployment pipeline, production
-  retention policy, backup/restore policy, final design system, and production
-  operations model.
+  authentication provider, hosting platform, deployment pipeline, retention
+  durations and automation, backup/restore policy, final design system, and
+  production operations model.
 - Controlled import artifact format, import command or API implementation,
   import validation, idempotency, reset/reload behavior, and comparison against
   retained SQLite/Datasette validation output.
@@ -94,7 +99,8 @@
 - Authentication, authorization, role storage, invitation flow, account
   lifecycle, access revocation, audit schema, and user deprovisioning
   implementation.
-- Audit logging, export generation, reset/reload, tester feedback persistence,
+- Audit persistence implementation, export builder implementation,
+  reset/reload command or API implementation, tester feedback persistence,
   reviewer-created state persistence, annotations, corrections, queues, and
   review-state workflows.
 - QNAP, Azure, AWS, cloud deployment, public URL behavior, hosted live crawling,
@@ -122,8 +128,10 @@
   local-only sample filtering/search, and fixture/sample-only source
   traceability summary panels, local CSV profiling, tiny public-source facility
   fixtures, the first fixture-backed facility master sample view, and the
-  fixture-only facility source coverage panel are complete. Next work should
-  move to an approved roadmap milestone, not repeat those completed items.
+  fixture-only facility source coverage panel are complete. ADR-0013 has also
+  completed the operational boundary decision for audit, export, reset/reload,
+  and retention planning. Next work should move to the approved product-moving
+  implementation path, not repeat those completed items.
 - Local-only/sample-only boundaries remain active. Sample records must stay
   clearly marked as fixture/sample records and must not be presented as live,
   database-backed, complete, statewide, official, or production data.
@@ -138,9 +146,10 @@
   semantic/accessibility validation before any live or database-backed source is
   introduced.
 - Future import path into hosted view: source-derived hosted records should come
-  from a controlled snapshot import from validated pipeline output after the
-  import artifact format, validation, stable identities, idempotency, reset/
-  reload behavior, and audit expectations are approved.
+  from a controlled snapshot import from validated pipeline output. ADR-0013
+  now defines reset/reload and audit expectations at the operational boundary;
+  implementation still needs import artifact format, validation, stable
+  identities, idempotency, schema/API behavior, and comparison details.
 - Future database/schema implementation: no schema changes are approved by the
   current scaffold. Future schema work must preserve separate physical areas or
   table groups for source-derived imported records, reviewer-created state,
@@ -153,10 +162,12 @@
   deployment, DNS, app registration, cloud database, and deployment credential
   choices remain deferred and must not be implied by local scaffold tooling.
 - Future audit, reviewer-state, correction, export, feedback, and reset/reload
-  workflows: these remain reviewer-created state and operational layers. They
-  must not overwrite source-derived canonical records, raw source files, source
-  document metadata, extraction audit rows, source URLs, raw hashes, connector
-  metadata, retrieval timestamps, or original extracted values.
+  workflows: ADR-0013 defines the operational boundaries for audit, export,
+  reset/reload, and retention. Implementations must still preserve them as
+  reviewer-created state and operational layers that do not overwrite
+  source-derived canonical records, raw source files, source document metadata,
+  extraction audit rows, source URLs, raw hashes, connector metadata, retrieval
+  timestamps, or original extracted values.
 - Future public-source expansion: structured CSV/open-data files, HTML portal
   pages, PDFs, metadata/catalog pages, and future multi-state sources need
   source inventory entries, local profiling, terms and sensitivity review,
