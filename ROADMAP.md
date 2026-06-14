@@ -234,6 +234,12 @@ the governed primary future review experience.
 	without adding schemas, tables, migrations, API routes, imports, reset
 	commands, auth middleware, secrets, deployment, CI configuration, live
 	crawling, or connector execution.
+- Added minimal PostgreSQL/Alembic project wiring for the hosted tester MVP,
+	including no-secret database URL validation, an Alembic script location with no
+	domain migration revisions, scaffold-only persistence/API boundary descriptors,
+	dependency declarations, local setup checks, and focused tests without adding
+	domain tables, API routes, imports, reset/reload commands, auth middleware,
+	secrets, deployment, live crawling, or connector execution.
 - Added the first local hosted tester MVP scaffold with a Python standard-library
 	app shell, health route, smoke check, focused tests, and local Windows
 	PowerShell run documentation without adding cloud, QNAP, Docker, schema,
@@ -290,9 +296,10 @@ the governed primary future review experience.
 	hosted implementation decisions are made.
 - Use the accepted audit, export, reset/reload, tester retention, auth
 	provider-class, role, scope, audit-identity, PostgreSQL, and Alembic migration
-	boundaries to move the next hosted tester MVP branches toward minimal hosted
-	schema/API scaffolding, focused auth integration, seeded corpus import/reset,
-	and the first authenticated tester workflow.
+	boundaries plus the minimal PostgreSQL/Alembic scaffold wiring to move the
+	next hosted tester MVP branches toward a first concrete domain migration/API
+	contract, focused auth integration, seeded corpus import/reset, and the first
+	authenticated tester workflow.
 - Preserve Datasette, SQLite views, and review-bundle exports where they support
 	validation, inspection, debugging, local exploration, and export workflows.
 - Harden extraction with additional representative fixtures and edge-case tests.
@@ -314,10 +321,9 @@ has been outgrown as the primary future review experience and should be extended
 only where it remains useful for validation, inspection, debugging, local
 exploration, or export support.
 
-1. Implement a minimal hosted schema/API scaffold for seeded source-derived
-	records and reviewer-created state using the accepted PostgreSQL,
-	Alembic-managed migration, auth provider-class, role/scope, and operational
-	boundaries.
+1. Implement the first narrow PostgreSQL/Alembic domain migration and API
+	contract for seeded source-derived records and reviewer-created state using
+	the accepted auth provider-class, role/scope, and operational boundaries.
 2. Implement focused auth integration against the managed OpenID Connect/OAuth
 	2.0 provider class with role, scope, disabled-account, unauthenticated, and
 	role-denied path validation.
@@ -349,8 +355,9 @@ define the smallest useful product shape:
 	controlled import boundary, ADR-0010's physical separation strategy,
 	ADR-0011's authenticated access boundary, ADR-0012's scaffold-first sequence,
 	ADR-0013's operational boundaries, and ADR-0014's auth provider-class and role
-	implementation direction, and ADR-0015's PostgreSQL/Alembic direction to move
-	into schema/API, focused auth integration, seeded import/reset,
+	implementation direction, and ADR-0015's PostgreSQL/Alembic direction plus the
+	minimal scaffold wiring to move into a first concrete domain migration/API
+	contract, focused auth integration, seeded import/reset,
 	reviewer-created state persistence, audit/export/feedback/reset metadata, and
 	first authenticated tester workflow implementation.
 

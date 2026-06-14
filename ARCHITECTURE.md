@@ -115,6 +115,14 @@ read from SQLite or a hosted database, load live public-source data, run
 import/sync, authenticate users, persist reviewer-created state, deploy to
 QNAP/Azure/AWS, or expose a public URL.
 
+The hosted scaffold now also includes minimal PostgreSQL/Alembic project wiring
+for local and test validation: a no-secret database URL configuration seam, an
+Alembic script location with no domain migration revisions, and scaffold-only
+persistence/API boundary descriptors for future seeded source-derived records
+and reviewer-created state. This wiring does not create tables, connect to a
+database during scaffold tests, read hosted data, implement API routes, run
+imports, or persist reviewer-created state.
+
 ## Components
 
 ### Connectors
@@ -137,11 +145,13 @@ Raw source files are stored in ordinary file storage under `data/raw/`. Each fil
 SQLite is the initial validation database. A hosted relational database is the
 accepted future direction for hosted tester reviewer-created state and imported
 source-derived records. ADR-0015 chooses PostgreSQL as that database product and
-Alembic-managed migrations as the migration tooling direction. Table names,
-columns, indexes, constraints, migration files, ORM models, API behavior,
-deployment, connection configuration, and implementation remain deferred, and
-future hosted schema work must preserve the physical data-domain separation
-accepted by ADR-0010.
+Alembic-managed migrations as the migration tooling direction. The current
+hosted scaffold adds only local/test configuration validation, an Alembic script
+location, and explicit boundary descriptors. Table names, columns, indexes,
+constraints, domain migration revisions, ORM models, API behavior, deployment,
+hosted connection configuration, and implementation remain deferred, and future
+hosted schema work must preserve the physical data-domain separation accepted by
+ADR-0010.
 
 ### Presentation
 
@@ -210,9 +220,12 @@ retention implementation PRs validate the concrete layer.
   audit events, export packet state, tester feedback, and operational/reset
   metadata.
 - Hosted tester MVP persistence must use PostgreSQL and Alembic-managed
-  migrations for future schema implementation. SQLite and Datasette remain
-  retained validation and transition-comparison tools, not the hosted
-  reviewer-created state store.
+  migrations for future schema implementation. The current scaffold may validate
+  no-secret local/test database configuration and describe separated persistence
+  and API boundaries, but it must not imply domain tables, database-backed views,
+  imports, reviewer-state persistence, or operational reset/reload behavior are
+  implemented. SQLite and Datasette remain retained validation and
+  transition-comparison tools, not the hosted reviewer-created state store.
 - Hosted tester MVP access must be authenticated and role-scoped; anonymous
   hosted tester access is not approved because the hosted app includes
   reviewer-created state, tester feedback, annotations, corrections, export

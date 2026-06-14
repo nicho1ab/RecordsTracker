@@ -62,10 +62,18 @@ def build_local_check_report() -> list[LocalCheck]:
         check_python_package_or_command("pytest", "pytest", "pytest for scaffold tests"),
         check_python_package_or_command("ruff", "ruff", "ruff for lint checks"),
         check_python_package_or_command("mypy", "mypy", "mypy for type checks"),
+        check_importable("alembic", "Alembic migration tooling"),
+        check_importable("sqlalchemy", "SQLAlchemy migration runtime"),
+        check_importable("psycopg", "PostgreSQL driver for future hosted tester wiring"),
         informational_boundary("Node/npm", "Not required for the Python stdlib hosted scaffold."),
         informational_boundary(
             "Docker",
             "Not required for local hosted scaffold setup or validation.",
+        ),
+        informational_boundary(
+            "PostgreSQL server",
+            "Not required for scaffold import, smoke, or boundary tests; "
+            "required later to run migrations.",
         ),
         informational_boundary(
             "QNAP/cloud/public URL",
