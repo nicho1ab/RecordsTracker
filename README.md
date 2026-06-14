@@ -129,6 +129,9 @@ public-record review notes.
    Start with `scripts/check-hosted-scaffold-local.ps1` to verify local Python
    and development-tool prerequisites without installing software or requiring
    admin rights.
+   The local `/source-records` route shows fixture/sample source-derived records
+   only, with sample traceability-style fields and no live data, database,
+   import/sync, authentication, or reviewer-created state persistence.
 
 ## Validation
 

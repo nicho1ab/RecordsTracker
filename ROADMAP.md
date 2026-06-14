@@ -224,11 +224,16 @@ the governed primary future review experience.
   Python and development-tool prerequisites on Windows without installing
   software, requiring admin rights, or requiring Node, Docker, QNAP, cloud
   resources, or a public URL.
+- Added the first local-only read-only source-derived hosted view shell using
+	fixture/sample records, sample source-traceability-style fields, and clear
+	labels that no live data, database, import/sync, authentication, or
+	reviewer-created state persistence is active.
 
 ## Near-term milestones
 
-- Keep the local hosted scaffold runnable, prerequisite-checked, and
-  smoke-tested while the next hosted implementation decisions are made.
+- Keep the local hosted scaffold runnable, prerequisite-checked, smoke-tested,
+	and clear about sample-only read-only source-derived views while the next
+	hosted implementation decisions are made.
 - Decide audit logging, export generation, reset/reload, tester data retention,
   provider-specific authentication details, and concrete framework/tooling
   choices before implementing the affected hosted workflow layers.
@@ -260,8 +265,8 @@ exploration, or export support.
 3. Decide concrete database product and migration tooling for the hosted tester
   MVP only after the remaining access, audit, reset/reload, export, retention,
   and operations constraints are understood.
-4. Plan the first read-only source-derived hosted view only after the import,
-  schema, and local scaffold boundaries are ready for that layer.
+4. Decide the next read-only hosted source-detail boundary only after the import,
+	schema, authentication, and sample-shell limits remain clear.
 5. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
 
