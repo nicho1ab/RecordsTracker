@@ -988,6 +988,7 @@ def render_facility_detail(record: SampleFacilityRecord) -> str:
 def route_response(
     path: str,
     *,
+  request_body: bytes | None = None,
     source_derived_api_context: SourceDerivedApiContext | None = None,
     audit_events_api_context: AuditEventsApiContext | None = None,
     reviewer_workflow_shell_context: ReviewerWorkflowShellContext | None = None,
@@ -1005,10 +1006,11 @@ def route_response(
             reviewer_workflow_shell_context,
         )
     if parsed_path.startswith(REVIEWER_CREATED_STATE_API_PREFIX):
-      return route_reviewer_created_state_api_response(
-        path,
-        reviewer_created_state_api_context,
-      )
+        return route_reviewer_created_state_api_response(
+            path,
+            reviewer_created_state_api_context,
+            request_body=request_body,
+        )
     if parsed_path == SEEDED_CORPUS_RESET_RELOAD_DRY_RUN_API_PATH:
         return route_seeded_corpus_reset_reload_dry_run_response(
             path,

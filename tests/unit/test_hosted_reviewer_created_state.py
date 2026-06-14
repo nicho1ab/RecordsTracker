@@ -21,6 +21,7 @@ from ccld_complaints.hosted_app.auth import (
 from ccld_complaints.hosted_app.reviewer_created_state import (
     ReviewerCreatedStateReferenceError,
     create_reviewer_created_state_scaffold,
+    create_reviewer_note_scaffold,
     get_reviewer_created_state_scaffold,
     hosted_reviewer_created_state,
     list_reviewer_created_state_scaffold,
@@ -99,6 +100,66 @@ def test_reviewer_created_state_can_be_read_for_authorized_scope() -> None:
 
     assert read == created
     assert read.state_payload == {"scaffold_state": "in_review"}
+
+
+def test_reviewer_note_scaffold_uses_existing_state_and_audit_path() -> None:
+    with _seeded_connection() as connection:
+        before_source_rows = _source_rows(connection)
+
+        created = create_reviewer_note_scaffold(
+            connection,
+            _reviewer_actor(),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            note_text="Need to verify the source narrative before export.",
+        )
+
+        after_source_rows = _source_rows(connection)
+        reviewer_state_count = connection.execute(
+            select(func.count()).select_from(hosted_reviewer_created_state)
+        ).scalar_one()
+        audit_event_count = connection.execute(
+            select(func.count()).select_from(hosted_audit_events)
+        ).scalar_one()
+
+    assert before_source_rows == after_source_rows
+    assert reviewer_state_count == 1
+    assert audit_event_count == 1
+    assert created.state_kind == "review_item_state_scaffold"
+    assert created.state_payload == {
+        "payload_kind": "reviewer_note_scaffold",
+        "note_text": "Need to verify the source narrative before export.",
+        "note_format": "plain_text",
+        "source_record_key": COMPLAINT_KEY,
+        "local_test_only": True,
+    }
+
+
+def test_reviewer_note_scaffold_rejects_empty_or_secret_like_text() -> None:
+    with _seeded_connection() as connection:
+        with pytest.raises(ValueError, match="note text"):
+            create_reviewer_note_scaffold(
+                connection,
+                _reviewer_actor(),
+                scope=TEST_SCOPE,
+                source_record_key=COMPLAINT_KEY,
+                note_text="   ",
+            )
+        with pytest.raises(ValueError, match="secret-like"):
+            create_reviewer_note_scaffold(
+                connection,
+                _reviewer_actor(),
+                scope=TEST_SCOPE,
+                source_record_key=COMPLAINT_KEY,
+                note_text="Temporary token value was pasted here.",
+            )
+
+        assert connection.execute(
+            select(func.count()).select_from(hosted_reviewer_created_state)
+        ).scalar_one() == 0
+        assert connection.execute(
+            select(func.count()).select_from(hosted_audit_events)
+        ).scalar_one() == 0
 
 
 def test_reviewer_created_state_can_be_fetched_by_authorized_state_id() -> None:

@@ -64,7 +64,8 @@ migrations/
   selected source record.
 16. Use the hosted reviewer-created state scaffold only for local/test
   authenticated placeholder state rows linked to staged source-derived record
-  keys without modifying source-derived records.
+  keys, including bounded non-secret reviewer note payloads, without modifying
+  source-derived records.
 17. Use the hosted reviewer-created state read route seam only for local/test
   authenticated JSON list, fetch, filter, and bounded search access over those
   scaffold rows without mutating reviewer-created, source-derived, audit, or
@@ -157,7 +158,9 @@ seam can list or fetch those persisted rows with schema-backed filters after
 import/reload authorization, without executing reset/reload. The reviewer-created state scaffold service can create and read
 placeholder review-item-state rows only after authenticated actor, role, account
 status, scope, and source-derived reference checks pass; it does not implement
-full reviewer workflows. The local/test reviewer-created state read route seam
+full reviewer workflows. The local/test reviewer note creation route writes
+bounded non-secret note text through that same scaffold and audit path under the
+existing state kind, without adding note editing/deletion or a schema change. The local/test reviewer-created state read route seam
 can list, fetch, filter, or search those persisted scaffold rows after
 reviewer-state-read authorization passes, without mutating reviewer-created,
 source-derived, audit, or operational metadata. Successful reviewer-created state scaffold writes also

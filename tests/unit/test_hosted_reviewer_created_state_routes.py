@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, cast
 from urllib.parse import quote
@@ -274,6 +275,266 @@ def test_reviewer_created_state_api_search_returns_empty_list() -> None:
     assert payload["pagination"] == {"limit": 100, "offset": 0, "returned_count": 0}
 
 
+def test_reviewer_created_state_api_creates_reviewer_note() -> None:
+    with _seeded_connection() as connection:
+        before_source_rows = _source_rows(connection)
+
+        status, content_type, body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-note"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            request_body=_json_bytes(
+                {"note_text": "Need source follow-up before export handoff."}
+            ),
+            reviewer_created_state_api_context=_api_context(
+                connection,
+                actor=_reviewer_actor(),
+            ),
+        )
+
+        after_source_rows = _source_rows(connection)
+        counts = _table_counts(connection)
+
+    payload = _json_body(body)
+
+    assert status == 201
+    assert content_type == "application/json; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 1,
+        "audit_events": 1,
+        "reset_reload_planning_metadata": 0,
+    }
+    state_row = payload["reviewer_created_state"]
+    assert state_row["source_record_key"] == COMPLAINT_KEY
+    assert state_row["state_kind"] == "review_item_state_scaffold"
+    assert state_row["state_payload"] == {
+        "payload_kind": "reviewer_note_scaffold",
+        "note_text": "Need source follow-up before export handoff.",
+        "note_format": "plain_text",
+        "source_record_key": COMPLAINT_KEY,
+        "local_test_only": True,
+    }
+    assert state_row["created_by"]["provider_subject"] == "fixture-subject-reviewer"
+    assert payload["workflow"] == {
+        "created_reviewer_note": True,
+        "local_test_only": True,
+        "route_source": f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-note",
+        "writes_create_audit_event": True,
+        "source_of_record": "public portal",
+        "does_not_mutate_source_derived_records": True,
+    }
+    serialized_body = body.decode("utf-8").casefold()
+    assert "token" not in serialized_body
+    assert "cookie" not in serialized_body
+    assert "tester@example.invalid" not in serialized_body
+
+
+def test_reviewer_created_state_api_reviewer_note_is_visible_after_write() -> None:
+    with _seeded_connection() as connection:
+        create_status, _content_type, create_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-note"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            request_body=_json_bytes({"note_text": "Visible through the read seam."}),
+            reviewer_created_state_api_context=_api_context(
+                connection,
+                actor=_reviewer_actor(),
+            ),
+        )
+        created = _json_body(create_body)["reviewer_created_state"]
+
+        list_status, _content_type, list_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_created_state_api_context=_api_context(connection),
+        )
+        fetch_status, _content_type, fetch_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/by-id"
+            f"?reviewer_state_id={quote(created['reviewer_state_id'])}",
+            reviewer_created_state_api_context=_api_context(connection),
+        )
+
+    list_payload = _json_body(list_body)
+    fetch_payload = _json_body(fetch_body)
+
+    assert create_status == 201
+    assert list_status == 200
+    assert fetch_status == 200
+    assert [
+        row["reviewer_state_id"]
+        for row in list_payload["reviewer_created_state"]
+    ] == [created["reviewer_state_id"]]
+    assert fetch_payload["reviewer_created_state"] == created
+
+
+def test_reviewer_created_state_api_reviewer_note_rejects_unauthenticated_actor() -> None:
+    with _seeded_connection() as connection:
+        status, _content_type, body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-note"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            request_body=_json_bytes({"note_text": "Needs source review."}),
+            reviewer_created_state_api_context=_api_context(connection, actor=None),
+        )
+
+    payload = _json_body(body)
+    assert status == 401
+    assert payload["error"]["code"] == "authentication_required"
+
+
+@pytest.mark.parametrize("account_status", ["disabled", "revoked"])
+def test_reviewer_created_state_api_reviewer_note_rejects_disabled_or_revoked_actor(
+    account_status: str,
+) -> None:
+    with _seeded_connection() as connection:
+        status, _content_type, body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-note"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            request_body=_json_bytes({"note_text": "Needs source review."}),
+            reviewer_created_state_api_context=_api_context(
+                connection,
+                actor=_reviewer_actor(account_status=account_status),
+            ),
+        )
+
+    payload = _json_body(body)
+    assert status == 403
+    assert payload["error"]["code"] == "account_disabled_or_revoked"
+
+
+def test_reviewer_created_state_api_reviewer_note_rejects_role_without_write() -> None:
+    with _seeded_connection() as connection:
+        status, _content_type, body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-note"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            request_body=_json_bytes({"note_text": "Needs source review."}),
+            reviewer_created_state_api_context=_api_context(connection),
+        )
+
+    payload = _json_body(body)
+    assert status == 403
+    assert payload["error"]["code"] == "role_denied"
+
+
+def test_reviewer_created_state_api_reviewer_note_rejects_out_of_scope_actor() -> None:
+    with _seeded_connection() as connection:
+        status, _content_type, body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-note"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            request_body=_json_bytes({"note_text": "Needs source review."}),
+            reviewer_created_state_api_context=_api_context(
+                connection,
+                actor=_reviewer_actor(scopes=(OTHER_SCOPE,)),
+            ),
+        )
+
+    payload = _json_body(body)
+    assert status == 403
+    assert payload["error"]["code"] == "scope_denied"
+
+
+def test_reviewer_created_state_api_reviewer_note_rejects_missing_source_record() -> None:
+    with _seeded_connection() as connection:
+        missing_key_status, _content_type, missing_key_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-note",
+            request_body=_json_bytes({"note_text": "Needs source review."}),
+            reviewer_created_state_api_context=_api_context(
+                connection,
+                actor=_reviewer_actor(),
+            ),
+        )
+        missing_record_status, _content_type, missing_record_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-note"
+            "?source_record_key=complaint%3Amissing",
+            request_body=_json_bytes({"note_text": "Needs source review."}),
+            reviewer_created_state_api_context=_api_context(
+                connection,
+                actor=_reviewer_actor(),
+            ),
+        )
+        counts = _table_counts(connection)
+
+    assert missing_key_status == 400
+    assert _json_body(missing_key_body)["error"]["code"] == "invalid_request"
+    assert missing_record_status == 400
+    assert _json_body(missing_record_body)["error"]["code"] == "invalid_request"
+    assert counts["reviewer_created_state"] == 0
+    assert counts["audit_events"] == 0
+
+
+def test_reviewer_created_state_api_reviewer_note_rejects_invalid_payload() -> None:
+    with _seeded_connection() as connection:
+        missing_body_status, _content_type, missing_body_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-note"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_created_state_api_context=_api_context(
+                connection,
+                actor=_reviewer_actor(),
+            ),
+        )
+        empty_note_status, _content_type, empty_note_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-note"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            request_body=_json_bytes({"note_text": "   "}),
+            reviewer_created_state_api_context=_api_context(
+                connection,
+                actor=_reviewer_actor(),
+            ),
+        )
+        secret_note_status, _content_type, secret_note_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-note"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            request_body=_json_bytes({"note_text": "A token was pasted here."}),
+            reviewer_created_state_api_context=_api_context(
+                connection,
+                actor=_reviewer_actor(),
+            ),
+        )
+        counts = _table_counts(connection)
+
+    assert missing_body_status == 400
+    assert _json_body(missing_body_body)["error"]["code"] == "invalid_request"
+    assert empty_note_status == 400
+    assert _json_body(empty_note_body)["error"]["code"] == "invalid_request"
+    assert secret_note_status == 400
+    assert _json_body(secret_note_body)["error"]["code"] == "invalid_request"
+    assert counts["reviewer_created_state"] == 0
+    assert counts["audit_events"] == 0
+
+
+def test_reviewer_created_state_api_reviewer_note_preserves_existing_audit_rows() -> None:
+    with _seeded_connection() as connection:
+        create_reviewer_created_state_scaffold(
+            connection,
+            _admin_actor(),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            state_payload={"scaffold_state": "in_review"},
+        )
+        before_source_rows = _source_rows(connection)
+        before_counts = _table_counts(connection)
+
+        status, _content_type, _body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-note"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            request_body=_json_bytes({"note_text": "Second reviewer note."}),
+            reviewer_created_state_api_context=_api_context(
+                connection,
+                actor=_reviewer_actor(),
+            ),
+        )
+        after_source_rows = _source_rows(connection)
+        after_counts = _table_counts(connection)
+
+    assert status == 201
+    assert before_source_rows == after_source_rows
+    assert after_counts == {
+        **before_counts,
+        "reviewer_created_state": before_counts["reviewer_created_state"] + 1,
+        "audit_events": before_counts["audit_events"] + 1,
+    }
+
+
 def test_reviewer_created_state_api_rejects_unauthenticated_actor() -> None:
     with _seeded_connection() as connection:
         status, _content_type, body = route_response(
@@ -405,6 +666,10 @@ def _json_body(body: bytes) -> dict[str, Any]:
     return loaded
 
 
+def _json_bytes(payload: Mapping[str, Any]) -> bytes:
+    return json.dumps(payload, sort_keys=True).encode("utf-8")
+
+
 def _api_context(
     connection: Connection,
     *,
@@ -419,9 +684,15 @@ def _api_context(
     )
 
 
-def _reviewer_actor() -> AuthenticatedActor:
+def _reviewer_actor(
+    *,
+    scopes: tuple[HostedAccessScope, ...] = (TEST_SCOPE,),
+    account_status: str = "active",
+) -> AuthenticatedActor:
     return _actor(
         roles=("tester_reviewer",),
+        scopes=scopes,
+        account_status=account_status,
         actor_category="tester",
         provider_subject="fixture-subject-reviewer",
         display_name="Fixture Tester Reviewer",
@@ -525,3 +796,12 @@ def _table_counts(connection: Connection) -> dict[str, int]:
         "audit_events": audit_events,
         "reset_reload_planning_metadata": reset_reload_planning_metadata,
     }
+
+
+def _source_rows(connection: Connection) -> list[dict[str, Any]]:
+    rows = connection.execute(
+        select(hosted_source_derived_records).order_by(
+            hosted_source_derived_records.c.source_record_key
+        )
+    ).mappings()
+    return [dict(row) for row in rows]
