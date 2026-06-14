@@ -81,7 +81,10 @@ purpose is functional validation, not polish: local testers can list/search a
 seeded source-derived record, see list-level reviewer-created note/status
 indicators, open detail, inspect safe source traceability fields and safe
 related seeded bundle context, add a reviewer note, set a reviewer status, and
-see read-after-write reviewer-created state. Narrative
+see read-after-write reviewer-created state. Empty, invalid-form, and blocked
+states should give clear next steps such as clearing search, returning to the
+reviewer list, selecting a seeded record, or retrying valid note/status input.
+Narrative
 source fields are hidden in the browser shell. It must keep source-derived values visibly separate
 from reviewer-created notes/statuses, keep local/test limitations visible, use
 semantic headings, tables, labels, and accessible buttons, avoid color-only

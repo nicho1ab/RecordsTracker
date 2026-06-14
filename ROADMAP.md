@@ -359,7 +359,8 @@ the governed primary future review experience.
 	record, see list-level reviewer-created note/status indicators, inspect safe
 	source traceability fields and safe related seeded bundle context, submit
 	reviewer note/status forms through the existing workflow actions, and see
-	read-after-write reviewer-created state without mutating
+	read-after-write reviewer-created state with clear no-search-results,
+	missing-record, invalid-form, and permission-blocked guidance without mutating
 	source-derived records, exposing sensitive narrative fields, changing
 	schemas or migrations, adding production auth, exports, reset/reload
 	execution, hosted live crawling, connector execution, deployment, hosted URLs,

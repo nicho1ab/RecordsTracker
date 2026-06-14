@@ -95,6 +95,9 @@
         open detail, view safe source traceability fields plus safe related seeded
         bundle context, submit a bounded reviewer note, submit a bounded reviewer
         status, and see read-after-write reviewer-created state.
+    No-search-results, missing-record, invalid-form, and permission-blocked
+    states provide local/test next-step links but do not diagnose production
+    access or data availability.
     Narrative source fields are hidden in the browser shell. The UI uses
     process-local seeded test state and a fixture actor context; it is not production authentication,
     durable hosted deployment, full reviewer workflow behavior, or complete

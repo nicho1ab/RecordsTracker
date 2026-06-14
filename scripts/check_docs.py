@@ -340,6 +340,7 @@ REQUIRED_CONTENT = {
         "read-after-write reviewer-created state",
         "list-level reviewer-created note/status indicators",
         "safe related seeded bundle context",
+        "permission-blocked states include clear",
         "Narrative source fields are hidden in the browser shell",
         "UI actions do not mutate source-derived records",
         "does not install software",
