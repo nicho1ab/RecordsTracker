@@ -44,6 +44,12 @@ route output for the selected source record when an explicit local/test
 reviewer-created state API context is supplied; that associated state remains
 non-canonical reviewer-created scaffold data and does not mutate source-derived,
 reviewer-created, audit, or operational metadata rows.
+The workflow shell can also expose a narrow local/test reviewer note action that
+first resolves the selected source-derived detail context and then delegates to
+the existing reviewer note creation route using the resolved source record key.
+That action stores only reviewer-created scaffold data and audit rows through
+the existing write path; it does not add canonical source-derived fields or
+trust a conflicting caller-provided source record binding.
 The detail payload can additionally include a compact state summary derived only
 from that already-composed associated reviewer-created state route output, such
 as row counts, present state kinds, latest created timestamp, and non-secret

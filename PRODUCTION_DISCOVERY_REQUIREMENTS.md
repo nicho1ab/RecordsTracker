@@ -52,7 +52,9 @@ persisted scaffold rows with schema-backed filters and bounded search, a narrow 
 integration that composes associated reviewer-created state read output for a
 selected source-derived record, a compact workflow shell state summary derived
 from that associated state output, a narrow local/test authenticated reviewer
-note creation route over the existing reviewer-created state scaffold, a local/test authenticated reset/reload dry-run route
+note creation route over the existing reviewer-created state scaffold, a narrow
+local/test workflow-shell note action that resolves the selected source-derived
+detail context before delegating to that reviewer note route, a local/test authenticated reset/reload dry-run route
 seam, a separate local/test reset/reload operational planning metadata
 scaffold, a narrow local/test read-only planning metadata route seam, and
 scaffold/API boundary descriptors. The dry-run reports
@@ -94,13 +96,21 @@ existing scaffold state kind and audit event path, and does not change the
 domain schema, source-derived records, note editing/deletion behavior, exports,
 or production auth behavior.
 
+The reviewer workflow shell can now create a reviewer note for the selected
+source-derived detail context through a narrow local/test action seam. The action
+first resolves the selected source record through the existing source-derived
+route, forces the reviewer note source-record binding from that resolved detail,
+delegates to the existing reviewer note creation route, and returns created note
+metadata plus refreshed workflow detail context for read-after-write tests.
+
 The reviewer workflow shell can now include associated reviewer-created state
 read route output in a selected source-record detail response when explicit
 local/test source-derived and reviewer-created state contexts are supplied.
 That integration can also include a compact summary derived from the associated
-state route output. It remains read-only, requires both source-derived read
-access and reviewer-state read access, and does not create or modify reviewer-
-created state, source-derived rows, audit rows, or operational metadata.
+state route output. Queue and detail reads remain read-only, require both
+source-derived read access and reviewer-state read access, and do not create or
+modify reviewer-created state, source-derived rows, audit rows, or operational
+metadata.
 
 The next safe hosted-view increment should remain similarly narrow and
 fixture-backed, preserving fixture/sample labels, read-only behavior,

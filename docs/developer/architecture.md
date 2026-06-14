@@ -58,9 +58,10 @@ migrations/
 14. Use the hosted source-derived route seam only for local/test authenticated
   JSON list and fetch access over staged seeded corpus records.
 15. Use the hosted reviewer workflow shell only for local/test authenticated
-  read-only queue and detail payloads that consume the source-derived route seam
-  and, on selected detail responses, compose associated reviewer-created state
-  read route output plus a compact summary derived from that output for the
+  read-only queue and detail payloads that consume the source-derived route seam,
+  compose associated reviewer-created state read route output plus a compact
+  summary on selected detail responses, and expose a narrow reviewer note action
+  that delegates to the existing reviewer note route after resolving the
   selected source record.
 16. Use the hosted reviewer-created state scaffold only for local/test
   authenticated placeholder state rows linked to staged source-derived record
@@ -143,8 +144,10 @@ list, fetch-by-key, and fetch-by-stable-identity handlers over those staged
 records. The reviewer workflow shell adds local/test authenticated read-only
 queue and detail payloads over those route responses, and detail payloads can
 include associated reviewer-created state read route output and a compact
-summary derived from that output for the selected source record while keeping
-review status, annotations, corrections, tester feedback, audit events, export
+summary derived from that output for the selected source record. It also exposes
+a narrow local/test reviewer note action that resolves the selected detail
+source record before delegating to the existing reviewer note route, while
+keeping review status, full annotations, corrections, tester feedback, export
 packet state, and queue-state persistence deferred. The reset/reload dry-run seam adds
 local/test authenticated planning over seeded corpus metadata: it reports
 existing import batches, source-derived record counts by entity, scoped reviewer-
