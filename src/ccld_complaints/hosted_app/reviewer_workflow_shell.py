@@ -53,6 +53,12 @@ def route_reviewer_workflow_shell_response(
             context,
             request_body,
         )
+    if parsed_url.path == f"{REVIEWER_WORKFLOW_API_PREFIX}/detail/reviewer-status":
+        return _create_reviewer_status_from_detail_response(
+            query_values,
+            context,
+            request_body,
+        )
     return _json_error(
         404,
         "reviewer_workflow_shell_route_not_found",
@@ -172,6 +178,65 @@ def _create_reviewer_note_from_detail_response(
     )
 
 
+def _create_reviewer_status_from_detail_response(
+    query_values: Mapping[str, list[str]],
+    context: ReviewerWorkflowShellContext,
+    request_body: bytes | None,
+) -> tuple[int, str, bytes]:
+    status, content_type, body = _selected_source_record_response(query_values, context)
+    if status != 200:
+        return status, content_type, body
+
+    source_payload = _json_object(body)
+    record = _record_object(source_payload, "record")
+    resolved_source_record_key = _record_string(record, "source_record_key")
+    create_status, create_content_type, create_body = (
+        route_reviewer_created_state_api_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-status?"
+            f"{urlencode({'source_record_key': resolved_source_record_key})}",
+            context.reviewer_created_state_api_context,
+            request_body=request_body,
+        )
+    )
+    if create_status != 201:
+        return create_status, create_content_type, create_body
+
+    created_payload = _json_object(create_body)
+    detail_status, detail_content_type, detail_body = _review_detail_response_for_record(
+        record,
+        query_values,
+        context,
+    )
+    if detail_status != 200:
+        return detail_status, detail_content_type, detail_body
+    detail_payload = _json_object(detail_body)
+    return _json_response(
+        201,
+        {
+            "workflow_shell": _workflow_shell_payload(context),
+            "workflow_action": {
+                "action_id": "create-reviewer-status-from-selected-detail-shell",
+                "action_source": (
+                    f"{REVIEWER_WORKFLOW_API_PREFIX}/detail/reviewer-status"
+                ),
+                "delegated_route_source": (
+                    f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-status"
+                ),
+                "created_reviewer_status": True,
+                "selected_source_record_key": resolved_source_record_key,
+                "source_record_binding_forced_from_selected_detail": True,
+                "local_test_only": True,
+                "writes_create_audit_event": True,
+                "source_of_record": "public portal",
+                "does_not_mutate_source_derived_records": True,
+            },
+            "reviewer_created_state": created_payload["reviewer_created_state"],
+            "delegated_reviewer_created_state_workflow": created_payload["workflow"],
+            "detail": detail_payload["detail"],
+        },
+    )
+
+
 def _selected_source_record_response(
     query_values: Mapping[str, list[str]],
     context: ReviewerWorkflowShellContext,
@@ -232,7 +297,7 @@ def _workflow_shell_payload(context: ReviewerWorkflowShellContext) -> dict[str, 
     return {
         "workflow_id": "authenticated-source-derived-review-shell",
         "workflow_label": "Authenticated source-derived review shell",
-        "mode": "local_test_read_with_note_action",
+        "mode": "local_test_read_with_workflow_actions",
         "authenticated_route_source": "/api/source-derived-records",
         "scope": {"scope_type": scope.scope_type, "scope_id": scope.scope_id},
         "source_of_record": "public portal",
@@ -243,9 +308,15 @@ def _workflow_shell_payload(context: ReviewerWorkflowShellContext) -> dict[str, 
         "reviewer_note_action_route_source": (
             f"{REVIEWER_WORKFLOW_API_PREFIX}/detail/reviewer-note"
         ),
-        "reviewer_actions_enabled": ["create_reviewer_note"],
+        "reviewer_status_action_enabled": True,
+        "reviewer_status_action_route_source": (
+            f"{REVIEWER_WORKFLOW_API_PREFIX}/detail/reviewer-status"
+        ),
+        "reviewer_actions_enabled": [
+            "create_reviewer_note",
+            "create_reviewer_status",
+        ],
         "deferred_actions": [
-            "review status persistence",
             "full annotation workflow",
             "corrections",
             "export packet builder",
@@ -292,15 +363,18 @@ def _reviewer_state_boundary_payload() -> dict[str, Any]:
         "workflow_note_action_route_source": (
             f"{REVIEWER_WORKFLOW_API_PREFIX}/detail/reviewer-note"
         ),
+        "workflow_status_action_enabled": True,
+        "workflow_status_action_route_source": (
+            f"{REVIEWER_WORKFLOW_API_PREFIX}/detail/reviewer-status"
+        ),
         "associated_state_reads_enabled": True,
         "associated_state_read_route_source": REVIEWER_CREATED_STATE_API_PREFIX,
         "associated_state_reads_require_reviewer_state_read_permission": True,
         "reads_create_or_modify_state": False,
         "anonymous_reviewer_created_state_allowed": False,
-        "available_actions": ["create_reviewer_note"],
+        "available_actions": ["create_reviewer_note", "create_reviewer_status"],
         "deferred_actions": [
             "queue state persistence",
-            "review status changes",
             "full annotation workflow",
             "correction proposals",
             "tester feedback",
@@ -340,6 +414,32 @@ def _associated_reviewer_created_state_summary_payload(
         "total_associated_rows": len(records),
         "state_kinds_present": sorted(
             {_record_string(record, "state_kind") for record in records}
+        ),
+        "payload_kinds_present": sorted(
+            {
+                payload_kind
+                for record in records
+                if (
+                    payload_kind := _optional_record_string(
+                        _record_object(record, "state_payload"),
+                        "payload_kind",
+                    )
+                )
+                is not None
+            }
+        ),
+        "reviewer_statuses_present": sorted(
+            {
+                reviewer_status
+                for record in records
+                if (
+                    reviewer_status := _optional_record_string(
+                        _record_object(record, "state_payload"),
+                        "reviewer_status",
+                    )
+                )
+                is not None
+            }
         ),
         "latest_created_at": max(created_at_values) if created_at_values else None,
         "actor_attribution_labels": sorted(
@@ -412,6 +512,15 @@ def _record_object(payload: Mapping[str, Any], key: str) -> Mapping[str, Any]:
 
 def _record_string(payload: Mapping[str, Any], key: str) -> str:
     value = payload[key]
+    if not isinstance(value, str):
+        raise ValueError(f"Expected {key} to be a JSON string.")
+    return value
+
+
+def _optional_record_string(payload: Mapping[str, Any], key: str) -> str | None:
+    value = payload.get(key)
+    if value is None:
+        return None
     if not isinstance(value, str):
         raise ValueError(f"Expected {key} to be a JSON string.")
     return value

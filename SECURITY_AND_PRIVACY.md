@@ -62,15 +62,15 @@ state read route contexts. It consumes the authenticated source-derived route
 seam for read-only queue and detail payloads, and the detail payload can compose
 associated reviewer-created state read route output for the selected source
 record plus a compact summary derived only from that route output.
-It can also create a bounded non-secret reviewer note through a narrow local/test
-workflow-shell action that first resolves the selected source-derived detail
-context, then delegates to the existing reviewer note creation route and audit
-path using that resolved source record key.
+It can also create a bounded non-secret reviewer note and a bounded reviewer
+status value through narrow local/test workflow-shell actions that first resolve
+the selected source-derived detail context, then delegate to existing reviewer-
+created write routes and the audit path using that resolved source record key.
 Source-derived record reads still require source-derived read access,
 and associated reviewer-created state reads separately require reviewer-state
 read access; source-derived read permission alone does not grant the associated
-state context, and reviewer note creation separately requires reviewer-state
-write access. The shell preserves unauthenticated, disabled or revoked,
+state context, and reviewer note or status creation separately requires
+reviewer-state write access. The shell preserves unauthenticated, disabled or revoked,
 role-denied, and out-of-scope rejection behavior. It does not authenticate
 browser users, parse or store provider tokens, create sessions or cookies, add
 production auth middleware, create anonymous reviewer-created state, trust
@@ -116,10 +116,12 @@ capture provider subject, provider issuer, display label, actor category, write
 permission, and generated timestamp for attribution. The scaffold does not
 store provider secrets, tokens, cookies, sessions, private headers, production
 roles, or user tables, and it does not implement real login flow, auth
-middleware, annotations, corrections, note editing or deletion, export decisions,
+middleware, annotations, corrections, note or status editing or deletion, export decisions,
 tester feedback, or stateful reviewer workflows. The local/test reviewer note
 creation route stores only bounded non-secret note text as reviewer-created
-scaffold payload and rejects secret-like note text. Successful scaffold writes also create a narrow
+scaffold payload and rejects secret-like note text. The local/test reviewer
+status creation route stores only bounded status values as reviewer-created
+scaffold payload. Successful scaffold writes also create a narrow
 local/test audit event row in a separate table; if that audit row cannot be
 created, the reviewer-created scaffold write is rolled back rather than silently
 leaving unaudited reviewer-created state.

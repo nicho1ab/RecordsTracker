@@ -53,8 +53,10 @@ integration that composes associated reviewer-created state read output for a
 selected source-derived record, a compact workflow shell state summary derived
 from that associated state output, a narrow local/test authenticated reviewer
 note creation route over the existing reviewer-created state scaffold, a narrow
-local/test workflow-shell note action that resolves the selected source-derived
-detail context before delegating to that reviewer note route, a local/test authenticated reset/reload dry-run route
+local/test authenticated reviewer status creation route over the existing
+reviewer-created state scaffold, narrow local/test workflow-shell note and
+status actions that resolve the selected source-derived detail context before
+delegating to reviewer-created write routes, a local/test authenticated reset/reload dry-run route
 seam, a separate local/test reset/reload operational planning metadata
 scaffold, a narrow local/test read-only planning metadata route seam, and
 scaffold/API boundary descriptors. The dry-run reports
@@ -74,7 +76,7 @@ automate production imports, execute reset/reload, archive or clear reviewer-
 created state, persist audit events beyond the narrow reviewer-created state
 write scaffold, expose audit history beyond that narrow local/test read seam,
 create, update, or delete reviewer-created state through the read route seam,
-edit or delete reviewer notes, create stateful queues, implement full
+edit or delete reviewer notes or statuses, create stateful queues, implement full
 reviewer workflows, annotations, corrections, export packet behavior, or tester
 feedback.
 
@@ -84,8 +86,8 @@ database, authenticated actor, and scope context with reviewer-state read
 permission. That seam lists or fetches only non-secret scaffold fields, supports
 schema-backed filters and bounded search over existing non-secret scaffold
 fields, keeps reviewer-created state separate from source-derived records,
-audit rows, and operational metadata, and does not implement workflow writes,
-annotations, corrections, review status transitions, exports, real login,
+audit rows, and operational metadata, and does not implement read-route writes,
+annotations, corrections, editable review status transitions, exports, real login,
 sessions, or production auth middleware.
 
 Reviewer notes can now be created through a narrow local/test authenticated
@@ -102,6 +104,17 @@ first resolves the selected source record through the existing source-derived
 route, forces the reviewer note source-record binding from that resolved detail,
 delegates to the existing reviewer note creation route, and returns created note
 metadata plus refreshed workflow detail context for read-after-write tests.
+
+Reviewer status values can now be created through a narrow local/test
+authenticated route and workflow-shell action when tests or local callers provide
+an explicit database, actor, and scope context with reviewer-state write
+permission. The action accepts only bounded local/test status values, forces the
+source-record binding from the selected detail context, stores the status as
+reviewer-created scaffold data, creates the same audit event as other successful
+reviewer-created writes, and returns refreshed workflow detail context for
+read-after-write tests. It does not add status editing/deletion, queue
+assignment, full workflow engine behavior, schema changes, exports, or
+production auth behavior.
 
 The reviewer workflow shell can now include associated reviewer-created state
 read route output in a selected source-record detail response when explicit

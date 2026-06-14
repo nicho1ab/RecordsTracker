@@ -5,8 +5,8 @@
 This document explains how to run the first local hosted tester MVP scaffold.
 The scaffold is a runnable placeholder app shell and smoke route only. It is not
 a functioning reviewer workflow yet; the current reviewer workflow shell is a
-local/test seam with read-only queue/detail payloads and a narrow reviewer note
-action, not a stateful hosted tester workflow.
+local/test seam with read-only queue/detail payloads and narrow reviewer
+note/status actions, not a stateful hosted tester workflow.
 
 The scaffold is local-first and must run on a Windows development workstation
 before any QNAP, Azure, AWS, public hosting, or public URL work is attempted.
@@ -194,9 +194,9 @@ wiring includes:
 - `ccld_complaints.hosted_app.reviewer_workflow_shell` for a local/test
   authenticated review queue and detail shell over source-derived route
   responses, with read-only selected detail payloads able to compose associated
-  reviewer-created state read route output and a narrow note action that
-  delegates to the existing reviewer note route after resolving the selected
-  source record.
+  reviewer-created state read route output and narrow note/status actions that
+  delegate to existing reviewer-created write routes after resolving the
+  selected source record.
 - `ccld_complaints.hosted_app.reviewer_created_state` for local/test
   authenticated reviewer-created state scaffold writes and scoped reads without
   mutating staged source-derived records.
@@ -266,7 +266,8 @@ state, or a production API framework.
 The reviewer workflow shell is intentionally small. It exposes local/test JSON
 handlers for `/api/reviewer/source-derived-review/queue`,
 `/api/reviewer/source-derived-review/detail`, and
-`/api/reviewer/source-derived-review/detail/reviewer-note` only when the caller
+`/api/reviewer/source-derived-review/detail/reviewer-note`, and
+`/api/reviewer/source-derived-review/detail/reviewer-status` only when the caller
 supplies an explicit workflow shell context backed by the source-derived route
 context and the reviewer-created state route context. The shell consumes the
 authenticated source-derived route seam, returns read-only queue and detail
@@ -274,14 +275,14 @@ payloads with source-derived record identity, original values, source
 traceability, source document metadata, and import batch context, and can
 compose associated reviewer-created state read route output plus a compact state
 summary derived from that output for the selected source record on detail
-responses. The note action first resolves the selected source-derived detail
-record, forces the reviewer note source-record binding from that resolved
-record, and delegates to the existing reviewer note creation route and audit
-path. Source-derived reads, associated reviewer-created state reads, and note
+responses. The note and status actions first resolve the selected source-derived
+detail record, force the source-record binding from that resolved record, and
+delegate to existing reviewer-created write routes and audit path. Source-
+derived reads, associated reviewer-created state reads, note writes, and status
 writes each enforce their own authenticated, active, role/scope-allowed access.
-The shell does not create queue state, review status, full annotations,
-corrections, tester feedback, export packet state, sessions, cookies,
-production auth middleware, or a production API framework.
+The shell does not create queue state, editable status transitions, full
+annotations, corrections, tester feedback, export packet state, sessions,
+cookies, production auth middleware, or a production API framework.
 
 The reviewer-created state persistence scaffold is intentionally small. It can
 create and read only local/test review-item-state scaffold rows after the caller
@@ -291,12 +292,14 @@ account status, matching scope, and an existing staged source-derived record key
 Rows are stored in a separate reviewer-created table with actor attribution and
 do not overwrite source-derived records, original extracted values, raw source
 metadata, import metadata, or source traceability. The scaffold does not
-implement annotations, corrections, note editing/deletion, review status workflows,
+implement annotations, corrections, note/status editing/deletion, full review status workflows,
 tester feedback, export packet decisions, sessions, cookies, production auth
 middleware, or a production API framework. A narrow local/test reviewer note
 creation route stores bounded non-secret note text as scaffold payload under the
 existing state kind and reuses the existing write/audit path without changing the
-schema. Successful writes also create a separate local/test
+schema. A narrow local/test reviewer status creation route stores bounded status
+values as scaffold payload under the same state kind and reuses the same write/
+audit path without changing the schema. Successful writes also create a separate local/test
 audit event scaffold row with actor, permission, scope, action, target, and
 source-derived context. If the audit row cannot be created, the reviewer-created
 state write is rolled back.

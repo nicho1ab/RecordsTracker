@@ -85,6 +85,12 @@ context, permission failures, invalid or missing source records, invalid note
 payloads, successful audit creation, no audit/state mutation on failure,
 read-after-write visibility through existing read routes and workflow detail
 output, and no source-derived mutation.
+Workflow shell status action tests should cover successful bounded status
+creation from the selected detail context, forced source-record binding from
+that selected context, permission failures, invalid or missing source records,
+invalid status payloads, successful audit creation, no audit/state mutation on
+failure, read-after-write visibility through existing read routes and workflow
+detail output, and no source-derived mutation.
 
 Hosted reviewer-created state read route tests must prove persisted scaffold
 rows are readable only through authenticated, active, role/scope-allowed local/
@@ -94,9 +100,10 @@ bounded search success and empty search results, unauthenticated actors,
 disabled or revoked actors, role-denied actors, out-of-scope actors, invalid
 requests, note creation with reviewer-state write permission, invalid note
 payload and missing source rejection, read-after-write visibility through the
-existing read routes and workflow shell detail composition, successful note audit
-event creation, non-secret payloads, and before/after table counts proving reads
-do not mutate source-derived rows, reviewer-created rows, audit rows, or
+existing read routes and workflow shell detail composition, status creation with
+reviewer-state write permission, invalid status rejection, successful note/status
+audit event creation, non-secret payloads, and before/after table counts proving
+reads do not mutate source-derived rows, reviewer-created rows, audit rows, or
 operational metadata.
 
 Hosted audit event scaffold tests must prove successful reviewer-created state

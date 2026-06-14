@@ -125,7 +125,8 @@ persistence scaffold, a narrow local/test authenticated audit history read
 route seam, a narrow local/test authenticated reviewer-created state read route
 seam, a narrow local/test authenticated reviewer note creation route seam over
 the existing reviewer-created state scaffold, a narrow local/test workflow-shell
-note action over the selected source-derived detail context, and a local/test authenticated reset/reload dry-run route seam: a
+note action and status action over the selected source-derived detail context,
+and a local/test authenticated reset/reload dry-run route seam: a
 no-secret database URL configuration seam, an Alembic script location, one
 domain migration for import batch metadata and source-derived record staging,
 one domain migration for a separate reviewer-created state scaffold table, one
@@ -142,9 +143,11 @@ state rows by approved reviewer state identifiers, schema-supported filters,
 and bounded search over existing non-secret scaffold fields,
 plus read-only workflow-shell detail composition of associated reviewer-created
 state read route output and a compact derived summary for a selected source record,
-plus a workflow-shell note action that resolves the selected source-derived
-detail context before delegating to the reviewer note route,
+plus workflow-shell note and status actions that resolve the selected source-
+derived detail context before delegating to reviewer-created write routes,
 plus a JSON handler that stores bounded non-secret reviewer note text as reviewer-created
+scaffold payload under the existing state kind,
+plus a JSON handler that stores bounded reviewer status values as reviewer-created
 scaffold payload under the existing state kind,
 plus JSON handlers for listing or fetching scaffold audit rows by approved audit
 identifiers and schema-supported filters, plus JSON handlers for listing or
@@ -161,7 +164,7 @@ audit rows for successful reviewer-created state scaffold writes only, and the
 separation from reviewer-created state, audit rows, and operational metadata.
 It does not implement real login flow, provider registration, sessions, cookies,
 tokens, auth middleware, full reviewer-created workflows, annotations,
-corrections, note editing or deletion, export packet decisions, tester feedback, reset/reload execution,
+corrections, note or status editing or deletion, export packet decisions, tester feedback, reset/reload execution,
 reviewer-created state archive or clear behavior, full audit coverage, audit UI,
 audit export, hosted live crawling, hosted connector execution, production import automation, production
 API framework behavior, or deployment.
@@ -196,7 +199,7 @@ reviewer-created state scaffold table, plus a third narrow migration for one
 audit event scaffold table, plus a fourth narrow migration for one reset/reload
 operational planning metadata scaffold table. The current auth boundary,
 source-derived read route seam, reviewer workflow shell with read-only queue/
-detail payloads and a narrow note action,
+detail payloads and narrow note/status actions,
 reviewer-created state scaffold service, reviewer-created state read route seam,
 audit history read route seam, reset/reload dry-run seam, opt-in reset/reload
 planning metadata scaffold, and read-only reset/reload planning metadata route seam
@@ -280,7 +283,7 @@ retention implementation PRs validate the concrete layer.
   API boundaries, expose a local/test database-backed read service over the
   staged source-derived records, and expose a narrow local/test authenticated
   source-derived read route seam, reviewer workflow shell with read-only queue/
-  detail payloads and a narrow reviewer note action, and reset/reload dry-run
+  detail payloads and narrow reviewer note/status actions, and reset/reload dry-run
   route seam with opt-in operational planning metadata persistence plus
   read-only planning metadata routes, but it must not imply stateful
   database-backed reviewer views, full reviewer workflows, production import

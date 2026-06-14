@@ -60,6 +60,13 @@ invalid or missing source records and note payloads do not mutate reviewer-
 created state or audit rows, successful writes create audit rows, source-derived
 rows are not mutated, and existing read routes plus workflow detail output show
 the note after write.
+Reviewer workflow shell status action tests must prove the selected source-
+derived detail context is resolved before write delegation, conflicting caller-
+provided source bindings are ignored, reviewer-state write permission is
+required, invalid or missing source records and bounded status payloads do not
+mutate reviewer-created state or audit rows, successful writes create audit
+rows, source-derived rows are not mutated, and existing read routes plus
+workflow detail output show the status after write.
 
 ### Fixture hash and line-ending tests
 
