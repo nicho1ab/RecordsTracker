@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html as html_lib
 from pathlib import Path
 from typing import Any, cast
 from urllib.parse import quote, urlencode
@@ -61,6 +62,7 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "Workflow overview" in html
     assert "Key terms" in html
     assert "Feedback guidance" in html
+    assert "structured checklist" in html
     assert "browser-triggered connector execution" in normalized_html
     assert "Read how this CCLD review workflow works" in normalized_html
     assert "provider" not in html.casefold()
@@ -85,6 +87,7 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "Reviewer notes" in html
     assert "Reviewer status" in html
     assert "Useful tester feedback includes" in normalized_html
+    assert "copy the structured checklist" in normalized_html
     assert "Open the CCLD record request form" in html
     assert_no_secret_html(html)
 
@@ -223,6 +226,16 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "No reviewer notes or status yet" in html
     assert "1 loaded source records in bundle" not in html
     assert "6 loaded source records in bundle" in html
+    assert "Copyable tester feedback checklist" in html
+    assert "Structured CCLD feedback checklist" in html
+    assert "CCLD tester feedback checklist" in html
+    assert "- Matching source-derived rows shown: 6" in html
+    assert "- Matching complaint records in queue: 1" in html
+    assert "- Not started: 1" in html
+    assert "- Reviewer notes present: no" in html
+    assert "- Reviewer statuses present: no" in html
+    assert "- Records that seemed missing:" in html
+    assert "Copy this checklist into the agreed external feedback channel manually." in html
     assert "Open reviewer records" in html
     assert "did not run live retrieval" in html
     assert "run-ccld-live-fetch.ps1 -FacilityNumber 157806098" in html
@@ -300,6 +313,10 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
     assert reviewed_status == 200
     assert "Latest reviewer status: Reviewed" in reviewed_html
     assert "1 reviewer note(s)" in reviewed_html
+    assert "- Reviewer-created rows read for this queue: 2" in reviewed_html
+    assert "- Reviewer notes present: yes" in reviewed_html
+    assert "- Reviewer statuses present: yes" in reviewed_html
+    assert "- Reviewed: 1" in reviewed_html
     assert "Showing 1 of 1 matching complaint record(s) for queue filter Reviewed." in (
         reviewed_normalized
     )
@@ -350,6 +367,11 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert counts == _empty_reviewer_counts()
     assert "No matching local/test CCLD records found" in html
     assert "Rows for this facility currently available before date filtering: 6" in html
+    assert "Copyable tester feedback checklist" in html
+    assert "- Matching source-derived rows shown: 0" in html
+    assert "- Matching complaint records in queue: 0" in html
+    assert "- Local facility rows before date filtering: 6" in html
+    assert "- None shown for this request." in html
     assert "CCLD pipeline step still required" in html
     assert "does not run live CCLD retrieval or import" in html
     assert "build-hosted-ccld-artifact.ps1" in html
@@ -380,6 +402,8 @@ def test_ccld_record_request_empty_hosted_records_offers_local_validated_load() 
     assert counts == _empty_unloaded_counts()
     assert "No matching local/test CCLD records found" in html
     assert "Load local validated CCLD records" in html
+    assert "Copyable tester feedback checklist" in html
+    assert "- Local facility rows before date filtering: 0" in html
     assert "does not run live public web requests" in html
     assert "ccld_import_reload_action" in html
     assert_no_secret_html(html)
@@ -421,10 +445,79 @@ def test_ccld_record_request_loads_local_validated_output_then_shows_matches() -
     assert "validated_seeded_corpus.json" in html
     assert "CCLD request accepted" in html
     assert "Found 6 local/test CCLD source-derived row(s)" in normalized_html
+    assert "- Load action submitted on this request: yes" in html
+    assert "- Local validated records loaded or refreshed: yes" in html
+    assert "- New source-derived rows staged: 6" in html
+    assert "- Existing source-derived rows refreshed: 0" in html
     assert detail_href in html
     assert "Refresh from local validated CCLD output" in html
     assert "run live public web requests" in html
     assert_no_secret_html(html)
+
+
+def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persistent() -> None:
+    with _seeded_connection() as connection:
+        before_source_rows = _source_rows(connection)
+
+        first_status, _content_type, first_body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "facility_number": "157806098",
+                    "start_date": "2022-08-01",
+                    "end_date": "2022-08-31",
+                }
+            ),
+            ccld_record_request_ui_context=_context(connection),
+        )
+        second_status, _content_type, second_body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "facility_number": "157806098",
+                    "start_date": "2022-08-01",
+                    "end_date": "2022-08-31",
+                }
+            ),
+            ccld_record_request_ui_context=_context(connection),
+        )
+
+        after_source_rows = _source_rows(connection)
+        counts = _table_counts(connection)
+
+    first_html = first_body.decode("utf-8")
+    second_html = second_body.decode("utf-8")
+    first_checklist = _feedback_checklist(first_html)
+    second_checklist = _feedback_checklist(second_html)
+
+    assert first_status == 200
+    assert second_status == 200
+    assert before_source_rows == after_source_rows
+    assert counts == _empty_reviewer_counts()
+    assert first_checklist == second_checklist
+    assert first_checklist.startswith("CCLD tester feedback checklist")
+    assert "- Source scope: CCLD public complaint records only" in first_checklist
+    assert "- Facility/license number: 157806098" in first_checklist
+    assert "- Date range: 2022-08-01 to 2022-08-31" in first_checklist
+    assert "- Matching source-derived rows shown: 6" in first_checklist
+    assert "- Matching complaint records in queue: 1" in first_checklist
+    assert "- Local validated records loaded or refreshed: no" in first_checklist
+    assert "- Reviewer-created rows read for this queue: 0" in first_checklist
+    assert "- Records that seemed missing:" in first_checklist
+    assert "- Confusing terms or instructions:" in first_checklist
+    assert "- Unexpected queue or filter behavior:" in first_checklist
+    assert "- Workflow friction:" in first_checklist
+    assert "- Suggested enhancements:" in first_checklist
+    assert "- The app does not persist this feedback." in first_checklist
+    assert "- Browser pages did not run live CCLD retrieval or connector execution." in (
+        first_checklist
+    )
+    assert "CCLD public portal remains the source of record" in first_checklist
+    assert "provider" not in first_checklist.casefold()
+    assert_no_secret_html(first_html)
+    assert_no_secret_html(second_html)
 
 
 def test_ccld_record_request_local_validated_load_defers_when_dates_do_not_match() -> None:
@@ -484,6 +577,14 @@ def assert_no_secret_html(markup: str) -> None:
         "https://example.com",
     ]:
         assert marker not in lowered
+
+
+def _feedback_checklist(markup: str) -> str:
+    start_marker = '<textarea id="feedback-checklist"'
+    start = markup.index(start_marker)
+    content_start = markup.index(">", start) + 1
+    content_end = markup.index("</textarea>", content_start)
+    return html_lib.unescape(markup[content_start:content_end]).strip()
 
 
 def _form_bytes(payload: dict[str, str]) -> bytes:

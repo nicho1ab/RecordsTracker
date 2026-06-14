@@ -187,10 +187,12 @@ public-record review notes.
    CCLD rows from local validated hosted seeded-corpus output through the
    existing source-derived import tables, links matching rows into the hosted
    reviewer UI, shows a guided facility/date-scoped result queue with contextual
-   help and feedback guidance, and explains the explicit CCLD live-fetch command
-   when broader retrieval is needed. It does not run live crawling, execute connectors,
-   mutate reviewer-created state, create audit rows, or add non-CCLD sources
-   from browser requests. A browser-accessible local/test reviewer UI shell is
+   help, progress/status context, and a structured copyable feedback checklist
+   intended to be pasted into an external feedback channel manually, and explains
+   the explicit CCLD live-fetch command when broader retrieval is needed. It does
+   not run live crawling, execute connectors, mutate reviewer-created state, create
+   audit rows, persist feedback, or add non-CCLD sources from browser requests. A
+   browser-accessible local/test reviewer UI shell is
    available at `/reviewer` when the scaffold is running locally; it loads the
    tiny seeded fixture corpus into process-local test state, lets a local tester
    search/select a source-derived record, see list-level reviewer-created

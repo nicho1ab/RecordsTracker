@@ -125,12 +125,14 @@ CCLD facility/license number and optional date range, reads existing seeded
 source-derived records, can load or refresh matching rows from local validated
 hosted seeded-corpus output, and links matching rows into the hosted reviewer
 UI. It also includes a first-time help page at `/ccld/help`, contextual
-facility/date/load/review help, feedback guidance, and a facility/date-scoped
+facility/date/load/review help, feedback guidance, a structured copyable feedback
+checklist for the current request and queue state, and a facility/date-scoped
 review queue with one row per matching complaint record, progress counts, and a
 reviewer-status filter. After adding a note or status in reviewer detail, return
 to the CCLD request page and submit the same request to see updated progress.
-It does not run live CCLD retrieval, execute connectors, persist feedback, or mutate reviewer
-notes/statuses from the browser request page. When matching local validated records are
+The feedback checklist is not saved by the app; copy it into the agreed external
+feedback channel manually. It does not run live CCLD retrieval, execute connectors,
+persist feedback, or mutate reviewer notes/statuses from the browser request page. When matching local validated records are
 unavailable, it shows the explicit live-fetch command that must be run outside
 the hosted UI. After that outside-browser CCLD pipeline output is validated, a
 developer/tester can build the local/test hosted seeded-corpus JSON artifact with:

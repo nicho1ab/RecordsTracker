@@ -154,9 +154,11 @@ source-derived rows. The page now includes first-time user workflow guidance,
 contextual help for facility/date/load/review terms, a `/ccld/help` page, and a
 facility/date-scoped complaint review queue with source traceability summaries,
 loaded-record context, reviewer-state indicators, progress counts, reviewer-
-status filtering, and reviewer-detail actions. Queue state is derived from
+status filtering, reviewer-detail actions, and a structured copyable tester
+feedback checklist for manual external sharing. Queue state is derived from
 existing source-derived records plus existing reviewer-created note/status rows;
-it is not persisted as a separate queue state model.
+it is not persisted as a separate queue state model. Feedback is not persisted by
+the app in this slice.
 It does not run hosted live crawling, execute connectors, mutate reviewer-
 created state from the request page, create audit rows, persist feedback, add non-CCLD source
 selection, or prove public-source completeness. A local/test CCLD-only artifact
