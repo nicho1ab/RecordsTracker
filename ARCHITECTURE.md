@@ -39,8 +39,8 @@ ADR-0007 recommends a hybrid transition direction for hosted tester MVP
 planning: preserve the existing Python ingestion and extraction pipeline, retain
 SQLite and Datasette for validation and transition comparison, and introduce a
 hosted relational database plus hosted reviewer application/API boundary for
-tester workflows after the remaining data model, authentication, sync, export,
-audit, retention, and implementation ADRs are accepted.
+tester workflows after the data model, authentication/access, sync,
+schema/migration, operational, and implementation boundaries are accepted.
 
 ADR-0008 defines the hosted tester MVP data and review-state model boundary. It
 requires two distinct data domains: a source-derived data domain for imported or
@@ -82,6 +82,13 @@ testable hosted app scaffold with smoke validation and local development docs;
 it must not implement business workflows, domain schema, authentication,
 authorization, import/sync, review queues, annotations, corrections, exports,
 reset/reload, hosted deployment, or extraction behavior.
+
+ADR-0013 defines the hosted tester MVP operational boundaries for audit logging,
+export generation, reset/reload, and tester data retention. It clears the next
+product-moving implementation path while keeping concrete authentication,
+database, migration, schema, API, import/reset, export builder, audit
+persistence, retention automation, and deployment implementation deferred to
+focused branches.
 
 The current hosted scaffold state is local-only and sample-only. It includes a
 Python standard-library app shell, health and smoke validation, local setup
@@ -158,7 +165,7 @@ membership, assignment if applicable, annotation, field-level note, source
 verification note, proposed correction, correction decision, tester feedback,
 export packet, export packet item, and audit event. These concepts are planning
 boundaries only until future schema, import/sync, API, export, audit, and
-retention ADRs approve implementation details.
+retention implementation PRs validate the concrete layer.
 
 ## Boundaries
 
@@ -188,11 +195,12 @@ retention ADRs approve implementation details.
   hosted tester access is not approved because the hosted app includes
   reviewer-created state, tester feedback, annotations, corrections, export
   decisions, audit history, and sensitive review context.
-- Hosted tester MVP implementation may begin only through the ADR-0012
-  scaffold-first sequence. Hosted schemas, authentication implementation,
-  correction workflows, queues, annotations, import/sync, reset/reload, hosted
-  deployment, and hosted export builders remain unapproved until their relevant
-  future decisions and implementation PRs validate the affected layer.
+- Hosted tester MVP implementation may proceed from the ADR-0012 scaffold-first
+  sequence into the ADR-0013 product-enabling path. Hosted schemas,
+  authentication implementation, correction workflows, queues, annotations,
+  import/sync, reset/reload commands or APIs, hosted deployment, audit
+  persistence, retention automation, and hosted export builders remain
+  unimplemented until focused implementation PRs validate the affected layer.
 
 ## Accessibility
 
