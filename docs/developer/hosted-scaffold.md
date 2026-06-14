@@ -72,6 +72,20 @@ itself as a scaffold and not a functioning reviewer workflow. It must not imply
 that authentication, records, workflows, cloud hosting, QNAP, Azure, or AWS are
 available.
 
+## Open the sample read-only source view shell
+
+The scaffold includes a local-only sample source-derived view shell at:
+
+```text
+http://127.0.0.1:8000/source-records
+```
+
+The page displays fixture/sample records only. It does not load live public data,
+does not read from a database, does not run import/sync, does not authenticate
+users, and does not persist reviewer-created state. Its source-traceability-style
+fields are sample values that exist only to exercise the future read-only
+reviewer-app shape.
+
 ## Run the smoke check
 
 The smoke check starts an in-process local scaffold server, checks the health
@@ -139,6 +153,10 @@ The scaffold intentionally does not implement:
 - Source-derived canonical field changes.
 - Extraction behavior changes.
 - QNAP, Azure, AWS, public hosting, public URLs, or production deployment.
+
+The sample source-derived view shell is also local-only and read-only. It is not
+an import workflow, a database-backed source record view, a queue, a correction
+workflow, or a reviewer-created state surface.
 
 Those layers remain deferred to later ADRs or implementation PRs with focused
 validation for the affected boundary.

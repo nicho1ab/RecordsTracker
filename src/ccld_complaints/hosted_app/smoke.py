@@ -23,6 +23,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         try:
             health_status, health_body = _read_url(f"{base_url}/health")
             root_status, root_body = _read_url(f"{base_url}/")
+            records_status, records_body = _read_url(f"{base_url}/source-records")
         finally:
             server.shutdown()
             thread.join(timeout=5)
@@ -32,6 +33,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold health check did not return ok.")
     if root_status != 200 or b"not a functioning reviewer workflow yet" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return the placeholder notice.")
+    if records_status != 200 or b"Fixture/sample source record list" not in records_body:
+        raise RuntimeError("Hosted scaffold source-record shell did not return the sample list.")
     return payload if isinstance(payload, dict) else {}
 
 
