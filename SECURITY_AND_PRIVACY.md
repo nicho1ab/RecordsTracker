@@ -38,6 +38,16 @@ password storage for the tester MVP. Provider secrets, client credentials,
 tenant IDs, app registrations, callback URLs, hosted URLs, private URLs, tokens,
 and account-specific configuration must not be committed.
 
+The current hosted auth boundary scaffold validates only the accepted managed
+OIDC/OAuth2 provider class through `CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS` and
+models authenticated actor identity, account status, role assignments,
+project/corpus scopes, authorization targets, and audit-ready actor context for
+local/test use. It does not implement provider login, token validation, session
+storage, cookies, callback handling, user tables, role tables, provider tenant
+configuration, client secrets, or production auth middleware. Protected service
+helpers must reject unauthenticated, disabled or revoked, role-denied, and
+out-of-scope actors before future reviewer-created workflows are enabled.
+
 Identity storage, sessions, authorization middleware, user tables, role tables,
 invitation flow, account recovery, final multi-factor requirements, and user
 deprovisioning implementation remain deferred to later implementation

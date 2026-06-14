@@ -28,10 +28,12 @@
     It stages source-derived records from a validated JSON artifact into the
     PostgreSQL/Alembic import batch and source-derived table group only. A
     narrow local/test read service can list and fetch those staged records with
-    import batch context and source traceability. The path does not run live
-    crawling, execute connectors, automate production imports, implement
-    reset/reload, authenticate users, create reviewer-created state, expose HTTP
-    API routes or database-backed reviewer views, or prove source completeness.
+    import batch context and source traceability, and local/test auth guards can
+    protect those service reads by actor role, account status, and scope. The
+    path does not run live crawling, execute connectors, automate production
+    imports, implement reset/reload, authenticate browser users, validate real
+    provider tokens, create reviewer-created state, expose HTTP API routes or
+    database-backed reviewer views, or prove source completeness.
 - The local hosted scaffold `/facilities` list and detail pages use committed
     tiny public-source facility fixtures and manifest placeholder metadata only.
     The facility detail source coverage panel and related source-record links

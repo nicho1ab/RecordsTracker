@@ -109,6 +109,7 @@ def test_schema_api_scaffold_summary_reflects_seeded_import_without_reviewer_wor
     scaffold = build_hosted_schema_api_scaffold()
 
     assert scaffold.domain_tables_created is True
+    assert scaffold.auth_boundary_scaffold_implemented is True
     assert scaffold.source_derived_read_service_implemented is True
     assert scaffold.api_routes_implemented is False
     assert scaffold.imports_implemented is True

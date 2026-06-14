@@ -20,8 +20,9 @@
   Alembic script location, one narrow domain migration for controlled seeded
   import batch metadata and source-derived record staging, a local validated
   JSON artifact importer, a local/test database-backed read service over staged
-  source-derived records, and source-derived versus reviewer-created state
-  boundary descriptors.
+  source-derived records, a local/test auth boundary scaffold for actor, role,
+  account-status, scope, target, and audit-context checks, and source-derived
+  versus reviewer-created state boundary descriptors.
 - Local-only sample filtering/search: implemented for the hosted source-record
   shell using in-memory fixture/sample records only.
 - Fixture/sample-only source traceability summary panels: implemented for the
@@ -38,9 +39,11 @@
   functioning reviewer workflow.
 - Local-only scaffold status: the scaffold is sample-only, read-only, local to a
   development workstation, and not backed by live public data, ignored raw CSVs,
-  generated profiling outputs, SQLite, HTTP API route reads, authentication, authorization,
-  reviewer-created state, queues, annotations, corrections, exports, audit
-  trail, reset/reload, deployment, QNAP, Azure, AWS, or public URL behavior.
+  generated profiling outputs, SQLite, HTTP API route reads, real provider
+  login, auth middleware, persistent authorization storage, reviewer-created
+  state, queues, annotations, corrections, exports, audit trail, reset/reload,
+  deployment, QNAP, Azure, AWS, or public URL behavior. Current auth behavior is
+  limited to local/test service guards over fixture actor contexts.
 - Datasette role: Datasette remains retained for validation, inspection,
   debugging, local exploration, export support, and transition comparison. It is
   not the governed primary future reviewer UX.
@@ -113,9 +116,10 @@
   export packet state, tester feedback, auth role/scope references, and
   operational/reset metadata. The current Alembic path includes only the narrow
   seeded import batch and source-derived staging migration.
-- Authentication, authorization, role storage, invitation flow, account
-  lifecycle, access revocation, access review, audit schema, and user
-  deprovisioning implementation.
+- Real provider authentication, token validation, session handling, auth
+  middleware, role storage, invitation flow, account lifecycle, access
+  revocation, access review, audit schema, and user deprovisioning
+  implementation.
 - Audit persistence implementation, export builder implementation,
   reset/reload command or API implementation, tester feedback persistence,
   reviewer-created state persistence, annotations, corrections, queues, and
@@ -150,10 +154,11 @@
   retention planning. ADR-0014 completed the auth provider-class and role
   implementation direction decision. ADR-0015 completed the database and
   migration tooling decision. Minimal PostgreSQL/Alembic scaffold wiring,
-  schema/API boundary descriptors, a controlled seeded corpus import path, and
-  database-backed source-derived read service are now in place. Next work should
-  move to focused auth implementation, narrow HTTP/API route decisions, or
-  reset/reload planning, not repeat those completed items.
+  schema/API boundary descriptors, a controlled seeded corpus import path,
+  database-backed source-derived read service, and local/test auth boundary
+  scaffold are now in place. Next work should move to narrow HTTP/API route
+  decisions, real provider integration, or reset/reload planning, not repeat
+  those completed items.
 - Local-only/sample-only boundaries remain active. Sample records must stay
   clearly marked as fixture/sample records and must not be presented as live,
   database-backed, complete, statewide, official, or production data.
@@ -186,7 +191,10 @@
   ADR-0014 managed OpenID Connect/OAuth 2.0 provider class, remain explicitly
   invited or provisioned, role-scoped, project/corpus-scoped, revocable,
   reviewable, and auditable where feasible before tester workflows expose
-  reviewer-created state.
+  reviewer-created state. The current scaffold validates the provider class and
+  enforces local/test role, scope, and account-status checks for service seams;
+  real provider login, token validation, session handling, middleware, and
+  persistent role/scope assignments remain deferred.
 - Future deployment/hosting decision: QNAP, Azure, AWS, public URL, cloud
   deployment, DNS, app registration, cloud database, and deployment credential
   choices remain deferred and must not be implied by local scaffold tooling.
