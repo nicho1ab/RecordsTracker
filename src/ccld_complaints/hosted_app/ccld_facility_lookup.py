@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import html
+import os
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,6 +13,10 @@ CCLD_RECORD_REQUEST_PATH = "/ccld/records/request"
 DEFAULT_CCLD_FACILITY_REFERENCE_PATH = Path(
     "tests/fixtures/public_source_facilities/ccld_program_facilities_tiny.csv"
 )
+DEFAULT_FULL_CCLD_FACILITY_REFERENCE_PATH = Path(
+  "data/raw/ccld/facility-reference.csv"
+)
+CCLD_FACILITY_REFERENCE_CSV_ENV = "CCLD_FACILITY_REFERENCE_CSV"
 MAX_FACILITY_LOOKUP_RESULTS = 25
 _REQUIRED_COLUMNS = (
     "Facility Number",
@@ -52,19 +57,29 @@ class CcldFacilityLookupRecord:
 
 
 @dataclass(frozen=True)
+class CcldFacilityReferenceSource:
+    source_kind: str
+    label: str
+    path_label: str
+    records: tuple[CcldFacilityLookupRecord, ...]
+    warnings: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class CcldFacilityLookupResult:
-    query: str
-    total_match_count: int
-    returned_records: tuple[CcldFacilityLookupRecord, ...]
-    result_limit: int
+  query: str
+  total_match_count: int
+  returned_records: tuple[CcldFacilityLookupRecord, ...]
+  result_limit: int
+  reference_source: CcldFacilityReferenceSource | None = None
 
-    @property
-    def empty_search(self) -> bool:
-        return not self.query.strip()
+  @property
+  def empty_search(self) -> bool:
+    return not self.query.strip()
 
-    @property
-    def has_more_matches(self) -> bool:
-        return self.total_match_count > len(self.returned_records)
+  @property
+  def has_more_matches(self) -> bool:
+    return self.total_match_count > len(self.returned_records)
 
 
 def load_ccld_facility_reference(
@@ -87,11 +102,67 @@ def load_ccld_facility_reference(
     )
 
 
+def load_active_ccld_facility_reference(
+    *,
+    configured_path: str | None = None,
+) -> CcldFacilityReferenceSource:
+    configured_value = configured_path
+    if configured_value is None:
+        configured_value = os.environ.get(CCLD_FACILITY_REFERENCE_CSV_ENV)
+    if configured_value:
+        configured_reference = Path(configured_value)
+        if configured_reference.exists():
+            try:
+                return CcldFacilityReferenceSource(
+                    source_kind="full_local_test_csv",
+                    label="Full local/test CCLD facility reference CSV",
+                    path_label=_safe_path_label(configured_reference),
+                    records=load_ccld_facility_reference(configured_reference),
+                )
+            except ValueError as error:
+                return _tiny_fixture_reference(
+                    warnings=(
+                        "Configured full local/test CCLD facility reference CSV "
+                        f"could not be loaded: {error}. Using tiny fixture fallback.",
+                    )
+                )
+        return _tiny_fixture_reference(
+            warnings=(
+                "Configured full local/test CCLD facility reference CSV was not found. "
+                "Using tiny fixture fallback.",
+            )
+        )
+    if DEFAULT_FULL_CCLD_FACILITY_REFERENCE_PATH.exists():
+        try:
+            return CcldFacilityReferenceSource(
+                source_kind="full_local_test_csv",
+                label="Full local/test CCLD facility reference CSV",
+                path_label=_safe_path_label(DEFAULT_FULL_CCLD_FACILITY_REFERENCE_PATH),
+                records=load_ccld_facility_reference(
+                    DEFAULT_FULL_CCLD_FACILITY_REFERENCE_PATH
+                ),
+            )
+        except ValueError as error:
+            return _tiny_fixture_reference(
+                warnings=(
+                    "Default full local/test CCLD facility reference CSV could not be "
+                    f"loaded: {error}. Using tiny fixture fallback.",
+                )
+            )
+    return _tiny_fixture_reference(
+        warnings=(
+            "No full local/test CCLD facility reference CSV is configured or available. "
+            "Using tiny fixture fallback.",
+        )
+    )
+
+
 def search_ccld_facilities(
     query: str,
     records: Iterable[CcldFacilityLookupRecord] | None = None,
     *,
     result_limit: int = MAX_FACILITY_LOOKUP_RESULTS,
+    reference_source: CcldFacilityReferenceSource | None = None,
 ) -> CcldFacilityLookupResult:
     if result_limit < 1:
         raise ValueError("result_limit must be at least 1.")
@@ -102,8 +173,15 @@ def search_ccld_facilities(
             total_match_count=0,
             returned_records=(),
             result_limit=result_limit,
+            reference_source=reference_source,
         )
-    active_records = tuple(records) if records is not None else load_ccld_facility_reference()
+    active_reference: CcldFacilityReferenceSource | None = reference_source
+    active_records: tuple[CcldFacilityLookupRecord, ...] | None = (
+        tuple(records) if records is not None else None
+    )
+    if active_records is None:
+        active_reference = load_active_ccld_facility_reference()
+        active_records = active_reference.records
     query_tokens = tuple(normalized_query.split())
     matches = tuple(
         record for record in active_records if _record_matches_query(record, query_tokens)
@@ -113,6 +191,7 @@ def search_ccld_facilities(
         total_match_count=len(matches),
         returned_records=matches[:result_limit],
         result_limit=result_limit,
+        reference_source=active_reference,
     )
 
 
@@ -133,18 +212,25 @@ def route_ccld_facility_lookup_response(path: str) -> tuple[int, str, bytes]:
 
 
 def render_ccld_facility_lookup_page(query: str = "") -> str:
-    result = search_ccld_facilities(query)
+    reference_source = load_active_ccld_facility_reference()
+    result = search_ccld_facilities(
+        query,
+        reference_source.records,
+        reference_source=reference_source,
+    )
     return _page(
         title="Find CCLD facility",
         heading="Find CCLD facility",
         main=f"""    <section aria-labelledby="facility-lookup-scope-heading">
       <h2 id="facility-lookup-scope-heading">CCLD-only local/test facility lookup</h2>
-      <p>This lookup reads the committed local/test CCLD program facility reference CSV.
-      It helps carry a public facility/license number into the CCLD request workflow.</p>
+            <p>This lookup reads a full local/test CCLD facility reference CSV when configured
+            or available, otherwise it falls back to the committed tiny fixture CSV. It helps
+            carry a public facility/license number into the CCLD request workflow.</p>
       <p>The lookup does not run live CCLD retrieval, query the public portal, import records,
       persist data, or prove public-source completeness.</p>
     </section>
     {_render_lookup_form(result.query)}
+    {_render_reference_source_section(reference_source)}
     {_render_lookup_results(result)}
     <section aria-labelledby="manual-entry-heading">
       <h2 id="manual-entry-heading">Manual facility/license entry</h2>
@@ -168,6 +254,19 @@ def _record_from_row(row: dict[str, str]) -> CcldFacilityLookupRecord:
         facility_type=_clean_value(row["Facility Type"]),
         status=_clean_value(row["Facility Status"]),
         closed_date=_clean_value(row["Closed Date"]),
+    )
+
+
+def _tiny_fixture_reference(
+    *,
+    warnings: tuple[str, ...] = (),
+) -> CcldFacilityReferenceSource:
+    return CcldFacilityReferenceSource(
+        source_kind="tiny_fixture_fallback",
+        label="Tiny committed CCLD facility fixture fallback",
+        path_label=DEFAULT_CCLD_FACILITY_REFERENCE_PATH.as_posix(),
+        records=load_ccld_facility_reference(DEFAULT_CCLD_FACILITY_REFERENCE_PATH),
+        warnings=warnings,
     )
 
 
@@ -206,6 +305,33 @@ def _render_lookup_form(query: str) -> str:
         </p>
         <p><button type="submit">Search CCLD facilities</button></p>
       </form>
+    </section>"""
+
+
+def _render_reference_source_section(source: CcldFacilityReferenceSource) -> str:
+    warning_markup = ""
+    default_full_path = DEFAULT_FULL_CCLD_FACILITY_REFERENCE_PATH.as_posix()
+    if source.warnings:
+        warning_items = "\n".join(
+            f"        <li>{_escape(warning)}</li>" for warning in source.warnings
+        )
+        warning_markup = f"""      <ul>
+{warning_items}
+      </ul>"""
+    return f"""    <section aria-labelledby="reference-source-heading">
+      <h2 id="reference-source-heading">Facility reference source</h2>
+      <p id="reference-source-help">Active source: {_escape(source.label)}.</p>
+      <dl aria-describedby="reference-source-help">
+        <dt>Reference path</dt>
+        <dd>{_escape(source.path_label)}</dd>
+        <dt>Rows loaded for lookup</dt>
+        <dd>{len(source.records)}</dd>
+      </dl>
+{warning_markup}
+      <p>Full local/test CSV support is read-only. Raw/full facility CSV files must stay
+      outside the repository and are not imported or persisted by this app.</p>
+            <p>To use a full local/test CSV, set <code>{CCLD_FACILITY_REFERENCE_CSV_ENV}</code>
+            or place the file at <code>{default_full_path}</code>.</p>
     </section>"""
 
 
@@ -378,6 +504,12 @@ def _first_query_value(query_values: dict[str, list[str]], key: str) -> str:
     if not values:
         return ""
     return values[0].strip()
+
+
+def _safe_path_label(path: Path) -> str:
+    if path.is_absolute():
+        return path.name
+    return path.as_posix()
 
 
 def _clean_value(value: str | None) -> str:

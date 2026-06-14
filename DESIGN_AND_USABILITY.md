@@ -117,10 +117,12 @@ not-started, in-review, needs-follow-up, reviewed, and blocked records without
 adding persisted queue state.
 The CCLD facility lookup version can add a local/test reference-data search path
 before the request page so testers do not need to know the full facility/license
-number. It should support searching safe available CSV fields, show bounded,
-readable results, carry the selected facility/license number into the request
-form, preserve manual entry, and clearly state that lookup rows are local/test
-reference assistance rather than complaint source truth or completeness proof.
+number. It should support a configured full local/test CSV with a committed tiny
+fixture fallback, show which reference source is active, support searching safe
+available CSV fields, show bounded readable results, carry the selected
+facility/license number into the request form, preserve manual entry, and clearly
+state that lookup rows are local/test reference assistance rather than complaint
+source truth or completeness proof.
 
 The hosted scaffold and first local-only read-only source-derived views now
 exist. Detailed hosted visual design may begin from that real shell, but early

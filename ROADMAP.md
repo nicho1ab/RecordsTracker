@@ -403,6 +403,12 @@ the governed primary future review experience.
 	request, queue, review, and feedback checklist workflow without adding live
 	browser retrieval, connector execution, schema changes, persistence, non-CCLD
 	sources, or production auth.
+- Added safe full local/test CCLD facility reference CSV support for that lookup:
+	testers can use `CCLD_FACILITY_REFERENCE_CSV` or ignored local path
+	`data/raw/ccld/facility-reference.csv`, see which source is active, and fall
+	back to the committed tiny fixture when the full CSV is not configured,
+	unavailable, or malformed without committing raw/full CSVs or mutating hosted
+	state.
 - Added a minimal local/test audit event persistence scaffold with a separate
 	PostgreSQL/Alembic table and service boundary for successful reviewer-created
 	state scaffold writes only, preserving source-derived records and reviewer-
