@@ -9,6 +9,15 @@
 - Every extracted record must link to a source document.
 - Every source document must include source URL, raw hash, retrieval timestamp, and connector name.
 
+## Public source inventory boundary
+
+`PUBLIC_SOURCE_DATA_INVENTORY.md` may document future source metadata, uploaded
+CSV example profiling needs, parser profiles, row counts, column counts,
+download timestamps, file names, hashes, warnings, allowed use, review status,
+and caution language. Those inventory planning fields are not canonical
+source-derived fields unless a later data contract, schema, documentation, and
+test update explicitly adds them.
+
 ## Canonical entities
 
 ### facility

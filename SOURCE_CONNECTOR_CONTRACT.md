@@ -4,6 +4,14 @@
 
 This contract allows the project to scale across future public data sources with different structures.
 
+Before implementing a new connector, add or update a source inventory entry in
+`PUBLIC_SOURCE_DATA_INVENTORY.md`. The inventory entry should describe source
+type, jurisdiction, agency, topic or domain, retrieval method, update cadence
+when known, parser profile, traceability fields, caution and limitation
+language, allowed use, and review status. Inventory entries are planning
+artifacts only; they do not approve connector implementation, imports, schemas,
+canonical fields, hosted workflows, or legal conclusions.
+
 ## Required connector functions
 
 Each connector must implement:

@@ -97,6 +97,13 @@ public URL.
 
 Connectors are source-specific modules responsible for discovering, fetching, and extracting data from one public data source.
 
+Before a new connector or import path is implemented, candidate public sources
+should be inventoried in `PUBLIC_SOURCE_DATA_INVENTORY.md`. The inventory may
+classify structured CSV/open-data sources, HTML portal/detail pages, PDFs,
+metadata/catalog pages, and future multi-state public sources. It is a planning
+surface only; it does not create source adapters, schemas, imports, hosted
+workflows, or canonical fields.
+
 ### Raw source storage
 
 Raw source files are stored in ordinary file storage under `data/raw/`. Each file must have a stable name, source URL, retrieval timestamp, and SHA-256 hash.
