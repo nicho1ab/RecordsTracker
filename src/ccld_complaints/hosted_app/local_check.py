@@ -89,6 +89,10 @@ def build_local_check_report() -> list[LocalCheck]:
             "Hosted reset/reload dry-run package",
         ),
         check_importable(
+            "ccld_complaints.hosted_app.reset_reload_execution_plan",
+            "Hosted reset/reload execution-plan package",
+        ),
+        check_importable(
             "ccld_complaints.hosted_app.reset_reload_planning_routes",
             "Hosted reset/reload planning metadata API route package",
         ),
@@ -140,6 +144,7 @@ def format_text_report(report: list[LocalCheck]) -> str:
             "tests/unit/test_hosted_audit_events.py "
             "tests/unit/test_hosted_audit_event_routes.py "
             "tests/unit/test_hosted_reset_reload_dry_run.py "
+            "tests/unit/test_hosted_reset_reload_execution_plan.py "
             "tests/unit/test_hosted_reset_reload_operational_metadata.py "
             "tests/unit/test_hosted_reset_reload_planning_routes.py",
         ]

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added a narrow local/test reset/reload seeded corpus execution-plan route seam
+	that converts existing dry-run summaries and planning metadata context into an
+	ordered bounded non-destructive action plan, with optional persistence through
+	the existing operational planning metadata scaffold and focused no-mutation
+	tests, without adding reset/reload execution, archive/clear/reload behavior,
+	scheduler behavior, production auth, deployment, live crawling, connector
+	execution, schema changes, or migrations.
 - Added a narrow local/test reviewer workflow shell action for recording bounded
 	reviewer status values from the selected source-derived detail context,
 	delegating to the existing reviewer-created state write/audit path so source-

@@ -163,7 +163,9 @@ public-record review notes.
    authenticated reset/reload dry-run route seam that reports
    what a future seeded corpus reset/reload would affect and can optionally
    persist a separate operational planning metadata record when explicitly
-   requested by local/test code, plus a narrow local/test read-only route seam
+   requested by local/test code, a narrow local/test execution-plan route seam
+   that turns those summaries into ordered bounded non-destructive action steps,
+   plus a narrow local/test read-only route seam
    for listing or fetching those persisted planning records. It does not
    implement real login flow, auth middleware, full reviewer workflows,
    annotations, corrections, review status UI, production import automation,
@@ -186,9 +188,9 @@ public-record review notes.
    local/test only, force source-record binding from the selected detail context,
    require reviewer-state write permission, and write through the existing
    reviewer-created state and audit path.
-   The reset/reload dry-run seam is also local/test only and requires an
-   explicit database, actor, and scope context from tests or local callers. Its
-   operational metadata scaffold stores dry-run planning metadata only, requires
+   The reset/reload dry-run and execution-plan seams are also local/test only and require an
+   explicit database, actor, and scope context from tests or local callers. The
+   operational metadata scaffold stores non-executing planning metadata only, requires
    import/reload permission, rejects unauthenticated, disabled or revoked,
    role-denied, and out-of-scope actors, supports read-only list/fetch routes
    over those planning records, and does not execute reset/reload. The

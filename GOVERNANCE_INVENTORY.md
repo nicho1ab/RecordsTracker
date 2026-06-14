@@ -43,7 +43,9 @@
   history read route seam over those scaffold audit rows, a local/test authenticated reset/reload
   dry-run seam that reports seeded import batch, source-derived record,
   reviewer-created scaffold row, and audit scaffold row impact without mutating
-  data, and a narrow local/test reset/reload operational planning metadata
+  data, a narrow local/test reset/reload execution-plan seam that turns those
+  summaries into an ordered bounded non-destructive action plan, and a narrow
+  local/test reset/reload operational planning metadata
   scaffold that persists explicit dry-run planning records only, plus a narrow
   local/test read-only route seam for those planning records, plus source-
   derived versus reviewer-created state boundary descriptors.
@@ -72,7 +74,7 @@
   compact derived summary for selected details plus narrow note/status actions
   over the selected detail context, reviewer-created state scaffold service helpers,
   reviewer-created state read handlers with schema-backed filters and bounded
-  search, reset/reload dry-run handlers, and
+  search, reset/reload dry-run and execution-plan handlers, and
   explicit reset/reload planning metadata helpers and read handlers that require
   test database, actor, and scope context.
   Current auth
@@ -196,8 +198,8 @@
   persistence scaffold, narrow audit event scaffold, local/test reset/reload
   dry-run planning seam, opt-in reset/reload operational metadata scaffold, and
   read-only planning metadata route seam are now in place. Next work should
-  move to real provider integration, fuller reset/reload execution planning
-  beyond persisted planning metadata readback,
+  move to real provider integration, later reset/reload execution behavior
+  beyond this non-destructive execution-plan seam,
   export/feedback persistence, fuller audit coverage, or
   stateful reviewer-created workflow layers, not repeat those completed items.
 - Local-only/sample-only boundaries remain active. Sample records must stay
@@ -235,6 +237,7 @@
   reviewer status creation route that writes bounded status payloads through the
   same scaffold write/audit path, plus a local/test
   authenticated dry-run seam that reports seeded corpus reset/reload impact and
+  an execution-plan seam that orders those non-destructive planning steps and
   scoped reviewer-created scaffold and audit scaffold row counts without
   deleting, overwriting, archiving, importing, reloading, or creating new dry-run
   audit events, plus an opt-in operational metadata scaffold and read route seam

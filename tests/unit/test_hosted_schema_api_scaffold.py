@@ -143,6 +143,9 @@ def test_api_boundaries_keep_source_records_and_reviewer_state_separate() -> Non
     assert "dry-run route seam" in boundary_by_id[
         "seeded_corpus_reset_reload_operations_api"
     ].intended_future_use
+    assert "execution-plan route seam" in boundary_by_id[
+        "seeded_corpus_reset_reload_operations_api"
+    ].intended_future_use
     assert "operational planning metadata" in boundary_by_id[
         "seeded_corpus_reset_reload_operations_api"
     ].intended_future_use
@@ -150,6 +153,9 @@ def test_api_boundaries_keep_source_records_and_reviewer_state_separate() -> Non
         "seeded_corpus_reset_reload_operations_api"
     ].intended_future_use
     assert "read-only access to persisted planning metadata" in boundary_by_id[
+        "seeded_corpus_reset_reload_operations_api"
+    ].preserves
+    assert "ordered non-destructive execution-plan steps" in boundary_by_id[
         "seeded_corpus_reset_reload_operations_api"
     ].preserves
     assert "destructive reset execution" in boundary_by_id[
@@ -176,6 +182,7 @@ def test_schema_api_scaffold_summary_reflects_seeded_import_without_reviewer_wor
     assert scaffold.reviewer_workflow_shell_note_action_implemented is True
     assert scaffold.reviewer_workflow_shell_status_action_implemented is True
     assert scaffold.reset_reload_dry_run_implemented is True
+    assert scaffold.reset_reload_execution_plan_implemented is True
     assert scaffold.reset_reload_operational_metadata_scaffold_implemented is True
     assert scaffold.reset_reload_planning_metadata_read_api_routes_implemented is True
     assert scaffold.reviewer_created_state_persistence_scaffold_implemented is True

@@ -303,6 +303,13 @@ the governed primary future review experience.
 	coverage without adding reset/reload execution, archive execution, clear
 	execution, relinking, scheduler behavior, production automation, hosted live
 	crawling, connector execution, deployment, or production API behavior.
+- Added a narrow local/test reset/reload seeded corpus execution-plan seam that
+	reuses dry-run summaries and planning metadata context to return an ordered
+	bounded non-destructive action plan, optionally persisted as existing
+	operational planning metadata, without adding reset/reload execution, archive
+	execution, clear execution, relinking, scheduler behavior, production
+	automation, hosted live crawling, connector execution, deployment, or
+	production API behavior.
 - Added a minimal local/test reviewer-created state persistence scaffold with a
 	separate PostgreSQL/Alembic table and service boundary for authenticated
 	review-item-state placeholder rows linked to staged source-derived record
@@ -416,10 +423,11 @@ the governed primary future review experience.
 	authenticated tester workflow shell, reviewer workflow shell associated-state
 	read integration and derived state summary, reviewer-created state persistence scaffold, reviewer-created state read route seam, audit event persistence
 	scaffold, audit history read route seam, and
-	reset/reload dry-run planning seam with opt-in operational metadata persistence
-	and read-only planning metadata routes to
+	reset/reload dry-run planning seam, execution-plan seam, opt-in operational
+	metadata persistence, and read-only planning metadata routes to
 	move the next hosted tester MVP branches toward real provider integration,
-	further reset/reload execution planning beyond persisted metadata readback, and
+	later reset/reload execution behavior beyond this non-destructive planning
+	scaffold, and
 	stateful reviewer-created workflow layers.
 - Preserve Datasette, SQLite views, and review-bundle exports where they support
 	validation, inspection, debugging, local exploration, and export workflows.
@@ -448,7 +456,7 @@ exploration, or export support.
 2. Expand reset/reload planning into later reset/reload behavior for the seeded
 	corpus only after reviewer-created state preservation, fuller audit coverage,
 	operational metadata, and permission boundaries are broadened beyond this
-	local/test planning scaffold.
+	local/test dry-run, execution-plan, and planning metadata scaffold.
 3. Expand beyond the reviewer-created state and first audit event scaffolds into
 	export packet state, tester feedback, reset/reload metadata, fuller audit
 	coverage, and stateful reviewer-created workflow branches.
@@ -483,8 +491,9 @@ define the smallest useful product shape:
 	shell, reviewer-created state persistence scaffold, reviewer-created state
 	read route seam, first audit event persistence scaffold, local/test audit
 	history read route seam, reset/reload
-	planning metadata scaffold, and read-only planning metadata route seam to move into real
-	provider integration, fuller reset/reload planning,
+	execution-plan seam, planning metadata scaffold, and read-only planning
+	metadata route seam to move into real provider integration, later reset/reload
+	execution behavior,
 	fuller audit coverage, export/feedback metadata, and stateful authenticated tester
 	workflow implementation.
 
