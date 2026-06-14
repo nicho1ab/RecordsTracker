@@ -79,10 +79,11 @@ migrations/
   accessible server-rendered HTML wrapper over existing seeded source-derived
   reads, allowing CCLD digit facility/license number and optional date-range
   filtering, local validated hosted seeded-corpus load/refresh into existing
-  source-derived records, and reviewer UI links without running live crawling,
-  executing connectors, mutating reviewer-created state, creating audit rows,
-  supporting non-CCLD sources, or adding production auth, schema changes, or
-  deployment.
+  source-derived records, guided facility/date-scoped request result queue
+  rendering, first-time help and feedback guidance, and reviewer UI links
+  without running live crawling, executing connectors, mutating reviewer-created
+  state, creating audit rows, persisting feedback, supporting non-CCLD sources,
+  or adding production auth, schema changes, or deployment.
 19. Use the CCLD hosted artifact builder only as a local/test outside-browser
   conversion from validated CCLD SQLite pipeline output into hosted seeded-
   corpus JSON. It preserves source traceability and original values for CCLD

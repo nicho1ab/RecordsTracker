@@ -39,8 +39,9 @@ experience.
 - Includes a local/test hosted CCLD record request page where a tester can enter
    a CCLD facility/license number and optional date range, read matching seeded
    source-derived records, load or refresh matching CCLD records from validated
-   local/test hosted seeded-corpus output, and open them in the hosted reviewer
-   UI without running live crawling from a browser request.
+   local/test hosted seeded-corpus output, review a guided facility/date-scoped
+   complaint queue, open records in the hosted reviewer UI, and read first-time
+   workflow help without running live crawling from a browser request.
 
 ## Core Principles
 
@@ -183,8 +184,9 @@ public-record review notes.
    reads existing seeded source-derived records, can load or refresh matching
    CCLD rows from local validated hosted seeded-corpus output through the
    existing source-derived import tables, links matching rows into the hosted
-   reviewer UI, and explains the explicit CCLD live-fetch command when broader
-   retrieval is needed. It does not run live crawling, execute connectors,
+   reviewer UI, shows a guided facility/date-scoped result queue with contextual
+   help and feedback guidance, and explains the explicit CCLD live-fetch command
+   when broader retrieval is needed. It does not run live crawling, execute connectors,
    mutate reviewer-created state, create audit rows, or add non-CCLD sources
    from browser requests. A browser-accessible local/test reviewer UI shell is
    available at `/reviewer` when the scaffold is running locally; it loads the

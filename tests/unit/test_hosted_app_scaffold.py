@@ -104,13 +104,17 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
 
     assert "<main>" in html
     assert "Local/test scaffold only: not a production reviewer workflow." in html
-    assert "The root scaffold page does not load source records" in html
-    assert "Local/test reviewer workflow behavior is available only" in html
-    assert "Authentication and authorization" in html
-    assert "QNAP, Azure, AWS, public URLs, or deployment" in normalized_html
-    assert "Sample source-derived records" in html
-    assert "Sample facility master records" in html
-    assert "Local/test reviewer UI shell" in html
+    assert "Request CCLD facility records" in html
+    assert "Start with a CCLD facility request" in html
+    assert "Workflow overview" in html
+    assert "What the main words mean" in html
+    assert "Feedback guidance" in html
+    assert "Local/test boundaries" in html
+    assert "Browser pages do not run live CCLD retrieval" in html
+    assert "Production sign-in, sessions, cookies, exports, deployment" in normalized_html
+    assert "Request CCLD records" in html
+    assert "How this works" in html
+    assert "Review loaded records" in html
     assert "/reviewer" in html
 
 
@@ -392,7 +396,7 @@ def test_source_record_list_has_accessible_semantic_structure() -> None:
     assert status == 200
     parser = assert_source_shell_semantics(
         html,
-        expected_title="Sample source-derived records - CCLD Hosted Tester MVP Scaffold",
+        expected_title="Sample source-derived records - CCLD Records Review",
         expected_h1="Sample source-derived records",
         required_links={"/", "/health", "/source-records/sample-complaint-001"},
     )
@@ -432,7 +436,7 @@ def test_source_record_detail_has_accessible_semantic_structure() -> None:
     assert status == 200
     parser = assert_source_shell_semantics(
         html,
-        expected_title="SAMPLE-CC-001 - CCLD Hosted Tester MVP Scaffold",
+        expected_title="SAMPLE-CC-001 - CCLD Records Review",
         expected_h1="SAMPLE-CC-001",
         required_links={
             "/",
@@ -477,7 +481,7 @@ def test_facility_list_has_accessible_semantic_structure() -> None:
     assert status == 200
     parser = assert_source_shell_semantics(
         html,
-        expected_title="Sample facility master records - CCLD Hosted Tester MVP Scaffold",
+        expected_title="Sample facility master records - CCLD Records Review",
         expected_h1="Sample facility master records",
         required_links={
             "/",
@@ -519,7 +523,7 @@ def test_facility_detail_has_accessible_semantic_structure() -> None:
     assert status == 200
     parser = assert_source_shell_semantics(
         html,
-        expected_title="900000002 - CCLD Hosted Tester MVP Scaffold",
+        expected_title="900000002 - CCLD Records Review",
         expected_h1="900000002",
         required_links={"/", "/facilities", "/source-records", "/health"},
     )

@@ -103,6 +103,13 @@ must not offer non-CCLD source selection, imply hosted live crawling, imply
 generic connector execution, or hide the required outside-browser handoff when
 broader retrieval requires an explicit live-fetch command and local/test
 artifact build command before browser load/refresh.
+The next guided version of that page can organize matching complaints as a
+facility/date-scoped review queue, provide first-time workflow and key-term
+help, show reviewer notes/status indicators from existing reviewer-created
+state reads, and include feedback guidance without adding feedback persistence.
+That UI must keep source-derived records visibly separate from reviewer-created
+notes/statuses and avoid implying production readiness or public-source
+completeness.
 
 The hosted scaffold and first local-only read-only source-derived views now
 exist. Detailed hosted visual design may begin from that real shell, but early

@@ -104,8 +104,9 @@ http://127.0.0.1:8000/ccld/records/request
 The page is CCLD-only. It accepts a digit-only CCLD facility/license number and
 an optional start and end date. It reads the existing seeded source-derived
 records through the local/test hosted route seams, shows matching seeded CCLD
-rows, and links matching complaint records into the hosted reviewer UI detail or
-list pages.
+complaint records as a facility/date-scoped review queue, includes first-time
+workflow and key-term help at `/ccld/help`, and links matching complaint records
+into the hosted reviewer UI detail or list pages.
 
 When no matching hosted rows are available, the page can offer a bounded local
 validated CCLD load action. That action reads committed local/test hosted
@@ -113,7 +114,9 @@ seeded-corpus JSON output, validates the CCLD facility/date request, and stages
 matching CCLD source-derived rows through the existing idempotent hosted seeded
 import path. The result page reports matching rows before and after the load,
 new source-derived rows staged, existing rows refreshed, duplicate rows avoided,
-local validated rows outside the request, and any deferred reason.
+local validated rows outside the request, any deferred reason, source
+traceability summaries, loaded-record bundle context, and reviewer-state
+indicators from existing reviewer-created state reads.
 
 The page does not run live crawling, execute connectors, write reviewer-created
 state, create audit rows, persist operational metadata, destructively delete or
@@ -122,6 +125,9 @@ is needed, it still shows the explicit outside-browser handoff: run the CCLD
 live fetch command when live public requests are intended, validate the SQLite
 output, run the local/test artifact builder, then return to the request page to
 load or refresh the generated hosted seeded-corpus JSON.
+The feedback section is guidance-only; it explains what a tester should capture
+about missing records, confusing wording, workflow friction, or desired features
+without adding feedback persistence.
 
 To build that local/test hosted seeded-corpus JSON from validated CCLD SQLite
 output, run:

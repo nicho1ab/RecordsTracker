@@ -54,8 +54,34 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "CCLD-only local/test request" in html
     assert "CCLD facility/license number" in html
     assert "optional date range" in html
-    assert "does not run live crawling or imports" in normalized_html
+    assert "Workflow overview" in html
+    assert "Key terms" in html
+    assert "Feedback guidance" in html
+    assert "browser-triggered connector execution" in normalized_html
+    assert "Read how this CCLD review workflow works" in normalized_html
     assert "provider" not in html.casefold()
+    assert_no_secret_html(html)
+
+
+def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
+    status, content_type, body = route_response("/ccld/help")
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "How CCLD review works" in html
+    assert "What this local/test app does" in html
+    assert "Workflow overview" in html
+    assert "Facility/license number" in html
+    assert "Date range" in html
+    assert "Loaded records" in html
+    assert "Source records" in html
+    assert "Review queue" in html
+    assert "Reviewer notes" in html
+    assert "Reviewer status" in html
+    assert "Useful tester feedback includes" in normalized_html
+    assert "Open the CCLD record request form" in html
     assert_no_secret_html(html)
 
 
@@ -153,12 +179,18 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Found 6 local/test CCLD source-derived row(s)" in normalized_html
     assert "facility/license number 157806098" in html
     assert "Date range: 2022-08-01 to 2022-08-31." in html
+    assert "CCLD review queue" in html
+    assert "Facility/date-scoped CCLD complaint records ready for review" in html
+    assert "Review this complaint record" in html
     assert "A. MIRIAM JAMISON" in html
     assert "32-CR-20220407124448" in html
-    assert "Open reviewer detail" in html
     assert detail_href in html
+    assert "Complete source traceability" in html
+    assert "No reviewer notes or status yet" in html
+    assert "1 loaded source records in bundle" not in html
+    assert "6 loaded source records in bundle" in html
     assert "Open reviewer records" in html
-    assert "did not run live retrieval or import" in html
+    assert "did not run live retrieval" in html
     assert "run-ccld-live-fetch.ps1 -FacilityNumber 157806098" in html
     assert_no_secret_html(html)
 

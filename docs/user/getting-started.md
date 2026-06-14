@@ -124,12 +124,14 @@ Then open `http://127.0.0.1:8000/ccld/records/request`. The page accepts a
 CCLD facility/license number and optional date range, reads existing seeded
 source-derived records, can load or refresh matching rows from local validated
 hosted seeded-corpus output, and links matching rows into the hosted reviewer
-UI. It does not run live CCLD retrieval, execute connectors, or mutate reviewer
+UI. It also includes a first-time help page at `/ccld/help`, contextual
+facility/date/load/review help, feedback guidance, and a facility/date-scoped
+review queue with one row per matching complaint record. It does not run live
+CCLD retrieval, execute connectors, persist feedback, or mutate reviewer
 notes/statuses from the browser. When matching local validated records are
 unavailable, it shows the explicit live-fetch command that must be run outside
 the hosted UI. After that outside-browser CCLD pipeline output is validated, a
-developer/tester can build the local/test hosted seeded-corpus JSON artifact
-with:
+developer/tester can build the local/test hosted seeded-corpus JSON artifact with:
 
 ```powershell
 .\scripts\build-hosted-ccld-artifact.ps1 -DbPath data\processed\ccld.sqlite -FacilityNumber 157806098 -Overwrite
