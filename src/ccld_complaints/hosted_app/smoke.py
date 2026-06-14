@@ -25,6 +25,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
             root_status, root_body = _read_url(f"{base_url}/")
             records_status, records_body = _read_url(f"{base_url}/source-records")
             facilities_status, facilities_body = _read_url(f"{base_url}/facilities")
+            ccld_status, ccld_body = _read_url(f"{base_url}/ccld/records/request")
             reviewer_status, reviewer_body = _read_url(f"{base_url}/reviewer")
         finally:
             server.shutdown()
@@ -47,6 +48,12 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Committed tiny public-source facility fixture rows" not in facilities_body
     ):
         raise RuntimeError("Hosted scaffold facility sample shell did not return the fixture list.")
+    if (
+        ccld_status != 200
+        or b"CCLD record request" not in ccld_body
+        or b"CCLD facility/license number" not in ccld_body
+    ):
+        raise RuntimeError("Hosted scaffold CCLD request shell did not return the request page.")
     if (
         reviewer_status != 200
         or b"Local/test reviewer records" not in reviewer_body

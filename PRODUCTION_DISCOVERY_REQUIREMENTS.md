@@ -143,6 +143,17 @@ route, and audit scaffold; it does not add schema changes, production auth,
 sessions, cookies, exports, reset/reload execution, hosted live crawling,
 connector execution, deployment, hosted URLs, or full reviewer workflows.
 
+A thin local/test CCLD record request page now exists at
+`/ccld/records/request` when the local scaffold process is running. It accepts
+a CCLD facility/license number and optional date range, reads only existing
+seeded source-derived rows, shows matching seeded CCLD rows, and links matching
+complaints into the reviewer UI. It validates digit-only CCLD identifiers and
+date ranges, shows clear no-match guidance, and identifies the remaining need
+for a safe CCLD-only import/reload path from validated pipeline output into
+hosted source-derived records. It does not run hosted live crawling, execute
+connectors, import records, mutate hosted scaffold tables, add non-CCLD source
+selection, or prove public-source completeness.
+
 The reviewer workflow shell can now include associated reviewer-created state
 read route output in a selected source-record detail response when explicit
 local/test source-derived and reviewer-created state contexts are supplied.
@@ -188,6 +199,12 @@ Reviewers must be able to search or filter facilities by available
 source-derived identifiers and names, select a facility, see source coverage at a
 high level, and navigate into that facility's complaint review queue without
 manual table joins.
+For the CCLD-only MVP path, the first browser step should accept a CCLD
+facility/license number and optional date range, then retrieve, prepare, or show
+CCLD records for that scope before sending the user into reviewer pages. Hosted
+browser requests must not run live crawling unless a later approved architecture
+decision adds a safe execution model with tests, audit, rate limits, and source
+traceability preservation.
 
 ### Complaint review queue
 

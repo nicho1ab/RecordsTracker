@@ -75,36 +75,42 @@ migrations/
   created state display without exposing sensitive
   narrative fields or adding production auth, schema changes, exports, reset/reload
   execution, live crawling, connector execution, or deployment.
-18. Use the hosted reviewer-created state scaffold only for local/test
+18. Use the hosted CCLD record request page only as a local/test browser-
+  accessible server-rendered HTML wrapper over existing seeded source-derived
+  reads, allowing CCLD digit facility/license number and optional date-range
+  filtering plus reviewer UI links without running live crawling, executing
+  connectors, importing data, mutating hosted scaffold tables, supporting non-
+  CCLD sources, or adding production auth, schema changes, or deployment.
+19. Use the hosted reviewer-created state scaffold only for local/test
   authenticated placeholder state rows linked to staged source-derived record
   keys, including bounded non-secret reviewer note payloads and bounded reviewer
   status payloads, without modifying source-derived records.
-19. Use the hosted reviewer-created state read route seam only for local/test
+20. Use the hosted reviewer-created state read route seam only for local/test
   authenticated JSON list, fetch, filter, and bounded search access over those
   scaffold rows without mutating reviewer-created, source-derived, audit, or
   operational metadata.
-20. Use the hosted audit event scaffold only for local/test audit rows created
+21. Use the hosted audit event scaffold only for local/test audit rows created
   for successful reviewer-created state scaffold writes, without modifying
   source-derived or reviewer-created rows.
-21. Use the hosted audit history read route seam only for local/test
+22. Use the hosted audit history read route seam only for local/test
   authenticated JSON list and fetch access over those scaffold audit rows.
-22. Use the hosted audit coverage planning seam only for local/test
+23. Use the hosted audit coverage planning seam only for local/test
   authenticated, non-persistent readiness planning over current and deferred
   audit categories, without creating audit rows or mutating persisted data.
-23. Use the hosted reset/reload dry-run seam only for local/test authenticated
+24. Use the hosted reset/reload dry-run seam only for local/test authenticated
   planning over staged seeded corpus metadata, with optional persisted
   operational planning metadata when explicitly requested, without mutating
   source-derived, reviewer-created, or audit data.
-24. Use the hosted reset/reload execution-plan seam only for local/test
+25. Use the hosted reset/reload execution-plan seam only for local/test
   authenticated, ordered, bounded non-destructive action plans over existing
   dry-run summaries and planning metadata context, with optional persisted
   operational planning metadata when explicitly requested, without mutating
   source-derived, reviewer-created, or audit data.
-25. Use the hosted reset/reload planning metadata read route seam only for
+26. Use the hosted reset/reload planning metadata read route seam only for
   local/test authenticated JSON list and fetch access over persisted planning
   rows, without mutating operational, source-derived, reviewer-created, or audit
   data.
-26. Keep full reviewer-created workflows, annotations, corrections, exports,
+27. Keep full reviewer-created workflows, annotations, corrections, exports,
   full audit coverage, audit UI, audit export, reset/reload execution, real login flow, auth
   middleware, provider integration, production API framework behavior, live
   crawling, connector execution, and production automation in future focused

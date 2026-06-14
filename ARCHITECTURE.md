@@ -127,7 +127,10 @@ seam, a narrow local/test authenticated reviewer note creation route seam over
 the existing reviewer-created state scaffold, a narrow local/test workflow-shell
 note action and status action over the selected source-derived detail context,
 a thin browser-accessible local/test reviewer UI shell at `/reviewer` and
-`/reviewer/records` over those existing seams,
+`/reviewer/records` over those existing seams, a thin browser-accessible
+local/test CCLD record request page at `/ccld/records/request` that filters
+existing seeded source-derived rows by CCLD facility/license number and optional
+date range and links matches into the reviewer UI,
 a local/test authenticated reset/reload dry-run route seam, and a local/test
 authenticated reset/reload execution-plan route seam: a
 no-secret database URL configuration seam, an Alembic script location, one
@@ -157,6 +160,11 @@ open detail, view safe source traceability fields and safe related seeded bundle
 context, submit reviewer note/status forms through the existing workflow
 actions, and see read-after-write reviewer-created state without exposing
 sensitive narrative fields,
+plus a simple server-rendered CCLD request page that accepts only CCLD digit
+facility/license numbers and optional valid date ranges, shows seeded match or
+no-match results, links seeded matches to reviewer pages, and explains the
+external live-fetch command and remaining safe import/reload gap when broader
+retrieval is needed,
 plus a JSON handler that stores bounded non-secret reviewer note text as reviewer-created
 scaffold payload under the existing state kind,
 plus a JSON handler that stores bounded reviewer status values as reviewer-created

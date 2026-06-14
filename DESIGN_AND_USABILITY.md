@@ -91,6 +91,17 @@ semantic headings, tables, labels, and accessible buttons, avoid color-only
 meaning, and avoid unsupported legal, facility-wide, completeness, harm, abuse,
 neglect, liability, or rights-deprivation conclusions.
 
+The first browser-accessible CCLD record request page is a local/test, server-
+rendered HTML surface at `/ccld/records/request`. Its design purpose is to
+return the MVP to the original user flow: enter a CCLD facility/license number,
+optionally narrow by date range, see matching seeded CCLD records when they
+already exist, and continue into the hosted reviewer UI. Empty and invalid
+states should use plain language that distinguishes missing local/test seeded
+records from public-source completeness. The page must not offer non-CCLD source
+selection, imply hosted live crawling or import execution, or hide the remaining
+pipeline gap when broader retrieval requires an explicit command outside the
+browser UI.
+
 The hosted scaffold and first local-only read-only source-derived views now
 exist. Detailed hosted visual design may begin from that real shell, but early
 design work must stay inside local-only, fixture/sample, read-only boundaries

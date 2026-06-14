@@ -35,7 +35,13 @@
   note/status indicators, open detail, view safe source traceability fields and
   safe related seeded bundle context, submit note/status forms through those
   existing workflow actions, and see read-after-write
-  reviewer-created state without exposing sensitive narrative fields, a narrow
+  reviewer-created state without exposing sensitive narrative fields, a browser-
+  accessible local/test CCLD record request page at `/ccld/records/request` that
+  accepts a CCLD facility/license number and optional date range, reads matching
+  seeded source-derived rows, links matches into the reviewer UI, and explains
+  the explicit external CCLD live-fetch command when broader retrieval is needed
+  without running live crawling, connector execution, imports, or hosted table
+  mutations from browser requests, a narrow
   local/test reviewer-created state persistence scaffold table/service with
   authenticated actor attribution and stable source-derived record references,
   a narrow local/test authenticated reviewer-created state read route seam over
@@ -68,10 +74,12 @@
   source-record view shell, and PR #109 added local-only semantic/accessibility
   validation for that shell.
 - Primary UX direction: future primary reviewer UX belongs in a hosted reviewer
-  application/API boundary, separate from Datasette, with source-derived records
-  kept separate from reviewer-created state. The current scaffold is an
-  implementation path toward that direction, not a final production framework or
-  stateful reviewer workflow.
+  application/API boundary, separate from Datasette, with a CCLD-only
+  facility/license number plus optional date-range record request flow leading
+  into source-traceable reviewer pages. Source-derived records must stay
+  separate from reviewer-created state. The current scaffold is an
+  implementation path toward that direction, not a final production framework,
+  hosted live crawler, import automation path, or stateful reviewer workflow.
 - Local-only scaffold status: the scaffold is local/test only, local to a
   development workstation, and not backed by live public data, ignored raw CSVs,
   generated profiling outputs, SQLite-backed sample UI routes, real provider
@@ -85,6 +93,7 @@
   over the selected detail context, reviewer-created state scaffold service helpers,
   reviewer-created state read handlers with schema-backed filters and bounded
   search, the local/test browser reviewer UI shell over those existing seams,
+  the local/test CCLD record request page over seeded source-derived records,
   reset/reload dry-run and execution-plan handlers, and
   explicit reset/reload planning metadata helpers and read handlers that require
   test database, actor, and scope context.

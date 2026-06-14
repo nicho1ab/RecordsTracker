@@ -101,6 +101,20 @@ login, sessions, cookies, token validation, auth middleware, anonymous writes,
 exports, reset/reload execution, hosted live crawling, connector execution,
 deployment, or public launch behavior.
 
+The current browser-accessible CCLD record request page is local/test only and
+runs at `/ccld/records/request` when the local scaffold process is started. It
+accepts only a digit CCLD facility/license number and optional date range, reads
+existing seeded source-derived rows through the same local/test route seams, and
+links matching seeded complaint rows into the reviewer UI. Its HTML output must
+remain limited to safe scalar source-derived context, source traceability-style
+identifiers, local/test boundary text, and the explicit external live-fetch
+command shape. It must not expose narrative source text, provider claims, email
+addresses, tokens, cookies, private headers, connection strings, client secrets,
+hosted URLs, private URLs, or credentials. It does not run live crawling,
+execute connectors, import records, write reviewer-created state, create audit
+events, persist operational metadata, implement auth middleware, or support
+non-CCLD sources.
+
 The current reset/reload dry-run seam is local/test only and must receive an
 explicit database, actor, and corpus scope context from tests or local callers.
 It reuses the auth boundary to require import/reload permission, reject
