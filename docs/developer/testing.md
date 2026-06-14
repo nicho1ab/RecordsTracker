@@ -86,13 +86,17 @@ test routes with reviewer-state read permission. Tests should cover authorized
 list and fetch paths, empty list, missing records, schema-supported filters,
 bounded search success and empty search results, unauthenticated actors,
 disabled or revoked actors, role-denied actors, out-of-scope actors, invalid
-requests, non-secret payloads, and before/after table counts proving reads do
-not mutate source-derived rows, reviewer-created rows, audit rows, or
+requests, note creation with reviewer-state write permission, invalid note
+payload and missing source rejection, read-after-write visibility through the
+existing read routes and workflow shell detail composition, successful note audit
+event creation, non-secret payloads, and before/after table counts proving reads
+do not mutate source-derived rows, reviewer-created rows, audit rows, or
 operational metadata.
 
 Hosted audit event scaffold tests must prove successful reviewer-created state
-scaffold writes create separate audit rows with authenticated actor attribution,
-permission, project/corpus scope, action, target, and source-derived context;
+scaffold writes, including reviewer note writes, create separate audit rows with
+authenticated actor attribution, permission, project/corpus scope, action,
+target, and source-derived context;
 failed reviewer-created writes do not create successful audit rows; audit
 persistence failure rolls back the reviewer-created write; source-derived and
 reviewer-created rows are not modified by audit persistence; audit read

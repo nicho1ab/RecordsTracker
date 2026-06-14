@@ -189,7 +189,10 @@ public-record review notes.
    over those planning records, and does not execute reset/reload. The
    reviewer-created state scaffold is also local/test only, requires explicit
    authenticated actor context and reviewer-state write permission for writes,
-   and stores scaffold rows separately from source-derived records. The audit
+   stores scaffold rows separately from source-derived records, and exposes a
+   narrow local/test reviewer note creation route that stores bounded non-secret
+   note text as reviewer-created scaffold payload under the existing state kind
+   without changing the schema. The audit
    event scaffold is also local/test only and records successful reviewer-
    created state scaffold writes separately from both source-derived and
    reviewer-created rows. The audit history read seam is local/test only,

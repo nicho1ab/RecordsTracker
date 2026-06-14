@@ -352,6 +352,63 @@ def test_reviewer_workflow_shell_detail_filters_associated_state_search() -> Non
     ] == 1
 
 
+def test_reviewer_workflow_shell_detail_shows_created_reviewer_note() -> None:
+    with _seeded_connection() as connection:
+        note = create_reviewer_created_state_scaffold(
+            connection,
+            _actor(roles=("tester_reviewer",), display_name="Fixture Note Reviewer"),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            state_payload={
+                "payload_kind": "reviewer_note_scaffold",
+                "note_text": "Visible note in workflow detail.",
+                "note_format": "plain_text",
+                "source_record_key": COMPLAINT_KEY,
+                "local_test_only": True,
+            },
+        )
+
+        status, _content_type, body = route_response(
+            "/api/reviewer/source-derived-review/detail"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_workflow_shell_context=_workflow_context(connection),
+        )
+
+    payload = _json_body(body)
+
+    assert status == 200
+    associated_state = payload["detail"]["associated_reviewer_created_state"]
+    assert [
+        row["reviewer_state_id"]
+        for row in associated_state["reviewer_created_state"]
+    ] == [note.reviewer_state_id]
+    [state_row] = associated_state["reviewer_created_state"]
+    assert state_row["state_payload"] == {
+        "payload_kind": "reviewer_note_scaffold",
+        "note_text": "Visible note in workflow detail.",
+        "note_format": "plain_text",
+        "source_record_key": COMPLAINT_KEY,
+        "local_test_only": True,
+    }
+    assert payload["detail"]["associated_reviewer_created_state_summary"] == {
+        "summary_source": "/api/reviewer-created-state",
+        "has_reviewer_created_state": True,
+        "total_associated_rows": 1,
+        "state_kinds_present": ["review_item_state_scaffold"],
+        "latest_created_at": note.created_at,
+        "actor_attribution_labels": ["Fixture Note Reviewer (tester)"],
+        "actor_categories_present": ["tester"],
+        "safety": {
+            "derived_from_associated_state_route_output": True,
+            "read_only_route": True,
+            "does_not_mutate_source_derived_records": True,
+            "does_not_mutate_reviewer_created_state": True,
+            "does_not_mutate_audit_events": True,
+            "does_not_mutate_operational_metadata": True,
+        },
+    }
+
+
 def test_reviewer_workflow_shell_rejects_unauthenticated_actor() -> None:
     with _seeded_connection() as connection:
         status, _content_type, body = route_response(

@@ -123,7 +123,8 @@ first local/test authenticated reviewer workflow shell, a narrow local/test
 reviewer-created state persistence scaffold, a narrow local/test audit event
 persistence scaffold, a narrow local/test authenticated audit history read
 route seam, a narrow local/test authenticated reviewer-created state read route
-seam, and a local/test authenticated reset/reload dry-run route seam: a
+seam, a narrow local/test authenticated reviewer note creation route seam over
+the existing reviewer-created state scaffold, and a local/test authenticated reset/reload dry-run route seam: a
 no-secret database URL configuration seam, an Alembic script location, one
 domain migration for import batch metadata and source-derived record staging,
 one domain migration for a separate reviewer-created state scaffold table, one
@@ -140,6 +141,8 @@ state rows by approved reviewer state identifiers, schema-supported filters,
 and bounded search over existing non-secret scaffold fields,
 plus read-only workflow-shell detail composition of associated reviewer-created
 state read route output and a compact derived summary for a selected source record,
+plus a JSON handler that stores bounded non-secret reviewer note text as reviewer-created
+scaffold payload under the existing state kind,
 plus JSON handlers for listing or fetching scaffold audit rows by approved audit
 identifiers and schema-supported filters, plus JSON handlers for listing or
 fetching persisted reset/reload planning metadata rows by approved planning
@@ -155,7 +158,7 @@ audit rows for successful reviewer-created state scaffold writes only, and the
 separation from reviewer-created state, audit rows, and operational metadata.
 It does not implement real login flow, provider registration, sessions, cookies,
 tokens, auth middleware, full reviewer-created workflows, annotations,
-corrections, export packet decisions, tester feedback, reset/reload execution,
+corrections, note editing or deletion, export packet decisions, tester feedback, reset/reload execution,
 reviewer-created state archive or clear behavior, full audit coverage, audit UI,
 audit export, hosted live crawling, hosted connector execution, production import automation, production
 API framework behavior, or deployment.

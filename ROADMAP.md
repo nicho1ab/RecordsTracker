@@ -317,6 +317,14 @@ the governed primary future review experience.
 	adding reviewer-created state writes, full reviewer workflows, annotations,
 	corrections, exports, real login flow, auth middleware, hosted live crawling,
 	connector execution, deployment, or production API behavior.
+- Added a narrow local/test reviewer note creation route over the existing
+	reviewer-created state scaffold, with reviewer-state write permission checks,
+	bounded non-secret note payload validation, successful-write audit event
+	creation, read-after-write visibility through the existing reviewer-created
+	state routes and workflow shell detail composition, and no schema changes,
+	note editing/deletion, full annotations, corrections, exports, real login flow,
+	auth middleware, hosted live crawling, connector execution, deployment, or
+	production API behavior.
 - Added a minimal local/test audit event persistence scaffold with a separate
 	PostgreSQL/Alembic table and service boundary for successful reviewer-created
 	state scaffold writes only, preserving source-derived records and reviewer-

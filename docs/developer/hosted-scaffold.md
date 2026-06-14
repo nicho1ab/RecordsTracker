@@ -285,9 +285,12 @@ account status, matching scope, and an existing staged source-derived record key
 Rows are stored in a separate reviewer-created table with actor attribution and
 do not overwrite source-derived records, original extracted values, raw source
 metadata, import metadata, or source traceability. The scaffold does not
-implement annotations, corrections, review status workflows, tester feedback,
-export packet decisions, sessions, cookies, production auth middleware, or a
-production API framework. Successful writes also create a separate local/test
+implement annotations, corrections, note editing/deletion, review status workflows,
+tester feedback, export packet decisions, sessions, cookies, production auth
+middleware, or a production API framework. A narrow local/test reviewer note
+creation route stores bounded non-secret note text as scaffold payload under the
+existing state kind and reuses the existing write/audit path without changing the
+schema. Successful writes also create a separate local/test
 audit event scaffold row with actor, permission, scope, action, target, and
 source-derived context. If the audit row cannot be created, the reviewer-created
 state write is rolled back.
@@ -520,12 +523,14 @@ fetch handlers over persisted scaffold rows, schema-backed filters, bounded
 search success and empty search results, empty list, missing-record responses,
 explicit route-context requirements, unauthenticated, disabled or revoked,
 role-denied, and out-of-scope rejections, source-derived read permission
-separation, non-secret JSON payloads, and before/after row counts proving reads
-do not mutate seeded import, reviewer-created scaffold, audit scaffold, or
-operational planning metadata tables.
+separation, note creation with reviewer-state write permission, invalid note
+payload and missing source rejection, read-after-write visibility, successful
+note audit event creation, non-secret JSON payloads, and before/after row counts
+proving reads do not mutate seeded import, reviewer-created scaffold, audit
+scaffold, or operational planning metadata tables.
 The audit event scaffold tests verify that successful reviewer-created state
-scaffold writes create separate audit rows with actor attribution and target
-context, failed writes do not create successful audit rows, audit persistence
+scaffold writes, including reviewer note writes, create separate audit rows with
+actor attribution and target context, failed writes do not create successful audit rows, audit persistence
 failure rolls back the reviewer-created state write, source-derived rows remain
 unchanged, reviewer-created rows are not modified by audit persistence, audit
 read permission is required, and secret-like values are not stored in audit

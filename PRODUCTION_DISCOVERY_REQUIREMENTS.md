@@ -51,7 +51,8 @@ a narrow local/test authenticated reviewer-created state read route seam for
 persisted scaffold rows with schema-backed filters and bounded search, a narrow local/test reviewer workflow shell detail
 integration that composes associated reviewer-created state read output for a
 selected source-derived record, a compact workflow shell state summary derived
-from that associated state output, a local/test authenticated reset/reload dry-run route
+from that associated state output, a narrow local/test authenticated reviewer
+note creation route over the existing reviewer-created state scaffold, a local/test authenticated reset/reload dry-run route
 seam, a separate local/test reset/reload operational planning metadata
 scaffold, a narrow local/test read-only planning metadata route seam, and
 scaffold/API boundary descriptors. The dry-run reports
@@ -71,7 +72,7 @@ automate production imports, execute reset/reload, archive or clear reviewer-
 created state, persist audit events beyond the narrow reviewer-created state
 write scaffold, expose audit history beyond that narrow local/test read seam,
 create, update, or delete reviewer-created state through the read route seam,
-create stateful queues, implement full
+edit or delete reviewer notes, create stateful queues, implement full
 reviewer workflows, annotations, corrections, export packet behavior, or tester
 feedback.
 
@@ -84,6 +85,14 @@ fields, keeps reviewer-created state separate from source-derived records,
 audit rows, and operational metadata, and does not implement workflow writes,
 annotations, corrections, review status transitions, exports, real login,
 sessions, or production auth middleware.
+
+Reviewer notes can now be created through a narrow local/test authenticated
+route when tests or local callers provide an explicit database, actor, and scope
+context with reviewer-state write permission. The route writes bounded non-
+secret note text into the existing reviewer-created scaffold payload, reuses the
+existing scaffold state kind and audit event path, and does not change the
+domain schema, source-derived records, note editing/deletion behavior, exports,
+or production auth behavior.
 
 The reviewer workflow shell can now include associated reviewer-created state
 read route output in a selected source-record detail response when explicit

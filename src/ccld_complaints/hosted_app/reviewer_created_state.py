@@ -39,6 +39,20 @@ ReviewerCreatedStateKind = Literal["review_item_state_scaffold"]
 REVIEWER_CREATED_STATE_KINDS: tuple[ReviewerCreatedStateKind, ...] = (
     "review_item_state_scaffold",
 )
+REVIEWER_NOTE_PAYLOAD_KIND = "reviewer_note_scaffold"
+MAX_REVIEWER_NOTE_TEXT_LENGTH = 2_000
+SECRET_NOTE_MARKERS = (
+    "authorization",
+    "client_secret",
+    "connection string",
+    "connection_string",
+    "cookie",
+    "password",
+    "private_header",
+    "private header",
+    "secret",
+    "token",
+)
 
 hosted_reviewer_created_state = Table(
     "hosted_reviewer_created_state",
@@ -88,6 +102,30 @@ class ReviewerCreatedStateRead:
 
 class ReviewerCreatedStateReferenceError(ValueError):
     pass
+
+
+def create_reviewer_note_scaffold(
+    connection: Connection,
+    actor: AuthenticatedActor | None,
+    *,
+    scope: HostedAccessScope,
+    source_record_key: str,
+    note_text: str,
+) -> ReviewerCreatedStateRead:
+    normalized_note_text = _validated_reviewer_note_text(note_text)
+    return create_reviewer_created_state_scaffold(
+        connection,
+        actor,
+        scope=scope,
+        source_record_key=source_record_key,
+        state_payload={
+            "payload_kind": REVIEWER_NOTE_PAYLOAD_KIND,
+            "note_text": normalized_note_text,
+            "note_format": "plain_text",
+            "source_record_key": source_record_key,
+            "local_test_only": True,
+        },
+    )
 
 
 def create_reviewer_created_state_scaffold(
@@ -263,6 +301,20 @@ def _like_search_pattern(search_query: str) -> str:
         search_query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     )
     return f"%{escaped}%"
+
+
+def _validated_reviewer_note_text(note_text: str) -> str:
+    normalized_note_text = " ".join(note_text.split())
+    if not normalized_note_text:
+        raise ValueError("Reviewer note text is required.")
+    if len(normalized_note_text) > MAX_REVIEWER_NOTE_TEXT_LENGTH:
+        raise ValueError(
+            f"Reviewer note text must be at most {MAX_REVIEWER_NOTE_TEXT_LENGTH} characters."
+        )
+    lowered_note_text = normalized_note_text.casefold()
+    if any(marker in lowered_note_text for marker in SECRET_NOTE_MARKERS):
+        raise ValueError("Reviewer note text must not include secret-like data.")
+    return normalized_note_text
 
 
 def get_reviewer_created_state_scaffold(

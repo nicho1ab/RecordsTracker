@@ -20,6 +20,7 @@ from ccld_complaints.hosted_app.reviewer_created_state import (
     REVIEWER_CREATED_STATE_KINDS,
     ReviewerCreatedStateKind,
     ReviewerCreatedStateRead,
+    create_reviewer_note_scaffold,
     get_reviewer_created_state_scaffold,
     list_reviewer_created_state_scaffold,
 )
@@ -39,6 +40,8 @@ class ReviewerCreatedStateApiContext:
 def route_reviewer_created_state_api_response(
     path: str,
     context: ReviewerCreatedStateApiContext | None,
+    *,
+    request_body: bytes | None = None,
 ) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
     query_values = parse_qs(parsed_url.query, keep_blank_values=True)
@@ -51,6 +54,8 @@ def route_reviewer_created_state_api_response(
             )
         if parsed_url.path == REVIEWER_CREATED_STATE_API_PREFIX:
             return _list_reviewer_created_state(query_values, context)
+        if parsed_url.path == f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-note":
+            return _create_reviewer_note(query_values, context, request_body)
         if parsed_url.path == f"{REVIEWER_CREATED_STATE_API_PREFIX}/by-id":
             return _get_reviewer_created_state_by_id(query_values, context)
         return _json_error(
@@ -111,6 +116,37 @@ def _list_reviewer_created_state(
                 "limit": limit,
                 "offset": offset,
                 "returned_count": len(records),
+            },
+        },
+    )
+
+
+def _create_reviewer_note(
+    query_values: Mapping[str, list[str]],
+    context: ReviewerCreatedStateApiContext,
+    request_body: bytes | None,
+) -> tuple[int, str, bytes]:
+    source_record_key = _required_query_value(query_values, "source_record_key")
+    body = _required_json_body(request_body)
+    note_text = _required_body_string(body, "note_text")
+    created = create_reviewer_note_scaffold(
+        context.connection,
+        context.actor,
+        scope=context.scope,
+        source_record_key=source_record_key,
+        note_text=note_text,
+    )
+    return _json_response(
+        201,
+        {
+            "reviewer_created_state": _reviewer_created_state_payload(created),
+            "workflow": {
+                "created_reviewer_note": True,
+                "local_test_only": True,
+                "route_source": f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-note",
+                "writes_create_audit_event": True,
+                "source_of_record": "public portal",
+                "does_not_mutate_source_derived_records": True,
             },
         },
     )
@@ -219,6 +255,25 @@ def _required_query_value(
 ) -> str:
     value = _optional_query_value(query_values, key)
     if value is None:
+        raise ValueError(f"{key} is required.")
+    return value
+
+
+def _required_json_body(request_body: bytes | None) -> Mapping[str, Any]:
+    if request_body is None:
+        raise ValueError("JSON request body is required.")
+    try:
+        loaded = json.loads(request_body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError("JSON request body must be a valid object.") from error
+    if not isinstance(loaded, Mapping):
+        raise ValueError("JSON request body must be an object.")
+    return loaded
+
+
+def _required_body_string(body: Mapping[str, Any], key: str) -> str:
+    value = body.get(key)
+    if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{key} is required.")
     return value
 
