@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added local-only public-source CSV profiling tooling with synthetic fixtures,
+	focused tests, ignored JSON/CSV/log outputs, and documentation of the boundary
+	that raw files and generated profiles stay ignored and no imports, connectors,
+	schema changes, canonical fields, or hosted app behavior are created.
 - Added fixture/sample-only source traceability summary panels to the hosted
 	scaffold `/source-records` list and detail shell, showing visible sample
 	source URL, raw SHA-256, connector, retrieval timestamp, report index,
