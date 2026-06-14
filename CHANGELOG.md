@@ -10,7 +10,8 @@
 	indicators before opening detail, view safe source traceability fields and safe
 	related seeded bundle context, submit a bounded reviewer note, submit a
 	bounded reviewer status, and see read-after-write reviewer-created state
-	without mutating source-derived rows, exposing sensitive narrative fields, adding
+	with clearer no-search-results, missing-record, invalid-form, and permission-
+	blocked guidance without mutating source-derived rows, exposing sensitive narrative fields, adding
 	schema changes, production auth, cookies, sessions, exports, reset/reload
 	execution, live crawling, connector execution, deployment, hosted URLs, or a
 	frontend build pipeline.

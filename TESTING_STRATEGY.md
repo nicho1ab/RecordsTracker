@@ -90,7 +90,8 @@ timestamp are visible, safe source traceability fields and safe related seeded
 bundle context are visible, sensitive narrative fields remain hidden, note/status forms delegate to
 the existing workflow actions, read-after-write reviewer-created state appears
 in the page, unauthenticated, disabled or revoked, role-denied, and out-of-scope
-contexts are blocked, source-derived rows are not mutated by UI actions,
+contexts are blocked with visible next steps, no-match search, missing-record,
+and invalid note/status form states show clear accessible guidance, source-derived rows are not mutated by UI actions,
 reviewer-created state and audit rows are created only through the existing
 services, and HTML does not expose secrets, tokens, cookies, private headers,
 raw provider claims, private URLs, hosted URLs, credentials, or unnecessary

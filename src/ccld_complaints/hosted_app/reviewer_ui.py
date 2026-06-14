@@ -349,10 +349,12 @@ def _detail_response(
     if not source_record_key:
         return _html_response(
             400,
-            _render_blocked_page(
-                title="Source record required",
-                heading="Source record required",
+            _render_message_page(
+                title="Select a seeded record",
+                heading="Select a seeded record",
                 message="Choose a seeded source-derived record before opening reviewer detail.",
+                guidance="Return to the reviewer list and open one of the seeded records.",
+                links=(("Return to reviewer records", REVIEWER_UI_RECORDS_PATH),),
             ),
         )
     detail_path = _workflow_detail_path(source_record_key)
@@ -361,7 +363,11 @@ def _detail_response(
         context.workflow_shell_context,
     )
     if status != 200:
-        return _workflow_error_page(status, body)
+        return _workflow_error_page(
+            status,
+            body,
+            missing_record_heading="Selected seeded record was not found",
+        )
     payload = _json_object(body)
     return _detail_html_response(status, payload, context, notice=None)
 
@@ -371,15 +377,34 @@ def _note_form_response(
     context: ReviewerUiContext,
 ) -> tuple[int, str, bytes]:
     form = _form_values(request_body)
-    source_record_key = _required_form_value(form, "source_record_key")
-    note_text = _required_form_value(form, "note_text")
+    source_record_key = _first_form_value(form, "source_record_key")
+    note_text = _first_form_value(form, "note_text")
+    if not source_record_key:
+        return _invalid_form_response(
+            title="Reviewer note was not saved",
+            message="Select a seeded record before saving a reviewer note.",
+            source_record_key=None,
+        )
+    if not note_text:
+        return _invalid_form_response(
+            title="Reviewer note was not saved",
+            message="Reviewer note text is required.",
+            source_record_key=source_record_key,
+        )
     status, _content_type, body = route_reviewer_workflow_shell_response(
         _workflow_note_path(source_record_key),
         context.workflow_shell_context,
         request_body=json.dumps({"note_text": note_text}, sort_keys=True).encode("utf-8"),
     )
     if status != 201:
-        return _workflow_error_page(status, body)
+        return _workflow_error_page(
+            status,
+            body,
+            title="Reviewer note was not saved",
+            heading="Reviewer note was not saved",
+            guidance="Return to the detail page and retry with valid note text.",
+            links=_retry_links(source_record_key),
+        )
     payload = _json_object(body)
     return _detail_html_response(
         200,
@@ -397,8 +422,20 @@ def _status_form_response(
     context: ReviewerUiContext,
 ) -> tuple[int, str, bytes]:
     form = _form_values(request_body)
-    source_record_key = _required_form_value(form, "source_record_key")
-    reviewer_status = _required_form_value(form, "reviewer_status")
+    source_record_key = _first_form_value(form, "source_record_key")
+    reviewer_status = _first_form_value(form, "reviewer_status")
+    if not source_record_key:
+        return _invalid_form_response(
+            title="Reviewer status was not saved",
+            message="Select a seeded record before saving a reviewer status.",
+            source_record_key=None,
+        )
+    if not reviewer_status:
+        return _invalid_form_response(
+            title="Reviewer status was not saved",
+            message="Choose a reviewer status before saving.",
+            source_record_key=source_record_key,
+        )
     status, _content_type, body = route_reviewer_workflow_shell_response(
         _workflow_status_path(source_record_key),
         context.workflow_shell_context,
@@ -408,7 +445,14 @@ def _status_form_response(
         ).encode("utf-8"),
     )
     if status != 201:
-        return _workflow_error_page(status, body)
+        return _workflow_error_page(
+            status,
+            body,
+            title="Reviewer status was not saved",
+            heading="Reviewer status was not saved",
+            guidance="Return to the detail page and choose one of the listed statuses.",
+            links=_retry_links(source_record_key),
+        )
     payload = _json_object(body)
     return _detail_html_response(
         200,
@@ -498,6 +542,7 @@ def _render_record_list(
                     current search.</td>
         </tr>"""
         returned_count = _int_value(_mapping(queue, "pagination"), "returned_count")
+    no_results_notice = _render_no_results_notice(search_query, records)
     return _page(
         title="Local/test reviewer records",
         heading="Local/test reviewer records",
@@ -516,6 +561,7 @@ def _render_record_list(
         </p>
       </form>
     </section>
+        {no_results_notice}
     <section aria-labelledby="reviewer-list-heading">
       <h2 id="reviewer-list-heading">Seeded source-derived review list</h2>
             <p>Showing {len(records)} of {returned_count} seeded complaint records.</p>
@@ -541,6 +587,32 @@ def _render_record_list(
       </table>
     </section>""",
     )
+
+
+def _render_no_results_notice(
+        search_query: str,
+        records: list[Mapping[str, Any]],
+) -> str:
+        if records:
+                return ""
+        if search_query:
+                return f"""<section aria-labelledby="no-results-heading">
+            <h2 id="no-results-heading">No matching seeded reviewer records</h2>
+            <p>No seeded source-derived records match {_escape(search_query)}.</p>
+            <p>Clear the search or return to the reviewer list to choose a seeded record.</p>
+            <ul>
+                <li><a href="{REVIEWER_UI_RECORDS_PATH}">Clear search</a></li>
+                <li><a href="{REVIEWER_UI_PREFIX}">Return to reviewer home</a></li>
+            </ul>
+        </section>"""
+        return f"""<section aria-labelledby="no-results-heading">
+            <h2 id="no-results-heading">No seeded reviewer records are available</h2>
+            <p>The local/test seeded corpus did not return reviewer records.</p>
+            <p>Return to the reviewer home page and retry the local/test scaffold.</p>
+            <ul>
+                <li><a href="{REVIEWER_UI_PREFIX}">Return to reviewer home</a></li>
+            </ul>
+        </section>"""
 
 
 def _render_review_item_row(
@@ -1159,29 +1231,135 @@ def _page(*, title: str, heading: str, main: str) -> str:
 
 
 def _render_blocked_page(*, title: str, heading: str, message: str) -> str:
+    return _render_message_page(
+        title=title,
+        heading=heading,
+        message=message,
+        guidance=(
+            "Use the local/test reviewer list, or retry with an actor that has "
+            "the required role and seeded corpus scope."
+        ),
+        links=(("Return to reviewer records", REVIEWER_UI_RECORDS_PATH),),
+    )
+
+
+def _workflow_error_page(
+    status: int,
+    body: bytes,
+    *,
+    title: str | None = None,
+    heading: str | None = None,
+    guidance: str | None = None,
+    links: tuple[tuple[str, str], ...] | None = None,
+    missing_record_heading: str = "Selected seeded record was not found",
+) -> tuple[int, str, bytes]:
+    payload = _json_object(body)
+    error = _mapping(payload, "error")
+    code = _optional_string(error, "code")
+    message = _safe_error_message(_string(error, "message"))
+    if code == "source_derived_record_not_found":
+        return _html_response(
+            status,
+            _render_message_page(
+                title=missing_record_heading,
+                heading=missing_record_heading,
+                message=(
+                    "The selected seeded record is not available in this "
+                    "local/test seeded corpus."
+                ),
+                guidance="Return to the reviewer list and select a seeded record.",
+                links=(("Return to reviewer records", REVIEWER_UI_RECORDS_PATH),),
+            ),
+        )
+    return _html_response(
+        status,
+        _render_message_page(
+            title="Reviewer request blocked" if title is None else title,
+            heading="Reviewer request blocked" if heading is None else heading,
+            message=message,
+            guidance=(
+                "Use the local/test reviewer list, or retry with valid values "
+                "and an actor that has the required permission."
+                if guidance is None
+                else guidance
+            ),
+            links=(
+                (("Return to reviewer records", REVIEWER_UI_RECORDS_PATH),)
+                if links is None
+                else links
+            ),
+        ),
+    )
+
+
+def _invalid_form_response(
+    *,
+    title: str,
+    message: str,
+    source_record_key: str | None,
+) -> tuple[int, str, bytes]:
+    return _html_response(
+        400,
+        _render_message_page(
+            title=title,
+            heading=title,
+            message=message,
+            guidance="Return to the detail page and retry with a valid form value.",
+            links=_retry_links(source_record_key),
+        ),
+    )
+
+
+def _retry_links(source_record_key: str | None) -> tuple[tuple[str, str], ...]:
+    if source_record_key is None:
+        return (("Return to reviewer records", REVIEWER_UI_RECORDS_PATH),)
+    detail_href = (
+        f"{REVIEWER_UI_DETAIL_PATH}?"
+        f"{urlencode({'source_record_key': source_record_key})}"
+    )
+    return (
+        ("Return to selected record detail", detail_href),
+        ("Return to reviewer records", REVIEWER_UI_RECORDS_PATH),
+    )
+
+
+def _render_message_page(
+    *,
+    title: str,
+    heading: str,
+    message: str,
+    guidance: str,
+    links: tuple[tuple[str, str], ...],
+) -> str:
+    link_items = "\n".join(
+        f'        <li><a href="{_escape(href)}">{_escape(label)}</a></li>'
+        for label, href in links
+    )
     return _page(
         title=title,
         heading=heading,
-        main=f"""    <section aria-labelledby="blocked-heading">
-      <h2 id="blocked-heading">Request blocked</h2>
-      <p>{_escape(message)}</p>
-            <p>Local/test reviewer pages require an explicit active actor, role, and
-            seeded corpus scope.</p>
+        main=f"""    <section aria-labelledby="message-heading">
+      <h2 id="message-heading">What happened</h2>
+      <p>{_escape(_safe_error_message(message))}</p>
+    </section>
+    <section aria-labelledby="next-steps-heading">
+      <h2 id="next-steps-heading">What you can do next</h2>
+      <p>{_escape(guidance)}</p>
+      <ul>
+{link_items}
+      </ul>
     </section>""",
     )
 
 
-def _workflow_error_page(status: int, body: bytes) -> tuple[int, str, bytes]:
-    payload = _json_object(body)
-    error = _mapping(payload, "error")
-    return _html_response(
-        status,
-        _render_blocked_page(
-            title="Reviewer request blocked",
-            heading="Reviewer request blocked",
-            message=_string(error, "message"),
-        ),
-    )
+def _safe_error_message(message: str) -> str:
+    lowered = message.casefold()
+    if any(marker in lowered for marker in _SECRET_HTML_MARKERS):
+        return (
+            "The request included blocked private data. Remove credentials or "
+            "private values and retry."
+        )
+    return message
 
 
 def _render_original_value_rows(original_values: Mapping[str, Any]) -> str:

@@ -162,7 +162,9 @@ public-record review notes.
    note/status indicators before opening detail, view safe source traceability
    fields plus safe related seeded bundle context, submit a bounded reviewer
    note, submit a bounded reviewer status, and see read-after-write reviewer-
-   created state through those same existing workflow seams. Narrative source
+   created state through those same existing workflow seams. It also gives clear
+   browser guidance for no search results, missing seeded records, invalid note
+   or status forms, and local/test permission blocks. Narrative source
    fields are hidden in the browser shell. It also includes a narrow local/test reviewer-
    created state persistence scaffold table/service, a narrow local/test audit
    event scaffold for successful reviewer-created state scaffold writes only, a

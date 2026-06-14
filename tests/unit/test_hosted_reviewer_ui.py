@@ -135,6 +135,37 @@ def test_reviewer_ui_landing_supports_simple_search() -> None:
     assert "No seeded source-derived review records match the current search." in (
         " ".join(empty_html.split())
     )
+    assert "No matching seeded reviewer records" in empty_html
+    assert "Clear search" in empty_html
+    assert "Return to reviewer home" in empty_html
+
+
+def test_reviewer_ui_missing_detail_record_has_clear_next_step() -> None:
+    with _seeded_connection() as connection:
+        missing_key_status, _content_type, missing_key_body = route_response(
+            REVIEWER_UI_DETAIL_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+        invalid_key_status, _content_type, invalid_key_body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key=complaint%3Amissing",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    missing_key_html = missing_key_body.decode("utf-8")
+    invalid_key_html = invalid_key_body.decode("utf-8")
+
+    assert missing_key_status == 400
+    assert "Select a seeded record" in missing_key_html
+    assert "Choose a seeded source-derived record before opening reviewer detail." in (
+        missing_key_html
+    )
+    assert "Return to reviewer records" in missing_key_html
+    assert invalid_key_status == 404
+    assert "Selected seeded record was not found" in invalid_key_html
+    assert "The selected seeded record is not available" in invalid_key_html
+    assert "Return to reviewer records" in invalid_key_html
+    assert_no_secret_html(missing_key_html)
+    assert_no_secret_html(invalid_key_html)
 
 
 def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
@@ -259,6 +290,51 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert_no_secret_html(html)
 
 
+def test_reviewer_ui_invalid_note_submission_has_clear_error_without_mutation() -> None:
+    with _seeded_connection() as connection:
+        missing_status, _content_type, missing_body = route_response(
+            REVIEWER_UI_NOTE_PATH,
+            method="POST",
+            request_body=_form_bytes({"source_record_key": COMPLAINT_KEY}),
+            reviewer_ui_context=reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(roles=("tester_reviewer",)),
+            ),
+        )
+        blocked_value_status, _content_type, blocked_value_body = route_response(
+            REVIEWER_UI_NOTE_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "source_record_key": COMPLAINT_KEY,
+                    "note_text": "A token was pasted here.",
+                }
+            ),
+            reviewer_ui_context=reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(roles=("tester_reviewer",)),
+            ),
+        )
+        counts = _table_counts(connection)
+
+    missing_html = missing_body.decode("utf-8")
+    blocked_value_html = blocked_value_body.decode("utf-8")
+
+    assert missing_status == 400
+    assert "Reviewer note was not saved" in missing_html
+    assert "Reviewer note text is required." in missing_html
+    assert "What you can do next" in missing_html
+    assert "Return to selected record detail" in missing_html
+    assert blocked_value_status == 400
+    assert "Reviewer note was not saved" in blocked_value_html
+    assert "blocked private data" in blocked_value_html
+    assert "token" not in blocked_value_html.casefold()
+    assert counts["reviewer_created_state"] == 0
+    assert counts["audit_events"] == 0
+    assert_no_secret_html(missing_html)
+    assert_no_secret_html(blocked_value_html)
+
+
 def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_write() -> None:
     with _seeded_connection() as connection:
         before_source_rows = _source_rows(connection)
@@ -314,6 +390,50 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
         "source_record_key",
     ]
     assert_no_secret_html(html)
+
+
+def test_reviewer_ui_invalid_status_submission_has_clear_error_without_mutation() -> None:
+    with _seeded_connection() as connection:
+        missing_status, _content_type, missing_body = route_response(
+            REVIEWER_UI_STATUS_PATH,
+            method="POST",
+            request_body=_form_bytes({"source_record_key": COMPLAINT_KEY}),
+            reviewer_ui_context=reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(roles=("tester_reviewer",)),
+            ),
+        )
+        invalid_status, _content_type, invalid_body = route_response(
+            REVIEWER_UI_STATUS_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "source_record_key": COMPLAINT_KEY,
+                    "reviewer_status": "source_checked",
+                }
+            ),
+            reviewer_ui_context=reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(roles=("tester_reviewer",)),
+            ),
+        )
+        counts = _table_counts(connection)
+
+    missing_html = missing_body.decode("utf-8")
+    invalid_html = invalid_body.decode("utf-8")
+
+    assert missing_status == 400
+    assert "Reviewer status was not saved" in missing_html
+    assert "Choose a reviewer status before saving." in missing_html
+    assert "Return to selected record detail" in missing_html
+    assert invalid_status == 400
+    assert "Reviewer status was not saved" in invalid_html
+    assert "reviewer_status must be one of" in invalid_html
+    assert "Return to selected record detail" in invalid_html
+    assert counts["reviewer_created_state"] == 0
+    assert counts["audit_events"] == 0
+    assert_no_secret_html(missing_html)
+    assert_no_secret_html(invalid_html)
 
 
 def test_reviewer_ui_note_status_writes_are_visible_on_list_after_write() -> None:
@@ -422,6 +542,8 @@ def test_reviewer_ui_rejects_blocked_list_contexts(
     assert content_type == "text/html; charset=utf-8"
     assert "Reviewer request blocked" in html
     assert expected_text in html
+    assert "What you can do next" in html
+    assert "Return to reviewer records" in html
     assert_no_secret_html(html)
 
 
@@ -440,6 +562,8 @@ def test_reviewer_ui_rejects_source_read_without_reviewer_state_read_on_detail()
     assert status == 403
     assert "Reviewer request blocked" in html
     assert "reviewer_state_read" in html
+    assert "What you can do next" in html
+    assert "Return to reviewer records" in html
     assert_no_secret_html(html)
 
 
@@ -458,6 +582,8 @@ def test_reviewer_ui_rejects_source_read_without_reviewer_state_read_on_list() -
     assert status == 403
     assert "Reviewer request blocked" in html
     assert "reviewer_state_read" in html
+    assert "What you can do next" in html
+    assert "Return to reviewer records" in html
     assert_no_secret_html(html)
 
 
@@ -479,8 +605,10 @@ def test_reviewer_ui_rejects_note_write_without_reviewer_state_write() -> None:
     html = body.decode("utf-8")
 
     assert status == 403
-    assert "Reviewer request blocked" in html
+    assert "Reviewer note was not saved" in html
     assert "reviewer_state_write" in html
+    assert "What you can do next" in html
+    assert "Return to selected record detail" in html
     assert counts["source_records"] == 6
     assert counts["reviewer_created_state"] == 0
     assert counts["audit_events"] == 0
