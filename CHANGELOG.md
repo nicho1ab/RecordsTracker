@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added a narrow database-backed source-derived read service for staged hosted
+	seeded corpus records, with list and fetch helpers that preserve import batch
+	context, source traceability, original values, and the source-derived versus
+	reviewer-created state boundary without adding HTTP API routes, auth
+	middleware, reviewer workflows, reset/reload behavior, production import
+	automation, hosted live crawling, connector execution, or deployment.
 - Added a controlled hosted tester seeded corpus import path with a PostgreSQL/
 	Alembic migration for import batch metadata and source-derived record staging,
 	a local JSON artifact importer, a tiny validated fixture artifact, and focused

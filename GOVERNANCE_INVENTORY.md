@@ -19,7 +19,8 @@
   now includes dependency declarations, no-secret database URL validation, an
   Alembic script location, one narrow domain migration for controlled seeded
   import batch metadata and source-derived record staging, a local validated
-  JSON artifact importer, and source-derived versus reviewer-created state
+  JSON artifact importer, a local/test database-backed read service over staged
+  source-derived records, and source-derived versus reviewer-created state
   boundary descriptors.
 - Local-only sample filtering/search: implemented for the hosted source-record
   shell using in-memory fixture/sample records only.
@@ -37,8 +38,7 @@
   functioning reviewer workflow.
 - Local-only scaffold status: the scaffold is sample-only, read-only, local to a
   development workstation, and not backed by live public data, ignored raw CSVs,
-  generated profiling outputs, SQLite, database-backed API reads,
-  authentication, authorization,
+  generated profiling outputs, SQLite, HTTP API route reads, authentication, authorization,
   reviewer-created state, queues, annotations, corrections, exports, audit
   trail, reset/reload, deployment, QNAP, Azure, AWS, or public URL behavior.
 - Datasette role: Datasette remains retained for validation, inspection,
@@ -150,10 +150,10 @@
   retention planning. ADR-0014 completed the auth provider-class and role
   implementation direction decision. ADR-0015 completed the database and
   migration tooling decision. Minimal PostgreSQL/Alembic scaffold wiring,
-  schema/API boundary descriptors, and a controlled seeded corpus import path
-  are now in place. Next work should move to database-backed source-derived API
-  reads, focused auth implementation, or reset/reload planning, not repeat those
-  completed items.
+  schema/API boundary descriptors, a controlled seeded corpus import path, and
+  database-backed source-derived read service are now in place. Next work should
+  move to focused auth implementation, narrow HTTP/API route decisions, or
+  reset/reload planning, not repeat those completed items.
 - Local-only/sample-only boundaries remain active. Sample records must stay
   clearly marked as fixture/sample records and must not be presented as live,
   database-backed, complete, statewide, official, or production data.
@@ -170,8 +170,10 @@
 - Future import path into hosted view: source-derived hosted records now have a
   first controlled JSON artifact import path with batch metadata, stable
   identities, idempotent source-derived staging, and source traceability tests.
+  They also have a local/test database-backed read service for list and fetch
+  access that preserves import batch context and original source-derived values.
   ADR-0013 still defines reset/reload and audit expectations at the operational
-  boundary; implementation still needs database-backed API behavior, comparison
+  boundary; implementation still needs HTTP API route behavior, comparison
   against retained SQLite/Datasette validation output, production import
   operations, and reset/reload behavior.
 - Future database/schema implementation: the current domain schema is limited to

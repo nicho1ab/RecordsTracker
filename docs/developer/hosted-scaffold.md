@@ -14,11 +14,7 @@ commitment.
 
 ## Required local tools
 
-- Windows PowerShell.
-- Python 3.11 or newer.
-- The repository development dependencies from `requirements-dev.txt` for
   tests, lint, and type checks.
-- The runtime dependencies from `requirements.txt`, including Alembic,
   SQLAlchemy, and the PostgreSQL driver used by the scaffolded migration
   wiring.
 
@@ -26,9 +22,11 @@ Node.js is not required. Docker is not required. QNAP Container Station is not r
 No local PostgreSQL server is required for scaffold smoke, boundary tests, or
 seeded artifact parsing tests. A PostgreSQL-compatible database URL is required
 only when a developer explicitly runs Alembic migrations or the seeded corpus
-import command. No cloud resources, public URLs, app registrations, cloud
-databases, DNS records, deployment credentials, secrets, or tokens are required.
-
+import command. The database-backed read service can be exercised in unit tests
+The database-backed read service can be exercised in unit tests against in-memory
+SQLite and does not require a running PostgreSQL server. No cloud resources,
+public URLs, app registrations, cloud databases, DNS records, deployment
+credentials, secrets, or tokens are required.
 ## Verify local prerequisites
 
 Run the local setup check from the repository root after installing project
@@ -165,6 +163,8 @@ wiring includes:
   derived and reviewer-created state API boundary descriptors.
 - `ccld_complaints.hosted_app.seeded_import` for loading a controlled validated
   JSON artifact into the seeded import tables.
+- `ccld_complaints.hosted_app.source_derived_reads` for local/test list and
+  fetch access to staged source-derived records with import batch context.
 - `ccld_complaints.cli.import_hosted_seeded_corpus` as a minimal local command
   wrapper for operator-initiated test imports.
 
@@ -181,6 +181,13 @@ stable identities, original source-derived values, source URL, raw SHA-256,
 raw path when available, connector metadata, retrieval timestamp, and import
 batch linkage.
 
+The source-derived read service is intentionally small. It lists staged records
+and fetches a single staged record by source record key or by entity type plus
+stable source-derived identity. Read models include original values,
+source-traceability fields, and import batch context. They do not include review
+status, annotations, corrections, tester feedback, export packet state, audit
+events, or other reviewer-created state.
+
 To run migrations or load a seeded corpus into a local PostgreSQL-compatible
 test database, set `CCLD_HOSTED_TESTER_DATABASE_URL` outside the repository and
 run Alembic before the import command:
@@ -196,8 +203,8 @@ python -m ccld_complaints.cli.import_hosted_seeded_corpus tests\fixtures\hosted_
 Do not commit connection strings, usernames, passwords, provider settings,
 private URLs, hosted URLs, tokens, or deployment-specific configuration.
 
-The current path does not implement database-backed API routes, database-backed
-review views, authentication, authorization, reviewer-created state persistence,
+The current path does not implement HTTP API routes, database-backed reviewer
+views, authentication, authorization, reviewer-created state persistence,
 reviewer workflows, audit persistence, export builders, reset/reload behavior,
 production import automation, hosted live crawling, hosted connector execution,
 QNAP, Azure, AWS, public hosting, public URLs, or production deployment.
@@ -237,6 +244,12 @@ Run the focused hosted seeded import tests:
 pytest tests/unit/test_hosted_seeded_corpus_import.py
 ```
 
+Run the focused hosted source-derived read tests:
+
+```powershell
+pytest tests/unit/test_hosted_source_derived_reads.py
+```
+
 These tests include local-only semantic/accessibility validation for the sample
 source view shell and facility master sample view. They use Python standard-library HTML parsing
 to verify one page-level heading, meaningful page titles, semantic main content,
@@ -253,6 +266,9 @@ domain behavior is the controlled seeded source-derived import path.
 The seeded import tests verify the tiny validated artifact shape, import batch
 identity, source traceability preservation, stable source-derived identity,
 idempotent staging, and no reviewer-created state writes.
+The source-derived read tests verify database-backed list and fetch behavior,
+import batch context, source traceability preservation, stable identity lookup,
+and no reviewer-created state exposure.
 They do not require browser automation, Node.js, Playwright, Selenium, axe,
 Docker, a running PostgreSQL server, cloud services, or public URLs.
 
@@ -286,7 +302,8 @@ The scaffold intentionally does not implement:
 - Authorization.
 - Production schema beyond the seeded import table group.
 - Reviewer-created state, audit, export, feedback, auth, or reset/reload tables.
-- Database-backed reads or API routes.
+- HTTP API routes.
+- Database-backed reviewer views or workflows.
 - Production import/sync automation.
 - Queues.
 - Annotations.
@@ -303,8 +320,10 @@ The scaffold intentionally does not implement:
 - QNAP, Azure, AWS, public hosting, public URLs, or production deployment.
 
 The sample source-derived view shell is also local-only and read-only. It is not
-an import workflow, a database-backed source record view, a queue, a correction
-workflow, or a reviewer-created state surface.
+an import workflow, a database-backed source record route, a queue, a correction
+workflow, or a reviewer-created state surface. Database-backed source-derived
+reads are limited to the local/test service seam over staged seeded corpus
+records.
 
 The sample facility master view is also local-only and read-only. It is not a
 CSV import, source connector, database-backed facility search, official facility

@@ -115,17 +115,18 @@ read from SQLite or a hosted database, load live public-source data, run
 import/sync, authenticate users, persist reviewer-created state, deploy to
 QNAP/Azure/AWS, or expose a public URL.
 
-The hosted scaffold now also includes minimal PostgreSQL/Alembic project wiring
-and the first controlled seeded corpus import path for local and test
-validation: a no-secret database URL configuration seam, an Alembic script
-location, one domain migration for import batch metadata and source-derived
-record staging, scaffold/API boundary descriptors, and a local JSON artifact
-importer for validated pipeline-output-shaped fixtures. This path preserves
-import batch identity, source traceability, original source-derived values, and
-the separation from reviewer-created state. It does not implement database-
-backed API reads, reviewer workflows, reset/reload behavior, authentication,
-authorization, hosted live crawling, hosted connector execution, production
-import automation, or deployment.
+The hosted scaffold now also includes minimal PostgreSQL/Alembic project wiring,
+the first controlled seeded corpus import path, and a narrow database-backed
+source-derived read service for local and test validation: a no-secret database
+URL configuration seam, an Alembic script location, one domain migration for
+import batch metadata and source-derived record staging, scaffold/API boundary
+descriptors, a local JSON artifact importer for validated pipeline-output-
+shaped fixtures, and list/fetch helpers over staged source-derived records. This
+path preserves import batch identity, source traceability, original source-
+derived values, and the separation from reviewer-created state. It does not
+implement HTTP API routes, reviewer workflows, reset/reload behavior,
+authentication, authorization, hosted live crawling, hosted connector execution,
+production import automation, or deployment.
 
 ## Components
 
@@ -154,10 +155,10 @@ hosted scaffold adds local/test configuration validation, an Alembic script
 location, and a first narrow domain migration for seeded import batch metadata
 and source-derived record staging. Reviewer-created state tables, auth tables,
 audit tables, export tables, feedback tables, reset/reload metadata tables, ORM
-models, database-backed API behavior, deployment, hosted connection
-configuration, and production import automation remain deferred, and future
-hosted schema work must preserve the physical data-domain separation accepted by
-ADR-0010.
+models, HTTP API routes, reviewer workflow API behavior, deployment, hosted
+connection configuration, and production import automation remain deferred, and
+future hosted schema work must preserve the physical data-domain separation
+accepted by ADR-0010.
 
 ### Presentation
 
@@ -229,10 +230,12 @@ retention implementation PRs validate the concrete layer.
   migrations for future schema implementation. The current scaffold may validate
   no-secret local/test database configuration, stage source-derived records from
   a controlled validated seeded artifact, and describe separated persistence and
-  API boundaries, but it must not imply database-backed views, reviewer-state
-  persistence, production import automation, or operational reset/reload
-  behavior are implemented. SQLite and Datasette remain retained validation and
-  transition-comparison tools, not the hosted reviewer-created state store.
+  API boundaries, and expose a local/test database-backed read service over the
+  staged source-derived records, but it must not imply database-backed reviewer
+  views, HTTP API routes, reviewer-state persistence, production import
+  automation, or operational reset/reload behavior are implemented. SQLite and
+  Datasette remain retained validation and transition-comparison tools, not the
+  hosted reviewer-created state store.
 - Hosted tester MVP access must be authenticated and role-scoped; anonymous
   hosted tester access is not approved because the hosted app includes
   reviewer-created state, tester feedback, annotations, corrections, export
@@ -245,8 +248,9 @@ retention implementation PRs validate the concrete layer.
 - Hosted tester MVP implementation may proceed from the ADR-0012 scaffold-first
   sequence into the ADR-0013, ADR-0014, and ADR-0015 product-enabling path. The
   current seeded corpus import path is limited to controlled validated artifact
-  imports into import batch and source-derived staging tables. Concrete
-  authentication implementation, correction workflows, queues, annotations,
+  imports into import batch and source-derived staging tables plus local/test
+  service reads over those staged records. Concrete authentication
+  implementation, HTTP API routes, correction workflows, queues, annotations,
   reviewer-created state persistence, reset/reload commands or APIs, hosted
   deployment, audit persistence, retention automation, production import
   automation, and hosted export builders remain unimplemented until focused

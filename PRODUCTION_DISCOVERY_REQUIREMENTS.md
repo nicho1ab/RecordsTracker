@@ -40,16 +40,17 @@ Minimal PostgreSQL/Alembic project wiring now exists for local/test validation:
 dependency declarations, no-secret database URL validation, an Alembic script
 location, one domain migration for controlled seeded corpus import batch
 metadata and source-derived record staging, a local validated JSON artifact
-importer, and scaffold/API boundary descriptors. This path does not implement
-database-backed API routes, run migrations against a local database during
-scaffold tests, load live public data, run connector execution, automate
-production imports, implement reset/reload, or persist reviewer-created state.
+importer, a local/test database-backed read service over staged source-derived
+records, and scaffold/API boundary descriptors. This path does not implement
+HTTP API routes, run migrations against a local database during scaffold tests,
+load live public data, run connector execution, automate production imports,
+implement reset/reload, or persist reviewer-created state.
 
 The next safe hosted-view increment should remain similarly narrow and
 fixture-backed, preserving fixture/sample labels, read-only behavior,
 source-derived versus reviewer-created state separation, semantic structure,
-accessibility validation, and the no-database, no-import, no-authentication,
-no-deployment boundary.
+accessibility validation, and the no-HTTP-route, no-reviewer-created-state,
+no-authentication, no-deployment boundary.
 
 ## Non-negotiable boundaries
 
