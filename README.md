@@ -150,7 +150,8 @@ public-record review notes.
    scaffold for actor, role, scope, and account-status guards plus a narrow
    local/test authenticated source-derived read API route seam and read-only
    reviewer workflow shell that can include associated reviewer-created state
-   read route output on selected detail responses. It also includes a narrow local/test reviewer-
+   read route output plus a compact summary derived from that output on selected
+   detail responses. It also includes a narrow local/test reviewer-
    created state persistence scaffold table/service, a narrow local/test audit
    event scaffold for successful reviewer-created state scaffold writes only, a
    narrow local/test authenticated audit history read route seam for those audit
@@ -176,8 +177,9 @@ public-record review notes.
    source-derived API route seam, and the read-only reviewer workflow shell are
    limited to local/test seams and are not wired into the sample UI routes.
    Workflow shell detail payloads can compose associated reviewer-created state
-   read output only when tests or local callers provide explicit source-derived
-   and reviewer-created state route contexts.
+   read output and a compact summary derived from that output only when tests or
+   local callers provide explicit source-derived and reviewer-created state
+   route contexts.
    The reset/reload dry-run seam is also local/test only and requires an
    explicit database, actor, and scope context from tests or local callers. Its
    operational metadata scaffold stores dry-run planning metadata only, requires

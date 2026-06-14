@@ -50,7 +50,8 @@ a local/test authenticated audit history read route seam over those audit rows,
 a narrow local/test authenticated reviewer-created state read route seam for
 persisted scaffold rows, a narrow local/test reviewer workflow shell detail
 integration that composes associated reviewer-created state read output for a
-selected source-derived record, a local/test authenticated reset/reload dry-run route
+selected source-derived record, a compact workflow shell state summary derived
+from that associated state output, a local/test authenticated reset/reload dry-run route
 seam, a separate local/test reset/reload operational planning metadata
 scaffold, a narrow local/test read-only planning metadata route seam, and
 scaffold/API boundary descriptors. The dry-run reports
@@ -86,9 +87,10 @@ production auth middleware.
 The reviewer workflow shell can now include associated reviewer-created state
 read route output in a selected source-record detail response when explicit
 local/test source-derived and reviewer-created state contexts are supplied.
-That integration remains read-only, requires both source-derived read access and
-reviewer-state read access, and does not create or modify reviewer-created
-state, source-derived rows, audit rows, or operational metadata.
+That integration can also include a compact summary derived from the associated
+state route output. It remains read-only, requires both source-derived read
+access and reviewer-state read access, and does not create or modify reviewer-
+created state, source-derived rows, audit rows, or operational metadata.
 
 The next safe hosted-view increment should remain similarly narrow and
 fixture-backed, preserving fixture/sample labels, read-only behavior,

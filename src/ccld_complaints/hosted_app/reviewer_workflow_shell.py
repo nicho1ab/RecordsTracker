@@ -119,6 +119,7 @@ def _review_detail_response(
         return state_status, state_content_type, state_body
 
     state_payload = _json_object(state_body)
+    associated_state = _associated_reviewer_created_state_payload(state_payload)
     return _json_response(
         200,
         {
@@ -126,8 +127,9 @@ def _review_detail_response(
             "detail": {
                 "detail_id": f"source-derived-review-detail-shell:{record['source_record_key']}",
                 "source_record": _source_record_payload(record),
-                "associated_reviewer_created_state": (
-                    _associated_reviewer_created_state_payload(state_payload)
+                "associated_reviewer_created_state": associated_state,
+                "associated_reviewer_created_state_summary": (
+                    _associated_reviewer_created_state_summary_payload(associated_state)
                 ),
                 "reviewer_created_state_boundary": _reviewer_state_boundary_payload(),
             },
@@ -230,6 +232,48 @@ def _associated_reviewer_created_state_payload(
     }
 
 
+def _associated_reviewer_created_state_summary_payload(
+    associated_state: Mapping[str, Any],
+) -> dict[str, Any]:
+    records = _record_list(associated_state, "reviewer_created_state")
+    created_at_values = [_record_string(record, "created_at") for record in records]
+    return {
+        "summary_source": REVIEWER_CREATED_STATE_API_PREFIX,
+        "has_reviewer_created_state": len(records) > 0,
+        "total_associated_rows": len(records),
+        "state_kinds_present": sorted(
+            {_record_string(record, "state_kind") for record in records}
+        ),
+        "latest_created_at": max(created_at_values) if created_at_values else None,
+        "actor_attribution_labels": sorted(
+            {_actor_attribution_label(record) for record in records}
+        ),
+        "actor_categories_present": sorted(
+            {
+                _record_string(_record_object(record, "created_by"), "actor_category")
+                for record in records
+            }
+        ),
+        "safety": {
+            "derived_from_associated_state_route_output": True,
+            "read_only_route": True,
+            "does_not_mutate_source_derived_records": True,
+            "does_not_mutate_reviewer_created_state": True,
+            "does_not_mutate_audit_events": True,
+            "does_not_mutate_operational_metadata": True,
+        },
+    }
+
+
+def _actor_attribution_label(record: Mapping[str, Any]) -> str:
+    created_by = _record_object(record, "created_by")
+    actor_category = _record_string(created_by, "actor_category")
+    display_name = created_by.get("display_name")
+    if isinstance(display_name, str) and display_name.strip():
+        return f"{display_name.strip()} ({actor_category})"
+    return actor_category
+
+
 def _optional_query_value(
     query_values: Mapping[str, list[str]],
     key: str,
@@ -266,6 +310,13 @@ def _record_object(payload: Mapping[str, Any], key: str) -> Mapping[str, Any]:
     value = payload[key]
     if not isinstance(value, Mapping):
         raise ValueError(f"Expected {key} to be a JSON object.")
+    return value
+
+
+def _record_string(payload: Mapping[str, Any], key: str) -> str:
+    value = payload[key]
+    if not isinstance(value, str):
+        raise ValueError(f"Expected {key} to be a JSON string.")
     return value
 
 

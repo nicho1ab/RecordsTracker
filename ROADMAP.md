@@ -280,7 +280,8 @@ the governed primary future review experience.
 	or schema changes.
 - Added a narrow local/test reviewer workflow shell detail integration that
 	composes associated reviewer-created state read route output for a selected
-	source-derived record, preserving separate source-derived and reviewer-state
+	source-derived record and a compact summary derived from that output,
+	preserving separate source-derived and reviewer-state
 	read permissions, non-secret payloads, no-mutation behavior, and the no-write,
 	no-full-workflow, no-production-auth, no-deployment, no-schema-change boundary.
 - Added a local/test authenticated seeded corpus reset/reload dry-run seam that
@@ -389,7 +390,7 @@ the governed primary future review experience.
 	controlled seeded import, database-backed source-derived read, auth boundary
 	scaffold, local/test source-derived read route seam, first read-only
 	authenticated tester workflow shell, reviewer workflow shell associated-state
-	read integration, reviewer-created state persistence scaffold, reviewer-created state read route seam, audit event persistence
+	read integration and derived state summary, reviewer-created state persistence scaffold, reviewer-created state read route seam, audit event persistence
 	scaffold, audit history read route seam, and
 	reset/reload dry-run planning seam with opt-in operational metadata persistence
 	and read-only planning metadata routes to
