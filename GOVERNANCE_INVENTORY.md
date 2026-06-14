@@ -10,9 +10,13 @@
   source-traceable exports. The hosted tester work currently consists of a
   local Python standard-library scaffold, health and smoke validation, local
   setup checks, and a read-only `/source-records` list/detail shell with local
-  sample filtering/search over fixture/sample records.
+  sample filtering/search and fixture/sample-only source traceability summary
+  panels over fixture/sample records.
 - Local-only sample filtering/search: implemented for the hosted source-record
   shell using in-memory fixture/sample records only.
+- Fixture/sample-only source traceability summary panels: implemented for the
+  hosted source-record list/detail shell using in-memory fixture/sample records
+  only.
 - Recent hosted sequence: PR #106 added the local hosted scaffold foundation,
   PR #107 added local setup checks, PR #108 added the first local-only read-only
   source-record view shell, and PR #109 added local-only semantic/accessibility
@@ -110,8 +114,9 @@
   extraction behavior changes.
 - Roadmap items for the first hosted scaffold, local setup checks, local-only
   read-only source-record shell, semantic/accessibility validation, and
-  local-only sample filtering/search are complete. Next work should move to an
-  approved roadmap milestone, not repeat those completed items.
+  local-only sample filtering/search, and fixture/sample-only source
+  traceability summary panels are complete. Next work should move to an approved
+  roadmap milestone, not repeat those completed items.
 - Local-only/sample-only boundaries remain active. Sample records must stay
   clearly marked as fixture/sample records and must not be presented as live,
   database-backed, complete, statewide, official, or production data.
@@ -121,9 +126,10 @@
 ## Gap analysis
 
 - Future fixture-backed source view expansion: additional source-record fields,
-  list/detail states, empty states, navigation states, or filter facets should be
-  backed by representative fixtures and semantic/accessibility validation before
-  any live or database-backed source is introduced.
+  list/detail states, empty states, navigation states, filter facets, or
+  traceability summary states should be backed by representative fixtures and
+  semantic/accessibility validation before any live or database-backed source is
+  introduced.
 - Future import path into hosted view: source-derived hosted records should come
   from a controlled snapshot import from validated pipeline output after the
   import artifact format, validation, stable identities, idempotency, reset/

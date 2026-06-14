@@ -5,6 +5,7 @@ from html.parser import HTMLParser
 
 from ccld_complaints.hosted_app.app import (
     SourceRecordFilters,
+    build_source_traceability_summary,
     filter_sample_source_records,
     get_sample_source_record,
     health_response,
@@ -147,6 +148,11 @@ def test_source_record_list_route_labels_sample_read_only_scope() -> None:
     assert "Jurisdiction" in html
     assert "Source family" in html
     assert "Source type" in html
+    assert "Sample source traceability summary" in html
+    assert "2 of 2 fixture/sample records" in html
+    assert "Jurisdictions represented" in html
+    assert "Source families represented" in html
+    assert "Visible sample traceability fields in the current result set" in html
     assert "Raw SHA-256" in html
     assert "sample-complaint-001" in html
 
@@ -165,6 +171,27 @@ def test_source_record_filter_query_uses_sample_records_only() -> None:
     assert [record.complaint_control_number for record in filtered_records] == ["SAMPLE-CC-002"]
 
 
+def test_source_traceability_summary_uses_filtered_sample_records() -> None:
+    filters = SourceRecordFilters(query="beta")
+    filtered_records = filter_sample_source_records(filters)
+    summary = build_source_traceability_summary(filtered_records)
+
+    assert summary.total_records == 1
+    assert summary.complete_record_count == 1
+    assert summary.jurisdictions == ("California",)
+    assert summary.source_families == ("CCLD complaint reports",)
+    assert {field.label: field.present_count for field in summary.fields} == {
+        "Sample source URL": 1,
+        "Raw SHA-256": 1,
+        "Connector name": 1,
+        "Retrieved at": 1,
+        "Report index": 1,
+        "Extraction warning": 1,
+        "Jurisdiction": 1,
+        "Source family": 1,
+    }
+
+
 def test_source_record_list_route_filters_by_query_parameter() -> None:
     status, content_type, body = route_response("/source-records?q=beta")
     html = body.decode("utf-8")
@@ -173,6 +200,7 @@ def test_source_record_list_route_filters_by_query_parameter() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "value=\"beta\"" in html
     assert "Showing 1 of 2 fixture/sample records." in html
+    assert "1 of 1 fixture/sample records" in html
     assert "SAMPLE-CC-002" in html
     assert "SAMPLE-CC-001" not in html
     assert "They do not query live public-source data or a database" in " ".join(html.split())
@@ -185,6 +213,8 @@ def test_source_record_list_route_shows_sample_no_match_state() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Showing 0 of 2 fixture/sample records." in html
+    assert "0 of 0 fixture/sample records" in html
+    assert "None in the current fixture/sample result set" in html
     assert "No fixture/sample records match the current filters." in html
     assert "SAMPLE-CC-001" not in html
     assert "SAMPLE-CC-002" not in html
@@ -198,6 +228,9 @@ def test_source_record_detail_route_displays_traceability_fields() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Read-only sample source-derived detail" in html
+    assert "Sample source traceability block" in html
+    assert "visible sample traceability metadata" in html
+    assert "do not verify a live public-source record" in normalized_html
     assert "Sample source URL" in html
     assert "https://example.invalid/sample-ccld-source-document-001" in html
     assert "Jurisdiction" in html
@@ -228,9 +261,16 @@ def test_source_record_list_has_accessible_semantic_structure() -> None:
         required_links={"/", "/health", "/source-records/sample-complaint-001"},
     )
 
-    assert parser.tags.count("table") == 1
+    assert parser.tags.count("table") == 2
     normalized_main = " ".join(parser.text_for("main").split())
 
+    assert "Sample source traceability summary" in parser.text_for("h2")
+    assert "Visible sample traceability fields in the current result set" in parser.text_for(
+        "caption"
+    )
+    assert "Traceability-style field" in parser.text_for("th")
+    assert "Fixture/sample records with visible value" in parser.text_for("th")
+    assert "Sample source URL" in parser.text_for("th")
     assert "Local sample source-derived complaint records" in parser.text_for("caption")
     assert "Complaint control number" in parser.text_for("th")
     assert "Jurisdiction" in parser.text_for("th")
@@ -245,6 +285,8 @@ def test_source_record_list_has_accessible_semantic_structure() -> None:
     assert "These rows are sample-only placeholders" in normalized_main
     assert "They are not imported records" in normalized_main
     assert "not official public-source facts" in normalized_main
+    assert "does not verify live public-source completeness" in normalized_main
+    assert "does not read from a database" in normalized_main
 
 
 def test_source_record_detail_has_accessible_semantic_structure() -> None:
@@ -260,6 +302,10 @@ def test_source_record_detail_has_accessible_semantic_structure() -> None:
     )
 
     assert parser.tags.count("dl") == 1
+    normalized_main = " ".join(parser.text_for("main").split())
+
+    assert "Sample source traceability block" in parser.text_for("main")
+    assert "do not verify a live public-source record" in normalized_main
     assert "Read-only sample source-derived detail" in parser.text_for("main")
     for label in [
         "Jurisdiction",

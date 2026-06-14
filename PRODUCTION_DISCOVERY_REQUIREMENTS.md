@@ -20,8 +20,9 @@ source-derived canonical fields.
 The local hosted tester MVP scaffold has begun under ADR-0012. Current hosted
 implementation is limited to a local Python standard-library app shell, health
 and smoke validation, local setup checks, and a read-only `/source-records`
-list/detail shell with local sample filtering/search over fixture/sample
-records with semantic/accessibility validation.
+list/detail shell with local sample filtering/search and fixture/sample-only
+source traceability summary panels over fixture/sample records with
+semantic/accessibility validation.
 
 This scaffold is not a hosted tester-ready reviewer workflow. It does not load
 live public data, read from SQLite or a hosted database, run import/sync,
