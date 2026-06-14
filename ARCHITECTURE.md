@@ -117,8 +117,9 @@ to QNAP/Azure/AWS, or expose a public URL.
 
 The hosted scaffold now also includes minimal PostgreSQL/Alembic project wiring,
 the first controlled seeded corpus import path, a narrow database-backed
-source-derived read service, a local/test auth/authz boundary scaffold, and a
-narrow local/test authenticated source-derived HTTP/API read route seam: a
+source-derived read service, a local/test auth/authz boundary scaffold, a
+narrow local/test authenticated source-derived HTTP/API read route seam, and a
+first local/test authenticated reviewer workflow shell: a
 no-secret database URL configuration seam, an Alembic script location, one
 domain migration for import batch metadata and source-derived record staging,
 scaffold/API boundary descriptors, a local JSON artifact importer for validated
@@ -126,12 +127,14 @@ pipeline-output-shaped fixtures, list/fetch helpers over staged source-derived
 records, managed OIDC/OAuth2 provider-class configuration validation, actor/
 role/scope/target models, protected read-service guards, and JSON handlers for
 listing staged source-derived records or fetching one staged record by key or
-stable identity. This path preserves import batch identity, source traceability,
+stable identity, plus read-only queue and detail shell payloads over those route
+responses. This path preserves import batch identity, source traceability,
 original source-derived values, and the separation from reviewer-created state.
 It does not implement real login flow, provider registration, sessions, cookies,
-tokens, auth middleware, reviewer workflows, reset/reload behavior, hosted live
-crawling, hosted connector execution, production import automation, production
-API framework behavior, or deployment.
+tokens, auth middleware, reviewer-created state persistence, stateful reviewer
+workflows, reset/reload behavior, hosted live crawling, hosted connector
+execution, production import automation, production API framework behavior, or
+deployment.
 
 ## Components
 
@@ -159,9 +162,10 @@ Alembic-managed migrations as the migration tooling direction. The current
 hosted scaffold adds local/test configuration validation, an Alembic script
 location, and a first narrow domain migration for seeded import batch metadata
 and source-derived record staging. The current auth boundary and
-source-derived read route seam are schema-free; reviewer-created state tables,
-auth tables, audit tables, export tables, feedback tables, reset/reload metadata
-tables, ORM models, reviewer workflow API behavior, deployment, hosted
+source-derived read route seam, and read-only reviewer workflow shell are
+schema-free; reviewer-created state tables, auth tables, audit tables, export
+tables, feedback tables, reset/reload metadata tables, ORM models, stateful
+reviewer workflow API behavior, deployment, hosted
 connection configuration, and production import automation remain deferred, and
 future hosted schema work must preserve the physical data-domain separation
 accepted by ADR-0010.
@@ -238,9 +242,10 @@ retention implementation PRs validate the concrete layer.
   a controlled validated seeded artifact, and describe separated persistence and
   API boundaries, expose a local/test database-backed read service over the
   staged source-derived records, and expose a narrow local/test authenticated
-  source-derived read route seam, but it must not imply database-backed reviewer
-  views, reviewer-state persistence, production import automation, production
-  API framework behavior, or operational reset/reload behavior are implemented.
+  source-derived read route seam and read-only reviewer workflow shell, but it
+  must not imply stateful database-backed reviewer views, reviewer-state
+  persistence, production import automation, production API framework behavior,
+  or operational reset/reload behavior are implemented.
   SQLite and Datasette remain retained validation and transition-comparison
   tools, not the hosted reviewer-created state store.
 - Hosted tester MVP access must be authenticated and role-scoped; anonymous

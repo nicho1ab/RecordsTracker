@@ -64,6 +64,10 @@ def build_local_check_report() -> list[LocalCheck]:
             "ccld_complaints.hosted_app.source_derived_routes",
             "Hosted source-derived API route package",
         ),
+        check_importable(
+            "ccld_complaints.hosted_app.reviewer_workflow_shell",
+            "Hosted reviewer workflow shell package",
+        ),
         check_python_package_or_command("pytest", "pytest", "pytest for scaffold tests"),
         check_python_package_or_command("ruff", "ruff", "ruff for lint checks"),
         check_python_package_or_command("mypy", "mypy", "mypy for type checks"),
@@ -105,7 +109,8 @@ def format_text_report(report: list[LocalCheck]) -> str:
             "tests/unit/test_hosted_seeded_corpus_import.py "
             "tests/unit/test_hosted_source_derived_reads.py "
             "tests/unit/test_hosted_auth_boundary.py "
-            "tests/unit/test_hosted_source_derived_routes.py",
+            "tests/unit/test_hosted_source_derived_routes.py "
+            "tests/unit/test_hosted_reviewer_workflow_shell.py",
         ]
     )
     return "\n".join(lines)
