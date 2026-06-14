@@ -233,6 +233,10 @@ the governed primary future review experience.
 - Added a governance inventory and gap analysis for the production-discovery
 	state, local hosted scaffold implementation, completed ADRs, deferred
 	decisions, stale-guidance assessment, and next implementation phase.
+- Added a public-source data inventory for structured CSV/open-data sources,
+	HTML portal/detail pages, PDFs, metadata/catalog pages, uploaded CSV example
+	planning, future multi-source adapters, attorney focus areas, and gated
+	feedback or GitHub intake planning without implementing source behavior.
 
 ## Near-term milestones
 
@@ -254,6 +258,9 @@ the governed primary future review experience.
 	presence, and raw source traceability.
 - Keep roadmap, changelog, setup, runbook, and Copilot workflow documentation
 	current after each meaningful capability, governance, or workflow change.
+- Keep the public-source data inventory current when new source candidates,
+	uploaded examples, source metadata, source limitations, parser risks, or
+	multi-source planning assumptions are discovered.
 
 ## Current next priorities
 
@@ -312,6 +319,9 @@ define the smallest useful product shape:
   provides enough value to justify adding it outside the baseline workflow.
 - Decide when to add a second public source connector under the source connector
 	contract.
+- Decide which public-source candidates should move from inventory and local
+	profiling into approved connector, import, fixture, schema, or hosted-view
+	implementation work.
 - Decide what accessibility checks are required before any public or stable
 	release.
 - Decide which production operations governance is required for access, audit,

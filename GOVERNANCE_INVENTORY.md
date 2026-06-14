@@ -28,6 +28,12 @@
 - Datasette role: Datasette remains retained for validation, inspection,
   debugging, local exploration, export support, and transition comparison. It is
   not the governed primary future reviewer UX.
+- Public-source expansion status: `PUBLIC_SOURCE_DATA_INVENTORY.md` inventories
+  future public-source candidates, uploaded CSV example planning, conceptual
+  source adapter metadata, attorney focus-area planning, and gated feedback or
+  GitHub intake planning without approving imports, connectors, schemas, hosted
+  behavior, issue automation, role-based UI, multi-state support, or legal
+  conclusions.
 
 ## Completed ADR decisions
 
@@ -140,6 +146,17 @@
   must not overwrite source-derived canonical records, raw source files, source
   document metadata, extraction audit rows, source URLs, raw hashes, connector
   metadata, retrieval timestamps, or original extracted values.
+- Future public-source expansion: structured CSV/open-data files, HTML portal
+  pages, PDFs, metadata/catalog pages, and future multi-state sources need
+  source inventory entries, local profiling, terms and sensitivity review,
+  source metadata, traceability requirements, fixture plans, parser warnings,
+  and caution language before connector, import, schema, or hosted-view work.
+- Future attorney focus profiles and feedback intake: focus profiles may guide
+  queues, filters, dashboards, and issue spotting only after implementation
+  decisions define the relevant layer. Feedback or bug reports may integrate
+  with GitHub only after triage, classification, privacy/secrets review,
+  duplicate check, priority/severity assignment, human approval, and traceable
+  issue linkage are defined.
 
 ## Safeguards preserved
 
