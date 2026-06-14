@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added narrow local/test read-only reset/reload planning metadata routes for
+	persisted dry-run planning records, with JSON list and fetch-by-ID handlers,
+	schema-backed filters, import/reload authorization, and focused tests proving
+	empty history, missing-record, auth rejection, filtering, non-secret payloads,
+	and no-mutation behavior without adding reset/reload execution, scheduler,
+	archive/clear/reload behavior, production auth middleware, deployment, live
+	crawling, or connector execution.
 - Added a minimal local/test PostgreSQL/Alembic-backed reset/reload operational
 	metadata scaffold, with one separate planning table, opt-in dry-run persistence,
 	operator/admin-style import/reload authorization, safe readback helpers, and

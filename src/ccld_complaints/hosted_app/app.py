@@ -20,6 +20,11 @@ from ccld_complaints.hosted_app.reset_reload_dry_run import (
     SeededCorpusResetReloadDryRunContext,
     route_seeded_corpus_reset_reload_dry_run_response,
 )
+from ccld_complaints.hosted_app.reset_reload_planning_routes import (
+    RESET_RELOAD_PLANNING_METADATA_API_PREFIX,
+    ResetReloadPlanningMetadataApiContext,
+    route_reset_reload_planning_metadata_api_response,
+)
 from ccld_complaints.hosted_app.reviewer_workflow_shell import (
     ReviewerWorkflowShellContext,
     route_reviewer_workflow_shell_response,
@@ -982,6 +987,9 @@ def route_response(
     audit_events_api_context: AuditEventsApiContext | None = None,
     reviewer_workflow_shell_context: ReviewerWorkflowShellContext | None = None,
     reset_reload_dry_run_context: SeededCorpusResetReloadDryRunContext | None = None,
+    reset_reload_planning_metadata_api_context: (
+        ResetReloadPlanningMetadataApiContext | None
+    ) = None,
 ) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
     parsed_path = parsed_url.path
@@ -994,6 +1002,11 @@ def route_response(
         return route_seeded_corpus_reset_reload_dry_run_response(
             path,
             reset_reload_dry_run_context,
+        )
+    if parsed_path.startswith(RESET_RELOAD_PLANNING_METADATA_API_PREFIX):
+        return route_reset_reload_planning_metadata_api_response(
+            path,
+            reset_reload_planning_metadata_api_context,
         )
     if parsed_path.startswith(AUDIT_EVENTS_API_PREFIX):
         return route_audit_events_api_response(path, audit_events_api_context)

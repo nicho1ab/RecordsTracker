@@ -373,6 +373,9 @@ def list_seeded_corpus_reset_reload_planning_metadata(
     actor: AuthenticatedActor | None,
     *,
     scope: HostedAccessScope,
+    reviewer_state_handling_mode: ReviewerStateHandlingMode | None = None,
+    actor_provider_subject: str | None = None,
+    requested_operation_mode: ResetReloadRequestedOperationMode | None = None,
     limit: int = 100,
     offset: int = 0,
 ) -> tuple[ResetReloadPlanningMetadataRead, ...]:
@@ -380,6 +383,13 @@ def list_seeded_corpus_reset_reload_planning_metadata(
         raise ValueError("Reset/reload planning metadata list limit must be at least 1.")
     if offset < 0:
         raise ValueError("Reset/reload planning metadata list offset must be at least 0.")
+    if (
+        reviewer_state_handling_mode is not None
+        and reviewer_state_handling_mode not in REVIEWER_STATE_HANDLING_OPTIONS
+    ):
+        raise ValueError("Reset/reload reviewer state handling mode is not supported.")
+    if requested_operation_mode is not None and requested_operation_mode != "dry_run":
+        raise ValueError("Reset/reload requested operation mode is not supported.")
     require_permission(
         actor,
         permission=IMPORT_RELOAD_PERMISSION,
@@ -392,7 +402,24 @@ def list_seeded_corpus_reset_reload_planning_metadata(
             hosted_reset_reload_planning_metadata.c.source_scope_type == scope.scope_type,
             hosted_reset_reload_planning_metadata.c.source_scope_id == scope.scope_id,
         )
-        .order_by(
+    )
+    if reviewer_state_handling_mode is not None:
+        query = query.where(
+            hosted_reset_reload_planning_metadata.c.reviewer_state_handling_mode
+            == reviewer_state_handling_mode
+        )
+    if actor_provider_subject is not None:
+        query = query.where(
+            hosted_reset_reload_planning_metadata.c.actor_provider_subject
+            == actor_provider_subject
+        )
+    if requested_operation_mode is not None:
+        query = query.where(
+            hosted_reset_reload_planning_metadata.c.requested_operation_mode
+            == requested_operation_mode
+        )
+    query = (
+        query.order_by(
             hosted_reset_reload_planning_metadata.c.generated_at,
             hosted_reset_reload_planning_metadata.c.planning_record_id,
         )

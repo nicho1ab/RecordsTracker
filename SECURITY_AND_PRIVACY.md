@@ -84,6 +84,16 @@ create new dry-run audit events, parse or store provider tokens, create sessions
 or cookies, add production auth middleware, store connection strings, or commit
 provider, tenant, callback, hosted URL, or secret configuration.
 
+The current reset/reload planning metadata read route seam is local/test only
+and must receive an explicit database, actor, and corpus scope context from
+tests or local callers. It requires import/reload permission, rejects
+unauthenticated, disabled or revoked, role-denied, and out-of-scope actors, and
+serializes only non-secret persisted planning fields. It does not create,
+modify, delete, execute, archive, clear, relink, reload, or schedule
+reset/reload work, and it does not expose tokens, cookies, private headers,
+connection strings, raw provider claims, or unnecessary sensitive narrative
+content.
+
 The current reviewer-created state persistence scaffold is local/test only. It
 requires an explicit authenticated actor context, reviewer-state write
 permission, active account status, and matching project or corpus scope before

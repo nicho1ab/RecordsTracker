@@ -84,6 +84,10 @@ def build_local_check_report() -> list[LocalCheck]:
             "ccld_complaints.hosted_app.reset_reload_dry_run",
             "Hosted reset/reload dry-run package",
         ),
+        check_importable(
+            "ccld_complaints.hosted_app.reset_reload_planning_routes",
+            "Hosted reset/reload planning metadata API route package",
+        ),
         check_python_package_or_command("pytest", "pytest", "pytest for scaffold tests"),
         check_python_package_or_command("ruff", "ruff", "ruff for lint checks"),
         check_python_package_or_command("mypy", "mypy", "mypy for type checks"),
@@ -131,7 +135,8 @@ def format_text_report(report: list[LocalCheck]) -> str:
             "tests/unit/test_hosted_audit_events.py "
             "tests/unit/test_hosted_audit_event_routes.py "
             "tests/unit/test_hosted_reset_reload_dry_run.py "
-            "tests/unit/test_hosted_reset_reload_operational_metadata.py",
+            "tests/unit/test_hosted_reset_reload_operational_metadata.py "
+            "tests/unit/test_hosted_reset_reload_planning_routes.py",
         ]
     )
     return "\n".join(lines)
