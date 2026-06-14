@@ -132,6 +132,8 @@ local/test CCLD record request page at `/ccld/records/request` that filters
 existing seeded source-derived rows by CCLD facility/license number and optional
 date range, can load or refresh matching rows from local validated hosted
 seeded-corpus output, and links matches into the reviewer UI,
+a CCLD-only local/test artifact builder that converts validated CCLD SQLite
+pipeline output into hosted seeded-corpus JSON outside browser requests,
 a local/test authenticated reset/reload dry-run route seam, and a local/test
 authenticated reset/reload execution-plan route seam: a
 no-secret database URL configuration seam, an Alembic script location, one

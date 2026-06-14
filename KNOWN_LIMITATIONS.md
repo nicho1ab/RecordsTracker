@@ -128,9 +128,11 @@
     state, create audit rows, persist operational metadata, prove public-source
     completeness, or support non-CCLD sources. When records are missing from the
     local validated output or outside the requested date range, it explains the
-    explicit live-fetch command and the remaining future need for a controlled
-    artifact builder that converts validated CCLD SQLite pipeline output into
-    hosted seeded-corpus JSON outside browser requests.
+    explicit outside-browser CCLD live-fetch and local/test artifact-builder
+    handoff. The artifact builder converts validated CCLD SQLite pipeline output
+    into hosted seeded-corpus JSON outside browser requests, but it is still a
+    local/test step and does not prove public-source completeness or automate
+    production imports.
 - The local hosted scaffold `/facilities` list and detail pages use committed
     tiny public-source facility fixtures and manifest placeholder metadata only.
     The facility detail source coverage panel and related source-record links

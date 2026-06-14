@@ -118,10 +118,23 @@ local validated rows outside the request, and any deferred reason.
 The page does not run live crawling, execute connectors, write reviewer-created
 state, create audit rows, persist operational metadata, destructively delete or
 overwrite source-derived rows, or support non-CCLD sources. When broader retrieval
-is needed, it still shows the existing explicit CCLD live fetch command to run
-outside the hosted UI. The remaining gap is a controlled artifact builder that
-converts validated CCLD SQLite pipeline output into hosted seeded-corpus JSON
-outside browser requests.
+is needed, it still shows the explicit outside-browser handoff: run the CCLD
+live fetch command when live public requests are intended, validate the SQLite
+output, run the local/test artifact builder, then return to the request page to
+load or refresh the generated hosted seeded-corpus JSON.
+
+To build that local/test hosted seeded-corpus JSON from validated CCLD SQLite
+output, run:
+
+```powershell
+.\scripts\build-hosted-ccld-artifact.ps1 -DbPath data\processed\ccld.sqlite -FacilityNumber 157806098 -Overwrite
+```
+
+The default output path is
+`data/processed/hosted_seeded_corpus/validated_ccld_seeded_corpus.json`. The
+builder is CCLD-only, validates required source traceability before writing,
+rejects private or absolute raw paths, produces deterministic output when given
+deterministic metadata, and does not make live public web requests.
 
 ## Open the local/test reviewer UI shell
 

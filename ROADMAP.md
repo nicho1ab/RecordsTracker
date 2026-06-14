@@ -380,6 +380,12 @@ the governed primary future review experience.
 	without browser live crawling, generic connector execution, schema changes,
 	reviewer-created state mutation, audit writes, non-CCLD sources, deployment,
 	or a frontend build pipeline.
+- Added a CCLD-only local/test artifact builder from validated CCLD SQLite
+	pipeline output into hosted seeded-corpus JSON, with fixture-backed tests
+	proving deterministic output, source traceability preservation, hosted seeded
+	import compatibility, and `/ccld/records/request` import/reload compatibility
+	without browser live crawling, generic connector execution, schema changes,
+	non-CCLD sources, reviewer-created state mutation, or audit writes.
 - Added a minimal local/test audit event persistence scaffold with a separate
 	PostgreSQL/Alembic table and service boundary for successful reviewer-created
 	state scaffold writes only, preserving source-derived records and reviewer-
@@ -494,22 +500,20 @@ exploration, or export support.
 1. Add hosted reviewer UI support for reviewing the CCLD request result set as a
 	facility/date-scoped queue while preserving source traceability and reviewer-
 	created state separation.
-2. Add a controlled way to produce hosted seeded-corpus JSON artifacts from
-	validated CCLD SQLite pipeline output outside browser requests.
-3. Implement real provider integration against the managed OpenID Connect/OAuth
+2. Implement real provider integration against the managed OpenID Connect/OAuth
 	2.0 provider class after the CCLD request flow, local/test auth boundary,
 	callback/session, and configuration decisions are clear.
-4. Expand reset/reload planning into later reset/reload behavior for the seeded
+3. Expand reset/reload planning into later reset/reload behavior for the seeded
 	corpus only after reviewer-created state preservation, fuller audit coverage,
 	operational metadata, and permission boundaries are broadened beyond this
 	local/test dry-run, execution-plan, and planning metadata scaffold.
-5. Expand beyond the reviewer-created state and first audit event scaffolds into
+4. Expand beyond the reviewer-created state and first audit event scaffolds into
 	export packet state, tester feedback, reset/reload metadata, fuller audit
 	coverage, and stateful reviewer-created workflow branches.
-6. Implement stateful reviewer-created workflow layers over a seeded,
+5. Implement stateful reviewer-created workflow layers over a seeded,
 	source-traceable corpus after auth, schema, audit, and permission boundaries
 	are ready.
-7. Add additional CCLD fixtures and extraction hardening for representative
+6. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
 
 ## Production-discovery transition path
