@@ -36,7 +36,9 @@ authentication and access governance, audit event attribution and no-secret
 metadata where audit persistence is implemented, feedback collection, and
 reset/reload behavior at the level of the implemented change. Reset/reload
 operational metadata tests must prove any persisted planning record remains
-separate, permissioned, non-secret, and non-executing.
+separate, permissioned, non-secret, and non-executing. Reset/reload planning
+metadata read route tests must prove authorized readback remains scoped,
+non-secret, and non-mutating.
 
 ### Fixture hash and line-ending tests
 

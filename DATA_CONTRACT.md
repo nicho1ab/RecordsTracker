@@ -47,7 +47,10 @@ operational planning metadata record with actor attribution, permission used,
 scope, requested dry-run mode, validation summary, non-secret planning context,
 and impact summaries. That operational metadata is not a canonical
 source-derived field and remains separate from source-derived, reviewer-created,
-and audit rows.
+and audit rows. A narrow local/test read-only route seam can list or fetch those
+planning metadata records by approved planning identifiers and schema-supported
+filters without mutating source-derived, reviewer-created, audit, or operational
+metadata rows.
 A narrow local/test
 reviewer-created state scaffold table can store review-item-state placeholder
 rows separately from source-derived rows, linked through staged source-derived

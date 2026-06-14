@@ -135,7 +135,9 @@ role/scope/target models, protected read-service guards, and JSON handlers for
 listing staged source-derived records or fetching one staged record by key or
 stable identity, plus read-only queue and detail shell payloads over those route
 responses, plus JSON handlers for listing or fetching scaffold audit rows by
-approved audit identifiers and schema-supported filters, plus a dry-run handler
+approved audit identifiers and schema-supported filters, plus JSON handlers for
+listing or fetching persisted reset/reload planning metadata rows by approved
+planning identifiers and schema-supported filters, plus a dry-run handler
 that reports seeded import batch counts,
 source-derived record counts by entity, scoped reviewer-created state scaffold
 counts, scoped audit scaffold counts, future reviewer-created state handling options, required permissions,
@@ -183,7 +185,8 @@ audit event scaffold table, plus a fourth narrow migration for one reset/reload
 operational planning metadata scaffold table. The current auth boundary,
 source-derived read route seam, read-only reviewer workflow shell,
 reviewer-created state scaffold service, audit history read route seam,
-reset/reload dry-run seam, and opt-in reset/reload planning metadata scaffold
+reset/reload dry-run seam, opt-in reset/reload planning metadata scaffold, and
+read-only reset/reload planning metadata route seam
 are local/test only; auth tables, export tables, feedback tables, broader
 reset/reload metadata tables, ORM models, stateful reviewer workflow API behavior,
 deployment, hosted
@@ -265,7 +268,7 @@ retention implementation PRs validate the concrete layer.
   staged source-derived records, and expose a narrow local/test authenticated
   source-derived read route seam, read-only reviewer workflow shell, and
   reset/reload dry-run route seam with opt-in operational planning metadata
-  persistence, but it
+  persistence plus read-only planning metadata routes, but it
   must not imply stateful database-backed reviewer views, reviewer-state
   persistence, production import automation, production API framework behavior,
   or operational reset/reload execution are implemented.
@@ -294,7 +297,8 @@ retention implementation PRs validate the concrete layer.
   local/test authenticated audit history read route seam over those audit rows, and a
   non-mutating reset/reload dry-run plan over staged seeded corpus metadata,
   scoped reviewer-created scaffold and audit scaffold row counts, and explicit
-  dry-run planning metadata when requested. Real provider
+  dry-run planning metadata when requested, with read-only planning metadata
+  list/fetch access over persisted planning rows. Real provider
   authentication implementation, persistent authorization storage, production
   API framework behavior, correction workflows, queues, annotations, full
   reviewer-created workflow persistence, reset/reload commands or APIs, hosted
