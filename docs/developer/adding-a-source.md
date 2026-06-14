@@ -21,6 +21,28 @@ A source connector cannot be accepted until it passes:
 - Accessibility review for any user-facing output
 - Documentation checks
 
+## Local public-source CSV profiling
+
+Before proposing a connector, import path, schema, migration, hosted workflow,
+or canonical field for local public-source CSV examples, run the local profiler
+against the ignored source workspace:
+
+```powershell
+.\scripts\profile-public-source-csvs.ps1
+```
+
+The profiler reads CSV files recursively from `data\raw\source-profiling`, skips
+non-CSV files, does not modify raw files, does not contact the internet or cloud
+services, and writes ignored summaries to `data\processed\source-profiling` plus
+`data\logs\source-profiling.log`. Use the output only as local discovery input.
+It does not import data into SQLite or the hosted scaffold, create canonical
+fields, approve schema or migration work, add connectors, or validate source
+completeness.
+
+Do not commit raw downloaded CSVs, PDFs, HTML pages, or full generated profiling
+outputs. Committed profiler fixtures must be tiny, synthetic, and stored under
+the test fixture area.
+
 ## CCLD FacilityReports baseline
 
 The CCLD connector discovers public FacilityReports URLs from the facility detail page for facility `157806098`. Discovery normalizes each rendered report link into a source document candidate with source name, facility number, report index, source URL, visible report date, and optional discovery timestamp. Duplicate URLs and duplicate report indexes are removed before candidates are returned.

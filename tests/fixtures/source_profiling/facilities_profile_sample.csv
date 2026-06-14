@@ -1,0 +1,4 @@
+facility_number,facility_name,county,inspection_date,license_id,status
+123456789,Synthetic Family Home,Alameda,2026-06-07,LIC-001,Active
+987654321,,Contra Costa,06/08/2026,LIC-002,
+,Synthetic Center,,not a date,,Inactive

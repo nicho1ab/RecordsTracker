@@ -58,6 +58,13 @@ storage approach.
 
 Recommended local profiling before implementation:
 
+- Run `scripts/profile_public_source_csvs.py` or
+  `scripts/profile-public-source-csvs.ps1` against the ignored local
+  `data/raw/source-profiling/` workspace before any connector, import, schema,
+  migration, hosted behavior, or canonical-field work is proposed. The profiler
+  writes ignored local summaries under `data/processed/source-profiling/` and
+  `data/logs/`; those generated outputs are discovery artifacts and must not be
+  committed.
 - Record source URL or catalog URL when known.
 - Record access or download timestamp.
 - Compute and record the raw SHA-256 hash locally.
@@ -77,6 +84,17 @@ Future CSV handling must preserve at least source URL when known, download
 timestamp, original file name, raw hash, row count, column count, parser profile,
 parser warnings, and source-specific known limitations. These planning fields do
 not add canonical source-derived fields to `DATA_CONTRACT.md` by themselves.
+
+Local profiling does not import data, create canonical fields, approve schemas
+or migrations, add connectors, create database tables, populate the hosted app,
+or validate source completeness. Raw CSVs, downloaded PDFs, downloaded HTML
+pages, and generated profiling outputs remain ignored by Git. Tiny committed
+fixtures for profiler tests must be synthetic and must not copy rows from local
+raw source files.
+
+Local CDE HTML captures may be CAPTCHA or access-block pages. Treat those as
+source-access issues for later discovery notes, not as valid data pages or
+approved HTML scraping inputs.
 
 ## Multi-source expansion model
 
