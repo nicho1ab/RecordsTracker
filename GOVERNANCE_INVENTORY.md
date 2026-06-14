@@ -15,7 +15,10 @@
   sample view backed by committed tiny public-source facility fixtures and
   manifest placeholder metadata. Facility detail pages now include fixture-only
   source coverage indicators and related fixture/sample source-record context
-  where the local sample mapping exists.
+  where the local sample mapping exists. Hosted tester PostgreSQL/Alembic work
+  has begun only as scaffold wiring: dependency declarations, no-secret database
+  URL validation, an Alembic script location with no domain migration revisions,
+  and source-derived versus reviewer-created state boundary descriptors.
 - Local-only sample filtering/search: implemented for the hosted source-record
   shell using in-memory fixture/sample records only.
 - Fixture/sample-only source traceability summary panels: implemented for the
@@ -32,10 +35,10 @@
   functioning reviewer workflow.
 - Local-only scaffold status: the scaffold is sample-only, read-only, local to a
   development workstation, and not backed by live public data, ignored raw CSVs,
-  generated profiling outputs, SQLite, a hosted database, import/sync,
-  authentication, authorization, reviewer-created state, queues, annotations,
-  corrections, exports, audit trail, reset/reload, deployment, QNAP, Azure,
-  AWS, or public URL behavior.
+  generated profiling outputs, SQLite, database reads from PostgreSQL, domain
+  migration revisions, import/sync, authentication, authorization,
+  reviewer-created state, queues, annotations, corrections, exports, audit
+  trail, reset/reload, deployment, QNAP, Azure, AWS, or public URL behavior.
 - Datasette role: Datasette remains retained for validation, inspection,
   debugging, local exploration, export support, and transition comparison. It is
   not the governed primary future reviewer UX.
@@ -106,6 +109,7 @@
   indexes, constraints, and ORM models for import metadata, source-derived
   imported records, reviewer-created state, audit events, export packet state,
   tester feedback, auth role/scope references, and operational/reset metadata.
+  The current Alembic scaffold contains no domain migration revisions.
 - Authentication, authorization, role storage, invitation flow, account
   lifecycle, access revocation, access review, audit schema, and user
   deprovisioning implementation.
@@ -142,8 +146,10 @@
   the operational boundary decision for audit, export, reset/reload, and
   retention planning. ADR-0014 completed the auth provider-class and role
   implementation direction decision. ADR-0015 completed the database and
-  migration tooling decision. Next work should move to the approved
-  product-moving implementation path, not repeat those completed items.
+  migration tooling decision. Minimal PostgreSQL/Alembic scaffold wiring and
+  schema/API boundary descriptors are now in place. Next work should move to a
+  first concrete domain migration/API contract or focused auth implementation,
+  not repeat those completed items.
 - Local-only/sample-only boundaries remain active. Sample records must stay
   clearly marked as fixture/sample records and must not be presented as live,
   database-backed, complete, statewide, official, or production data.
@@ -162,12 +168,13 @@
   now defines reset/reload and audit expectations at the operational boundary;
   implementation still needs import artifact format, validation, stable
   identities, idempotency, schema/API behavior, and comparison details.
-- Future database/schema implementation: no schema changes are approved by the
-  current scaffold or ADR-0015. Future schema work must use PostgreSQL and
+- Future database/schema implementation: no domain schema changes are approved
+  by the current scaffold. Future schema work must use PostgreSQL and
   Alembic-managed migrations while preserving separate physical areas or table
   groups for source-derived imported records, reviewer-created state, import
   metadata, audit events, export packet state, tester feedback, auth role/scope
-  references, and operational/reset metadata.
+  references, and operational/reset metadata. The first domain migration branch
+  still needs table names, constraints, tests, and rollback or recovery guidance.
 - Future auth/access implementation: hosted tester access must use the
   ADR-0014 managed OpenID Connect/OAuth 2.0 provider class, remain explicitly
   invited or provisioned, role-scoped, project/corpus-scoped, revocable,

@@ -36,6 +36,13 @@ reset/reload, hosted live crawling, hosted connector execution, read ignored raw
 CSVs or generated profiling outputs, deployment, QNAP, Azure, AWS, or public
 URL behavior.
 
+Minimal PostgreSQL/Alembic project wiring now exists for local/test validation:
+dependency declarations, no-secret database URL validation, an Alembic script
+location with no domain migration revisions, and scaffold-only persistence/API
+boundary descriptors. This wiring does not create hosted tables, read hosted
+data, implement API routes, run migrations against a local database during
+scaffold tests, or persist reviewer-created state.
+
 The next safe hosted-view increment should remain similarly narrow and
 fixture-backed, preserving fixture/sample labels, read-only behavior,
 source-derived versus reviewer-created state separation, semantic structure,
@@ -312,10 +319,10 @@ equivalent governance updates must define the concrete affected layer:
 - How the ADR-0010 physical schema and migration strategy is mapped into
   separated schema areas or table groups, migration validation, and future
   implementation tests without weakening traceability or mixing data domains.
-- How ADR-0015's PostgreSQL and Alembic migration direction is mapped into
-  local/test/hosted configuration, migration review, rollback or recovery
-  guidance, and validation without committing secrets, connection strings, or
-  deployment configuration.
+- How ADR-0015's PostgreSQL and Alembic migration direction is mapped from the
+  current local/test scaffold wiring into concrete schema configuration,
+  migration review, rollback or recovery guidance, and validation without
+  committing secrets, connection strings, or deployment configuration.
 - How source traceability and extraction audit context remain available to the
   hosted reviewer application.
 - How authenticated tester access, audit history, reset/reload, export

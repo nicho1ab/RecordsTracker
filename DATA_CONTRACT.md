@@ -28,6 +28,12 @@ references, or reset/reload metadata are not canonical source-derived fields
 unless a later data contract, schema, documentation, migration, and test update
 explicitly adds them.
 
+The current hosted PostgreSQL/Alembic scaffold adds configuration validation,
+an Alembic script location without domain migration revisions, and boundary
+descriptors for future persistence/API table groups. It does not create hosted
+tables, add canonical fields, read source-derived records from PostgreSQL,
+persist reviewer-created state, or load seeded corpus data.
+
 Future hosted source-derived tables must preserve the canonical fields and
 source traceability required below. Reviewer-created state may link to
 source-derived records through stable identities, but it must not overwrite raw
