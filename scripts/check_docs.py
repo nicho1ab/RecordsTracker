@@ -249,6 +249,7 @@ REQUIRED_CONTENT = {
     ],
     "docs/developer/hosted-scaffold.md": [
         "Required local tools",
+        "Verify local prerequisites",
         "Install dependencies",
         "Start the scaffold locally",
         "Run the smoke check",
@@ -259,6 +260,9 @@ REQUIRED_CONTENT = {
         "Docker is not required",
         "QNAP Container Station is not required",
         "No cloud resources",
+        "check-hosted-scaffold-local.ps1",
+        "does not install software",
+        "does not require admin rights",
         "not a functioning reviewer workflow",
         "not a final production frontend framework",
     ],
