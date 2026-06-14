@@ -61,7 +61,8 @@ explicit workflow shell context backed by source-derived and reviewer-created
 state read route contexts. It consumes the authenticated source-derived route
 seam for read-only queue and detail payloads, and the detail payload can compose
 associated reviewer-created state read route output for the selected source
-record. Source-derived record reads still require source-derived read access,
+record plus a compact summary derived only from that route output.
+Source-derived record reads still require source-derived read access,
 and associated reviewer-created state reads separately require reviewer-state
 read access; source-derived read permission alone does not grant the associated
 state context. The shell preserves unauthenticated, disabled or revoked,
@@ -71,6 +72,8 @@ browser users, parse or store provider tokens, create sessions or cookies, add
 production auth middleware, create anonymous reviewer-created state, create or
 modify reviewer-created state, persist new audit events through reads, or commit
 provider, tenant, callback, hosted URL, or secret configuration.
+The associated state summary must remain non-secret and limited to fields
+already exposed by the reviewer-created state read route output.
 
 The current reset/reload dry-run seam is local/test only and must receive an
 explicit database, actor, and corpus scope context from tests or local callers.

@@ -24,7 +24,8 @@
   account-status, scope, target, and audit-context checks, a narrow local/test
   authenticated source-derived HTTP/API read route seam, a narrow local/test
   authenticated read-only reviewer workflow shell over that route seam with
-  associated reviewer-created state read output on selected detail responses, a narrow
+  associated reviewer-created state read output and a compact derived summary on
+  selected detail responses, a narrow
   local/test reviewer-created state persistence scaffold table/service with
   authenticated actor attribution and stable source-derived record references,
   a narrow local/test authenticated reviewer-created state read route seam over
@@ -60,7 +61,7 @@
   execution, deployment, QNAP, Azure, AWS, or public URL behavior. Current API behavior is
   limited to local/test source-derived read handlers, read-only reviewer
   workflow shell handlers that can compose associated reviewer-created state
-  read output for selected details, reviewer-created state scaffold service helpers,
+  read output and a compact derived summary for selected details, reviewer-created state scaffold service helpers,
   reviewer-created state read handlers, reset/reload dry-run handlers, and
   explicit reset/reload planning metadata helpers and read handlers that require
   test database, actor, and scope context.
@@ -211,7 +212,7 @@
   JSON list and fetch access over that read service, plus a narrow local/test
   authenticated read-only reviewer workflow shell for queue and detail payloads
   over that route seam with associated reviewer-created state read output on
-  selected detail responses, plus a narrow local/test reviewer-created state
+  selected detail responses and a compact derived summary, plus a narrow local/test reviewer-created state
   scaffold that can write and read attributed placeholder rows separately from
   source-derived records, plus a narrow local/test audit event scaffold for
   successful reviewer-created state scaffold writes only, plus a narrow
