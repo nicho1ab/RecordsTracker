@@ -519,10 +519,13 @@ def _render_key_terms_section() -> str:
 def _render_feedback_guidance_section() -> str:
         return """    <section aria-labelledby="feedback-guidance-heading">
             <h2 id="feedback-guidance-heading">Feedback guidance</h2>
-            <p>This branch does not store feedback. Useful tester feedback includes the
-            facility/license number, requested date range, what record or step was confusing,
-            whether expected records seemed missing from the local/test artifact, and what
-            workflow improvement would make review easier.</p>
+            <p>This local/test app does not store, send, email, export, or otherwise persist
+            feedback. Useful tester feedback includes the facility/license number, requested
+            date range, records that seemed missing, confusing wording, unexpected queue or
+            filter behavior, workflow friction, and suggested improvements.</p>
+            <p>After submitting a CCLD request, copy the structured checklist into the agreed
+            external feedback channel. The checklist is CCLD-only and reflects only the current
+            local/test request and queue state.</p>
         </section>"""
 
 
@@ -627,6 +630,13 @@ def _render_matched_result(
       </table>
       <p><a href="{REVIEWER_UI_RECORDS_PATH}">Open reviewer records</a></p>
     </section>
+                {_render_feedback_checklist_section(
+                        request,
+                        queue_items,
+                        import_reload_result=import_reload_result,
+                        matching_source_record_count=len(result.matched_records),
+                        local_facility_record_count=len(result.all_facility_records),
+                )}
         {_render_feedback_guidance_section()}
         {_render_import_reload_action(request, import_reload_available, refresh=True)}
     {_render_pipeline_plan(request)}""",
@@ -653,6 +663,13 @@ def _render_no_match_result(
       <p><a href="{CCLD_RECORD_REQUEST_PATH}">Return to CCLD request</a></p>
     </section>
         {_render_import_reload_summary(import_reload_result)}
+                {_render_feedback_checklist_section(
+                        request,
+                        (),
+                        import_reload_result=import_reload_result,
+                        matching_source_record_count=0,
+                        local_facility_record_count=local_count,
+                )}
         {_render_import_reload_action(request, import_reload_available, refresh=False)}
     {_render_pipeline_plan(request)}""",
     )
@@ -787,6 +804,147 @@ def _render_queue_progress_summary(items: tuple[CcldRequestQueueItem, ...]) -> s
         <dd>{counts['blocked']}</dd>
       </dl>
     </section>"""
+
+
+def _render_feedback_checklist_section(
+    request: CcldRecordRequest,
+    queue_items: tuple[CcldRequestQueueItem, ...],
+    *,
+    import_reload_result: CcldImportReloadResult | None,
+    matching_source_record_count: int,
+    local_facility_record_count: int,
+) -> str:
+    checklist = _feedback_checklist_text(
+        request,
+        queue_items,
+        import_reload_result=import_reload_result,
+        matching_source_record_count=matching_source_record_count,
+        local_facility_record_count=local_facility_record_count,
+    )
+    return f"""    <section aria-labelledby="feedback-checklist-heading">
+      <h2 id="feedback-checklist-heading">Copyable tester feedback checklist</h2>
+      <p id="feedback-checklist-help">This app does not save or send this feedback.
+      Copy the checklist into the agreed external feedback channel after adding any tester
+      observations. The checklist is generated from this CCLD-only local/test request and
+      queue state.</p>
+      <p>
+        <label for="feedback-checklist">Structured CCLD feedback checklist</label>
+        <textarea id="feedback-checklist" rows="28" readonly
+          aria-describedby="feedback-checklist-help">{_escape(checklist)}</textarea>
+      </p>
+    </section>"""
+
+
+def _feedback_checklist_text(
+    request: CcldRecordRequest,
+    queue_items: tuple[CcldRequestQueueItem, ...],
+    *,
+    import_reload_result: CcldImportReloadResult | None,
+    matching_source_record_count: int,
+    local_facility_record_count: int,
+) -> str:
+    counts = _queue_status_counts(queue_items)
+    reviewer_state_rows = sum(
+        _summary_int(item.reviewer_state, "total_rows") for item in queue_items
+    )
+    reviewer_note_count = sum(
+        _summary_int(item.reviewer_state, "note_count") for item in queue_items
+    )
+    reviewer_status_count = sum(
+        1 for item in queue_items if _summary_optional_string(item.reviewer_state, "latest_status")
+    )
+    lines = [
+        "CCLD tester feedback checklist",
+        "",
+        "Request context",
+        "- Source scope: CCLD public complaint records only",
+        "- Local/test app: yes",
+        f"- Facility/license number: {request.facility_number}",
+        f"- Date range: {_date_scope_text(request)}",
+        f"- Queue filter used: {_status_label(request.reviewer_status_filter)}",
+        f"- Matching source-derived rows shown: {matching_source_record_count}",
+        f"- Matching complaint records in queue: {len(queue_items)}",
+        f"- Local facility rows before date filtering: {local_facility_record_count}",
+        "",
+        "Local validated load context",
+        f"- Load action submitted on this request: {_yes_no(import_reload_result is not None)}",
+        "- Local validated records loaded or refreshed: "
+        f"{_yes_no(_feedback_load_executed(import_reload_result))}",
+        f"- New source-derived rows staged: {_feedback_imported_count(import_reload_result)}",
+        "- Existing source-derived rows refreshed: "
+        f"{_feedback_refreshed_count(import_reload_result)}",
+        "- Local validated rows outside this request: "
+        f"{_feedback_skipped_count(import_reload_result)}",
+        "",
+        "Queue status counts",
+        f"- Not started: {counts['not_started']}",
+        f"- In review: {counts['in_review']}",
+        f"- Needs follow-up: {counts['needs_follow_up']}",
+        f"- Reviewed: {counts['reviewed']}",
+        f"- Blocked: {counts['blocked']}",
+        "",
+        "Reviewer-created state considered",
+        f"- Reviewer-created rows read for this queue: {reviewer_state_rows}",
+        f"- Reviewer notes present: {_yes_no(reviewer_note_count > 0)}",
+        f"- Reviewer statuses present: {_yes_no(reviewer_status_count > 0)}",
+        "",
+        "Queue records",
+        *_feedback_queue_record_lines(queue_items),
+        "",
+        "Tester observations to add before copying externally",
+        "- Records that seemed missing:",
+        "- Confusing terms or instructions:",
+        "- Unexpected queue or filter behavior:",
+        "- Workflow friction:",
+        "- Suggested enhancements:",
+        "",
+        "Boundary reminders",
+        "- The app does not persist this feedback.",
+        "- Copy this checklist into the agreed external feedback channel manually.",
+        "- Browser pages did not run live CCLD retrieval or connector execution.",
+        "- The CCLD public portal remains the source of record.",
+    ]
+    return "\n".join(lines)
+
+
+def _feedback_load_executed(result: CcldImportReloadResult | None) -> bool:
+    return result is not None and result.import_executed
+
+
+def _feedback_imported_count(result: CcldImportReloadResult | None) -> int:
+    if result is None:
+        return 0
+    return result.imported_source_record_count
+
+
+def _feedback_refreshed_count(result: CcldImportReloadResult | None) -> int:
+    if result is None:
+        return 0
+    return result.refreshed_source_record_count
+
+
+def _feedback_skipped_count(result: CcldImportReloadResult | None) -> int:
+    if result is None:
+        return 0
+    return result.skipped_non_matching_source_record_count
+
+
+def _feedback_queue_record_lines(items: tuple[CcldRequestQueueItem, ...]) -> list[str]:
+    if not items:
+        return ["- None shown for this request."]
+    return [_feedback_queue_record_line(item) for item in items]
+
+
+def _feedback_queue_record_line(item: CcldRequestQueueItem) -> str:
+    complaint = _mapping(item.complaint_record, "original_values")
+    complaint_control_number = complaint.get("complaint_control_number")
+    if not _has_display_value(complaint_control_number):
+        complaint_control_number = _string(item.complaint_record, "source_record_key")
+    return (
+        f"- {_display_value(complaint_control_number)}; "
+        f"reviewer status: {_status_label(_queue_status(item))}; "
+        f"loaded source records in bundle: {item.related_record_count}"
+    )
 
 
 def _render_queue_filter_form(request: CcldRecordRequest) -> str:
@@ -1403,6 +1561,14 @@ def _page(*, title: str, heading: str, main: str) -> str:
             font: inherit;
             max-width: 20rem;
             padding: 0.45rem;
+            width: 100%;
+        }}
+        textarea {{
+            box-sizing: border-box;
+            font: inherit;
+            max-width: 100%;
+            min-height: 24rem;
+            padding: 0.5rem;
             width: 100%;
         }}
         button {{

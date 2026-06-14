@@ -129,9 +129,9 @@ deferred no-match behavior, reviewer UI links after load, no browser live
 crawling, no generic connector execution, no reviewer-created state or audit
 mutation, no operational metadata mutation, guided request result queue
 rendering, help page rendering, contextual facility/date/load/review help,
-first-time workflow overview, feedback guidance without persistence,
-accessibility-oriented headings/labels/captions/link text, and no-secret HTML
-output.
+first-time workflow overview, deterministic copyable feedback checklist guidance
+without persistence, accessibility-oriented headings/labels/captions/link text,
+and no-secret HTML output.
 Hosted CCLD artifact builder tests should build fixture-backed validated SQLite
 output, convert it into hosted seeded-corpus JSON, validate the JSON through the
 existing hosted seeded parser, import it through the existing hosted seeded

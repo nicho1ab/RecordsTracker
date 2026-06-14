@@ -108,12 +108,14 @@ existing seeded source-derived rows through the same local/test route seams, and
 can load or refresh matching records from local validated hosted seeded-corpus
 output through the existing source-derived import path, and links matching
 seeded complaint rows into the reviewer UI. The page can also render first-time
-workflow help, feedback guidance without persistence, and a guided request
-result queue over safe CCLD complaint context with progress counts and status
-filters derived from existing reviewer-created state. Its HTML output must
+workflow help, feedback guidance without persistence, a structured copyable
+feedback checklist that testers must paste into an external channel manually,
+and a guided request result queue over safe CCLD complaint context with progress
+counts and status filters derived from existing reviewer-created state. Its HTML output must
 remain limited to safe scalar source-derived context, source traceability-style
-identifiers, reviewer-state indicators, queue counts, local/test boundary text, local
-validated load counts, and the explicit external live-fetch command shape. It
+identifiers, reviewer-state indicators, queue counts, local/test boundary text,
+local validated load counts, non-persistent checklist prompts, and the explicit
+external live-fetch command shape. It
 must not expose narrative source text, provider
 claims, email addresses, tokens, cookies, private headers, connection strings,
 client secrets, hosted URLs, private URLs, or credentials. It does not run live

@@ -125,7 +125,8 @@
     source-derived rows, can load or refresh matching rows from local validated
     hosted seeded-corpus output, renders a guided facility/date-scoped complaint
     review queue with progress counts and reviewer-status filters derived from
-    existing reviewer-created state, and links matching rows into the reviewer
+    existing reviewer-created state, includes a structured copyable feedback
+    checklist for manual external sharing, and links matching rows into the reviewer
     UI. It does not run live retrieval, execute connectors, mutate reviewer-
     created state from the request page, create audit rows from the request
     page, persist feedback, persist operational metadata, prove public-source

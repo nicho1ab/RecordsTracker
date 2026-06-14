@@ -72,10 +72,12 @@ source-derived rows with existing source URL, raw SHA-256, raw path, connector
 metadata, original values, and source traceability.
 The page can also render a guided facility/date-scoped request result queue,
 first-time help, contextual field/action guidance, reviewer-state indicators,
-progress counts, reviewer-status filters, and feedback guidance. Those are
-presentation or reviewer-workflow guidance surfaces only; they do not add
-canonical source-derived fields, persisted queue state, feedback persistence,
-schema changes, migrations, or separate source-derived read/write paths.
+progress counts, reviewer-status filters, feedback guidance, and a structured
+copyable tester feedback checklist derived from the current request and queue
+state. Those are presentation or reviewer-workflow guidance surfaces only; they
+do not add canonical source-derived fields, persisted queue state, feedback
+persistence, schema changes, migrations, or separate source-derived read/write
+paths.
 A CCLD-only local/test artifact builder can convert validated CCLD SQLite
 pipeline output into that hosted seeded-corpus JSON format outside browser
 requests. The builder reuses existing canonical SQLite tables and hosted seeded
