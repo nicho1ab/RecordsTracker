@@ -535,6 +535,136 @@ def test_reviewer_created_state_api_reviewer_note_preserves_existing_audit_rows(
     }
 
 
+def test_reviewer_created_state_api_creates_reviewer_status() -> None:
+    with _seeded_connection() as connection:
+        before_source_rows = _source_rows(connection)
+
+        status, content_type, body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-status"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            request_body=_json_bytes({"reviewer_status": "in_review"}),
+            reviewer_created_state_api_context=_api_context(
+                connection,
+                actor=_reviewer_actor(),
+            ),
+        )
+
+        after_source_rows = _source_rows(connection)
+        counts = _table_counts(connection)
+
+    payload = _json_body(body)
+
+    assert status == 201
+    assert content_type == "application/json; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 1,
+        "audit_events": 1,
+        "reset_reload_planning_metadata": 0,
+    }
+    state_row = payload["reviewer_created_state"]
+    assert state_row["source_record_key"] == COMPLAINT_KEY
+    assert state_row["state_kind"] == "review_item_state_scaffold"
+    assert state_row["state_payload"] == {
+        "payload_kind": "reviewer_status_scaffold",
+        "reviewer_status": "in_review",
+        "source_record_key": COMPLAINT_KEY,
+        "local_test_only": True,
+    }
+    assert state_row["created_by"]["provider_subject"] == "fixture-subject-reviewer"
+    assert payload["workflow"] == {
+        "created_reviewer_status": True,
+        "local_test_only": True,
+        "route_source": f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-status",
+        "writes_create_audit_event": True,
+        "source_of_record": "public portal",
+        "does_not_mutate_source_derived_records": True,
+    }
+    serialized_body = body.decode("utf-8").casefold()
+    assert "token" not in serialized_body
+    assert "cookie" not in serialized_body
+    assert "tester@example.invalid" not in serialized_body
+
+
+def test_reviewer_created_state_api_reviewer_status_is_visible_after_write() -> None:
+    with _seeded_connection() as connection:
+        create_status, _content_type, create_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-status"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            request_body=_json_bytes({"reviewer_status": "reviewed"}),
+            reviewer_created_state_api_context=_api_context(
+                connection,
+                actor=_reviewer_actor(),
+            ),
+        )
+        created = _json_body(create_body)["reviewer_created_state"]
+
+        list_status, _content_type, list_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_created_state_api_context=_api_context(connection),
+        )
+        fetch_status, _content_type, fetch_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/by-id"
+            f"?reviewer_state_id={quote(created['reviewer_state_id'])}",
+            reviewer_created_state_api_context=_api_context(connection),
+        )
+
+    list_payload = _json_body(list_body)
+    fetch_payload = _json_body(fetch_body)
+
+    assert create_status == 201
+    assert list_status == 200
+    assert fetch_status == 200
+    assert [
+        row["reviewer_state_id"]
+        for row in list_payload["reviewer_created_state"]
+    ] == [created["reviewer_state_id"]]
+    assert fetch_payload["reviewer_created_state"] == created
+
+
+def test_reviewer_created_state_api_reviewer_status_rejects_invalid_payload() -> None:
+    with _seeded_connection() as connection:
+        missing_body_status, _content_type, missing_body_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-status"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_created_state_api_context=_api_context(
+                connection,
+                actor=_reviewer_actor(),
+            ),
+        )
+        empty_status, _content_type, empty_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-status"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            request_body=_json_bytes({"reviewer_status": "   "}),
+            reviewer_created_state_api_context=_api_context(
+                connection,
+                actor=_reviewer_actor(),
+            ),
+        )
+        invalid_status, _content_type, invalid_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/reviewer-status"
+            f"?source_record_key={quote(COMPLAINT_KEY)}",
+            request_body=_json_bytes({"reviewer_status": "source_checked"}),
+            reviewer_created_state_api_context=_api_context(
+                connection,
+                actor=_reviewer_actor(),
+            ),
+        )
+        counts = _table_counts(connection)
+
+    assert missing_body_status == 400
+    assert _json_body(missing_body_body)["error"]["code"] == "invalid_request"
+    assert empty_status == 400
+    assert _json_body(empty_body)["error"]["code"] == "invalid_request"
+    assert invalid_status == 400
+    assert _json_body(invalid_body)["error"]["code"] == "invalid_request"
+    assert counts["reviewer_created_state"] == 0
+    assert counts["audit_events"] == 0
+
+
 def test_reviewer_created_state_api_rejects_unauthenticated_actor() -> None:
     with _seeded_connection() as connection:
         status, _content_type, body = route_response(

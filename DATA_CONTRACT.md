@@ -44,16 +44,19 @@ route output for the selected source record when an explicit local/test
 reviewer-created state API context is supplied; that associated state remains
 non-canonical reviewer-created scaffold data and does not mutate source-derived,
 reviewer-created, audit, or operational metadata rows.
-The workflow shell can also expose a narrow local/test reviewer note action that
-first resolves the selected source-derived detail context and then delegates to
-the existing reviewer note creation route using the resolved source record key.
-That action stores only reviewer-created scaffold data and audit rows through
-the existing write path; it does not add canonical source-derived fields or
-trust a conflicting caller-provided source record binding.
+The workflow shell can also expose narrow local/test reviewer note and status
+actions that first resolve the selected source-derived detail context and then
+delegate to existing reviewer-created write routes using the resolved source
+record key. Those actions store only reviewer-created scaffold data and audit
+rows through the existing write path; they do not add canonical source-derived
+fields or trust a conflicting caller-provided source record binding. The status
+action stores only bounded local/test reviewer status values such as
+`not_started`, `in_review`, `needs_follow_up`, `reviewed`, and `blocked`.
 The detail payload can additionally include a compact state summary derived only
 from that already-composed associated reviewer-created state route output, such
-as row counts, present state kinds, latest created timestamp, and non-secret
-actor attribution labels. That summary is not a canonical source-derived field
+as row counts, present state kinds and payload kinds, bounded reviewer status
+values, latest created timestamp, and non-secret actor attribution labels. That
+summary is not a canonical source-derived field
 and does not create a separate read path, write path, schema, migration, audit
 event, export behavior, or workflow status.
 A local/test reset/reload dry-run seam can inspect existing seeded import batch
@@ -78,7 +81,11 @@ route can write bounded non-secret note text as reviewer-created scaffold
 payload under the existing review-item-state scaffold kind, creating the same
 audit event as other successful reviewer-created scaffold writes. Reviewer notes
 are not canonical source-derived fields and do not require a schema change in
-this scaffold. A narrow local/test authenticated reviewer-created state read route seam can
+this scaffold. A narrow local/test authenticated reviewer status creation route
+can write bounded status values as reviewer-created scaffold payload under the
+same scaffold kind, creating the same audit event as other successful reviewer-
+created scaffold writes. Reviewer status values are not canonical source-derived
+fields and do not require a schema change in this scaffold. A narrow local/test authenticated reviewer-created state read route seam can
 list or fetch those scaffold rows by approved reviewer state identifiers,
 schema-supported filters, and bounded search over existing non-secret scaffold
 fields without mutating source-derived, reviewer-created, audit, or operational

@@ -26,8 +26,8 @@
   authenticated reviewer workflow shell over that route seam with read-only
   queue/detail payloads, associated reviewer-created state read output, a
   compact derived summary on selected detail responses, and a narrow local/test
-  note action that resolves the selected source-derived detail context before
-  delegating to the existing reviewer note creation route, a narrow
+  note action and status action that resolve the selected source-derived detail
+  context before delegating to existing reviewer-created write routes, a narrow
   local/test reviewer-created state persistence scaffold table/service with
   authenticated actor attribution and stable source-derived record references,
   a narrow local/test authenticated reviewer-created state read route seam over
@@ -35,6 +35,9 @@
   a narrow local/test authenticated reviewer note creation route that stores
   bounded non-secret note text as reviewer-created scaffold payload under the
   existing state kind,
+  a narrow local/test authenticated reviewer status creation route that stores
+  bounded status values as reviewer-created scaffold payload under the existing
+  state kind,
   a narrow local/test audit event persistence scaffold for successful reviewer-
   created state scaffold writes only, a narrow local/test authenticated audit
   history read route seam over those scaffold audit rows, a local/test authenticated reset/reload
@@ -66,8 +69,8 @@
   execution, deployment, QNAP, Azure, AWS, or public URL behavior. Current API behavior is
   limited to local/test source-derived read handlers, reviewer workflow shell
   handlers that can compose associated reviewer-created state read output and a
-  compact derived summary for selected details plus a narrow note action over
-  the selected detail context, reviewer-created state scaffold service helpers,
+  compact derived summary for selected details plus narrow note/status actions
+  over the selected detail context, reviewer-created state scaffold service helpers,
   reviewer-created state read handlers with schema-backed filters and bounded
   search, reset/reload dry-run handlers, and
   explicit reset/reload planning metadata helpers and read handlers that require
@@ -219,8 +222,9 @@
   JSON list and fetch access over that read service, plus a narrow local/test
   authenticated reviewer workflow shell for read-only queue/detail payloads over
   that route seam with associated reviewer-created state read output on selected
-  detail responses, a compact derived summary, and a note action that delegates
-  to the existing reviewer note route after resolving the selected source record,
+  detail responses, a compact derived summary, and note/status actions that
+  delegate to existing reviewer-created write routes after resolving the
+  selected source record,
   plus a narrow local/test reviewer-created state
   scaffold that can write and read attributed placeholder rows separately from
   source-derived records, plus a narrow local/test audit event scaffold for
@@ -228,6 +232,8 @@
   local/test audit history read route seam for those scaffold audit rows, plus a local/test
   reviewer note creation route that writes bounded non-secret note payloads
   through the existing reviewer-created scaffold write/audit path, plus a local/test
+  reviewer status creation route that writes bounded status payloads through the
+  same scaffold write/audit path, plus a local/test
   authenticated dry-run seam that reports seeded corpus reset/reload impact and
   scoped reviewer-created scaffold and audit scaffold row counts without
   deleting, overwriting, archiving, importing, reloading, or creating new dry-run

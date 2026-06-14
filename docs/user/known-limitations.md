@@ -38,7 +38,7 @@
   narrow local/test reviewer workflow shell can return read-only queue/detail
   payloads over that route seam, compose associated reviewer-created state read
   route output plus a compact summary derived from that output on selected
-  detail responses, and expose a narrow note action when tests provide an
+  detail responses, and expose narrow note/status actions when tests provide an
   explicit workflow context.
   A narrow local/test reviewer-created state
   persistence scaffold can
@@ -61,13 +61,17 @@
   Source-derived read permission alone does not
   grant this reviewer-created state read access, including when the workflow
   shell composes associated state context and its derived summary for a selected
-  source record. Reviewer note creation through the workflow shell separately
-  requires reviewer-state write permission and forces source-record binding from
-  the selected detail context. A narrow local/test reviewer note creation route can write
+  source record. Reviewer note and status creation through the workflow shell
+  separately require reviewer-state write permission and force source-record
+  binding from the selected detail context. A narrow local/test reviewer note creation route can write
   bounded non-secret note text through the existing reviewer-created state
   scaffold and audit path when explicit local/test code supplies reviewer-state
   write context; it does not add a new schema kind, note editing/deletion, full
-  annotations, corrections, exports, or production auth behavior. The path does not run live crawling,
+  annotations, corrections, exports, or production auth behavior. A narrow
+  local/test reviewer status creation route can write bounded status values
+  through the same scaffold and audit path; it does not add a new schema kind,
+  status editing/deletion, queue assignment, full workflow engine behavior,
+  exports, or production auth behavior. The path does not run live crawling,
   execute connectors, automate production imports,
   execute reset/reload, delete or overwrite source-derived records, archive or
   clear reviewer-created state, execute persisted planning metadata, mutate
