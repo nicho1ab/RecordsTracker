@@ -46,6 +46,14 @@ project/corpus scope before reviewer-created state is enabled and must preserve
 audit identity context without logging credentials, cookies, tokens, private
 headers, or unnecessary sensitive narrative content.
 
+ADR-0015 chooses PostgreSQL and Alembic-managed migrations for hosted tester MVP
+persistence. Future database implementation must not store provider secrets,
+tokens, cookies, private headers, connection strings, or unnecessary sensitive
+narrative content. Reviewer-created state, audit events, feedback, export packet
+state, and role/scope assignments must remain separated from source-derived
+records and must be scoped to authenticated actors or approved system identities
+where applicable.
+
 ## Public repository hygiene
 
 Public repository content must not include personal paths, account details, secrets, tokens, private URLs, local machine names, personal handles, personal email addresses, or other machine-specific identifiers. Use neutral placeholders such as `<repo-root>`, `<local-project-path>`, `<your-github-org-or-user>`, and `<repository-name>` in examples.

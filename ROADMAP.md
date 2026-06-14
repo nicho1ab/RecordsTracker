@@ -227,6 +227,13 @@ the governed primary future review experience.
 	provider class and minimum role/scope/audit-identity boundaries without
 	adding auth middleware, schemas, API routes, provider configuration, secrets,
 	hosted URLs, deployment, live crawling, or connector execution.
+- Accepted the hosted tester MVP database and migration tooling direction,
+	choosing PostgreSQL and Alembic-managed migrations to support future hosted
+	source-derived imports, reviewer-created state, audit events, export packet
+	state, tester feedback, reset/reload metadata, and auth role/scope references
+	without adding schemas, tables, migrations, API routes, imports, reset
+	commands, auth middleware, secrets, deployment, CI configuration, live
+	crawling, or connector execution.
 - Added the first local hosted tester MVP scaffold with a Python standard-library
 	app shell, health route, smoke check, focused tests, and local Windows
 	PowerShell run documentation without adding cloud, QNAP, Docker, schema,
@@ -282,13 +289,10 @@ the governed primary future review experience.
 	and clear about sample-only read-only source-derived views while the next
 	hosted implementation decisions are made.
 - Use the accepted audit, export, reset/reload, tester retention, auth
-	provider-class, role, scope, and audit-identity boundaries to move the next
-	hosted tester MVP branches toward database/migration selection, minimal
-	hosted schema/API scaffolding, focused auth integration, seeded corpus
-	import/reset, and the first authenticated tester workflow.
-- Decide concrete database product and migration tooling only after the accepted
-	schema/migration strategy, ADR-0014 auth provider-class direction, and
-	ADR-0013 operational constraints are clear.
+	provider-class, role, scope, audit-identity, PostgreSQL, and Alembic migration
+	boundaries to move the next hosted tester MVP branches toward minimal hosted
+	schema/API scaffolding, focused auth integration, seeded corpus import/reset,
+	and the first authenticated tester workflow.
 - Preserve Datasette, SQLite views, and review-bundle exports where they support
 	validation, inspection, debugging, local exploration, and export workflows.
 - Harden extraction with additional representative fixtures and edge-case tests.
@@ -310,17 +314,18 @@ has been outgrown as the primary future review experience and should be extended
 only where it remains useful for validation, inspection, debugging, local
 exploration, or export support.
 
-1. Decide concrete database product and migration tooling for the hosted tester
-	MVP using the accepted access, auth provider-class, schema/migration, and
-	ADR-0013 operational constraints.
-2. Implement a minimal hosted schema/API scaffold for seeded source-derived
-	records and reviewer-created state after provider and database/migration
-	decisions are accepted.
-3. Implement focused auth integration against the managed OpenID Connect/OAuth
+1. Implement a minimal hosted schema/API scaffold for seeded source-derived
+	records and reviewer-created state using the accepted PostgreSQL,
+	Alembic-managed migration, auth provider-class, role/scope, and operational
+	boundaries.
+2. Implement focused auth integration against the managed OpenID Connect/OAuth
 	2.0 provider class with role, scope, disabled-account, unauthenticated, and
 	role-denied path validation.
-4. Implement seeded corpus import/reset from validated pipeline output before
+3. Implement seeded corpus import/reset from validated pipeline output before
 	enabling tester workflows that depend on hosted source-derived records.
+4. Implement reviewer-created state persistence, audit event persistence,
+	export packet state, tester feedback, and reset/reload metadata in focused
+	PostgreSQL/Alembic-backed branches.
 5. Implement the first authenticated tester workflow over a seeded,
 	source-traceable corpus.
 6. Add additional CCLD fixtures and extraction hardening for representative
@@ -344,9 +349,10 @@ define the smallest useful product shape:
 	controlled import boundary, ADR-0010's physical separation strategy,
 	ADR-0011's authenticated access boundary, ADR-0012's scaffold-first sequence,
 	ADR-0013's operational boundaries, and ADR-0014's auth provider-class and role
-	implementation direction to move into database/migration, schema/API, focused
-	auth integration, seeded import/reset, and first authenticated tester workflow
-	implementation.
+	implementation direction, and ADR-0015's PostgreSQL/Alembic direction to move
+	into schema/API, focused auth integration, seeded import/reset,
+	reviewer-created state persistence, audit/export/feedback/reset metadata, and
+	first authenticated tester workflow implementation.
 
 ## Decision points
 
