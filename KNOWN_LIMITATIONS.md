@@ -47,11 +47,16 @@
     only and is stored separately from source-derived, reviewer-created, and
     audit rows. A narrow local/test read-only route can list or fetch those
     planning records when tests or local callers provide explicit database,
-    actor, and scope context with import/reload permission.
+    actor, and scope context with import/reload permission. A narrow local/test
+    read-only reviewer-created state route can list or fetch persisted scaffold
+    rows when tests or local callers provide explicit database, actor, and scope
+    context with reviewer-state read permission. Source-derived read permission
+    alone does not grant this reviewer-created state read access.
     The path does not run live crawling, execute connectors, automate production
     imports, execute reset/reload, delete or overwrite source-derived records,
     archive or clear reviewer-created state, execute persisted planning
-    metadata, mutate planning metadata through reads, persist audit events beyond
+    metadata, mutate planning metadata or reviewer-created state through reads,
+    persist audit events beyond
     successful reviewer-created state scaffold writes, authenticate browser
     users, validate real provider tokens, implement full reviewer
     workflows, expose stateful database-backed reviewer views or production API

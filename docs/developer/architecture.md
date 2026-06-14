@@ -15,6 +15,7 @@ src/ccld_complaints/
     auth.py
     persistence.py
     reviewer_created_state.py
+    reviewer_created_state_routes.py
     reset_reload_dry_run.py
     reviewer_workflow_shell.py
     schema_api_scaffold.py
@@ -61,16 +62,19 @@ migrations/
 16. Use the hosted reviewer-created state scaffold only for local/test
   authenticated placeholder state rows linked to staged source-derived record
   keys without modifying source-derived records.
-17. Use the hosted audit event scaffold only for local/test audit rows created
+17. Use the hosted reviewer-created state read route seam only for local/test
+  authenticated JSON list and fetch access over those scaffold rows without
+  mutating reviewer-created, source-derived, audit, or operational metadata.
+18. Use the hosted audit event scaffold only for local/test audit rows created
   for successful reviewer-created state scaffold writes, without modifying
   source-derived or reviewer-created rows.
-18. Use the hosted audit history read route seam only for local/test
+19. Use the hosted audit history read route seam only for local/test
   authenticated JSON list and fetch access over those scaffold audit rows.
-19. Use the hosted reset/reload dry-run seam only for local/test authenticated
+20. Use the hosted reset/reload dry-run seam only for local/test authenticated
   planning over staged seeded corpus metadata, with optional persisted
   operational planning metadata when explicitly requested, without mutating
   source-derived, reviewer-created, or audit data.
-20. Use the hosted reset/reload planning metadata read route seam only for
+21. Use the hosted reset/reload planning metadata read route seam only for
   local/test authenticated JSON list and fetch access over persisted planning
   rows, without mutating operational, source-derived, reviewer-created, or audit
   data.
@@ -147,7 +151,10 @@ seam can list or fetch those persisted rows with schema-backed filters after
 import/reload authorization, without executing reset/reload. The reviewer-created state scaffold service can create and read
 placeholder review-item-state rows only after authenticated actor, role, account
 status, scope, and source-derived reference checks pass; it does not implement
-full reviewer workflows. Successful reviewer-created state scaffold writes also
+full reviewer workflows. The local/test reviewer-created state read route seam
+can list or fetch those persisted scaffold rows after reviewer-state-read
+authorization passes, without mutating reviewer-created, source-derived, audit,
+or operational metadata. Successful reviewer-created state scaffold writes also
 create a separate audit scaffold row with actor, permission, scope, target, and
 source-derived context; if the audit row cannot be created, the reviewer-created
 state write is rolled back. The local/test audit history read route seam can list
@@ -165,8 +172,9 @@ execution, hosted live crawling, hosted connector execution, deployment,
 source-derived canonical field changes, full reviewer-created workflow
 persistence, or extraction behavior. Its database-backed reads, auth guards,
 source-derived read routes, reviewer workflow shell, reviewer-created state
-scaffold service, audit event scaffold service, audit history read routes,
-reset/reload dry-run, and planning metadata read routes are limited to
+scaffold service, reviewer-created state read routes, audit event scaffold
+service, audit history read routes, reset/reload dry-run, and planning metadata
+read routes are limited to
 local/test service seams. It does not require Docker, QNAP Container Station,
 Azure, AWS, a public URL, secrets, or cloud resources.
 

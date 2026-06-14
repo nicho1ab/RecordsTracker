@@ -1,0 +1,445 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any, cast
+from urllib.parse import quote
+
+import pytest
+from sqlalchemy import create_engine, func, select
+from sqlalchemy.engine import Connection
+
+from ccld_complaints.hosted_app.app import route_response
+from ccld_complaints.hosted_app.audit_events import hosted_audit_events
+from ccld_complaints.hosted_app.auth import (
+    AuthenticatedActor,
+    HostedAccessScope,
+    HostedAccountStatus,
+    HostedActorCategory,
+    HostedTesterRole,
+)
+from ccld_complaints.hosted_app.reset_reload_dry_run import (
+    hosted_reset_reload_planning_metadata,
+)
+from ccld_complaints.hosted_app.reviewer_created_state import (
+    create_reviewer_created_state_scaffold,
+    hosted_reviewer_created_state,
+)
+from ccld_complaints.hosted_app.reviewer_created_state_routes import (
+    REVIEWER_CREATED_STATE_API_PREFIX,
+    ReviewerCreatedStateApiContext,
+)
+from ccld_complaints.hosted_app.seeded_import import (
+    hosted_import_batches,
+    hosted_seeded_import_metadata,
+    hosted_source_derived_records,
+    import_seeded_corpus_artifact,
+    load_seeded_corpus_artifact,
+)
+
+FIXTURE = Path("tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json")
+TEST_SCOPE = HostedAccessScope("seeded_corpus", "seeded-ccld-fixture-2026-06-13")
+OTHER_SCOPE = HostedAccessScope("seeded_corpus", "different-seeded-corpus")
+COMPLAINT_KEY = "complaint:ccld:complaint:32-CR-20220407124448"
+FACILITY_KEY = "facility:ccld:facility:157806098"
+DEFAULT_ACTOR = object()
+
+
+def test_reviewer_created_state_api_lists_authenticated_rows() -> None:
+    with _seeded_connection() as connection:
+        created = create_reviewer_created_state_scaffold(
+            connection,
+            _reviewer_actor(),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            state_payload={"scaffold_state": "in_review"},
+        )
+
+        status, content_type, body = route_response(
+            REVIEWER_CREATED_STATE_API_PREFIX,
+            reviewer_created_state_api_context=_api_context(connection),
+        )
+
+    payload = _json_body(body)
+
+    assert status == 200
+    assert content_type == "application/json; charset=utf-8"
+    assert payload["pagination"] == {"limit": 100, "offset": 0, "returned_count": 1}
+    [state_row] = payload["reviewer_created_state"]
+    assert state_row["reviewer_state_id"] == created.reviewer_state_id
+    assert state_row["source_record_key"] == COMPLAINT_KEY
+    assert state_row["scope"] == {
+        "scope_type": "seeded_corpus",
+        "scope_id": TEST_SCOPE.scope_id,
+    }
+    assert state_row["state_kind"] == "review_item_state_scaffold"
+    assert state_row["state_payload"] == {"scaffold_state": "in_review"}
+    assert state_row["created_by"] == {
+        "provider_subject": "fixture-subject-reviewer",
+        "provider_issuer": "fixture-managed-oidc-provider",
+        "display_name": "Fixture Tester Reviewer",
+        "actor_category": "tester",
+    }
+    assert state_row["authorization_permission"] == "reviewer_state_write"
+    assert state_row["safety"] == {
+        "read_only_route": True,
+        "does_not_mutate_source_derived_records": True,
+        "does_not_mutate_reviewer_created_state": True,
+        "does_not_mutate_audit_events": True,
+        "does_not_mutate_operational_metadata": True,
+    }
+    serialized_body = body.decode("utf-8").casefold()
+    assert "token" not in serialized_body
+    assert "cookie" not in serialized_body
+    assert "tester@example.invalid" not in serialized_body
+
+
+def test_reviewer_created_state_api_fetches_one_authorized_row_by_id() -> None:
+    with _seeded_connection() as connection:
+        created = create_reviewer_created_state_scaffold(
+            connection,
+            _reviewer_actor(),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            state_payload={"scaffold_state": "source_check_needed"},
+        )
+
+        status, _content_type, body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/by-id"
+            f"?reviewer_state_id={quote(created.reviewer_state_id)}",
+            reviewer_created_state_api_context=_api_context(connection),
+        )
+
+    payload = _json_body(body)
+
+    assert status == 200
+    assert payload["reviewer_created_state"]["reviewer_state_id"] == (
+        created.reviewer_state_id
+    )
+    assert payload["reviewer_created_state"]["state_payload"] == {
+        "scaffold_state": "source_check_needed"
+    }
+
+
+def test_reviewer_created_state_api_returns_empty_list_for_scope_without_rows() -> None:
+    with _empty_connection() as connection:
+        status, _content_type, body = route_response(
+            REVIEWER_CREATED_STATE_API_PREFIX,
+            reviewer_created_state_api_context=_api_context(connection),
+        )
+
+    payload = _json_body(body)
+
+    assert status == 200
+    assert payload["reviewer_created_state"] == []
+    assert payload["pagination"] == {"limit": 100, "offset": 0, "returned_count": 0}
+
+
+def test_reviewer_created_state_api_returns_not_found_for_missing_record() -> None:
+    with _empty_connection() as connection:
+        status, _content_type, body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/by-id"
+            "?reviewer_state_id=reviewer-state:missing",
+            reviewer_created_state_api_context=_api_context(connection),
+        )
+
+    payload = _json_body(body)
+
+    assert status == 404
+    assert payload["error"]["code"] == "reviewer_created_state_not_found"
+
+
+def test_reviewer_created_state_api_filters_schema_backed_fields() -> None:
+    with _seeded_connection() as connection:
+        first = create_reviewer_created_state_scaffold(
+            connection,
+            _reviewer_actor(),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            state_payload={"scaffold_state": "in_review"},
+        )
+        second = create_reviewer_created_state_scaffold(
+            connection,
+            _admin_actor(),
+            scope=TEST_SCOPE,
+            source_record_key=FACILITY_KEY,
+            state_payload={"scaffold_state": "source_check_needed"},
+        )
+
+        by_source_status, _content_type, by_source_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}"
+            f"?source_record_key={quote(COMPLAINT_KEY)}"
+            "&state_kind=review_item_state_scaffold",
+            reviewer_created_state_api_context=_api_context(connection),
+        )
+        by_actor_status, _content_type, by_actor_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}"
+            "?actor_provider_subject=fixture-subject-admin",
+            reviewer_created_state_api_context=_api_context(connection),
+        )
+
+    by_source_payload = _json_body(by_source_body)
+    by_actor_payload = _json_body(by_actor_body)
+
+    assert by_source_status == 200
+    assert [
+        record["reviewer_state_id"]
+        for record in by_source_payload["reviewer_created_state"]
+    ] == [first.reviewer_state_id]
+    assert by_source_payload["filters"] == {
+        "source_record_key": COMPLAINT_KEY,
+        "state_kind": "review_item_state_scaffold",
+        "actor_provider_subject": None,
+    }
+    assert by_actor_status == 200
+    assert [
+        record["reviewer_state_id"]
+        for record in by_actor_payload["reviewer_created_state"]
+    ] == [second.reviewer_state_id]
+
+
+def test_reviewer_created_state_api_rejects_unauthenticated_actor() -> None:
+    with _seeded_connection() as connection:
+        status, _content_type, body = route_response(
+            REVIEWER_CREATED_STATE_API_PREFIX,
+            reviewer_created_state_api_context=_api_context(connection, actor=None),
+        )
+
+    payload = _json_body(body)
+    assert status == 401
+    assert payload["error"]["code"] == "authentication_required"
+
+
+@pytest.mark.parametrize("account_status", ["disabled", "revoked"])
+def test_reviewer_created_state_api_rejects_disabled_or_revoked_actor(
+    account_status: str,
+) -> None:
+    with _seeded_connection() as connection:
+        status, _content_type, body = route_response(
+            REVIEWER_CREATED_STATE_API_PREFIX,
+            reviewer_created_state_api_context=_api_context(
+                connection,
+                actor=_read_only_actor(account_status=account_status),
+            ),
+        )
+
+    payload = _json_body(body)
+    assert status == 403
+    assert payload["error"]["code"] == "account_disabled_or_revoked"
+
+
+def test_reviewer_created_state_api_rejects_role_without_reviewer_state_read() -> None:
+    with _seeded_connection() as connection:
+        status, _content_type, body = route_response(
+            REVIEWER_CREATED_STATE_API_PREFIX,
+            reviewer_created_state_api_context=_api_context(
+                connection,
+                actor=_operator_actor(),
+            ),
+        )
+
+    payload = _json_body(body)
+    assert status == 403
+    assert payload["error"]["code"] == "role_denied"
+
+
+def test_reviewer_created_state_api_rejects_out_of_scope_actor() -> None:
+    with _seeded_connection() as connection:
+        status, _content_type, body = route_response(
+            REVIEWER_CREATED_STATE_API_PREFIX,
+            reviewer_created_state_api_context=_api_context(
+                connection,
+                actor=_read_only_actor(scopes=(OTHER_SCOPE,)),
+            ),
+        )
+
+    payload = _json_body(body)
+    assert status == 403
+    assert payload["error"]["code"] == "scope_denied"
+
+
+def test_reviewer_created_state_api_rejects_invalid_filter_and_paging_values() -> None:
+    with _seeded_connection() as connection:
+        invalid_kind_status, _content_type, invalid_kind_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}?state_kind=annotation",
+            reviewer_created_state_api_context=_api_context(connection),
+        )
+        invalid_limit_status, _content_type, invalid_limit_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}?limit=0",
+            reviewer_created_state_api_context=_api_context(connection),
+        )
+
+    assert invalid_kind_status == 400
+    assert _json_body(invalid_kind_body)["error"]["code"] == "invalid_request"
+    assert invalid_limit_status == 400
+    assert _json_body(invalid_limit_body)["error"]["code"] == "invalid_request"
+
+
+def test_reviewer_created_state_api_requires_explicit_local_test_context() -> None:
+    status, _content_type, body = route_response(REVIEWER_CREATED_STATE_API_PREFIX)
+
+    payload = _json_body(body)
+
+    assert status == 503
+    assert payload["error"]["code"] == "reviewer_created_state_api_context_required"
+
+
+def test_reviewer_created_state_api_reads_do_not_mutate_persisted_tables() -> None:
+    with _seeded_connection() as connection:
+        created = create_reviewer_created_state_scaffold(
+            connection,
+            _reviewer_actor(),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            state_payload={"scaffold_state": "in_review"},
+        )
+        before_counts = _table_counts(connection)
+
+        list_status, _content_type, _list_body = route_response(
+            REVIEWER_CREATED_STATE_API_PREFIX,
+            reviewer_created_state_api_context=_api_context(connection),
+        )
+        fetch_status, _content_type, _fetch_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}/by-id"
+            f"?reviewer_state_id={quote(created.reviewer_state_id)}",
+            reviewer_created_state_api_context=_api_context(connection),
+        )
+        after_counts = _table_counts(connection)
+
+    assert list_status == 200
+    assert fetch_status == 200
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 1,
+        "audit_events": 1,
+        "reset_reload_planning_metadata": 0,
+    }
+
+
+def _json_body(body: bytes) -> dict[str, Any]:
+    loaded = json.loads(body)
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def _api_context(
+    connection: Connection,
+    *,
+    actor: AuthenticatedActor | None | object = DEFAULT_ACTOR,
+    scope: HostedAccessScope = TEST_SCOPE,
+) -> ReviewerCreatedStateApiContext:
+    context_actor = _read_only_actor() if actor is DEFAULT_ACTOR else actor
+    return ReviewerCreatedStateApiContext(
+        connection=connection,
+        actor=cast(AuthenticatedActor | None, context_actor),
+        scope=scope,
+    )
+
+
+def _reviewer_actor() -> AuthenticatedActor:
+    return _actor(
+        roles=("tester_reviewer",),
+        actor_category="tester",
+        provider_subject="fixture-subject-reviewer",
+        display_name="Fixture Tester Reviewer",
+        email="tester@example.invalid",
+    )
+
+
+def _read_only_actor(
+    *,
+    scopes: tuple[HostedAccessScope, ...] = (TEST_SCOPE,),
+    account_status: str = "active",
+) -> AuthenticatedActor:
+    return _actor(
+        roles=("read_only_tester",),
+        scopes=scopes,
+        account_status=account_status,
+        actor_category="tester",
+        provider_subject="fixture-subject-read-only",
+        display_name="Fixture Read Only Tester",
+        email="read-only@example.invalid",
+    )
+
+
+def _operator_actor() -> AuthenticatedActor:
+    return _actor(
+        roles=("developer_operator",),
+        actor_category="operator",
+        provider_subject="fixture-subject-operator",
+        display_name="Fixture Operator",
+        email="operator@example.invalid",
+    )
+
+
+def _admin_actor() -> AuthenticatedActor:
+    return _actor(
+        roles=("admin",),
+        actor_category="admin",
+        provider_subject="fixture-subject-admin",
+        display_name="Fixture Admin",
+        email="admin@example.invalid",
+    )
+
+
+def _actor(
+    *,
+    roles: tuple[str, ...],
+    scopes: tuple[HostedAccessScope, ...] = (TEST_SCOPE,),
+    account_status: str = "active",
+    actor_category: str,
+    provider_subject: str,
+    display_name: str,
+    email: str,
+) -> AuthenticatedActor:
+    return AuthenticatedActor(
+        provider_subject=provider_subject,
+        provider_issuer="fixture-managed-oidc-provider",
+        display_name=display_name,
+        email=email,
+        actor_category=cast(HostedActorCategory, actor_category),
+        account_status=cast(HostedAccountStatus, account_status),
+        roles=tuple(cast(HostedTesterRole, role) for role in roles),
+        scopes=scopes,
+    )
+
+
+def _seeded_connection() -> Connection:
+    connection = _empty_connection()
+    transaction = connection.begin()
+    artifact = load_seeded_corpus_artifact(FIXTURE)
+    import_seeded_corpus_artifact(connection, artifact)
+    transaction.commit()
+    return connection
+
+
+def _empty_connection() -> Connection:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+    return engine.connect()
+
+
+def _table_counts(connection: Connection) -> dict[str, int]:
+    import_batches = connection.execute(
+        select(func.count()).select_from(hosted_import_batches)
+    ).scalar_one()
+    source_records = connection.execute(
+        select(func.count()).select_from(hosted_source_derived_records)
+    ).scalar_one()
+    reviewer_created_state = connection.execute(
+        select(func.count()).select_from(hosted_reviewer_created_state)
+    ).scalar_one()
+    audit_events = connection.execute(
+        select(func.count()).select_from(hosted_audit_events)
+    ).scalar_one()
+    reset_reload_planning_metadata = connection.execute(
+        select(func.count()).select_from(hosted_reset_reload_planning_metadata)
+    ).scalar_one()
+    return {
+        "import_batches": import_batches,
+        "source_records": source_records,
+        "reviewer_created_state": reviewer_created_state,
+        "audit_events": audit_events,
+        "reset_reload_planning_metadata": reset_reload_planning_metadata,
+    }

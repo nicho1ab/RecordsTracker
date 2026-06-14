@@ -153,7 +153,9 @@ public-record review notes.
    created state persistence scaffold table/service, a narrow local/test audit
    event scaffold for successful reviewer-created state scaffold writes only, a
    narrow local/test authenticated audit history read route seam for those audit
-   rows, and a local/test authenticated reset/reload dry-run route seam that reports
+   rows, a narrow local/test authenticated reviewer-created state read route
+   seam for listing or fetching persisted scaffold rows, and a local/test
+   authenticated reset/reload dry-run route seam that reports
    what a future seeded corpus reset/reload would affect and can optionally
    persist a separate operational planning metadata record when explicitly
    requested by local/test code, plus a narrow local/test read-only route seam
@@ -187,6 +189,10 @@ public-record review notes.
    requires explicit database, actor, and scope context plus audit-read
    permission, and returns non-secret audit row fields without mutating source-
    derived, reviewer-created, or audit rows.
+   The reviewer-created state read seam is local/test only, requires explicit
+   database, actor, and scope context plus reviewer-state read permission, and
+   returns non-secret scaffold row fields without mutating source-derived,
+   reviewer-created, audit, or operational metadata rows.
    The local `/facilities` route shows a read-only facility master
    sample view backed only by committed tiny public-source facility fixtures and
    manifest placeholder metadata. Facility detail pages include fixture-only
