@@ -126,6 +126,9 @@ public-record review notes.
    production-discovery phase, hosted scaffold status, completed ADR decisions,
    remaining deferred decisions, stale-guidance assessment, and next-phase gap
    analysis.
+- Review [PUBLIC_SOURCE_DATA_INVENTORY.md](PUBLIC_SOURCE_DATA_INVENTORY.md)
+   before planning public-source expansion, uploaded CSV profiling,
+   multi-source adapters, attorney focus areas, or feedback intake paths.
 - Use [docs/developer/hosted-scaffold.md](docs/developer/hosted-scaffold.md) to
    run the local hosted tester MVP scaffold. The scaffold is a placeholder app
    shell and health route only; it does not implement reviewer workflows,

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added a public-source data inventory for CCLD report pages, CCLD public CSV
+	download planning, CalHHS/CHHS facilities data planning, uploaded CSV example
+	usage, conceptual multi-source adapter metadata, attorney focus-area planning,
+	and gated feedback or GitHub intake planning without implementing source
+	behavior.
 - Added a governance inventory and gap analysis for the current
 	production-discovery phase, local hosted scaffold state, completed ADRs,
 	deferred decisions, stale-guidance assessment, and next hosted implementation

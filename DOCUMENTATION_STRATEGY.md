@@ -34,12 +34,17 @@ End users need plain-language instructions for browsing, searching, filtering, u
 
 - `PRODUCTION_DISCOVERY_REQUIREMENTS.md`
 - `GOVERNANCE_INVENTORY.md`
+- `PUBLIC_SOURCE_DATA_INVENTORY.md`
 
 Future hosted primary reviewer application work must keep this requirements
 document current until ADRs and implementation docs supersede specific sections.
 The governance inventory must stay current when the active phase, hosted
 scaffold state, completed ADR assessment, deferred decisions, stale-guidance
 assessment, or next-phase gap analysis changes.
+The public-source data inventory must stay current when new source candidates,
+uploaded examples, source metadata, parsing risks, source limitations,
+multi-source planning assumptions, attorney focus-area planning, or feedback
+intake planning changes.
 
 ## Update rules
 
@@ -66,6 +71,7 @@ At minimum, review these documentation surfaces for impact:
 
 - `README.md`
 - `GOVERNANCE_INVENTORY.md`
+- `PUBLIC_SOURCE_DATA_INVENTORY.md`
 - `ROADMAP.md`
 - `CHANGELOG.md`
 - `docs/user/*`
