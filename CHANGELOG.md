@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added a controlled hosted tester seeded corpus import path with a PostgreSQL/
+	Alembic migration for import batch metadata and source-derived record staging,
+	a local JSON artifact importer, a tiny validated fixture artifact, and focused
+	tests that preserve source traceability, import batch identity, original
+	source-derived values, and the separation from reviewer-created state without
+	adding reset/reload behavior, API routes, auth middleware, reviewer workflows,
+	production automation, hosted live crawling, or connector execution.
 - Added minimal hosted tester PostgreSQL/Alembic project wiring, scaffold-only
 	persistence/API boundary descriptors, dependency declarations, and focused
 	tests for safe configuration validation and ADR-0010 data-domain separation

@@ -16,9 +16,11 @@
   manifest placeholder metadata. Facility detail pages now include fixture-only
   source coverage indicators and related fixture/sample source-record context
   where the local sample mapping exists. Hosted tester PostgreSQL/Alembic work
-  has begun only as scaffold wiring: dependency declarations, no-secret database
-  URL validation, an Alembic script location with no domain migration revisions,
-  and source-derived versus reviewer-created state boundary descriptors.
+  now includes dependency declarations, no-secret database URL validation, an
+  Alembic script location, one narrow domain migration for controlled seeded
+  import batch metadata and source-derived record staging, a local validated
+  JSON artifact importer, and source-derived versus reviewer-created state
+  boundary descriptors.
 - Local-only sample filtering/search: implemented for the hosted source-record
   shell using in-memory fixture/sample records only.
 - Fixture/sample-only source traceability summary panels: implemented for the
@@ -35,8 +37,8 @@
   functioning reviewer workflow.
 - Local-only scaffold status: the scaffold is sample-only, read-only, local to a
   development workstation, and not backed by live public data, ignored raw CSVs,
-  generated profiling outputs, SQLite, database reads from PostgreSQL, domain
-  migration revisions, import/sync, authentication, authorization,
+  generated profiling outputs, SQLite, database-backed API reads,
+  authentication, authorization,
   reviewer-created state, queues, annotations, corrections, exports, audit
   trail, reset/reload, deployment, QNAP, Azure, AWS, or public URL behavior.
 - Datasette role: Datasette remains retained for validation, inspection,
@@ -102,14 +104,15 @@
   and configuration, hosting platform, deployment pipeline, retention durations
   and automation, backup/restore policy, final design system, and production
   operations model.
-- Controlled import artifact format, import command or API implementation,
-  import validation, idempotency, reset/reload behavior, and comparison against
-  retained SQLite/Datasette validation output.
+- Controlled import comparison against retained SQLite/Datasette validation
+  output, database-backed import API behavior, production import automation,
+  reset/reload behavior, and richer import validation beyond the current tiny
+  validated JSON artifact path.
 - Physical hosted schemas, Alembic migration files, PostgreSQL table groups,
-  indexes, constraints, and ORM models for import metadata, source-derived
-  imported records, reviewer-created state, audit events, export packet state,
-  tester feedback, auth role/scope references, and operational/reset metadata.
-  The current Alembic scaffold contains no domain migration revisions.
+  indexes, constraints, and ORM models for reviewer-created state, audit events,
+  export packet state, tester feedback, auth role/scope references, and
+  operational/reset metadata. The current Alembic path includes only the narrow
+  seeded import batch and source-derived staging migration.
 - Authentication, authorization, role storage, invitation flow, account
   lifecycle, access revocation, access review, audit schema, and user
   deprovisioning implementation.
@@ -146,10 +149,11 @@
   the operational boundary decision for audit, export, reset/reload, and
   retention planning. ADR-0014 completed the auth provider-class and role
   implementation direction decision. ADR-0015 completed the database and
-  migration tooling decision. Minimal PostgreSQL/Alembic scaffold wiring and
-  schema/API boundary descriptors are now in place. Next work should move to a
-  first concrete domain migration/API contract or focused auth implementation,
-  not repeat those completed items.
+  migration tooling decision. Minimal PostgreSQL/Alembic scaffold wiring,
+  schema/API boundary descriptors, and a controlled seeded corpus import path
+  are now in place. Next work should move to database-backed source-derived API
+  reads, focused auth implementation, or reset/reload planning, not repeat those
+  completed items.
 - Local-only/sample-only boundaries remain active. Sample records must stay
   clearly marked as fixture/sample records and must not be presented as live,
   database-backed, complete, statewide, official, or production data.
@@ -163,18 +167,19 @@
   traceability summary states should be backed by representative fixtures and
   semantic/accessibility validation before any live or database-backed source is
   introduced.
-- Future import path into hosted view: source-derived hosted records should come
-  from a controlled snapshot import from validated pipeline output. ADR-0013
-  now defines reset/reload and audit expectations at the operational boundary;
-  implementation still needs import artifact format, validation, stable
-  identities, idempotency, schema/API behavior, and comparison details.
-- Future database/schema implementation: no domain schema changes are approved
-  by the current scaffold. Future schema work must use PostgreSQL and
-  Alembic-managed migrations while preserving separate physical areas or table
-  groups for source-derived imported records, reviewer-created state, import
-  metadata, audit events, export packet state, tester feedback, auth role/scope
-  references, and operational/reset metadata. The first domain migration branch
-  still needs table names, constraints, tests, and rollback or recovery guidance.
+- Future import path into hosted view: source-derived hosted records now have a
+  first controlled JSON artifact import path with batch metadata, stable
+  identities, idempotent source-derived staging, and source traceability tests.
+  ADR-0013 still defines reset/reload and audit expectations at the operational
+  boundary; implementation still needs database-backed API behavior, comparison
+  against retained SQLite/Datasette validation output, production import
+  operations, and reset/reload behavior.
+- Future database/schema implementation: the current domain schema is limited to
+  seeded import batch metadata and source-derived staging. Future schema work
+  must use PostgreSQL and Alembic-managed migrations while preserving separate
+  physical areas or table groups for reviewer-created state, audit events,
+  export packet state, tester feedback, auth role/scope references, and
+  operational/reset metadata.
 - Future auth/access implementation: hosted tester access must use the
   ADR-0014 managed OpenID Connect/OAuth 2.0 provider class, remain explicitly
   invited or provisioned, role-scoped, project/corpus-scoped, revocable,

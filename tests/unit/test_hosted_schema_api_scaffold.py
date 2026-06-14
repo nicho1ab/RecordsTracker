@@ -99,21 +99,21 @@ def test_api_boundaries_keep_source_records_and_reviewer_state_separate() -> Non
         "reviewer_created_state_api"
     ].requires_authenticated_actor_before_write is True
     assert "auth middleware" in boundary_by_id["reviewer_created_state_api"].deferred
-    assert "database reads" in boundary_by_id["source_derived_records_api"].deferred
+    assert "database-backed API reads" in boundary_by_id["source_derived_records_api"].deferred
 
 
-def test_schema_api_scaffold_summary_does_not_enable_product_behavior() -> None:
+def test_schema_api_scaffold_summary_reflects_seeded_import_without_reviewer_workflows() -> None:
     scaffold = build_hosted_schema_api_scaffold()
 
-    assert scaffold.domain_tables_created is False
+    assert scaffold.domain_tables_created is True
     assert scaffold.api_routes_implemented is False
-    assert scaffold.imports_implemented is False
+    assert scaffold.imports_implemented is True
     assert scaffold.reviewer_workflows_implemented is False
     assert len(scaffold.persistence_boundaries) >= 7
     assert len(scaffold.api_boundaries) == 2
 
 
-def test_alembic_scaffold_has_no_domain_migration_versions() -> None:
+def test_alembic_scaffold_has_seeded_import_domain_migration_only() -> None:
     repo_root = Path(__file__).resolve().parents[2]
     alembic_ini = repo_root / "alembic.ini"
     migrations_dir = repo_root / "migrations"
@@ -123,4 +123,6 @@ def test_alembic_scaffold_has_no_domain_migration_versions() -> None:
     assert "sqlalchemy.url =" in alembic_ini.read_text(encoding="utf-8")
     assert (migrations_dir / "env.py").exists()
     assert (migrations_dir / "script.py.mako").exists()
-    assert version_files == []
+    assert [version_file.name for version_file in version_files] == [
+        "20260613_0001_seeded_corpus_import.py"
+    ]

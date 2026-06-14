@@ -29,7 +29,7 @@ indicators and related fixture/sample source-record context on facility detail
 pages where the local sample mapping exists.
 
 This scaffold is not a hosted tester-ready reviewer workflow. It does not load
-live public data, read from SQLite or a hosted database, run import/sync,
+live public data, read from SQLite or a hosted database through API routes,
 authenticate users, authorize roles, persist reviewer-created state, create
 queues, support annotations, corrections, exports, feedback, audit trail,
 reset/reload, hosted live crawling, hosted connector execution, read ignored raw
@@ -38,10 +38,12 @@ URL behavior.
 
 Minimal PostgreSQL/Alembic project wiring now exists for local/test validation:
 dependency declarations, no-secret database URL validation, an Alembic script
-location with no domain migration revisions, and scaffold-only persistence/API
-boundary descriptors. This wiring does not create hosted tables, read hosted
-data, implement API routes, run migrations against a local database during
-scaffold tests, or persist reviewer-created state.
+location, one domain migration for controlled seeded corpus import batch
+metadata and source-derived record staging, a local validated JSON artifact
+importer, and scaffold/API boundary descriptors. This path does not implement
+database-backed API routes, run migrations against a local database during
+scaffold tests, load live public data, run connector execution, automate
+production imports, implement reset/reload, or persist reviewer-created state.
 
 The next safe hosted-view increment should remain similarly narrow and
 fixture-backed, preserving fixture/sample labels, read-only behavior,

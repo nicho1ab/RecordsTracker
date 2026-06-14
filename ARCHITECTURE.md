@@ -116,12 +116,16 @@ import/sync, authenticate users, persist reviewer-created state, deploy to
 QNAP/Azure/AWS, or expose a public URL.
 
 The hosted scaffold now also includes minimal PostgreSQL/Alembic project wiring
-for local and test validation: a no-secret database URL configuration seam, an
-Alembic script location with no domain migration revisions, and scaffold-only
-persistence/API boundary descriptors for future seeded source-derived records
-and reviewer-created state. This wiring does not create tables, connect to a
-database during scaffold tests, read hosted data, implement API routes, run
-imports, or persist reviewer-created state.
+and the first controlled seeded corpus import path for local and test
+validation: a no-secret database URL configuration seam, an Alembic script
+location, one domain migration for import batch metadata and source-derived
+record staging, scaffold/API boundary descriptors, and a local JSON artifact
+importer for validated pipeline-output-shaped fixtures. This path preserves
+import batch identity, source traceability, original source-derived values, and
+the separation from reviewer-created state. It does not implement database-
+backed API reads, reviewer workflows, reset/reload behavior, authentication,
+authorization, hosted live crawling, hosted connector execution, production
+import automation, or deployment.
 
 ## Components
 
@@ -146,10 +150,12 @@ SQLite is the initial validation database. A hosted relational database is the
 accepted future direction for hosted tester reviewer-created state and imported
 source-derived records. ADR-0015 chooses PostgreSQL as that database product and
 Alembic-managed migrations as the migration tooling direction. The current
-hosted scaffold adds only local/test configuration validation, an Alembic script
-location, and explicit boundary descriptors. Table names, columns, indexes,
-constraints, domain migration revisions, ORM models, API behavior, deployment,
-hosted connection configuration, and implementation remain deferred, and future
+hosted scaffold adds local/test configuration validation, an Alembic script
+location, and a first narrow domain migration for seeded import batch metadata
+and source-derived record staging. Reviewer-created state tables, auth tables,
+audit tables, export tables, feedback tables, reset/reload metadata tables, ORM
+models, database-backed API behavior, deployment, hosted connection
+configuration, and production import automation remain deferred, and future
 hosted schema work must preserve the physical data-domain separation accepted by
 ADR-0010.
 
@@ -221,10 +227,11 @@ retention implementation PRs validate the concrete layer.
   metadata.
 - Hosted tester MVP persistence must use PostgreSQL and Alembic-managed
   migrations for future schema implementation. The current scaffold may validate
-  no-secret local/test database configuration and describe separated persistence
-  and API boundaries, but it must not imply domain tables, database-backed views,
-  imports, reviewer-state persistence, or operational reset/reload behavior are
-  implemented. SQLite and Datasette remain retained validation and
+  no-secret local/test database configuration, stage source-derived records from
+  a controlled validated seeded artifact, and describe separated persistence and
+  API boundaries, but it must not imply database-backed views, reviewer-state
+  persistence, production import automation, or operational reset/reload
+  behavior are implemented. SQLite and Datasette remain retained validation and
   transition-comparison tools, not the hosted reviewer-created state store.
 - Hosted tester MVP access must be authenticated and role-scoped; anonymous
   hosted tester access is not approved because the hosted app includes
@@ -236,12 +243,14 @@ retention implementation PRs validate the concrete layer.
   enforce role, permission, and project/corpus scope before reviewer-created
   state is enabled.
 - Hosted tester MVP implementation may proceed from the ADR-0012 scaffold-first
-  sequence into the ADR-0013, ADR-0014, and ADR-0015 product-enabling path.
-  Hosted schemas, concrete authentication implementation, correction workflows,
-  queues, annotations, import/sync, reset/reload commands or APIs, hosted
-  deployment, audit persistence, retention automation, and hosted export
-  builders remain unimplemented until focused implementation PRs validate the
-  affected layer.
+  sequence into the ADR-0013, ADR-0014, and ADR-0015 product-enabling path. The
+  current seeded corpus import path is limited to controlled validated artifact
+  imports into import batch and source-derived staging tables. Concrete
+  authentication implementation, correction workflows, queues, annotations,
+  reviewer-created state persistence, reset/reload commands or APIs, hosted
+  deployment, audit persistence, retention automation, production import
+  automation, and hosted export builders remain unimplemented until focused
+  implementation PRs validate the affected layer.
 
 ## Accessibility
 

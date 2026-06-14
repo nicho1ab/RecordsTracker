@@ -31,9 +31,9 @@ class HostedSchemaApiScaffold:
     database_config: HostedDatabaseConfig
     persistence_boundaries: tuple[PersistenceBoundary, ...]
     api_boundaries: tuple[HostedApiBoundary, ...]
-    domain_tables_created: bool = False
+    domain_tables_created: bool = True
     api_routes_implemented: bool = False
-    imports_implemented: bool = False
+    imports_implemented: bool = True
     reviewer_workflows_implemented: bool = False
 
 
@@ -56,10 +56,10 @@ HOSTED_API_BOUNDARIES = (
         ),
         deferred=(
             "API routes",
-            "import execution",
-            "database reads",
+            "database-backed API reads",
             "live crawling",
             "hosted connector execution",
+            "reset/reload behavior",
         ),
     ),
     HostedApiBoundary(

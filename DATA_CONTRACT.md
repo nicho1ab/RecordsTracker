@@ -29,10 +29,13 @@ unless a later data contract, schema, documentation, migration, and test update
 explicitly adds them.
 
 The current hosted PostgreSQL/Alembic scaffold adds configuration validation,
-an Alembic script location without domain migration revisions, and boundary
-descriptors for future persistence/API table groups. It does not create hosted
-tables, add canonical fields, read source-derived records from PostgreSQL,
-persist reviewer-created state, or load seeded corpus data.
+an Alembic script location, a narrow seeded corpus import migration, and
+boundary descriptors for persistence/API table groups. The seeded import tables
+stage import batch metadata and source-derived records from a controlled
+validated artifact while preserving original values and source traceability.
+Those import mechanics do not add canonical source-derived fields, create
+reviewer-created state, run live crawling, run connector execution, or make the
+hosted database the public source of record.
 
 Future hosted source-derived tables must preserve the canonical fields and
 source traceability required below. Reviewer-created state may link to

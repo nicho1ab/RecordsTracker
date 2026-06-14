@@ -51,7 +51,7 @@ def test_text_report_can_include_database_scaffold_boundary() -> None:
         LocalCheck("Alembic migration tooling", "pass", "alembic is importable.", True),
         informational_boundary(
             "PostgreSQL server",
-            "Not required for scaffold import, smoke, or boundary tests.",
+            "Not required for local smoke, boundary tests, or artifact parsing tests.",
         ),
     ]
 
@@ -59,4 +59,4 @@ def test_text_report_can_include_database_scaffold_boundary() -> None:
 
     assert "Alembic migration tooling" in text
     assert "PostgreSQL server" in text
-    assert "Not required for scaffold import" in text
+    assert "artifact parsing tests" in text
