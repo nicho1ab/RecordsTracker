@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Added a narrow local/test CCLD-only import/reload seam from validated hosted
+	seeded-corpus JSON output into existing hosted source-derived records, plus a
+	bounded `/ccld/records/request` action that lets a local tester load or refresh
+	matching CCLD facility/date-scoped records without running live crawling from
+	browser requests. The path preserves source URL, raw SHA-256, raw path,
+	connector metadata, and idempotent source-derived keys, reports new, refreshed,
+	duplicate-avoided, and deferred rows, and does not mutate reviewer-created
+	state, create audit rows, add schema changes, add non-CCLD sources, add
+	production auth, or execute reset/reload destructively.
 - Added a browser-accessible local/test CCLD record request page at
 	`/ccld/records/request` where a local tester can enter a CCLD
 	facility/license number and optional date range, read matching records from

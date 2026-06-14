@@ -148,11 +148,13 @@ A thin local/test CCLD record request page now exists at
 a CCLD facility/license number and optional date range, reads only existing
 seeded source-derived rows, shows matching seeded CCLD rows, and links matching
 complaints into the reviewer UI. It validates digit-only CCLD identifiers and
-date ranges, shows clear no-match guidance, and identifies the remaining need
-for a safe CCLD-only import/reload path from validated pipeline output into
-hosted source-derived records. It does not run hosted live crawling, execute
-connectors, import records, mutate hosted scaffold tables, add non-CCLD source
-selection, or prove public-source completeness.
+date ranges, shows clear no-match guidance, and can load or refresh matching
+records from local validated hosted seeded-corpus output into existing hosted
+source-derived rows. It does not run hosted live crawling, execute connectors,
+mutate reviewer-created state, create audit rows, add non-CCLD source selection,
+or prove public-source completeness. The remaining gap is a controlled artifact
+builder that produces hosted seeded-corpus JSON from validated CCLD SQLite
+pipeline output outside browser requests.
 
 The reviewer workflow shell can now include associated reviewer-created state
 read route output in a selected source-record detail response when explicit

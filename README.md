@@ -35,8 +35,9 @@ experience.
    rate-limited by script options, and scoped to provided facility numbers.
 - Includes a local/test hosted CCLD record request page where a tester can enter
    a CCLD facility/license number and optional date range, read matching seeded
-   source-derived records, and open them in the hosted reviewer UI without
-   running live crawling or imports from a browser request.
+   source-derived records, load or refresh matching CCLD records from validated
+   local/test hosted seeded-corpus output, and open them in the hosted reviewer
+   UI without running live crawling from a browser request.
 
 ## Core Principles
 
@@ -162,11 +163,13 @@ public-record review notes.
    selected source record. A browser-accessible local/test CCLD record request
    page is available at `/ccld/records/request` when the scaffold is running
    locally; it accepts a CCLD facility/license number and optional date range,
-   reads existing seeded source-derived records, links matching rows into the
-   hosted reviewer UI, and explains the explicit CCLD live-fetch command when
-   matching seeded records are unavailable or broader retrieval is needed. It
-   does not run live crawling, execute connectors, import data, or mutate hosted
-   scaffold tables from browser requests. A browser-accessible local/test reviewer UI shell is
+   reads existing seeded source-derived records, can load or refresh matching
+   CCLD rows from local validated hosted seeded-corpus output through the
+   existing source-derived import tables, links matching rows into the hosted
+   reviewer UI, and explains the explicit CCLD live-fetch command when broader
+   retrieval is needed. It does not run live crawling, execute connectors,
+   mutate reviewer-created state, create audit rows, or add non-CCLD sources
+   from browser requests. A browser-accessible local/test reviewer UI shell is
    available at `/reviewer` when the scaffold is running locally; it loads the
    tiny seeded fixture corpus into process-local test state, lets a local tester
    search/select a source-derived record, see list-level reviewer-created

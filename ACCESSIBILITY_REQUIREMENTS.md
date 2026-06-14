@@ -44,9 +44,9 @@ Accessibility requirements apply to:
 	messages with useful next-step links.
 - The local/test hosted CCLD record request page must use semantic headings,
 	labeled facility/license number and date controls, accessible validation
-	messages, table captions/headings for matched seeded records, descriptive
-	reviewer links, and visible no-match guidance that does not rely on color or
-	position alone.
+	messages, labeled local validated load controls, table captions/headings for
+	matched seeded records, descriptive reviewer links, and visible no-match or
+	load-result guidance that does not rely on color or position alone.
 
 ### Color and contrast
 

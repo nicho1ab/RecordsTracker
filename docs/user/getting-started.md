@@ -122,10 +122,12 @@ CCLD-only request page:
 
 Then open `http://127.0.0.1:8000/ccld/records/request`. The page accepts a
 CCLD facility/license number and optional date range, reads existing seeded
-source-derived records, and links matching rows into the hosted reviewer UI. It
-does not run live CCLD retrieval or import records from the browser. When
-matching seeded records are unavailable, it shows the explicit live-fetch
-command that must be run outside the hosted UI.
+source-derived records, can load or refresh matching rows from local validated
+hosted seeded-corpus output, and links matching rows into the hosted reviewer
+UI. It does not run live CCLD retrieval, execute connectors, or mutate reviewer
+notes/statuses from the browser. When matching local validated records are
+unavailable, it shows the explicit live-fetch command that must be run outside
+the hosted UI.
 
 ## Start Datasette
 

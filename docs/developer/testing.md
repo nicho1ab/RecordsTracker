@@ -121,6 +121,14 @@ status form, and blocked-request next-step guidance, unauthenticated, disabled o
 and source-read-versus-reviewer-state permission separation blocking, no-secret
 HTML output, successful audit creation, and no source-derived mutation.
 
+Hosted CCLD request and import/reload tests should cover digit-only facility/
+license input, optional date ranges, empty hosted source-derived state, loading
+from local validated hosted seeded-corpus JSON output, source URL/raw SHA-256/
+raw path/connector traceability preservation, duplicate-safe refresh behavior,
+deferred no-match behavior, reviewer UI links after load, no browser live
+crawling, no generic connector execution, no reviewer-created state or audit
+mutation, no operational metadata mutation, and no-secret HTML output.
+
 Hosted reviewer-created state read route tests must prove persisted scaffold
 rows are readable only through authenticated, active, role/scope-allowed local/
 test routes with reviewer-state read permission. Tests should cover authorized

@@ -130,7 +130,8 @@ a thin browser-accessible local/test reviewer UI shell at `/reviewer` and
 `/reviewer/records` over those existing seams, a thin browser-accessible
 local/test CCLD record request page at `/ccld/records/request` that filters
 existing seeded source-derived rows by CCLD facility/license number and optional
-date range and links matches into the reviewer UI,
+date range, can load or refresh matching rows from local validated hosted
+seeded-corpus output, and links matches into the reviewer UI,
 a local/test authenticated reset/reload dry-run route seam, and a local/test
 authenticated reset/reload execution-plan route seam: a
 no-secret database URL configuration seam, an Alembic script location, one
@@ -163,8 +164,10 @@ sensitive narrative fields,
 plus a simple server-rendered CCLD request page that accepts only CCLD digit
 facility/license numbers and optional valid date ranges, shows seeded match or
 no-match results, links seeded matches to reviewer pages, and explains the
-external live-fetch command and remaining safe import/reload gap when broader
-retrieval is needed,
+external live-fetch command when broader retrieval is needed, plus a local/test
+validated CCLD import/reload service that reads only validated hosted seeded-
+corpus JSON artifacts and stages source-derived rows through the existing
+idempotent hosted seeded import path,
 plus a JSON handler that stores bounded non-secret reviewer note text as reviewer-created
 scaffold payload under the existing state kind,
 plus a JSON handler that stores bounded reviewer status values as reviewer-created
