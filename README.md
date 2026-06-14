@@ -40,8 +40,10 @@ experience.
    a CCLD facility/license number and optional date range, read matching seeded
    source-derived records, load or refresh matching CCLD records from validated
    local/test hosted seeded-corpus output, review a guided facility/date-scoped
-   complaint queue, open records in the hosted reviewer UI, and read first-time
-   workflow help without running live crawling from a browser request.
+   complaint queue with progress counts and reviewer-status filtering, open
+   records in the hosted reviewer UI, return to see updated progress after
+   notes/statuses, and read first-time workflow help without running live
+   crawling from a browser request.
 
 ## Core Principles
 

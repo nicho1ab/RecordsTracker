@@ -213,6 +213,7 @@ def test_schema_api_scaffold_summary_reflects_seeded_import_without_reviewer_wor
     assert scaffold.reviewer_ui_shell_implemented is True
     assert scaffold.ccld_record_request_ui_shell_implemented is True
     assert scaffold.ccld_request_result_queue_guidance_implemented is True
+    assert scaffold.ccld_request_queue_status_progress_implemented is True
     assert scaffold.ccld_validated_import_reload_implemented is True
     assert scaffold.reset_reload_dry_run_implemented is True
     assert scaffold.reset_reload_execution_plan_implemented is True
