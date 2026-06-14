@@ -21,7 +21,8 @@
   import batch metadata and source-derived record staging, a local validated
   JSON artifact importer, a local/test database-backed read service over staged
   source-derived records, a local/test auth boundary scaffold for actor, role,
-  account-status, scope, target, and audit-context checks, and source-derived
+  account-status, scope, target, and audit-context checks, a narrow local/test
+  authenticated source-derived HTTP/API read route seam, and source-derived
   versus reviewer-created state boundary descriptors.
 - Local-only sample filtering/search: implemented for the hosted source-record
   shell using in-memory fixture/sample records only.
@@ -39,11 +40,13 @@
   functioning reviewer workflow.
 - Local-only scaffold status: the scaffold is sample-only, read-only, local to a
   development workstation, and not backed by live public data, ignored raw CSVs,
-  generated profiling outputs, SQLite, HTTP API route reads, real provider
+  generated profiling outputs, SQLite-backed sample UI routes, real provider
   login, auth middleware, persistent authorization storage, reviewer-created
   state, queues, annotations, corrections, exports, audit trail, reset/reload,
-  deployment, QNAP, Azure, AWS, or public URL behavior. Current auth behavior is
-  limited to local/test service guards over fixture actor contexts.
+  deployment, QNAP, Azure, AWS, or public URL behavior. Current API behavior is
+  limited to local/test source-derived read handlers that require explicit test
+  database, actor, and scope context. Current auth behavior is limited to
+  local/test service and route guards over fixture actor contexts.
 - Datasette role: Datasette remains retained for validation, inspection,
   debugging, local exploration, export support, and transition comparison. It is
   not the governed primary future reviewer UX.
@@ -156,9 +159,9 @@
   migration tooling decision. Minimal PostgreSQL/Alembic scaffold wiring,
   schema/API boundary descriptors, a controlled seeded corpus import path,
   database-backed source-derived read service, and local/test auth boundary
-  scaffold are now in place. Next work should move to narrow HTTP/API route
-  decisions, real provider integration, or reset/reload planning, not repeat
-  those completed items.
+  scaffold, and local/test source-derived read route seam are now in place. Next
+  work should move to real provider integration, reset/reload planning, or the
+  first authenticated tester workflow, not repeat those completed items.
 - Local-only/sample-only boundaries remain active. Sample records must stay
   clearly marked as fixture/sample records and must not be presented as live,
   database-backed, complete, statewide, official, or production data.
@@ -177,10 +180,11 @@
   identities, idempotent source-derived staging, and source traceability tests.
   They also have a local/test database-backed read service for list and fetch
   access that preserves import batch context and original source-derived values.
-  ADR-0013 still defines reset/reload and audit expectations at the operational
-  boundary; implementation still needs HTTP API route behavior, comparison
-  against retained SQLite/Datasette validation output, production import
-  operations, and reset/reload behavior.
+  They now have a narrow local/test authenticated HTTP/API read route seam for
+  JSON list and fetch access over that read service. ADR-0013 still defines
+  reset/reload and audit expectations at the operational boundary;
+  implementation still needs comparison against retained SQLite/Datasette
+  validation output, production import operations, and reset/reload behavior.
 - Future database/schema implementation: the current domain schema is limited to
   seeded import batch metadata and source-derived staging. Future schema work
   must use PostgreSQL and Alembic-managed migrations while preserving separate

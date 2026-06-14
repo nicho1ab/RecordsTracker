@@ -10,6 +10,11 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from ccld_complaints.hosted_app.source_derived_routes import (
+    SourceDerivedApiContext,
+    route_source_derived_api_response,
+)
+
 APP_NAME = "CCLD Hosted Tester MVP Scaffold"
 SCAFFOLD_NOTICE = "Scaffold only: not a functioning reviewer workflow yet."
 SAMPLE_DATA_NOTICE = "Local sample source-derived data only; no live public-source data is loaded."
@@ -956,9 +961,15 @@ def render_facility_detail(record: SampleFacilityRecord) -> str:
 """
 
 
-def route_response(path: str) -> tuple[int, str, bytes]:
+def route_response(
+    path: str,
+    *,
+    source_derived_api_context: SourceDerivedApiContext | None = None,
+) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
     parsed_path = parsed_url.path
+    if parsed_path.startswith("/api/source-derived-records"):
+        return route_source_derived_api_response(path, source_derived_api_context)
     if parsed_path == "/":
         return 200, "text/html; charset=utf-8", render_app_shell().encode("utf-8")
     if parsed_path == "/source-records":
