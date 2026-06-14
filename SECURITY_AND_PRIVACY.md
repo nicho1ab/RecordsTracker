@@ -72,10 +72,24 @@ explicit database, actor, and corpus scope context from tests or local callers.
 It reuses the auth boundary to require import/reload permission, reject
 unauthenticated, disabled or revoked, role-denied, and out-of-scope actors, and
 report what a future seeded corpus reset/reload would affect. It performs
-read-only inspection queries only. It does not delete, truncate, overwrite,
-archive, import, reload, persist audit events, parse or store provider tokens,
-create sessions or cookies, add production auth middleware, or commit provider,
-tenant, callback, hosted URL, or secret configuration.
+read-only inspection queries only, including a scoped count of the narrow
+reviewer-created state scaffold table when present. It does not delete,
+truncate, overwrite, archive, import, reload, persist audit events, parse or
+store provider tokens, create sessions or cookies, add production auth
+middleware, or commit provider, tenant, callback, hosted URL, or secret
+configuration.
+
+The current reviewer-created state persistence scaffold is local/test only. It
+requires an explicit authenticated actor context, reviewer-state write
+permission, active account status, and matching project or corpus scope before
+it writes a scaffold row. Rows are stored separately from staged source-derived
+records, reference source-derived records by staged stable record key, and
+capture provider subject, provider issuer, display label, actor category, write
+permission, and generated timestamp for attribution. The scaffold does not
+store provider secrets, tokens, cookies, sessions, private headers, production
+roles, user tables, or audit events, and it does not implement real login flow,
+auth middleware, annotations, corrections, export decisions, tester feedback, or
+stateful reviewer workflows.
 
 Identity storage, sessions, authorization middleware, user tables, role tables,
 invitation flow, account recovery, final multi-factor requirements, and user

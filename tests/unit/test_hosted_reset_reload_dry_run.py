@@ -21,6 +21,9 @@ from ccld_complaints.hosted_app.reset_reload_dry_run import (
     SeededCorpusResetReloadDryRunContext,
     plan_seeded_corpus_reset_reload_dry_run,
 )
+from ccld_complaints.hosted_app.reviewer_created_state import (
+    hosted_reviewer_created_state,
+)
 from ccld_complaints.hosted_app.seeded_import import (
     hosted_import_batches,
     hosted_seeded_import_metadata,
@@ -50,7 +53,11 @@ def test_reset_reload_dry_run_reports_seeded_corpus_impact_without_mutation() ->
 
     assert status == 200
     assert content_type == "application/json; charset=utf-8"
-    assert before_counts == after_counts == {"import_batches": 1, "source_records": 6}
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 0,
+    }
     assert payload["dry_run"] is True
     assert payload["operation"] == "seeded_corpus_reset_reload_dry_run"
     assert payload["scope"] == {
@@ -96,10 +103,10 @@ def test_reset_reload_dry_run_reports_seeded_corpus_impact_without_mutation() ->
         "future_reload_scope": "seeded source-derived records for the requested corpus scope",
     }
     reviewer_impact = payload["reviewer_created_state_impact"]
-    assert reviewer_impact["persistence_implemented"] is False
+    assert reviewer_impact["persistence_implemented"] is True
     assert reviewer_impact["selected_handling_mode"] == "preserve"
     assert reviewer_impact["handling_options"] == ["preserve", "archive", "clear"]
-    assert reviewer_impact["current_state_count"] is None
+    assert reviewer_impact["current_state_count"] == 0
     assert "annotations" in reviewer_impact["affected_state_categories"]
     assert payload["future_execution_permissions"] == ["import_reload"]
     assert payload["safety"] == {
@@ -312,4 +319,11 @@ def _table_counts(connection: Connection) -> dict[str, int]:
     source_records = connection.execute(
         select(func.count()).select_from(hosted_source_derived_records)
     ).scalar_one()
-    return {"import_batches": import_batches, "source_records": source_records}
+    reviewer_created_state = connection.execute(
+        select(func.count()).select_from(hosted_reviewer_created_state)
+    ).scalar_one()
+    return {
+        "import_batches": import_batches,
+        "source_records": source_records,
+        "reviewer_created_state": reviewer_created_state,
+    }

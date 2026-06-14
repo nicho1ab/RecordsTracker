@@ -119,10 +119,12 @@ The hosted scaffold now also includes minimal PostgreSQL/Alembic project wiring,
 the first controlled seeded corpus import path, a narrow database-backed
 source-derived read service, a local/test auth/authz boundary scaffold, a
 narrow local/test authenticated source-derived HTTP/API read route seam, and a
-first local/test authenticated reviewer workflow shell, and a local/test
-authenticated reset/reload dry-run route seam: a
+first local/test authenticated reviewer workflow shell, a narrow local/test
+reviewer-created state persistence scaffold, and a local/test authenticated
+reset/reload dry-run route seam: a
 no-secret database URL configuration seam, an Alembic script location, one
 domain migration for import batch metadata and source-derived record staging,
+one domain migration for a separate reviewer-created state scaffold table,
 scaffold/API boundary descriptors, a local JSON artifact importer for validated
 pipeline-output-shaped fixtures, list/fetch helpers over staged source-derived
 records, managed OIDC/OAuth2 provider-class configuration validation, actor/
@@ -130,15 +132,18 @@ role/scope/target models, protected read-service guards, and JSON handlers for
 listing staged source-derived records or fetching one staged record by key or
 stable identity, plus read-only queue and detail shell payloads over those route
 responses, plus a dry-run handler that reports seeded import batch counts,
-source-derived record counts by entity, future reviewer-created state handling
-options, required permissions, validation requirements, audit requirements, and
-deferred destructive actions without mutating data. This path preserves import batch identity, source traceability,
-original source-derived values, and the separation from reviewer-created state.
+source-derived record counts by entity, scoped reviewer-created state scaffold
+counts, future reviewer-created state handling options, required permissions,
+validation requirements, audit requirements, and deferred destructive actions
+without mutating data. This path preserves import batch identity, source traceability,
+original source-derived values, authenticated attribution for scaffold rows, and
+the separation from reviewer-created state.
 It does not implement real login flow, provider registration, sessions, cookies,
-tokens, auth middleware, reviewer-created state persistence, stateful reviewer
-workflows, reset/reload execution, reviewer-created state archive or clear
-behavior, audit persistence, hosted live crawling, hosted connector execution,
-production import automation, production API framework behavior, or deployment.
+tokens, auth middleware, full reviewer-created workflows, annotations,
+corrections, export packet decisions, tester feedback, reset/reload execution,
+reviewer-created state archive or clear behavior, audit persistence, hosted live
+crawling, hosted connector execution, production import automation, production
+API framework behavior, or deployment.
 
 ## Components
 
@@ -165,11 +170,13 @@ source-derived records. ADR-0015 chooses PostgreSQL as that database product and
 Alembic-managed migrations as the migration tooling direction. The current
 hosted scaffold adds local/test configuration validation, an Alembic script
 location, and a first narrow domain migration for seeded import batch metadata
-and source-derived record staging. The current auth boundary, source-derived
-read route seam, read-only reviewer workflow shell, and reset/reload dry-run
-seam are schema-free; reviewer-created state tables, auth tables, audit tables, export
-tables, feedback tables, reset/reload metadata tables, ORM models, stateful
-reviewer workflow API behavior, deployment, hosted
+and source-derived record staging, plus a second narrow migration for one
+reviewer-created state scaffold table. The current auth boundary,
+source-derived read route seam, read-only reviewer workflow shell, reviewer-
+created state scaffold service, and reset/reload dry-run seam are local/test
+only; auth tables, audit tables, export tables, feedback tables, reset/reload
+metadata tables, ORM models, stateful reviewer workflow API behavior,
+deployment, hosted
 connection configuration, and production import automation remain deferred, and
 future hosted schema work must preserve the physical data-domain separation
 accepted by ADR-0010.
@@ -270,13 +277,15 @@ retention implementation PRs validate the concrete layer.
   current seeded corpus import path is limited to controlled validated artifact
   imports into import batch and source-derived staging tables plus local/test
   service reads over those staged records plus local/test auth guards for those
-  reads, and a non-mutating reset/reload dry-run plan over staged seeded corpus
-  metadata. Real provider authentication implementation, persistent authorization
+  reads, a narrow local/test reviewer-created state scaffold table linked to
+  staged source-derived records, and a non-mutating reset/reload dry-run plan
+  over staged seeded corpus metadata and scoped reviewer-created scaffold row
+  counts. Real provider authentication implementation, persistent authorization
   storage, production API framework behavior, correction workflows, queues,
-  annotations, reviewer-created state persistence, reset/reload commands or
-  APIs, hosted deployment, audit persistence, retention automation, production
-  import automation, and hosted export builders remain unimplemented until
-  focused implementation PRs validate the affected layer.
+  annotations, full reviewer-created workflow persistence, reset/reload commands
+  or APIs, hosted deployment, audit persistence, retention automation,
+  production import automation, and hosted export builders remain unimplemented
+  until focused implementation PRs validate the affected layer.
 
 ## Accessibility
 

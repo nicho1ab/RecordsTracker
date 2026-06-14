@@ -129,6 +129,7 @@ def test_schema_api_scaffold_summary_reflects_seeded_import_without_reviewer_wor
     assert scaffold.source_derived_read_api_routes_implemented is True
     assert scaffold.reviewer_workflow_shell_implemented is True
     assert scaffold.reset_reload_dry_run_implemented is True
+    assert scaffold.reviewer_created_state_persistence_scaffold_implemented is True
     assert scaffold.api_routes_implemented is True
     assert scaffold.imports_implemented is True
     assert scaffold.reviewer_workflows_implemented is False
@@ -148,5 +149,6 @@ def test_alembic_scaffold_has_seeded_import_domain_migration_only() -> None:
     assert (migrations_dir / "env.py").exists()
     assert (migrations_dir / "script.py.mako").exists()
     assert [version_file.name for version_file in version_files] == [
-        "20260613_0001_seeded_corpus_import.py"
+        "20260613_0001_seeded_corpus_import.py",
+        "20260614_0002_reviewer_created_state_scaffold.py",
     ]
