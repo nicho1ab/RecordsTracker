@@ -11,7 +11,9 @@
   local Python standard-library scaffold, health and smoke validation, local
   setup checks, and a read-only `/source-records` list/detail shell with local
   sample filtering/search and fixture/sample-only source traceability summary
-  panels over fixture/sample records.
+  panels over fixture/sample records, plus a read-only `/facilities` list/detail
+  sample view backed by committed tiny public-source facility fixtures and
+  manifest placeholder metadata.
 - Local-only sample filtering/search: implemented for the hosted source-record
   shell using in-memory fixture/sample records only.
 - Fixture/sample-only source traceability summary panels: implemented for the
@@ -27,10 +29,11 @@
   implementation path toward that direction, not a final production framework or
   functioning reviewer workflow.
 - Local-only scaffold status: the scaffold is sample-only, read-only, local to a
-  development workstation, and not backed by live public data, SQLite, a hosted
-  database, import/sync, authentication, authorization, reviewer-created state,
-  queues, annotations, corrections, exports, audit trail, reset/reload,
-  deployment, QNAP, Azure, AWS, or public URL behavior.
+  development workstation, and not backed by live public data, ignored raw CSVs,
+  generated profiling outputs, SQLite, a hosted database, import/sync,
+  authentication, authorization, reviewer-created state, queues, annotations,
+  corrections, exports, audit trail, reset/reload, deployment, QNAP, Azure,
+  AWS, or public URL behavior.
 - Datasette role: Datasette remains retained for validation, inspection,
   debugging, local exploration, export support, and transition comparison. It is
   not the governed primary future reviewer UX.
@@ -115,8 +118,10 @@
 - Roadmap items for the first hosted scaffold, local setup checks, local-only
   read-only source-record shell, semantic/accessibility validation, and
   local-only sample filtering/search, and fixture/sample-only source
-  traceability summary panels are complete. Next work should move to an approved
-  roadmap milestone, not repeat those completed items.
+  traceability summary panels, local CSV profiling, tiny public-source facility
+  fixtures, and the first fixture-backed facility master sample view are
+  complete. Next work should move to an approved roadmap milestone, not repeat
+  those completed items.
 - Local-only/sample-only boundaries remain active. Sample records must stay
   clearly marked as fixture/sample records and must not be presented as live,
   database-backed, complete, statewide, official, or production data.

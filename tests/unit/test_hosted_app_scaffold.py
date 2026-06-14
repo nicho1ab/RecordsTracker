@@ -7,8 +7,10 @@ from ccld_complaints.hosted_app.app import (
     SourceRecordFilters,
     build_source_traceability_summary,
     filter_sample_source_records,
+    get_sample_facility_record,
     get_sample_source_record,
     health_response,
+    load_sample_facility_records,
     render_app_shell,
     route_response,
     source_record_filters_from_query,
@@ -105,6 +107,7 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "Authentication and authorization" in html
     assert "QNAP, Azure, AWS, public URLs, or deployment" in normalized_html
     assert "Sample source-derived records" in html
+    assert "Sample facility master records" in html
 
 
 def test_routes_return_shell_health_and_not_found() -> None:
@@ -157,6 +160,28 @@ def test_source_record_list_route_labels_sample_read_only_scope() -> None:
     assert "sample-complaint-001" in html
 
 
+def test_load_sample_facility_records_uses_committed_public_source_fixtures() -> None:
+    records = load_sample_facility_records()
+
+    assert len(records) == 4
+    assert {record.source_fixture for record in records} == {
+        "ccld_program_facilities_tiny.csv",
+        "chhs_facility_master_tiny.csv",
+    }
+    assert {record.facility_number for record in records} == {"900000001", "900000002"}
+    assert {record.facility_name for record in records} == {
+        "Synthetic Orchard Child Care",
+        "Synthetic Valley Family Agency",
+    }
+    assert {record.source_family for record in records} == {
+        "ccld-public-download",
+        "chhs-facility-master",
+    }
+    assert all(record.jurisdiction == "California" for record in records)
+    assert all(record.source_url.startswith("https://example.invalid/") for record in records)
+    assert all(len(record.raw_sha256) == 64 for record in records)
+
+
 def test_source_record_filter_query_uses_sample_records_only() -> None:
     filters = source_record_filters_from_query(
         "q=beta&jurisdiction=California&source_family=CCLD+complaint+reports"
@@ -169,6 +194,78 @@ def test_source_record_filter_query_uses_sample_records_only() -> None:
         source_family="CCLD complaint reports",
     )
     assert [record.complaint_control_number for record in filtered_records] == ["SAMPLE-CC-002"]
+
+
+def test_facility_list_route_labels_fixture_read_only_scope() -> None:
+    status, content_type, body = route_response("/facilities")
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Sample facility master records" in html
+    assert "Read-only facility master sample view" in html
+    assert "Fixture/sample data only" in html
+    assert "No live public-source data is loaded" in html
+    assert "committed tiny public-source facility fixtures" in normalized_html
+    assert "does not read ignored raw CSVs" in normalized_html
+    assert "generated profiling outputs" in normalized_html
+    assert "SQLite, a hosted database, or an import/sync process" in normalized_html
+    assert "No reviewer workflow is active" in html
+    assert "no authentication is implemented" in html
+    assert "no reviewer-created state is persisted" in html
+    assert "Source-derived sample records and future reviewer-created state remain separate" in (
+        normalized_html
+    )
+    assert "not official facility lists" in normalized_html
+    assert "complete statewide coverage" in normalized_html
+    assert "legal or facility-wide conclusions" in normalized_html
+    assert "Synthetic Orchard Child Care" in html
+    assert "Synthetic Valley Family Agency" in html
+    assert "ccld_program_facilities_tiny.csv" in html
+    assert "chhs_facility_master_tiny.csv" in html
+    assert "ccld-program-facilities-tiny-900000001" in html
+
+
+def test_facility_detail_route_displays_manifest_traceability_metadata() -> None:
+    status, content_type, body = route_response("/facilities/chhs-facility-master-tiny-900000001")
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Read-only facility fixture detail" in html
+    assert "Synthetic Orchard Child Care" in html
+    assert "Facility number" in html
+    assert "900000001" in html
+    assert "Facility type" in html
+    assert "Child Care Center" in html
+    assert "Program type" in html
+    assert "Child Care" in html
+    assert "County" in html
+    assert "Los Angeles" in html
+    assert "Source family" in html
+    assert "chhs-facility-master" in html
+    assert "Source fixture" in html
+    assert "chhs_facility_master_tiny.csv" in html
+    assert "Profiled source shape" in html
+    assert "CalHHS/CHHS 21- or 22-column facility master download" in html
+    assert "Source URL placeholder" in html
+    assert "https://example.invalid/chhs-community-care-licensing-facilities" in html
+    assert "Raw SHA-256 placeholder" in html
+    assert "1111111111111111111111111111111111111111111111111111111111111111" in html
+    assert "Retrieved at placeholder" in html
+    assert "2026-06-07T00:00:00Z" in html
+    assert "does not read ignored raw CSVs" in normalized_html
+
+
+def test_unknown_facility_detail_returns_not_found() -> None:
+    status, content_type, body = route_response("/facilities/not-found")
+
+    assert get_sample_facility_record("not-found") is None
+    assert status == 404
+    assert content_type == "text/plain; charset=utf-8"
+    assert body == b"Not found"
 
 
 def test_source_traceability_summary_uses_filtered_sample_records() -> None:
@@ -324,6 +421,88 @@ def test_source_record_detail_has_accessible_semantic_structure() -> None:
     assert "Sample-only value; not extracted from live public-source data." in parser.text_for(
         "dd"
     )
+
+
+def test_facility_list_has_accessible_semantic_structure() -> None:
+    status, _content_type, body = route_response("/facilities")
+    html = body.decode("utf-8")
+
+    assert status == 200
+    parser = assert_source_shell_semantics(
+        html,
+        expected_title="Sample facility master records - CCLD Hosted Tester MVP Scaffold",
+        expected_h1="Sample facility master records",
+        required_links={
+            "/",
+            "/source-records",
+            "/health",
+            "/facilities/chhs-facility-master-tiny-900000001",
+        },
+    )
+
+    assert parser.tags.count("table") == 1
+    normalized_main = " ".join(parser.text_for("main").split())
+
+    assert "Facility fixture scope" in parser.text_for("h2")
+    assert "Read-only facility master sample view" in parser.text_for("h2")
+    assert "Committed tiny public-source facility fixture rows" in parser.text_for("caption")
+    for label in [
+        "Facility number",
+        "Facility name",
+        "Facility type",
+        "Program type",
+        "County",
+        "Status",
+        "Capacity",
+        "Source family",
+        "Source fixture",
+    ]:
+        assert label in parser.text_for("th")
+    assert "committed tiny public-source facility fixtures" in normalized_main
+    assert "does not read ignored raw CSVs" in normalized_main
+    assert "not official facility lists" in normalized_main
+
+
+def test_facility_detail_has_accessible_semantic_structure() -> None:
+    status, _content_type, body = route_response(
+        "/facilities/ccld-program-facilities-tiny-900000002"
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    parser = assert_source_shell_semantics(
+        html,
+        expected_title="900000002 - CCLD Hosted Tester MVP Scaffold",
+        expected_h1="900000002",
+        required_links={"/", "/facilities", "/source-records", "/health"},
+    )
+
+    assert parser.tags.count("dl") == 1
+    normalized_main = " ".join(parser.text_for("main").split())
+
+    assert "Read-only facility fixture detail" in parser.text_for("h2")
+    for label in [
+        "Facility name",
+        "Facility number",
+        "Facility type",
+        "Program type",
+        "County",
+        "Status",
+        "Capacity",
+        "Source family",
+        "Jurisdiction",
+        "Source fixture",
+        "Profiled source shape",
+        "Source dataset reference",
+        "Source URL placeholder",
+        "Raw SHA-256 placeholder",
+        "Retrieved at placeholder",
+    ]:
+        assert label in parser.text_for("dt")
+    assert "Synthetic Valley Family Agency" in parser.text_for("dd")
+    assert "CCLD 31-column program-specific facility download" in parser.text_for("dd")
+    assert "ccld-public-download" in parser.text_for("dd")
+    assert "does not read ignored raw CSVs" in normalized_main
 
 
 def test_unknown_source_record_detail_returns_not_found() -> None:

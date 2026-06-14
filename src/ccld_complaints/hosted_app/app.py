@@ -1,16 +1,24 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import html
 import json
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 APP_NAME = "CCLD Hosted Tester MVP Scaffold"
 SCAFFOLD_NOTICE = "Scaffold only: not a functioning reviewer workflow yet."
 SAMPLE_DATA_NOTICE = "Local sample source-derived data only; no live public-source data is loaded."
+PUBLIC_SOURCE_FACILITY_FIXTURE_DIR = (
+  Path(__file__).resolve().parents[3]
+  / "tests"
+  / "fixtures"
+  / "public_source_facilities"
+)
 
 
 @dataclass(frozen=True)
@@ -52,6 +60,26 @@ class SourceTraceabilitySummary:
     fields: tuple[TraceabilityFieldSummary, ...]
     jurisdictions: tuple[str, ...]
     source_families: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SampleFacilityRecord:
+    record_id: str
+    facility_number: str
+    facility_name: str
+    facility_type: str
+    program_type: str
+    county: str
+    status: str
+    capacity: str
+    source_family: str
+    jurisdiction: str
+    source_fixture: str
+    profiled_source_shape: str
+    source_dataset_reference: str
+    source_url: str
+    raw_sha256: str
+    retrieved_at: str
 
 
 TRACEABILITY_FIELDS = (
@@ -102,6 +130,111 @@ SAMPLE_SOURCE_RECORDS = [
         extraction_warning="Sample-only value; not extracted from live public-source data.",
     ),
 ]
+
+
+def _read_csv_fixture(path: Path) -> list[dict[str, str]]:
+    with path.open("r", encoding="utf-8", newline="") as fixture_file:
+        return [dict(row) for row in csv.DictReader(fixture_file)]
+
+
+def _load_facility_fixture_manifest() -> dict[str, dict[str, str]]:
+    manifest_path = PUBLIC_SOURCE_FACILITY_FIXTURE_DIR / "source_fixture_manifest.csv"
+    return {row["fixture_file"]: row for row in _read_csv_fixture(manifest_path)}
+
+
+def _facility_record_id(fixture_file: str, facility_number: str) -> str:
+    fixture_slug = fixture_file.removesuffix(".csv").replace("_", "-")
+    return f"{fixture_slug}-{facility_number}"
+
+
+def _facility_manifest_value(
+    manifest_by_file: dict[str, dict[str, str]], fixture_file: str, key: str
+) -> str:
+    return manifest_by_file[fixture_file][key]
+
+
+def _facility_from_ccld_program_row(
+    row: dict[str, str], manifest_by_file: dict[str, dict[str, str]]
+) -> SampleFacilityRecord:
+    fixture_file = "ccld_program_facilities_tiny.csv"
+    facility_number = row["Facility Number"]
+    return SampleFacilityRecord(
+        record_id=_facility_record_id(fixture_file, facility_number),
+        facility_number=facility_number,
+        facility_name=row["Facility Name"],
+        facility_type=row["Facility Type"],
+        program_type=row["Facility Type"],
+        county=row["County Name"],
+        status=row["Facility Status"],
+        capacity=row["Facility Capacity"],
+        source_family=_facility_manifest_value(manifest_by_file, fixture_file, "source_family"),
+        jurisdiction=_facility_manifest_value(manifest_by_file, fixture_file, "jurisdiction"),
+        source_fixture=fixture_file,
+        profiled_source_shape=_facility_manifest_value(
+            manifest_by_file, fixture_file, "profiled_source_shape"
+        ),
+        source_dataset_reference=_facility_manifest_value(
+            manifest_by_file, fixture_file, "source_dataset_reference"
+        ),
+        source_url=_facility_manifest_value(
+            manifest_by_file, fixture_file, "source_url_placeholder"
+        ),
+        raw_sha256=_facility_manifest_value(
+            manifest_by_file, fixture_file, "raw_sha256_placeholder"
+        ),
+        retrieved_at=_facility_manifest_value(
+            manifest_by_file, fixture_file, "retrieved_at_placeholder"
+        ),
+    )
+
+
+def _facility_from_chhs_master_row(
+    row: dict[str, str], manifest_by_file: dict[str, dict[str, str]]
+) -> SampleFacilityRecord:
+    fixture_file = "chhs_facility_master_tiny.csv"
+    facility_number = row["FAC_NBR"]
+    return SampleFacilityRecord(
+        record_id=_facility_record_id(fixture_file, facility_number),
+        facility_number=facility_number,
+        facility_name=row["NAME"],
+        facility_type=row["FAC_TYPE_DESC"],
+        program_type=row["PROGRAM_TYPE"],
+        county=row["COUNTY"],
+        status=row["STATUS"],
+        capacity=row["CAPACITY"],
+        source_family=_facility_manifest_value(manifest_by_file, fixture_file, "source_family"),
+        jurisdiction=_facility_manifest_value(manifest_by_file, fixture_file, "jurisdiction"),
+        source_fixture=fixture_file,
+        profiled_source_shape=_facility_manifest_value(
+            manifest_by_file, fixture_file, "profiled_source_shape"
+        ),
+        source_dataset_reference=_facility_manifest_value(
+            manifest_by_file, fixture_file, "source_dataset_reference"
+        ),
+        source_url=_facility_manifest_value(
+            manifest_by_file, fixture_file, "source_url_placeholder"
+        ),
+        raw_sha256=_facility_manifest_value(
+            manifest_by_file, fixture_file, "raw_sha256_placeholder"
+        ),
+        retrieved_at=_facility_manifest_value(
+            manifest_by_file, fixture_file, "retrieved_at_placeholder"
+        ),
+    )
+
+
+def load_sample_facility_records() -> list[SampleFacilityRecord]:
+    manifest_by_file = _load_facility_fixture_manifest()
+    ccld_rows = _read_csv_fixture(
+        PUBLIC_SOURCE_FACILITY_FIXTURE_DIR / "ccld_program_facilities_tiny.csv"
+    )
+    chhs_rows = _read_csv_fixture(
+        PUBLIC_SOURCE_FACILITY_FIXTURE_DIR / "chhs_facility_master_tiny.csv"
+    )
+    return [
+        *(_facility_from_ccld_program_row(row, manifest_by_file) for row in ccld_rows),
+        *(_facility_from_chhs_master_row(row, manifest_by_file) for row in chhs_rows),
+    ]
 
 
 def _first_query_value(query_values: dict[str, list[str]], key: str) -> str:
@@ -213,6 +346,13 @@ def get_sample_source_record(record_id: str) -> SampleSourceRecord | None:
     return None
 
 
+def get_sample_facility_record(record_id: str) -> SampleFacilityRecord | None:
+    for record in load_sample_facility_records():
+        if record.record_id == record_id:
+            return record
+    return None
+
+
 def _render_filter_option(value: str, selected_value: str) -> str:
     selected = ' selected="selected"' if value == selected_value else ""
     return f'<option value="{html.escape(value)}"{selected}>{html.escape(value)}</option>'
@@ -270,6 +410,22 @@ def render_scope_notice() -> str:
       <p>Source-derived sample records and future reviewer-created state remain
       separate. This shell does not create queues, annotations, corrections,
       exports, feedback, audit history, reset/reload behavior, or imports.</p>
+    </section>"""
+
+
+def render_facility_fixture_scope_notice() -> str:
+    return """<section aria-labelledby="facility-scope-heading">
+      <h2 id="facility-scope-heading">Facility fixture scope</h2>
+      <p>Fixture/sample data only. No live public-source data is loaded.</p>
+      <p>This read-only sample view uses only the committed tiny public-source
+      facility fixtures. It does not read ignored raw CSVs, generated profiling
+      outputs, SQLite, a hosted database, or an import/sync process.</p>
+      <p>No reviewer workflow is active, no authentication is implemented, and
+      no reviewer-created state is persisted.</p>
+      <p>Source-derived sample records and future reviewer-created state remain
+      separate. These rows are not official facility lists, complete statewide
+      coverage, source completeness proof, or legal or facility-wide
+      conclusions.</p>
     </section>"""
 
 
@@ -351,6 +507,7 @@ def render_app_shell() -> str:
     <ul>
       <li><a href="#status">Scaffold status</a></li>
       <li><a href="/source-records">Sample source-derived records</a></li>
+      <li><a href="/facilities">Sample facility master records</a></li>
       <li><a href="#boundaries">Not implemented yet</a></li>
       <li><a href="/health">Health check</a></li>
     </ul>
@@ -361,7 +518,7 @@ def render_app_shell() -> str:
       <p>This local app shell is runnable on a Windows development workstation.</p>
       <p>No records are loaded, no users are authenticated, and no reviewer
       workflow behavior is active.</p>
-      <p>The source-record shell uses fixture/sample data only.</p>
+      <p>The source-record and facility sample shells use fixture/sample data only.</p>
     </section>
     <section id="boundaries" aria-labelledby="boundaries-heading">
       <h2 id="boundaries-heading">Intentionally not implemented</h2>
@@ -520,26 +677,171 @@ def render_source_record_detail(record: SampleSourceRecord) -> str:
 """
 
 
+def render_facility_list() -> str:
+    records = load_sample_facility_records()
+    rows = "\n".join(
+        f"""        <tr>
+          <td><a href="/facilities/{html.escape(record.record_id)}">
+            {html.escape(record.facility_number)}
+          </a></td>
+          <td>{html.escape(record.facility_name)}</td>
+          <td>{html.escape(record.facility_type)}</td>
+          <td>{html.escape(record.program_type)}</td>
+          <td>{html.escape(record.county)}</td>
+          <td>{html.escape(record.status)}</td>
+          <td>{html.escape(record.capacity)}</td>
+          <td>{html.escape(record.source_family)}</td>
+          <td>{html.escape(record.source_fixture)}</td>
+        </tr>"""
+        for record in records
+    )
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sample facility master records - {html.escape(APP_NAME)}</title>
+</head>
+<body>
+  <header>
+    <p>{html.escape(SCAFFOLD_NOTICE)}</p>
+    <p>{html.escape(SAMPLE_DATA_NOTICE)}</p>
+    <h1>Sample facility master records</h1>
+  </header>
+  <nav aria-label="Local scaffold navigation">
+    <ul>
+      <li><a href="/">Scaffold home</a></li>
+      <li><a href="/source-records">Sample source-derived records</a></li>
+      <li><a href="/health">Health check</a></li>
+    </ul>
+  </nav>
+  <main>
+    {render_facility_fixture_scope_notice()}
+    <section aria-labelledby="facilities-heading">
+      <h2 id="facilities-heading">Read-only facility master sample view</h2>
+      <p>Showing {len(records)} fixture/sample facility rows from committed tiny
+      public-source facility fixtures. These rows exercise facility-list display
+      and manifest-backed traceability labels only.</p>
+      <table>
+        <caption>Committed tiny public-source facility fixture rows</caption>
+        <thead>
+          <tr>
+            <th scope="col">Facility number</th>
+            <th scope="col">Facility name</th>
+            <th scope="col">Facility type</th>
+            <th scope="col">Program type</th>
+            <th scope="col">County</th>
+            <th scope="col">Status</th>
+            <th scope="col">Capacity</th>
+            <th scope="col">Source family</th>
+            <th scope="col">Source fixture</th>
+          </tr>
+        </thead>
+        <tbody>
+{rows}
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>
+"""
+
+
+def render_facility_detail(record: SampleFacilityRecord) -> str:
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{html.escape(record.facility_number)} - {html.escape(APP_NAME)}</title>
+</head>
+<body>
+  <header>
+    <p>{html.escape(SCAFFOLD_NOTICE)}</p>
+    <p>{html.escape(SAMPLE_DATA_NOTICE)}</p>
+    <h1>{html.escape(record.facility_number)}</h1>
+  </header>
+  <nav aria-label="Local scaffold navigation">
+    <ul>
+      <li><a href="/">Scaffold home</a></li>
+      <li><a href="/facilities">Sample facility master records</a></li>
+      <li><a href="/source-records">Sample source-derived records</a></li>
+      <li><a href="/health">Health check</a></li>
+    </ul>
+  </nav>
+  <main>
+    {render_facility_fixture_scope_notice()}
+    <section aria-labelledby="facility-detail-heading">
+      <h2 id="facility-detail-heading">Read-only facility fixture detail</h2>
+      <dl>
+        <dt>Facility name</dt>
+        <dd>{html.escape(record.facility_name)}</dd>
+        <dt>Facility number</dt>
+        <dd>{html.escape(record.facility_number)}</dd>
+        <dt>Facility type</dt>
+        <dd>{html.escape(record.facility_type)}</dd>
+        <dt>Program type</dt>
+        <dd>{html.escape(record.program_type)}</dd>
+        <dt>County</dt>
+        <dd>{html.escape(record.county)}</dd>
+        <dt>Status</dt>
+        <dd>{html.escape(record.status)}</dd>
+        <dt>Capacity</dt>
+        <dd>{html.escape(record.capacity)}</dd>
+        <dt>Source family</dt>
+        <dd>{html.escape(record.source_family)}</dd>
+        <dt>Jurisdiction</dt>
+        <dd>{html.escape(record.jurisdiction)}</dd>
+        <dt>Source fixture</dt>
+        <dd>{html.escape(record.source_fixture)}</dd>
+        <dt>Profiled source shape</dt>
+        <dd>{html.escape(record.profiled_source_shape)}</dd>
+        <dt>Source dataset reference</dt>
+        <dd>{html.escape(record.source_dataset_reference)}</dd>
+        <dt>Source URL placeholder</dt>
+        <dd>{html.escape(record.source_url)}</dd>
+        <dt>Raw SHA-256 placeholder</dt>
+        <dd>{html.escape(record.raw_sha256)}</dd>
+        <dt>Retrieved at placeholder</dt>
+        <dd>{html.escape(record.retrieved_at)}</dd>
+      </dl>
+    </section>
+  </main>
+</body>
+</html>
+"""
+
+
 def route_response(path: str) -> tuple[int, str, bytes]:
-    parsed_url = urlparse(path)
-    parsed_path = parsed_url.path
-    if parsed_path == "/":
-        return 200, "text/html; charset=utf-8", render_app_shell().encode("utf-8")
-    if parsed_path == "/source-records":
-        filters = source_record_filters_from_query(parsed_url.query)
-        body = render_source_record_list(filters).encode("utf-8")
-        return 200, "text/html; charset=utf-8", body
-    if parsed_path.startswith("/source-records/"):
-        record_id = parsed_path.removeprefix("/source-records/")
-        record = get_sample_source_record(record_id)
-        if record is not None:
-            body = render_source_record_detail(record).encode("utf-8")
-            return 200, "text/html; charset=utf-8", body
-    if parsed_path in {"/health", "/api/health"}:
-        body = json.dumps(health_response(), sort_keys=True).encode("utf-8")
-        return 200, "application/json; charset=utf-8", body
-    body = b"Not found"
-    return 404, "text/plain; charset=utf-8", body
+  parsed_url = urlparse(path)
+  parsed_path = parsed_url.path
+  if parsed_path == "/":
+    return 200, "text/html; charset=utf-8", render_app_shell().encode("utf-8")
+  if parsed_path == "/source-records":
+    filters = source_record_filters_from_query(parsed_url.query)
+    body = render_source_record_list(filters).encode("utf-8")
+    return 200, "text/html; charset=utf-8", body
+  if parsed_path.startswith("/source-records/"):
+    record_id = parsed_path.removeprefix("/source-records/")
+    source_record = get_sample_source_record(record_id)
+    if source_record is not None:
+      body = render_source_record_detail(source_record).encode("utf-8")
+      return 200, "text/html; charset=utf-8", body
+  if parsed_path == "/facilities":
+    body = render_facility_list().encode("utf-8")
+    return 200, "text/html; charset=utf-8", body
+  if parsed_path.startswith("/facilities/"):
+    record_id = parsed_path.removeprefix("/facilities/")
+    facility_record = get_sample_facility_record(record_id)
+    if facility_record is not None:
+      body = render_facility_detail(facility_record).encode("utf-8")
+      return 200, "text/html; charset=utf-8", body
+  if parsed_path in {"/health", "/api/health"}:
+    body = json.dumps(health_response(), sort_keys=True).encode("utf-8")
+    return 200, "application/json; charset=utf-8", body
+  body = b"Not found"
+  return 404, "text/plain; charset=utf-8", body
 
 
 class HostedScaffoldHandler(BaseHTTPRequestHandler):

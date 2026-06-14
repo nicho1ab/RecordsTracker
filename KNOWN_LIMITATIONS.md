@@ -24,5 +24,12 @@
     read from SQLite or a hosted database, run import/sync, authenticate users,
     persist reviewer-created state, deploy publicly, or prove source
     completeness.
+- The local hosted scaffold `/facilities` list and detail pages use committed
+    tiny public-source facility fixtures and manifest placeholder metadata only.
+    They do not read ignored raw CSVs, generated profiling outputs, SQLite, a
+    hosted database, live public-source data, import/sync output, authentication
+    state, or reviewer-created state, and they do not prove source
+    completeness, statewide coverage, official facility status, or legal or
+    facility-wide conclusions.
 - Accessibility of third-party presentation layers must be validated before release.
 - GitHub Actions availability and limits may depend on project policy and platform usage limits.
