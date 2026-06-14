@@ -112,7 +112,8 @@ failure, read-after-write visibility through existing read routes and workflow
 detail output, and no source-derived mutation.
 Hosted reviewer UI shell tests should cover browser-accessible local/test
 landing and detail HTML pages over the seeded fixture corpus, safe source
-traceability display, labeled search/note/status controls, note/status form
+traceability display, safe related seeded bundle context with sensitive
+narrative fields hidden, labeled search/note/status controls, note/status form
 delegation to the existing workflow actions, read-after-write reviewer-created
 state display, unauthenticated, disabled or revoked, role-denied, out-of-scope,
 and source-read-versus-reviewer-state permission separation blocking, no-secret

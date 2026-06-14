@@ -54,10 +54,11 @@ action stores only bounded local/test reviewer status values such as
 `not_started`, `in_review`, `needs_follow_up`, `reviewed`, and `blocked`.
 A thin browser-accessible local/test reviewer UI shell can wrap those existing
 read and write seams for the tiny seeded fixture corpus so a local tester can
-view safe source traceability fields, submit reviewer note/status forms, and
-see read-after-write reviewer-created state. That UI shell does not add
-canonical source-derived fields, schema changes, migrations, or a separate
-source-derived data access path.
+view safe source traceability fields, view safe related seeded bundle context,
+submit reviewer note/status forms, and see read-after-write reviewer-created
+state. Narrative source fields remain hidden in the browser shell. That UI shell
+does not add canonical source-derived fields, schema changes, migrations, or a
+separate source-derived data access path.
 The detail payload can additionally include a compact state summary derived only
 from that already-composed associated reviewer-created state route output, such
 as row counts, present state kinds and payload kinds, bounded reviewer status
