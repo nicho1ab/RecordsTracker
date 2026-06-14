@@ -14,7 +14,11 @@ commitment.
 
 ## Required local tools
 
+- Windows PowerShell.
+- Python 3.11 or newer.
+- The repository development dependencies from `requirements-dev.txt` for
   tests, lint, and type checks.
+- The runtime dependencies from `requirements.txt`, including Alembic,
   SQLAlchemy, and the PostgreSQL driver used by the scaffolded migration
   wiring.
 
@@ -22,11 +26,11 @@ Node.js is not required. Docker is not required. QNAP Container Station is not r
 No local PostgreSQL server is required for scaffold smoke, boundary tests, or
 seeded artifact parsing tests. A PostgreSQL-compatible database URL is required
 only when a developer explicitly runs Alembic migrations or the seeded corpus
-import command. The database-backed read service can be exercised in unit tests
-The database-backed read service can be exercised in unit tests against in-memory
-SQLite and does not require a running PostgreSQL server. No cloud resources,
-public URLs, app registrations, cloud databases, DNS records, deployment
-credentials, secrets, or tokens are required.
+import command. The database-backed read service and auth boundary scaffold can
+be exercised in unit tests against in-memory SQLite and fixture actors. No cloud resources,
+public URLs, app registrations, cloud databases, DNS records,
+deployment credentials, secrets, or tokens are required.
+
 ## Verify local prerequisites
 
 Run the local setup check from the repository root after installing project
@@ -103,7 +107,7 @@ presented through the same list/filter pattern after the relevant source,
 import, schema, and hosted workflow decisions are approved. The current shell
 still keeps the fixture/sample labels, read-only behavior, source-derived versus
 reviewer-created state separation, semantic structure, accessibility validation,
-and no-database, no-import, no-authentication, no-deployment boundary.
+and no-database, no-import, no-real-login, no-deployment boundary.
 The source-derived versus reviewer-created state separation remains visible in
 the sample shell text and tests.
 
@@ -143,9 +147,9 @@ in the fixture/sample mapping.
 
 The facility sample view does not load live public-source data, read ignored raw
 CSVs, read generated profiling outputs, read SQLite or a hosted database, run
-import/sync, authenticate users, persist reviewer-created state, or prove source
-completeness, statewide coverage, official facility status, or legal or
-facility-wide conclusions.
+import/sync, perform real provider login, persist reviewer-created state, or
+prove source completeness, statewide coverage, official facility status, or
+legal or facility-wide conclusions.
 
 ## PostgreSQL and Alembic seeded import wiring
 
@@ -159,6 +163,9 @@ wiring includes:
   metadata and source-derived record staging tables only.
 - `ccld_complaints.hosted_app.persistence` for no-secret database URL validation
   and ADR-0010 persistence boundary descriptors.
+- `ccld_complaints.hosted_app.auth` for managed OIDC/OAuth2 provider-class
+  configuration validation, local/test actor context, role and scope guards, and
+  protected source-derived read service helpers.
 - `ccld_complaints.hosted_app.schema_api_scaffold` for scaffold-only source-
   derived and reviewer-created state API boundary descriptors.
 - `ccld_complaints.hosted_app.seeded_import` for loading a controlled validated
@@ -188,6 +195,17 @@ source-traceability fields, and import batch context. They do not include review
 status, annotations, corrections, tester feedback, export packet state, audit
 events, or other reviewer-created state.
 
+The auth boundary scaffold is also intentionally small. It validates only the
+accepted provider class value `managed-oidc-oauth2` through
+`CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS`, defines local/test actor, role,
+account-status, project/corpus scope, authorization target, and audit-context
+models, and exposes guards for protected service seams. It rejects
+unauthenticated actors, disabled or revoked actors, actors without the required
+role permission, and actors outside the requested project or corpus scope. It
+does not validate provider tokens, store sessions, create cookies, configure a
+tenant, register an app, persist users or roles, or implement login/logout or
+callback routes.
+
 To run migrations or load a seeded corpus into a local PostgreSQL-compatible
 test database, set `CCLD_HOSTED_TESTER_DATABASE_URL` outside the repository and
 run Alembic before the import command:
@@ -204,7 +222,8 @@ Do not commit connection strings, usernames, passwords, provider settings,
 private URLs, hosted URLs, tokens, or deployment-specific configuration.
 
 The current path does not implement HTTP API routes, database-backed reviewer
-views, authentication, authorization, reviewer-created state persistence,
+views, real provider login, token validation, sessions, cookies, auth
+middleware, user or role persistence, reviewer-created state persistence,
 reviewer workflows, audit persistence, export builders, reset/reload behavior,
 production import automation, hosted live crawling, hosted connector execution,
 QNAP, Azure, AWS, public hosting, public URLs, or production deployment.
@@ -250,6 +269,12 @@ Run the focused hosted source-derived read tests:
 pytest tests/unit/test_hosted_source_derived_reads.py
 ```
 
+Run the focused hosted auth boundary tests:
+
+```powershell
+pytest tests/unit/test_hosted_auth_boundary.py
+```
+
 These tests include local-only semantic/accessibility validation for the sample
 source view shell and facility master sample view. They use Python standard-library HTML parsing
 to verify one page-level heading, meaningful page titles, semantic main content,
@@ -269,6 +294,11 @@ idempotent staging, and no reviewer-created state writes.
 The source-derived read tests verify database-backed list and fetch behavior,
 import batch context, source traceability preservation, stable identity lookup,
 and no reviewer-created state exposure.
+The auth boundary tests verify safe provider-class configuration validation,
+authenticated actor context, audit-ready authorization decisions, protected
+source-derived read helpers, disabled-account rejection, role-denied rejection,
+out-of-scope rejection, and that read-only source-derived access does not imply
+reviewer-created, import/reload, or user-administration permissions.
 They do not require browser automation, Node.js, Playwright, Selenium, axe,
 Docker, a running PostgreSQL server, cloud services, or public URLs.
 
@@ -299,7 +329,8 @@ git diff --check
 The scaffold intentionally does not implement:
 
 - Real authentication.
-- Authorization.
+- Real provider token validation, sessions, cookies, or auth middleware.
+- Persistent authorization, user, role, invitation, or scope storage.
 - Production schema beyond the seeded import table group.
 - Reviewer-created state, audit, export, feedback, auth, or reset/reload tables.
 - HTTP API routes.

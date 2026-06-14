@@ -32,6 +32,7 @@ class HostedSchemaApiScaffold:
     persistence_boundaries: tuple[PersistenceBoundary, ...]
     api_boundaries: tuple[HostedApiBoundary, ...]
     domain_tables_created: bool = True
+    auth_boundary_scaffold_implemented: bool = True
     source_derived_read_service_implemented: bool = True
     api_routes_implemented: bool = False
     imports_implemented: bool = True

@@ -24,15 +24,17 @@
   source-record links on those pages are fixture/sample display patterns only.
   They do not load live public-source data, read ignored raw CSVs or generated
   profiling outputs, use SQLite or a hosted database through API routes,
-  authenticate users, persist reviewer-created state, or prove statewide
+  perform real provider login, persist reviewer-created state, or prove statewide
   coverage, source completeness, official facility status, or legal or
   facility-wide conclusions.
 - The hosted seeded corpus import path is controlled and local/test-oriented.
   It stages source-derived records from a validated JSON artifact into the
   PostgreSQL/Alembic import batch and source-derived table group only. A narrow
   local/test read service can list and fetch those staged records with import
-  batch context and source traceability. The path does not run live crawling,
-  execute connectors, automate production imports, implement reset/reload,
-  authenticate users, create reviewer-created state, expose HTTP API routes or
+  batch context and source traceability, and local/test auth guards can protect
+  those service reads by actor role, account status, and scope. The path does
+  not run live crawling, execute connectors, automate production imports,
+  implement reset/reload, authenticate browser users, validate real provider
+  tokens, create reviewer-created state, expose HTTP API routes or
   database-backed reviewer views, or prove source completeness.
 - Datasette accessibility depends partly on the installed Datasette version, browser, and assistive technology. Validate keyboard navigation, table headers, focus visibility, and exported table usability before treating a release as stable.

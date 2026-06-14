@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Added a focused hosted tester auth/authz boundary scaffold with managed
+	OIDC/OAuth2 provider-class configuration validation, immutable actor, role,
+	scope, target, and audit-context models, and protected source-derived read
+	service guards for authenticated, disabled, role-denied, and out-of-scope
+	local/test paths without adding real login flow, provider registration,
+	secrets, tokens, cookies, auth middleware, user tables, reviewer-created
+	state, audit persistence, API routes, deployment, live crawling, or connector
+	execution.
 - Added a narrow database-backed source-derived read service for staged hosted
 	seeded corpus records, with list and fetch helpers that preserve import batch
 	context, source traceability, original values, and the source-derived versus
