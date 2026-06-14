@@ -9,6 +9,7 @@ src/ccld_complaints/
   cli/
   connectors/
   extraction/
+  hosted_app/
   storage/
   quality/
   utils/
@@ -34,7 +35,10 @@ src/ccld_complaints/
 
 The first hosted tester MVP scaffold is a local-first Python standard-library
 HTTP app shell. It provides a placeholder page and health route for smoke
-validation on a Windows development workstation.
+validation on a Windows development workstation. Its local setup check verifies
+Python and development-tool prerequisites without installing software, requiring
+admin rights, or requiring Node, Docker, QNAP, Azure, AWS, cloud resources, or a
+public URL.
 
 The scaffold does not implement authentication, authorization, production
 schema, migrations, import/sync, queues, annotations, corrections, exports,

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added local hosted scaffold setup-check tooling for verifying Python and
+	development-tool prerequisites on Windows without installing software,
+	requiring admin rights, or requiring Node, Docker, QNAP, cloud resources, or a
+	public URL.
+- Updated the local secret-check script to ignore conventional `.venv*` local
+	virtual environment directories so developer validation does not scan installed
+	third-party packages.
 - Added the first local hosted tester MVP scaffold with a Python
 	standard-library app shell, health route, smoke check, focused tests, and
 	Windows PowerShell run documentation while intentionally deferring cloud,

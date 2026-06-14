@@ -126,6 +126,9 @@ public-record review notes.
    run the local hosted tester MVP scaffold. The scaffold is a placeholder app
    shell and health route only; it does not implement reviewer workflows,
    authentication, schemas, imports, exports, deployment, QNAP, Azure, or AWS.
+   Start with `scripts/check-hosted-scaffold-local.ps1` to verify local Python
+   and development-tool prerequisites without installing software or requiring
+   admin rights.
 
 ## Validation
 
