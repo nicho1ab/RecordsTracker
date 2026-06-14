@@ -122,6 +122,10 @@ public-record review notes.
 - Review [PRODUCTION_DISCOVERY_REQUIREMENTS.md](PRODUCTION_DISCOVERY_REQUIREMENTS.md)
    before planning hosted reviewer app requirements, architecture ADRs, tester
    MVP workflows, review state, annotations, corrections, or export packet state.
+- Review [GOVERNANCE_INVENTORY.md](GOVERNANCE_INVENTORY.md) for the current
+   production-discovery phase, hosted scaffold status, completed ADR decisions,
+   remaining deferred decisions, stale-guidance assessment, and next-phase gap
+   analysis.
 - Use [docs/developer/hosted-scaffold.md](docs/developer/hosted-scaffold.md) to
    run the local hosted tester MVP scaffold. The scaffold is a placeholder app
    shell and health route only; it does not implement reviewer workflows,

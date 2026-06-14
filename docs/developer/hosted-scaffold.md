@@ -86,6 +86,12 @@ users, and does not persist reviewer-created state. Its source-traceability-styl
 fields are sample values that exist only to exercise the future read-only
 reviewer-app shape.
 
+The next safe expansion for this shell is local-only sample filtering/search or
+a similarly narrow fixture-backed source-view improvement. It must keep the
+fixture/sample labels, read-only behavior, source-derived versus
+reviewer-created state separation, semantic structure, accessibility validation,
+and no-database, no-import, no-authentication, no-deployment boundary.
+
 ## Run the smoke check
 
 The smoke check starts an in-process local scaffold server, checks the health

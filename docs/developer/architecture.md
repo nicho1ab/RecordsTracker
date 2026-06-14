@@ -46,6 +46,12 @@ list and detail navigation only. It does not read from SQLite or a hosted
 database, run import/sync, load live public-source data, authenticate users, or
 persist reviewer-created state.
 
+The current next hosted-view gap is local-only sample filtering/search or a
+similarly narrow fixture-backed source-view expansion. That work must preserve
+sample labeling, read-only behavior, source traceability, semantic structure,
+accessibility validation, and the no-database, no-import, no-authentication,
+no-reviewer-state, no-deployment boundary.
+
 The scaffold does not implement authentication, authorization, production
 schema, migrations, import/sync, queues, annotations, corrections, exports,
 tester feedback, audit trail, reset/reload, hosted live crawling, hosted

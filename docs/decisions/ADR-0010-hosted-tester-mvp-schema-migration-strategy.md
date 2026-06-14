@@ -32,6 +32,12 @@ public-source language. This ADR defines the schema and migration strategy
 boundary only. It does not create actual schema files, migration files,
 database code, import code, reset/reload code, or app scaffold work.
 
+Current note: ADR-0012 later approved scaffold-first sequencing, and later local
+implementation PRs added only the local scaffold, setup checks, read-only sample
+source-record shell, and semantic/accessibility validation. This ADR still does
+not approve schemas, migrations, database creation, import code, reset/reload
+code, or reviewer-created state persistence.
+
 ## Decision
 
 Future hosted schema work must organize persisted data into separate physical

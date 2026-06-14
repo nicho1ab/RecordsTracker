@@ -17,3 +17,7 @@ See detailed ADRs in `docs/decisions/`.
 | ADR-0010 | Define hosted tester MVP schema and migration strategy | Accepted |
 | ADR-0011 | Define hosted tester MVP authentication and access boundaries | Accepted |
 | ADR-0012 | Define hosted tester MVP scope and scaffold sequencing | Accepted |
+
+See `GOVERNANCE_INVENTORY.md` for the current active phase, local-only hosted
+scaffold status, completed ADR assessment, remaining deferred decisions, and
+gap analysis for the next implementation phase.
