@@ -4,10 +4,13 @@ import json
 from html.parser import HTMLParser
 
 from ccld_complaints.hosted_app.app import (
+    SourceRecordFilters,
+    filter_sample_source_records,
     get_sample_source_record,
     health_response,
     render_app_shell,
     route_response,
+    source_record_filters_from_query,
 )
 from ccld_complaints.hosted_app.smoke import run_scaffold_smoke_check
 
@@ -139,8 +142,52 @@ def test_source_record_list_route_labels_sample_read_only_scope() -> None:
     assert "Source-derived sample records and future reviewer-created state remain separate" in (
         normalized_html
     )
+    assert "Sample filtering/search" in html
+    assert "Filters apply only to the local fixture/sample records" in normalized_html
+    assert "Jurisdiction" in html
+    assert "Source family" in html
+    assert "Source type" in html
     assert "Raw SHA-256" in html
     assert "sample-complaint-001" in html
+
+
+def test_source_record_filter_query_uses_sample_records_only() -> None:
+    filters = source_record_filters_from_query(
+        "q=beta&jurisdiction=California&source_family=CCLD+complaint+reports"
+    )
+    filtered_records = filter_sample_source_records(filters)
+
+    assert filters == SourceRecordFilters(
+        query="beta",
+        jurisdiction="California",
+        source_family="CCLD complaint reports",
+    )
+    assert [record.complaint_control_number for record in filtered_records] == ["SAMPLE-CC-002"]
+
+
+def test_source_record_list_route_filters_by_query_parameter() -> None:
+    status, content_type, body = route_response("/source-records?q=beta")
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "value=\"beta\"" in html
+    assert "Showing 1 of 2 fixture/sample records." in html
+    assert "SAMPLE-CC-002" in html
+    assert "SAMPLE-CC-001" not in html
+    assert "They do not query live public-source data or a database" in " ".join(html.split())
+
+
+def test_source_record_list_route_shows_sample_no_match_state() -> None:
+    status, content_type, body = route_response("/source-records?q=not-a-sample-match")
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Showing 0 of 2 fixture/sample records." in html
+    assert "No fixture/sample records match the current filters." in html
+    assert "SAMPLE-CC-001" not in html
+    assert "SAMPLE-CC-002" not in html
 
 
 def test_source_record_detail_route_displays_traceability_fields() -> None:
@@ -153,6 +200,12 @@ def test_source_record_detail_route_displays_traceability_fields() -> None:
     assert "Read-only sample source-derived detail" in html
     assert "Sample source URL" in html
     assert "https://example.invalid/sample-ccld-source-document-001" in html
+    assert "Jurisdiction" in html
+    assert "California" in html
+    assert "Source family" in html
+    assert "CCLD complaint reports" in html
+    assert "Source type" in html
+    assert "HTML portal/detail page" in html
     assert "Raw SHA-256" in html
     assert "Connector name" in html
     assert "Retrieved at" in html
@@ -180,8 +233,15 @@ def test_source_record_list_has_accessible_semantic_structure() -> None:
 
     assert "Local sample source-derived complaint records" in parser.text_for("caption")
     assert "Complaint control number" in parser.text_for("th")
+    assert "Jurisdiction" in parser.text_for("th")
+    assert "Source family" in parser.text_for("th")
+    assert "Source type" in parser.text_for("th")
     assert "Facility name" in parser.text_for("th")
     assert "Raw SHA-256" in parser.text_for("th")
+    assert "Filter sample source records" in parser.text_for("legend")
+    assert "Search sample records" in parser.text_for("label")
+    assert "Jurisdiction" in parser.text_for("label")
+    assert "Source family" in parser.text_for("label")
     assert "These rows are sample-only placeholders" in normalized_main
     assert "They are not imported records" in normalized_main
     assert "not official public-source facts" in normalized_main
@@ -202,6 +262,9 @@ def test_source_record_detail_has_accessible_semantic_structure() -> None:
     assert parser.tags.count("dl") == 1
     assert "Read-only sample source-derived detail" in parser.text_for("main")
     for label in [
+        "Jurisdiction",
+        "Source family",
+        "Source type",
         "Sample source URL",
         "Raw SHA-256",
         "Connector name",

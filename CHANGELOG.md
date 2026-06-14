@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added local-only sample filtering/search to the hosted scaffold
+	`/source-records` shell using query, jurisdiction, and source-family controls
+	over fixture/sample records only, without adding live source loading,
+	database access, import/sync, authentication, reviewer-created state,
+	schema changes, or deployment behavior.
 - Added a public-source data inventory for CCLD report pages, CCLD public CSV
 	download planning, CalHHS/CHHS facilities data planning, uploaded CSV example
 	usage, conceptual multi-source adapter metadata, attorney focus-area planning,

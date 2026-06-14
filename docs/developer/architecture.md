@@ -41,16 +41,19 @@ admin rights, or requiring Node, Docker, QNAP, Azure, AWS, cloud resources, or a
 public URL.
 
 The scaffold also includes a local-only read-only source-derived view shell over
-fixture/sample records. This view is an app-facing placeholder for source record
-list and detail navigation only. It does not read from SQLite or a hosted
-database, run import/sync, load live public-source data, authenticate users, or
-persist reviewer-created state.
+fixture/sample records. This view is an app-facing placeholder for source-record
+list, local sample filtering/search, and detail navigation only. Its sample list
+supports query, jurisdiction, and source-family filtering against in-memory
+fixture/sample records so future source-derived records from multiple
+jurisdictions and source families can use the same list/filter pattern. It does
+not read from SQLite or a hosted database, run import/sync, load live
+public-source data, authenticate users, or persist reviewer-created state.
 
-The current next hosted-view gap is local-only sample filtering/search or a
-similarly narrow fixture-backed source-view expansion. That work must preserve
-sample labeling, read-only behavior, source traceability, semantic structure,
-accessibility validation, and the no-database, no-import, no-authentication,
-no-reviewer-state, no-deployment boundary.
+The current next hosted-view gap is an additional narrow fixture-backed
+source-view expansion after the sample filtering/search shell. That work must
+preserve sample labeling, read-only behavior, source traceability, semantic
+structure, accessibility validation, and the no-database, no-import,
+no-authentication, no-reviewer-state, no-deployment boundary.
 
 The scaffold does not implement authentication, authorization, production
 schema, migrations, import/sync, queues, annotations, corrections, exports,
