@@ -23,9 +23,11 @@ commitment.
   wiring.
 
 Node.js is not required. Docker is not required. QNAP Container Station is not required.
-No local PostgreSQL server is required for scaffold import, smoke, or boundary
-tests. No cloud resources, public URLs, app registrations, cloud databases, DNS
-records, deployment credentials, secrets, or tokens are required.
+No local PostgreSQL server is required for scaffold smoke, boundary tests, or
+seeded artifact parsing tests. A PostgreSQL-compatible database URL is required
+only when a developer explicitly runs Alembic migrations or the seeded corpus
+import command. No cloud resources, public URLs, app registrations, cloud
+databases, DNS records, deployment credentials, secrets, or tokens are required.
 
 ## Verify local prerequisites
 
@@ -41,7 +43,7 @@ development tools used for focused tests, lint, and type checks. It also checks
 that Alembic, SQLAlchemy, and the PostgreSQL driver are importable for the
 scaffolded migration wiring. It reports that Node/npm, Docker, a local
 PostgreSQL server, QNAP, cloud resources, and a public URL are not required for
-scaffold import, smoke, or boundary tests.
+local scaffold smoke, boundary tests, or seeded artifact parsing tests.
 
 The local setup check does not install software, does not require admin rights,
 does not create secrets, and does not contact cloud services.
@@ -147,28 +149,58 @@ import/sync, authenticate users, persist reviewer-created state, or prove source
 completeness, statewide coverage, official facility status, or legal or
 facility-wide conclusions.
 
-## PostgreSQL and Alembic scaffold wiring
+## PostgreSQL and Alembic seeded import wiring
 
-The repository now includes minimal PostgreSQL/Alembic project wiring for future
-hosted tester MVP persistence. The wiring includes:
+The repository now includes minimal PostgreSQL/Alembic project wiring and a
+controlled seeded corpus import path for hosted tester MVP persistence. The
+wiring includes:
 
 - `alembic.ini` with an empty committed database URL setting.
 - `migrations/` as the Alembic script location.
-- `migrations/versions/` with no domain migration revisions yet.
+- `migrations/versions/20260613_0001_seeded_corpus_import.py` with import batch
+  metadata and source-derived record staging tables only.
 - `ccld_complaints.hosted_app.persistence` for no-secret database URL validation
   and ADR-0010 persistence boundary descriptors.
 - `ccld_complaints.hosted_app.schema_api_scaffold` for scaffold-only source-
   derived and reviewer-created state API boundary descriptors.
+- `ccld_complaints.hosted_app.seeded_import` for loading a controlled validated
+  JSON artifact into the seeded import tables.
+- `ccld_complaints.cli.import_hosted_seeded_corpus` as a minimal local command
+  wrapper for operator-initiated test imports.
 
 The migration environment reads the database URL from
 `CCLD_HOSTED_TESTER_DATABASE_URL` only when migrations are explicitly run. Do not
 commit connection strings, usernames, passwords, provider settings, private
 URLs, hosted URLs, tokens, or deployment-specific configuration.
 
-The current scaffold does not require a PostgreSQL server for import, smoke, or
-unit tests. It does not create tables, include domain migration revisions, read
-from PostgreSQL, implement API routes, run imports, authenticate users, persist
-reviewer-created state, or perform reset/reload behavior.
+The seeded import artifact format is intentionally narrow and fixture-backed.
+It carries import batch metadata, validation status, raw hash validation status,
+record counts, warnings, errors, and normalized source-derived records shaped
+like validated pipeline output. The importer stages source-derived records with
+stable identities, original source-derived values, source URL, raw SHA-256,
+raw path when available, connector metadata, retrieval timestamp, and import
+batch linkage.
+
+To run migrations or load a seeded corpus into a local PostgreSQL-compatible
+test database, set `CCLD_HOSTED_TESTER_DATABASE_URL` outside the repository and
+run Alembic before the import command:
+
+```powershell
+alembic upgrade head
+```
+
+```powershell
+python -m ccld_complaints.cli.import_hosted_seeded_corpus tests\fixtures\hosted_seeded_corpus\validated_seeded_corpus.json
+```
+
+Do not commit connection strings, usernames, passwords, provider settings,
+private URLs, hosted URLs, tokens, or deployment-specific configuration.
+
+The current path does not implement database-backed API routes, database-backed
+review views, authentication, authorization, reviewer-created state persistence,
+reviewer workflows, audit persistence, export builders, reset/reload behavior,
+production import automation, hosted live crawling, hosted connector execution,
+QNAP, Azure, AWS, public hosting, public URLs, or production deployment.
 
 ## Run the smoke check
 
@@ -199,6 +231,12 @@ Run the focused hosted schema/API scaffold tests:
 pytest tests/unit/test_hosted_schema_api_scaffold.py tests/unit/test_hosted_app_local_check.py
 ```
 
+Run the focused hosted seeded import tests:
+
+```powershell
+pytest tests/unit/test_hosted_seeded_corpus_import.py
+```
+
 These tests include local-only semantic/accessibility validation for the sample
 source view shell and facility master sample view. They use Python standard-library HTML parsing
 to verify one page-level heading, meaningful page titles, semantic main content,
@@ -210,8 +248,11 @@ fixture-only source coverage indicators, and related fixture/sample source
 context links.
 The schema/API scaffold tests verify safe database configuration validation,
 redacted connection summaries, required ADR-0010 persistence boundaries, source-
-derived versus reviewer-created state API separation, and that no domain
-migration versions or product behavior are enabled.
+derived versus reviewer-created state API separation, and that the only enabled
+domain behavior is the controlled seeded source-derived import path.
+The seeded import tests verify the tiny validated artifact shape, import batch
+identity, source traceability preservation, stable source-derived identity,
+idempotent staging, and no reviewer-created state writes.
 They do not require browser automation, Node.js, Playwright, Selenium, axe,
 Docker, a running PostgreSQL server, cloud services, or public URLs.
 
@@ -243,10 +284,10 @@ The scaffold intentionally does not implement:
 
 - Real authentication.
 - Authorization.
-- Production schema.
-- Domain migration revisions or migrations with domain tables.
+- Production schema beyond the seeded import table group.
+- Reviewer-created state, audit, export, feedback, auth, or reset/reload tables.
 - Database-backed reads or API routes.
-- Import/sync.
+- Production import/sync automation.
 - Queues.
 - Annotations.
 - Corrections.

@@ -21,15 +21,21 @@
 - The local hosted scaffold `/source-records` list uses fixture/sample records
     and local sample filtering/search plus fixture/sample-only source
     traceability summary panels only. It does not load live public-source data,
-    read from SQLite or a hosted database, run import/sync, authenticate users,
-    persist reviewer-created state, deploy publicly, or prove source
+    read from SQLite or a hosted database through API routes, authenticate
+    users, persist reviewer-created state, deploy publicly, or prove source
     completeness.
+- The hosted seeded corpus import path is controlled and local/test-oriented.
+    It stages source-derived records from a validated JSON artifact into the
+    PostgreSQL/Alembic import batch and source-derived table group only. It does
+    not run live crawling, execute connectors, automate production imports,
+    implement reset/reload, authenticate users, create reviewer-created state,
+    expose database-backed API reads, or prove source completeness.
 - The local hosted scaffold `/facilities` list and detail pages use committed
     tiny public-source facility fixtures and manifest placeholder metadata only.
     The facility detail source coverage panel and related source-record links
     are fixture/sample display patterns only.
     They do not read ignored raw CSVs, generated profiling outputs, SQLite, a
-    hosted database, live public-source data, import/sync output, authentication
+    hosted database, live public-source data, import output, authentication
     state, or reviewer-created state, and they do not prove source
     completeness, statewide coverage, official facility status, or legal or
     facility-wide conclusions.

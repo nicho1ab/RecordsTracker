@@ -1,6 +1,8 @@
 # Migration Versions
 
-No hosted tester domain migrations are present yet.
+This directory contains the first hosted tester domain migration for controlled
+seeded corpus import tables only.
 
-Add the first revision here only in a focused schema branch that creates tested
-PostgreSQL table groups for the approved hosted tester MVP layer.
+Add future revisions here only in focused schema branches that create tested
+PostgreSQL table groups for approved hosted tester MVP layers while preserving
+source-derived and reviewer-created state separation.
