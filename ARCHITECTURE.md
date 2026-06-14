@@ -137,6 +137,9 @@ scaffold/API boundary descriptors, a local JSON artifact importer for validated
 pipeline-output-shaped fixtures, list/fetch helpers over staged source-derived
 records, managed OIDC/OAuth2 provider-class configuration validation, actor/
 role/scope/target models, protected read-service guards, and JSON handlers for
+local/test auth provider integration planning that accept only non-secret
+readiness inputs and summarize future provider registration, claim, role/scope,
+and audit attribution expectations without persistence, plus JSON handlers for
 listing staged source-derived records or fetching one staged record by key or
 stable identity, plus read-only queue and detail shell payloads over those route
 responses, plus JSON handlers for listing or fetching scaffold reviewer-created
@@ -166,7 +169,7 @@ original source-derived values, authenticated attribution for scaffold rows,
 audit rows for successful reviewer-created state scaffold writes only, and the
 separation from reviewer-created state, audit rows, and operational metadata.
 It does not implement real login flow, provider registration, sessions, cookies,
-tokens, auth middleware, full reviewer-created workflows, annotations,
+tokens, auth middleware, provider discovery calls, hosted URLs, full reviewer-created workflows, annotations,
 corrections, note or status editing or deletion, export packet decisions, tester feedback, reset/reload execution,
 reviewer-created state archive or clear behavior, full audit coverage, audit UI,
 audit export, hosted live crawling, hosted connector execution, production import automation, production
@@ -304,8 +307,10 @@ retention implementation PRs validate the concrete layer.
   configuration kept out of the repository. Application authorization must still
   enforce role, permission, and project/corpus scope before reviewer-created
   state is enabled. The current scaffold models that local/test auth boundary
-  and protects the source-derived read service, but it does not implement real
-  provider login, sessions, cookies, auth middleware, user tables, or role/scope
+  and protects the source-derived read service. It can also return a local/test
+  non-persistent provider integration readiness plan using non-secret boolean
+  inputs, but it does not implement real provider login, sessions, cookies, auth
+  middleware, provider registration, hosted URLs, user tables, or role/scope
   persistence.
 - Hosted tester MVP implementation may proceed from the ADR-0012 scaffold-first
   sequence into the ADR-0013, ADR-0014, and ADR-0015 product-enabling path. The

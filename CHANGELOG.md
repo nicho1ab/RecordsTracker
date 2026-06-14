@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Added a narrow local/test auth provider integration planning seam for the
+	ADR-0014 managed OpenID Connect/OAuth 2.0 provider class, returning bounded
+	non-secret readiness and configuration-planning steps with user-role-admin
+	authorization and focused no-secret/no-mutation tests, without adding real
+	login, callbacks, token handling, sessions, cookies, provider registration,
+	hosted URLs, user tables, role persistence, schema changes, migrations,
+	external network calls, production auth, deployment, live crawling, or
+	connector execution.
 - Added a narrow local/test reset/reload seeded corpus execution-plan route seam
 	that converts existing dry-run summaries and planning metadata context into an
 	ordered bounded non-destructive action plan, with optional persistence through

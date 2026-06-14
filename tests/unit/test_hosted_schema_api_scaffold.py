@@ -87,11 +87,25 @@ def test_api_boundaries_keep_source_records_and_reviewer_state_separate() -> Non
     boundary_by_id = {boundary.boundary_id: boundary for boundary in api_boundaries}
 
     assert set(boundary_by_id) == {
+        "auth_provider_integration_plan_api",
         "source_derived_records_api",
         "reviewer_created_state_api",
         "audit_events_api",
         "seeded_corpus_reset_reload_operations_api",
     }
+    assert boundary_by_id["auth_provider_integration_plan_api"].domain == "auth"
+    assert "managed OpenID Connect/OAuth 2.0 provider integration" in boundary_by_id[
+        "auth_provider_integration_plan_api"
+    ].intended_future_use
+    assert "non-secret configuration readiness inputs" in boundary_by_id[
+        "auth_provider_integration_plan_api"
+    ].preserves
+    assert "real login flow" in boundary_by_id[
+        "auth_provider_integration_plan_api"
+    ].deferred
+    assert "token exchange or validation" in boundary_by_id[
+        "auth_provider_integration_plan_api"
+    ].deferred
     assert boundary_by_id["source_derived_records_api"].domain == "source-derived"
     assert boundary_by_id["reviewer_created_state_api"].domain == "reviewer-created"
     assert "controlled snapshot imports from validated pipeline output" in boundary_by_id[
@@ -174,6 +188,7 @@ def test_schema_api_scaffold_summary_reflects_seeded_import_without_reviewer_wor
 
     assert scaffold.domain_tables_created is True
     assert scaffold.auth_boundary_scaffold_implemented is True
+    assert scaffold.auth_provider_integration_plan_implemented is True
     assert scaffold.source_derived_read_service_implemented is True
     assert scaffold.source_derived_read_api_routes_implemented is True
     assert scaffold.reviewer_workflow_shell_implemented is True
@@ -196,7 +211,7 @@ def test_schema_api_scaffold_summary_reflects_seeded_import_without_reviewer_wor
     assert scaffold.reviewer_workflows_implemented is False
     assert scaffold.reset_reload_implemented is False
     assert len(scaffold.persistence_boundaries) >= 7
-    assert len(scaffold.api_boundaries) == 4
+    assert len(scaffold.api_boundaries) == 5
 
 
 def test_alembic_scaffold_has_seeded_import_domain_migration_only() -> None:

@@ -10,7 +10,13 @@ from ccld_complaints.hosted_app.persistence import (
     load_hosted_database_config,
 )
 
-ApiDomain = Literal["source-derived", "reviewer-created", "audit", "operational"]
+ApiDomain = Literal[
+    "source-derived",
+    "reviewer-created",
+    "audit",
+    "operational",
+    "auth",
+]
 ImplementationStatus = Literal["scaffold-only"]
 
 
@@ -33,6 +39,7 @@ class HostedSchemaApiScaffold:
     api_boundaries: tuple[HostedApiBoundary, ...]
     domain_tables_created: bool = True
     auth_boundary_scaffold_implemented: bool = True
+    auth_provider_integration_plan_implemented: bool = True
     source_derived_read_service_implemented: bool = True
     source_derived_read_api_routes_implemented: bool = True
     reviewer_workflow_shell_implemented: bool = True
@@ -57,6 +64,35 @@ class HostedSchemaApiScaffold:
 
 
 HOSTED_API_BOUNDARIES = (
+    HostedApiBoundary(
+        boundary_id="auth_provider_integration_plan_api",
+        label="Auth provider integration planning API boundary",
+        domain="auth",
+        implementation_status="scaffold-only",
+        intended_future_use=(
+            "Plan future managed OpenID Connect/OAuth 2.0 provider integration "
+            "through a local/test non-persistent route seam that validates the "
+            "accepted provider class, summarizes auth boundary models, and "
+            "returns bounded non-secret readiness steps without implementing login."
+        ),
+        requires_authenticated_actor_before_write=True,
+        preserves=(
+            "managed provider-class direction from ADR-0014",
+            "existing local/test actor, role, permission, and scope model",
+            "non-secret configuration readiness inputs",
+            "no-persistence planning behavior",
+        ),
+        deferred=(
+            "real login flow",
+            "auth middleware",
+            "callback handling",
+            "token exchange or validation",
+            "sessions or cookies",
+            "provider registration",
+            "user tables or role persistence",
+            "hosted URLs or deployment configuration",
+        ),
+    ),
     HostedApiBoundary(
         boundary_id="source_derived_records_api",
         label="Seeded source-derived records API boundary",

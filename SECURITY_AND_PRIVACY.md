@@ -42,11 +42,15 @@ The current hosted auth boundary scaffold validates only the accepted managed
 OIDC/OAuth2 provider class through `CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS` and
 models authenticated actor identity, account status, role assignments,
 project/corpus scopes, authorization targets, and audit-ready actor context for
-local/test use. It does not implement provider login, token validation, session
-storage, cookies, callback handling, user tables, role tables, provider tenant
-configuration, client secrets, or production auth middleware. Protected service
-helpers must reject unauthenticated, disabled or revoked, role-denied, and
-out-of-scope actors before future reviewer-created workflows are enabled.
+local/test use. A narrow local/test auth provider integration planning seam can
+validate the accepted provider class, require user-role-admin planning access,
+accept only non-secret readiness inputs, and return bounded provider readiness
+steps without persistence. It does not implement provider login, token
+validation, session storage, cookies, callback handling, provider registration,
+hosted URLs, user tables, role tables, provider tenant configuration, client
+secrets, or production auth middleware. Protected service helpers must reject
+unauthenticated, disabled or revoked, role-denied, and out-of-scope actors
+before future reviewer-created workflows are enabled.
 
 The current source-derived HTTP/API read route seam is local/test only and must
 receive an explicit fixture or test actor context from the caller. It reuses the

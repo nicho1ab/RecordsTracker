@@ -22,6 +22,8 @@
   JSON artifact importer, a local/test database-backed read service over staged
   source-derived records, a local/test auth boundary scaffold for actor, role,
   account-status, scope, target, and audit-context checks, a narrow local/test
+  auth provider integration planning seam that validates the ADR-0014 provider
+  class and returns non-secret readiness steps without persistence, a narrow local/test
   authenticated source-derived HTTP/API read route seam, a narrow local/test
   authenticated reviewer workflow shell over that route seam with read-only
   queue/detail payloads, associated reviewer-created state read output, a
@@ -79,8 +81,8 @@
   test database, actor, and scope context.
   Current auth
   behavior is limited to local/test service, route, workflow-shell,
-  reviewer-created state, audit, dry-run, and planning-metadata guards over
-  fixture actor contexts.
+  reviewer-created state, audit, dry-run, auth provider planning, and
+  planning-metadata guards over fixture actor contexts.
 - Datasette role: Datasette remains retained for validation, inspection,
   debugging, local exploration, export support, and transition comparison. It is
   not the governed primary future reviewer UX.
@@ -193,12 +195,14 @@
   migration tooling decision. Minimal PostgreSQL/Alembic scaffold wiring,
   schema/API boundary descriptors, a controlled seeded corpus import path,
   database-backed source-derived read service, local/test auth boundary
-  scaffold, local/test source-derived read route seam, and first local/test
+  scaffold, local/test auth provider integration planning seam, local/test
+  source-derived read route seam, and first local/test
   read-only authenticated tester workflow shell, reviewer-created state
   persistence scaffold, narrow audit event scaffold, local/test reset/reload
   dry-run planning seam, opt-in reset/reload operational metadata scaffold, and
   read-only planning metadata route seam are now in place. Next work should
-  move to real provider integration, later reset/reload execution behavior
+  move to real provider implementation beyond this non-persistent readiness plan,
+  later reset/reload execution behavior
   beyond this non-destructive execution-plan seam,
   export/feedback persistence, fuller audit coverage, or
   stateful reviewer-created workflow layers, not repeat those completed items.
@@ -258,10 +262,12 @@
   ADR-0014 managed OpenID Connect/OAuth 2.0 provider class, remain explicitly
   invited or provisioned, role-scoped, project/corpus-scoped, revocable,
   reviewable, and auditable where feasible before tester workflows expose
-  reviewer-created state. The current scaffold validates the provider class and
+  reviewer-created state. The current scaffold validates the provider class,
+  produces a local/test non-secret provider integration readiness plan, and
   enforces local/test role, scope, and account-status checks for service seams;
-  real provider login, token validation, session handling, middleware, and
-  persistent role/scope assignments remain deferred.
+  real provider login, token validation, session handling, middleware, provider
+  registration, hosted URLs, and persistent role/scope assignments remain
+  deferred.
 - Future deployment/hosting decision: QNAP, Azure, AWS, public URL, cloud
   deployment, DNS, app registration, cloud database, and deployment credential
   choices remain deferred and must not be implied by local scaffold tooling.

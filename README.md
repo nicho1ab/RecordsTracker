@@ -147,7 +147,9 @@ public-record review notes.
    shell with a controlled seeded corpus import path for validated local
    pipeline-output artifacts and a local/test database-backed read service for
    staged source-derived records. It also includes a local/test auth boundary
-   scaffold for actor, role, scope, and account-status guards plus a narrow
+   scaffold for actor, role, scope, and account-status guards, a narrow
+   local/test auth provider integration planning route for non-secret managed
+   OpenID Connect/OAuth 2.0 readiness planning, plus a narrow
    local/test authenticated source-derived read API route seam and reviewer
    workflow shell with read-only queue/detail payloads, associated reviewer-
    created state read route output, a compact summary derived from that output
@@ -167,7 +169,8 @@ public-record review notes.
    that turns those summaries into ordered bounded non-destructive action steps,
    plus a narrow local/test read-only route seam
    for listing or fetching those persisted planning records. It does not
-   implement real login flow, auth middleware, full reviewer workflows,
+   implement real login flow, auth middleware, provider registration, hosted
+   URLs, user tables, role persistence, full reviewer workflows,
    annotations, corrections, review status UI, production import automation,
    full audit coverage, audit UI, audit export, reset/reload execution, exports,
    deployment, QNAP, Azure, or AWS.
