@@ -6,7 +6,7 @@ import json
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 APP_NAME = "CCLD Hosted Tester MVP Scaffold"
 SCAFFOLD_NOTICE = "Scaffold only: not a functioning reviewer workflow yet."
@@ -15,50 +15,121 @@ SAMPLE_DATA_NOTICE = "Local sample source-derived data only; no live public-sour
 
 @dataclass(frozen=True)
 class SampleSourceRecord:
-  record_id: str
-  facility_name: str
-  facility_number: str
-  complaint_id: str
-  complaint_control_number: str
-  finding: str
-  source_url: str
-  raw_sha256: str
-  connector_name: str
-  retrieved_at: str
-  report_index: str
-  extraction_warning: str
+    record_id: str
+    jurisdiction: str
+    source_family: str
+    source_type: str
+    facility_name: str
+    facility_number: str
+    complaint_id: str
+    complaint_control_number: str
+    finding: str
+    source_url: str
+    raw_sha256: str
+    connector_name: str
+    retrieved_at: str
+    report_index: str
+    extraction_warning: str
+
+
+@dataclass(frozen=True)
+class SourceRecordFilters:
+    query: str = ""
+    jurisdiction: str = ""
+    source_family: str = ""
 
 
 SAMPLE_SOURCE_RECORDS = [
-  SampleSourceRecord(
-    record_id="sample-complaint-001",
-    facility_name="Sample Facility Alpha",
-    facility_number="000000001",
-    complaint_id="sample-complaint-001",
-    complaint_control_number="SAMPLE-CC-001",
-    finding="Unknown",
-    source_url="https://example.invalid/sample-ccld-source-document-001",
-    raw_sha256="0" * 64,
-    connector_name="sample-ccld-fixture",
-    retrieved_at="2026-01-01T00:00:00+00:00",
-    report_index="sample-1",
-    extraction_warning="Sample-only value; not extracted from live public-source data.",
-  ),
-  SampleSourceRecord(
-    record_id="sample-complaint-002",
-    facility_name="Sample Facility Beta",
-    facility_number="000000002",
-    complaint_id="sample-complaint-002",
-    complaint_control_number="SAMPLE-CC-002",
-    finding="Unknown",
-    source_url="https://example.invalid/sample-ccld-source-document-002",
-    raw_sha256="1" * 64,
-    connector_name="sample-ccld-fixture",
-    retrieved_at="2026-01-02T00:00:00+00:00",
-    report_index="sample-2",
-    extraction_warning="Sample-only value; not extracted from live public-source data.",
-  ),
+    SampleSourceRecord(
+        record_id="sample-complaint-001",
+        jurisdiction="California",
+        source_family="CCLD complaint reports",
+        source_type="HTML portal/detail page",
+        facility_name="Sample Facility Alpha",
+        facility_number="000000001",
+        complaint_id="sample-complaint-001",
+        complaint_control_number="SAMPLE-CC-001",
+        finding="Unknown",
+        source_url="https://example.invalid/sample-ccld-source-document-001",
+        raw_sha256="0" * 64,
+        connector_name="sample-ccld-fixture",
+        retrieved_at="2026-01-01T00:00:00+00:00",
+        report_index="sample-1",
+        extraction_warning="Sample-only value; not extracted from live public-source data.",
+    ),
+    SampleSourceRecord(
+        record_id="sample-complaint-002",
+        jurisdiction="California",
+        source_family="CCLD complaint reports",
+        source_type="HTML portal/detail page",
+        facility_name="Sample Facility Beta",
+        facility_number="000000002",
+        complaint_id="sample-complaint-002",
+        complaint_control_number="SAMPLE-CC-002",
+        finding="Unknown",
+        source_url="https://example.invalid/sample-ccld-source-document-002",
+        raw_sha256="1" * 64,
+        connector_name="sample-ccld-fixture",
+        retrieved_at="2026-01-02T00:00:00+00:00",
+        report_index="sample-2",
+        extraction_warning="Sample-only value; not extracted from live public-source data.",
+    ),
 ]
+
+
+def _first_query_value(query_values: dict[str, list[str]], key: str) -> str:
+    values = query_values.get(key, [])
+    if not values:
+        return ""
+    return values[0].strip()
+
+
+def source_record_filters_from_query(query: str) -> SourceRecordFilters:
+    query_values = parse_qs(query, keep_blank_values=True)
+    return SourceRecordFilters(
+        query=_first_query_value(query_values, "q"),
+        jurisdiction=_first_query_value(query_values, "jurisdiction"),
+        source_family=_first_query_value(query_values, "source_family"),
+    )
+
+
+def _normalized_filter_text(value: str) -> str:
+    return " ".join(value.casefold().split())
+
+
+def _record_search_text(record: SampleSourceRecord) -> str:
+    return _normalized_filter_text(
+        " ".join(
+            [
+                record.record_id,
+                record.jurisdiction,
+                record.source_family,
+                record.source_type,
+                record.facility_name,
+                record.facility_number,
+                record.complaint_id,
+                record.complaint_control_number,
+                record.finding,
+                record.connector_name,
+                record.report_index,
+            ]
+        )
+    )
+
+
+def filter_sample_source_records(filters: SourceRecordFilters) -> list[SampleSourceRecord]:
+    query = _normalized_filter_text(filters.query)
+    return [
+        record
+        for record in SAMPLE_SOURCE_RECORDS
+        if (not query or query in _record_search_text(record))
+        and (not filters.jurisdiction or record.jurisdiction == filters.jurisdiction)
+        and (not filters.source_family or record.source_family == filters.source_family)
+    ]
+
+
+def _unique_record_values(field_name: str) -> list[str]:
+    return sorted({str(getattr(record, field_name)) for record in SAMPLE_SOURCE_RECORDS})
 
 
 def format_host(host: object) -> str:
@@ -83,6 +154,54 @@ def get_sample_source_record(record_id: str) -> SampleSourceRecord | None:
         if record.record_id == record_id:
             return record
     return None
+
+
+def _render_filter_option(value: str, selected_value: str) -> str:
+    selected = ' selected="selected"' if value == selected_value else ""
+    return f'<option value="{html.escape(value)}"{selected}>{html.escape(value)}</option>'
+
+
+def render_source_record_filters(filters: SourceRecordFilters) -> str:
+    jurisdiction_options = "\n".join(
+        _render_filter_option(value, filters.jurisdiction)
+        for value in _unique_record_values("jurisdiction")
+    )
+    source_family_options = "\n".join(
+        _render_filter_option(value, filters.source_family)
+        for value in _unique_record_values("source_family")
+    )
+    return f"""<section aria-labelledby="filter-heading">
+      <h2 id="filter-heading">Sample filtering/search</h2>
+      <p>Filters apply only to the local fixture/sample records shown on this
+      page. They do not query live public-source data or a database.</p>
+      <form action="/source-records" method="get">
+        <fieldset>
+          <legend>Filter sample source records</legend>
+          <p>
+            <label for="q">Search sample records</label>
+            <input id="q" name="q" type="search" value="{html.escape(filters.query)}">
+          </p>
+          <p>
+            <label for="jurisdiction">Jurisdiction</label>
+            <select id="jurisdiction" name="jurisdiction">
+              <option value="">All jurisdictions</option>
+{jurisdiction_options}
+            </select>
+          </p>
+          <p>
+            <label for="source_family">Source family</label>
+            <select id="source_family" name="source_family">
+              <option value="">All source families</option>
+{source_family_options}
+            </select>
+          </p>
+          <p>
+            <button type="submit">Apply filters</button>
+            <a href="/source-records">Clear filters</a>
+          </p>
+        </fieldset>
+      </form>
+    </section>"""
 
 
 def render_scope_notice() -> str:
@@ -145,18 +264,30 @@ def render_app_shell() -> str:
 """
 
 
-def render_source_record_list() -> str:
+def render_source_record_list(filters: SourceRecordFilters | None = None) -> str:
+    active_filters = filters or SourceRecordFilters()
+    filtered_records = filter_sample_source_records(active_filters)
     rows = "\n".join(
         f"""        <tr>
           <td><a href="/source-records/{html.escape(record.record_id)}">
             {html.escape(record.complaint_control_number)}
           </a></td>
+          <td>{html.escape(record.jurisdiction)}</td>
+          <td>{html.escape(record.source_family)}</td>
+          <td>{html.escape(record.source_type)}</td>
           <td>{html.escape(record.facility_name)}</td>
           <td>{html.escape(record.facility_number)}</td>
           <td>{html.escape(record.finding)}</td>
           <td>{html.escape(record.raw_sha256)}</td>
         </tr>"""
-        for record in SAMPLE_SOURCE_RECORDS
+        for record in filtered_records
+    )
+    if not rows:
+        rows = """        <tr>
+          <td colspan="8">No fixture/sample records match the current filters.</td>
+        </tr>"""
+    filter_count_text = (
+        f"Showing {len(filtered_records)} of {len(SAMPLE_SOURCE_RECORDS)} fixture/sample records."
     )
     return f"""<!doctype html>
 <html lang="en">
@@ -179,16 +310,21 @@ def render_source_record_list() -> str:
   </nav>
   <main>
     {render_scope_notice()}
+    {render_source_record_filters(active_filters)}
     <section aria-labelledby="records-heading">
       <h2 id="records-heading">Fixture/sample source record list</h2>
       <p>These rows are sample-only placeholders for a future read-only hosted
       source-derived view. They are not imported records and are not official
       public-source facts.</p>
+      <p>{html.escape(filter_count_text)}</p>
       <table>
         <caption>Local sample source-derived complaint records</caption>
         <thead>
           <tr>
             <th scope="col">Complaint control number</th>
+            <th scope="col">Jurisdiction</th>
+            <th scope="col">Source family</th>
+            <th scope="col">Source type</th>
             <th scope="col">Facility name</th>
             <th scope="col">Facility number</th>
             <th scope="col">Finding</th>
@@ -234,6 +370,12 @@ def render_source_record_detail(record: SampleSourceRecord) -> str:
       <dl>
         <dt>Facility name</dt>
         <dd>{html.escape(record.facility_name)}</dd>
+        <dt>Jurisdiction</dt>
+        <dd>{html.escape(record.jurisdiction)}</dd>
+        <dt>Source family</dt>
+        <dd>{html.escape(record.source_family)}</dd>
+        <dt>Source type</dt>
+        <dd>{html.escape(record.source_type)}</dd>
         <dt>Facility number</dt>
         <dd>{html.escape(record.facility_number)}</dd>
         <dt>Complaint ID</dt>
@@ -261,11 +403,14 @@ def render_source_record_detail(record: SampleSourceRecord) -> str:
 
 
 def route_response(path: str) -> tuple[int, str, bytes]:
-    parsed_path = urlparse(path).path
+    parsed_url = urlparse(path)
+    parsed_path = parsed_url.path
     if parsed_path == "/":
         return 200, "text/html; charset=utf-8", render_app_shell().encode("utf-8")
     if parsed_path == "/source-records":
-        return 200, "text/html; charset=utf-8", render_source_record_list().encode("utf-8")
+        filters = source_record_filters_from_query(parsed_url.query)
+        body = render_source_record_list(filters).encode("utf-8")
+        return 200, "text/html; charset=utf-8", body
     if parsed_path.startswith("/source-records/"):
         record_id = parsed_path.removeprefix("/source-records/")
         record = get_sample_source_record(record_id)

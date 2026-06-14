@@ -86,10 +86,10 @@ reset/reload, hosted deployment, or extraction behavior.
 The current hosted scaffold state is local-only and sample-only. It includes a
 Python standard-library app shell, health and smoke validation, local setup
 checks, and a read-only `/source-records` list/detail shell over fixture/sample
-records with semantic/accessibility validation. It does not read from SQLite or
-a hosted database, load live public-source data, run import/sync, authenticate
-users, persist reviewer-created state, deploy to QNAP/Azure/AWS, or expose a
-public URL.
+records with local sample filtering/search and semantic/accessibility
+validation. It does not read from SQLite or a hosted database, load live
+public-source data, run import/sync, authenticate users, persist
+reviewer-created state, deploy to QNAP/Azure/AWS, or expose a public URL.
 
 ## Components
 

@@ -137,8 +137,9 @@ public-record review notes.
    and development-tool prerequisites without installing software or requiring
    admin rights.
    The local `/source-records` route shows fixture/sample source-derived records
-   only, with sample traceability-style fields and no live data, database,
-   import/sync, authentication, or reviewer-created state persistence.
+   only, with local sample filtering/search controls, sample
+   traceability-style fields, and no live data, database, import/sync,
+   authentication, or reviewer-created state persistence.
 
 ## Validation
 
