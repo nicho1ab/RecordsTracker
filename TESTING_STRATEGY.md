@@ -53,6 +53,13 @@ audit rows, and operational metadata. When the workflow shell derives a state
 summary from that associated route output, focused tests must cover empty state,
 one row, multiple rows, deterministic summary fields, permission separation,
 and no mutation without adding a separate state read path.
+Reviewer workflow shell note action tests must prove the selected source-derived
+detail context is resolved before write delegation, conflicting caller-provided
+source bindings are ignored, reviewer-state write permission is required,
+invalid or missing source records and note payloads do not mutate reviewer-
+created state or audit rows, successful writes create audit rows, source-derived
+rows are not mutated, and existing read routes plus workflow detail output show
+the note after write.
 
 ### Fixture hash and line-ending tests
 

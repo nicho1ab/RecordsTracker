@@ -23,9 +23,11 @@
   source-derived records, a local/test auth boundary scaffold for actor, role,
   account-status, scope, target, and audit-context checks, a narrow local/test
   authenticated source-derived HTTP/API read route seam, a narrow local/test
-  authenticated read-only reviewer workflow shell over that route seam with
-  associated reviewer-created state read output and a compact derived summary on
-  selected detail responses, a narrow
+  authenticated reviewer workflow shell over that route seam with read-only
+  queue/detail payloads, associated reviewer-created state read output, a
+  compact derived summary on selected detail responses, and a narrow local/test
+  note action that resolves the selected source-derived detail context before
+  delegating to the existing reviewer note creation route, a narrow
   local/test reviewer-created state persistence scaffold table/service with
   authenticated actor attribution and stable source-derived record references,
   a narrow local/test authenticated reviewer-created state read route seam over
@@ -62,9 +64,10 @@
   login, auth middleware, persistent authorization storage, full reviewer-
   created workflows, queues, annotations, corrections, exports, full audit trail, reset/reload
   execution, deployment, QNAP, Azure, AWS, or public URL behavior. Current API behavior is
-  limited to local/test source-derived read handlers, read-only reviewer
-  workflow shell handlers that can compose associated reviewer-created state
-  read output and a compact derived summary for selected details, reviewer-created state scaffold service helpers,
+  limited to local/test source-derived read handlers, reviewer workflow shell
+  handlers that can compose associated reviewer-created state read output and a
+  compact derived summary for selected details plus a narrow note action over
+  the selected detail context, reviewer-created state scaffold service helpers,
   reviewer-created state read handlers with schema-backed filters and bounded
   search, reset/reload dry-run handlers, and
   explicit reset/reload planning metadata helpers and read handlers that require
@@ -214,9 +217,11 @@
   access that preserves import batch context and original source-derived values.
   They now have a narrow local/test authenticated HTTP/API read route seam for
   JSON list and fetch access over that read service, plus a narrow local/test
-  authenticated read-only reviewer workflow shell for queue and detail payloads
-  over that route seam with associated reviewer-created state read output on
-  selected detail responses and a compact derived summary, plus a narrow local/test reviewer-created state
+  authenticated reviewer workflow shell for read-only queue/detail payloads over
+  that route seam with associated reviewer-created state read output on selected
+  detail responses, a compact derived summary, and a note action that delegates
+  to the existing reviewer note route after resolving the selected source record,
+  plus a narrow local/test reviewer-created state
   scaffold that can write and read attributed placeholder rows separately from
   source-derived records, plus a narrow local/test audit event scaffold for
   successful reviewer-created state scaffold writes only, plus a narrow

@@ -5,7 +5,8 @@
 This document explains how to run the first local hosted tester MVP scaffold.
 The scaffold is a runnable placeholder app shell and smoke route only. It is not
 a functioning reviewer workflow yet; the current reviewer workflow shell is a
-local/test read-only route seam, not a stateful hosted tester workflow.
+local/test seam with read-only queue/detail payloads and a narrow reviewer note
+action, not a stateful hosted tester workflow.
 
 The scaffold is local-first and must run on a Windows development workstation
 before any QNAP, Azure, AWS, public hosting, or public URL work is attempted.
@@ -191,9 +192,11 @@ wiring includes:
   authenticated JSON list, fetch-by-key, and fetch-by-stable-identity route
   handlers over staged source-derived records.
 - `ccld_complaints.hosted_app.reviewer_workflow_shell` for a local/test
-  authenticated read-only review queue and detail shell over source-derived
-  route responses, with selected detail payloads able to compose associated
-  reviewer-created state read route output.
+  authenticated review queue and detail shell over source-derived route
+  responses, with read-only selected detail payloads able to compose associated
+  reviewer-created state read route output and a narrow note action that
+  delegates to the existing reviewer note route after resolving the selected
+  source record.
 - `ccld_complaints.hosted_app.reviewer_created_state` for local/test
   authenticated reviewer-created state scaffold writes and scoped reads without
   mutating staged source-derived records.
@@ -261,21 +264,24 @@ production auth middleware, token parsing, cookies, sessions, reviewer-created
 state, or a production API framework.
 
 The reviewer workflow shell is intentionally small. It exposes local/test JSON
-handlers for `/api/reviewer/source-derived-review/queue` and
-`/api/reviewer/source-derived-review/detail` only when the caller supplies an
-explicit workflow shell context backed by the source-derived route context and
-the reviewer-created state read route context. The shell consumes the
+handlers for `/api/reviewer/source-derived-review/queue`,
+`/api/reviewer/source-derived-review/detail`, and
+`/api/reviewer/source-derived-review/detail/reviewer-note` only when the caller
+supplies an explicit workflow shell context backed by the source-derived route
+context and the reviewer-created state route context. The shell consumes the
 authenticated source-derived route seam, returns read-only queue and detail
 payloads with source-derived record identity, original values, source
 traceability, source document metadata, and import batch context, and can
-compose associated reviewer-created state read route output plus a compact
-state summary derived from that output for the selected source record on detail
-responses. Source-derived reads and associated
-reviewer-created state reads each enforce their own authenticated, active,
-role/scope-allowed access. The shell marks reviewer-created state persistence
-and reviewer actions as deferred. It does not create queue state, review status,
-annotations, corrections, tester feedback, audit events, export packet state,
-sessions, cookies, production auth middleware, or a production API framework.
+compose associated reviewer-created state read route output plus a compact state
+summary derived from that output for the selected source record on detail
+responses. The note action first resolves the selected source-derived detail
+record, forces the reviewer note source-record binding from that resolved
+record, and delegates to the existing reviewer note creation route and audit
+path. Source-derived reads, associated reviewer-created state reads, and note
+writes each enforce their own authenticated, active, role/scope-allowed access.
+The shell does not create queue state, review status, full annotations,
+corrections, tester feedback, export packet state, sessions, cookies,
+production auth middleware, or a production API framework.
 
 The reviewer-created state persistence scaffold is intentionally small. It can
 create and read only local/test review-item-state scaffold rows after the caller
@@ -512,7 +518,11 @@ missing-detail behavior, explicit workflow context requirements, source
 traceability preservation, import batch context, source-derived read versus
 reviewer-state read permission separation, non-secret associated state payloads,
 and unauthenticated, disabled or revoked, role-denied, out-of-scope, and
-no-mutation behavior without reviewer-created state persistence.
+read no-mutation behavior. They also verify reviewer note creation through the
+workflow shell action, forced source-record binding from the selected detail
+context, invalid source or note payload rejection, audit creation on success,
+no audit/state mutation on failure, read-after-write visibility, and no source-
+derived mutation.
 The reviewer-created state scaffold tests verify separate storage from staged
 source-derived records, source-derived records are not modified, authenticated
 actor attribution is captured, reviewer-state write permission is required,
@@ -600,9 +610,9 @@ The scaffold intentionally does not implement:
   export, feedback, auth, or
   reset/reload execution tables beyond the narrow planning metadata scaffold.
 - HTTP API routes outside the narrow local/test source-derived read route seam,
-  read-only reviewer workflow shell, reviewer-created state read route seam,
-  reset/reload dry-run seam, audit history read route seam, and reset/reload
-  planning metadata read route seam.
+  reviewer workflow shell queue/detail/note-action seam, reviewer-created state
+  read route seam, reset/reload dry-run seam, audit history read route seam, and
+  reset/reload planning metadata read route seam.
 - Stateful database-backed reviewer views or workflows.
 - Production import/sync automation.
 - Queues.
