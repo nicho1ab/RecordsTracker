@@ -162,6 +162,11 @@ Validate documentation structure and run manual or automated checks for user-fac
 - User-visible behavior changes include user documentation updates.
 - Implementation work uses focused validation first, then standard PR validation before opening a PR.
 - PR bodies include focused validation, why those focused checks matched the change, full local validation results, required remote check results, and any tests intentionally not run with the reason.
+- Readiness, hardening, planning, and checklist PRs must also state the
+	user-facing CCLD MVP capability, tester productivity improvement, or concrete
+	MVP-blocking risk that justifies doing the work now. If that product-benefit
+	case is weak, keep the item tracked as deferred readiness instead of making it
+	the next branch.
 
 ## Validation tiers
 

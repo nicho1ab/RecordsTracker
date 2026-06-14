@@ -149,6 +149,11 @@ unavailable, it shows the explicit live-fetch command that must be run outside
 the hosted UI. After that outside-browser CCLD pipeline output is validated, a
 developer/tester can build the local/test hosted seeded-corpus JSON artifact with:
 
+Deferred production-readiness work such as auth provider integration, audit UI,
+exports, reset/reload execution, deployment, and persisted feedback remains
+tracked in project docs, but it is sequenced behind the local/test CCLD MVP
+workflow unless it unlocks tester value or resolves a concrete MVP-blocking risk.
+
 ```powershell
 .\scripts\build-hosted-ccld-artifact.ps1 -DbPath data\processed\ccld.sqlite -FacilityNumber 157806098 -Overwrite
 ```

@@ -185,7 +185,12 @@ The next safe hosted-view increment should remain similarly narrow and
 fixture-backed, preserving fixture/sample labels, explicit local/test actor
 context, source-derived versus reviewer-created state separation, semantic
 structure, accessibility validation, read/write permission separation, and the
-no-real-login, no-full-reviewer-created-workflow, no-deployment boundary.
+no-real-login, no-full-reviewer-created-workflow, no-deployment boundary. Apply
+the deferred-readiness/product-benefit gate in `GOVERNANCE_INVENTORY.md` before
+sequencing source-verification planning, auth/provider readiness, audit/export,
+reset/reload execution, deployment, database-backed lookup, persisted feedback,
+or broader reviewer workflow work: the branch should unlock user-facing CCLD MVP
+value or address a concrete MVP-blocking risk.
 
 ## Non-negotiable boundaries
 
