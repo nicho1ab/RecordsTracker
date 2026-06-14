@@ -373,6 +373,13 @@ the governed primary future review experience.
 	existing explicit live-fetch command, and does not mutate hosted scaffold
 	tables, run live crawling, execute connectors, import data, add schemas or
 	migrations, add production auth, deploy, or add a frontend build pipeline.
+- Added a narrow local/test CCLD-only validated import/reload path behind that
+	request page, loading committed hosted seeded-corpus output into existing
+	hosted source-derived records with idempotent keys and source traceability,
+	while reporting new, refreshed, duplicate-avoided, skipped, and deferred rows
+	without browser live crawling, generic connector execution, schema changes,
+	reviewer-created state mutation, audit writes, non-CCLD sources, deployment,
+	or a frontend build pipeline.
 - Added a minimal local/test audit event persistence scaffold with a separate
 	PostgreSQL/Alembic table and service boundary for successful reviewer-created
 	state scaffold writes only, preserving source-derived records and reviewer-
@@ -484,12 +491,11 @@ has been outgrown as the primary future review experience and should be extended
 only where it remains useful for validation, inspection, debugging, local
 exploration, or export support.
 
-1. Add a safe CCLD-only import/reload path from validated pipeline output into
-	hosted source-derived records so the `/ccld/records/request` page can prepare
-	or refresh records without live crawling from browser requests.
-2. Add hosted reviewer UI support for reviewing the CCLD request result set as a
+1. Add hosted reviewer UI support for reviewing the CCLD request result set as a
 	facility/date-scoped queue while preserving source traceability and reviewer-
 	created state separation.
+2. Add a controlled way to produce hosted seeded-corpus JSON artifacts from
+	validated CCLD SQLite pipeline output outside browser requests.
 3. Implement real provider integration against the managed OpenID Connect/OAuth
 	2.0 provider class after the CCLD request flow, local/test auth boundary,
 	callback/session, and configuration decisions are clear.

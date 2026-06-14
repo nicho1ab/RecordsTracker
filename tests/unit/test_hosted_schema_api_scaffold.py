@@ -211,6 +211,8 @@ def test_schema_api_scaffold_summary_reflects_seeded_import_without_reviewer_wor
     assert scaffold.reviewer_workflow_shell_note_action_implemented is True
     assert scaffold.reviewer_workflow_shell_status_action_implemented is True
     assert scaffold.reviewer_ui_shell_implemented is True
+    assert scaffold.ccld_record_request_ui_shell_implemented is True
+    assert scaffold.ccld_validated_import_reload_implemented is True
     assert scaffold.reset_reload_dry_run_implemented is True
     assert scaffold.reset_reload_execution_plan_implemented is True
     assert scaffold.reset_reload_operational_metadata_scaffold_implemented is True

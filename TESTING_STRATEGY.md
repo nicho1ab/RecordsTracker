@@ -100,12 +100,18 @@ Hosted CCLD record request UI tests must prove the browser-accessible local/test
 request page accepts only CCLD digit facility/license numbers plus optional
 valid date ranges, returns accessible validation guidance for missing or invalid
 requests, reads matching rows only from the seeded source-derived route seam,
-links matching seeded complaint records into the hosted reviewer UI, shows a
-clear no-match and external pipeline plan when seeded records do not match, does
-not run live crawling, execute connectors, import data, or mutate source-derived,
-reviewer-created, audit, import, or operational metadata rows, and does not
-expose secrets, private URLs, provider claims, credentials, or unnecessary
-sensitive narrative content.
+can load or refresh matching CCLD rows from local validated hosted seeded-corpus
+output through the existing source-derived import path, links matching seeded
+complaint records into the hosted reviewer UI, shows a clear no-match and
+external pipeline plan when local validated records do not match, does not run
+live crawling, execute connectors, mutate reviewer-created state, create audit
+rows, or mutate operational metadata rows, and does not expose secrets, private
+URLs, provider claims, credentials, or unnecessary sensitive narrative content.
+Hosted CCLD import/reload tests must prove local validated artifacts are
+validated before load, source URL/raw SHA-256/raw path/connector traceability is
+preserved, existing source-derived keys are refreshed without duplicates,
+facility/date no-match requests defer without writes, and browser request paths
+do not invoke live public web requests.
 
 ### Fixture hash and line-ending tests
 
