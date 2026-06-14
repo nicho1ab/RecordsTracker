@@ -34,11 +34,16 @@
     source-derived reads when tests provide an explicit route context, and a
     narrow local/test read-only reviewer workflow shell can return queue and
     detail payloads over that route seam when tests provide an explicit workflow
+    context. A local/test reset/reload dry-run seam can report seeded import
+    batch metadata, source-derived record counts, future reviewer-created state
+    handling modes, permissions, validation requirements, audit requirements,
+    and deferred destructive actions when tests provide an explicit dry-run
     context. The path does not run live crawling, execute connectors, automate
-    production imports, implement reset/reload, authenticate browser users,
-    validate real provider tokens, create reviewer-created state, expose
-    stateful database-backed reviewer views or production API framework
-    behavior, or prove source completeness.
+    production imports, execute reset/reload, delete or overwrite source-derived
+    records, archive or clear reviewer-created state, persist audit events,
+    authenticate browser users, validate real provider tokens, create
+    reviewer-created state, expose stateful database-backed reviewer views or
+    production API framework behavior, or prove source completeness.
 - The local hosted scaffold `/facilities` list and detail pages use committed
     tiny public-source facility fixtures and manifest placeholder metadata only.
     The facility detail source coverage panel and related source-record links

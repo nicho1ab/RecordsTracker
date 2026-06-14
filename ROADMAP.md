@@ -278,6 +278,13 @@ the governed primary future review experience.
 	corrections, review status, audit persistence, exports, reset/reload,
 	production automation, hosted live crawling, connector execution, deployment,
 	or schema changes.
+- Added a local/test authenticated seeded corpus reset/reload dry-run seam that
+	reports existing seeded import batch metadata, source-derived record counts by
+	entity, future reviewer-created state handling modes, required permissions,
+	validation requirements, audit requirements, and deferred destructive actions
+	without deleting, truncating, overwriting, archiving, importing, reloading,
+	persisting audit events, running hosted live crawling, executing connectors,
+	deploying, or changing schemas.
 - Added the first local hosted tester MVP scaffold with a Python standard-library
 	app shell, health route, smoke check, focused tests, and local Windows
 	PowerShell run documentation without adding cloud, QNAP, Docker, schema,
@@ -335,9 +342,10 @@ the governed primary future review experience.
 - Use the accepted audit, export, reset/reload, tester retention, auth
 	provider-class, role, scope, audit-identity, PostgreSQL, Alembic migration,
 	controlled seeded import, database-backed source-derived read, auth boundary
-	scaffold, local/test source-derived read route seam, and first read-only
-	authenticated tester workflow shell to move the next hosted tester MVP
-	branches toward real provider integration, reset/reload planning, and
+	scaffold, local/test source-derived read route seam, first read-only
+	authenticated tester workflow shell, and reset/reload dry-run planning seam to
+	move the next hosted tester MVP branches toward real provider integration,
+	reset/reload execution planning with persisted operational metadata, and
 	stateful reviewer-created workflow layers.
 - Preserve Datasette, SQLite views, and review-bundle exports where they support
 	validation, inspection, debugging, local exploration, and export workflows.
@@ -363,9 +371,9 @@ exploration, or export support.
 1. Implement real provider integration against the managed OpenID Connect/OAuth
 	2.0 provider class after the local/test auth boundary, callback/session, and
 	configuration decisions are clear.
-2. Implement reset/reload planning and later reset/reload behavior for the
-	seeded corpus only after reviewer-created state preservation, audit, and
-	permission boundaries are tested.
+2. Expand reset/reload planning into later reset/reload behavior for the seeded
+	corpus only after reviewer-created state preservation, audit persistence,
+	operational metadata, and permission boundaries are tested.
 3. Implement reviewer-created state persistence, audit event persistence,
 	export packet state, tester feedback, and reset/reload metadata in focused
 	PostgreSQL/Alembic-backed branches.

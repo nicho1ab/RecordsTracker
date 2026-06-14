@@ -42,6 +42,13 @@ At minimum, complaints, allegations, events, and extraction audit rows should
 trace back to a source document with source URL, raw SHA-256 hash, connector
 metadata, and retrieval timestamp.
 
+Hosted reset/reload planning tests must prove the implemented layer is
+non-mutating. Dry-run tests should check affected seeded import batches,
+source-derived record counts, reviewer-created state handling options,
+permission failures, invalid requests, and before/after table counts without
+executing imports, reloads, archives, clears, truncates, deletes, overwrites, or
+audit-event persistence.
+
 ## Regression rule
 
 When fixing extraction behavior, add the failing case as a fixture before changing parser code.

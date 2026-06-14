@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added a local/test authenticated seeded corpus reset/reload dry-run seam that
+	reports existing seeded import batches, source-derived record counts by entity,
+	future reviewer-created state handling modes, required permissions,
+	validation requirements, audit requirements, and explicitly deferred destructive
+	actions without deleting, truncating, overwriting, archiving, importing,
+	reloading, persisting audit events, running live crawling, executing connectors,
+	deploying, or changing schemas.
 - Added the first narrow local/test authenticated reviewer-facing workflow shell
 	over staged seeded corpus source-derived records, with JSON queue and detail
 	handlers that consume the authenticated source-derived read route seam and

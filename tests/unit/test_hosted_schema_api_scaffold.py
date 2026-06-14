@@ -89,6 +89,7 @@ def test_api_boundaries_keep_source_records_and_reviewer_state_separate() -> Non
     assert set(boundary_by_id) == {
         "source_derived_records_api",
         "reviewer_created_state_api",
+        "seeded_corpus_reset_reload_operations_api",
     }
     assert boundary_by_id["source_derived_records_api"].domain == "source-derived"
     assert boundary_by_id["reviewer_created_state_api"].domain == "reviewer-created"
@@ -105,6 +106,15 @@ def test_api_boundaries_keep_source_records_and_reviewer_state_separate() -> Non
     assert "stateful reviewer workflows" in boundary_by_id[
         "reviewer_created_state_api"
     ].deferred
+    assert boundary_by_id["seeded_corpus_reset_reload_operations_api"].domain == (
+        "operational"
+    )
+    assert "dry-run route seam" in boundary_by_id[
+        "seeded_corpus_reset_reload_operations_api"
+    ].intended_future_use
+    assert "destructive reset execution" in boundary_by_id[
+        "seeded_corpus_reset_reload_operations_api"
+    ].deferred
     assert "database-backed API reads" not in boundary_by_id[
         "source_derived_records_api"
     ].deferred
@@ -118,11 +128,13 @@ def test_schema_api_scaffold_summary_reflects_seeded_import_without_reviewer_wor
     assert scaffold.source_derived_read_service_implemented is True
     assert scaffold.source_derived_read_api_routes_implemented is True
     assert scaffold.reviewer_workflow_shell_implemented is True
+    assert scaffold.reset_reload_dry_run_implemented is True
     assert scaffold.api_routes_implemented is True
     assert scaffold.imports_implemented is True
     assert scaffold.reviewer_workflows_implemented is False
+    assert scaffold.reset_reload_implemented is False
     assert len(scaffold.persistence_boundaries) >= 7
-    assert len(scaffold.api_boundaries) == 2
+    assert len(scaffold.api_boundaries) == 3
 
 
 def test_alembic_scaffold_has_seeded_import_domain_migration_only() -> None:
