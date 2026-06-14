@@ -137,6 +137,8 @@ listing staged source-derived records or fetching one staged record by key or
 stable identity, plus read-only queue and detail shell payloads over those route
 responses, plus JSON handlers for listing or fetching scaffold reviewer-created
 state rows by approved reviewer state identifiers and schema-supported filters,
+plus read-only workflow-shell detail composition of associated reviewer-created
+state read route output for a selected source record,
 plus JSON handlers for listing or fetching scaffold audit rows by approved audit
 identifiers and schema-supported filters, plus JSON handlers for listing or
 fetching persisted reset/reload planning metadata rows by approved planning
