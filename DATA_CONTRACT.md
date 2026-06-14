@@ -95,7 +95,10 @@ metadata rows. It returns only non-secret scaffold fields and remains separate
 from source-derived record reads.
 A narrow local/test authenticated audit history read route seam can list or
 fetch those audit rows by approved audit identifiers and schema-supported
-filters without mutating source-derived, reviewer-created, or audit rows. Those
+filters without mutating source-derived, reviewer-created, or audit rows. A
+narrow local/test audit coverage planning seam can summarize implemented audit
+sources and deferred audit categories without adding canonical fields, creating
+audit rows, persisting planning rows, or mutating hosted scaffold tables. Those
 import, read, route, workflow-shell, dry-run, operational metadata,
 reviewer-created state, and audit
 scaffold mechanics do not

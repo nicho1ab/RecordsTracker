@@ -79,20 +79,23 @@ migrations/
   source-derived or reviewer-created rows.
 19. Use the hosted audit history read route seam only for local/test
   authenticated JSON list and fetch access over those scaffold audit rows.
-20. Use the hosted reset/reload dry-run seam only for local/test authenticated
+20. Use the hosted audit coverage planning seam only for local/test
+  authenticated, non-persistent readiness planning over current and deferred
+  audit categories, without creating audit rows or mutating persisted data.
+21. Use the hosted reset/reload dry-run seam only for local/test authenticated
   planning over staged seeded corpus metadata, with optional persisted
   operational planning metadata when explicitly requested, without mutating
   source-derived, reviewer-created, or audit data.
-21. Use the hosted reset/reload execution-plan seam only for local/test
+22. Use the hosted reset/reload execution-plan seam only for local/test
   authenticated, ordered, bounded non-destructive action plans over existing
   dry-run summaries and planning metadata context, with optional persisted
   operational planning metadata when explicitly requested, without mutating
   source-derived, reviewer-created, or audit data.
-22. Use the hosted reset/reload planning metadata read route seam only for
+23. Use the hosted reset/reload planning metadata read route seam only for
   local/test authenticated JSON list and fetch access over persisted planning
   rows, without mutating operational, source-derived, reviewer-created, or audit
   data.
-23. Keep full reviewer-created workflows, annotations, corrections, exports,
+24. Keep full reviewer-created workflows, annotations, corrections, exports,
   full audit coverage, audit UI, audit export, reset/reload execution, real login flow, auth
   middleware, provider integration, production API framework behavior, live
   crawling, connector execution, and production automation in future focused
@@ -183,7 +186,9 @@ source-derived, audit, or operational metadata. Successful reviewer-created stat
 create a separate audit scaffold row with actor, permission, scope, target, and
 source-derived context; if the audit row cannot be created, the reviewer-created
 state write is rolled back. The local/test audit history read route seam can list
-or fetch those audit rows only after audit-read authorization passes. The next hosted tester MVP work can move toward real
+or fetch those audit rows only after audit-read authorization passes. The
+local/test audit coverage planning seam can summarize current and deferred audit
+coverage without creating audit rows or persisting planning records. The next hosted tester MVP work can move toward real
 provider integration, later reset/reload execution behavior beyond this
 non-destructive execution-plan seam, fuller audit coverage, and stateful reviewer-created workflow layers
 when each branch validates its layer.

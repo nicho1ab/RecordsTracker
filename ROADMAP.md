@@ -369,6 +369,12 @@ the governed primary future review experience.
 	audit UI, audit export, full audit coverage, retention automation, real login
 	flow, auth middleware, hosted live crawling, connector execution, deployment,
 	or production API behavior.
+- Added a narrow local/test audit coverage planning seam over current and
+	deferred audit categories, with audit-read permission checks, deterministic
+	readiness steps, non-secret payloads, and no-mutation coverage without adding
+	new audit writes, audit UI, audit export, full audit coverage, retention
+	automation, real login flow, auth middleware, hosted live crawling, connector
+	execution, deployment, or production API behavior.
 - Added the first local hosted tester MVP scaffold with a Python standard-library
 	app shell, health route, smoke check, focused tests, and local Windows
 	PowerShell run documentation without adding cloud, QNAP, Docker, schema,
@@ -430,7 +436,7 @@ the governed primary future review experience.
 	read route seam, first read-only
 	authenticated tester workflow shell, reviewer workflow shell associated-state
 	read integration and derived state summary, reviewer-created state persistence scaffold, reviewer-created state read route seam, audit event persistence
-	scaffold, audit history read route seam, and
+	scaffold, audit history read route seam, audit coverage planning seam, and
 	reset/reload dry-run planning seam, execution-plan seam, opt-in operational
 	metadata persistence, and read-only planning metadata routes to
 	move the next hosted tester MVP branches toward real provider integration,

@@ -49,6 +49,13 @@ are rejected, secret-like values and real URLs are rejected without being echoed
 user-role-admin permission and scope are required, no provider configuration is
 persisted, and existing hosted scaffold tables are not mutated.
 
+Hosted audit coverage planning tests must prove current and deferred audit
+coverage output is authenticated, audit/admin-scoped, deterministic,
+non-secret, and non-persistent; unauthenticated, disabled or revoked,
+role-denied, and out-of-scope actors are rejected; no audit rows are created;
+and import, source-derived, reviewer-created, audit, operational, and auth-
+related scaffold rows are not mutated.
+
 Hosted reset/reload planning tests must prove the implemented layer is
 non-mutating. Dry-run tests should check affected seeded import batches,
 source-derived record counts, scoped reviewer-created scaffold counts, scoped

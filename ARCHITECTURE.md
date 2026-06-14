@@ -154,7 +154,10 @@ scaffold payload under the existing state kind,
 plus a JSON handler that stores bounded reviewer status values as reviewer-created
 scaffold payload under the existing state kind,
 plus JSON handlers for listing or fetching scaffold audit rows by approved audit
-identifiers and schema-supported filters, plus JSON handlers for listing or
+identifiers and schema-supported filters, plus an audit coverage planning
+handler that reports current scaffold coverage, deferred audit categories,
+actor attribution, target/source context, and non-secret metadata rules without
+creating audit rows, plus JSON handlers for listing or
 fetching persisted reset/reload planning metadata rows by approved planning
 identifiers and schema-supported filters, plus a dry-run handler
 that reports seeded import batch counts,
@@ -172,7 +175,7 @@ It does not implement real login flow, provider registration, sessions, cookies,
 tokens, auth middleware, provider discovery calls, hosted URLs, full reviewer-created workflows, annotations,
 corrections, note or status editing or deletion, export packet decisions, tester feedback, reset/reload execution,
 reviewer-created state archive or clear behavior, full audit coverage, audit UI,
-audit export, hosted live crawling, hosted connector execution, production import automation, production
+audit export, new audit write behavior, hosted live crawling, hosted connector execution, production import automation, production
 API framework behavior, or deployment.
 
 ## Components
@@ -207,7 +210,7 @@ operational planning metadata scaffold table. The current auth boundary,
 source-derived read route seam, reviewer workflow shell with read-only queue/
 detail payloads and narrow note/status actions,
 reviewer-created state scaffold service, reviewer-created state read route seam,
-audit history read route seam, reset/reload dry-run seam, reset/reload
+audit history read route seam, audit coverage planning seam, reset/reload dry-run seam, reset/reload
 execution-plan seam, opt-in reset/reload
 planning metadata scaffold, and read-only reset/reload planning metadata route seam
 are local/test only; auth tables, export tables, feedback tables, broader
@@ -322,7 +325,8 @@ retention implementation PRs validate the concrete layer.
   created state read route seam over those scaffold rows, a narrow local/test
   audit event scaffold table tied to successful reviewer-created state scaffold
   writes only, a narrow local/test authenticated audit history read route seam
-  over those audit rows, and a
+  over those audit rows, a narrow local/test audit coverage planning seam over
+  current and deferred audit categories, and a
   non-mutating reset/reload dry-run plan and execution-plan steps over staged
   seeded corpus metadata, scoped reviewer-created scaffold and audit scaffold row counts, and explicit
   dry-run planning metadata when requested, with read-only planning metadata

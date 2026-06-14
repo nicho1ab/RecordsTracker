@@ -48,6 +48,7 @@ workflow shell over the route seam, a narrow local/test reviewer-created state
 persistence scaffold table and service boundary, a narrow local/test audit event
 persistence scaffold for successful reviewer-created state scaffold writes only,
 a local/test authenticated audit history read route seam over those audit rows,
+a local/test audit coverage planning seam over current and deferred audit categories,
 a narrow local/test authenticated reviewer-created state read route seam for
 persisted scaffold rows with schema-backed filters and bounded search, a narrow local/test reviewer workflow shell detail
 integration that composes associated reviewer-created state read output for a
@@ -65,7 +66,10 @@ scaffold/API boundary descriptors. The provider integration planning seam
 validates the accepted managed OpenID Connect/OAuth 2.0 provider class,
 summarizes existing auth boundary models, accepts only non-secret readiness
 inputs, and does not persist configuration, users, roles, claims, sessions, or
-credentials. The dry-run reports
+credentials. The audit coverage planning seam summarizes current audit scaffold
+coverage, deferred hosted tester audit categories, actor attribution, target/
+source context, and non-secret metadata rules without creating audit rows or
+persisting planning records. The dry-run reports
 what a future seeded corpus reset/reload would affect, including existing import
 batch metadata, source-derived record counts by entity, future reviewer-created
 state handling modes, required permissions, validation requirements, audit

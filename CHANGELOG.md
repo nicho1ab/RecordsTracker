@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added a narrow local/test audit coverage planning seam that summarizes current
+	audit scaffold coverage, identifies deferred ADR-0013/ADR-0014 audit event
+	categories, and returns deterministic non-persistent readiness steps with
+	audit-read authorization and focused no-secret/no-mutation tests, without
+	adding audit writes, audit UI, audit export, schemas, migrations, provider
+	login, production auth, reset/reload execution, exports, retention automation,
+	live crawling, connector execution, deployment, or hosted URLs.
 - Added a narrow local/test auth provider integration planning seam for the
 	ADR-0014 managed OpenID Connect/OAuth 2.0 provider class, returning bounded
 	non-secret readiness and configuration-planning steps with user-role-admin
