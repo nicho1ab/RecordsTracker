@@ -27,9 +27,11 @@ No local PostgreSQL server is required for scaffold smoke, boundary tests, or
 seeded artifact parsing tests. A PostgreSQL-compatible database URL is required
 only when a developer explicitly runs Alembic migrations or the seeded corpus
 import command. The database-backed read service and auth boundary scaffold can
-be exercised in unit tests against in-memory SQLite and fixture actors. No cloud resources,
-public URLs, app registrations, cloud databases, DNS records,
-deployment credentials, secrets, or tokens are required.
+be exercised in unit tests against in-memory SQLite and fixture actors. The
+source-derived API route seam can also be exercised in unit tests with an
+explicit local/test route context. No cloud resources, public URLs, app
+registrations, cloud databases, DNS records, deployment credentials, secrets, or
+tokens are required.
 
 ## Verify local prerequisites
 
@@ -172,6 +174,9 @@ wiring includes:
   JSON artifact into the seeded import tables.
 - `ccld_complaints.hosted_app.source_derived_reads` for local/test list and
   fetch access to staged source-derived records with import batch context.
+- `ccld_complaints.hosted_app.source_derived_routes` for local/test
+  authenticated JSON list, fetch-by-key, and fetch-by-stable-identity route
+  handlers over staged source-derived records.
 - `ccld_complaints.cli.import_hosted_seeded_corpus` as a minimal local command
   wrapper for operator-initiated test imports.
 
@@ -206,6 +211,18 @@ does not validate provider tokens, store sessions, create cookies, configure a
 tenant, register an app, persist users or roles, or implement login/logout or
 callback routes.
 
+The source-derived HTTP/API route seam is intentionally small. It exposes
+local/test JSON handlers for `/api/source-derived-records`,
+`/api/source-derived-records/by-key`, and
+`/api/source-derived-records/by-identity` only when the caller supplies an
+explicit test route context with a database connection, authenticated actor or
+unauthenticated test actor state, and seeded corpus scope. The handlers reuse
+the protected read service, return source traceability and import batch context,
+and reject unauthenticated, disabled or revoked, role-denied, out-of-scope,
+invalid filter, invalid paging, and missing-record paths. They do not implement
+production auth middleware, token parsing, cookies, sessions, reviewer-created
+state, or a production API framework.
+
 To run migrations or load a seeded corpus into a local PostgreSQL-compatible
 test database, set `CCLD_HOSTED_TESTER_DATABASE_URL` outside the repository and
 run Alembic before the import command:
@@ -221,12 +238,13 @@ python -m ccld_complaints.cli.import_hosted_seeded_corpus tests\fixtures\hosted_
 Do not commit connection strings, usernames, passwords, provider settings,
 private URLs, hosted URLs, tokens, or deployment-specific configuration.
 
-The current path does not implement HTTP API routes, database-backed reviewer
-views, real provider login, token validation, sessions, cookies, auth
-middleware, user or role persistence, reviewer-created state persistence,
-reviewer workflows, audit persistence, export builders, reset/reload behavior,
-production import automation, hosted live crawling, hosted connector execution,
-QNAP, Azure, AWS, public hosting, public URLs, or production deployment.
+The current path does not implement database-backed reviewer views, real
+provider login, token validation, sessions, cookies, auth middleware, user or
+role persistence, reviewer-created state persistence, reviewer workflows, audit
+persistence, export builders, reset/reload behavior, production import
+automation, production API framework behavior, hosted live crawling, hosted
+connector execution, QNAP, Azure, AWS, public hosting, public URLs, or
+production deployment.
 
 ## Run the smoke check
 
@@ -275,6 +293,12 @@ Run the focused hosted auth boundary tests:
 pytest tests/unit/test_hosted_auth_boundary.py
 ```
 
+Run the focused hosted source-derived API route tests:
+
+```powershell
+pytest tests/unit/test_hosted_source_derived_routes.py
+```
+
 These tests include local-only semantic/accessibility validation for the sample
 source view shell and facility master sample view. They use Python standard-library HTML parsing
 to verify one page-level heading, meaningful page titles, semantic main content,
@@ -299,6 +323,10 @@ authenticated actor context, audit-ready authorization decisions, protected
 source-derived read helpers, disabled-account rejection, role-denied rejection,
 out-of-scope rejection, and that read-only source-derived access does not imply
 reviewer-created, import/reload, or user-administration permissions.
+The source-derived API route tests verify local/test JSON list and fetch
+handlers, source traceability and import batch serialization, entity filtering,
+paging, missing-record responses, explicit route-context requirements, and
+unauthenticated, disabled or revoked, role-denied, and out-of-scope rejections.
 They do not require browser automation, Node.js, Playwright, Selenium, axe,
 Docker, a running PostgreSQL server, cloud services, or public URLs.
 
@@ -333,7 +361,7 @@ The scaffold intentionally does not implement:
 - Persistent authorization, user, role, invitation, or scope storage.
 - Production schema beyond the seeded import table group.
 - Reviewer-created state, audit, export, feedback, auth, or reset/reload tables.
-- HTTP API routes.
+- HTTP API routes outside the narrow local/test source-derived read route seam.
 - Database-backed reviewer views or workflows.
 - Production import/sync automation.
 - Queues.

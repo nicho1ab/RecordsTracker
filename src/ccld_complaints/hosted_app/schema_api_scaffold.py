@@ -34,7 +34,8 @@ class HostedSchemaApiScaffold:
     domain_tables_created: bool = True
     auth_boundary_scaffold_implemented: bool = True
     source_derived_read_service_implemented: bool = True
-    api_routes_implemented: bool = False
+    source_derived_read_api_routes_implemented: bool = True
+    api_routes_implemented: bool = True
     imports_implemented: bool = True
     reviewer_workflows_implemented: bool = False
 
@@ -47,7 +48,8 @@ HOSTED_API_BOUNDARIES = (
         implementation_status="scaffold-only",
         intended_future_use=(
             "Read seeded source-derived records loaded from controlled snapshot imports "
-            "from validated pipeline output through a local/test service seam."
+            "from validated pipeline output through a local/test service and "
+            "authenticated HTTP/API route seam."
         ),
         requires_authenticated_actor_before_write=True,
         preserves=(
@@ -57,7 +59,7 @@ HOSTED_API_BOUNDARIES = (
             "SQLite/Datasette validation and transition comparison role",
         ),
         deferred=(
-            "HTTP API routes",
+            "production API framework",
             "live crawling",
             "hosted connector execution",
             "reset/reload behavior",

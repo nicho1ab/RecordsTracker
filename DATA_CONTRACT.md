@@ -34,10 +34,12 @@ boundary descriptors for persistence/API table groups. The seeded import tables
 stage import batch metadata and source-derived records from a controlled
 validated artifact while preserving original values and source traceability. A
 narrow local/test read service can list and fetch those staged records with
-their import batch context. Those import and read mechanics do not add canonical
-source-derived fields, create reviewer-created state, run live crawling, run
-connector execution, expose HTTP API routes, or make the hosted database the
-public source of record.
+their import batch context, and a narrow local/test authenticated HTTP/API route
+seam can serialize those read models for list and fetch access. Those import,
+read, and route mechanics do not add canonical source-derived fields, create
+reviewer-created state, run live crawling, run connector execution, implement a
+production API framework, or make the hosted database the public source of
+record.
 
 Future hosted source-derived tables must preserve the canonical fields and
 source traceability required below. Reviewer-created state may link to

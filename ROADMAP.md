@@ -261,6 +261,14 @@ the governed primary future review experience.
 	provider registration, secrets, tokens, cookies, auth middleware, user tables,
 	reviewer-created state, audit persistence, API routes, deployment, live
 	crawling, or connector execution.
+- Added a narrow local/test authenticated source-derived HTTP/API read route
+	seam over staged seeded corpus records, with JSON list, fetch-by-key, and
+	fetch-by-stable-identity handlers that preserve source traceability, original
+	values, import batch context, auth guard behavior, and the source-derived
+	versus reviewer-created state boundary without adding real login flow, auth
+	middleware, reviewer-created state, audit persistence, exports, reset/reload,
+	production automation, hosted live crawling, connector execution, deployment,
+	or schema changes.
 - Added the first local hosted tester MVP scaffold with a Python standard-library
 	app shell, health route, smoke check, focused tests, and local Windows
 	PowerShell run documentation without adding cloud, QNAP, Docker, schema,
@@ -317,10 +325,10 @@ the governed primary future review experience.
 	hosted implementation decisions are made.
 - Use the accepted audit, export, reset/reload, tester retention, auth
 	provider-class, role, scope, audit-identity, PostgreSQL, Alembic migration,
-	controlled seeded import, database-backed source-derived read, and auth
-	boundary scaffold to move the next hosted tester MVP branches toward HTTP/API
-	route decisions, real provider integration, reset/reload planning, and the
-	first authenticated tester workflow.
+	controlled seeded import, database-backed source-derived read, auth boundary
+	scaffold, and local/test source-derived read route seam to move the next
+	hosted tester MVP branches toward real provider integration, reset/reload
+	planning, and the first authenticated tester workflow.
 - Preserve Datasette, SQLite views, and review-bundle exports where they support
 	validation, inspection, debugging, local exploration, and export workflows.
 - Harden extraction with additional representative fixtures and edge-case tests.
@@ -342,21 +350,18 @@ has been outgrown as the primary future review experience and should be extended
 only where it remains useful for validation, inspection, debugging, local
 exploration, or export support.
 
-1. Decide and implement the narrow HTTP/API route layer for source-derived reads
-	after auth and API framework boundaries are clear, reusing the staged-record
-	read service without adding reviewer-created state.
-2. Implement real provider integration against the managed OpenID Connect/OAuth
+1. Implement real provider integration against the managed OpenID Connect/OAuth
 	2.0 provider class after the local/test auth boundary, callback/session, and
 	configuration decisions are clear.
-3. Implement reset/reload planning and later reset/reload behavior for the
+2. Implement reset/reload planning and later reset/reload behavior for the
 	seeded corpus only after reviewer-created state preservation, audit, and
 	permission boundaries are tested.
-4. Implement reviewer-created state persistence, audit event persistence,
+3. Implement reviewer-created state persistence, audit event persistence,
 	export packet state, tester feedback, and reset/reload metadata in focused
 	PostgreSQL/Alembic-backed branches.
-5. Implement the first authenticated tester workflow over a seeded,
+4. Implement the first authenticated tester workflow over a seeded,
 	source-traceable corpus.
-6. Add additional CCLD fixtures and extraction hardening for representative
+5. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
 
 ## Production-discovery transition path
@@ -379,10 +384,11 @@ define the smallest useful product shape:
 	ADR-0013's operational boundaries, ADR-0014's auth provider-class and role
 	implementation direction, and ADR-0015's PostgreSQL/Alembic direction plus the
 	minimal scaffold wiring, controlled seeded import path, and database-backed
-	source-derived read service, and the local/test auth boundary scaffold to move
-	into HTTP/API route decisions, real provider integration, reset/reload planning,
-	reviewer-created state persistence, audit/export/feedback/reset metadata, and
-	first authenticated tester workflow implementation.
+	source-derived read service, local/test auth boundary scaffold, and local/test
+	source-derived read route seam to move into real provider integration,
+	reset/reload planning, reviewer-created state persistence,
+	audit/export/feedback/reset metadata, and first authenticated tester workflow
+	implementation.
 
 ## Decision points
 

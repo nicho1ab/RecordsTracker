@@ -48,6 +48,14 @@ configuration, client secrets, or production auth middleware. Protected service
 helpers must reject unauthenticated, disabled or revoked, role-denied, and
 out-of-scope actors before future reviewer-created workflows are enabled.
 
+The current source-derived HTTP/API read route seam is local/test only and must
+receive an explicit fixture or test actor context from the caller. It reuses the
+auth boundary to reject unauthenticated, disabled or revoked, role-denied, and
+out-of-scope reads before serializing staged source-derived records. It does not
+parse or store provider tokens, create sessions or cookies, add production auth
+middleware, persist audit events, expose reviewer-created state, or commit
+provider, tenant, callback, hosted URL, or secret configuration.
+
 Identity storage, sessions, authorization middleware, user tables, role tables,
 invitation flow, account recovery, final multi-factor requirements, and user
 deprovisioning implementation remain deferred to later implementation
