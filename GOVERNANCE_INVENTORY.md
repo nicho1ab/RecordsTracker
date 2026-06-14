@@ -41,8 +41,9 @@
   seeded source-derived rows, can load or refresh matching rows from local
   validated hosted seeded-corpus output through the existing source-derived
   import path, renders matching complaints as a guided facility/date-scoped
-  request result queue with first-time help and feedback guidance, links matches
-  into the reviewer UI, and explains the explicit
+  request result queue with first-time help, progress counts, reviewer-status
+  filtering, and feedback guidance, links matches into the reviewer UI, and
+  explains the explicit
   external CCLD live-fetch and local/test artifact-builder commands when broader retrieval is needed without
   running live crawling, connector execution, reviewer-created state mutation,
   audit writes, or non-CCLD behavior from browser requests, a narrow

@@ -107,6 +107,10 @@ records through the local/test hosted route seams, shows matching seeded CCLD
 complaint records as a facility/date-scoped review queue, includes first-time
 workflow and key-term help at `/ccld/help`, and links matching complaint records
 into the hosted reviewer UI detail or list pages.
+The queue includes progress counts and a reviewer-status filter derived from
+existing reviewer-created note/status rows. Records with no reviewer status are
+counted as not started. After a tester saves a note or status in the reviewer UI,
+submitting the same CCLD request again shows the updated queue progress.
 
 When no matching hosted rows are available, the page can offer a bounded local
 validated CCLD load action. That action reads committed local/test hosted

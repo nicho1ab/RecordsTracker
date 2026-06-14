@@ -50,6 +50,7 @@ class HostedSchemaApiScaffold:
     reviewer_ui_shell_implemented: bool = True
     ccld_record_request_ui_shell_implemented: bool = True
     ccld_request_result_queue_guidance_implemented: bool = True
+    ccld_request_queue_status_progress_implemented: bool = True
     ccld_validated_import_reload_implemented: bool = True
     reset_reload_dry_run_implemented: bool = True
     reset_reload_execution_plan_implemented: bool = True

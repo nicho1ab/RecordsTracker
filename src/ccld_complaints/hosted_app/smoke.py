@@ -54,6 +54,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"CCLD record request" not in ccld_body
         or b"CCLD facility/license number" not in ccld_body
         or b"Workflow overview" not in ccld_body
+        or b"Queue status filter" not in ccld_body
         or b"validated CCLD load" not in ccld_body
     ):
         raise RuntimeError("Hosted scaffold CCLD request shell did not return the request page.")

@@ -124,10 +124,12 @@
     facility/license number and optional date range, reads only existing seeded
     source-derived rows, can load or refresh matching rows from local validated
     hosted seeded-corpus output, renders a guided facility/date-scoped complaint
-    review queue, and links matching rows into the reviewer UI. It does not run
-    live retrieval, execute connectors, mutate reviewer-created state, create
-    audit rows, persist feedback, persist operational metadata, prove public-
-    source completeness, or support non-CCLD sources. When records are missing
+    review queue with progress counts and reviewer-status filters derived from
+    existing reviewer-created state, and links matching rows into the reviewer
+    UI. It does not run live retrieval, execute connectors, mutate reviewer-
+    created state from the request page, create audit rows from the request
+    page, persist feedback, persist operational metadata, prove public-source
+    completeness, or support non-CCLD sources. When records are missing
     from the local validated output or outside the requested date range, it
     explains the explicit outside-browser CCLD live-fetch and local/test
     artifact-builder handoff. The artifact builder converts validated CCLD
