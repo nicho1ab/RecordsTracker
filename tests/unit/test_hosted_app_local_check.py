@@ -44,3 +44,19 @@ def test_text_report_includes_commands_and_non_install_boundary() -> None:
     assert ".\\scripts\\run-hosted-scaffold.ps1 -Port 8000" in text
     assert ".\\scripts\\smoke-hosted-scaffold.ps1" in text
     assert "pytest tests/unit/test_hosted_app_scaffold.py" in text
+
+
+def test_text_report_can_include_database_scaffold_boundary() -> None:
+    report = [
+        LocalCheck("Alembic migration tooling", "pass", "alembic is importable.", True),
+        informational_boundary(
+            "PostgreSQL server",
+            "Not required for scaffold import, smoke, or boundary tests.",
+        ),
+    ]
+
+    text = format_text_report(report)
+
+    assert "Alembic migration tooling" in text
+    assert "PostgreSQL server" in text
+    assert "Not required for scaffold import" in text

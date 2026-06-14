@@ -18,10 +18,14 @@ commitment.
 - Python 3.11 or newer.
 - The repository development dependencies from `requirements-dev.txt` for
   tests, lint, and type checks.
+- The runtime dependencies from `requirements.txt`, including Alembic,
+  SQLAlchemy, and the PostgreSQL driver used by the scaffolded migration
+  wiring.
 
 Node.js is not required. Docker is not required. QNAP Container Station is not required.
-No cloud resources, public URLs, app registrations, cloud databases, DNS records,
-deployment credentials, secrets, or tokens are required.
+No local PostgreSQL server is required for scaffold import, smoke, or boundary
+tests. No cloud resources, public URLs, app registrations, cloud databases, DNS
+records, deployment credentials, secrets, or tokens are required.
 
 ## Verify local prerequisites
 
@@ -33,9 +37,11 @@ dependencies:
 ```
 
 The check verifies the Python version, hosted scaffold package import, and local
-development tools used for focused tests, lint, and type checks. It also reports
-that Node/npm, Docker, QNAP, cloud resources, and a public URL are not required
-for the Python standard-library scaffold.
+development tools used for focused tests, lint, and type checks. It also checks
+that Alembic, SQLAlchemy, and the PostgreSQL driver are importable for the
+scaffolded migration wiring. It reports that Node/npm, Docker, a local
+PostgreSQL server, QNAP, cloud resources, and a public URL are not required for
+scaffold import, smoke, or boundary tests.
 
 The local setup check does not install software, does not require admin rights,
 does not create secrets, and does not contact cloud services.
@@ -141,6 +147,29 @@ import/sync, authenticate users, persist reviewer-created state, or prove source
 completeness, statewide coverage, official facility status, or legal or
 facility-wide conclusions.
 
+## PostgreSQL and Alembic scaffold wiring
+
+The repository now includes minimal PostgreSQL/Alembic project wiring for future
+hosted tester MVP persistence. The wiring includes:
+
+- `alembic.ini` with an empty committed database URL setting.
+- `migrations/` as the Alembic script location.
+- `migrations/versions/` with no domain migration revisions yet.
+- `ccld_complaints.hosted_app.persistence` for no-secret database URL validation
+  and ADR-0010 persistence boundary descriptors.
+- `ccld_complaints.hosted_app.schema_api_scaffold` for scaffold-only source-
+  derived and reviewer-created state API boundary descriptors.
+
+The migration environment reads the database URL from
+`CCLD_HOSTED_TESTER_DATABASE_URL` only when migrations are explicitly run. Do not
+commit connection strings, usernames, passwords, provider settings, private
+URLs, hosted URLs, tokens, or deployment-specific configuration.
+
+The current scaffold does not require a PostgreSQL server for import, smoke, or
+unit tests. It does not create tables, include domain migration revisions, read
+from PostgreSQL, implement API routes, run imports, authenticate users, persist
+reviewer-created state, or perform reset/reload behavior.
+
 ## Run the smoke check
 
 The smoke check starts an in-process local scaffold server, checks the health
@@ -164,6 +193,12 @@ Run the focused scaffold tests:
 pytest tests/unit/test_hosted_app_scaffold.py
 ```
 
+Run the focused hosted schema/API scaffold tests:
+
+```powershell
+pytest tests/unit/test_hosted_schema_api_scaffold.py tests/unit/test_hosted_app_local_check.py
+```
+
 These tests include local-only semantic/accessibility validation for the sample
 source view shell and facility master sample view. They use Python standard-library HTML parsing
 to verify one page-level heading, meaningful page titles, semantic main content,
@@ -173,8 +208,12 @@ source-derived versus reviewer-created state separation, visible
 source-traceability-style fields, manifest-backed facility fixture metadata,
 fixture-only source coverage indicators, and related fixture/sample source
 context links.
+The schema/API scaffold tests verify safe database configuration validation,
+redacted connection summaries, required ADR-0010 persistence boundaries, source-
+derived versus reviewer-created state API separation, and that no domain
+migration versions or product behavior are enabled.
 They do not require browser automation, Node.js, Playwright, Selenium, axe,
-Docker, cloud services, or public URLs.
+Docker, a running PostgreSQL server, cloud services, or public URLs.
 
 Run the standard project validation before opening a PR:
 
@@ -205,7 +244,8 @@ The scaffold intentionally does not implement:
 - Real authentication.
 - Authorization.
 - Production schema.
-- Migrations with domain tables.
+- Domain migration revisions or migrations with domain tables.
+- Database-backed reads or API routes.
 - Import/sync.
 - Queues.
 - Annotations.
@@ -237,7 +277,9 @@ validation for the affected boundary.
 
 ## Tooling impact
 
-The scaffold uses Python standard-library HTTP server primitives only. This is a
-scaffold choice for local validation, not a final production frontend framework,
-API framework, database product, authentication provider, hosting platform, or
-deployment pipeline decision.
+The hosted app shell still uses Python standard-library HTTP server primitives.
+The PostgreSQL/Alembic wiring follows ADR-0015 for the hosted tester persistence
+target and migration tool direction, but it is only scaffold wiring for local
+and test validation. It is not a final production frontend framework, API
+framework, concrete auth provider instance, hosting platform, deployment
+pipeline, cloud database plan, backup policy, or retention automation decision.

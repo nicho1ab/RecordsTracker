@@ -10,9 +10,15 @@ src/ccld_complaints/
   connectors/
   extraction/
   hosted_app/
+    persistence.py
+    schema_api_scaffold.py
   storage/
   quality/
   utils/
+
+migrations/
+  env.py
+  versions/
 ```
 
 ## Data flow
@@ -30,6 +36,9 @@ src/ccld_complaints/
   and accepted architecture decisions.
 10. Run the local hosted tester MVP scaffold only as a placeholder app shell and
   smoke route until later implementation PRs add approved hosted behavior.
+11. Use the hosted persistence/API scaffold modules and Alembic script location
+  only as local/test wiring for future PostgreSQL-backed implementation until a
+  focused schema/API branch adds reviewed domain migration revisions and tests.
 
 ## Hosted scaffold boundary
 
@@ -66,17 +75,21 @@ logging, export generation, reset/reload, and tester data retention. ADR-0014
 now chooses a managed standards-based OpenID Connect/OAuth 2.0
 provider class and role implementation direction. ADR-0015 now chooses
 PostgreSQL and Alembic-managed migrations for hosted tester MVP persistence.
-The next hosted tester MVP work can move toward minimal hosted schema/API
-scaffolding, focused auth integration, seeded corpus import/reset, and the
-first authenticated tester workflow when each branch validates its layer.
+The scaffold now includes minimal PostgreSQL/Alembic wiring: no-secret database
+URL configuration validation, an Alembic script location with no domain
+migration revisions, and scaffold-only persistence/API boundary descriptors for
+future source-derived records and reviewer-created state. The next hosted tester
+MVP work can move toward a first reviewed domain migration/API contract, focused
+auth integration, seeded corpus import/reset, and the first authenticated tester
+workflow when each branch validates its layer.
 
 The scaffold does not implement authentication, authorization, production
-schema, migrations, import/sync, queues, annotations, corrections, exports,
-tester feedback, audit trail, reset/reload, hosted live crawling, hosted
-connector execution, deployment, source-derived canonical field changes,
-reviewer-created state persistence, or extraction behavior. It does not require
-Docker, QNAP Container Station, Azure, AWS, a public URL, secrets, or cloud
-resources.
+domain schema, domain migration revisions, API routes, database-backed reads,
+import/sync, queues, annotations, corrections, exports, tester feedback, audit
+trail, reset/reload, hosted live crawling, hosted connector execution,
+deployment, source-derived canonical field changes, reviewer-created state
+persistence, or extraction behavior. It does not require Docker, QNAP Container
+Station, Azure, AWS, a public URL, secrets, or cloud resources.
 
 See `docs/developer/hosted-scaffold.md` for local run and smoke-check commands.
 

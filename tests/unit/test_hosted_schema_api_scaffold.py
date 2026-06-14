@@ -1,0 +1,126 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from ccld_complaints.hosted_app.persistence import (
+    DATABASE_PRODUCT,
+    DATABASE_URL_ENV,
+    MIGRATION_TOOL,
+    HostedDatabaseConfigError,
+    hosted_persistence_boundaries,
+    load_hosted_database_config,
+    missing_required_persistence_boundaries,
+    redact_database_url,
+    validate_postgresql_database_url,
+)
+from ccld_complaints.hosted_app.schema_api_scaffold import (
+    build_hosted_schema_api_scaffold,
+    hosted_api_boundaries,
+)
+
+
+def test_hosted_database_config_is_safe_when_unset() -> None:
+    config = load_hosted_database_config(environ={}, project_root=Path("<repo-root>"))
+
+    assert config.configured is False
+    assert config.safe_database_url == "<unset>"
+    assert config.database_url_env == DATABASE_URL_ENV
+    assert config.database_product == DATABASE_PRODUCT
+    assert config.migration_tool == MIGRATION_TOOL
+    assert config.alembic_config_path == Path("<repo-root>") / "alembic.ini"
+    assert config.migration_script_location == Path("<repo-root>") / "migrations"
+
+
+def test_hosted_database_config_accepts_postgresql_url_without_printing_it() -> None:
+    raw_url = "postgresql+psycopg://db.example.invalid:5432/ccld_tester"
+    config = load_hosted_database_config(environ={DATABASE_URL_ENV: raw_url})
+
+    assert config.configured is True
+    assert config.database_url == raw_url
+    assert config.safe_database_url == "postgresql+psycopg://<redacted-host>/<redacted-database>"
+    assert "db.example.invalid" not in config.safe_database_url
+    assert "ccld_tester" not in config.safe_database_url
+
+
+def test_hosted_database_config_rejects_non_postgresql_urls() -> None:
+    with pytest.raises(HostedDatabaseConfigError, match="PostgreSQL"):
+        validate_postgresql_database_url("sqlite:///local.db")
+
+    with pytest.raises(HostedDatabaseConfigError, match="database name"):
+        validate_postgresql_database_url("postgresql://db.example.invalid")
+
+
+def test_hosted_database_config_can_require_url_for_migration_runs() -> None:
+    with pytest.raises(HostedDatabaseConfigError, match=DATABASE_URL_ENV):
+        load_hosted_database_config(environ={}, require_url=True)
+
+
+def test_redacted_database_url_does_not_expose_connection_details() -> None:
+    redacted = redact_database_url("postgresql://db.example.invalid:5432/private_db")
+
+    assert redacted == "postgresql://<redacted-host>/<redacted-database>"
+    assert "db.example.invalid" not in redacted
+    assert "private_db" not in redacted
+
+
+def test_persistence_boundaries_cover_required_adr_0010_table_groups() -> None:
+    boundaries = hosted_persistence_boundaries()
+    boundary_by_id = {boundary.boundary_id: boundary for boundary in boundaries}
+
+    assert missing_required_persistence_boundaries() == frozenset()
+    assert boundary_by_id["source_derived_records"].domain == "source-derived"
+    assert boundary_by_id["reviewer_created_state"].domain == "reviewer-created"
+    assert "source URL" in boundary_by_id["source_derived_records"].preserves
+    assert "raw SHA-256 hash" in boundary_by_id["source_derived_records"].preserves
+    assert "authenticated actor attribution" in boundary_by_id[
+        "reviewer_created_state"
+    ].preserves
+    assert "overwrite source-derived canonical values" in boundary_by_id[
+        "reviewer_created_state"
+    ].must_not
+
+
+def test_api_boundaries_keep_source_records_and_reviewer_state_separate() -> None:
+    api_boundaries = hosted_api_boundaries()
+    boundary_by_id = {boundary.boundary_id: boundary for boundary in api_boundaries}
+
+    assert set(boundary_by_id) == {
+        "source_derived_records_api",
+        "reviewer_created_state_api",
+    }
+    assert boundary_by_id["source_derived_records_api"].domain == "source-derived"
+    assert boundary_by_id["reviewer_created_state_api"].domain == "reviewer-created"
+    assert "controlled snapshot imports from validated pipeline output" in boundary_by_id[
+        "source_derived_records_api"
+    ].intended_future_use
+    assert boundary_by_id[
+        "reviewer_created_state_api"
+    ].requires_authenticated_actor_before_write is True
+    assert "auth middleware" in boundary_by_id["reviewer_created_state_api"].deferred
+    assert "database reads" in boundary_by_id["source_derived_records_api"].deferred
+
+
+def test_schema_api_scaffold_summary_does_not_enable_product_behavior() -> None:
+    scaffold = build_hosted_schema_api_scaffold()
+
+    assert scaffold.domain_tables_created is False
+    assert scaffold.api_routes_implemented is False
+    assert scaffold.imports_implemented is False
+    assert scaffold.reviewer_workflows_implemented is False
+    assert len(scaffold.persistence_boundaries) >= 7
+    assert len(scaffold.api_boundaries) == 2
+
+
+def test_alembic_scaffold_has_no_domain_migration_versions() -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    alembic_ini = repo_root / "alembic.ini"
+    migrations_dir = repo_root / "migrations"
+    version_files = list((migrations_dir / "versions").glob("*.py"))
+
+    assert alembic_ini.exists()
+    assert "sqlalchemy.url =" in alembic_ini.read_text(encoding="utf-8")
+    assert (migrations_dir / "env.py").exists()
+    assert (migrations_dir / "script.py.mako").exists()
+    assert version_files == []

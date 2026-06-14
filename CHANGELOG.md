@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added minimal hosted tester PostgreSQL/Alembic project wiring, scaffold-only
+	persistence/API boundary descriptors, dependency declarations, and focused
+	tests for safe configuration validation and ADR-0010 data-domain separation
+	without adding domain tables, migration revisions, API routes, database reads,
+	imports, reset/reload commands, auth middleware, reviewer workflows, secrets,
+	hosted URLs, deployment, live crawling, or connector execution.
 - Added ADR-0015 choosing PostgreSQL and Alembic-managed migrations for the
 	hosted tester MVP database and migration tooling direction, unblocking minimal
 	hosted schema/API scaffold, seeded corpus import/reset, reviewer-created state

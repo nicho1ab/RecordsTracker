@@ -6,4 +6,7 @@ python-dateutil
 types-jsonschema
 types-python-dateutil
 datasette
+SQLAlchemy
+alembic
+psycopg[binary]
 pip-audit
