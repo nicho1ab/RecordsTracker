@@ -129,6 +129,11 @@ committed tiny public-source facility fixtures under
 facility number links and show source-family, jurisdiction, profiled source
 shape, source dataset reference, source URL placeholder, raw SHA-256 placeholder,
 and retrieval-time placeholder metadata from the committed fixture manifest.
+Facility detail pages also show fixture-only source coverage indicators and
+related fixture/sample source-record context when the local sample mapping
+connects a facility-master fixture row to a sample source record. Program-
+specific fixture rows without that local mapping are labeled as not represented
+in the fixture/sample mapping.
 
 The facility sample view does not load live public-source data, read ignored raw
 CSVs, read generated profiling outputs, read SQLite or a hosted database, run
@@ -165,7 +170,9 @@ to verify one page-level heading, meaningful page titles, semantic main content,
 navigation links, fixture/sample caution text, read-only labels, accessible
 filter labels, sample no-match behavior, source traceability summary panels,
 source-derived versus reviewer-created state separation, visible
-source-traceability-style fields, and manifest-backed facility fixture metadata.
+source-traceability-style fields, manifest-backed facility fixture metadata,
+fixture-only source coverage indicators, and related fixture/sample source
+context links.
 They do not require browser automation, Node.js, Playwright, Selenium, axe,
 Docker, cloud services, or public URLs.
 
@@ -221,6 +228,9 @@ workflow, or a reviewer-created state surface.
 The sample facility master view is also local-only and read-only. It is not a
 CSV import, source connector, database-backed facility search, official facility
 master, reviewer queue, correction workflow, or reviewer-created state surface.
+Its source coverage panel is a fixture-only display pattern, not evidence of
+live public-source coverage, source completeness, import status, or legal or
+facility-wide conclusions.
 
 Those layers remain deferred to later ADRs or implementation PRs with focused
 validation for the affected boundary.

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added a local-only facility source coverage panel to hosted scaffold facility
+	detail pages, linking committed tiny facility-master fixture rows to related
+	fixture/sample source-record context where the sample mapping exists while
+	keeping unmapped fixture rows clearly labeled and avoiding live source,
+	database, import/sync, authentication, reviewer-created state, schema, or
+	deployment behavior.
 - Added a local-only hosted scaffold `/facilities` read-only sample view and
 	detail pages backed by the committed tiny public-source facility fixtures,
 	showing facility master fields and manifest traceability placeholders without
