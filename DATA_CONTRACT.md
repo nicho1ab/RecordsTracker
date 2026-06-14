@@ -32,10 +32,12 @@ The current hosted PostgreSQL/Alembic scaffold adds configuration validation,
 an Alembic script location, a narrow seeded corpus import migration, and
 boundary descriptors for persistence/API table groups. The seeded import tables
 stage import batch metadata and source-derived records from a controlled
-validated artifact while preserving original values and source traceability.
-Those import mechanics do not add canonical source-derived fields, create
-reviewer-created state, run live crawling, run connector execution, or make the
-hosted database the public source of record.
+validated artifact while preserving original values and source traceability. A
+narrow local/test read service can list and fetch those staged records with
+their import batch context. Those import and read mechanics do not add canonical
+source-derived fields, create reviewer-created state, run live crawling, run
+connector execution, expose HTTP API routes, or make the hosted database the
+public source of record.
 
 Future hosted source-derived tables must preserve the canonical fields and
 source traceability required below. Reviewer-created state may link to

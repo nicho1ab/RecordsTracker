@@ -248,6 +248,12 @@ the governed primary future review experience.
 	state writes without adding reset/reload behavior, API routes, auth
 	middleware, reviewer workflows, production automation, hosted live crawling,
 	or connector execution.
+- Added a narrow database-backed source-derived read service over staged hosted
+	seeded corpus records, with list and fetch helpers that return source
+	traceability, original values, stable source-derived identities, and import
+	batch context without adding HTTP API routes, auth middleware, reviewer
+	workflows, reset/reload behavior, production automation, hosted live crawling,
+	or connector execution.
 - Added the first local hosted tester MVP scaffold with a Python standard-library
 	app shell, health route, smoke check, focused tests, and local Windows
 	PowerShell run documentation without adding cloud, QNAP, Docker, schema,
@@ -304,9 +310,10 @@ the governed primary future review experience.
 	hosted implementation decisions are made.
 - Use the accepted audit, export, reset/reload, tester retention, auth
 	provider-class, role, scope, audit-identity, PostgreSQL, Alembic migration,
-	and controlled seeded import boundaries to move the next hosted tester MVP
-	branches toward database-backed source-derived API reads, focused auth
-	integration, reset/reload planning, and the first authenticated tester workflow.
+	controlled seeded import, and database-backed source-derived read boundaries
+	to move the next hosted tester MVP branches toward focused auth integration,
+	HTTP/API route decisions, reset/reload planning, and the first authenticated
+	tester workflow.
 - Preserve Datasette, SQLite views, and review-bundle exports where they support
 	validation, inspection, debugging, local exploration, and export workflows.
 - Harden extraction with additional representative fixtures and edge-case tests.
@@ -328,12 +335,12 @@ has been outgrown as the primary future review experience and should be extended
 only where it remains useful for validation, inspection, debugging, local
 exploration, or export support.
 
-1. Implement database-backed API reads for the seeded source-derived records now
-	staged by the controlled import path, while keeping reviewer-created state
-	separate and preserving source traceability.
-2. Implement focused auth integration against the managed OpenID Connect/OAuth
+1. Implement focused auth integration against the managed OpenID Connect/OAuth
 	2.0 provider class with role, scope, disabled-account, unauthenticated, and
 	role-denied path validation.
+2. Decide and implement the narrow HTTP/API route layer for source-derived reads
+	after auth and API framework boundaries are clear, reusing the staged-record
+	read service without adding reviewer-created state.
 3. Implement reset/reload planning and later reset/reload behavior for the
 	seeded corpus only after reviewer-created state preservation, audit, and
 	permission boundaries are tested.
@@ -362,11 +369,11 @@ define the smallest useful product shape:
 3. Use ADR-0007's hybrid direction, ADR-0008's data-domain boundary, ADR-0009's
 	controlled import boundary, ADR-0010's physical separation strategy,
 	ADR-0011's authenticated access boundary, ADR-0012's scaffold-first sequence,
-	ADR-0013's operational boundaries, and ADR-0014's auth provider-class and role
+	ADR-0013's operational boundaries, ADR-0014's auth provider-class and role
 	implementation direction, and ADR-0015's PostgreSQL/Alembic direction plus the
-	minimal scaffold wiring and controlled seeded import path to move into
-	database-backed source-derived API reads, focused auth integration,
-	reset/reload planning,
+	minimal scaffold wiring, controlled seeded import path, and database-backed
+	source-derived read service to move into focused auth integration, HTTP/API
+	route decisions, reset/reload planning,
 	reviewer-created state persistence, audit/export/feedback/reset metadata, and
 	first authenticated tester workflow implementation.
 

@@ -32,6 +32,7 @@ class HostedSchemaApiScaffold:
     persistence_boundaries: tuple[PersistenceBoundary, ...]
     api_boundaries: tuple[HostedApiBoundary, ...]
     domain_tables_created: bool = True
+    source_derived_read_service_implemented: bool = True
     api_routes_implemented: bool = False
     imports_implemented: bool = True
     reviewer_workflows_implemented: bool = False
@@ -45,7 +46,7 @@ HOSTED_API_BOUNDARIES = (
         implementation_status="scaffold-only",
         intended_future_use=(
             "Read seeded source-derived records loaded from controlled snapshot imports "
-            "from validated pipeline output."
+            "from validated pipeline output through a local/test service seam."
         ),
         requires_authenticated_actor_before_write=True,
         preserves=(
@@ -55,8 +56,7 @@ HOSTED_API_BOUNDARIES = (
             "SQLite/Datasette validation and transition comparison role",
         ),
         deferred=(
-            "API routes",
-            "database-backed API reads",
+            "HTTP API routes",
             "live crawling",
             "hosted connector execution",
             "reset/reload behavior",
