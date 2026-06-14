@@ -73,6 +73,10 @@ def build_local_check_report() -> list[LocalCheck]:
             "Hosted reviewer-created state scaffold package",
         ),
         check_importable(
+            "ccld_complaints.hosted_app.reviewer_created_state_routes",
+            "Hosted reviewer-created state API route package",
+        ),
+        check_importable(
             "ccld_complaints.hosted_app.audit_events",
             "Hosted audit event scaffold package",
         ),
@@ -132,6 +136,7 @@ def format_text_report(report: list[LocalCheck]) -> str:
             "tests/unit/test_hosted_source_derived_routes.py "
             "tests/unit/test_hosted_reviewer_workflow_shell.py "
             "tests/unit/test_hosted_reviewer_created_state.py "
+            "tests/unit/test_hosted_reviewer_created_state_routes.py "
             "tests/unit/test_hosted_audit_events.py "
             "tests/unit/test_hosted_audit_event_routes.py "
             "tests/unit/test_hosted_reset_reload_dry_run.py "

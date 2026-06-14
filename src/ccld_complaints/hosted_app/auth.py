@@ -39,6 +39,7 @@ HostedTesterRole = Literal[
 ]
 HostedPermission = Literal[
     "source_derived_read",
+    "reviewer_state_read",
     "reviewer_state_write",
     "correction_propose",
     "correction_decide",
@@ -61,6 +62,7 @@ AuthorizationTargetType = Literal[
 ]
 
 SOURCE_DERIVED_READ_PERMISSION: HostedPermission = "source_derived_read"
+REVIEWER_STATE_READ_PERMISSION: HostedPermission = "reviewer_state_read"
 REVIEWER_STATE_WRITE_PERMISSION: HostedPermission = "reviewer_state_write"
 IMPORT_RELOAD_PERMISSION: HostedPermission = "import_reload"
 USER_ROLE_ADMIN_PERMISSION: HostedPermission = "user_role_admin"
@@ -70,6 +72,7 @@ ROLE_PERMISSIONS: Mapping[HostedTesterRole, frozenset[HostedPermission]] = {
     "admin": frozenset(
         {
             "source_derived_read",
+            "reviewer_state_read",
             "reviewer_state_write",
             "correction_propose",
             "correction_decide",
@@ -85,13 +88,14 @@ ROLE_PERMISSIONS: Mapping[HostedTesterRole, frozenset[HostedPermission]] = {
     "tester_reviewer": frozenset(
         {
             "source_derived_read",
+            "reviewer_state_read",
             "reviewer_state_write",
             "correction_propose",
             "export_prepare",
             "feedback_submit",
         }
     ),
-    "read_only_tester": frozenset({"source_derived_read"}),
+    "read_only_tester": frozenset({"source_derived_read", "reviewer_state_read"}),
     "developer_operator": frozenset(
         {
             "source_derived_read",

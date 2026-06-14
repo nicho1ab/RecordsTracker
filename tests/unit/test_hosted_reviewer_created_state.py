@@ -21,6 +21,7 @@ from ccld_complaints.hosted_app.auth import (
 from ccld_complaints.hosted_app.reviewer_created_state import (
     ReviewerCreatedStateReferenceError,
     create_reviewer_created_state_scaffold,
+    get_reviewer_created_state_scaffold,
     hosted_reviewer_created_state,
     list_reviewer_created_state_scaffold,
 )
@@ -98,6 +99,26 @@ def test_reviewer_created_state_can_be_read_for_authorized_scope() -> None:
 
     assert read == created
     assert read.state_payload == {"scaffold_state": "in_review"}
+
+
+def test_reviewer_created_state_can_be_fetched_by_authorized_state_id() -> None:
+    with _seeded_connection() as connection:
+        created = create_reviewer_created_state_scaffold(
+            connection,
+            _reviewer_actor(),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            state_payload={"scaffold_state": "source_check_needed"},
+        )
+
+        read = get_reviewer_created_state_scaffold(
+            connection,
+            _read_only_actor(),
+            scope=TEST_SCOPE,
+            reviewer_state_id=created.reviewer_state_id,
+        )
+
+    assert read == created
 
 
 def test_reviewer_created_state_write_requires_authenticated_actor() -> None:

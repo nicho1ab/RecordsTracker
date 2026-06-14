@@ -196,6 +196,10 @@ wiring includes:
 - `ccld_complaints.hosted_app.reviewer_created_state` for local/test
   authenticated reviewer-created state scaffold writes and scoped reads without
   mutating staged source-derived records.
+- `ccld_complaints.hosted_app.reviewer_created_state_routes` for local/test
+  authenticated JSON list and fetch access over persisted reviewer-created
+  scaffold rows without mutating staged source-derived, reviewer-created, audit,
+  or operational metadata records.
 - `ccld_complaints.hosted_app.audit_events` for local/test audit rows tied to
   successful reviewer-created state scaffold writes without mutating staged
   source-derived or reviewer-created records.
@@ -281,6 +285,18 @@ production API framework. Successful writes also create a separate local/test
 audit event scaffold row with actor, permission, scope, action, target, and
 source-derived context. If the audit row cannot be created, the reviewer-created
 state write is rolled back.
+
+The reviewer-created state read route seam is intentionally small. It exposes
+local/test JSON handlers for `/api/reviewer-created-state` and
+`/api/reviewer-created-state/by-id` only when the caller supplies an explicit
+route context with a database connection, authenticated actor, and seeded corpus
+scope. The handlers require reviewer-state read permission, support schema-
+backed filters, serialize non-secret scaffold fields, and reject
+unauthenticated, disabled or revoked, role-denied, out-of-scope, invalid filter,
+invalid paging, and missing-record paths. They do not create, update, delete,
+execute, archive, clear, relink, reload, or otherwise mutate source-derived,
+reviewer-created, audit, or operational metadata rows. Source-derived read
+permission alone does not grant reviewer-created state read access.
 
 The audit event persistence scaffold is intentionally small. It stores rows only
 for successful reviewer-created state scaffold writes, using a separate audit
@@ -430,6 +446,12 @@ Run the focused hosted reviewer-created state scaffold tests:
 pytest tests/unit/test_hosted_reviewer_created_state.py
 ```
 
+Run the focused hosted reviewer-created state route tests:
+
+```powershell
+pytest tests/unit/test_hosted_reviewer_created_state_routes.py
+```
+
 Run the focused hosted audit event scaffold tests:
 
 ```powershell
@@ -464,8 +486,9 @@ and no reviewer-created state exposure.
 The auth boundary tests verify safe provider-class configuration validation,
 authenticated actor context, audit-ready authorization decisions, protected
 source-derived read helpers, disabled-account rejection, role-denied rejection,
-out-of-scope rejection, and that read-only source-derived access does not imply
-reviewer-created, import/reload, or user-administration permissions.
+out-of-scope rejection, and that source-derived read access alone does not imply
+reviewer-created state read, reviewer-created state write, import/reload, or
+user-administration permissions.
 The source-derived API route tests verify local/test JSON list and fetch
 handlers, source traceability and import batch serialization, entity filtering,
 paging, missing-record responses, explicit route-context requirements, and
@@ -481,6 +504,13 @@ source-derived records, source-derived records are not modified, authenticated
 actor attribution is captured, reviewer-state write permission is required,
 disabled or revoked, role-denied, out-of-scope, and invalid source-derived
 reference writes are rejected, and scoped readback works where implemented.
+The reviewer-created state route tests verify local/test authenticated list and
+fetch handlers over persisted scaffold rows, schema-backed filters, empty list,
+missing-record responses, explicit route-context requirements, unauthenticated,
+disabled or revoked, role-denied, and out-of-scope rejections, source-derived
+read permission separation, non-secret JSON payloads, and before/after row
+counts proving reads do not mutate seeded import, reviewer-created scaffold,
+audit scaffold, or operational planning metadata tables.
 The audit event scaffold tests verify that successful reviewer-created state
 scaffold writes create separate audit rows with actor attribution and target
 context, failed writes do not create successful audit rows, audit persistence
@@ -553,8 +583,9 @@ The scaffold intentionally does not implement:
   export, feedback, auth, or
   reset/reload execution tables beyond the narrow planning metadata scaffold.
 - HTTP API routes outside the narrow local/test source-derived read route seam,
-  read-only reviewer workflow shell, reset/reload dry-run seam, audit history
-  read route seam, and reset/reload planning metadata read route seam.
+  read-only reviewer workflow shell, reviewer-created state read route seam,
+  reset/reload dry-run seam, audit history read route seam, and reset/reload
+  planning metadata read route seam.
 - Stateful database-backed reviewer views or workflows.
 - Production import/sync automation.
 - Queues.

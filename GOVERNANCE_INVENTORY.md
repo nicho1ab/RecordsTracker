@@ -26,6 +26,8 @@
   authenticated read-only reviewer workflow shell over that route seam, a narrow
   local/test reviewer-created state persistence scaffold table/service with
   authenticated actor attribution and stable source-derived record references,
+  a narrow local/test authenticated reviewer-created state read route seam over
+  those persisted scaffold rows,
   a narrow local/test audit event persistence scaffold for successful reviewer-
   created state scaffold writes only, a narrow local/test authenticated audit
   history read route seam over those scaffold audit rows, a local/test authenticated reset/reload
@@ -57,8 +59,9 @@
   execution, deployment, QNAP, Azure, AWS, or public URL behavior. Current API behavior is
   limited to local/test source-derived read handlers, read-only reviewer
   workflow shell handlers, reviewer-created state scaffold service helpers,
-  reset/reload dry-run handlers, and explicit reset/reload planning metadata
-  helpers and read handlers that require test database, actor, and scope context.
+  reviewer-created state read handlers, reset/reload dry-run handlers, and
+  explicit reset/reload planning metadata helpers and read handlers that require
+  test database, actor, and scope context.
   Current auth
   behavior is limited to local/test service, route, workflow-shell,
   reviewer-created state, audit, dry-run, and planning-metadata guards over

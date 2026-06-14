@@ -47,10 +47,11 @@ workflow shell over the route seam, a narrow local/test reviewer-created state
 persistence scaffold table and service boundary, a narrow local/test audit event
 persistence scaffold for successful reviewer-created state scaffold writes only,
 a local/test authenticated audit history read route seam over those audit rows,
-a local/test authenticated reset/reload dry-run route seam, a separate
-local/test reset/reload operational planning metadata scaffold, a narrow
-local/test read-only planning metadata route seam, and scaffold/API
-boundary descriptors. The dry-run reports
+a narrow local/test authenticated reviewer-created state read route seam for
+persisted scaffold rows, a local/test authenticated reset/reload dry-run route
+seam, a separate local/test reset/reload operational planning metadata
+scaffold, a narrow local/test read-only planning metadata route seam, and
+scaffold/API boundary descriptors. The dry-run reports
 what a future seeded corpus reset/reload would affect, including existing import
 batch metadata, source-derived record counts by entity, future reviewer-created
 state handling modes, required permissions, validation requirements, audit
@@ -66,15 +67,25 @@ database during scaffold tests, load live public data, run connector execution,
 automate production imports, execute reset/reload, archive or clear reviewer-
 created state, persist audit events beyond the narrow reviewer-created state
 write scaffold, expose audit history beyond that narrow local/test read seam,
+create, update, or delete reviewer-created state through the read route seam,
 create stateful queues, implement full
 reviewer workflows, annotations, corrections, export packet behavior, or tester
 feedback.
 
+Persisted reviewer-created state scaffold rows can now be read through a narrow
+local/test JSON route seam when tests or local callers provide an explicit
+database, authenticated actor, and scope context with reviewer-state read
+permission. That seam lists or fetches only non-secret scaffold fields, keeps
+reviewer-created state separate from source-derived records, audit rows, and
+operational metadata, and does not implement workflow writes, annotations,
+corrections, review status transitions, exports, real login, sessions, or
+production auth middleware.
+
 The next safe hosted-view increment should remain similarly narrow and
 fixture-backed, preserving fixture/sample labels, read-only behavior,
 source-derived versus reviewer-created state separation, semantic structure,
-accessibility validation, and the no-real-login, no-reviewer-created-state,
-no-deployment boundary.
+accessibility validation, and the no-real-login, no-full-reviewer-created-
+workflow, no-deployment boundary.
 
 ## Non-negotiable boundaries
 

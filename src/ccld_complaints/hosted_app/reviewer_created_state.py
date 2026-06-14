@@ -10,8 +10,8 @@ from sqlalchemy.engine import Connection, RowMapping
 
 from ccld_complaints.hosted_app.audit_events import create_hosted_audit_event
 from ccld_complaints.hosted_app.auth import (
+    REVIEWER_STATE_READ_PERMISSION,
     REVIEWER_STATE_WRITE_PERMISSION,
-    SOURCE_DERIVED_READ_PERMISSION,
     AuthenticatedActor,
     AuthorizationTarget,
     HostedAccessScope,
@@ -159,6 +159,8 @@ def list_reviewer_created_state_scaffold(
     *,
     scope: HostedAccessScope,
     source_record_key: str | None = None,
+    state_kind: ReviewerCreatedStateKind | None = None,
+    actor_provider_subject: str | None = None,
     limit: int = 100,
     offset: int = 0,
 ) -> tuple[ReviewerCreatedStateRead, ...]:
@@ -166,9 +168,11 @@ def list_reviewer_created_state_scaffold(
         raise ValueError("Reviewer-created state list limit must be at least 1.")
     if offset < 0:
         raise ValueError("Reviewer-created state list offset must be at least 0.")
+    if state_kind is not None and state_kind not in REVIEWER_CREATED_STATE_KINDS:
+        raise ValueError("Reviewer-created state kind is not supported by this scaffold.")
     require_permission(
         actor,
-        permission=SOURCE_DERIVED_READ_PERMISSION,
+        permission=REVIEWER_STATE_READ_PERMISSION,
         scope=scope,
         target=AuthorizationTarget("reviewer_created_state", scope.scope_id),
     )
@@ -181,8 +185,53 @@ def list_reviewer_created_state_scaffold(
         query = query.where(
             hosted_reviewer_created_state.c.source_record_key == source_record_key
         )
-    query = query.order_by(hosted_reviewer_created_state.c.created_at).limit(limit).offset(offset)
+    if state_kind is not None:
+        query = query.where(hosted_reviewer_created_state.c.state_kind == state_kind)
+    if actor_provider_subject is not None:
+        query = query.where(
+            hosted_reviewer_created_state.c.created_by_provider_subject
+            == actor_provider_subject
+        )
+    query = (
+        query.order_by(
+            hosted_reviewer_created_state.c.created_at,
+            hosted_reviewer_created_state.c.reviewer_state_id,
+        )
+        .limit(limit)
+        .offset(offset)
+    )
     return tuple(_read_model_from_row(row) for row in connection.execute(query).mappings().all())
+
+
+def get_reviewer_created_state_scaffold(
+    connection: Connection,
+    actor: AuthenticatedActor | None,
+    *,
+    scope: HostedAccessScope,
+    reviewer_state_id: str,
+) -> ReviewerCreatedStateRead | None:
+    if not reviewer_state_id.strip():
+        raise ValueError("Reviewer-created state ID is required.")
+    require_permission(
+        actor,
+        permission=REVIEWER_STATE_READ_PERMISSION,
+        scope=scope,
+        target=AuthorizationTarget("reviewer_created_state", reviewer_state_id),
+    )
+    row = (
+        connection.execute(
+            select(hosted_reviewer_created_state).where(
+                hosted_reviewer_created_state.c.scope_type == scope.scope_type,
+                hosted_reviewer_created_state.c.scope_id == scope.scope_id,
+                hosted_reviewer_created_state.c.reviewer_state_id == reviewer_state_id,
+            )
+        )
+        .mappings()
+        .one_or_none()
+    )
+    if row is None:
+        return None
+    return _read_model_from_row(row)
 
 
 def _read_model_from_row(row: RowMapping) -> ReviewerCreatedStateRead:

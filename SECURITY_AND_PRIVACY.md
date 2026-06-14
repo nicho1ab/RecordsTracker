@@ -109,6 +109,17 @@ local/test audit event row in a separate table; if that audit row cannot be
 created, the reviewer-created scaffold write is rolled back rather than silently
 leaving unaudited reviewer-created state.
 
+The current reviewer-created state read route seam is local/test only and must
+receive an explicit database, actor, and scope context from tests or local
+callers. It requires authenticated, active, reviewer-state-read-permitted, role
+and scope-allowed access before listing or fetching persisted scaffold rows.
+Read access to source-derived records alone does not grant reviewer-created
+state read access. The route serializes only non-secret scaffold fields and
+does not create, modify, delete, or execute reviewer-created state, source-
+derived records, audit rows, or operational metadata. It does not expose tokens,
+cookies, private headers, connection strings, raw provider claims, or
+unnecessary sensitive narrative content.
+
 The current audit event persistence scaffold is local/test only and covers
 successful reviewer-created state scaffold writes only. It captures provider
 subject and issuer, display label when available, actor category, permission

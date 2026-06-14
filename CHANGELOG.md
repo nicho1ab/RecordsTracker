@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added narrow local/test read-only reviewer-created state routes for persisted
+	scaffold rows, with JSON list and fetch-by-ID handlers, schema-backed filters,
+	reviewer-state read authorization, and focused tests proving empty list,
+	missing-record, auth rejection, filtering, non-secret payloads, and no-mutation
+	behavior without adding reviewer-created state writes, full reviewer workflows,
+	annotations UI, corrections UI, audit UI, export behavior, real login flow,
+	auth middleware, deployment, live crawling, or connector execution.
 - Added narrow local/test read-only reset/reload planning metadata routes for
 	persisted dry-run planning records, with JSON list and fetch-by-ID handlers,
 	schema-backed filters, import/reload authorization, and focused tests proving
