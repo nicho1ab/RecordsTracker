@@ -41,7 +41,7 @@
   seeded source-derived rows, can load or refresh matching rows from local
   validated hosted seeded-corpus output through the existing source-derived
   import path, links matches into the reviewer UI, and explains the explicit
-  external CCLD live-fetch command when broader retrieval is needed without
+  external CCLD live-fetch and local/test artifact-builder commands when broader retrieval is needed without
   running live crawling, connector execution, reviewer-created state mutation,
   audit writes, or non-CCLD behavior from browser requests, a narrow
   local/test reviewer-created state persistence scaffold table/service with
@@ -96,7 +96,8 @@
   reviewer-created state read handlers with schema-backed filters and bounded
   search, the local/test browser reviewer UI shell over those existing seams,
   the local/test CCLD record request page over seeded source-derived records and
-  local validated CCLD hosted seeded-corpus output,
+  local validated CCLD hosted seeded-corpus output plus a CCLD-only local/test
+  SQLite-to-hosted-seeded-corpus artifact builder,
   reset/reload dry-run and execution-plan handlers, and
   explicit reset/reload planning metadata helpers and read handlers that require
   test database, actor, and scope context.

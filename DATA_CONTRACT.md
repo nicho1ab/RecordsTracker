@@ -70,6 +70,12 @@ flow state only; they are not canonical source-derived fields and do not require
 schema or migration changes in this scaffold. Loaded rows remain ordinary hosted
 source-derived rows with existing source URL, raw SHA-256, raw path, connector
 metadata, original values, and source traceability.
+A CCLD-only local/test artifact builder can convert validated CCLD SQLite
+pipeline output into that hosted seeded-corpus JSON format outside browser
+requests. The builder reuses existing canonical SQLite tables and hosted seeded
+import structures; it does not add canonical fields, schemas, migrations,
+reviewer-created state, audit rows, non-CCLD source rows, or live retrieval
+behavior.
 The detail payload can additionally include a compact state summary derived only
 from that already-composed associated reviewer-created state route output, such
 as row counts, present state kinds and payload kinds, bounded reviewer status

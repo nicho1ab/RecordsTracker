@@ -126,8 +126,10 @@
   does not run live retrieval, execute connectors, mutate reviewer-created
   state, create audit rows, persist operational metadata, prove public-source
   completeness, or support non-CCLD sources. When records are missing from the
-  local validated output or outside the requested date range, it only explains
-  the explicit live-fetch command and the remaining future need for a controlled
-  artifact builder that converts validated CCLD SQLite pipeline output into
-  hosted seeded-corpus JSON outside browser requests.
+  local validated output or outside the requested date range, it explains the
+  explicit outside-browser CCLD live-fetch and local/test artifact-builder
+  handoff. The artifact builder converts validated CCLD SQLite pipeline output
+  into hosted seeded-corpus JSON outside browser requests, but it is still a
+  local/test step and does not prove public-source completeness or automate
+  production imports.
 - Datasette accessibility depends partly on the installed Datasette version, browser, and assistive technology. Validate keyboard navigation, table headers, focus visibility, and exported table usability before treating a release as stable.

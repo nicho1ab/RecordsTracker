@@ -128,6 +128,13 @@ raw path/connector traceability preservation, duplicate-safe refresh behavior,
 deferred no-match behavior, reviewer UI links after load, no browser live
 crawling, no generic connector execution, no reviewer-created state or audit
 mutation, no operational metadata mutation, and no-secret HTML output.
+Hosted CCLD artifact builder tests should build fixture-backed validated SQLite
+output, convert it into hosted seeded-corpus JSON, validate the JSON through the
+existing hosted seeded parser, import it through the existing hosted seeded
+import path, exercise the CCLD import/reload path against that generated
+artifact, prove deterministic ordering, prove source traceability preservation,
+reject missing or unsafe traceability fields, and prove no live crawling or
+browser-triggered connector execution is required.
 
 Hosted reviewer-created state read route tests must prove persisted scaffold
 rows are readable only through authenticated, active, role/scope-allowed local/

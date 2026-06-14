@@ -33,6 +33,9 @@ experience.
    and review-bundle exports without live public requests.
 - Supports a controlled live fetch workflow that is explicitly user-invoked,
    rate-limited by script options, and scoped to provided facility numbers.
+- Builds a local/test CCLD-only hosted seeded-corpus JSON artifact from
+   validated CCLD SQLite output so `/ccld/records/request` can load or refresh
+   those source-derived records through the existing local validated path.
 - Includes a local/test hosted CCLD record request page where a tester can enter
    a CCLD facility/license number and optional date range, read matching seeded
    source-derived records, load or refresh matching CCLD records from validated
@@ -99,6 +102,20 @@ what to open first, delay triage, source verification, and CSV export.
 Downloaded live raw files are saved under the ignored local `data/raw` path by
 default. Treat public complaint narratives carefully because they may contain
 sensitive details even when publicly available.
+
+After validating CCLD SQLite output, build a local/test hosted seeded-corpus
+JSON artifact outside the browser:
+
+```powershell
+.\scripts\build-hosted-ccld-artifact.ps1 -DbPath data\processed\ccld.sqlite -FacilityNumber 157806098 -Overwrite
+```
+
+The artifact is written to
+`data/processed/hosted_seeded_corpus/validated_ccld_seeded_corpus.json` by
+default. When the local hosted scaffold is running, `/ccld/records/request` can
+then load or refresh matching CCLD rows from that validated JSON through the
+existing local/test import/reload path. The builder does not run live public web
+requests or browser-triggered connector execution.
 
 To profile ignored local public-source CSV examples before any source expansion
 implementation is proposed, run:

@@ -117,6 +117,16 @@ crawling, execute connectors, write reviewer-created state, create audit events,
 persist operational metadata, implement auth middleware, or support non-CCLD
 sources.
 
+The local/test CCLD hosted artifact builder runs only as an explicit developer
+command or function outside browser requests. It converts already validated CCLD
+SQLite output into hosted seeded-corpus JSON, rejects missing required
+traceability, rejects private or absolute raw paths, and writes no secrets,
+tokens, cookies, private headers, provider claims, hosted URLs, private URLs,
+connection strings, client secrets, or credentials. It does not run live public
+web requests, execute connectors from the browser, mutate reviewer-created
+state, create audit events, persist operational metadata, implement auth
+middleware, or support non-CCLD sources.
+
 The current reset/reload dry-run seam is local/test only and must receive an
 explicit database, actor, and corpus scope context from tests or local callers.
 It reuses the auth boundary to require import/reload permission, reject

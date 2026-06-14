@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Added a CCLD-only local/test hosted artifact builder that converts validated
+	CCLD SQLite pipeline output into hosted seeded-corpus JSON consumable by the
+	existing `/ccld/records/request` local validated import/reload action. The
+	builder accepts a SQLite path, CCLD facility/license number, optional date
+	filters, and deterministic local/test metadata, preserves source URL, raw
+	SHA-256, raw path, connector metadata, retrieval timestamp, stable keys,
+	entity types, source traceability, and original values, validates required
+	traceability before writing, rejects private or absolute raw paths, and does
+	not run live crawling, execute browser-triggered connectors, add schema
+	changes, add non-CCLD sources, mutate reviewer-created state, or create audit
+	rows.
 - Added a narrow local/test CCLD-only import/reload seam from validated hosted
 	seeded-corpus JSON output into existing hosted source-derived records, plus a
 	bounded `/ccld/records/request` action that lets a local tester load or refresh
