@@ -10,6 +10,7 @@ src/ccld_complaints/
   connectors/
   extraction/
   hosted_app/
+    auth.py
     persistence.py
     schema_api_scaffold.py
     seeded_import.py
@@ -44,9 +45,13 @@ migrations/
 12. Use the hosted source-derived read service only for local/test list and
   fetch access to staged seeded corpus records with import batch context and
   preserved source traceability.
-13. Keep reviewer-created state, reset/reload behavior, auth, HTTP API routes,
-  live crawling, connector execution, and production automation in future
-  focused branches until those layers are implemented and tested.
+13. Use the hosted auth boundary scaffold only for local/test actor, role,
+  account-status, scope, and authorization-target checks before protected
+  service reads.
+14. Keep reviewer-created state, reset/reload behavior, real login flow, auth
+  middleware, provider integration, HTTP API routes, live crawling, connector
+  execution, and production automation in future focused branches until those
+  layers are implemented and tested.
 
 ## Hosted scaffold boundary
 
@@ -65,8 +70,8 @@ jurisdiction, source-family filtering, and traceability summary indicators
 against in-memory fixture/sample records so future source-derived records from
 multiple jurisdictions and source families can use the same list/filter/summary
 pattern. It does not read from SQLite or a hosted database, run import/sync,
-load live public-source data, authenticate users, or persist reviewer-created
-state.
+load live public-source data, perform real provider login, or persist
+reviewer-created state.
 
 The scaffold also includes a local-only read-only `/facilities` sample view and
 detail pages backed only by the committed tiny public-source facility fixtures
@@ -91,19 +96,23 @@ scaffold/API boundary descriptors for future source-derived API routes and
 reviewer-created state. It also includes a narrow database-backed
 source-derived read service for local/test list and fetch access to staged
 records while preserving import batch context, original source-derived values,
-and source traceability. The next hosted tester MVP work can move toward focused
-auth integration, HTTP/API route decisions, reset/reload planning, and the first
+and source traceability. The auth boundary scaffold adds managed OIDC/OAuth2
+provider-class configuration validation plus local/test authenticated actor,
+role, scope, account-status, target, and audit-context models for protected
+service seams. The next hosted tester MVP work can move toward HTTP/API route
+decisions, real provider integration, reset/reload planning, and the first
 authenticated tester workflow when each branch validates its layer.
 
-The scaffold does not implement authentication, authorization, production
-domain schema beyond the seeded import table group, API routes,
-production import automation, queues, annotations, corrections, exports, tester
-feedback, audit trail, reset/reload, hosted live crawling, hosted connector
-execution, deployment, source-derived canonical field changes,
-reviewer-created state persistence, or extraction behavior. Its database-backed
-reads are limited to the staged seeded corpus service seam and are not wired to
-HTTP routes or reviewer workflows. It does not require Docker, QNAP Container
-Station, Azure, AWS, a public URL, secrets, or cloud resources.
+The scaffold does not implement real provider login, token validation, sessions,
+cookies, auth middleware, role or user storage, production domain schema beyond
+the seeded import table group, API routes, production import automation, queues,
+annotations, corrections, exports, tester feedback, audit trail, reset/reload,
+hosted live crawling, hosted connector execution, deployment, source-derived
+canonical field changes, reviewer-created state persistence, or extraction
+behavior. Its database-backed reads and auth guards are limited to local/test
+service seams and are not wired to HTTP routes or reviewer workflows. It does
+not require Docker, QNAP Container Station, Azure, AWS, a public URL, secrets,
+or cloud resources.
 
 See `docs/developer/hosted-scaffold.md` for local run and smoke-check commands.
 
