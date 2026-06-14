@@ -56,6 +56,17 @@ parse or store provider tokens, create sessions or cookies, add production auth
 middleware, persist audit events, expose reviewer-created state, or commit
 provider, tenant, callback, hosted URL, or secret configuration.
 
+The current reviewer workflow shell is also local/test only and must receive an
+explicit workflow shell context backed by the source-derived route context. It
+consumes the authenticated source-derived route seam for read-only queue and
+detail payloads, preserves the same unauthenticated, disabled or revoked,
+role-denied, and out-of-scope rejection behavior, and marks reviewer-created
+state persistence and reviewer actions as deferred. It does not authenticate
+browser users, parse or store provider tokens, create sessions or cookies, add
+production auth middleware, create anonymous reviewer-created state, persist
+audit events, or commit provider, tenant, callback, hosted URL, or secret
+configuration.
+
 Identity storage, sessions, authorization middleware, user tables, role tables,
 invitation flow, account recovery, final multi-factor requirements, and user
 deprovisioning implementation remain deferred to later implementation

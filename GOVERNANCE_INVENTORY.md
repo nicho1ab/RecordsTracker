@@ -22,8 +22,9 @@
   JSON artifact importer, a local/test database-backed read service over staged
   source-derived records, a local/test auth boundary scaffold for actor, role,
   account-status, scope, target, and audit-context checks, a narrow local/test
-  authenticated source-derived HTTP/API read route seam, and source-derived
-  versus reviewer-created state boundary descriptors.
+  authenticated source-derived HTTP/API read route seam, a narrow local/test
+  authenticated read-only reviewer workflow shell over that route seam, and
+  source-derived versus reviewer-created state boundary descriptors.
 - Local-only sample filtering/search: implemented for the hosted source-record
   shell using in-memory fixture/sample records only.
 - Fixture/sample-only source traceability summary panels: implemented for the
@@ -37,16 +38,17 @@
   application/API boundary, separate from Datasette, with source-derived records
   kept separate from reviewer-created state. The current scaffold is an
   implementation path toward that direction, not a final production framework or
-  functioning reviewer workflow.
+  stateful reviewer workflow.
 - Local-only scaffold status: the scaffold is sample-only, read-only, local to a
   development workstation, and not backed by live public data, ignored raw CSVs,
   generated profiling outputs, SQLite-backed sample UI routes, real provider
   login, auth middleware, persistent authorization storage, reviewer-created
   state, queues, annotations, corrections, exports, audit trail, reset/reload,
   deployment, QNAP, Azure, AWS, or public URL behavior. Current API behavior is
-  limited to local/test source-derived read handlers that require explicit test
-  database, actor, and scope context. Current auth behavior is limited to
-  local/test service and route guards over fixture actor contexts.
+  limited to local/test source-derived read handlers and read-only reviewer
+  workflow shell handlers that require explicit test database, actor, and scope
+  context. Current auth behavior is limited to local/test service, route, and
+  workflow-shell guards over fixture actor contexts.
 - Datasette role: Datasette remains retained for validation, inspection,
   debugging, local exploration, export support, and transition comparison. It is
   not the governed primary future reviewer UX.
@@ -158,10 +160,11 @@
   implementation direction decision. ADR-0015 completed the database and
   migration tooling decision. Minimal PostgreSQL/Alembic scaffold wiring,
   schema/API boundary descriptors, a controlled seeded corpus import path,
-  database-backed source-derived read service, and local/test auth boundary
-  scaffold, and local/test source-derived read route seam are now in place. Next
-  work should move to real provider integration, reset/reload planning, or the
-  first authenticated tester workflow, not repeat those completed items.
+  database-backed source-derived read service, local/test auth boundary
+  scaffold, local/test source-derived read route seam, and first local/test
+  read-only authenticated tester workflow shell are now in place. Next work
+  should move to real provider integration, reset/reload planning, or stateful
+  reviewer-created workflow layers, not repeat those completed items.
 - Local-only/sample-only boundaries remain active. Sample records must stay
   clearly marked as fixture/sample records and must not be presented as live,
   database-backed, complete, statewide, official, or production data.
@@ -181,10 +184,13 @@
   They also have a local/test database-backed read service for list and fetch
   access that preserves import batch context and original source-derived values.
   They now have a narrow local/test authenticated HTTP/API read route seam for
-  JSON list and fetch access over that read service. ADR-0013 still defines
-  reset/reload and audit expectations at the operational boundary;
-  implementation still needs comparison against retained SQLite/Datasette
-  validation output, production import operations, and reset/reload behavior.
+  JSON list and fetch access over that read service, plus a narrow local/test
+  authenticated read-only reviewer workflow shell for queue and detail payloads
+  over that route seam. ADR-0013 still defines reset/reload and audit
+  expectations at the operational boundary; implementation still needs
+  comparison against retained SQLite/Datasette validation output, production
+  import operations, stateful reviewer-created workflow layers, and
+  reset/reload behavior.
 - Future database/schema implementation: the current domain schema is limited to
   seeded import batch metadata and source-derived staging. Future schema work
   must use PostgreSQL and Alembic-managed migrations while preserving separate

@@ -102,6 +102,9 @@ def test_api_boundaries_keep_source_records_and_reviewer_state_separate() -> Non
     assert "production API framework" in boundary_by_id[
         "source_derived_records_api"
     ].deferred
+    assert "stateful reviewer workflows" in boundary_by_id[
+        "reviewer_created_state_api"
+    ].deferred
     assert "database-backed API reads" not in boundary_by_id[
         "source_derived_records_api"
     ].deferred
@@ -114,6 +117,7 @@ def test_schema_api_scaffold_summary_reflects_seeded_import_without_reviewer_wor
     assert scaffold.auth_boundary_scaffold_implemented is True
     assert scaffold.source_derived_read_service_implemented is True
     assert scaffold.source_derived_read_api_routes_implemented is True
+    assert scaffold.reviewer_workflow_shell_implemented is True
     assert scaffold.api_routes_implemented is True
     assert scaffold.imports_implemented is True
     assert scaffold.reviewer_workflows_implemented is False

@@ -4,7 +4,8 @@
 
 This document explains how to run the first local hosted tester MVP scaffold.
 The scaffold is a runnable placeholder app shell and smoke route only. It is not
-a functioning reviewer workflow.
+a functioning reviewer workflow yet; the current reviewer workflow shell is a
+local/test read-only route seam, not a stateful hosted tester workflow.
 
 The scaffold is local-first and must run on a Windows development workstation
 before any QNAP, Azure, AWS, public hosting, or public URL work is attempted.
@@ -80,7 +81,7 @@ Run the scaffold from the repository root:
 ```
 
 Open `http://127.0.0.1:8000/` on the same workstation. The page must identify
-itself as a scaffold and not a functioning reviewer workflow. It must not imply
+itself as a scaffold and not a functioning reviewer workflow yet. It must not imply
 that authentication, records, workflows, cloud hosting, QNAP, Azure, or AWS are
 available.
 
@@ -177,6 +178,9 @@ wiring includes:
 - `ccld_complaints.hosted_app.source_derived_routes` for local/test
   authenticated JSON list, fetch-by-key, and fetch-by-stable-identity route
   handlers over staged source-derived records.
+- `ccld_complaints.hosted_app.reviewer_workflow_shell` for a local/test
+  authenticated read-only review queue and detail shell over source-derived
+  route responses.
 - `ccld_complaints.cli.import_hosted_seeded_corpus` as a minimal local command
   wrapper for operator-initiated test imports.
 
@@ -223,6 +227,18 @@ invalid filter, invalid paging, and missing-record paths. They do not implement
 production auth middleware, token parsing, cookies, sessions, reviewer-created
 state, or a production API framework.
 
+The reviewer workflow shell is intentionally small. It exposes local/test JSON
+handlers for `/api/reviewer/source-derived-review/queue` and
+`/api/reviewer/source-derived-review/detail` only when the caller supplies an
+explicit workflow shell context backed by the source-derived route context. The
+shell consumes the authenticated source-derived route seam, returns read-only
+queue and detail payloads with source-derived record identity, original values,
+source traceability, source document metadata, and import batch context, and
+marks reviewer-created state persistence and reviewer actions as deferred. It
+does not create queue state, review status, annotations, corrections, tester
+feedback, audit events, export packet state, sessions, cookies, production auth
+middleware, or a production API framework.
+
 To run migrations or load a seeded corpus into a local PostgreSQL-compatible
 test database, set `CCLD_HOSTED_TESTER_DATABASE_URL` outside the repository and
 run Alembic before the import command:
@@ -238,9 +254,9 @@ python -m ccld_complaints.cli.import_hosted_seeded_corpus tests\fixtures\hosted_
 Do not commit connection strings, usernames, passwords, provider settings,
 private URLs, hosted URLs, tokens, or deployment-specific configuration.
 
-The current path does not implement database-backed reviewer views, real
+The current path does not implement stateful database-backed reviewer views, real
 provider login, token validation, sessions, cookies, auth middleware, user or
-role persistence, reviewer-created state persistence, reviewer workflows, audit
+role persistence, reviewer-created state persistence, stateful reviewer workflows, audit
 persistence, export builders, reset/reload behavior, production import
 automation, production API framework behavior, hosted live crawling, hosted
 connector execution, QNAP, Azure, AWS, public hosting, public URLs, or
@@ -299,6 +315,12 @@ Run the focused hosted source-derived API route tests:
 pytest tests/unit/test_hosted_source_derived_routes.py
 ```
 
+Run the focused hosted reviewer workflow shell tests:
+
+```powershell
+pytest tests/unit/test_hosted_reviewer_workflow_shell.py
+```
+
 These tests include local-only semantic/accessibility validation for the sample
 source view shell and facility master sample view. They use Python standard-library HTML parsing
 to verify one page-level heading, meaningful page titles, semantic main content,
@@ -327,6 +349,12 @@ The source-derived API route tests verify local/test JSON list and fetch
 handlers, source traceability and import batch serialization, entity filtering,
 paging, missing-record responses, explicit route-context requirements, and
 unauthenticated, disabled or revoked, role-denied, and out-of-scope rejections.
+The reviewer workflow shell tests verify local/test authenticated queue and
+detail payloads over the source-derived route seam, empty queue behavior,
+missing-detail behavior, explicit workflow context requirements, source
+traceability preservation, import batch context, and unauthenticated, disabled
+or revoked, role-denied, and out-of-scope rejections without reviewer-created
+state persistence.
 They do not require browser automation, Node.js, Playwright, Selenium, axe,
 Docker, a running PostgreSQL server, cloud services, or public URLs.
 
@@ -361,8 +389,9 @@ The scaffold intentionally does not implement:
 - Persistent authorization, user, role, invitation, or scope storage.
 - Production schema beyond the seeded import table group.
 - Reviewer-created state, audit, export, feedback, auth, or reset/reload tables.
-- HTTP API routes outside the narrow local/test source-derived read route seam.
-- Database-backed reviewer views or workflows.
+- HTTP API routes outside the narrow local/test source-derived read route seam
+  and read-only reviewer workflow shell.
+- Stateful database-backed reviewer views or workflows.
 - Production import/sync automation.
 - Queues.
 - Annotations.

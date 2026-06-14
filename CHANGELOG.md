@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Added the first narrow local/test authenticated reviewer-facing workflow shell
+	over staged seeded corpus source-derived records, with JSON queue and detail
+	handlers that consume the authenticated source-derived read route seam and
+	return record identity, original values, source traceability, source document
+	metadata, import batch context, and explicit reviewer-created state deferral
+	without adding real login flow, tokens, cookies, sessions, auth middleware,
+	reviewer-created state persistence, annotations, corrections, review status,
+	audit persistence, exports, reset/reload, production automation, hosted live
+	crawling, connector execution, deployment, or schema changes.
 - Added a narrow local/test authenticated HTTP/API route seam for staged
 	source-derived reads, with JSON list, fetch-by-key, and fetch-by-stable-
 	identity handlers that reuse the hosted auth boundary and database-backed read
