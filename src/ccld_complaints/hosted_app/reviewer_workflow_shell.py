@@ -110,7 +110,12 @@ def _review_detail_response(
 
     source_payload = _json_object(body)
     record = _record_object(source_payload, "record")
-    state_query = urlencode({"source_record_key": record["source_record_key"]})
+    state_query_values = {"source_record_key": record["source_record_key"]}
+    for key in ("state_kind", "actor_provider_subject", "q"):
+        value = _optional_query_value(query_values, key)
+        if value is not None:
+            state_query_values[key] = value
+    state_query = urlencode(state_query_values)
     state_status, state_content_type, state_body = route_reviewer_created_state_api_response(
         f"{REVIEWER_CREATED_STATE_API_PREFIX}?{state_query}",
         context.reviewer_created_state_api_context,

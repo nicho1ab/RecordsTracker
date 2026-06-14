@@ -66,8 +66,9 @@ migrations/
   authenticated placeholder state rows linked to staged source-derived record
   keys without modifying source-derived records.
 17. Use the hosted reviewer-created state read route seam only for local/test
-  authenticated JSON list and fetch access over those scaffold rows without
-  mutating reviewer-created, source-derived, audit, or operational metadata.
+  authenticated JSON list, fetch, filter, and bounded search access over those
+  scaffold rows without mutating reviewer-created, source-derived, audit, or
+  operational metadata.
 18. Use the hosted audit event scaffold only for local/test audit rows created
   for successful reviewer-created state scaffold writes, without modifying
   source-derived or reviewer-created rows.
@@ -157,9 +158,9 @@ import/reload authorization, without executing reset/reload. The reviewer-create
 placeholder review-item-state rows only after authenticated actor, role, account
 status, scope, and source-derived reference checks pass; it does not implement
 full reviewer workflows. The local/test reviewer-created state read route seam
-can list or fetch those persisted scaffold rows after reviewer-state-read
-authorization passes, without mutating reviewer-created, source-derived, audit,
-or operational metadata. Successful reviewer-created state scaffold writes also
+can list, fetch, filter, or search those persisted scaffold rows after
+reviewer-state-read authorization passes, without mutating reviewer-created,
+source-derived, audit, or operational metadata. Successful reviewer-created state scaffold writes also
 create a separate audit scaffold row with actor, permission, scope, target, and
 source-derived context; if the audit row cannot be created, the reviewer-created
 state write is rolled back. The local/test audit history read route seam can list

@@ -297,7 +297,8 @@ local/test JSON handlers for `/api/reviewer-created-state` and
 `/api/reviewer-created-state/by-id` only when the caller supplies an explicit
 route context with a database connection, authenticated actor, and seeded corpus
 scope. The handlers require reviewer-state read permission, support schema-
-backed filters, serialize non-secret scaffold fields, and reject
+backed filters and bounded search over existing non-secret scaffold fields,
+serialize non-secret scaffold fields, and reject
 unauthenticated, disabled or revoked, role-denied, out-of-scope, invalid filter,
 invalid paging, and missing-record paths. They do not create, update, delete,
 execute, archive, clear, relink, reload, or otherwise mutate source-derived,
@@ -502,25 +503,26 @@ unauthenticated, disabled or revoked, role-denied, and out-of-scope rejections.
 The reviewer workflow shell tests verify local/test authenticated queue and
 detail payloads over the source-derived route seam, associated reviewer-created
 state read route output for selected detail responses, derived associated-state
-summary fields for empty, one-row, and multiple-row states, empty associated
-state, empty queue behavior, missing-detail behavior, explicit workflow context
-requirements, source traceability preservation, import batch context,
-source-derived read versus reviewer-state read permission separation,
-non-secret associated state payloads, and unauthenticated, disabled or revoked,
-role-denied, out-of-scope, and no-mutation behavior without reviewer-created
-state persistence.
+summary fields for empty, one-row, and multiple-row states, associated-state
+filter/search pass-through, empty associated state, empty queue behavior,
+missing-detail behavior, explicit workflow context requirements, source
+traceability preservation, import batch context, source-derived read versus
+reviewer-state read permission separation, non-secret associated state payloads,
+and unauthenticated, disabled or revoked, role-denied, out-of-scope, and
+no-mutation behavior without reviewer-created state persistence.
 The reviewer-created state scaffold tests verify separate storage from staged
 source-derived records, source-derived records are not modified, authenticated
 actor attribution is captured, reviewer-state write permission is required,
 disabled or revoked, role-denied, out-of-scope, and invalid source-derived
 reference writes are rejected, and scoped readback works where implemented.
 The reviewer-created state route tests verify local/test authenticated list and
-fetch handlers over persisted scaffold rows, schema-backed filters, empty list,
-missing-record responses, explicit route-context requirements, unauthenticated,
-disabled or revoked, role-denied, and out-of-scope rejections, source-derived
-read permission separation, non-secret JSON payloads, and before/after row
-counts proving reads do not mutate seeded import, reviewer-created scaffold,
-audit scaffold, or operational planning metadata tables.
+fetch handlers over persisted scaffold rows, schema-backed filters, bounded
+search success and empty search results, empty list, missing-record responses,
+explicit route-context requirements, unauthenticated, disabled or revoked,
+role-denied, and out-of-scope rejections, source-derived read permission
+separation, non-secret JSON payloads, and before/after row counts proving reads
+do not mutate seeded import, reviewer-created scaffold, audit scaffold, or
+operational planning metadata tables.
 The audit event scaffold tests verify that successful reviewer-created state
 scaffold writes create separate audit rows with actor attribution and target
 context, failed writes do not create successful audit rows, audit persistence

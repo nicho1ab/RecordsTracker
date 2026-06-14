@@ -26,6 +26,7 @@ from ccld_complaints.hosted_app.reviewer_created_state import (
 
 REVIEWER_CREATED_STATE_API_PREFIX = "/api/reviewer-created-state"
 MAX_REVIEWER_CREATED_STATE_API_LIMIT = 100
+MAX_REVIEWER_CREATED_STATE_SEARCH_LENGTH = 120
 
 
 @dataclass(frozen=True)
@@ -79,6 +80,7 @@ def _list_reviewer_created_state(
         query_values,
         "actor_provider_subject",
     )
+    search_query = _optional_search_query(query_values)
     limit = _bounded_int_query_value(query_values, "limit", default=100, minimum=1)
     offset = _bounded_int_query_value(query_values, "offset", default=0, minimum=0)
 
@@ -89,6 +91,7 @@ def _list_reviewer_created_state(
         source_record_key=source_record_key,
         state_kind=state_kind,
         actor_provider_subject=actor_provider_subject,
+        search_query=search_query,
         limit=limit,
         offset=offset,
     )
@@ -102,6 +105,7 @@ def _list_reviewer_created_state(
                 "source_record_key": source_record_key,
                 "state_kind": state_kind,
                 "actor_provider_subject": actor_provider_subject,
+                "q": search_query,
             },
             "pagination": {
                 "limit": limit,
@@ -175,6 +179,17 @@ def _optional_state_kind(
         allowed_values = ", ".join(REVIEWER_CREATED_STATE_KINDS)
         raise ValueError(f"state_kind must be one of: {allowed_values}.")
     return "review_item_state_scaffold"
+
+
+def _optional_search_query(query_values: Mapping[str, list[str]]) -> str | None:
+    search_query = _optional_query_value(query_values, "q")
+    if search_query is None:
+        return None
+    if len(search_query) > MAX_REVIEWER_CREATED_STATE_SEARCH_LENGTH:
+        raise ValueError(
+            f"q must be at most {MAX_REVIEWER_CREATED_STATE_SEARCH_LENGTH} characters."
+        )
+    return search_query
 
 
 def _bounded_int_query_value(

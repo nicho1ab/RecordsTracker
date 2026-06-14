@@ -42,6 +42,9 @@ non-secret, and non-mutating.
 Reviewer-created state read route tests must prove authorized readback remains
 scoped, non-secret, separated from source-derived reads, and non-mutating across
 source-derived rows, reviewer-created rows, audit rows, and operational metadata.
+When those reads add filtering or search, focused tests must cover matching
+results, empty results, permission rejection, out-of-scope rejection, and no
+mutation using only existing schema-backed and non-secret scaffold fields.
 Reviewer workflow shell state-read integration tests must prove selected detail
 payloads compose associated reviewer-created state read route output only
 through authenticated, role/scope-allowed local/test contexts and remain

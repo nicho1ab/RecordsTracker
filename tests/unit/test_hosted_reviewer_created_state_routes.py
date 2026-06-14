@@ -190,12 +190,88 @@ def test_reviewer_created_state_api_filters_schema_backed_fields() -> None:
         "source_record_key": COMPLAINT_KEY,
         "state_kind": "review_item_state_scaffold",
         "actor_provider_subject": None,
+        "q": None,
     }
     assert by_actor_status == 200
     assert [
         record["reviewer_state_id"]
         for record in by_actor_payload["reviewer_created_state"]
     ] == [second.reviewer_state_id]
+
+
+def test_reviewer_created_state_api_searches_non_secret_scaffold_fields() -> None:
+    with _seeded_connection() as connection:
+        first = create_reviewer_created_state_scaffold(
+            connection,
+            _reviewer_actor(),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            state_payload={"scaffold_state": "in_review"},
+        )
+        second = create_reviewer_created_state_scaffold(
+            connection,
+            _admin_actor(),
+            scope=TEST_SCOPE,
+            source_record_key=FACILITY_KEY,
+            state_payload={"scaffold_state": "source_check_needed"},
+        )
+
+        display_status, _content_type, display_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}?q=fixture%20admin",
+            reviewer_created_state_api_context=_api_context(connection),
+        )
+        source_status, _content_type, source_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}?q={quote(COMPLAINT_KEY.upper())}",
+            reviewer_created_state_api_context=_api_context(connection),
+        )
+
+    display_payload = _json_body(display_body)
+    source_payload = _json_body(source_body)
+
+    assert display_status == 200
+    assert [
+        record["reviewer_state_id"]
+        for record in display_payload["reviewer_created_state"]
+    ] == [second.reviewer_state_id]
+    assert display_payload["filters"] == {
+        "source_record_key": None,
+        "state_kind": None,
+        "actor_provider_subject": None,
+        "q": "fixture admin",
+    }
+    assert source_status == 200
+    assert [
+        record["reviewer_state_id"]
+        for record in source_payload["reviewer_created_state"]
+    ] == [first.reviewer_state_id]
+
+
+def test_reviewer_created_state_api_search_returns_empty_list() -> None:
+    with _seeded_connection() as connection:
+        create_reviewer_created_state_scaffold(
+            connection,
+            _reviewer_actor(),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            state_payload={"scaffold_state": "in_review"},
+        )
+
+        status, _content_type, body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}?q=no-matching-state",
+            reviewer_created_state_api_context=_api_context(connection),
+        )
+
+    payload = _json_body(body)
+
+    assert status == 200
+    assert payload["reviewer_created_state"] == []
+    assert payload["filters"] == {
+        "source_record_key": None,
+        "state_kind": None,
+        "actor_provider_subject": None,
+        "q": "no-matching-state",
+    }
+    assert payload["pagination"] == {"limit": 100, "offset": 0, "returned_count": 0}
 
 
 def test_reviewer_created_state_api_rejects_unauthenticated_actor() -> None:
@@ -268,11 +344,17 @@ def test_reviewer_created_state_api_rejects_invalid_filter_and_paging_values() -
             f"{REVIEWER_CREATED_STATE_API_PREFIX}?limit=0",
             reviewer_created_state_api_context=_api_context(connection),
         )
+        invalid_search_status, _content_type, invalid_search_body = route_response(
+            f"{REVIEWER_CREATED_STATE_API_PREFIX}?q={'x' * 121}",
+            reviewer_created_state_api_context=_api_context(connection),
+        )
 
     assert invalid_kind_status == 400
     assert _json_body(invalid_kind_body)["error"]["code"] == "invalid_request"
     assert invalid_limit_status == 400
     assert _json_body(invalid_limit_body)["error"]["code"] == "invalid_request"
+    assert invalid_search_status == 400
+    assert _json_body(invalid_search_body)["error"]["code"] == "invalid_request"
 
 
 def test_reviewer_created_state_api_requires_explicit_local_test_context() -> None:

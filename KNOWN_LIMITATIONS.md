@@ -52,8 +52,9 @@
     planning records when tests or local callers provide explicit database,
     actor, and scope context with import/reload permission. A narrow local/test
     read-only reviewer-created state route can list or fetch persisted scaffold
-    rows when tests or local callers provide explicit database, actor, and scope
-    context with reviewer-state read permission. Source-derived read permission
+    rows with schema-backed filters and bounded search when tests or local
+    callers provide explicit database, actor, and scope context with
+    reviewer-state read permission. Source-derived read permission
     alone does not grant this reviewer-created state read access, including
     when the workflow shell composes associated state context and its derived
     summary for a selected source record.
