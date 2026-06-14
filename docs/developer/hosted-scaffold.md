@@ -34,7 +34,9 @@ source-derived API route seam can also be exercised in unit tests with an
 explicit local/test route context. The reset/reload dry-run seam can be
 exercised in unit tests with an explicit database, actor, and corpus scope
 context, including optional persisted planning metadata and read-only planning
-metadata route access. No cloud resources, public URLs, app
+metadata route access. The reset/reload execution-plan seam can also be
+exercised in unit tests with that explicit local/test context and produces only
+bounded non-destructive action-plan output. No cloud resources, public URLs, app
 registrations, cloud databases, DNS records, deployment credentials, secrets, or
 tokens are required.
 
@@ -214,6 +216,11 @@ wiring includes:
   authenticated seeded corpus reset/reload dry-run route seam that reports
   future impact without mutating data and can optionally persist a non-secret
   planning metadata record when explicitly requested.
+- `ccld_complaints.hosted_app.reset_reload_execution_plan` for a local/test
+  authenticated seeded corpus reset/reload execution-plan route seam that turns
+  dry-run summaries and planning metadata context into ordered bounded non-
+  destructive action steps, with optional non-secret planning metadata
+  persistence when explicitly requested.
 - `ccld_complaints.hosted_app.reset_reload_planning_routes` for local/test
   authenticated JSON list and fetch access over persisted reset/reload planning
   metadata records without mutating data or executing reset/reload.
@@ -347,6 +354,14 @@ read-only inspection queries by default. When local/test code adds
 `persist_planning_metadata=true`, it persists one separate operational planning
 metadata record with actor attribution, permission used, scope, generated
 timestamp, validation summary, impact summaries, and non-secret planning context.
+The reset/reload execution-plan seam exposes the local/test JSON handler
+`/api/operations/seeded-corpus-reset-reload/execution-plan` only when the caller
+supplies an explicit local/test context with a database connection,
+authenticated operator or admin-style actor, and seeded corpus scope. It reuses
+the dry-run permission and scope checks, returns ordered bounded non-destructive
+action steps, and can optionally persist an execution-plan artifact through the
+same planning metadata table when local/test code adds
+`persist_planning_metadata=true`.
 The read-only planning metadata route seam exposes
 `/api/operations/seeded-corpus-reset-reload/planning-metadata` and
 `/api/operations/seeded-corpus-reset-reload/planning-metadata/by-id` only when
@@ -445,6 +460,12 @@ Run the focused hosted reset/reload dry-run tests:
 
 ```powershell
 pytest tests/unit/test_hosted_reset_reload_dry_run.py
+```
+
+Run the focused hosted reset/reload execution-plan tests:
+
+```powershell
+pytest tests/unit/test_hosted_reset_reload_execution_plan.py
 ```
 
 Run the focused hosted reset/reload operational metadata tests:
@@ -567,6 +588,14 @@ option rejection, unauthenticated, disabled or revoked, role-denied, and out-of-
 scope rejection, and before/after row counts proving persisted planning metadata
 does not mutate seeded import, reviewer-created scaffold, or audit scaffold
 tables or execute reset/reload.
+The reset/reload execution-plan tests verify authenticated success,
+unauthenticated, disabled or revoked, role-denied, and out-of-scope rejections,
+invalid requested mode and reviewer-state handling option rejection, default
+non-persistence, optional planning metadata persistence, deterministic action-
+plan ordering, and before/after row counts proving execution-plan creation does
+not mutate seeded import, source-derived, reviewer-created, audit, or
+operational metadata tables except for the explicitly requested planning
+metadata row.
 The reset/reload planning metadata route tests verify local/test authenticated
 list and fetch handlers over persisted planning rows, schema-backed filters,
 empty history, missing-record responses, explicit route-context requirements,
@@ -614,8 +643,8 @@ The scaffold intentionally does not implement:
   reset/reload execution tables beyond the narrow planning metadata scaffold.
 - HTTP API routes outside the narrow local/test source-derived read route seam,
   reviewer workflow shell queue/detail/note-action seam, reviewer-created state
-  read route seam, reset/reload dry-run seam, audit history read route seam, and
-  reset/reload planning metadata read route seam.
+  read route seam, reset/reload dry-run seam, reset/reload execution-plan seam,
+  audit history read route seam, and reset/reload planning metadata read route seam.
 - Stateful database-backed reviewer views or workflows.
 - Production import/sync automation.
 - Queues.

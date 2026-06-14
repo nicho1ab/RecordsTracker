@@ -62,15 +62,17 @@ event, export behavior, or workflow status.
 A local/test reset/reload dry-run seam can inspect existing seeded import batch
 metadata, source-derived record counts by entity, and audit scaffold row counts
 for a requested corpus scope and report reviewer-created state handling options.
-When explicitly requested by local/test code, it can persist a separate
-operational planning metadata record with actor attribution, permission used,
-scope, requested dry-run mode, validation summary, non-secret planning context,
-and impact summaries. That operational metadata is not a canonical
-source-derived field and remains separate from source-derived, reviewer-created,
-and audit rows. A narrow local/test read-only route seam can list or fetch those
-planning metadata records by approved planning identifiers and schema-supported
-filters without mutating source-derived, reviewer-created, audit, or operational
-metadata rows.
+A narrow local/test execution-plan seam can turn that existing planning context
+into ordered bounded non-destructive action steps without adding canonical
+source-derived fields. When explicitly requested by local/test code, either seam
+can persist a separate operational planning metadata record with actor
+attribution, permission used, scope, requested dry-run mode, validation summary,
+non-secret planning context, and impact summaries. That operational metadata is
+not a canonical source-derived field and remains separate from source-derived,
+reviewer-created, and audit rows. A narrow local/test read-only route seam can
+list or fetch those planning metadata records by approved planning identifiers
+and schema-supported filters without mutating source-derived, reviewer-created,
+audit, or operational metadata rows.
 A narrow local/test reviewer-created state scaffold table can store review-item-
 state placeholder rows separately from source-derived rows, linked through
 staged source-derived record keys and attributed to authenticated actors. A

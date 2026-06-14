@@ -20,6 +20,11 @@ from ccld_complaints.hosted_app.reset_reload_dry_run import (
     SeededCorpusResetReloadDryRunContext,
     route_seeded_corpus_reset_reload_dry_run_response,
 )
+from ccld_complaints.hosted_app.reset_reload_execution_plan import (
+  SEEDED_CORPUS_RESET_RELOAD_EXECUTION_PLAN_API_PATH,
+  SeededCorpusResetReloadExecutionPlanContext,
+  route_seeded_corpus_reset_reload_execution_plan_response,
+)
 from ccld_complaints.hosted_app.reset_reload_planning_routes import (
     RESET_RELOAD_PLANNING_METADATA_API_PREFIX,
     ResetReloadPlanningMetadataApiContext,
@@ -994,6 +999,9 @@ def route_response(
     reviewer_workflow_shell_context: ReviewerWorkflowShellContext | None = None,
     reviewer_created_state_api_context: ReviewerCreatedStateApiContext | None = None,
     reset_reload_dry_run_context: SeededCorpusResetReloadDryRunContext | None = None,
+    reset_reload_execution_plan_context: (
+      SeededCorpusResetReloadExecutionPlanContext | None
+    ) = None,
     reset_reload_planning_metadata_api_context: (
         ResetReloadPlanningMetadataApiContext | None
     ) = None,
@@ -1017,6 +1025,11 @@ def route_response(
             path,
             reset_reload_dry_run_context,
         )
+    if parsed_path == SEEDED_CORPUS_RESET_RELOAD_EXECUTION_PLAN_API_PATH:
+      return route_seeded_corpus_reset_reload_execution_plan_response(
+        path,
+        reset_reload_execution_plan_context,
+      )
     if parsed_path.startswith(RESET_RELOAD_PLANNING_METADATA_API_PREFIX):
         return route_reset_reload_planning_metadata_api_response(
             path,

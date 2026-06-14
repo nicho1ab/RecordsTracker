@@ -126,7 +126,8 @@ route seam, a narrow local/test authenticated reviewer-created state read route
 seam, a narrow local/test authenticated reviewer note creation route seam over
 the existing reviewer-created state scaffold, a narrow local/test workflow-shell
 note action and status action over the selected source-derived detail context,
-and a local/test authenticated reset/reload dry-run route seam: a
+a local/test authenticated reset/reload dry-run route seam, and a local/test
+authenticated reset/reload execution-plan route seam: a
 no-secret database URL configuration seam, an Alembic script location, one
 domain migration for import batch metadata and source-derived record staging,
 one domain migration for a separate reviewer-created state scaffold table, one
@@ -157,7 +158,9 @@ that reports seeded import batch counts,
 source-derived record counts by entity, scoped reviewer-created state scaffold
 counts, scoped audit scaffold counts, future reviewer-created state handling options, required permissions,
 validation requirements, audit requirements, and deferred destructive actions
-without mutating data, and can optionally persist one non-secret operational
+without mutating data, plus an execution-plan handler that orders those
+summaries into bounded non-destructive local/test action steps and can
+optionally persist one non-secret operational
 planning metadata record when explicitly requested by local/test code. This path preserves import batch identity, source traceability,
 original source-derived values, authenticated attribution for scaffold rows,
 audit rows for successful reviewer-created state scaffold writes only, and the
@@ -201,7 +204,8 @@ operational planning metadata scaffold table. The current auth boundary,
 source-derived read route seam, reviewer workflow shell with read-only queue/
 detail payloads and narrow note/status actions,
 reviewer-created state scaffold service, reviewer-created state read route seam,
-audit history read route seam, reset/reload dry-run seam, opt-in reset/reload
+audit history read route seam, reset/reload dry-run seam, reset/reload
+execution-plan seam, opt-in reset/reload
 planning metadata scaffold, and read-only reset/reload planning metadata route seam
 are local/test only; auth tables, export tables, feedback tables, broader
 reset/reload metadata tables, ORM models, stateful reviewer workflow API behavior,
@@ -283,8 +287,8 @@ retention implementation PRs validate the concrete layer.
   API boundaries, expose a local/test database-backed read service over the
   staged source-derived records, and expose a narrow local/test authenticated
   source-derived read route seam, reviewer workflow shell with read-only queue/
-  detail payloads and narrow reviewer note/status actions, and reset/reload dry-run
-  route seam with opt-in operational planning metadata persistence plus
+  detail payloads and narrow reviewer note/status actions, reset/reload dry-run
+  route seam, execution-plan route seam, opt-in operational planning metadata persistence plus
   read-only planning metadata routes, but it must not imply stateful
   database-backed reviewer views, full reviewer workflows, production import
   automation, production API framework behavior, or operational reset/reload
@@ -314,8 +318,8 @@ retention implementation PRs validate the concrete layer.
   audit event scaffold table tied to successful reviewer-created state scaffold
   writes only, a narrow local/test authenticated audit history read route seam
   over those audit rows, and a
-  non-mutating reset/reload dry-run plan over staged seeded corpus metadata,
-  scoped reviewer-created scaffold and audit scaffold row counts, and explicit
+  non-mutating reset/reload dry-run plan and execution-plan steps over staged
+  seeded corpus metadata, scoped reviewer-created scaffold and audit scaffold row counts, and explicit
   dry-run planning metadata when requested, with read-only planning metadata
   list/fetch access over persisted planning rows. Real provider
   authentication implementation, persistent authorization storage, production
