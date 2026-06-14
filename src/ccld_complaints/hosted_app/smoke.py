@@ -25,6 +25,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
             root_status, root_body = _read_url(f"{base_url}/")
             records_status, records_body = _read_url(f"{base_url}/source-records")
             facilities_status, facilities_body = _read_url(f"{base_url}/facilities")
+            reviewer_status, reviewer_body = _read_url(f"{base_url}/reviewer")
         finally:
             server.shutdown()
             thread.join(timeout=5)
@@ -32,7 +33,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     payload = json.loads(health_body.decode("utf-8"))
     if health_status != 200 or payload.get("status") != "ok":
         raise RuntimeError("Hosted scaffold health check did not return ok.")
-    if root_status != 200 or b"not a functioning reviewer workflow yet" not in root_body:
+    if root_status != 200 or b"not a production reviewer workflow" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return the placeholder notice.")
     if (
         records_status != 200
@@ -46,6 +47,12 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Committed tiny public-source facility fixture rows" not in facilities_body
     ):
         raise RuntimeError("Hosted scaffold facility sample shell did not return the fixture list.")
+    if (
+        reviewer_status != 200
+        or b"Local/test reviewer records" not in reviewer_body
+        or b"Seeded source-derived review list" not in reviewer_body
+    ):
+        raise RuntimeError("Hosted scaffold reviewer UI shell did not return the seeded list.")
     return payload if isinstance(payload, dict) else {}
 
 

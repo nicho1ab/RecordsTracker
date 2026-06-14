@@ -54,6 +54,7 @@ def test_text_report_includes_commands_and_non_install_boundary() -> None:
     assert "tests/unit/test_hosted_reset_reload_execution_plan.py" in text
     assert "tests/unit/test_hosted_reset_reload_operational_metadata.py" in text
     assert "tests/unit/test_hosted_reset_reload_planning_routes.py" in text
+    assert "tests/unit/test_hosted_reviewer_ui.py" in text
 
 
 def test_text_report_can_include_database_scaffold_boundary() -> None:

@@ -106,14 +106,14 @@ feedback, reset/reload metadata, and auth role/scope references. SQLite and
 Datasette remain retained for validation, inspection, debugging, local
 exploration, export support, and transition comparison.
 
-The current hosted scaffold state is local-only and sample-only. It includes a
-Python standard-library app shell, health and smoke validation, local setup
-checks, and a read-only `/source-records` list/detail shell over fixture/sample
-records with local sample filtering/search, fixture/sample-only source
-traceability summary panels, and semantic/accessibility validation. It does not
-read from SQLite or a hosted database, load live public-source data, run
-import/sync, perform real provider login, persist reviewer-created state, deploy
-to QNAP/Azure/AWS, or expose a public URL.
+The earlier hosted scaffold sample pages remain local-only and sample-only. The
+Python standard-library app shell still includes health and smoke validation,
+local setup checks, and a read-only `/source-records` list/detail shell over
+fixture/sample records with local sample filtering/search, fixture/sample-only
+source traceability summary panels, and semantic/accessibility validation. Those
+sample pages do not read from SQLite or a hosted database, load live public-
+source data, run import/sync, perform real provider login, persist reviewer-
+created state, deploy to QNAP/Azure/AWS, or expose a public URL.
 
 The hosted scaffold now also includes minimal PostgreSQL/Alembic project wiring,
 the first controlled seeded corpus import path, a narrow database-backed
@@ -126,6 +126,8 @@ route seam, a narrow local/test authenticated reviewer-created state read route
 seam, a narrow local/test authenticated reviewer note creation route seam over
 the existing reviewer-created state scaffold, a narrow local/test workflow-shell
 note action and status action over the selected source-derived detail context,
+a thin browser-accessible local/test reviewer UI shell at `/reviewer` and
+`/reviewer/records` over those existing seams,
 a local/test authenticated reset/reload dry-run route seam, and a local/test
 authenticated reset/reload execution-plan route seam: a
 no-secret database URL configuration seam, an Alembic script location, one
@@ -149,6 +151,10 @@ plus read-only workflow-shell detail composition of associated reviewer-created
 state read route output and a compact derived summary for a selected source record,
 plus workflow-shell note and status actions that resolve the selected source-
 derived detail context before delegating to reviewer-created write routes,
+plus simple server-rendered HTML pages that let a local tester list/search a
+seeded complaint record, open detail, view safe source traceability fields,
+submit reviewer note/status forms through the existing workflow actions, and
+see read-after-write reviewer-created state,
 plus a JSON handler that stores bounded non-secret reviewer note text as reviewer-created
 scaffold payload under the existing state kind,
 plus a JSON handler that stores bounded reviewer status values as reviewer-created
@@ -173,7 +179,8 @@ audit rows for successful reviewer-created state scaffold writes only, and the
 separation from reviewer-created state, audit rows, and operational metadata.
 It does not implement real login flow, provider registration, sessions, cookies,
 tokens, auth middleware, provider discovery calls, hosted URLs, full reviewer-created workflows, annotations,
-corrections, note or status editing or deletion, export packet decisions, tester feedback, reset/reload execution,
+corrections, note or status editing or deletion, production review status UI,
+export packet decisions, tester feedback, reset/reload execution,
 reviewer-created state archive or clear behavior, full audit coverage, audit UI,
 audit export, new audit write behavior, hosted live crawling, hosted connector execution, production import automation, production
 API framework behavior, or deployment.
@@ -293,10 +300,11 @@ retention implementation PRs validate the concrete layer.
   API boundaries, expose a local/test database-backed read service over the
   staged source-derived records, and expose a narrow local/test authenticated
   source-derived read route seam, reviewer workflow shell with read-only queue/
-  detail payloads and narrow reviewer note/status actions, reset/reload dry-run
-  route seam, execution-plan route seam, opt-in operational planning metadata persistence plus
+  detail payloads and narrow reviewer note/status actions, a thin local/test
+  browser reviewer UI shell over those seams, reset/reload dry-run route seam,
+  execution-plan route seam, opt-in operational planning metadata persistence plus
   read-only planning metadata routes, but it must not imply stateful
-  database-backed reviewer views, full reviewer workflows, production import
+  production reviewer views, full reviewer workflows, production import
   automation, production API framework behavior, or operational reset/reload
   execution are implemented.
   SQLite and Datasette remain retained validation and transition-comparison

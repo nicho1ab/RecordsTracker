@@ -1,0 +1,427 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any, cast
+from urllib.parse import quote, urlencode
+
+import pytest
+from sqlalchemy import create_engine, func, select
+from sqlalchemy.engine import Connection
+
+from ccld_complaints.hosted_app.app import route_response
+from ccld_complaints.hosted_app.audit_events import hosted_audit_events
+from ccld_complaints.hosted_app.auth import (
+    AuthenticatedActor,
+    HostedAccessScope,
+    HostedAccountStatus,
+    HostedActorCategory,
+    HostedTesterRole,
+)
+from ccld_complaints.hosted_app.reset_reload_dry_run import (
+    hosted_reset_reload_planning_metadata,
+)
+from ccld_complaints.hosted_app.reviewer_created_state import hosted_reviewer_created_state
+from ccld_complaints.hosted_app.reviewer_ui import (
+    LOCAL_REVIEWER_UI_SCOPE,
+    REVIEWER_UI_DETAIL_PATH,
+    REVIEWER_UI_NOTE_PATH,
+    REVIEWER_UI_STATUS_PATH,
+    reviewer_ui_context_for_connection,
+)
+from ccld_complaints.hosted_app.seeded_import import (
+    hosted_import_batches,
+    hosted_seeded_import_metadata,
+    hosted_source_derived_records,
+    import_seeded_corpus_artifact,
+    load_seeded_corpus_artifact,
+)
+
+FIXTURE = Path("tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json")
+TEST_SCOPE = LOCAL_REVIEWER_UI_SCOPE
+OTHER_SCOPE = HostedAccessScope("seeded_corpus", "different-seeded-corpus")
+COMPLAINT_KEY = "complaint:ccld:complaint:32-CR-20220407124448"
+
+
+def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
+    with _seeded_connection() as connection:
+        status, content_type, body = route_response(
+            "/reviewer",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Local/test reviewer records" in html
+    assert "Local/test reviewer UI shell" in html
+    assert "Search seeded review records" in html
+    assert "Seeded source-derived review list" in html
+    assert "32-CR-20220407124448" in html
+    assert COMPLAINT_KEY in html
+    assert "6088c9627374baac647e2f2a54f6e389cb68c1b92db42da00020aaf508a853bd" in html
+    assert "Source-derived records remain separate from reviewer-created notes" in normalized_html
+    assert "This shell does not implement production sign-in" in normalized_html
+    assert "Open detail" in html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_landing_supports_simple_search() -> None:
+    with _seeded_connection() as connection:
+        matched_status, _content_type, matched_body = route_response(
+            "/reviewer/records?q=32-CR",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+        empty_status, _content_type, empty_body = route_response(
+            "/reviewer/records?q=no-match",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    matched_html = matched_body.decode("utf-8")
+    empty_html = empty_body.decode("utf-8")
+
+    assert matched_status == 200
+    assert "value=\"32-CR\"" in matched_html
+    assert "32-CR-20220407124448" in matched_html
+    assert empty_status == 200
+    assert "No seeded source-derived review records match the current search." in (
+        " ".join(empty_html.split())
+    )
+
+
+def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
+    with _seeded_connection() as connection:
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Local/test reviewer detail" in html
+    assert "Source-derived record" in html
+    assert "Safe source-derived values for the selected seeded record" in html
+    assert "complaint_control_number" in html
+    assert "32-CR-20220407124448" in html
+    assert "Source traceability" in html
+    assert "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports" in html
+    assert "Raw SHA-256" in html
+    assert "6088c9627374baac647e2f2a54f6e389cb68c1b92db42da00020aaf508a853bd" in html
+    assert "Connector name" in html
+    assert "ccld_facility_reports" in html
+    assert "Source document ID" in html
+    assert "ccld:document:157806098:3" in html
+    assert "Import batch ID" in html
+    assert TEST_SCOPE.scope_id in html
+    assert "Reviewer-created state" in html
+    assert "No reviewer-created state has been recorded" in html
+    assert "Add reviewer note" in html
+    assert f"action=\"{REVIEWER_UI_NOTE_PATH}\"" in html
+    assert "Set reviewer status" in html
+    assert f"action=\"{REVIEWER_UI_STATUS_PATH}\"" in html
+    assert "Reviewer-created state is stored separately" in normalized_html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write() -> None:
+    with _seeded_connection() as connection:
+        before_source_rows = _source_rows(connection)
+
+        status, content_type, body = route_response(
+            REVIEWER_UI_NOTE_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "source_record_key": COMPLAINT_KEY,
+                    "note_text": "Review source traceability before export.",
+                }
+            ),
+            reviewer_ui_context=reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(
+                    roles=("tester_reviewer",),
+                    provider_subject="fixture-ui-note-reviewer",
+                    display_name="Fixture UI Note Reviewer",
+                ),
+            ),
+        )
+
+        after_source_rows = _source_rows(connection)
+        counts = _table_counts(connection)
+        [audit_event] = connection.execute(select(hosted_audit_events)).mappings().all()
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 1,
+        "audit_events": 1,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert "Reviewer note saved through the existing local/test workflow action." in html
+    assert "Review source traceability before export." in html
+    assert "reviewer_note_scaffold" in html
+    assert "Fixture UI Note Reviewer (tester)" in html
+    assert "Reviewer-created; source-derived record unchanged" in html
+    assert audit_event["source_record_key"] == COMPLAINT_KEY
+    assert audit_event["context_metadata"]["state_payload_keys"] == [
+        "local_test_only",
+        "note_format",
+        "note_text",
+        "payload_kind",
+        "source_record_key",
+    ]
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_write() -> None:
+    with _seeded_connection() as connection:
+        before_source_rows = _source_rows(connection)
+
+        status, content_type, body = route_response(
+            REVIEWER_UI_STATUS_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "source_record_key": COMPLAINT_KEY,
+                    "reviewer_status": "needs_follow_up",
+                }
+            ),
+            reviewer_ui_context=reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(
+                    roles=("tester_reviewer",),
+                    provider_subject="fixture-ui-status-reviewer",
+                    display_name="Fixture UI Status Reviewer",
+                ),
+            ),
+        )
+
+        after_source_rows = _source_rows(connection)
+        counts = _table_counts(connection)
+        [audit_event] = connection.execute(select(hosted_audit_events)).mappings().all()
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 1,
+        "audit_events": 1,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert "Reviewer status saved through the existing local/test workflow action." in html
+    assert "reviewer_status_scaffold" in html
+    assert "needs_follow_up" in html
+    assert "Reviewer statuses present" in html
+    assert "Fixture UI Status Reviewer (tester)" in html
+    assert audit_event["source_record_key"] == COMPLAINT_KEY
+    assert audit_event["context_metadata"]["state_payload_keys"] == [
+        "local_test_only",
+        "payload_kind",
+        "reviewer_status",
+        "source_record_key",
+    ]
+    assert_no_secret_html(html)
+
+
+@pytest.mark.parametrize(
+    ("actor_case", "expected_status", "expected_text"),
+    [
+        ("unauthenticated", 401, "requires an authenticated actor"),
+        ("disabled", 403, "disabled or revoked"),
+        ("revoked", 403, "disabled or revoked"),
+        ("role_denied", 403, "does not allow"),
+        ("out_of_scope", 403, "not assigned to the requested project or corpus scope"),
+    ],
+)
+def test_reviewer_ui_rejects_blocked_list_contexts(
+    actor_case: str,
+    expected_status: int,
+    expected_text: str,
+) -> None:
+    actor: AuthenticatedActor | None
+    if actor_case == "unauthenticated":
+        actor = None
+    elif actor_case == "disabled":
+        actor = _actor(roles=("tester_reviewer",), account_status="disabled")
+    elif actor_case == "revoked":
+        actor = _actor(roles=("tester_reviewer",), account_status="revoked")
+    elif actor_case == "out_of_scope":
+        actor = _actor(roles=("tester_reviewer",), scopes=(OTHER_SCOPE,))
+    else:
+        actor = _actor(roles=())
+
+    with _seeded_connection() as connection:
+        status, content_type, body = route_response(
+            "/reviewer/records",
+            reviewer_ui_context=reviewer_ui_context_for_connection(
+                connection,
+                actor=actor,
+            ),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == expected_status
+    assert content_type == "text/html; charset=utf-8"
+    assert "Reviewer request blocked" in html
+    assert expected_text in html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_rejects_source_read_without_reviewer_state_read_on_detail() -> None:
+    with _seeded_connection() as connection:
+        status, _content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(roles=("developer_operator",), actor_category="operator"),
+            ),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 403
+    assert "Reviewer request blocked" in html
+    assert "reviewer_state_read" in html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_rejects_note_write_without_reviewer_state_write() -> None:
+    with _seeded_connection() as connection:
+        status, _content_type, body = route_response(
+            REVIEWER_UI_NOTE_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {"source_record_key": COMPLAINT_KEY, "note_text": "Needs review."}
+            ),
+            reviewer_ui_context=reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(roles=("read_only_tester",)),
+            ),
+        )
+        counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+
+    assert status == 403
+    assert "Reviewer request blocked" in html
+    assert "reviewer_state_write" in html
+    assert counts["source_records"] == 6
+    assert counts["reviewer_created_state"] == 0
+    assert counts["audit_events"] == 0
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_default_route_context_is_browser_accessible() -> None:
+    status, content_type, body = route_response("/reviewer")
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Local/test reviewer records" in html
+    assert "32-CR-20220407124448" in html
+    assert_no_secret_html(html)
+
+
+def assert_no_secret_html(markup: str) -> None:
+    lowered = markup.casefold()
+    for marker in [
+        "authorization",
+        "client_secret",
+        "connection string",
+        "connection_string",
+        "cookie",
+        "password",
+        "private_header",
+        "private header",
+        "provider_issuer",
+        "provider_subject",
+        "secret",
+        "token",
+        "tester@example.invalid",
+        "https://example.com",
+    ]:
+        assert marker not in lowered
+
+
+def _form_bytes(payload: dict[str, str]) -> bytes:
+    return urlencode(payload).encode("utf-8")
+
+
+def _seeded_connection() -> Connection:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+    connection = engine.connect()
+    transaction = connection.begin()
+    artifact = load_seeded_corpus_artifact(FIXTURE)
+    import_seeded_corpus_artifact(connection, artifact)
+    transaction.commit()
+    return connection
+
+
+def _actor(
+    *,
+    roles: tuple[str, ...],
+    scopes: tuple[HostedAccessScope, ...] = (TEST_SCOPE,),
+    account_status: str = "active",
+    actor_category: str = "tester",
+    provider_subject: str = "fixture-ui-reviewer",
+    display_name: str = "Fixture UI Reviewer",
+) -> AuthenticatedActor:
+    return AuthenticatedActor(
+        provider_subject=provider_subject,
+        provider_issuer="fixture-managed-oidc-provider",
+        display_name=display_name,
+        email="tester@example.invalid",
+        actor_category=cast(HostedActorCategory, actor_category),
+        account_status=cast(HostedAccountStatus, account_status),
+        roles=tuple(cast(HostedTesterRole, role) for role in roles),
+        scopes=scopes,
+    )
+
+
+def _source_rows(connection: Connection) -> list[dict[str, Any]]:
+    rows = connection.execute(
+        select(hosted_source_derived_records).order_by(
+            hosted_source_derived_records.c.source_record_key
+        )
+    ).mappings()
+    return [dict(row) for row in rows]
+
+
+def _table_counts(connection: Connection) -> dict[str, int]:
+    import_batches = connection.execute(
+        select(func.count()).select_from(hosted_import_batches)
+    ).scalar_one()
+    source_records = connection.execute(
+        select(func.count()).select_from(hosted_source_derived_records)
+    ).scalar_one()
+    reviewer_created_state = connection.execute(
+        select(func.count()).select_from(hosted_reviewer_created_state)
+    ).scalar_one()
+    audit_events = connection.execute(
+        select(func.count()).select_from(hosted_audit_events)
+    ).scalar_one()
+    reset_reload_planning_metadata = connection.execute(
+        select(func.count()).select_from(hosted_reset_reload_planning_metadata)
+    ).scalar_one()
+    return {
+        "import_batches": import_batches,
+        "source_records": source_records,
+        "reviewer_created_state": reviewer_created_state,
+        "audit_events": audit_events,
+        "reset_reload_planning_metadata": reset_reload_planning_metadata,
+    }

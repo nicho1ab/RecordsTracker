@@ -92,6 +92,7 @@ def test_health_response_marks_scaffold_only() -> None:
     assert payload["status"] == "ok"
     assert payload["service"] == "hosted-tester-mvp-scaffold"
     assert payload["scaffold_only"] is True
+    assert payload["local_test_reviewer_ui_shell"] is True
     assert payload["review_workflows_implemented"] is False
     assert payload["authentication_implemented"] is False
     assert payload["source_data_loaded"] is False
@@ -102,12 +103,15 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     normalized_html = " ".join(html.split())
 
     assert "<main>" in html
-    assert "Scaffold only: not a functioning reviewer workflow yet." in html
-    assert "No records are loaded" in html
+    assert "Local/test scaffold only: not a production reviewer workflow." in html
+    assert "The root scaffold page does not load source records" in html
+    assert "Local/test reviewer workflow behavior is available only" in html
     assert "Authentication and authorization" in html
     assert "QNAP, Azure, AWS, public URLs, or deployment" in normalized_html
     assert "Sample source-derived records" in html
     assert "Sample facility master records" in html
+    assert "Local/test reviewer UI shell" in html
+    assert "/reviewer" in html
 
 
 def test_routes_return_shell_health_and_not_found() -> None:
@@ -118,7 +122,7 @@ def test_routes_return_shell_health_and_not_found() -> None:
 
     assert root_status == 200
     assert root_content_type == "text/html; charset=utf-8"
-    assert b"not a functioning reviewer workflow yet" in root_body
+    assert b"not a production reviewer workflow" in root_body
     assert health_status == 200
     assert health_content_type == "application/json; charset=utf-8"
     assert json.loads(health_body)["status"] == "ok"

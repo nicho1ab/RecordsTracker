@@ -129,6 +129,18 @@ read-after-write tests. It does not add status editing/deletion, queue
 assignment, full workflow engine behavior, schema changes, exports, or
 production auth behavior.
 
+A thin local/test browser reviewer UI shell now exists at `/reviewer` and
+`/reviewer/records` when the local scaffold process is running. It loads only
+the tiny seeded fixture corpus into process-local test state and gives a local
+tester a first browser path to list/search seeded source-derived records, open a
+source-derived detail page, view safe source traceability fields, submit a
+bounded reviewer note, submit a bounded reviewer status, and see read-after-
+write reviewer-created state. The UI delegates reads and writes to the existing
+local/test workflow shell, reviewer-created state route, source-derived read
+route, and audit scaffold; it does not add schema changes, production auth,
+sessions, cookies, exports, reset/reload execution, hosted live crawling,
+connector execution, deployment, hosted URLs, or full reviewer workflows.
+
 The reviewer workflow shell can now include associated reviewer-created state
 read route output in a selected source-record detail response when explicit
 local/test source-derived and reviewer-created state contexts are supplied.
@@ -139,10 +151,10 @@ modify reviewer-created state, source-derived rows, audit rows, or operational
 metadata.
 
 The next safe hosted-view increment should remain similarly narrow and
-fixture-backed, preserving fixture/sample labels, read-only behavior,
-source-derived versus reviewer-created state separation, semantic structure,
-accessibility validation, and the no-real-login, no-full-reviewer-created-
-workflow, no-deployment boundary.
+fixture-backed, preserving fixture/sample labels, explicit local/test actor
+context, source-derived versus reviewer-created state separation, semantic
+structure, accessibility validation, read/write permission separation, and the
+no-real-login, no-full-reviewer-created-workflow, no-deployment boundary.
 
 ## Non-negotiable boundaries
 

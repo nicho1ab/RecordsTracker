@@ -88,7 +88,15 @@
   local/test reviewer status creation route can write bounded status values
   through the same scaffold and audit path; it does not add a new schema kind,
   status editing/deletion, queue assignment, full workflow engine behavior,
-  exports, or production auth behavior. The path does not run live crawling,
+  exports, or production auth behavior. A browser-accessible local/test reviewer
+  UI shell at `/reviewer` and `/reviewer/records` now wraps those existing seams
+  for the tiny seeded fixture corpus only: a local tester can list/search a
+  seeded source-derived complaint record, open detail, view safe source
+  traceability fields, submit a bounded reviewer note, submit a bounded reviewer
+  status, and see read-after-write reviewer-created state. The UI uses process-
+  local seeded test state and a fixture actor context; it is not production
+  authentication, durable hosted deployment, full reviewer workflow behavior, or
+  complete public-source coverage. The path does not run live crawling,
   execute connectors, automate production imports,
   execute reset/reload, delete or overwrite source-derived records, archive or
   clear reviewer-created state, execute persisted planning or execution-plan metadata, mutate
@@ -96,7 +104,7 @@
   audit events beyond successful reviewer-created state scaffold writes,
   authenticate browser users, validate
   real provider tokens, implement full reviewer workflows,
-  expose stateful database-backed reviewer views or production API framework
+  expose production reviewer views or production API framework
   behavior, or prove source completeness. The audit event scaffold is local/test
   only, stored separately, and records only successful reviewer-created state
   scaffold writes with actor, permission, scope, action, target, and source-
