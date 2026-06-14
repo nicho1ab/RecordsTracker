@@ -168,8 +168,9 @@ plus workflow-shell note and status actions that resolve the selected source-
 derived detail context before delegating to reviewer-created write routes,
 plus simple server-rendered HTML pages that let a local tester list/search a
 seeded complaint record, see list-level reviewer-created note/status indicators,
-open detail, view safe source traceability fields and safe related seeded bundle
-context, submit reviewer note/status forms through the existing workflow
+open detail, view a plain-language record summary, safe source traceability
+fields, safe related seeded bundle context, reviewer-created notes/statuses,
+CCLD return links, and record-specific feedback clues, submit reviewer note/status forms through the existing workflow
 actions, and see read-after-write reviewer-created state without exposing
 sensitive narrative fields,
 plus a simple server-rendered CCLD request page that accepts only CCLD digit

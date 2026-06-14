@@ -182,9 +182,27 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Local/test reviewer detail" in html
     assert "Detail navigation" in html
+    assert "Return to CCLD request or queue" in html
+    assert "Find another CCLD facility" in html
+    assert "Open CCLD workflow help" in html
     assert "Back to reviewer records" in html
+    assert "Review record summary" in html
     assert "Review source-derived context" in html
+    assert "Prepare tester feedback" in html
+    assert "Record summary" in html
+    assert "This summary orients the selected local/test CCLD complaint record" in (
+        normalized_html
+    )
+    assert "Complaint and report dates" in html
+    assert "Facility/license number" in html
+    assert "157806098" in html
+    assert "Facility name" in html
+    assert "A. MIRIAM JAMISON" in html
+    assert "Reviewer status recorded" in html
     assert "Source-derived record" in html
+    assert "These are safe scalar fields from the selected source-derived row" in (
+        normalized_html
+    )
     assert "Safe source-derived values for the selected seeded record" in html
     assert "complaint_control_number" in html
     assert "32-CR-20220407124448" in html
@@ -199,8 +217,12 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "ccld:document:157806098:3" in html
     assert "Import batch ID" in html
     assert TEST_SCOPE.scope_id in html
+    assert "Use these fields to confirm that the selected record remains tied" in (
+        normalized_html
+    )
     assert "Selected source-derived bundle summary" in html
     assert "Related seeded source-derived context" in html
+    assert "Use this section to distinguish the selected complaint" in normalized_html
     assert "Safe related source-derived rows in the selected seeded bundle" in html
     assert "facility" in html
     assert "source_document" in html
@@ -220,15 +242,54 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "adequate supervision to the facility clients" not in html
     assert "Reviewer-created state" in html
     assert "UI actions add reviewer-created rows and audit rows" in normalized_html
+    assert "Use this section to see whether another local/test reviewer" in normalized_html
     assert "Reviewer-created payload kinds present" in html
     assert "Latest reviewer-created row" in html
     assert "No reviewer-created state has been recorded" in html
     assert "Reviewer actions" in html
+    assert "Set a status to keep queue progress understandable" in normalized_html
     assert "Add reviewer note" in html
+    assert "Use safe plain text" in html
     assert f"action=\"{REVIEWER_UI_NOTE_PATH}\"" in html
     assert "Set reviewer status" in html
+    assert "Status is reviewer-created local/test state for" in normalized_html
     assert f"action=\"{REVIEWER_UI_STATUS_PATH}\"" in html
     assert "Reviewer-created state is stored separately" in normalized_html
+    assert "Feedback clues for this record" in html
+    assert "copy the tester feedback checklist" in normalized_html
+    assert "/ccld/records/request?facility_number=157806098" in html
+    assert "/ccld/facilities" in html
+    assert "/ccld/help" in html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_detail_render_is_non_mutating() -> None:
+    with _seeded_connection() as connection:
+        before_source_rows = _source_rows(connection)
+        before_counts = _table_counts(connection)
+
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        after_source_rows = _source_rows(connection)
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 0,
+        "audit_events": 0,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert "Record summary" in html
+    assert "Feedback clues for this record" in html
     assert_no_secret_html(html)
 
 

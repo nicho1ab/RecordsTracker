@@ -32,9 +32,11 @@
   context before delegating to existing reviewer-created write routes, a thin
   browser-accessible local/test reviewer UI shell that lets a local tester list/
   search seeded source-derived records, see list-level reviewer-created
-  note/status indicators, open detail, view safe source traceability fields and
-  safe related seeded bundle context, submit note/status forms through those
-  existing workflow actions, and see read-after-write
+  note/status indicators, open detail, view a plain-language record summary,
+  safe source traceability fields, safe related seeded bundle context,
+  reviewer-created notes/statuses, CCLD return links, and record-specific
+  feedback clues, submit note/status forms through those existing workflow
+  actions, and see read-after-write
   reviewer-created state without exposing sensitive narrative fields, a browser-
   accessible local/test CCLD facility lookup page at `/ccld/facilities` that
   reads configured full local/test or committed tiny CCLD program facility

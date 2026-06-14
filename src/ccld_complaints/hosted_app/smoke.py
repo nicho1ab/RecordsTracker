@@ -30,6 +30,10 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
             )
             ccld_status, ccld_body = _read_url(f"{base_url}/ccld/records/request")
             reviewer_status, reviewer_body = _read_url(f"{base_url}/reviewer")
+            reviewer_detail_status, reviewer_detail_body = _read_url(
+                f"{base_url}/reviewer/records/detail?"
+                "source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448"
+            )
             help_status, help_body = _read_url(f"{base_url}/ccld/help")
         finally:
             server.shutdown()
@@ -83,6 +87,13 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Seeded source-derived review list" not in reviewer_body
     ):
         raise RuntimeError("Hosted scaffold reviewer UI shell did not return the seeded list.")
+    if (
+        reviewer_detail_status != 200
+        or b"Local/test reviewer detail" not in reviewer_detail_body
+        or b"Record summary" not in reviewer_detail_body
+        or b"Feedback clues for this record" not in reviewer_detail_body
+    ):
+        raise RuntimeError("Hosted scaffold reviewer detail did not return usable guidance.")
     return payload if isinstance(payload, dict) else {}
 
 

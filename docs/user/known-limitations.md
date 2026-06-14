@@ -93,8 +93,9 @@
   for the tiny seeded fixture corpus only: a local tester can list/search a
   seeded source-derived complaint record, see list-level reviewer-created
   note/status indicators, open detail, view safe source traceability fields plus
-  safe related seeded bundle context, submit a bounded reviewer note, submit a
-  bounded reviewer status, and see read-after-write reviewer-created state.
+  safe related seeded bundle context, see record-summary and feedback guidance,
+  submit a bounded reviewer note, submit a bounded reviewer status, and see
+  read-after-write reviewer-created state.
   No-search-results, missing-record, invalid-form, and permission-blocked states
   provide local/test next-step links but do not diagnose production access or
   data availability.
