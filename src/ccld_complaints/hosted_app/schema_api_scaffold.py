@@ -55,6 +55,7 @@ class HostedSchemaApiScaffold:
     reviewer_note_write_route_scaffold_implemented: bool = True
     reviewer_created_state_read_api_routes_implemented: bool = True
     reviewer_created_state_read_filter_search_implemented: bool = True
+    audit_coverage_plan_implemented: bool = True
     audit_event_persistence_scaffold_implemented: bool = True
     audit_event_read_api_routes_implemented: bool = True
     api_routes_implemented: bool = True
@@ -181,6 +182,35 @@ HOSTED_API_BOUNDARIES = (
             "full audit policy coverage",
             "audit UI or export behavior",
             "retention automation",
+        ),
+    ),
+    HostedApiBoundary(
+        boundary_id="audit_coverage_plan_api",
+        label="Audit coverage planning API boundary",
+        domain="audit",
+        implementation_status="scaffold-only",
+        intended_future_use=(
+            "Plan future hosted tester audit coverage through a local/test "
+            "non-persistent route seam that summarizes current scaffold audit "
+            "coverage, deferred ADR-0013/ADR-0014 event categories, and bounded "
+            "implementation-readiness steps without creating audit rows."
+        ),
+        requires_authenticated_actor_before_write=True,
+        preserves=(
+            "current reviewer-created state write audit coverage",
+            "authenticated actor attribution model",
+            "target and source-derived context model",
+            "non-secret audit metadata rules",
+            "no-persistence planning behavior",
+        ),
+        deferred=(
+            "new audit event write behavior",
+            "audit UI or export behavior",
+            "export packet audit coverage",
+            "provider login audit coverage",
+            "reset/reload execution audit coverage",
+            "retention automation",
+            "audit schema changes or migrations",
         ),
     ),
     HostedApiBoundary(

@@ -50,6 +50,11 @@ rejected, secret-like inputs and real URLs are rejected without echoing values,
 user-role-admin permission and scope are required, ordering is deterministic,
 and no hosted scaffold tables are mutated or persisted auth configuration is
 created.
+Audit coverage planning tests must prove authenticated audit/admin-style access,
+unauthenticated, disabled or revoked, role-denied, and out-of-scope rejection,
+deterministic ordering, no secret exposure, no audit row creation, no
+persistence, and no mutation of source-derived, reviewer-created, audit, import,
+operational, or auth-related scaffold rows.
 Reviewer-created state read route tests must prove authorized readback remains
 scoped, non-secret, separated from source-derived reads, and non-mutating across
 source-derived rows, reviewer-created rows, audit rows, and operational metadata.

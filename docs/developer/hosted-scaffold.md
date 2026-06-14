@@ -215,6 +215,9 @@ wiring includes:
 - `ccld_complaints.hosted_app.audit_events` for local/test audit rows tied to
   successful reviewer-created state scaffold writes without mutating staged
   source-derived or reviewer-created records.
+- `ccld_complaints.hosted_app.audit_coverage_plan` for local/test audit-read
+  coverage planning over current and deferred audit categories without creating
+  audit rows, persisting planning records, or mutating hosted scaffold tables.
 - `ccld_complaints.hosted_app.audit_event_routes` for local/test authenticated
   JSON list and fetch access over those scaffold audit rows without mutating
   staged source-derived, reviewer-created, or audit records.
@@ -456,6 +459,12 @@ Run the focused hosted auth provider integration planning tests:
 pytest tests/unit/test_hosted_auth_provider_integration_plan.py
 ```
 
+Run the focused hosted audit coverage planning tests:
+
+```powershell
+pytest tests/unit/test_hosted_audit_coverage_plan.py
+```
+
 Run the focused hosted source-derived API route tests:
 
 ```powershell
@@ -547,6 +556,11 @@ inputs, secret-like input and real URL rejection without echoing values,
 user-role-admin permission and scope checks, deterministic plan ordering, no
 persistence, and before/after row counts proving existing hosted scaffold tables
 are not mutated.
+The audit coverage planning tests verify local/test audit-read planning over
+current and deferred audit categories, unauthenticated, disabled or revoked,
+role-denied, and out-of-scope rejections, deterministic ordering, non-secret
+payloads, no audit row creation, no persistence, and before/after row counts
+proving existing hosted scaffold tables are not mutated.
 The source-derived API route tests verify local/test JSON list and fetch
 handlers, source traceability and import batch serialization, entity filtering,
 paging, missing-record responses, explicit route-context requirements, and

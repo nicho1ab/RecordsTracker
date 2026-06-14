@@ -159,7 +159,8 @@ public-record review notes.
    created state persistence scaffold table/service, a narrow local/test audit
    event scaffold for successful reviewer-created state scaffold writes only, a
    narrow local/test authenticated audit history read route seam for those audit
-   rows, a narrow local/test authenticated reviewer-created state read route
+   rows, a narrow local/test audit coverage planning route that summarizes
+   current and deferred audit categories without creating audit rows, a narrow local/test authenticated reviewer-created state read route
    seam for listing, fetching, filtering, or bounded search over persisted
    scaffold rows, and a local/test
    authenticated reset/reload dry-run route seam that reports
@@ -172,7 +173,7 @@ public-record review notes.
    implement real login flow, auth middleware, provider registration, hosted
    URLs, user tables, role persistence, full reviewer workflows,
    annotations, corrections, review status UI, production import automation,
-   full audit coverage, audit UI, audit export, reset/reload execution, exports,
+   full audit coverage, new audit writes, audit UI, audit export, reset/reload execution, exports,
    deployment, QNAP, Azure, or AWS.
    Start with `scripts/check-hosted-scaffold-local.ps1` to verify local Python
    and development-tool prerequisites without installing software or requiring

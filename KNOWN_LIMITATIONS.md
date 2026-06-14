@@ -44,6 +44,12 @@
     configuration, register a provider, create hosted URLs, handle callbacks,
     exchange or validate tokens, create sessions or cookies, or implement
     production auth.
+    A narrow local/test audit coverage planning seam can summarize current
+    scaffold audit coverage and deferred hosted tester audit categories when
+    tests or local callers provide explicit database, actor, and scope context
+    with audit-read permission. It does not create audit rows, persist planning
+    records, add schemas or migrations, provide audit UI/export, or implement
+    full audit coverage.
     A narrow local/test reviewer-created state
     persistence scaffold can
     store attributed placeholder rows separately from source-derived records
