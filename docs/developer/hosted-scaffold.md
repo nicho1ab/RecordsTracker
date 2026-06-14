@@ -109,6 +109,13 @@ Run the focused scaffold tests:
 pytest tests/unit/test_hosted_app_scaffold.py
 ```
 
+These tests include local-only semantic/accessibility validation for the sample
+source view shell. They use Python standard-library HTML parsing to verify one
+page-level heading, meaningful page titles, semantic main content, navigation
+links, fixture/sample caution text, read-only labels, source-derived versus reviewer-created state separation, and visible source-traceability-style fields.
+They do not require browser automation, Node.js, Playwright, Selenium, axe,
+Docker, cloud services, or public URLs.
+
 Run the standard project validation before opening a PR:
 
 ```powershell

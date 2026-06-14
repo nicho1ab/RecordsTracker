@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added local-only semantic/accessibility validation coverage for the hosted
+	scaffold source-record list and detail shell using Python standard-library
+	HTML parsing, without browser automation or frontend test dependencies.
 - Added the first local-only read-only source-derived hosted view shell with
 	fixture/sample records, sample source-traceability-style fields, and explicit
 	labels that no live data, database, import/sync, authentication, or
