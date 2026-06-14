@@ -33,6 +33,10 @@ experience.
    and review-bundle exports without live public requests.
 - Supports a controlled live fetch workflow that is explicitly user-invoked,
    rate-limited by script options, and scoped to provided facility numbers.
+- Includes a local/test hosted CCLD record request page where a tester can enter
+   a CCLD facility/license number and optional date range, read matching seeded
+   source-derived records, and open them in the hosted reviewer UI without
+   running live crawling or imports from a browser request.
 
 ## Core Principles
 
@@ -155,7 +159,14 @@ public-record review notes.
    created state read route output, a compact summary derived from that output
    on selected detail responses, and narrow local/test note/status actions that
    delegate to existing reviewer-created write routes after resolving the
-   selected source record. A browser-accessible local/test reviewer UI shell is
+   selected source record. A browser-accessible local/test CCLD record request
+   page is available at `/ccld/records/request` when the scaffold is running
+   locally; it accepts a CCLD facility/license number and optional date range,
+   reads existing seeded source-derived records, links matching rows into the
+   hosted reviewer UI, and explains the explicit CCLD live-fetch command when
+   matching seeded records are unavailable or broader retrieval is needed. It
+   does not run live crawling, execute connectors, import data, or mutate hosted
+   scaffold tables from browser requests. A browser-accessible local/test reviewer UI shell is
    available at `/reviewer` when the scaffold is running locally; it loads the
    tiny seeded fixture corpus into process-local test state, lets a local tester
    search/select a source-derived record, see list-level reviewer-created

@@ -365,6 +365,14 @@ the governed primary future review experience.
 	schemas or migrations, adding production auth, exports, reset/reload
 	execution, hosted live crawling, connector execution, deployment, hosted URLs,
 	or a frontend build pipeline.
+- Added the first browser-accessible local/test CCLD record request page at
+	`/ccld/records/request`, letting a local tester enter a CCLD facility/license
+	number and optional date range, read matching records from the seeded source-
+	derived corpus, and open matching rows in the hosted reviewer UI. The page
+	validates CCLD-only input and date ranges, shows no-match guidance and the
+	existing explicit live-fetch command, and does not mutate hosted scaffold
+	tables, run live crawling, execute connectors, import data, add schemas or
+	migrations, add production auth, deploy, or add a frontend build pipeline.
 - Added a minimal local/test audit event persistence scaffold with a separate
 	PostgreSQL/Alembic table and service boundary for successful reviewer-created
 	state scaffold writes only, preserving source-derived records and reviewer-
@@ -438,8 +446,9 @@ the governed primary future review experience.
 ## Near-term milestones
 
 - Keep the local hosted scaffold runnable, prerequisite-checked, smoke-tested,
-	and clear about sample-only read-only source-derived views while the next
-	hosted implementation decisions are made.
+	and focused on the CCLD facility/license number plus optional date-range
+	record request flow into the hosted reviewer UI while the next hosted
+	implementation decisions are made.
 - Use the accepted audit, export, reset/reload, tester retention, auth
 	provider-class, role, scope, audit-identity, PostgreSQL, Alembic migration,
 	controlled seeded import, database-backed source-derived read, auth boundary
@@ -475,20 +484,26 @@ has been outgrown as the primary future review experience and should be extended
 only where it remains useful for validation, inspection, debugging, local
 exploration, or export support.
 
-1. Implement real provider integration against the managed OpenID Connect/OAuth
-	2.0 provider class after the local/test auth boundary, callback/session, and
-	configuration decisions are clear.
-2. Expand reset/reload planning into later reset/reload behavior for the seeded
+1. Add a safe CCLD-only import/reload path from validated pipeline output into
+	hosted source-derived records so the `/ccld/records/request` page can prepare
+	or refresh records without live crawling from browser requests.
+2. Add hosted reviewer UI support for reviewing the CCLD request result set as a
+	facility/date-scoped queue while preserving source traceability and reviewer-
+	created state separation.
+3. Implement real provider integration against the managed OpenID Connect/OAuth
+	2.0 provider class after the CCLD request flow, local/test auth boundary,
+	callback/session, and configuration decisions are clear.
+4. Expand reset/reload planning into later reset/reload behavior for the seeded
 	corpus only after reviewer-created state preservation, fuller audit coverage,
 	operational metadata, and permission boundaries are broadened beyond this
 	local/test dry-run, execution-plan, and planning metadata scaffold.
-3. Expand beyond the reviewer-created state and first audit event scaffolds into
+5. Expand beyond the reviewer-created state and first audit event scaffolds into
 	export packet state, tester feedback, reset/reload metadata, fuller audit
 	coverage, and stateful reviewer-created workflow branches.
-4. Implement stateful reviewer-created workflow layers over a seeded,
+6. Implement stateful reviewer-created workflow layers over a seeded,
 	source-traceable corpus after auth, schema, audit, and permission boundaries
 	are ready.
-5. Add additional CCLD fixtures and extraction hardening for representative
+7. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases.
 
 ## Production-discovery transition path

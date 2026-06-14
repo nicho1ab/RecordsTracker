@@ -119,4 +119,14 @@
   provide full audit coverage, audit UI, audit export, retention automation, or
   audit coverage for reset/reload, exports, feedback, annotations, corrections,
   provider login, role changes, or operational actions.
+- The local hosted scaffold `/ccld/records/request` page accepts a CCLD
+  facility/license number and optional date range, reads only existing seeded
+  source-derived rows, and links matching rows into the reviewer UI. It does not
+  run live retrieval, execute connectors, import new data, mutate source-
+  derived records, create reviewer-created state, create audit rows, persist
+  operational metadata, prove public-source completeness, or support non-CCLD
+  sources. When records are missing or outside the requested date range, it only
+  explains the explicit live-fetch command and the remaining future need for a
+  safe CCLD-only import/reload path from validated pipeline output into hosted
+  source-derived records.
 - Datasette accessibility depends partly on the installed Datasette version, browser, and assistive technology. Validate keyboard navigation, table headers, focus visibility, and exported table usability before treating a release as stable.

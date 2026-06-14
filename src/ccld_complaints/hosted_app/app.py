@@ -25,6 +25,12 @@ from ccld_complaints.hosted_app.auth_provider_integration_plan import (
     AuthProviderIntegrationPlanContext,
     route_auth_provider_integration_plan_response,
 )
+from ccld_complaints.hosted_app.ccld_record_request_ui import (
+  CCLD_UI_PREFIX,
+  CcldRecordRequestUiContext,
+  default_ccld_record_request_ui_context,
+  route_ccld_record_request_ui_response,
+)
 from ccld_complaints.hosted_app.reset_reload_dry_run import (
     SEEDED_CORPUS_RESET_RELOAD_DRY_RUN_API_PATH,
     SeededCorpusResetReloadDryRunContext,
@@ -700,6 +706,7 @@ def render_app_shell() -> str:
       <li><a href="#status">Scaffold status</a></li>
       <li><a href="/source-records">Sample source-derived records</a></li>
       <li><a href="/facilities">Sample facility master records</a></li>
+      <li><a href="/ccld/records/request">CCLD record request</a></li>
       <li><a href="/reviewer">Local/test reviewer UI shell</a></li>
       <li><a href="#boundaries">Not implemented yet</a></li>
       <li><a href="/health">Health check</a></li>
@@ -713,6 +720,9 @@ def render_app_shell() -> str:
       users. Local/test reviewer workflow behavior is available only through
       the fixture-backed reviewer UI shell.</p>
       <p>The source-record and facility sample shells use fixture/sample data only.</p>
+      <p>The CCLD record request page at <a href="/ccld/records/request">/ccld/records/request</a>
+      accepts a CCLD facility/license number and optional date range, reads existing
+      seeded source-derived records, and links matching rows into the hosted reviewer UI.</p>
       <p>The local/test reviewer UI shell at <a href="/reviewer">/reviewer</a>
       loads a tiny seeded corpus into process-local test state and lets a local
       tester view source-derived records, add reviewer notes, set reviewer
@@ -1035,9 +1045,22 @@ def route_response(
         ResetReloadPlanningMetadataApiContext | None
     ) = None,
     reviewer_ui_context: ReviewerUiContext | None = None,
+    ccld_record_request_ui_context: CcldRecordRequestUiContext | None = None,
 ) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
     parsed_path = parsed_url.path
+    if parsed_path.startswith(CCLD_UI_PREFIX):
+      active_ccld_context = (
+        default_ccld_record_request_ui_context()
+        if ccld_record_request_ui_context is None
+        else ccld_record_request_ui_context
+      )
+      return route_ccld_record_request_ui_response(
+        path,
+        active_ccld_context,
+        method=method,
+        request_body=request_body,
+      )
     if parsed_path.startswith(REVIEWER_UI_PREFIX):
         active_reviewer_ui_context = (
             default_local_test_reviewer_ui_context()

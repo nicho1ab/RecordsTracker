@@ -60,6 +60,12 @@ note/status forms, and see read-after-write reviewer-created state. Narrative
 source fields remain hidden in the browser shell. That UI shell does not add
 canonical source-derived fields, schema changes, migrations, or a separate
 source-derived data access path.
+A browser-accessible local/test CCLD record request page can accept a CCLD
+facility/license number and optional date range, filter existing seeded source-
+derived rows, and link matches into that reviewer UI shell. The request values,
+date filters, no-match guidance, and external pipeline plan are UI state only;
+they are not canonical source-derived fields, do not create or import records,
+and do not require schema or migration changes in this scaffold.
 The detail payload can additionally include a compact state summary derived only
 from that already-composed associated reviewer-created state route output, such
 as row counts, present state kinds and payload kinds, bounded reviewer status

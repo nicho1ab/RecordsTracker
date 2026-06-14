@@ -93,6 +93,28 @@ itself as a local/test scaffold. It may link to the local/test reviewer UI shell
 but must not imply that production authentication, full reviewer workflows,
 cloud hosting, QNAP, Azure, AWS, or public URLs are available.
 
+## Open the CCLD record request page
+
+The scaffold includes a browser-accessible local/test CCLD record request page at:
+
+```text
+http://127.0.0.1:8000/ccld/records/request
+```
+
+The page is CCLD-only. It accepts a digit-only CCLD facility/license number and
+an optional start and end date. It reads the existing seeded source-derived
+records through the local/test hosted route seams, shows matching seeded CCLD
+rows, and links matching complaint records into the hosted reviewer UI detail or
+list pages.
+
+The page does not run live crawling, execute connectors, import new records,
+write reviewer-created state, create audit rows, persist operational metadata,
+or modify source-derived rows. When no matching seeded records are available,
+or when broader retrieval is needed, it shows the existing explicit CCLD live
+fetch command to run outside the hosted UI and labels the remaining gap as a
+future safe CCLD-only import/reload path from validated pipeline output into
+hosted source-derived records.
+
 ## Open the local/test reviewer UI shell
 
 The scaffold includes a browser-accessible local/test reviewer UI shell at:
