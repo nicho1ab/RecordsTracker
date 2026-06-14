@@ -38,6 +38,7 @@ class HostedSchemaApiScaffold:
     reviewer_workflow_shell_implemented: bool = True
     reset_reload_dry_run_implemented: bool = True
     reset_reload_operational_metadata_scaffold_implemented: bool = True
+    reset_reload_planning_metadata_read_api_routes_implemented: bool = True
     reviewer_created_state_persistence_scaffold_implemented: bool = True
     audit_event_persistence_scaffold_implemented: bool = True
     audit_event_read_api_routes_implemented: bool = True
@@ -136,7 +137,8 @@ HOSTED_API_BOUNDARIES = (
             "that inspects staged seeded corpus metadata and reports affected "
             "source-derived and future reviewer-created state categories. It can "
             "optionally persist a separate local/test operational planning metadata "
-            "record when explicitly requested."
+            "record when explicitly requested, and exposes a read-only local/test "
+            "route seam to list or fetch those persisted planning records."
         ),
         requires_authenticated_actor_before_write=True,
         preserves=(
@@ -144,6 +146,7 @@ HOSTED_API_BOUNDARIES = (
             "stable source-derived identities",
             "source traceability",
             "future audit requirements for operational changes",
+            "read-only access to persisted planning metadata",
         ),
         deferred=(
             "destructive reset execution",

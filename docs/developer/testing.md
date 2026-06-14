@@ -54,6 +54,11 @@ when explicitly requested, remain separate from source-derived, reviewer-created
 and audit rows, reject unauthenticated, disabled or revoked, role-denied, and
 out-of-scope actors, reject secret-like planning context, and never execute
 reset/reload.
+Planning metadata read route tests should prove persisted planning rows are
+readable only through authenticated, role/scope-allowed local/test routes,
+support approved schema-backed filters, return non-secret payloads, and do not
+mutate operational metadata, source-derived rows, reviewer-created rows, or
+audit rows.
 
 Hosted reviewer-created state scaffold tests must prove reviewer-created rows
 are stored separately from source-derived rows, source-derived records and

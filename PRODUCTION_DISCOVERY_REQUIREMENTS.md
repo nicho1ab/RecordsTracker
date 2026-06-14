@@ -48,7 +48,8 @@ persistence scaffold table and service boundary, a narrow local/test audit event
 persistence scaffold for successful reviewer-created state scaffold writes only,
 a local/test authenticated audit history read route seam over those audit rows,
 a local/test authenticated reset/reload dry-run route seam, a separate
-local/test reset/reload operational planning metadata scaffold, and scaffold/API
+local/test reset/reload operational planning metadata scaffold, a narrow
+local/test read-only planning metadata route seam, and scaffold/API
 boundary descriptors. The dry-run reports
 what a future seeded corpus reset/reload would affect, including existing import
 batch metadata, source-derived record counts by entity, future reviewer-created
@@ -57,7 +58,8 @@ requirements, scoped reviewer-created scaffold row counts, scoped audit scaffold
 row counts, and deferred
 destructive actions, without mutating data. When explicitly requested by
 local/test code, it can persist one non-secret planning metadata record without
-executing reset/reload. This path does
+executing reset/reload and can read those persisted planning records through
+permissioned local/test list/fetch handlers. This path does
 not implement real login flow, provider registration, tokens, cookies, auth
 middleware, production API framework behavior, run migrations against a local
 database during scaffold tests, load live public data, run connector execution,
@@ -325,7 +327,9 @@ import artifact decisions are implemented. The current local/test dry-run seam
 supports planning only and does not execute reset/reload. It can persist a
 separate planning metadata record only when explicitly requested by local/test
 code, and it counts existing audit scaffold rows but does not create new audit
-events.
+events. A narrow local/test planning metadata read route can list or fetch those
+records for authorized operators/admins without executing reset/reload or
+mutating operational, source-derived, reviewer-created, or audit rows.
 
 ### Operational boundaries
 

@@ -32,7 +32,8 @@
   dry-run seam that reports seeded import batch, source-derived record,
   reviewer-created scaffold row, and audit scaffold row impact without mutating
   data, and a narrow local/test reset/reload operational planning metadata
-  scaffold that persists explicit dry-run planning records only, plus source-
+  scaffold that persists explicit dry-run planning records only, plus a narrow
+  local/test read-only route seam for those planning records, plus source-
   derived versus reviewer-created state boundary descriptors.
 - Local-only sample filtering/search: implemented for the hosted source-record
   shell using in-memory fixture/sample records only.
@@ -57,7 +58,8 @@
   limited to local/test source-derived read handlers, read-only reviewer
   workflow shell handlers, reviewer-created state scaffold service helpers,
   reset/reload dry-run handlers, and explicit reset/reload planning metadata
-  helpers that require test database, actor, and scope context. Current auth
+  helpers and read handlers that require test database, actor, and scope context.
+  Current auth
   behavior is limited to local/test service, route, workflow-shell,
   reviewer-created state, audit, dry-run, and planning-metadata guards over
   fixture actor contexts.
@@ -176,9 +178,10 @@
   scaffold, local/test source-derived read route seam, and first local/test
   read-only authenticated tester workflow shell, reviewer-created state
   persistence scaffold, narrow audit event scaffold, local/test reset/reload
-  dry-run planning seam, and opt-in reset/reload operational metadata scaffold
-  are now in place. Next work should move to real provider integration, fuller
-  reset/reload execution planning beyond persisted planning metadata,
+  dry-run planning seam, opt-in reset/reload operational metadata scaffold, and
+  read-only planning metadata route seam are now in place. Next work should
+  move to real provider integration, fuller reset/reload execution planning
+  beyond persisted planning metadata readback,
   export/feedback persistence, fuller audit coverage, or
   stateful reviewer-created workflow layers, not repeat those completed items.
 - Local-only/sample-only boundaries remain active. Sample records must stay
@@ -210,8 +213,8 @@
   authenticated dry-run seam that reports seeded corpus reset/reload impact and
   scoped reviewer-created scaffold and audit scaffold row counts without
   deleting, overwriting, archiving, importing, reloading, or creating new dry-run
-  audit events, plus an opt-in operational metadata scaffold for persisted
-  dry-run planning records. ADR-0013 still defines reset/reload and audit expectations at
+  audit events, plus an opt-in operational metadata scaffold and read route seam
+  for persisted dry-run planning records. ADR-0013 still defines reset/reload and audit expectations at
   the operational boundary;
   implementation still needs
   comparison against retained SQLite/Datasette validation output, production

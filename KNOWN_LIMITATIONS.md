@@ -45,12 +45,14 @@
     It can persist a separate operational planning metadata record only when
     local/test code explicitly requests it; that record is planning metadata
     only and is stored separately from source-derived, reviewer-created, and
-    audit rows.
+    audit rows. A narrow local/test read-only route can list or fetch those
+    planning records when tests or local callers provide explicit database,
+    actor, and scope context with import/reload permission.
     The path does not run live crawling, execute connectors, automate production
     imports, execute reset/reload, delete or overwrite source-derived records,
     archive or clear reviewer-created state, execute persisted planning
-    metadata, persist audit events beyond successful reviewer-created state
-    scaffold writes, authenticate browser
+    metadata, mutate planning metadata through reads, persist audit events beyond
+    successful reviewer-created state scaffold writes, authenticate browser
     users, validate real provider tokens, implement full reviewer
     workflows, expose stateful database-backed reviewer views or production API
     framework behavior, or prove source completeness. The audit event scaffold
