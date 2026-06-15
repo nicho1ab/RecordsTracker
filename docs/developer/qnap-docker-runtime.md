@@ -13,9 +13,11 @@ This runtime includes the first provider-agnostic auth boundary for the external
 direction: production mode blocks anonymous workflow routes unless an
 authenticated route context exists, and explicit local-dev mode is available only
 for local scaffold validation. It does not add a real OIDC login flow, token
-handling, sessions, cookies, custom password storage, hosted live CCLD retrieval,
-browser-triggered connector execution, production import automation, public URL
-behavior, or a hosted deployment in this repository branch.
+handling, sessions, cookies, custom password storage, completed hosted CCLD
+retrieval jobs, production import automation, public URL behavior, or a hosted
+deployment in this repository branch. ADR-0016 approves a future controlled
+browser-triggered, server-executed CCLD retrieval-job boundary that can run in
+this runtime or a portable worker/container/task after focused implementation.
 
 ## Files
 
@@ -142,6 +144,12 @@ map the same responsibilities to managed disks, persistent volumes, or a managed
 database. The app should still receive configuration through environment
 variables and should not depend on QNAP-specific filesystem paths.
 
+When ADR-0016 retrieval jobs are implemented, `ccld_raw_data` or an approved
+server-side raw artifact mount must preserve fetched CCLD source files before
+extraction, and backups must cover both PostgreSQL and raw artifacts. Retrieval
+job workers must use configured server-side storage paths or volumes, not
+browser-provided paths.
+
 ## Backup and Restore
 
 Preferred PostgreSQL backup from a running Compose deployment:
@@ -178,8 +186,8 @@ After starting the runtime, check the health route and core local/test pages:
 - `/reviewer`
 
 The scaffold should continue to identify itself as local/test. It should not
-claim real OIDC login, token handling, sessions, cookies, live browser retrieval,
-connector execution, public launch, or source completeness.
+claim real OIDC login, token handling, sessions, cookies, completed retrieval
+jobs, public launch, or source completeness.
 
 In production auth mode, protected workflow routes such as `/ccld/records/request`
 and `/reviewer` return a sign-in-required page until a real provider-backed
@@ -198,6 +206,9 @@ contract:
 - Raw and processed local/test artifacts use mounted storage, not application
   code paths tied to one host.
 - Secrets stay outside Git and outside rendered HTML or browser JavaScript.
+- Future controlled CCLD retrieval jobs stay server-side, use mounted raw
+  artifact storage, and can move to a separate worker/container/task without
+  QNAP-specific application code.
 
 GitHub Projects are not required for this runtime. Optional paid platform
 features are not required.

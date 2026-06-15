@@ -200,7 +200,7 @@ facility name, city, county, ZIP code, facility type, and status, bounded result
 lists, empty-search and no-match guidance, missing or malformed full CSV fallback
 guidance, active reference-source messages, selected facility carry-forward into
 `/ccld/records/request` with lookup-origin context, manual entry preservation, no browser live retrieval, no
-connector execution, no persistence, no source-derived/reviewer-created/audit/
+direct browser crawling, no connector execution, no persistence, no source-derived/reviewer-created/audit/
 import/operational metadata mutation, accessible headings/labels/captions/link
 text, and no-secret HTML output.
 Hosted CCLD artifact builder tests should build fixture-backed validated SQLite
@@ -210,6 +210,24 @@ import path, exercise the CCLD import/reload path against that generated
 artifact, prove deterministic ordering, prove source traceability preservation,
 reject missing or unsafe traceability fields, and prove no live crawling or
 browser-triggered connector execution is required.
+
+Controlled CCLD retrieval job tests must cover the ADR-0016 boundary before any
+browser-triggered retrieval is enabled. Tests should prove only facility/license
+number, record type or all supported record types, start date, and end date are
+accepted; invalid inputs, excessive date ranges, unsupported record types,
+unauthenticated actors, role-denied actors, out-of-scope actors, rate limits, and
+request limits block before network calls; server-side CCLD source allowlists
+block caller-supplied URLs, unsupported schemes, redirects to unapproved hosts,
+private/authenticated sources, and non-CCLD sources; network retrieval is mocked
+so CI makes no live CCLD calls; raw artifacts are preserved before extraction;
+raw SHA-256 hashes and source traceability are preserved; deterministic
+extraction, validation, and PostgreSQL import happen before successful status;
+job states and safe result counts are deterministic; re-runs are duplicate-safe;
+source-derived records, reviewer-created state, audit rows, feedback issues, and
+unrelated operational metadata are not mutated outside the implemented retrieval
+metadata/status path; and errors never expose stack traces, secrets, tokens,
+cookies, private headers, connection strings, provider claims, GitHub tokens,
+private URLs, or unnecessary narrative content.
 
 Docker runtime tests should statically validate `Dockerfile`,
 `docker-compose.qnap.yml`, and `.env.example` for the QNAP-first PostgreSQL

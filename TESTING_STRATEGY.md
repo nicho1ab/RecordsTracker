@@ -59,6 +59,28 @@ read, feedback submission, retrieval job trigger, import/reload, and admin-style
 actions, disabled or revoked actors are rejected, signed-in labels are safe, and
 HTML/JSON output does not expose provider subjects, issuers, raw claims, tokens,
 cookies, private headers, hosted URLs, or secrets.
+Controlled CCLD retrieval job tests must prove the ADR-0016 boundary before any
+browser-triggered retrieval is enabled. Tests must accept only facility/license
+number, one allowed record type or all supported record types, start date, and
+end date; reject invalid facility/license numbers, invalid date ranges,
+excessive date ranges, unsupported record types, too many requests,
+unauthenticated actors, role-denied actors, and out-of-scope actors before any
+network call; enforce server-side CCLD source-domain and URL-pattern allowlists;
+block caller-supplied URLs, unsupported schemes, redirects to unapproved hosts,
+private/authenticated sources, and non-CCLD sources; enforce per-job request
+limits, per-user or per-actor rate limits, timeouts, and retry limits; exercise
+queued, running, completed, completed_with_warnings, failed,
+blocked_by_validation, and rate_limited states; mock all network retrieval so CI
+makes no live CCLD calls; prove raw source artifacts are saved before
+extraction; prove raw SHA-256 hashes, source URLs, connector metadata,
+retrieval timestamps, raw paths or artifact references, extraction audit context,
+and import validation status are preserved; prove deterministic extraction,
+normalization, schema validation, and PostgreSQL import happen before successful
+status is reported; prove duplicate/idempotent re-runs do not create duplicate
+source-derived rows or mutate reviewer-created state, audit rows, feedback
+issues, or unrelated operational metadata; and prove safe errors never expose
+raw stack traces, secrets, tokens, cookies, private headers, connection strings,
+provider claims, GitHub tokens, private URLs, or unnecessary narrative content.
 GitHub Issues feedback intake tests must prove the feedback page renders, the
 feedback type dropdown has exactly bug report, feature request, and new data
 source options, description and submit controls are accessible, missing values

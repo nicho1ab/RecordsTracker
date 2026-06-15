@@ -234,6 +234,13 @@ the governed primary future review experience.
 	without adding schemas, tables, migrations, API routes, imports, reset
 	commands, auth middleware, secrets, deployment, CI configuration, live
 	crawling, or connector execution.
+- Accepted ADR-0016 for controlled browser-triggered, server-executed CCLD
+  retrieval jobs, approving a future CCLD-only, facility/date/type-bounded,
+  authenticated, permissioned, rate-limited, raw-source-preserving,
+  PostgreSQL-imported, safe-status workflow without implementing retrieval,
+  schema changes, connector changes, production OIDC, deployment, direct browser
+  crawling, statewide crawling, non-CCLD sources, or legal/completeness
+  conclusions in the ADR branch.
 - Added the first QNAP-first, cloud-portable Docker Compose runtime envelope for
 	the hosted CCLD scaffold with a Python app container, PostgreSQL in Docker,
 	Alembic startup migration wiring, health checks, named volumes, `.env.example`,
@@ -595,8 +602,10 @@ the governed primary future review experience.
 
 - Keep the local hosted scaffold runnable, prerequisite-checked, smoke-tested,
 	and focused on the CCLD facility/license number plus optional date-range
-	record request flow into the hosted reviewer UI while the next hosted
-	implementation decisions are made.
+	record request flow into the hosted reviewer UI. After ADR-0016, the next
+	product-moving implementation may replace the outside-browser live-fetch/
+	artifact-builder handoff with a controlled browser-triggered, server-executed
+	CCLD retrieval job path.
 - Use the accepted audit, export, reset/reload, tester retention, auth
 	provider-class, role, scope, audit-identity, PostgreSQL, Alembic migration,
 	controlled seeded import, database-backed source-derived read, auth boundary
@@ -640,20 +649,25 @@ resolve a concrete MVP-blocking risk. Deferred readiness work stays tracked, but
 it should be sequenced by user value and MVP risk rather than by implementation
 convenience.
 
-1. Improve reviewer detail usability for the CCLD local/test review loop,
+1. Implement the ADR-0016 controlled browser-triggered, server-executed CCLD
+   retrieval job slice so authenticated testers can request facility/date/type-
+   bounded CCLD records from the browser, while tests mock network retrieval and
+   the server preserves raw evidence, validates/imports source-derived records,
+   exposes safe job status, and links results to the hosted queue.
+2. Improve reviewer detail usability for the CCLD local/test review loop,
 	including source-traceability clarity only when it directly helps testers
 	verify records.
-2. Improve the CCLD request, queue, status/progress, accessibility, and feedback
+3. Improve the CCLD request, queue, status/progress, accessibility, and feedback
 	workflow where tester confusion or friction remains.
-3. Add additional CCLD fixtures and extraction hardening for representative
+4. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases when they protect the CCLD MVP
 	from extraction or validation regressions.
-4. Expand reviewer-created workflow layers only after the current notes/status
+5. Expand reviewer-created workflow layers only after the current notes/status
 	loop proves what additional reviewer state testers need.
-5. Sequence production auth/provider integration, audit/export, reset/reload
-	execution, deployment, database-backed lookup, persisted feedback, live browser
-	retrieval, connector execution, and non-CCLD sources only when they unlock a
-	user-facing milestone or remove a concrete MVP-blocking risk.
+6. Sequence production auth/provider integration, audit/export, reset/reload
+	execution, deployment, database-backed lookup, persisted feedback, and non-CCLD
+	sources only when they unlock a user-facing milestone or remove a concrete
+	MVP-blocking risk.
 
 ## Production-discovery transition path
 
@@ -723,6 +737,8 @@ define the smallest useful product shape:
 - Source-verification planning/checklists, production auth/provider readiness,
 	audit UI/export, export packet generation, reset/reload execution, production
 	deployment, database-backed facility lookup, production facility reference
-	import/sync, browser live retrieval, connector execution, non-CCLD sources,
-	persisted tester feedback, and broader reviewer workflow layers remain tracked
-	but deferred until the product-benefit gate says they are needed.
+	import/sync, non-CCLD sources, persisted tester feedback, and broader reviewer
+	workflow layers remain tracked but deferred until the product-benefit gate says
+	they are needed. Controlled browser-triggered CCLD retrieval is no longer a
+	permanent blocker; ADR-0016 approves the boundary and the next branch may
+	implement it.

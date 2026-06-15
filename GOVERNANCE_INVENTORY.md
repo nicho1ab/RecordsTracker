@@ -112,15 +112,18 @@
   stay portable enough to move later to AWS, Azure, DigitalOcean, Render, Fly.io,
   or another host; QNAP-specific filesystem paths and backup locations belong in
   deployment docs or host-local configuration.
-- Public hosted deployment, public URL behavior, hosted live crawling, hosted
-  connector execution, production monitoring, incident response, and operational
-  support. The QNAP-first Docker Compose runtime envelope now exists for
-  production-like validation, but it is not by itself a public deployment,
-  production auth implementation, monitoring stack, or operational support model.
+- Public hosted deployment, public URL behavior, controlled CCLD retrieval-job
+  implementation, production monitoring, incident response, and operational
+  support remain pending. The QNAP-first Docker Compose runtime envelope now
+  exists for production-like validation, but it is not by itself a public
+  deployment, production auth implementation, retrieval worker, monitoring
+  stack, or operational support model.
 - Public URL behavior, cloud deployment beyond the QNAP-first runtime envelope,
-  hosted connector execution, and hosted live crawling remain deferred. The
-  runtime envelope is portable Docker/PostgreSQL packaging, not approval for a
-  public launch or production auth.
+  and production auth remain deferred. ADR-0016 now approves the narrow
+  browser-triggered, server-executed CCLD retrieval-job boundary, but
+  implementation remains pending and must stay CCLD-only, facility/date/type
+  bounded, server-side, permissioned, raw-source-preserving, rate-limited,
+  PostgreSQL-imported, and test-mocked.
 - Future deployment/hosting decision: public URL behavior, cloud deployment
   beyond the QNAP-first runtime envelope, DNS, app registration, managed cloud
   database, deployment credential choices, production monitoring, and operational
@@ -205,6 +208,14 @@
   implementing schemas, tables, migrations, API routes, imports, reset commands,
   auth middleware, secrets, provider configuration, hosted URLs, deployment, or
   CI configuration.
+- ADR-0016 accepted a narrow controlled browser-triggered, server-executed CCLD
+  retrieval-job boundary. It approves future CCLD-only, facility/date/type-
+  bounded, authenticated, permissioned, rate-limited, server-side retrieval,
+  raw-source preservation, validation, PostgreSQL import, safe job status, and
+  hosted-queue review without implementing live retrieval, connector code
+  changes, schema changes, production OIDC, deployment, GitHub feedback export,
+  GitHub Projects, UI redesign, non-CCLD sources, direct browser crawling, or
+  statewide crawling in the ADR branch.
 
 ## Remaining deferred decisions
 
@@ -230,8 +241,8 @@
   full reviewer-created state workflows, annotations, corrections, queues, and
   review-state behavior beyond the narrow scaffold table.
 - Public hosted deployment, cloud deployment beyond the QNAP-first runtime
-  envelope, public URL behavior, hosted live crawling, hosted connector
-  execution, production monitoring, incident response, and operational support.
+  envelope, public URL behavior, controlled retrieval-job implementation,
+  production monitoring, incident response, and operational support.
 
 ## Deferred readiness and product-benefit gate
 
@@ -265,7 +276,7 @@ without creating avoidable rework.
 | Reset/reload execution | Dry-run and execution-plan seams exist; destructive or state-changing behavior needs stronger reviewer-created state handling and audit policy. | Prove local validated load/refresh and reviewer state are useful in repeated CCLD sessions. | Test data must be repeatedly refreshed while preserving, archiving, or explicitly clearing reviewer-created state. | Pilot. |
 | Production deployment | The scaffold is local/test only and should not be hosted before the product loop is useful and access boundaries are implemented. | Complete a useful local/test CCLD review loop with accessible pages and feedback. | External tester access, secure hosting, monitoring, and support are approved and necessary. | Pilot/production. |
 | Database-backed facility lookup or production facility reference import/sync | CSV-backed lookup is sufficient for local/test facility selection and avoids premature schema work. | Validate that full local/test facility CSV lookup materially helps testers find records. | Facility reference data needs refresh history, reconciliation, permissions, provenance, or query scale beyond local CSV. | Pilot or production. |
-| Live browser retrieval or connector execution | Browser-triggered crawling is explicitly out of scope and raises rate-limit, audit, error, and source-preservation risks. | Keep live fetch explicit through scripts and local validated artifacts. | A later approved architecture defines safe execution, rate limits, audit, source preservation, and tester messaging. | Not needed for local tester MVP. |
+| Controlled browser-triggered CCLD retrieval job | ADR-0016 approves the boundary, but implementation must still add auth/permission checks, CCLD source allowlists, date/type/facility bounds, job states, rate limits, raw artifact preservation, validation, PostgreSQL import, safe status, and mocked-network tests. | Implement the smallest server-side CCLD retrieval job slice that lets testers request records from the browser and then review imported results in the hosted queue. | The next product blocker is moving from outside-browser live-fetch/artifact-builder handoff to a server-executed job path. | Next implementation branch. |
 | Non-CCLD sources | The first MVP remains CCLD-only. | Complete the CCLD request, review, feedback, accessibility, and validation loop. | CCLD MVP learning has stabilized and a new source has inventory, fixtures, connector contract, limitations, and governance approval. | After CCLD MVP. |
 | Persisted tester feedback | Copyable checklist is enough for first local/test feedback without schema work. | Learn what feedback testers actually provide through the external channel. | Feedback volume, triage, linkage to source records, or accountability requires app-managed state. | Pilot. |
 | Broader reviewer workflow layers | Current notes/status are intentionally narrow. | Validate that facility lookup, request queue, detail pages, and feedback checklist support the first review loop. | Testers need assignments, richer statuses, annotations, corrections, review history, or collaboration to continue. | Pilot. |
@@ -280,12 +291,14 @@ without creating avoidable rework.
   concept decisions, but current planning should describe production-discovery
   and the local hosted scaffold implementation state.
 - Older ADR statements saying app scaffold work was not approved were accurate
-  when written. They are now superseded only by ADR-0012 and the later local
-  scaffold implementation PRs. They do not approve schemas, authentication,
-  authorization, imports, queues, annotations, corrections, exports, reset/
-  reload, hosted deployment, hosted live crawling, hosted connector execution,
-  source-derived canonical field changes, reviewer-created state persistence, or
-  extraction behavior changes.
+  when written. They are now superseded by ADR-0012 and the later local scaffold
+  implementation PRs only for scaffold work, and by ADR-0016 only for the narrow
+  controlled browser-triggered, server-executed CCLD retrieval-job boundary.
+  They do not approve schemas, authentication implementation, authorization
+  implementation, queues, annotations, corrections, exports, reset/reload,
+  hosted deployment, non-CCLD sources, statewide crawling, direct browser
+  scraping, source-derived canonical field changes, full reviewer-created state
+  workflows, or extraction behavior changes.
 - Roadmap items for the first hosted scaffold, local setup checks, local-only
   read-only source-record shell, semantic/accessibility validation, and
   local-only sample filtering/search, and fixture/sample-only source
@@ -313,7 +326,9 @@ without creating avoidable rework.
   clearly marked as fixture/sample records and must not be presented as live,
   database-backed, complete, statewide, official, or production data.
 - Public URL behavior, cloud deployment beyond the QNAP-first runtime envelope,
-  hosted connector execution, and hosted live crawling remain deferred.
+  and production auth remain deferred. Controlled browser-triggered CCLD
+  retrieval is now approved by ADR-0016, but implementation remains pending and
+  must stay inside the ADR-0016 server-side job boundary.
 
 ## Gap analysis
 

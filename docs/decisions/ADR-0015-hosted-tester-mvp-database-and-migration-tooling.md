@@ -22,6 +22,13 @@ export packet persistence, tester feedback persistence, and the first
 authenticated tester workflow need a relational persistence target and a
 repeatable migration path before implementation can proceed safely.
 
+Superseding note: ADR-0016 later approved controlled browser-triggered,
+server-executed CCLD retrieval jobs. PostgreSQL remains the production-style
+data store for imported source-derived records and any future separated
+retrieval-job operational metadata. ADR-0016 does not add schema changes to
+ADR-0015; it only approves the future retrieval-job boundary that later schema
+or implementation branches must map into separated persistence.
+
 This ADR chooses the database product and migration tooling direction for the
 hosted tester MVP. It does not implement schemas, tables, migrations, API
 routes, imports, reset commands, authentication middleware, secrets, deployment,
@@ -175,8 +182,8 @@ decisions or focused implementation PRs define the concrete layer being built:
   URL, or production public launch behavior.
 - Retention automation, archival jobs, deletion workflows, backup/restore
   implementation, monitoring, or incident response.
-- Hosted live crawling, hosted connector execution, or automatic public-source
-  expansion.
+- Unbounded hosted live crawling, generic hosted connector execution, automatic
+  public-source expansion, and any retrieval job outside ADR-0016.
 
 No schema changes are approved by this ADR.
 
@@ -259,8 +266,8 @@ This ADR does not approve implementation of:
 - Audit tables or event stores.
 - Reviewer-created state persistence.
 - Export builder logic.
-- Hosted live crawling.
-- Hosted connector execution.
+- Hosted live crawling or hosted connector execution outside the ADR-0016
+  controlled CCLD retrieval-job boundary.
 - Production public launch.
 
 No source-derived canonical fields are added or changed.

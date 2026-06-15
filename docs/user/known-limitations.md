@@ -177,8 +177,18 @@
   facility CSV files must not be committed.
 - Production-readiness items such as source-verification planning, auth provider
   integration, audit UI/export, export packet generation, reset/reload execution,
-  deployment, database-backed lookup, live browser retrieval, connector
-  execution, non-CCLD sources, and persisted tester feedback remain deferred
-  unless they directly unlock tester value or resolve a concrete MVP-blocking
-  risk.
+  deployment, database-backed lookup, non-CCLD sources, and persisted tester
+  feedback remain deferred unless they directly unlock tester value or resolve a
+  concrete MVP-blocking risk. Controlled browser-triggered CCLD retrieval is
+  approved by ADR-0016 but not implemented yet.
+- Future controlled browser-triggered CCLD retrieval must be server-executed,
+  CCLD-only, facility/date/type bounded, authenticated, permissioned,
+  rate-limited, timeout-limited, retry-limited, raw-source-preserving,
+  PostgreSQL-imported, safe-status, secret-safe, and tested without live CCLD
+  calls in CI. The browser must not scrape or receive connector credentials,
+  GitHub tokens, provider tokens, cookies, private headers, or server-side
+  secrets. Statewide crawling, automatic source expansion, non-CCLD sources,
+  private/authenticated source scraping, legal/facility-wide/public-source
+  completeness conclusions, harm/abuse/neglect/liability conclusions, and
+  unsupported automated complaint findings remain out of scope.
 - Datasette accessibility depends partly on the installed Datasette version, browser, and assistive technology. Validate keyboard navigation, table headers, focus visibility, and exported table usability before treating a release as stable.
