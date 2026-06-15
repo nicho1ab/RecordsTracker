@@ -214,6 +214,10 @@ public-record review notes.
    provider-agnostic OIDC/OAuth2 environment placeholders for YLC pilot auth
    planning and the `CCLD_HOSTED_PAGE_DATA_MODE` setting for PostgreSQL-backed
    pages versus explicit fixture-demo mode.
+- Use [docs/developer/cloud-portability-deployment.md](docs/developer/cloud-portability-deployment.md)
+   to compare QNAP, AWS, Azure, DigitalOcean, Render, Fly.io, Railway, Supabase,
+   and Neon deployment shapes while keeping app runtime, PostgreSQL, raw file
+   storage, secrets, backups, and future retrieval jobs separated.
 - Use [docs/developer/hosted-scaffold.md](docs/developer/hosted-scaffold.md) to
    run the local hosted tester MVP scaffold. The scaffold is a placeholder app
    shell with a controlled seeded corpus import path for validated local

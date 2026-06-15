@@ -47,6 +47,8 @@ The Compose runtime starts the hosted scaffold app plus PostgreSQL in Docker,
 runs Alembic migrations before app startup, and exposes the scaffold on
 `CCLD_HOSTED_PORT`. Keep real database passwords and host-specific QNAP paths out
 of Git. See [docs/developer/qnap-docker-runtime.md](docs/developer/qnap-docker-runtime.md).
+For cloud portability planning, see
+[docs/developer/cloud-portability-deployment.md](docs/developer/cloud-portability-deployment.md).
 
 ## Run the fixture-backed sample workflow
 

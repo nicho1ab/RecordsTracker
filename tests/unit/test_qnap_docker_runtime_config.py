@@ -92,3 +92,36 @@ def test_qnap_runtime_doc_keeps_qnap_specifics_out_of_app_code() -> None:
     assert "GitHub Projects are not required" in normalized_guide
     assert "C:\\" not in guide
     assert "/share/" not in guide
+
+
+def test_cloud_portability_guide_compares_hosts_without_credentials() -> None:
+    guide = read_repo_text("docs/developer/cloud-portability-deployment.md")
+    normalized_guide = " ".join(guide.split())
+
+    for required_text in (
+        "QNAP Docker",
+        "AWS low-cost path",
+        "Azure",
+        "DigitalOcean",
+        "Render",
+        "Fly.io",
+        "Railway",
+        "Supabase or Neon",
+        "Python app",
+        "PostgreSQL",
+        "Persistent raw file storage",
+        "Server-side retrieval jobs",
+        "Secrets",
+        "Scheduled backups",
+        "Custom domain/HTTPS",
+        "Production-Readiness Checklist",
+    ):
+        assert required_text in guide
+
+    assert "does not deploy the app" in normalized_guide
+    assert "No real cloud credentials" not in guide
+    assert "ghp_" not in guide
+    assert "github_pat_" not in guide
+    assert "C:\\" not in guide
+    assert "OneDrive" not in guide
+    assert "client_secret=" not in guide.casefold()
