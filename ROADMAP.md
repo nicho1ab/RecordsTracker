@@ -455,6 +455,11 @@ the governed primary future review experience.
 	use refreshed suggested-next-record guidance without adding persisted queue
 	state, queue assignment, automatic record claiming, workflow-engine behavior,
 	schema changes, live browser retrieval, connector execution, or non-CCLD scope.
+- Improved local/test CCLD queue filtered-empty recovery guidance so testers can
+	understand that the selected reviewer-status filter hid all rows for the same
+	facility/date request context, clear the filter, and continue review without
+	adding persisted queue state, queue assignment, workflow-engine behavior,
+	schema changes, live browser retrieval, connector execution, or non-CCLD scope.
 - Improved the local/test CCLD facility lookup and request/result queue context
 	confirmation so testers can see whether a request came from lookup selection or
 	manual entry, confirm the facility/license number, date range, active facility

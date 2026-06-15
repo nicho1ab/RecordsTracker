@@ -158,7 +158,7 @@ a note or status in the reviewer UI, returning with the same facility/date
 request context and submitting the same CCLD request again shows updated queue
 progress and note/status cues derived from reviewer-created state.
 Filtered-empty states explain how to return to all queue records without
-implying that public-source records are absent.
+implying that local/test or public-source records are missing, deleted, or absent.
 The request and result pages include skip-to-main links, visible first-run
 next-step guidance, specific request/filter/load action text, and manual
 feedback-copy instructions. These are presentation-only accessibility aids and
