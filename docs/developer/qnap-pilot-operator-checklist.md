@@ -3,7 +3,8 @@
 Use this checklist before inviting early ylc.org testers to the hosted CCLD
 tester pilot. It complements `.env.example`,
 `scripts/verify-qnap-pilot-workflow.ps1`, `RUNBOOK.md`, and
-`docs/developer/qnap-docker-runtime.md`. Use
+`docs/developer/qnap-docker-runtime.md`. Start with the
+[QNAP pilot readiness index](qnap-pilot-readiness-index.md). Use
 [QNAP pilot seeded import evidence](qnap-pilot-seeded-import-evidence.md) when
 capturing proof that PostgreSQL-backed source-derived CCLD records are loaded
 before testers begin review. Use

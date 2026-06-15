@@ -249,6 +249,12 @@ authentication, requires verifier/seeded evidence/route evidence/auth readiness/
 feedback/retrieval decisions/backups/known limitations before invitation, and
 forbids secrets, callback URLs, broad default admin access, public-source
 completeness, and legal/facility-wide conclusions.
+QNAP readiness index documentation tests should prove the index exists, is linked
+from the operator/runtime/auth/tester-decision docs, lists the ordered pre-invite
+path, includes verifier, seeded evidence, and route evidence command shapes,
+requires disabled local-dev auth for QNAP, lists the evidence packet and
+do-not-invite-until checklist, links to ADR-0011 and ADR-0014, and avoids real
+secrets or public-source/legal conclusions.
 
 Controlled CCLD retrieval job tests cover the ADR-0016 boundary before and after
 browser-triggered retrieval is enabled. Tests should prove only facility/license
