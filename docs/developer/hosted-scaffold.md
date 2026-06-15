@@ -230,7 +230,8 @@ and supplies a fixture local/test reviewer actor from the scaffold process. It
 lets a local tester search/select a seeded source-derived complaint record, see
 list-level reviewer-created note/status indicators before opening detail, open
 detail, view a plain-language record summary, safe source traceability fields,
-clear available/missing traceability cues, safe related seeded bundle context,
+clear available/missing traceability cues, source-confidence cues for present,
+missing, and proxy-flagged local/test complaint fields, safe related seeded bundle context,
 reviewer-created notes/statuses, CCLD return links, and record-specific
 feedback handoff cues, submit a bounded reviewer note, submit
 a bounded reviewer status, see a saved-state confirmation with same-request
@@ -249,6 +250,10 @@ The UI is intentionally plain server-rendered HTML. It reuses the existing
 source-derived route seam, reviewer workflow shell, reviewer-created state
 write/read routes, and audit scaffold. UI actions do not mutate source-derived records; successful note/status writes create reviewer-created scaffold rows and
 the existing audit scaffold row through the existing services.
+Source-confidence cues are presentation-only. They do not add confidence scores,
+automated source verification, parser behavior, extraction changes, schema
+changes, persistence, queue assignment, workflow-engine behavior, or source-
+completeness assertions.
 
 The UI does not implement production sign-in, real OpenID Connect login, auth
 middleware, token validation, sessions, cookies, provider registration, client

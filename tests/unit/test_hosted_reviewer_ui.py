@@ -69,6 +69,8 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert "Open CCLD workflow help" in html
     assert "Seeded source-derived review list" in html
     assert "Reviewer queue triage summary" in html
+    assert "List values are source-derived display summaries" in normalized_html
+    assert "Open reviewer detail for source-confidence cues" in normalized_html
     assert "Total visible records" in html
     assert "Records with reviewer-created notes" in html
     assert "Records with reviewer-created status" in html
@@ -234,6 +236,25 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Safe source-derived values for the selected seeded record" in html
     assert "complaint_control_number" in html
     assert "32-CR-20220407124448" in html
+    assert "Source-confidence cues" in html
+    assert "Source-confidence cues for visible complaint fields" in html
+    assert "visible source-derived complaint fields already loaded" in normalized_html
+    assert "not a source-confidence score" in normalized_html
+    assert "automated source verification" in html
+    assert "public-source absence finding" in html
+    assert "record-completeness claim" in html
+    assert "Missing local/test values should be described" in normalized_html
+    assert "not as source absence, record incompleteness, or data loss" in normalized_html
+    assert "Complaint field" in html
+    assert "Source-confidence cue" in html
+    assert "Present in this local/test source-derived record" in html
+    assert "First investigation activity date" in html
+    assert "local/test missing-field flag is true" in normalized_html
+    assert "Report date proxy flag" in html
+    assert "Current local/test field does not mark report date as the delay-review proxy" in (
+        normalized_html
+    )
+    assert "Use fallback/proxy wording only when this cue says" in normalized_html
     assert "Source traceability" in html
     assert "Selected complaint source traceability fields" in html
     assert "Use these fields to confirm which local/test source-derived complaint record" in (
@@ -359,9 +380,61 @@ def test_reviewer_ui_detail_missing_traceability_uses_clear_non_conclusive_wordi
     }
     assert "Raw artifact path" in html
     assert "not available in this local/test record" in html
+    assert "Source-confidence cues" in html
+    assert "First investigation activity date" in html
+    assert "local/test missing-field flag is true" in normalized_html
     assert "do not treat a missing path as source loss" in html
     assert "not proof that the public source lacks a record" in normalized_html
     assert "does not make legal, facility-wide, completeness" in normalized_html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_detail_source_confidence_proxy_cues_are_non_mutating() -> None:
+    with _seeded_connection() as connection:
+        complaint_row = connection.execute(
+            select(hosted_source_derived_records.c.original_values).where(
+                hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY
+            )
+        ).scalar_one()
+        updated_values = dict(complaint_row)
+        updated_values["report_date_used_as_proxy"] = True
+        updated_values["visit_date"] = None
+        connection.execute(
+            update(hosted_source_derived_records)
+            .where(hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY)
+            .values(original_values=updated_values)
+        )
+        before_source_rows = _source_rows(connection)
+        before_counts = _table_counts(connection)
+
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        after_source_rows = _source_rows(connection)
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 0,
+        "audit_events": 0,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert "Source-confidence cues" in html
+    assert "Visit date" in html
+    assert "Not available in this local/test record" in html
+    assert "Fallback/proxy-derived delay basis indicated" in normalized_html
+    assert "Use fallback/proxy wording only when this cue says" in normalized_html
+    assert "not a source-confidence score" in normalized_html
+    assert "public-source absence finding" in html
     assert_no_secret_html(html)
 
 

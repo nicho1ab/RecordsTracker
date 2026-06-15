@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Improved local/test reviewer detail and queue source-confidence cues so testers
+	can see present source-derived fields, missing local/test fields, existing
+	proxy flags, and source-traceability review reminders without adding parser,
+	extraction, schema, persistence, automated source verification, queue
+	assignment, workflow-engine behavior, live browser retrieval, connector
+	execution, or non-CCLD scope.
 - Improved local/test CCLD terminology consistency across home, facility lookup,
 	request/help, queue, reviewer detail, note/status, no-match/load, filtered-
 	empty, next-record, and manual feedback checklist wording without changing

@@ -128,6 +128,43 @@ _SAFE_CONTEXT_FIELDS_BY_ENTITY: Mapping[str, tuple[str, ...]] = {
         "warning",
     ),
 }
+_SOURCE_CONFIDENCE_COMPLAINT_FIELDS = (
+    (
+        "Complaint control number",
+        "complaint_control_number",
+        "Use this as the complaint identifier only after checking the source document context.",
+    ),
+    (
+        "Complaint received date",
+        "complaint_received_date",
+        "Check the source traceability fields before relying on this date in notes/status.",
+    ),
+    (
+        "Visit date",
+        "visit_date",
+        "If this is missing, describe it as not available locally, not as proof no visit occurred.",
+    ),
+    (
+        "Report date",
+        "report_date",
+        "Check whether the report date is acting as a proxy before using delay wording.",
+    ),
+    (
+        "Date signed",
+        "date_signed",
+        "Use this as a source-derived display value; verify source context before relying on it.",
+    ),
+    (
+        "Finding",
+        "finding",
+        "Treat this as a source-derived local/test value, not as a new reviewer finding.",
+    ),
+    (
+        "Extraction confidence",
+        "extraction_confidence",
+        "Treat this as local/test extraction metadata, not as reviewer verification.",
+    ),
+)
 _SOURCE_CONTEXT_ENTITY_ORDER = {
     "facility": 0,
     "source_document": 1,
@@ -724,6 +761,9 @@ def _render_reviewer_queue_summary(
         <h3 id="reviewer-queue-summary-heading">Reviewer queue triage summary</h3>
         <p>This summary uses only loaded source-derived records and existing reviewer-created
         note/status rows. It does not save queue state or change source-derived records.</p>
+        <p>List values are source-derived display summaries. Open reviewer detail for
+        source-confidence cues before relying on missing, confusing, or proxy-related fields
+        in reviewer-created notes/status or manual feedback.</p>
         <dl>
             <dt>Total visible records</dt>
             <dd>{len(records)}</dd>
@@ -1036,6 +1076,7 @@ def _render_detail(
         </tbody>
       </table>
     </section>
+        {_render_source_confidence_cues_section(source_record, related_records)}
                 {_render_source_traceability_section(
                         identity,
                         source_document,
@@ -1139,6 +1180,125 @@ def _render_record_summary_section(
         <dd>{_escape(reviewer_statuses)}</dd>
       </dl>
     </section>"""
+
+
+def _render_source_confidence_cues_section(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> str:
+    original_values = _mapping(source_record, "original_values")
+    facility = _facility_context(related_records)
+    rows = "\n".join(
+        (
+            _render_source_confidence_field_row(
+                label,
+                original_values.get(field_name),
+                guidance,
+            )
+            for label, field_name, guidance in _SOURCE_CONFIDENCE_COMPLAINT_FIELDS
+        )
+    )
+    rows = "\n".join(
+        (
+            _render_source_confidence_field_row(
+                "Facility/license number",
+                None if facility is None else facility.get("external_facility_number"),
+                "Use this to confirm the detail matches the CCLD request context.",
+            ),
+            rows,
+            _render_first_activity_confidence_row(original_values),
+            _render_report_date_proxy_confidence_row(original_values),
+        )
+    )
+    return f"""<section id="source-confidence-heading" aria-labelledby="source-confidence-title">
+            <h2 id="source-confidence-title">Source-confidence cues</h2>
+            <p>These cues summarize visible source-derived complaint fields already loaded in
+            this local/test record. They help testers see which values are present, which
+            expected values are not available locally, and which fields need source traceability
+            review before a reviewer-created note or status observation relies on them.</p>
+            <p>This section is not a source-confidence score, automated source verification,
+            public-source absence finding, record-completeness claim, legal conclusion, or
+            facility-wide conclusion.</p>
+            <p>Missing local/test values should be described in reviewer-created notes/status or
+            manual feedback as <q>not available in this local/test record</q>, not as source
+            absence, record incompleteness, or data loss.</p>
+            <table>
+                <caption>Source-confidence cues for visible complaint fields</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Complaint field</th>
+                        <th scope="col">Source-confidence cue</th>
+                        <th scope="col">Value shown</th>
+                        <th scope="col">How to use it</th>
+                    </tr>
+                </thead>
+                <tbody>
+{rows}
+                </tbody>
+            </table>
+        </section>"""
+
+
+def _render_source_confidence_field_row(
+    label: str,
+    value: object,
+    guidance: str,
+) -> str:
+    return f"""          <tr>
+                        <th scope="row">{_escape(label)}</th>
+                        <td>{_escape(_source_confidence_cue(value))}</td>
+                        <td>{_escape(_source_confidence_value(value))}</td>
+                        <td>{_escape(guidance)}</td>
+                    </tr>"""
+
+
+def _render_first_activity_confidence_row(values: Mapping[str, Any]) -> str:
+    value = values.get("first_investigation_activity_date")
+    missing_flag = values.get("missing_first_activity_date")
+    cue = _source_confidence_cue(value)
+    if not _has_display_value(value) and missing_flag is True:
+        cue = (
+            "Not available in this local/test record. The local/test missing-field "
+            "flag is true."
+        )
+    return f"""          <tr>
+                        <th scope="row">First investigation activity date</th>
+                        <td>{_escape(cue)}</td>
+                        <td>{_escape(_source_confidence_value(value))}</td>
+                        <td>When relevant, say this value is not available locally; do not say
+                        investigation activity did or did not happen.</td>
+                    </tr>"""
+
+
+def _render_report_date_proxy_confidence_row(values: Mapping[str, Any]) -> str:
+    value = values.get("report_date_used_as_proxy")
+    if value is True:
+        cue = "Fallback/proxy-derived delay basis indicated by current local/test field."
+    elif value is False:
+        cue = "Current local/test field does not mark report date as the delay-review proxy."
+    else:
+        cue = "Not available in this local/test record."
+    return f"""          <tr>
+                        <th scope="row">Report date proxy flag</th>
+                        <td>{_escape(cue)}</td>
+                        <td>{_escape(_source_confidence_value(value))}</td>
+                        <td>Use fallback/proxy wording only when this cue says the current
+                        local/test field identifies a proxy-derived delay basis.</td>
+                    </tr>"""
+
+
+def _source_confidence_cue(value: object) -> str:
+    if _has_display_value(value):
+        return "Present in this local/test source-derived record."
+    return "Not available in this local/test record."
+
+
+def _source_confidence_value(value: object) -> str:
+    if not _has_display_value(value):
+        return "not available in this local/test record"
+    if isinstance(value, bool):
+        return "yes" if value else "no"
+    return _display_value(value)
 
 
 def _render_source_traceability_section(

@@ -271,6 +271,11 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Start over with a different CCLD facility" in html
     assert "This queue is tied to the request context confirmed above" in normalized_html
     assert "CCLD review queue" in html
+    assert "Queue rows show source-derived display summaries only" in normalized_html
+    assert "read the source-confidence cues before relying" in normalized_html
+    assert "proxy-related fields in reviewer-created notes/status or manual feedback" in (
+        normalized_html
+    )
     assert "return here with the same facility/date request context" in normalized_html
     assert "note/status cues derived from reviewer-created state" in normalized_html
     assert "First-run queue steps" in html
@@ -283,6 +288,8 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "<dt>Not started</dt>" in html
     assert "<dd>1</dd>" in html
     assert "Queue triage summary" in html
+    assert "Queue summaries do not prove record completeness" in normalized_html
+    assert "source-confidence cues before relying on a summary value" in normalized_html
     assert "record-specific reviewer-detail observations" in normalized_html
     assert "Continue review guidance" in html
     assert "derived from this facility/date request context" in normalized_html
@@ -311,9 +318,11 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "return_end_date=2022-08-31" in html
     assert "Complete source traceability" in html
     assert "Records with source traceability available</dt>" in html
+    assert "Loaded record/source-confidence context" in html
     assert "No reviewer-created notes/status yet" in html
     assert "1 loaded source-derived records in bundle" not in html
     assert "6 loaded source-derived records in bundle" in html
+    assert "Open detail for source-confidence cues before relying" in html
     assert "Copyable tester feedback checklist" in html
     assert "Structured CCLD feedback checklist" in html
     assert "id=\"feedback-checklist-section\"" in html
@@ -328,6 +337,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "- Facility lookup used or skipped: Manual facility/license entry" in html
     assert "- Active facility reference source:" in html
     assert "- Source traceability cues were easy to find:" in html
+    assert "- Source-confidence cues or missing local/test fields to mention:" in html
     assert "- Saved confirmation appeared as expected:" in html
     assert "- Queue showed updated note/status after returning" in html
     assert "- Records that seemed missing:" in html
@@ -712,6 +722,9 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     assert "reviewer note/status cue: No reviewer-created notes/status yet" in first_checklist
     assert "Reviewer detail and note/status confirmation" in first_checklist
     assert "- Source traceability cues were easy to find:" in first_checklist
+    assert "- Source-confidence cues or missing local/test fields to mention:" in (
+        first_checklist
+    )
     assert "- Saved confirmation appeared as expected:" in first_checklist
     assert "- Return-to-queue link worked:" in first_checklist
     assert "- Queue showed updated note/status after returning and resubmitting:" in (
