@@ -1019,6 +1019,7 @@ def test_qnap_pilot_access_method_decision_doc_covers_required_steps() -> None:
     for required_text in (
         "QNAP Pilot Access-Method Decision",
         "before any external tester link, credential, network rule, VPN rule, reverse proxy route",
+        "temporary access route, or screen-share tester session",
         "decision scaffold only",
         "does not implement authentication, networking, deployment, sessions, users, invitations",
         "Real login is not implemented",
@@ -1177,6 +1178,15 @@ def test_qnap_pilot_readiness_index_exists_and_covers_ordered_path() -> None:
         "PostgreSQL backup plan",
         "Raw artifact backup plan",
         "Known limitations acknowledged",
+        "Completion Marker",
+        "After the access-method decision is recorded and the evidence packet is "
+        "generated from real pilot inputs",
+        "QNAP pilot pre-invite readiness path is complete",
+        "documented operator path and local commands needed to prepare the pilot",
+        "does not mean production OIDC, production deployment, anonymous public access",
+        "broader product functionality is implemented",
+        "Do not add more readiness-only branches after this unless a concrete validation",
+        "security, privacy, data-integrity, or tester-blocking defect is found",
         "Do not invite early testers until all of these are true",
         "`.env` is configured on the host and remains untracked",
         "QNAP verifier passes",

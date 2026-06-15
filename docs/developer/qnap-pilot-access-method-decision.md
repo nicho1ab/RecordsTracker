@@ -1,8 +1,8 @@
 # QNAP Pilot Access-Method Decision
 
 Use this guide before any external tester link, credential, network rule, VPN
-rule, reverse proxy route, or temporary access arrangement is shared for the
-QNAP-hosted CCLD pilot.
+rule, reverse proxy route, temporary access route, or screen-share tester session
+is shared for the QNAP-hosted CCLD pilot.
 
 This is a decision scaffold only. It does not implement authentication,
 networking, deployment, sessions, users, invitations, account management,
