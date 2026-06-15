@@ -10,6 +10,9 @@ capturing proof that PostgreSQL-backed source-derived CCLD records are loaded
 before testers begin review. Use
 [QNAP pilot auth readiness](qnap-pilot-auth-readiness.md) when capturing the
 current production-mode auth boundary and deferred real-login work. Use
+[QNAP pilot access-method decision](qnap-pilot-access-method-decision.md) before
+sharing any external tester link, credential, network rule, VPN rule, or reverse
+proxy route. Use
 [QNAP pilot tester invitation decision](qnap-pilot-tester-invitation-decision.md)
 before inviting testers. Use `scripts/build-qnap-pilot-evidence-packet.ps1` only
 as optional local operator convenience after separate readiness evidence and
@@ -41,6 +44,8 @@ decisions are understood.
   callback URLs, private URLs, or account-specific settings are in committed
   files.
 - Confirm the auth readiness notes are reviewed before inviting testers.
+- Confirm the access-method decision is recorded before any external access path
+  is shared.
 - Confirm the tester invitation/access-control decision is recorded before
   inviting testers.
 - Confirm the operator has a plan for collecting route-check evidence and known
@@ -189,6 +194,10 @@ docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic u
 - Capture auth readiness evidence that production auth mode is active,
   local-dev auth is disabled, `/auth/status` is safe, and real login/session
   work remains deferred.
+- Capture the access-method decision: selected method, named testers or approved
+  group, role/scope, environment/host scope, start and expiration dates,
+  revocation method, feedback triage owner, backup/evidence confirmation, known
+  limitations acknowledgement, and explicit non-production-auth statement.
 - Capture the tester invitation/access-control decision: who is invited, role,
   scope, approval, revocation plan, and feedback triage owner.
 - Capture seeded import evidence that `hosted_import_batches` and
@@ -246,3 +255,4 @@ docker compose -f docker-compose.qnap.yml --env-file .env up --build -d
   completeness conclusions from the hosted pilot.
 - Do not invite testers until the access method, role/scope, and revocation plan
   are deliberately approved.
+- Do not share any access path until the access-method decision is recorded.

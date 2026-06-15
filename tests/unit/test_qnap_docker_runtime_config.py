@@ -1011,6 +1011,119 @@ def test_qnap_pilot_tester_invitation_decision_doc_is_linked_from_guides() -> No
         assert link in read_repo_text(path)
 
 
+def test_qnap_pilot_access_method_decision_doc_covers_required_steps() -> None:
+    guide = read_repo_text("docs/developer/qnap-pilot-access-method-decision.md")
+    normalized = " ".join(guide.split())
+    searchable_text = f"{guide}\n{normalized}"
+
+    for required_text in (
+        "QNAP Pilot Access-Method Decision",
+        "before any external tester link, credential, network rule, VPN rule, reverse proxy route",
+        "decision scaffold only",
+        "does not implement authentication, networking, deployment, sessions, users, invitations",
+        "Real login is not implemented",
+        "OIDC/OAuth2 callback handling is not implemented",
+        "Sessions and cookies are not implemented",
+        "User tables are not implemented",
+        "Invitation workflow implementation is not implemented",
+        "Local-dev fixture auth is not production authentication",
+        "CCLD_HOSTED_TESTER_AUTH_MODE=production",
+        "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH=disabled",
+        "No external tester access yet",
+        "Operator-only local network validation",
+        "Temporary supervised screen-share walkthrough",
+        "Temporary restricted network/VPN access",
+        "Future managed OIDC/OAuth2 access after implementation",
+        "Decision date",
+        "Decision owner or approver",
+        "Selected access method",
+        "Named testers or approved group",
+        "Role and scope per tester",
+        "Environment or host scope",
+        "Start date",
+        "End or expiration date",
+        "Revocation method",
+        "Feedback triage owner",
+        "Backup and evidence packet confirmation",
+        "Known limitations acknowledgement",
+        "Reason the selected method is acceptable for this pilot stage",
+        "not production auth unless real OIDC/session implementation exists",
+        "No anonymous public URL",
+        "No shared broad admin account by default",
+        "No local-dev fixture auth for external testers",
+        "No committed credentials",
+        "provider secrets, callback URLs, private URLs, hosted URLs, tokens, tenant IDs",
+        "connection strings, or client secrets",
+        "No broad future-data, all-project, statewide, private-source",
+        "Revocation must be possible before testers are invited",
+        "Reference the access-method decision in the QNAP pilot evidence packet",
+        "QNAP verifier output",
+        "Seeded import evidence",
+        "Route evidence",
+        "Auth readiness notes",
+        "Tester invitation decision",
+        "Feedback decision",
+        "Retrieval decision",
+        "PostgreSQL backup plan",
+        "Raw artifact backup plan",
+        "Known limitations acknowledgement",
+        "Real OIDC/login implementation",
+        "OAuth2 callback handling",
+        "Sessions or cookies",
+        "User tables",
+        "Self-service signup",
+        "Invitation workflow implementation",
+        "Account management UI",
+        "Identity provider integration",
+        "Deployment hardening",
+        "Public URL production readiness",
+        "Do not share any access path until the decision is recorded",
+        "Do not use local-dev fixture auth as production authentication",
+        "Do not publish a public anonymous tester URL",
+        "Do not commit or paste secrets",
+        "Do not treat a temporary network or access workaround as production auth",
+        "Do not invite testers without a revocation plan",
+        "Do not make public-source completeness, legal, facility-wide, harm",
+    ):
+        assert required_text in searchable_text
+
+    for forbidden_text in (
+        "ghp_",
+        "github_pat_",
+        "https://github.com/",
+        "C:\\",
+        "OneDrive",
+        "client_" + "secret" + "=",
+        "password" + "=",
+        "api_" + "key" + "=",
+    ):
+        assert forbidden_text not in guide.casefold()
+
+
+def test_qnap_pilot_access_method_decision_doc_is_linked_from_guides() -> None:
+    required_links = {
+        "README.md": "docs/developer/qnap-pilot-access-method-decision.md",
+        "RUNBOOK.md": "docs/developer/qnap-pilot-access-method-decision.md",
+        "docs/developer/qnap-pilot-readiness-index.md": (
+            "qnap-pilot-access-method-decision.md"
+        ),
+        "docs/developer/qnap-pilot-auth-readiness.md": (
+            "qnap-pilot-access-method-decision.md"
+        ),
+        "docs/developer/qnap-pilot-tester-invitation-decision.md": (
+            "qnap-pilot-access-method-decision.md"
+        ),
+        "docs/developer/qnap-pilot-operator-checklist.md": (
+            "qnap-pilot-access-method-decision.md"
+        ),
+        "docs/developer/qnap-docker-runtime.md": "qnap-pilot-access-method-decision.md",
+        "docs/developer/testing.md": "QNAP access-method decision documentation tests",
+    }
+
+    for path, link in required_links.items():
+        assert link in read_repo_text(path)
+
+
 def test_qnap_pilot_readiness_index_exists_and_covers_ordered_path() -> None:
     index = read_repo_text("docs/developer/qnap-pilot-readiness-index.md")
     normalized = " ".join(index.split())
@@ -1043,6 +1156,7 @@ def test_qnap_pilot_readiness_index_exists_and_covers_ordered_path() -> None:
         "optional, local, read-only operator convenience",
         "not an audit export, legal report, product export packet, public report",
         "QNAP pilot auth readiness",
+        "QNAP pilot access-method decision",
         "ADR-0011",
         "ADR-0014",
         "CCLD_HOSTED_TESTER_AUTH_MODE=production",
@@ -1056,6 +1170,7 @@ def test_qnap_pilot_readiness_index_exists_and_covers_ordered_path() -> None:
         "Seeded import evidence command output",
         "Route evidence command output",
         "Auth readiness decision",
+        "Access-method decision",
         "Tester invitation/access-control decision",
         "Feedback configuration decision",
         "Retrieval configuration decision",

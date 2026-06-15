@@ -8,6 +8,7 @@ should capture.
 This guide complements the [QNAP pilot operator checklist](qnap-pilot-operator-checklist.md),
 [QNAP Docker runtime guide](qnap-docker-runtime.md),
 [QNAP pilot readiness index](qnap-pilot-readiness-index.md),
+[QNAP pilot access-method decision](qnap-pilot-access-method-decision.md),
 [QNAP pilot tester invitation decision](qnap-pilot-tester-invitation-decision.md),
 ADR-0011, and ADR-0014.
 
@@ -45,6 +46,7 @@ ADR-0011, and ADR-0014.
 Do not invite real testers until there is a deliberate access-control decision
 for how they will authenticate and how their access will be provisioned,
 limited, reviewed, and revoked. Record that decision in
+[QNAP pilot access-method decision](qnap-pilot-access-method-decision.md) and
 [QNAP pilot tester invitation decision](qnap-pilot-tester-invitation-decision.md).
 
 ## 3. Host-Local Placeholder Guidance
@@ -80,6 +82,9 @@ Capture a small auth readiness packet:
   authenticated actor, while unconfigured feedback does not call GitHub.
 - Decision record that real OIDC/login remains deferred or planned, including
   who owns the next access-control decision.
+- Access-method decision record showing the temporary access method, scope,
+  expiration, revocation method, and that it is not production auth unless real
+  OIDC/session implementation exists.
 - Known limitation acknowledgement that the scaffold does not implement real
   login, sessions, cookies, token validation, user tables, self-service signup,
   or tester invitations.
