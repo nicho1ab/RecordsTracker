@@ -231,7 +231,8 @@ lets a local tester search/select a seeded source-derived complaint record, see
 list-level reviewer-created note/status indicators before opening detail, open
 detail, view a plain-language record summary, safe source traceability fields,
 clear available/missing traceability cues, source-confidence cues for present,
-missing, and proxy-flagged local/test complaint fields, safe related seeded bundle context,
+missing, and proxy-flagged local/test complaint fields, field-note guidance for
+cautious reviewer-created observations, safe related seeded bundle context,
 reviewer-created notes/statuses, CCLD return links, and record-specific
 feedback handoff cues, submit a bounded reviewer note, submit
 a bounded reviewer status, see a saved-state confirmation with same-request
@@ -254,6 +255,9 @@ Source-confidence cues are presentation-only. They do not add confidence scores,
 automated source verification, parser behavior, extraction changes, schema
 changes, persistence, queue assignment, workflow-engine behavior, or source-
 completeness assertions.
+Field-note guidance is also presentation-only. It does not generate notes, store
+note templates, add note fields, edit source-derived records, or create source-
+verification workflow behavior.
 
 The UI does not implement production sign-in, real OpenID Connect login, auth
 middleware, token validation, sessions, cookies, provider registration, client

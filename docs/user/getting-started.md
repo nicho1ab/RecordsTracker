@@ -156,6 +156,9 @@ and feedback clues for the selected record. The detail page explains available
 and missing source traceability and complaint-field values with local/test
 wording, names existing proxy flags when the loaded record supports them, and
 asks you to review source context before adding reviewer-created notes or status.
+It also includes field-note guidance for phrasing cautious reviewer-created
+observations when a value is present, not available locally, proxy-flagged, or
+still confusing after source traceability review.
 Missing local/test values should be described as not available in the local/test
 record, not as public-source absence, record incompleteness, or data loss. After adding a note or status in reviewer detail, return to the
 CCLD request page and submit the same request to see updated progress.

@@ -189,6 +189,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Record summary" not in reviewer_detail_body
         or b"Selected complaint source traceability fields" not in reviewer_detail_body
         or b"Source-confidence cues" not in reviewer_detail_body
+        or b"Field-note guidance" not in reviewer_detail_body
+        or b"Cautious wording for reviewer-created notes/status" not in reviewer_detail_body
         or b"not a source-confidence score" not in reviewer_detail_body
         or b"not available in this local/test record" not in reviewer_detail_body
         or b"does not make legal, facility-wide" not in reviewer_detail_body

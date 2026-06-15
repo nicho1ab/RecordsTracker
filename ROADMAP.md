@@ -472,6 +472,12 @@ the governed primary future review experience.
 	created notes/status or manual feedback, without adding parser, extraction,
 	schema, persistence, automated source verification, queue assignment, workflow-
 	engine behavior, live browser retrieval, connector execution, or non-CCLD scope.
+- Improved local/test reviewer detail field-note guidance so testers can phrase
+	reviewer-created notes/status observations cautiously after source traceability
+	and source-confidence review, without adding automated note generation, note
+	templates, new note fields, parser/extraction changes, schema, persistence,
+	source scoring, source verification workflow, live browser retrieval, connector
+	execution, or non-CCLD scope.
 
 - Improved the local/test CCLD facility lookup and request/result queue context
 	confirmation so testers can see whether a request came from lookup selection or

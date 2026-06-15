@@ -54,6 +54,10 @@ Accessibility requirements apply to:
 	that identify present source-derived fields, local/test missing fields,
 	existing proxy flags when available, and source-traceability review reminders
 	without relying on color, scoring, JavaScript, or automated verification.
+	Reviewer detail field-note guidance must be visible text with clear headings or
+	table headers that distinguish reviewer-created observations from source-
+	derived fields, explain cautious missing-field and proxy-flag wording, and avoid
+	color-only, generated-note, or JavaScript-dependent behavior.
 	Reviewer note/status saved confirmations must expose return-to-queue guidance,
 	same facility/date request-context reminders, queue-progress refresh guidance,
 	and next-record guidance as visible text with descriptive links.
