@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Improved local/test reviewer note/status confirmations on reviewer detail so
+	testers see clearer saved-state messages, validation guidance, read-after-write
+	state display, and return-to-queue next steps without changing reviewer-created
+	state persistence, audit behavior, source-derived records, schema, live
+	retrieval, connector execution, or non-CCLD scope.
 - Improved local/test CCLD first-run accessibility and visible-text guidance
 	across the home page, facility lookup, request/result queue, reviewer records,
 	reviewer detail, and feedback checklist surfaces with skip links, clearer

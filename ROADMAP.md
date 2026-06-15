@@ -428,6 +428,12 @@ the governed primary future review experience.
 	more specific form/action text, and manual checklist copy guidance without
 	adding persistence, schema changes, JavaScript-dependent workflow, live browser
 	retrieval, connector execution, or non-CCLD scope.
+- Improved local/test reviewer note/status confirmations so testers can see that
+	a reviewer-created note or status was saved, review the read-after-write state
+	on detail, return to the CCLD queue to see updated cues, and recover from
+	invalid note/status submissions without changing persistence, audit behavior,
+	source-derived records, schema, live browser retrieval, connector execution, or
+	non-CCLD scope.
 - Added a minimal local/test audit event persistence scaffold with a separate
 	PostgreSQL/Alembic table and service boundary for successful reviewer-created
 	state scaffold writes only, preserving source-derived records and reviewer-

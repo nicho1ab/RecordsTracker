@@ -344,8 +344,10 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
 
     assert note_status == 200
     assert status_status == 200
-    assert "Reviewer note saved through the existing local/test workflow action." in note_html
-    assert "Reviewer status saved through the existing local/test workflow action." in status_html
+    assert "Reviewer note saved for this record" in note_html
+    assert "Reviewer status saved for this record" in status_html
+    assert "Return to CCLD request queue" in note_html
+    assert "Return to CCLD request queue" in status_html
     assert reviewed_status == 200
     assert "Latest reviewer status: Reviewed" in reviewed_html
     assert "1 reviewer note(s)" in reviewed_html

@@ -101,6 +101,10 @@ URLs, or unnecessary sensitive narrative content. It does not implement real
 login, sessions, cookies, token validation, auth middleware, anonymous writes,
 exports, reset/reload execution, hosted live crawling, connector execution,
 deployment, or public launch behavior.
+Reviewer note/status confirmations may state that reviewer-created state was
+saved, show non-secret read-after-write reviewer-created state, and link back to
+the CCLD request queue. They must not expose raw provider claims, credentials,
+private values, or narrative source fields.
 
 The current browser-accessible CCLD record request page is local/test only and
 runs at `/ccld/records/request` when the local scaffold process is started. It

@@ -36,7 +36,8 @@
   safe source traceability fields, safe related seeded bundle context,
   reviewer-created notes/statuses, CCLD return links, and record-specific
   feedback clues, submit note/status forms through those existing workflow
-  actions, and see read-after-write
+  actions, see clearer saved-state confirmations and return-to-queue next steps,
+  and see read-after-write
   reviewer-created state without exposing sensitive narrative fields, a browser-
   accessible local/test CCLD facility lookup page at `/ccld/facilities` that
   reads configured full local/test or committed tiny CCLD program facility
