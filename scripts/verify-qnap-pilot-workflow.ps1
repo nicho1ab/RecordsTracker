@@ -96,6 +96,12 @@ function Test-PlaceholderValue {
     return $lower.Contains("placeholder") -or $lower.Contains("replace-with") -or $Value.Contains("<") -or $Value.Contains(">")
 }
 
+function Test-SecretLikeExampleValue {
+    param([string]$Value)
+    if ([string]::IsNullOrWhiteSpace($Value)) { return $false }
+    return $Value -match "ghp_[A-Za-z0-9_]{20,}" -or $Value -match "github_pat_[A-Za-z0-9_]{20,}"
+}
+
 function Test-NoHostSpecificPath {
     param(
         [string]$Label,
@@ -156,8 +162,7 @@ $requiredKeys = @(
     "CCLD_HOSTED_PAGE_DATA_MODE",
     "CCLD_HOSTED_TESTER_AUTH_MODE",
     "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH",
-    "CCLD_RETRIEVAL_ENABLED",
-    "CCLD_RETRIEVAL_RAW_DIR"
+    "CCLD_RETRIEVAL_ENABLED"
 )
 foreach ($key in $requiredKeys) { Test-PilotEnvValue -Values $envValues -Key $key }
 Write-CheckPass "Required QNAP pilot env keys are present."
@@ -166,7 +171,10 @@ $pageDataMode = Get-EnvValue -Values $envValues -Key "CCLD_HOSTED_PAGE_DATA_MODE
 $authMode = Get-EnvValue -Values $envValues -Key "CCLD_HOSTED_TESTER_AUTH_MODE"
 $localDevAuth = Get-EnvValue -Values $envValues -Key "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH"
 $retrievalDemoMode = Get-EnvValue -Values $envValues -Key "CCLD_RETRIEVAL_DEMO_MODE"
+$retrievalEnabled = Get-EnvValue -Values $envValues -Key "CCLD_RETRIEVAL_ENABLED"
 $retrievalRawDir = Get-EnvValue -Values $envValues -Key "CCLD_RETRIEVAL_RAW_DIR"
+$githubFeedbackRepo = Get-EnvValue -Values $envValues -Key "GITHUB_FEEDBACK_REPO"
+$githubFeedbackToken = Get-EnvValue -Values $envValues -Key "GITHUB_FEEDBACK_TOKEN"
 
 if ($retrievalDemoMode -eq "mock-success") {
     if (-not $AllowLocalDevDemo) {
@@ -187,11 +195,37 @@ else {
     Write-CheckPass "QNAP pilot mode keeps PostgreSQL page data and production auth boundary defaults."
 }
 
-Test-NoHostSpecificPath -Label "CCLD_RETRIEVAL_RAW_DIR" -Value $retrievalRawDir
-Write-CheckPass "Retrieval raw storage path is configurable and container-portable."
+if ($retrievalEnabled -eq "enabled") {
+    if ([string]::IsNullOrWhiteSpace($retrievalRawDir)) {
+        Stop-CheckFail "CCLD_RETRIEVAL_ENABLED=enabled requires CCLD_RETRIEVAL_RAW_DIR to preserve raw artifacts."
+    }
+    Test-NoHostSpecificPath -Label "CCLD_RETRIEVAL_RAW_DIR" -Value $retrievalRawDir
+    Write-CheckPass "Retrieval raw storage path is configurable and container-portable."
+    Write-CheckPass "Controlled retrieval is enabled with a configured raw artifact path."
+}
+else {
+    if (-not [string]::IsNullOrWhiteSpace($retrievalRawDir)) {
+        Test-NoHostSpecificPath -Label "CCLD_RETRIEVAL_RAW_DIR" -Value $retrievalRawDir
+        Write-CheckPass "Retrieval raw storage path is configurable and container-portable."
+    }
+    Write-CheckPass "Controlled retrieval is intentionally disabled unless CCLD_RETRIEVAL_ENABLED=enabled."
+}
+
+if ([string]::IsNullOrWhiteSpace($githubFeedbackRepo) -and [string]::IsNullOrWhiteSpace($githubFeedbackToken)) {
+    Write-CheckPass "GitHub feedback intake is intentionally disabled because repo and token are blank."
+}
+elseif ([string]::IsNullOrWhiteSpace($githubFeedbackRepo) -or [string]::IsNullOrWhiteSpace($githubFeedbackToken)) {
+    Stop-CheckFail "GitHub feedback must be either intentionally disabled with both repo/token blank or configured with both values set."
+}
+else {
+    Write-CheckPass "GitHub feedback intake has both repo and token values present."
+}
 
 foreach ($key in @("CCLD_POSTGRES_PASSWORD", "CCLD_HOSTED_TESTER_OIDC_ISSUER", "CCLD_HOSTED_TESTER_OIDC_CLIENT_ID", "GITHUB_FEEDBACK_REPO", "GITHUB_FEEDBACK_TOKEN")) {
     $value = Get-EnvValue -Values $envValues -Key $key
+    if (Test-SecretLikeExampleValue -Value $value) {
+        Stop-CheckFail "$key looks like a committed real secret or token. Keep real values only in untracked host configuration."
+    }
     if (Test-PlaceholderValue -Value $value) {
         Write-CheckWarn "$key still looks like a placeholder. Replace it before inviting external testers or enabling that integration."
     }

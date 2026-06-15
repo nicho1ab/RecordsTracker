@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import shutil
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+VERIFIER = ROOT / "scripts" / "verify-qnap-pilot-workflow.ps1"
 
 
 def read_repo_text(relative_path: str) -> str:
@@ -20,6 +23,27 @@ def parse_env_example() -> dict[str, str]:
     return values
 
 
+def run_verifier(*args: str) -> subprocess.CompletedProcess[str]:
+    shell = shutil.which("pwsh") or shutil.which("powershell")
+    if shell is None:
+        raise AssertionError("PowerShell is required for verifier behavior tests.")
+    return subprocess.run(
+        [shell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(VERIFIER), *args],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+def write_env_file(path: Path, updates: dict[str, str]) -> Path:
+    values = parse_env_example()
+    values.update(updates)
+    text = "\n".join(f"{key}={value}" for key, value in values.items()) + "\n"
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
 def test_env_example_uses_placeholders_only() -> None:
     values = parse_env_example()
 
@@ -28,8 +52,8 @@ def test_env_example_uses_placeholders_only() -> None:
     assert values["CCLD_POSTGRES_PASSWORD"] == "replace-with-strong-local-password"
     assert values["CCLD_HOSTED_PORT"] == "8000"
     assert values["CCLD_HOSTED_PAGE_DATA_MODE"] == "postgres"
-    assert values["GITHUB_FEEDBACK_REPO"] == "<your-github-org-or-user>/<repository-name>"
-    assert values["GITHUB_FEEDBACK_TOKEN"] == "<server-side-github-feedback-token>"
+    assert values["GITHUB_FEEDBACK_REPO"] == ""
+    assert values["GITHUB_FEEDBACK_TOKEN"] == ""
     assert values["GITHUB_FEEDBACK_DEFAULT_LABELS"] == ""
     assert values["CCLD_RETRIEVAL_ENABLED"] == "disabled"
     assert values["CCLD_RETRIEVAL_RAW_DIR"] == "/app/data/raw/ccld/retrieval"
@@ -42,11 +66,132 @@ def test_env_example_uses_placeholders_only() -> None:
     assert values["CCLD_FACILITY_REFERENCE_CSV"] == ""
 
     env_text = read_repo_text(".env.example")
+    for heading in (
+        "QNAP pilot environment template",
+        "Required: PostgreSQL container and app port",
+        "Required for QNAP pilot: PostgreSQL-backed hosted pages",
+        "Required for QNAP pilot: production auth boundary defaults",
+        "Optional server-side GitHub Issues feedback intake",
+        "Optional controlled server-side CCLD retrieval jobs",
+        "Local-dev scaffold validation only",
+        "Optional local/test CCLD facility reference CSV path",
+    ):
+        assert heading in env_text
     assert "ghp_" not in env_text
     assert "github_pat_" not in env_text
     assert "https://github.com/" not in env_text
     assert "C:\\" not in env_text
     assert "OneDrive" not in env_text
+
+
+def test_qnap_verifier_passes_env_example_with_placeholder_warnings() -> None:
+    result = run_verifier("-EnvFile", ".env.example")
+
+    assert result.returncode == 0
+    assert "[PASS] Required QNAP pilot env keys are present." in result.stdout
+    assert "QNAP pilot mode keeps PostgreSQL page data" in result.stdout
+    assert "Controlled retrieval is intentionally disabled" in result.stdout
+    assert "placeholder" in (result.stdout + result.stderr)
+
+
+def test_qnap_verifier_reports_missing_env_file(tmp_path: Path) -> None:
+    missing_env = tmp_path / "missing.env"
+
+    result = run_verifier("-EnvFile", str(missing_env), "-SkipComposeConfig")
+
+    assert result.returncode != 0
+    assert "not found" in (result.stderr + result.stdout)
+
+
+def test_qnap_verifier_rejects_unsafe_local_dev_auth(tmp_path: Path) -> None:
+    env_file = write_env_file(
+        tmp_path / "local-dev.env",
+        {
+            "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
+            "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
+        },
+    )
+
+    result = run_verifier("-EnvFile", str(env_file), "-SkipComposeConfig")
+
+    assert result.returncode != 0
+    output = result.stderr + result.stdout
+    assert "production auth mode" in output
+    assert "auth disabled" in output
+
+
+def test_qnap_verifier_rejects_mock_success_without_override(tmp_path: Path) -> None:
+    env_file = write_env_file(
+        tmp_path / "mock-success.env",
+        {"CCLD_RETRIEVAL_DEMO_MODE": "mock-success"},
+    )
+
+    result = run_verifier("-EnvFile", str(env_file), "-SkipComposeConfig")
+
+    assert result.returncode != 0
+    assert "requires -AllowLocalDevDemo" in (result.stderr + result.stdout)
+
+
+def test_qnap_verifier_detects_retrieval_enabled_without_raw_storage(tmp_path: Path) -> None:
+    env_file = write_env_file(
+        tmp_path / "retrieval-no-raw.env",
+        {
+            "CCLD_RETRIEVAL_ENABLED": "enabled",
+            "CCLD_RETRIEVAL_RAW_DIR": "",
+        },
+    )
+
+    result = run_verifier("-EnvFile", str(env_file), "-SkipComposeConfig")
+
+    assert result.returncode != 0
+    assert "requires CCLD_RETRIEVAL_RAW_DIR" in (result.stderr + result.stdout)
+
+
+def test_qnap_verifier_detects_partial_github_feedback(tmp_path: Path) -> None:
+    env_file = write_env_file(
+        tmp_path / "partial-feedback.env",
+        {
+            "GITHUB_FEEDBACK_REPO": "example/repo",
+            "GITHUB_FEEDBACK_TOKEN": "",
+        },
+    )
+
+    result = run_verifier("-EnvFile", str(env_file), "-SkipComposeConfig")
+
+    assert result.returncode != 0
+    assert "GitHub feedback must be either intentionally disabled" in (
+        result.stderr + result.stdout
+    )
+
+
+def test_qnap_verifier_allows_github_feedback_disabled(tmp_path: Path) -> None:
+    env_file = write_env_file(
+        tmp_path / "feedback-disabled.env",
+        {
+            "GITHUB_FEEDBACK_REPO": "",
+            "GITHUB_FEEDBACK_TOKEN": "",
+        },
+    )
+
+    result = run_verifier("-EnvFile", str(env_file), "-SkipComposeConfig")
+
+    assert result.returncode == 0
+    assert "GitHub feedback intake is intentionally disabled" in result.stdout
+
+
+def test_qnap_verifier_allows_retrieval_disabled_without_raw_storage(tmp_path: Path) -> None:
+    env_file = write_env_file(
+        tmp_path / "retrieval-disabled.env",
+        {
+            "CCLD_RETRIEVAL_ENABLED": "disabled",
+            "CCLD_RETRIEVAL_RAW_DIR": "",
+        },
+    )
+
+    result = run_verifier("-EnvFile", str(env_file), "-SkipComposeConfig")
+
+    assert result.returncode == 0
+    assert "Controlled retrieval is intentionally disabled" in result.stdout
 
 
 def test_compose_runtime_uses_postgres_named_volumes_and_healthchecks() -> None:
@@ -90,6 +235,9 @@ def test_qnap_pilot_workflow_script_checks_env_compose_and_routes() -> None:
         "CCLD_RETRIEVAL_DEMO_MODE",
         "mock-success",
         "AllowLocalDevDemo",
+        "GitHub feedback must be either intentionally disabled",
+        "CCLD_RETRIEVAL_ENABLED=enabled requires CCLD_RETRIEVAL_RAW_DIR",
+        "Controlled retrieval is intentionally disabled",
         "docker compose -f",
         "pg_isready",
         "alembic current",
@@ -110,8 +258,9 @@ def test_qnap_pilot_workflow_script_checks_env_compose_and_routes() -> None:
     assert "function Test-PilotEnvValue" in script
     assert "function Test-NoHostSpecificPath" in script
     assert 'Stop-CheckFail "$Label must be a portable container path' in script
-    assert "ghp_" not in script
-    assert "github_pat_" not in script
+    assert "Test-SecretLikeExampleValue" in script
+    assert "ghp_[A-Za-z0-9_]" in script
+    assert "github_pat_[A-Za-z0-9_]" in script
 
 
 def test_dockerfile_preserves_no_secret_portable_app_start() -> None:

@@ -237,6 +237,9 @@ public-record review notes.
    environment placeholders. Use `scripts/verify-qnap-pilot-workflow.ps1` to
    validate a QNAP pilot `.env`, Compose config, optional running containers,
    and optional route probes before inviting testers.
+   The template leaves GitHub feedback disabled unless both repo and token values
+   are configured on the host, and it keeps local-dev mock-success retrieval blank
+   for QNAP pilot mode.
 - Use [docs/developer/cloud-portability-deployment.md](docs/developer/cloud-portability-deployment.md)
    to compare QNAP, AWS, Azure, DigitalOcean, Render, Fly.io, Railway, Supabase,
    and Neon deployment shapes while keeping app runtime, PostgreSQL, raw file
