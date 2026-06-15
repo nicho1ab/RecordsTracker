@@ -96,7 +96,8 @@
   clear local/test missing-value guidance and safe related seeded bundle context,
   see record-summary and record-specific feedback handoff guidance,
   submit a bounded reviewer note, submit a bounded reviewer status, see
-  saved-state confirmations with same-request return-to-queue progress guidance,
+  saved-state confirmations with same-request return-to-queue progress and
+  next-record navigation guidance,
   and see read-after-write
   reviewer-created state.
   No-search-results, missing-record, invalid-form, and permission-blocked states

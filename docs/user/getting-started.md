@@ -157,6 +157,10 @@ CCLD request queue so the updated note/status cues can be checked.
 Use the same facility/date request context when returning to the queue. In this
 local/test MVP, you may need to submit the same request again to refresh queue
 progress and note/status cues before continuing to the next record.
+Next-record cues are local/test navigation help only. They are derived from the
+current CCLD request context and existing reviewer-created note/status rows;
+they are not persisted queue assignments, automatic record claims, or official
+workflow state.
 The reviewer detail feedback handoff cue tells you which record-specific source
 traceability, source context, note/status confirmation, same-queue return, queue
 refresh, unexpected-record, confusing-label, wording, keyboard-flow, or next-step

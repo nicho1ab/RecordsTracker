@@ -280,6 +280,13 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "<dd>1</dd>" in html
     assert "Queue triage summary" in html
     assert "record-specific reviewer-detail observations" in normalized_html
+    assert "Continue review guidance" in html
+    assert "derived from this facility/date request context" in normalized_html
+    assert "not a persisted queue assignment" in normalized_html
+    assert "automatic record claim" in html
+    assert "official workflow state" in html
+    assert "After reviewing detail or saving a note/status" in normalized_html
+    assert "Next record guidance" in html
     assert "Records with reviewer notes" in html
     assert "Records with reviewer status" in html
     assert "Records with source traceability available" in html
@@ -410,6 +417,8 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
     assert "Records with reviewer notes" in reviewed_html
     assert "Records with reviewer status" in reviewed_html
     assert "Suggested next record to open" in reviewed_html
+    assert "Continue review guidance" in reviewed_html
+    assert "not a persisted queue assignment" in reviewed_normalized
     assert "- Reviewer-created rows read for this queue: 2" in reviewed_html
     assert "- Reviewer notes present: yes" in reviewed_html
     assert "- Reviewer statuses present: yes" in reviewed_html

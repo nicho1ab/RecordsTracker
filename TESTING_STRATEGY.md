@@ -112,6 +112,10 @@ near detail feedback guidance, identify observations to carry into the existing
 manual checklist, preserve note/status confirmation and return-to-queue wording,
 remain no-secret, and do not mutate source-derived, reviewer-created, audit,
 import, or operational metadata rows during detail rendering.
+Reviewer detail next-record navigation tests should prove return-to-same-queue
+guidance, note/status confirmation next-record wording, queue suggested-next
+wording, and no-assignment/no-claim/no-workflow-state boundaries render while
+preserving existing request context and no-mutation behavior.
 Hosted CCLD record request UI tests must prove the browser-accessible local/test
 request page accepts only CCLD digit facility/license numbers plus optional
 valid date ranges, returns accessible validation guidance for missing or invalid

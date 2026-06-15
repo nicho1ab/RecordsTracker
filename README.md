@@ -51,7 +51,8 @@ experience.
    status, use record-specific feedback handoff cues, see clearer note/status
    save confirmations, return to the same CCLD
    request context to resubmit when needed, see updated queue cues, continue to
-   the next record after notes/statuses, and read first-time workflow help
+   the next suggested queue record after notes/statuses without persisted queue
+   assignment or record claiming, and read first-time workflow help
    without running live crawling from a browser request.
 
 ## Core Principles

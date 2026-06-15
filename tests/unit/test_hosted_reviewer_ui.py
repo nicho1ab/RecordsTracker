@@ -204,6 +204,11 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Confirm the selected complaint record" in html
     assert "Review the source traceability fields and source-context cues" in html
     assert "Return to the CCLD request queue" in html
+    assert "use the refreshed queue's suggested next record to continue" in normalized_html
+    assert "Next-record guidance is local/test navigation help" in html
+    assert "not a persisted assignment" in html
+    assert "automatic record claim" in normalized_html
+    assert "official workflow state" in html
     assert "Detail navigation" in html
     assert "Return to CCLD request or queue" in html
     assert "Find another CCLD facility" in html
@@ -445,6 +450,9 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert "same facility/license number and date range" in normalized_html
     assert "submit the request again" in html
     assert "continuing to the next record" in html
+    assert "suggested next record is not a persisted assignment" in html
+    assert "automatic record claim" in normalized_html
+    assert "official workflow state" in html
     assert "manual feedback checklist" in html
     assert "record-specific observation" in html
     assert "157806098" in html
@@ -566,6 +574,9 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "Queue progress and note/status cues are derived from reviewer-created state" in html
     assert "submit the request again" in html
     assert "continuing to the next record" in html
+    assert "suggested next record is not a persisted assignment" in html
+    assert "automatic record claim" in " ".join(html.split())
+    assert "official workflow state" in html
     assert "manual feedback checklist" in html
     assert "record-specific observation" in html
     assert "return_facility_number=157806098" in html

@@ -1065,8 +1065,13 @@ def _render_detail_first_run_steps(
                 <li>Add a note or status only after checking the source context and only if it
                 helps the local/test review queue.</li>
                 <li><a href="{_escape(ccld_request_href)}">Return to the CCLD request queue</a>
-                and copy the tester feedback checklist when ready.</li>
+                with the same request context, resubmit when needed, and use the refreshed
+                queue's suggested next record to continue.</li>
+                <li>Copy the tester feedback checklist when ready.</li>
             </ol>
+            <p>Next-record guidance is local/test navigation help derived from existing
+            reviewer-created note/status cues. It is not a persisted assignment, automatic
+            record claim, or official workflow state.</p>
             <p>Selected source record key: {_escape(source_record_key)}.</p>
         </section>"""
 
@@ -1902,6 +1907,9 @@ def _render_notice(
                 to refresh its displayed cues.</p>
                 <p>After the queue shows the updated cue, open the suggested next record or the
                 next not-started record to continue review.</p>
+                <p>The suggested next record is not a persisted assignment, automatic record
+                claim, or official workflow state. It is local/test navigation guidance based
+                on the same request context and existing reviewer-created note/status cues.</p>
                 <p>If the saved confirmation, same-context return link, or refreshed queue cue
                 did not behave as expected, include that record-specific observation in the
                 manual feedback checklist.</p>
