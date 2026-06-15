@@ -61,8 +61,11 @@ experience.
    database context, the hosted request flow can trigger CCLD-only,
    facility/date/type-bounded complaint retrieval, preserve raw artifacts and
    SHA-256 hashes, import validated source-derived rows into PostgreSQL, and show
-   safe job status/counts with clearer next-step and `/feedback` guidance. Tests
-   use mocked CCLD retrieval only.
+   safe job status/counts with clearer next-step and `/feedback` guidance. A
+   small `/ccld/retrieval/jobs` page shows recent retrieval job history/status
+   from existing operational metadata, including request context, state,
+   timestamps, import counts, warning/error summaries, and review links when
+   records were imported. Tests use mocked CCLD retrieval only.
 - Includes a local/test hosted CCLD record request page where a tester can enter
    a CCLD facility/license number and optional date range, read matching seeded
    source-derived records, load or refresh matching CCLD records from validated

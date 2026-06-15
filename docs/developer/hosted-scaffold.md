@@ -250,6 +250,21 @@ plain next steps. Safe summaries show what was requested, whether a job was
 created, whether records were imported, where to review imported records, and
 when to send `/feedback` for confusing status or wording.
 
+The scaffold also exposes a small read-only retrieval job history/status page at:
+
+```text
+http://127.0.0.1:8000/ccld/retrieval/jobs
+```
+
+The page reads existing `hosted_ccld_retrieval_jobs` operational metadata for the
+current authorized scope. It shows recent job state, requested facility/date/type,
+created and last-updated timestamps, imported-record counts, safe warning/error
+summaries, status messages, raw-artifact-preserved indicators without raw paths,
+links back to `/ccld/records/request`, review-queue links when records were
+imported, and `/feedback` guidance for confusing or failed jobs. It is not an
+audit UI, audit export, CSV export, scheduler, distributed worker queue, or broad
+operational console.
+
 ## Open the CCLD record request page
 
 The scaffold includes a browser-accessible local/test CCLD facility lookup page at:

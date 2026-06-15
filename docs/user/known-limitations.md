@@ -197,4 +197,9 @@
   completed-with-warnings, failed, blocked-by-validation, or rate-limited state
   tells you what happened to the job, not whether CCLD has complete records for a
   facility/date range.
+- The retrieval job history page shows recent status/history from existing
+  operational retrieval metadata only. It is not an audit export, CSV export,
+  scheduler, source-completeness report, legal conclusion, or proof that all CCLD
+  records for a facility/date range were found. It does not show raw source
+  narrative content, raw artifact file contents, or server-specific raw paths.
 - Datasette accessibility depends partly on the installed Datasette version, browser, and assistive technology. Validate keyboard navigation, table headers, focus visibility, and exported table usability before treating a release as stable.

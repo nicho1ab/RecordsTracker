@@ -90,6 +90,14 @@ operator configuration without exposing private values, validation states explai
 facility/date/type issues, completed-with-warnings is distinct from failed,
 rate-limited and failed states provide safe next steps, and confusing retrieval
 states point to `/feedback`.
+Retrieval job history tests should prove the history/status route requires the
+same allowed actor boundary as current workflow pages, renders an empty state
+safely, lists recent jobs with facility/date/type, state, timestamps, imported
+counts, safe warning/error summaries, and status messages, links to the CCLD
+queue only when records were imported, points confusing or failing jobs to
+`/feedback`, does not expose raw stack traces or private values, does not mutate
+source-derived, reviewer-created, audit, feedback, import, or unrelated
+operational rows, and uses mocked retrieval data only.
 GitHub Issues feedback intake tests must prove the feedback page renders, the
 feedback type dropdown has exactly bug report, feature request, and new data
 source options, description and submit controls are accessible, missing values

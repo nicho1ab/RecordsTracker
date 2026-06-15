@@ -192,6 +192,12 @@
     unsupported automated complaint findings, and unsupported record types remain
     out of scope. All supported record types currently resolves to complaint
     records only.
+- The local hosted scaffold `/ccld/retrieval/jobs` page shows recent controlled
+    retrieval status/history from existing operational metadata only. It is not an
+    audit export, CSV export, scheduler, worker console, source-completeness report,
+    legal conclusion, or proof that all CCLD records for a facility/date range were
+    found. It does not show raw source narrative content, raw artifact file
+    contents, or server-specific raw paths.
 - The local hosted scaffold `/facilities` list and detail pages use committed
     tiny public-source facility fixtures and manifest placeholder metadata only.
     The facility detail source coverage panel and related source-record links

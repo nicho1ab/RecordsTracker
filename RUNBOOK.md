@@ -73,6 +73,14 @@ safe job status first, then operator logs. Do not expose raw stack traces,
 tokens, cookies, private headers, connection strings, provider claims, GitHub
 tokens, private URLs, or unnecessary narrative content in support notes.
 
+Use `/ccld/retrieval/jobs` for a small browser-visible history/status view over
+existing retrieval job metadata. It shows recent job request context, state,
+timestamps, imported-record counts, safe warnings/errors, status messages, and
+review links when records were imported. It is not an audit export, CSV export,
+scheduler, worker console, or source-completeness report. If the history page is
+empty, confirm retrieval is configured and that jobs were submitted in the same
+authorized scope.
+
 Backups for retrieval-enabled deployments must cover both PostgreSQL and raw
 source artifacts. A database backup alone is not enough when source-derived rows
 reference raw artifact paths or raw hashes.

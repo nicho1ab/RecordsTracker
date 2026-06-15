@@ -20,6 +20,7 @@ from ccld_complaints.hosted_app.auth import (
 )
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     CCLD_RECORD_REQUEST_PATH,
+    CCLD_RETRIEVAL_JOBS_PATH,
     CcldRecordRequestUiContext,
     _render_retrieval_job_summary,
     ccld_record_request_context_for_reviewer_context,
@@ -331,6 +332,125 @@ def test_retrieval_status_summary_explains_queued_running_and_failed_states() ->
     assert_no_secret_html(failed_html)
 
 
+def test_retrieval_job_history_empty_state_renders_for_allowed_local_dev_actor() -> None:
+    status, content_type, body = route_response(
+        CCLD_RETRIEVAL_JOBS_PATH,
+        auth_runtime_config=_local_dev_auth_config(),
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Controlled CCLD retrieval job history" in html
+    assert "No retrieval jobs have been submitted" in html
+    assert "Controlled retrieval setup is missing" in html
+    assert "status/history visibility only, not an audit export" in html
+    assert "Submit or change a CCLD record request" in html
+    assert "Send tester feedback" in html
+    assert_no_secret_html(html)
+
+
+def test_anonymous_production_retrieval_job_history_is_blocked() -> None:
+    auth_config = load_hosted_auth_runtime_config(
+        environ={"CCLD_HOSTED_TESTER_AUTH_MODE": "production"}
+    )
+
+    status, _content_type, body = route_response(
+        CCLD_RETRIEVAL_JOBS_PATH,
+        auth_runtime_config=auth_config,
+        page_data_mode="postgres",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 401
+    assert "CCLD workflow access requires sign-in" in html
+    assert_no_secret_html(html)
+
+
+def test_retrieval_job_history_renders_recent_jobs_safely_without_mutation(
+    tmp_path: Path,
+) -> None:
+    with _empty_connection() as connection:
+        context = _request_context(connection, tmp_path)
+        _insert_history_job(
+            connection,
+            "completed-job",
+            state="completed",
+            created_at="2026-06-15T12:00:00+00:00",
+            updated_at="2026-06-15T12:04:00+00:00",
+            result_counts={"imported_source_derived_records": 6},
+            source_artifact_identity="ccld-retrieval-job:completed-job",
+            safe_message="Controlled CCLD retrieval imported source-derived records.",
+        )
+        _insert_history_job(
+            connection,
+            "warning-job",
+            state="completed_with_warnings",
+            created_at="2026-06-15T12:10:00+00:00",
+            updated_at="2026-06-15T12:14:00+00:00",
+            result_counts={"imported_source_derived_records": 0},
+            warnings=("Report 39 failed during fetch.",),
+            safe_message="Controlled CCLD retrieval completed with no matching imported records.",
+        )
+        _insert_history_job(
+            connection,
+            "failed-job",
+            state="failed",
+            created_at="2026-06-15T12:20:00+00:00",
+            updated_at="2026-06-15T12:21:00+00:00",
+            errors=("Traceback contained token and provider_subject details.",),
+            safe_message="Failure included token and provider_subject values.",
+        )
+        _insert_history_job(
+            connection,
+            "rate-limited-job",
+            state="rate_limited",
+            created_at="2026-06-15T12:30:00+00:00",
+            updated_at="2026-06-15T12:30:00+00:00",
+            safe_message="Controlled CCLD retrieval is rate-limited for this tester.",
+        )
+        before_counts = _table_counts(connection)
+        status, content_type, body = route_response(
+            CCLD_RETRIEVAL_JOBS_PATH,
+            ccld_record_request_ui_context=context,
+        )
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+    normalized = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_counts == after_counts
+    assert "Controlled retrieval is configured for this runtime" in html
+    assert "completed-job" in html
+    assert "warning-job" in html
+    assert "failed-job" in html
+    assert "rate-limited-job" in html
+    assert "Facility/license number" in html
+    assert "157806098" in html
+    assert "Complaint records" in html
+    assert "2022-08-01 to 2022-08-31" in html
+    assert "Created at" in html
+    assert "Started timestamp" in html
+    assert "Completed or last updated at" in html
+    assert "Records imported" in html
+    assert "Review imported records in the CCLD queue" in html
+    assert "Report 39 failed during fetch." in html
+    assert "Completed with warnings" in html
+    assert "No records were imported. Review warnings" in normalized
+    assert "Failed" in html
+    assert "Retry later or ask an operator to inspect server logs" in normalized
+    assert "Rate limited" in html
+    assert "Wait for an active retrieval job to finish" in normalized
+    assert "raw artifact preserved; source artifact identity available; raw paths not shown" in html
+    assert "Send tester feedback" in html
+    assert "Traceback" not in html
+    assert "provider_subject" not in html
+    assert_no_secret_html(html)
+
+
 def test_anonymous_production_retrieval_is_blocked() -> None:
     auth_config = load_hosted_auth_runtime_config(
         environ={"CCLD_HOSTED_TESTER_AUTH_MODE": "production"}
@@ -510,6 +630,50 @@ def _empty_counts() -> dict[str, int]:
         "audit_events": 0,
         "retrieval_jobs": 0,
     }
+
+
+def _insert_history_job(
+    connection: Connection,
+    retrieval_job_id: str,
+    *,
+    state: str,
+    created_at: str,
+    updated_at: str,
+    result_counts: dict[str, int] | None = None,
+    warnings: tuple[str, ...] = (),
+    errors: tuple[str, ...] = (),
+    source_artifact_identity: str | None = None,
+    safe_message: str = "Controlled CCLD retrieval status is available.",
+) -> None:
+    connection.execute(
+        hosted_ccld_retrieval_jobs.insert().values(
+            retrieval_job_id=retrieval_job_id,
+            created_at=created_at,
+            updated_at=updated_at,
+            job_state=state,
+            facility_number="157806098",
+            record_type="complaints",
+            start_date="2022-08-01",
+            end_date="2022-08-31",
+            source_scope_type=TEST_SCOPE.scope_type,
+            source_scope_id=TEST_SCOPE.scope_id,
+            actor_provider_subject="fixture-retrieval-reviewer",
+            actor_provider_issuer="fixture-managed-oidc-provider",
+            actor_display_name="Fixture Retrieval Reviewer",
+            actor_category="tester",
+            authorization_permission="retrieval_job_trigger",
+            request_limit="1",
+            retry_limit="0",
+            timeout_seconds="5",
+            raw_storage_path="raw",
+            source_artifact_identity=source_artifact_identity,
+            result_counts=result_counts or {},
+            warnings=list(warnings),
+            errors=list(errors),
+            safe_message=safe_message,
+            data_mutations_performed=bool(result_counts),
+        )
+    )
 
 
 def assert_no_secret_html(markup: str) -> None:

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added a small controlled CCLD retrieval job history/status page at
+	`/ccld/retrieval/jobs`. The page lists recent jobs from existing operational
+	metadata, shows facility/date/type request context, state, timestamps, import
+	counts, safe warning/error summaries, status messages, review-queue links
+	when records were imported, and `/feedback` guidance without adding audit
+	export, retrieval capability, new record types, raw path display, live test
+	calls, or broader UI redesign.
 - Improved controlled CCLD retrieval status usability. Setup-required, validation,
 	queued/running/completed/completed-with-warnings/failed/rate-limited, and result
 	states now use clearer tester and operator guidance, include safe request/job
