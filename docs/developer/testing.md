@@ -255,6 +255,17 @@ path, includes verifier, seeded evidence, and route evidence command shapes,
 requires disabled local-dev auth for QNAP, lists the evidence packet and
 do-not-invite-until checklist, links to ADR-0011 and ADR-0014, and avoids real
 secrets or public-source/legal conclusions.
+QNAP evidence packet command tests should prove the optional PowerShell command
+exists, parses, accepts `-EnvFile`, `-BaseUrl`, `-OutputDir`,
+`-SkipDatabaseCheck`, and `-AllowRouteUnavailable`, invokes the existing QNAP
+verifier, seeded import evidence, and route evidence scripts, writes Markdown
+only under ignored `data/processed/qnap-pilot-evidence/`, refuses or redacts
+secret-like operator inputs, does not call GitHub or live CCLD, does not POST,
+does not run imports or retrieval, includes known-limitation acknowledgement and
+deferred items, and avoids raw artifact contents, response bodies, provider
+subjects, provider issuers, cookies, tokens, callback URLs, tenant IDs,
+connection strings, private URLs, client secrets, and public-source/legal/
+facility-wide conclusion language.
 
 Controlled CCLD retrieval job tests cover the ADR-0016 boundary before and after
 browser-triggered retrieval is enabled. Tests should prove only facility/license

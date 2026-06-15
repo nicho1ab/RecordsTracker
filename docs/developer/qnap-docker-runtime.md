@@ -131,6 +131,11 @@ For proof that PostgreSQL-backed CCLD source-derived rows are actually imported,
 use [QNAP pilot seeded import evidence](qnap-pilot-seeded-import-evidence.md).
 The optional `scripts/summarize-qnap-pilot-seeded-import-evidence.ps1` command
 summarizes that evidence without mutating data or printing secrets/raw artifacts.
+The optional `scripts/build-qnap-pilot-evidence-packet.ps1` command can assemble
+a redacted local Markdown packet under ignored `data/processed/qnap-pilot-evidence/`
+from the existing verifier, seeded evidence, route evidence, and operator
+decisions. It is read-only and is not an audit export, legal report, product
+export packet, public report, GitHub issue, or certification.
 
 From the repository root on any Docker host, first validate the untracked pilot
 environment file:
@@ -192,6 +197,17 @@ read-only imported-data summary:
 
 The route checks are bounded and read-only. They do not run live CCLD retrieval,
 do not call GitHub, and do not prove public-source completeness.
+
+To assemble those existing checks and operator decisions into one local redacted
+Markdown packet, run:
+
+```powershell
+.\scripts\build-qnap-pilot-evidence-packet.ps1 -EnvFile .env -BaseUrl http://<host-name-or-ip>:<CCLD_HOSTED_PORT> -KnownLimitationsAcknowledged
+```
+
+Review the generated packet before sharing it. Generated packet files are local
+operator evidence under ignored `data/processed/qnap-pilot-evidence/` and must
+not be committed.
 
 ## Pilot Modes
 
