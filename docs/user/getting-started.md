@@ -154,6 +154,9 @@ CCLD request page and submit the same request to see updated progress.
 When a note or status is saved, the detail page confirms the reviewer-created
 update, shows it in the reviewer-created state section, and links back to the
 CCLD request queue so the updated note/status cues can be checked.
+Use the same facility/date request context when returning to the queue. In this
+local/test MVP, you may need to submit the same request again to refresh queue
+progress and note/status cues before continuing to the next record.
 The local/test browser pages include skip-to-main links, visible start-here or
 next-step guidance, specific button/link text, and manual checklist copy
 instructions so a first-time tester can use keyboard navigation and visible page

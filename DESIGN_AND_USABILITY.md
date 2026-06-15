@@ -101,6 +101,11 @@ state, understand which traceability fields are visible or missing in the
 local/test record, and avoid treating missing local/test values as public-source
 absence, completeness, legal, facility-wide, harm, abuse, neglect, liability, or
 automated-finding conclusions.
+Reviewer note/status confirmations should make the return path clear: saved
+notes/statuses are reviewer-created state, queue progress and note/status cues
+are derived from that state, the tester may need to resubmit the same local/test
+facility/date request context to refresh the queue display, and the next record
+should be chosen from the refreshed queue.
 
 The first browser-accessible CCLD record request page is a local/test, server-
 rendered HTML surface at `/ccld/records/request`. Its design purpose is to

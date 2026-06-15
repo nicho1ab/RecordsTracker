@@ -117,8 +117,9 @@ plain-language record summaries, safe source traceability display, safe related
 seeded bundle context with sensitive narrative fields hidden, clear missing-value
 wording for unavailable local/test traceability values, labeled search/
 note/status controls, note/status form delegation to the existing workflow
-actions, read-after-write reviewer-created state display, CCLD return navigation,
-record-specific feedback guidance, non-conclusion boundary wording, no-match search, missing-record, invalid note/
+actions, read-after-write reviewer-created state display, same-request
+return-to-queue progress guidance, CCLD return navigation, record-specific
+feedback guidance, non-conclusion boundary wording, no-match search, missing-record, invalid note/
 status form, and blocked-request next-step guidance, unauthenticated, disabled or revoked, role-denied, out-of-scope,
 and source-read-versus-reviewer-state permission separation blocking, no-secret
 HTML output, successful audit creation, and no source-derived mutation.
