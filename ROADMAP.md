@@ -492,6 +492,15 @@ the governed primary future review experience.
 	manual checklist without adding a second checklist, persisted feedback, export
 	behavior, schema changes, live browser retrieval, connector execution, or
 	non-CCLD scope.
+- Improved first-run local/test CCLD review session orientation so testers can
+	start from home or facility lookup, confirm request context, use the loaded
+	local/test queue, open reviewer detail for source traceability, source-
+	confidence, and field-note cues, save note/status observations, return to the
+	same queue/request context, continue to the next record, and copy the single
+	manual feedback checklist without adding saved sessions, persisted queue state,
+	duplicate checklist behavior, feedback persistence, schema changes, auth,
+	workflow-engine behavior, live browser retrieval, connector execution, or
+	non-CCLD scope.
 
 - Improved the local/test CCLD facility lookup and request/result queue context
 	confirmation so testers can see whether a request came from lookup selection or

@@ -44,7 +44,9 @@ experience.
    facility/date-scoped complaint queue with triage summaries, progress counts,
    reviewer note/status cues, source-traceability availability cues, reviewer-status filtering,
    filtered-empty recovery guidance, suggested next-record links, skip-to-main
-   links, visible first-run next-step guidance, clearer form/action text, open
+   links, visible first-run review session orientation from home/request/help
+   through queue, detail, note/status confirmation, same-queue refresh, next-record
+   continuation, and manual checklist copy behavior, clearer form/action text, open
    records in the hosted reviewer UI,
    see consistent plain-language terms across request, queue, reviewer detail,
    and help pages,
@@ -59,7 +61,8 @@ experience.
    save confirmations, return to the same CCLD
    request context to resubmit when needed, see updated queue cues, continue to
    the next suggested queue record after notes/statuses without persisted queue
-   assignment or record claiming, and read first-time workflow help
+   assignment, record claiming, saved review sessions, duplicate checklists, or
+   feedback persistence, and read first-time workflow help
    without running live crawling from a browser request.
 
 ## Core Principles

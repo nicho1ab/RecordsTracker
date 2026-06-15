@@ -190,7 +190,14 @@ observations to carry into the existing manual feedback checklist.
 The local/test browser pages include skip-to-main links, visible start-here or
 next-step guidance, specific button/link text, and manual checklist copy
 instructions so a first-time tester can use keyboard navigation and visible page
-text to move through the MVP flow.
+text to move through the MVP flow. Start the review session from home or facility
+lookup, confirm the request context, use the loaded local/test queue, open
+reviewer detail for source traceability, source-confidence, and field-note cues,
+save reviewer notes/status only as tester-created observations when useful,
+return to the same queue/request context to refresh progress, continue to the
+next record, and copy the single manual feedback checklist. The browser pages do
+not save a review session, persist queue state, create a second checklist, save
+feedback, run live CCLD retrieval, execute connectors, or build artifacts.
 If the request finds no matching rows, the result page searched only currently
 loaded local/test source-derived records. It shows the facility/license number,
 date range, rows already loaded for that facility before date filtering, and the

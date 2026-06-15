@@ -107,11 +107,23 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "Local/test scaffold only: not a production reviewer workflow." in html
     assert "Request CCLD facility records" in html
     assert "Start here: CCLD facility request" in html
+    assert "Start a CCLD review session here" in html
     assert "Start first CCLD review" in html
-    assert "Open the suggested queue record" in html
+    assert "Open the suggested queue record in reviewer detail" in normalized_html
+    assert "check source traceability, source-confidence cues, and field-note guidance" in (
+        normalized_html
+    )
+    assert "return to the same queue/request context" in normalized_html
+    assert "single manual feedback checklist" in normalized_html
+    assert "does not save a review session or persist feedback" in normalized_html
     assert "Find a CCLD facility" in html
     assert "facility/license number manually" in normalized_html
     assert "Workflow overview" in html
+    assert "Request loaded local/test CCLD records" in normalized_html
+    assert "Use reviewer detail to check source traceability" in normalized_html
+    assert "No saved review session, persisted queue state, duplicate checklist" in (
+        normalized_html
+    )
     assert "What the main words mean" in html
     assert "Feedback guidance" in html
     assert "Local/test boundaries" in html

@@ -70,6 +70,13 @@ Accessibility requirements apply to:
 	Queue-to-detail continuity cues must visibly tell testers to use the same
 	manual feedback checklist for queue observations and reviewer-detail
 	observations without requiring JavaScript or creating a second checklist.
+	First-run review session orientation must visibly tell testers where to start,
+	what order to follow, how facility lookup fills request context, how the queue
+	and reviewer detail fit together, how note/status observations refresh queue
+	cues, and that the single manual checklist remains copy-only and non-persistent.
+	This orientation must not require JavaScript or imply saved sessions, persisted
+	queue state, duplicate checklists, workflow-engine state, browser live fetch,
+	connector execution, or artifact building.
 - The local/test hosted CCLD record request page must use semantic headings,
 	labeled facility/license number and date controls, accessible validation
 	messages, labeled local validated load controls, table captions/headings for

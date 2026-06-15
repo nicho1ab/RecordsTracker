@@ -145,8 +145,10 @@
     sharing, provides queue-to-detail continuity cues for using that same
     checklist, and links matching rows into the reviewer
     UI. The local/test pages include skip-to-main links, visible first-run next
-    steps, clearer form/action text, and manual checklist copy guidance, but
-    these are presentation aids only and do not create persisted workflow state.
+    steps, review session orientation, clearer form/action text, and manual
+    checklist copy guidance, but these are presentation aids only and do not
+    create saved review sessions, persisted queue state, persisted workflow state,
+    duplicate checklists, or feedback persistence.
     It does not run live retrieval, execute connectors, mutate reviewer-
     created state from the request page, create audit rows from the request
     page, persist feedback, create duplicate checklists, persist operational metadata, prove public-source
