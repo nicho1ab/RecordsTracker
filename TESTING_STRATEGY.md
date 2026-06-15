@@ -59,7 +59,7 @@ read, feedback submission, retrieval job trigger, import/reload, and admin-style
 actions, disabled or revoked actors are rejected, signed-in labels are safe, and
 HTML/JSON output does not expose provider subjects, issuers, raw claims, tokens,
 cookies, private headers, hosted URLs, or secrets.
-Controlled CCLD retrieval job tests must prove the ADR-0016 boundary before any
+Controlled CCLD retrieval job tests prove the ADR-0016 boundary before and after
 browser-triggered retrieval is enabled. Tests must accept only facility/license
 number, one allowed record type or all supported record types, start date, and
 end date; reject invalid facility/license numbers, invalid date ranges,
@@ -81,6 +81,10 @@ source-derived rows or mutate reviewer-created state, audit rows, feedback
 issues, or unrelated operational metadata; and prove safe errors never expose
 raw stack traces, secrets, tokens, cookies, private headers, connection strings,
 provider claims, GitHub tokens, private URLs, or unnecessary narrative content.
+The first implemented slice also tests request-page controls, safe setup-required
+state when retrieval config is missing, mocked successful import into
+PostgreSQL-backed source-derived tables, queue linking, safe failure states,
+feedback route separation, and existing page-data/reviewer note/status behavior.
 GitHub Issues feedback intake tests must prove the feedback page renders, the
 feedback type dropdown has exactly bug report, feature request, and new data
 source options, description and submit controls are accessible, missing values

@@ -30,6 +30,13 @@ This ADR is that later decision. It approves a narrow browser-triggered,
 server-executed CCLD retrieval job boundary. It does not implement retrieval in
 this branch.
 
+Current implementation note: a later focused branch added the first controlled
+retrieval job slice for CCLD complaint records. That implementation keeps the
+browser as a trigger only, supports `complaints` and `all_supported` where all
+supported currently resolves to complaints, preserves raw artifacts and hashes,
+imports validated source-derived records into PostgreSQL, and tests retrieval
+with mocked CCLD network calls only.
+
 ## Decision
 
 The hosted CCLD app may add a controlled retrieval workflow in a later

@@ -89,6 +89,10 @@ def build_local_check_report() -> list[LocalCheck]:
             "Hosted CCLD validated import/reload package",
         ),
         check_importable(
+            "ccld_complaints.hosted_app.ccld_retrieval_jobs",
+            "Hosted controlled CCLD retrieval job package",
+        ),
+        check_importable(
             "ccld_complaints.hosted_app.reviewer_created_state",
             "Hosted reviewer-created state scaffold package",
         ),
@@ -169,6 +173,7 @@ def format_text_report(report: list[LocalCheck]) -> str:
             "tests/unit/test_hosted_reviewer_ui.py "
             "tests/unit/test_hosted_ccld_facility_lookup.py "
             "tests/unit/test_hosted_ccld_record_request_ui.py "
+            "tests/unit/test_hosted_ccld_retrieval_jobs.py "
             "tests/unit/test_hosted_app_scaffold.py "
             "tests/unit/test_hosted_ccld_import_reload.py "
             "tests/unit/test_hosted_ccld_artifact_builder.py "

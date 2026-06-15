@@ -211,7 +211,7 @@ artifact, prove deterministic ordering, prove source traceability preservation,
 reject missing or unsafe traceability fields, and prove no live crawling or
 browser-triggered connector execution is required.
 
-Controlled CCLD retrieval job tests must cover the ADR-0016 boundary before any
+Controlled CCLD retrieval job tests cover the ADR-0016 boundary before and after
 browser-triggered retrieval is enabled. Tests should prove only facility/license
 number, record type or all supported record types, start date, and end date are
 accepted; invalid inputs, excessive date ranges, unsupported record types,
@@ -228,6 +228,10 @@ unrelated operational metadata are not mutated outside the implemented retrieval
 metadata/status path; and errors never expose stack traces, secrets, tokens,
 cookies, private headers, connection strings, provider claims, GitHub tokens,
 private URLs, or unnecessary narrative content.
+The first implementation tests also cover the request-page record type dropdown,
+safe setup-required state when retrieval configuration is missing, mocked
+successful retrieval/import, queue links after import, and feedback route
+separation.
 
 Docker runtime tests should statically validate `Dockerfile`,
 `docker-compose.qnap.yml`, and `.env.example` for the QNAP-first PostgreSQL

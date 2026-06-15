@@ -242,8 +242,8 @@ existing hosted-queue review.
 
 ### Controlled CCLD retrieval job
 
-The next hosted CCLD implementation may add browser-triggered, server-executed
-retrieval jobs inside the ADR-0016 boundary. The user-facing request must accept
+The hosted CCLD implementation now includes the first browser-triggered,
+server-executed retrieval job slice inside the ADR-0016 boundary. The user-facing request accepts
 only a CCLD facility/license number, one allowed record type or all supported
 record types, and a bounded start/end date. The server must validate those
 inputs, create a retrieval job, use a CCLD source-domain and URL-pattern
@@ -259,8 +259,9 @@ request limit, per-user or per-actor rate limit, timeout limit, retry limit,
 safe failure messages, secret-safe logging, audit/status events, raw artifact
 path/hash preservation, import validation status, duplicate/idempotency
 expectations, operator runbook expectations, and backup/restore expectations for
-PostgreSQL and raw artifacts. Tests must mock network retrieval; CI must not
-make live CCLD calls.
+PostgreSQL and raw artifacts. Tests mock network retrieval; CI must not make
+live CCLD calls. The first slice supports complaint records only; all supported
+record types currently resolves to complaints.
 
 The retrieval job path must not provide connector credentials, GitHub tokens,
 server-side secrets, provider tokens, cookies, private headers, or arbitrary URL
@@ -436,10 +437,9 @@ presented as complete statewide coverage or official facility conclusions.
 
 Source-derived hosted tester records must enter the tester environment through
 the controlled import/sync boundary accepted by ADR-0009, starting with
-snapshot imports from validated pipeline output. ADR-0016 now also approves a
-future controlled browser-triggered, server-executed CCLD retrieval job as a
-different CCLD-only source-derived import path once implementation adds and
-tests the required controls.
+snapshot imports from validated pipeline output. ADR-0016 now also has a first
+controlled browser-triggered, server-executed CCLD retrieval job implementation
+for complaint records as a CCLD-only source-derived import path.
 
 ADR-0015 chooses PostgreSQL as the hosted tester MVP persistence store and
 Alembic-managed migrations as the migration tooling direction. Future seeded

@@ -5,6 +5,7 @@ import json
 import os
 import threading
 from typing import Any
+from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -24,8 +25,11 @@ def _post_form_url(url: str, payload: dict[str, str]) -> tuple[int, bytes]:
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         method="POST",
     )
-    with urlopen(request, timeout=5) as response:
-        return response.status, response.read()
+    try:
+        with urlopen(request, timeout=5) as response:
+            return response.status, response.read()
+    except HTTPError as error:
+        return int(error.code), error.read()
 
 
 def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str, object]:
@@ -73,6 +77,16 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
                         "facility_number": "157806098",
                         "start_date": "2023-01-01",
                         "end_date": "2023-12-31",
+                    },
+                )
+                ccld_retrieval_setup_status, ccld_retrieval_setup_body = _post_form_url(
+                    f"{base_url}/ccld/records/request",
+                    {
+                        "facility_number": "157806098",
+                        "record_type": "complaints",
+                        "start_date": "2022-08-01",
+                        "end_date": "2022-08-31",
+                        "ccld_retrieval_action": "run_controlled_ccld_retrieval",
                     },
                 )
                 reviewer_status, reviewer_body = _read_url(f"{base_url}/reviewer")
@@ -137,6 +151,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Review session path" not in ccld_body
         or b"Facility lookup helps fill the facility/license number" not in ccld_body
         or b"Reviewer-status filter" not in ccld_body
+        or b"Record type" not in ccld_body
+        or b"Run controlled CCLD retrieval" not in ccld_body
         or b"Confirm request context" not in ccld_body
         or b"validated CCLD load" not in ccld_body
         or b"Feedback guidance" not in ccld_body
@@ -179,6 +195,12 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"not a public-source absence" not in ccld_no_match_body
     ):
         raise RuntimeError("Hosted scaffold CCLD no-match result did not return load guidance.")
+    if (
+        ccld_retrieval_setup_status != 503
+        or b"Controlled CCLD retrieval setup required" not in ccld_retrieval_setup_body
+        or b"No retrieval job was created" not in ccld_retrieval_setup_body
+    ):
+        raise RuntimeError("Hosted scaffold retrieval setup state did not return safe guidance.")
     if (
         ccld_facilities_status != 200
         or b"Find CCLD facility" not in ccld_facilities_body

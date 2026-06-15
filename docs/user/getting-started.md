@@ -240,10 +240,14 @@ execution. Developers should use
 [docs/developer/qnap-docker-runtime.md](../developer/qnap-docker-runtime.md) for
 those runtime steps.
 
-ADR-0016 now approves a future controlled browser-triggered, server-executed
-CCLD retrieval job, but that workflow is not implemented yet. Until the
-implementation lands, use the outside-browser live-fetch and artifact-builder
-handoff described above when local validated records need to be prepared.
+The hosted request page now includes the first controlled browser-triggered,
+server-executed CCLD retrieval job slice for complaint records. When the server
+is configured with retrieval enabled, PostgreSQL, and raw source storage, use the
+record type control and the controlled retrieval button to request CCLD complaint
+records for one facility/date range. All supported record types currently means
+complaint records only. If retrieval is not configured, the page shows safe
+setup-required guidance and creates no retrieval job. The browser does not scrape
+or receive connector credentials.
 
 Return to `/ccld/records/request` and use the local validated CCLD load action
 to load or refresh matching source-derived rows from that JSON artifact. The

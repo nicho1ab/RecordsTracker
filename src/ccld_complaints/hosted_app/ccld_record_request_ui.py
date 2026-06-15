@@ -21,6 +21,14 @@ from ccld_complaints.hosted_app.ccld_import_reload import (
     ccld_import_reload_context_for_connection,
     import_reload_validated_ccld_records,
 )
+from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
+    RECORD_TYPE_LABELS,
+    SUPPORTED_RECORD_TYPES,
+    CcldRetrievalContext,
+    CcldRetrievalJobResult,
+    run_ccld_retrieval_job,
+    validate_ccld_retrieval_request,
+)
 from ccld_complaints.hosted_app.reviewer_created_state_routes import (
     REVIEWER_CREATED_STATE_API_PREFIX,
     route_reviewer_created_state_api_response,
@@ -41,6 +49,8 @@ CCLD_RECORD_REQUEST_PATH = f"{CCLD_UI_PREFIX}/records/request"
 CCLD_HELP_PATH = f"{CCLD_UI_PREFIX}/help"
 _IMPORT_RELOAD_ACTION_FIELD = "ccld_import_reload_action"
 _IMPORT_RELOAD_ACTION_VALUE = "load_local_validated_ccld_records"
+_RETRIEVAL_ACTION_FIELD = "ccld_retrieval_action"
+_RETRIEVAL_ACTION_VALUE = "run_controlled_ccld_retrieval"
 _REQUEST_CONTEXT_ORIGIN_FIELD = "request_context_origin"
 _LOOKUP_FACILITY_NAME_FIELD = "lookup_facility_name"
 _FACILITY_NUMBER_RE = re.compile(r"^\d+$")
@@ -105,6 +115,7 @@ class CcldRecordRequest:
     facility_number: str
     start_date: str | None = None
     end_date: str | None = None
+    record_type: str = "complaints"
     reviewer_status_filter: str = "all"
     request_context_origin: str = "manual_entry"
     lookup_facility_name: str | None = None
@@ -138,6 +149,7 @@ class CcldRequestQueueItem:
 class CcldRecordRequestUiContext:
     reviewer_ui_context: ReviewerUiContext
     import_reload_context: CcldImportReloadContext | None = None
+    retrieval_context: CcldRetrievalContext | None = None
 
 
 _DEFAULT_CCLD_RECORD_REQUEST_CONTEXT: CcldRecordRequestUiContext | None = None
@@ -158,10 +170,13 @@ def default_ccld_record_request_ui_context() -> CcldRecordRequestUiContext:
 
 def ccld_record_request_context_for_reviewer_context(
     reviewer_ui_context: ReviewerUiContext,
+    *,
+    retrieval_context: CcldRetrievalContext | None = None,
 ) -> CcldRecordRequestUiContext:
     return CcldRecordRequestUiContext(
         reviewer_ui_context=reviewer_ui_context,
         import_reload_context=_import_reload_context_for_reviewer_ui_context(reviewer_ui_context),
+        retrieval_context=retrieval_context,
     )
 
 
@@ -218,6 +233,8 @@ def route_ccld_record_request_ui_response(
                 selected_facility_number=selected_facility_number,
                 selected_start_date=_first_form_value(query_values, "start_date"),
                 selected_end_date=_first_form_value(query_values, "end_date"),
+                selected_record_type=_first_form_value(query_values, "record_type")
+                or "complaints",
                 request_context_origin=_request_context_origin_from_values(
                     query_values,
                     has_prefilled_facility=bool(selected_facility_number),
@@ -246,6 +263,7 @@ def validate_ccld_record_request(
     facility_number = _first_form_value(form_values, "facility_number")
     start_date = _optional_date_value(form_values, "start_date")
     end_date = _optional_date_value(form_values, "end_date")
+    record_type = _first_form_value(form_values, "record_type") or "complaints"
     reviewer_status_filter = _first_form_value(form_values, "reviewer_status_filter") or "all"
     request_context_origin = _first_form_value(form_values, _REQUEST_CONTEXT_ORIGIN_FIELD)
     errors: list[str] = []
@@ -265,6 +283,8 @@ def validate_ccld_record_request(
         errors.append("End date must not be before start date.")
     if reviewer_status_filter not in _STATUS_FILTER_VALUES:
         errors.append("Choose a supported reviewer-status filter.")
+    if record_type not in SUPPORTED_RECORD_TYPES:
+        errors.append("Choose a supported CCLD record type.")
     if request_context_origin and request_context_origin not in _REQUEST_CONTEXT_ORIGIN_VALUES:
         errors.append("Choose a supported CCLD request context.")
     if errors:
@@ -274,6 +294,7 @@ def validate_ccld_record_request(
             facility_number=facility_number,
             start_date=start_date.isoformat() if start_date is not None else None,
             end_date=end_date.isoformat() if end_date is not None else None,
+            record_type=record_type,
             reviewer_status_filter=reviewer_status_filter,
             request_context_origin=request_context_origin or "manual_entry",
             lookup_facility_name=_optional_lookup_facility_name(form_values),
@@ -330,6 +351,41 @@ def _post_request_response(
     context: CcldRecordRequestUiContext,
 ) -> tuple[int, str, bytes]:
     form_values = _form_values(request_body)
+    retrieval_result: CcldRetrievalJobResult | None = None
+    retrieval_action = _first_form_value(form_values, _RETRIEVAL_ACTION_FIELD)
+    if retrieval_action and retrieval_action != _RETRIEVAL_ACTION_VALUE:
+        return _html_response(
+            400,
+            _render_invalid_request(("Choose a supported CCLD retrieval action.",)),
+        )
+    if retrieval_action == _RETRIEVAL_ACTION_VALUE:
+        if context.retrieval_context is None:
+            return _html_response(
+                503,
+                _render_message_page(
+                    title="Controlled CCLD retrieval setup required",
+                    heading="Controlled CCLD retrieval setup required",
+                    message=(
+                        "Controlled CCLD retrieval is not configured with both database "
+                        "context and server-side raw source storage. No retrieval job was created."
+                    ),
+                    guidance=(
+                        "Configure server-side retrieval storage and keep browser requests "
+                        "bounded to CCLD facility/date/type inputs."
+                    ),
+                    links=(("Return to CCLD request", CCLD_RECORD_REQUEST_PATH),),
+                ),
+            )
+        retrieval_validation = validate_ccld_retrieval_request(
+            form_values,
+            max_date_range_days=context.retrieval_context.config.max_date_range_days,
+        )
+        if retrieval_validation.request is None:
+            return _html_response(400, _render_invalid_request(retrieval_validation.errors))
+        retrieval_result = run_ccld_retrieval_job(
+            context.retrieval_context,
+            retrieval_validation.request,
+        )
     validation = validate_ccld_record_request(form_values)
     if validation.request is None:
         return _html_response(400, _render_invalid_request(validation.errors))
@@ -390,6 +446,8 @@ def _post_request_response(
             state_summaries=state_summaries,
             import_reload_result=import_reload_result,
             import_reload_available=context.import_reload_context is not None,
+            retrieval_result=retrieval_result,
+            retrieval_available=context.retrieval_context is not None,
         ),
     )
 
@@ -425,6 +483,7 @@ def _render_request_form(
     selected_facility_number: str = "",
     selected_start_date: str = "",
     selected_end_date: str = "",
+    selected_record_type: str = "complaints",
     request_context_origin: str = "manual_entry",
     lookup_facility_name: str | None = None,
     reference_source: CcldFacilityReferenceSource | None = None,
@@ -478,6 +537,16 @@ def _render_request_form(
                     <span id="facility-number-help">Enter digits only, for example 157806098.
                     This identifies the CCLD facility or license scope to review.</span>
         </p>
+                <p>
+                    <label for="record_type">Record type</label>
+                                        <select id="record_type" name="record_type"
+                                                aria-describedby="record-type-help">
+{_render_record_type_options(selected_record_type)}
+                                        </select>
+                                        <span id="record-type-help">Only CCLD complaint records
+                                        are currently supported. All supported record types
+                                        currently resolves to complaint records only.</span>
+                </p>
         <p>
           <label for="start_date">Start date (optional)</label>
                     <input id="start_date" name="start_date" type="date"
@@ -508,6 +577,8 @@ def _render_request_form(
                     saved reviewer status are counted as not started.</span>
                 </p>
                 <p><button type="submit">Show CCLD request queue</button></p>
+                <p><button type="submit" name="{_RETRIEVAL_ACTION_FIELD}"
+                    value="{_RETRIEVAL_ACTION_VALUE}">Run controlled CCLD retrieval</button></p>
       </form>
     </section>
     {_render_key_terms_section()}
@@ -636,6 +707,17 @@ def _render_feedback_guidance_section() -> str:
         </section>"""
 
 
+def _render_record_type_options(selected_record_type: str) -> str:
+    options: list[str] = []
+    for record_type in SUPPORTED_RECORD_TYPES:
+        selected = ' selected="selected"' if record_type == selected_record_type else ""
+        options.append(
+            f'                        <option value="{html.escape(record_type)}"{selected}>'
+            f"{html.escape(RECORD_TYPE_LABELS[record_type])}</option>"
+        )
+    return "\n".join(options)
+
+
 def _render_invalid_request(errors: tuple[str, ...]) -> str:
     error_items = "\n".join(f"        <li>{_escape(error)}</li>" for error in errors)
     return _page(
@@ -660,6 +742,8 @@ def _render_request_result(
     state_summaries: Mapping[str, Mapping[str, Any]],
     import_reload_result: CcldImportReloadResult | None = None,
     import_reload_available: bool = False,
+    retrieval_result: CcldRetrievalJobResult | None = None,
+    retrieval_available: bool = False,
 ) -> str:
     reference_source = load_active_ccld_facility_reference()
     if result.matched_records:
@@ -669,6 +753,8 @@ def _render_request_result(
             state_summaries=state_summaries,
             import_reload_result=import_reload_result,
             import_reload_available=import_reload_available,
+            retrieval_result=retrieval_result,
+            retrieval_available=retrieval_available,
             reference_source=reference_source,
         )
     return _render_no_match_result(
@@ -676,6 +762,8 @@ def _render_request_result(
         result,
         import_reload_result=import_reload_result,
         import_reload_available=import_reload_available,
+        retrieval_result=retrieval_result,
+        retrieval_available=retrieval_available,
         reference_source=reference_source,
     )
 
@@ -687,6 +775,8 @@ def _render_matched_result(
     state_summaries: Mapping[str, Mapping[str, Any]],
     import_reload_result: CcldImportReloadResult | None,
     import_reload_available: bool,
+    retrieval_result: CcldRetrievalJobResult | None,
+    retrieval_available: bool,
     reference_source: CcldFacilityReferenceSource,
 ) -> str:
     queue_items = _request_queue_items(result, state_summaries)
@@ -717,6 +807,7 @@ def _render_matched_result(
                         include_change_links=True,
                 )}
     {_render_import_reload_summary(import_reload_result)}
+    {_render_retrieval_job_summary(retrieval_result)}
         <section aria-labelledby="review-queue-heading">
             <h2 id="review-queue-heading">CCLD review queue</h2>
             <p>This queue is tied to the request context confirmed above: the displayed
@@ -774,6 +865,7 @@ def _render_matched_result(
                     reference_source=reference_source,
                 )}
         {_render_feedback_guidance_section()}
+        {_render_retrieval_action(request, retrieval_available)}
         {_render_import_reload_action(request, import_reload_available, refresh=True)}
     {_render_pipeline_plan(request)}""",
     )
@@ -785,6 +877,8 @@ def _render_no_match_result(
     *,
     import_reload_result: CcldImportReloadResult | None,
     import_reload_available: bool,
+    retrieval_result: CcldRetrievalJobResult | None,
+    retrieval_available: bool,
     reference_source: CcldFacilityReferenceSource,
 ) -> str:
     local_count = len(result.all_facility_records)
@@ -813,6 +907,7 @@ def _render_no_match_result(
             )}
         {_render_no_match_guidance(request, local_count, import_reload_result)}
         {_render_import_reload_summary(import_reload_result)}
+        {_render_retrieval_job_summary(retrieval_result)}
                 {_render_feedback_checklist_section(
                         request,
                         (),
@@ -822,6 +917,7 @@ def _render_no_match_result(
                 reference_source=reference_source,
                 )}
         {_render_import_reload_action(request, import_reload_available, refresh=False)}
+        {_render_retrieval_action(request, retrieval_available)}
     {_render_pipeline_plan(request)}""",
     )
 
@@ -977,8 +1073,9 @@ def _render_import_reload_action(
                     value="{_escape(request.lookup_facility_name or '')}">
                 <input type="hidden" name="facility_number"
                     value="{_escape(request.facility_number)}">
-                <input type="hidden" name="start_date" value="{_escape(request.start_date or "")}">
-                <input type="hidden" name="end_date" value="{_escape(request.end_date or "")}">
+                <input type="hidden" name="record_type" value="{_escape(request.record_type)}">
+                <input type="hidden" name="start_date" value="{_escape(request.start_date or '')}">
+                <input type="hidden" name="end_date" value="{_escape(request.end_date or '')}">
                 <input type="hidden" name="reviewer_status_filter"
                     value="{_escape(request.reviewer_status_filter)}">
                 <input type="hidden" name="{_IMPORT_RELOAD_ACTION_FIELD}"
@@ -986,6 +1083,100 @@ def _render_import_reload_action(
                 <p><button type="submit">{_escape(button_label)}</button></p>
             </form>
         </section>"""
+
+
+def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
+    if result is None:
+        return ""
+    count_items = "\n".join(
+        f"                <dt>{_escape(_count_label(name))}</dt>\n"
+        f"                <dd>{count}</dd>"
+        for name, count in sorted(result.result_counts.items())
+    )
+    if not count_items:
+        count_items = "                <dt>Result counts</dt>\n                <dd>none</dd>"
+    warning_items = _safe_list_items(result.warnings) or "        <li>none</li>"
+    error_items = _safe_list_items(result.errors) or "        <li>none</li>"
+    queue_link = ""
+    if result.job_state in {"completed", "completed_with_warnings"}:
+        queue_link = (
+            f'            <p><a href="{CCLD_RECORD_REQUEST_PATH}?'
+            f'facility_number={_escape(result.facility_number)}&amp;'
+            f'start_date={_escape(result.start_date)}&amp;'
+            f'end_date={_escape(result.end_date)}&amp;'
+            f'record_type={_escape(result.record_type)}">'
+            "Open imported records in this CCLD queue</a></p>"
+        )
+    return f"""    <section aria-labelledby="retrieval-job-summary-heading">
+            <h2 id="retrieval-job-summary-heading">Controlled CCLD retrieval job status</h2>
+            <p>{_escape(result.safe_message)}</p>
+            <dl>
+                <dt>Job state</dt>
+                <dd>{_escape(result.job_state)}</dd>
+                <dt>Retrieval job ID</dt>
+                <dd>{_escape(result.retrieval_job_id)}</dd>
+                <dt>Record type</dt>
+                <dd>{_escape(RECORD_TYPE_LABELS.get(result.record_type, result.record_type))}</dd>
+                <dt>Date range</dt>
+                <dd>{_escape(result.start_date)} to {_escape(result.end_date)}</dd>
+{count_items}
+            </dl>
+            <h3>Safe warnings</h3>
+            <ul>
+{warning_items}
+            </ul>
+            <h3>Safe errors</h3>
+            <ul>
+{error_items}
+            </ul>
+            <p>The browser triggered this job only. Server-side retrieval preserved raw
+            artifacts, computed hashes, validated records, and imported source-derived rows
+            when the job completed. No connector credentials or server-side private values
+            are shown.</p>
+{queue_link}
+        </section>"""
+
+
+def _render_retrieval_action(
+    request: CcldRecordRequest,
+    retrieval_available: bool,
+) -> str:
+    if not retrieval_available:
+        return """    <section aria-labelledby="retrieval-action-heading">
+            <h2 id="retrieval-action-heading">Controlled CCLD retrieval setup required</h2>
+            <p>Server-side retrieval is not configured with database context and raw source
+            storage in this runtime. No retrieval job will be created from this browser page.</p>
+        </section>"""
+    return f"""    <section aria-labelledby="retrieval-action-heading">
+            <h2 id="retrieval-action-heading">Controlled CCLD retrieval</h2>
+            <p>This server-side action can retrieve CCLD complaint records for the bounded
+            facility/date/type request. The browser submits only CCLD request inputs; the
+            server performs retrieval, raw preservation, validation, and PostgreSQL import.</p>
+            <form action="{CCLD_RECORD_REQUEST_PATH}" method="post">
+                <input type="hidden" name="{_REQUEST_CONTEXT_ORIGIN_FIELD}"
+                    value="{_escape(request.request_context_origin)}">
+                <input type="hidden" name="{_LOOKUP_FACILITY_NAME_FIELD}"
+                    value="{_escape(request.lookup_facility_name or '')}">
+                <input type="hidden" name="facility_number"
+                    value="{_escape(request.facility_number)}">
+                <input type="hidden" name="record_type" value="{_escape(request.record_type)}">
+                <input type="hidden" name="start_date" value="{_escape(request.start_date or '')}">
+                <input type="hidden" name="end_date" value="{_escape(request.end_date or '')}">
+                <input type="hidden" name="reviewer_status_filter"
+                    value="{_escape(request.reviewer_status_filter)}">
+                <input type="hidden" name="{_RETRIEVAL_ACTION_FIELD}"
+                    value="{_RETRIEVAL_ACTION_VALUE}">
+                <p><button type="submit">Run controlled CCLD retrieval</button></p>
+            </form>
+        </section>"""
+
+
+def _safe_list_items(values: tuple[str, ...]) -> str:
+    return "\n".join(f"        <li>{_escape(value)}</li>" for value in values)
+
+
+def _count_label(name: str) -> str:
+    return name.replace("_", " ").capitalize()
 
 
 def _safe_artifact_label(identity: str) -> str:

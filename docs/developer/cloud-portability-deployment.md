@@ -56,6 +56,10 @@ Portable groups:
   optional `GITHUB_FEEDBACK_DEFAULT_LABELS`.
 - Optional local reference data: `CCLD_FACILITY_REFERENCE_CSV`, only when a
   local or mounted facility reference CSV is intentionally used.
+- Optional controlled retrieval settings: `CCLD_RETRIEVAL_ENABLED`,
+  `CCLD_RETRIEVAL_RAW_DIR`, `CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS`,
+  `CCLD_RETRIEVAL_PER_JOB_LIMIT`, `CCLD_RETRIEVAL_RATE_LIMIT_PER_ACTOR`,
+  `CCLD_RETRIEVAL_TIMEOUT_SECONDS`, and `CCLD_RETRIEVAL_RETRY_LIMIT`.
 
 Do not commit real issuer URLs, callback URLs, tenant identifiers, client
 secrets, tokens, cookies, private headers, database URLs, cloud credentials, or
@@ -135,9 +139,9 @@ is not enough if hosted rows reference raw paths or raw hashes.
 
 ## Server-Side Retrieval Jobs
 
-ADR-0016 approves controlled browser-triggered, server-executed CCLD retrieval
-jobs. They are not implemented in this branch. When implementation is added,
-keep job execution host-portable:
+ADR-0016 controlled browser-triggered, server-executed CCLD retrieval jobs now
+have a first implementation slice for complaint records. Keep job execution
+host-portable:
 
 - Browser submits bounded CCLD facility/license, record-type, and date-range
   inputs only.
@@ -174,14 +178,14 @@ Before any public or pilot launch claim:
 - HTTPS/custom domain is configured by the host or reverse proxy.
 - Logs do not expose secrets, raw provider claims, cookies, tokens, private
   headers, or unnecessary narrative source text.
-- Retrieval jobs remain disabled unless ADR-0016 implementation work has added
-  and validated the controlled server-side job path.
+- Retrieval jobs remain disabled unless configuration enables the controlled
+  server-side job path and raw artifact storage is available.
 - Known limitations and support/incident notes are current.
 
 ## Non-Goals
 
 This guide does not implement cloud deployment, provision resources, choose a
-final cloud provider, create DNS, configure TLS, create app registrations,
-implement retrieval jobs, add provider SDKs, or replace the QNAP-first path. It is a
+final cloud provider, create DNS, configure TLS, create app registrations, add
+provider SDKs, or replace the QNAP-first path. It is a
 portable checklist so a later move does not require rethinking app, database,
 storage, secrets, and backup boundaries from scratch.
