@@ -139,6 +139,11 @@ available CSV fields, show bounded readable results, carry the selected
 facility/license number into the request form, preserve manual entry, and clearly
 state that lookup rows are local/test reference assistance rather than complaint
 source truth or completeness proof.
+The request and queue pages should also make the active request context visible:
+whether it came from facility lookup or manual entry, which facility/license
+number and date range are being used, which local/test facility reference source
+is active, and how to change facility/date criteria before reviewing queue
+results.
 
 Near-term hosted work should pass the deferred-readiness/product-benefit gate in
 `GOVERNANCE_INVENTORY.md`. MVP usability is not cosmetic polish: user-friendly

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Improved the local/test CCLD facility lookup and request flow with visible
+	request-context confirmation showing whether the request came from lookup or
+	manual entry, the facility/license number, date range, active facility
+	reference source, and change-facility/date navigation without adding schema,
+	persistence, live retrieval, connector execution, auth, deployment, or
+	non-CCLD scope.
 - Improved local/test reviewer note/status confirmations on reviewer detail so
 	testers see clearer saved-state messages, validation guidance, read-after-write
 	state display, and return-to-queue next steps without changing reviewer-created

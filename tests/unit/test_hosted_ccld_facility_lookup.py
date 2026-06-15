@@ -284,6 +284,8 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
     assert "Use this facility for CCLD request" in html
     assert "Start here: find a facility" in html
     assert request_href in html
+    assert "request_context_origin=facility_lookup" in html
+    assert "lookup_facility_name=Synthetic+Orchard+Child+Care" in html
     assert "900000001" in html
     assert "Synthetic Orchard Child Care" in html
     assert "Sample City" in html
@@ -333,8 +335,11 @@ def test_ccld_facility_lookup_selection_prefills_request_form_without_mutation()
     assert content_type == "text/html; charset=utf-8"
     assert before_source_rows == after_source_rows
     assert counts == _empty_reviewer_counts()
-    assert "Selected facility/license number from lookup" in html
+    assert "Confirm request context" in html
+    assert "Prefilled facility/license link" in html
+    assert "Facility/license number being requested" in html
     assert "value=\"900000001\"" in html
+    assert "Active facility reference source" in html
     assert "Request CCLD records" in html
     assert "Find a CCLD facility" in html
     assert_no_secret_html(html)

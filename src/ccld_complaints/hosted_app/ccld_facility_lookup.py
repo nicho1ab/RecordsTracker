@@ -396,7 +396,12 @@ def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
 
 
 def _render_result_row(record: CcldFacilityLookupRecord) -> str:
-    href = f"{CCLD_RECORD_REQUEST_PATH}?{urlencode({'facility_number': record.facility_number})}"
+    query_values = {
+        "facility_number": record.facility_number,
+        "request_context_origin": "facility_lookup",
+        "lookup_facility_name": record.facility_name,
+    }
+    href = f"{CCLD_RECORD_REQUEST_PATH}?{urlencode(query_values)}"
     return f"""          <tr>
             <td><a href="{_escape(href)}">Use this facility for CCLD request</a></td>
             <td>{_escape(record.facility_number)}</td>

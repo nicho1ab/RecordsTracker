@@ -39,8 +39,9 @@ experience.
 - Includes a local/test hosted CCLD record request page where a tester can enter
    a CCLD facility/license number and optional date range, read matching seeded
    source-derived records, load or refresh matching CCLD records from validated
-   local/test hosted seeded-corpus output, review a guided facility/date-scoped
-   complaint queue with triage summaries, progress counts, reviewer note/status
+   local/test hosted seeded-corpus output, confirm lookup-selected or manually
+   entered request context with active facility reference source, review a guided
+   facility/date-scoped complaint queue with triage summaries, progress counts, reviewer note/status
    cues, source-traceability availability cues, reviewer-status filtering,
    suggested next-record links, skip-to-main links, visible first-run next-step
    guidance, clearer form/action text, open records in the hosted reviewer UI,
@@ -193,10 +194,12 @@ public-record review notes.
    committed tiny fixture CSV. Search fields include facility/license number,
    facility name, city, county, ZIP code, facility type, and status. The page
    shows which reference source is active and carries the selected
-   facility/license number into `/ccld/records/request`. A browser-accessible local/test CCLD record request
-   page is available at `/ccld/records/request`; it still accepts manual
-   facility/license entry plus an optional date range, reads existing seeded
-   source-derived records, can load or refresh matching CCLD rows from local
+   facility/license number and lookup-origin context into `/ccld/records/request`.
+   A browser-accessible local/test CCLD record request page is available at
+   `/ccld/records/request`; it still accepts manual facility/license entry plus
+   an optional date range, displays whether the request came from lookup or
+   manual entry, shows the active local/test facility reference source, reads
+   existing seeded source-derived records, can load or refresh matching CCLD rows from local
    validated hosted seeded-corpus output through the existing source-derived
    import tables, links matching rows into the hosted reviewer UI, shows a guided
    facility/date-scoped result queue with contextual help, triage summaries,

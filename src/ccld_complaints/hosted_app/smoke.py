@@ -104,6 +104,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Find a CCLD facility" not in ccld_body
         or b"Workflow overview" not in ccld_body
         or b"Queue status filter" not in ccld_body
+        or b"Confirm request context" not in ccld_body
         or b"validated CCLD load" not in ccld_body
         or b"Feedback guidance" not in ccld_body
         or b"Skip to main CCLD request content" not in ccld_body
@@ -112,6 +113,9 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         ccld_queue_status != 200
         or b"CCLD review queue" not in ccld_queue_body
+        or b"Confirm request context" not in ccld_queue_body
+        or b"Request started from" not in ccld_queue_body
+        or b"Change facility/date criteria for this request" not in ccld_queue_body
         or b"Queue triage summary" not in ccld_queue_body
         or b"Suggested next record to open" not in ccld_queue_body
         or b"Copy tester feedback checklist" not in ccld_queue_body
