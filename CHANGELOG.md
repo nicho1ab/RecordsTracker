@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Polished the existing local/test hosted tester UI shell with a shared visual
+	layout, consistent navigation, stronger focus/table/form styling, clearer home
+	start actions, and feedback guidance without adding routes, workflows, frontend
+	dependencies, auth, retrieval capability, exports, or deployment behavior.
 - Added the final QNAP pilot readiness completion marker to the readiness index,
 	clarifying that the documented pre-invite operator path is complete after real
 	pilot inputs, the access-method decision, and the evidence packet are supplied,

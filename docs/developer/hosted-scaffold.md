@@ -115,6 +115,12 @@ same-queue refresh, next-record continuation, and manual checklist copy. This is
 orientation only; it does not add saved sessions, persisted queue state, duplicate
 checklists, feedback persistence, auth, workflow-engine behavior, browser live
 fetch, connector execution, or artifact building from browser requests.
+The local/test hosted pages share a pilot-presentable shell with consistent
+navigation, readable cards and tables, visible focus styling, responsive
+wrapping, local/test boundary text, and source-of-record limitation wording.
+This is presentation polish only; it does not add routes, workflows, frontend
+dependencies, auth, exports, retrieval capability, deployment, or new state
+behavior.
 
 When selecting the next hosted scaffold task, apply the product-benefit gate in
 `GOVERNANCE_INVENTORY.md`. Backend readiness, hardening, planning, or checklist

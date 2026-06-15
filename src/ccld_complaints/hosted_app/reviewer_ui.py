@@ -43,6 +43,7 @@ from ccld_complaints.hosted_app.source_derived_routes import (
     SourceDerivedApiContext,
     route_source_derived_api_response,
 )
+from ccld_complaints.hosted_app.ui_shell import render_page_shell
 
 REVIEWER_UI_PREFIX = "/reviewer"
 REVIEWER_UI_RECORDS_PATH = f"{REVIEWER_UI_PREFIX}/records"
@@ -736,7 +737,8 @@ def _render_reviewer_queue_navigation() -> str:
     return f"""<nav aria-label="Reviewer queue navigation">
             <ul>
                 <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find a CCLD facility</a></li>
-                <li><a href="{CCLD_RECORD_REQUEST_PATH}">Open CCLD request or queue</a></li>
+                <li><a href="{CCLD_RECORD_REQUEST_PATH}">Open CCLD request or queue
+                (CCLD request queue)</a></li>
                 <li><a href="{CCLD_HELP_PATH}">Open CCLD workflow help</a></li>
             </ul>
         </nav>"""
@@ -2199,40 +2201,22 @@ def _reviewer_detail_href(
 
 
 def _page(*, title: str, heading: str, main: str, actor_label: str | None = None) -> str:
-    signed_in_markup = (
-        f"<p>Signed in as {_escape(actor_label)}.</p>" if actor_label else ""
-    )
-    return f"""<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{_escape(title)} - CCLD Hosted Tester MVP Scaffold</title>
-</head>
-<body>
-    <a href="#main-content">Skip to main reviewer content</a>
-  <header>
-    <p>Local/test only: source-derived review viewing with reviewer note/status actions.</p>
-        {signed_in_markup}
-    <h1>{_escape(heading)}</h1>
-  </header>
-  <nav aria-label="Local/test reviewer navigation">
-    <ul>
-      <li><a href="/">Scaffold home</a></li>
-            <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find CCLD facility</a></li>
-            <li><a href="{CCLD_RECORD_REQUEST_PATH}">CCLD request queue</a></li>
-            <li><a href="{CCLD_HELP_PATH}">CCLD workflow help</a></li>
-      <li><a href="{REVIEWER_UI_PREFIX}">Reviewer home</a></li>
-      <li><a href="{REVIEWER_UI_RECORDS_PATH}">Reviewer records</a></li>
-      <li><a href="/health">Health check</a></li>
-    </ul>
-  </nav>
-    <main id="main-content" tabindex="-1">
-{main}
-  </main>
-</body>
-</html>
-"""
+        return render_page_shell(
+                title=title,
+                heading=heading,
+                main=main,
+                skip_label="Skip to main reviewer content",
+                nav_label="Local/test reviewer navigation",
+                eyebrow=(
+                    "Local/test only: source-derived review viewing with reviewer note/status "
+                    "actions."
+                ),
+                actor_label=actor_label,
+                extra_nav_links=(
+                    ("Reviewer records", REVIEWER_UI_RECORDS_PATH),
+                    ("Health check", "/health"),
+                ),
+        )
 
 
 def _signed_in_actor_label(context: ReviewerUiContext) -> str | None:
