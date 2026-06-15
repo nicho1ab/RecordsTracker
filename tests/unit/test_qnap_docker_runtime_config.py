@@ -363,6 +363,73 @@ def test_qnap_pilot_operator_checklist_is_linked_from_guides() -> None:
         assert link in read_repo_text(path)
 
 
+def test_qnap_pilot_seeded_import_evidence_doc_exists_and_covers_required_steps() -> None:
+    evidence = read_repo_text("docs/developer/qnap-pilot-seeded-import-evidence.md")
+    normalized = " ".join(evidence.split())
+    searchable_text = f"{evidence}\n{normalized}"
+
+    for required_text in (
+        "early QNAP hosted tester readiness evidence",
+        "PostgreSQL-backed CCLD source-derived records",
+        "does not prove public-source completeness",
+        "legal findings, facility-wide conclusions",
+        "`.env` exists on the deployment host and remains untracked",
+        "Alembic migrations are current",
+        "`CCLD_HOSTED_PAGE_DATA_MODE=postgres`",
+        "QNAP verifier passes",
+        "raw artifact path",
+        "backup planning",
+        "`CCLD_RETRIEVAL_DEMO_MODE=` remains blank",
+        ".\\scripts\\verify-qnap-pilot-workflow.ps1 -EnvFile .env",
+        "docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic current",
+        "hosted_import_batches",
+        "hosted_source_derived_records",
+        "source_derived_rows",
+        "rows_with_raw_sha256",
+        "source_document_id",
+        "No raw artifact file contents displayed",
+        "/ccld/records/request",
+        "setup-required guidance",
+        "loaded queue state",
+        "A no-match result is not proof",
+        "/ccld/retrieval/jobs",
+        "/ccld/retrieval/jobs/detail?job_id=missing-job",
+        "/feedback",
+        "GitHub feedback decision",
+        "Controlled retrieval decision",
+        "Known limitations acknowledged",
+        "PostgreSQL volume",
+        "Back up raw artifact storage",
+        "Do not commit `.env`",
+        "Do not paste secrets into issue comments",
+        "Do not expose raw artifacts to testers",
+        "Do not enable `CCLD_RETRIEVAL_DEMO_MODE=mock-success` for QNAP pilot mode",
+        "Do not use fixture-demo mode as QNAP pilot seeded import evidence",
+    ):
+        assert required_text in searchable_text
+
+    assert "raw artifact viewer" not in normalized.casefold()
+    assert "public-source completeness proof" not in normalized.casefold()
+    assert "ghp_" not in evidence
+    assert "github_pat_" not in evidence
+    assert "https://github.com/" not in evidence
+    assert "C:\\" not in evidence
+    assert "OneDrive" not in evidence
+
+
+def test_qnap_pilot_seeded_import_evidence_doc_is_linked_from_operator_guides() -> None:
+    required_links = {
+        "README.md": "docs/developer/qnap-pilot-seeded-import-evidence.md",
+        "RUNBOOK.md": "docs/developer/qnap-pilot-seeded-import-evidence.md",
+        "docs/developer/qnap-docker-runtime.md": "qnap-pilot-seeded-import-evidence.md",
+        "docs/developer/qnap-pilot-operator-checklist.md": "qnap-pilot-seeded-import-evidence.md",
+        "docs/developer/testing.md": "QNAP seeded import evidence documentation tests",
+    }
+
+    for path, link in required_links.items():
+        assert link in read_repo_text(path)
+
+
 def test_cloud_portability_guide_compares_hosts_without_credentials() -> None:
     guide = read_repo_text("docs/developer/cloud-portability-deployment.md")
     normalized_guide = " ".join(guide.split())

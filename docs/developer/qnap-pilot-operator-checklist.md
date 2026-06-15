@@ -3,7 +3,10 @@
 Use this checklist before inviting early external stakeholder organization testers to the hosted CCLD
 tester pilot. It complements `.env.example`,
 `scripts/verify-qnap-pilot-workflow.ps1`, `RUNBOOK.md`, and
-`docs/developer/qnap-docker-runtime.md`.
+`docs/developer/qnap-docker-runtime.md`. Use
+[QNAP pilot seeded import evidence](qnap-pilot-seeded-import-evidence.md) when
+capturing proof that PostgreSQL-backed source-derived CCLD records are loaded
+before testers begin review.
 
 ## 1. Pilot Purpose And Scope
 
@@ -165,6 +168,9 @@ docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic u
 - Capture Alembic current state or migration success.
 - Capture route smoke results for the app shell, auth status, feedback, CCLD
   request, retrieval history/detail, help, and reviewer surfaces.
+- Capture seeded import evidence that `hosted_import_batches` and
+  `hosted_source_derived_records` contain validated PostgreSQL-backed CCLD rows
+  before treating the pilot as tester-ready.
 - Record the GitHub feedback decision: intentionally disabled or fully
   configured.
 - Record the controlled retrieval decision: intentionally disabled or fully
