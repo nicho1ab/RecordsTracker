@@ -434,6 +434,11 @@ the governed primary future review experience.
 	invalid note/status submissions without changing persistence, audit behavior,
 	source-derived records, schema, live browser retrieval, connector execution, or
 	non-CCLD scope.
+- Improved local/test queue return/progress guidance after reviewer note/status
+	saves so testers know queue cues are derived from reviewer-created state,
+	should return to and resubmit the same CCLD facility/date request context when
+	needed, and can continue to the next record without adding queue persistence,
+	schema changes, live browser retrieval, connector execution, or non-CCLD scope.
 - Improved the local/test CCLD facility lookup and request/result queue context
 	confirmation so testers can see whether a request came from lookup selection or
 	manual entry, confirm the facility/license number, date range, active facility

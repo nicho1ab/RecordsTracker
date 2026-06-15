@@ -701,8 +701,9 @@ def _render_matched_result(
             <p>This queue is scoped to the requested facility/license number and date range.
             Open each complaint record to inspect source traceability, add a reviewer note,
             or set a reviewer status.</p>
-            <p>After reviewing a record, return here and submit the same request to see
-            progress and reviewer status updates from existing reviewer-created state.</p>
+            <p>After saving a note or status on reviewer detail, return here with the same
+            facility/date request context and submit the same local/test request again to see
+            queue progress and note/status cues derived from reviewer-created state.</p>
             {_render_queue_first_run_steps()}
             {_render_queue_navigation()}
             {_render_queue_progress_summary(queue_items)}
@@ -956,7 +957,7 @@ def _render_queue_triage_summary(
     items: tuple[CcldRequestQueueItem, ...],
 ) -> str:
     next_item = _next_queue_item(items)
-    next_record_markup = _next_record_markup(next_item)
+    next_record_markup = _next_record_markup(next_item, request)
     note_count = sum(1 for item in items if _summary_int(item.reviewer_state, "note_count") > 0)
     status_count = sum(
         1 for item in items if _summary_optional_string(item.reviewer_state, "latest_status")
@@ -990,12 +991,15 @@ def _facility_scope_for_summary(request: CcldRecordRequest) -> str:
     return f"facility/license number {request.facility_number}"
 
 
-def _next_record_markup(item: CcldRequestQueueItem | None) -> str:
+def _next_record_markup(
+    item: CcldRequestQueueItem | None,
+    request: CcldRecordRequest,
+) -> str:
     if item is None:
         return "No matching complaint record is available for this request."
     complaint = _mapping(item.complaint_record, "original_values")
     source_record_key = _string(item.complaint_record, "source_record_key")
-    detail_href = f"{REVIEWER_UI_DETAIL_PATH}?{urlencode({'source_record_key': source_record_key})}"
+    detail_href = _reviewer_detail_href_for_request(source_record_key, request=request)
     label = _display_value(complaint.get("complaint_control_number") or source_record_key)
     status = _status_label(_queue_status(item))
     return (
@@ -1313,7 +1317,7 @@ def _render_queue_row(request: CcldRecordRequest, item: CcldRequestQueueItem) ->
         else {}
     )
     source_record_key = _string(item.complaint_record, "source_record_key")
-    detail_href = f"{REVIEWER_UI_DETAIL_PATH}?{urlencode({'source_record_key': source_record_key})}"
+    detail_href = _reviewer_detail_href_for_request(source_record_key, request=request)
     action_label = _queue_action_label(item)
     return f"""          <tr>
             <td><a href="{_escape(detail_href)}">{_escape(action_label)}</a></td>
@@ -1333,6 +1337,25 @@ def _queue_action_label(item: CcldRequestQueueItem) -> str:
     if _has_display_value(complaint_control_number):
         return f"Open reviewer detail for {_display_value(complaint_control_number)}"
     return "Open reviewer detail for this complaint record"
+
+
+def _reviewer_detail_href_for_request(
+    source_record_key: str,
+    *,
+    request: CcldRecordRequest | None,
+) -> str:
+    query_values = {"source_record_key": source_record_key}
+    if request is not None:
+        query_values.update(
+            {
+                "return_facility_number": request.facility_number,
+                "return_start_date": request.start_date or "",
+                "return_end_date": request.end_date or "",
+                "return_context_origin": request.request_context_origin,
+                "return_lookup_facility_name": request.lookup_facility_name or "",
+            }
+        )
+    return f"{REVIEWER_UI_DETAIL_PATH}?{urlencode(query_values)}"
 
 
 def _render_reviewer_link(

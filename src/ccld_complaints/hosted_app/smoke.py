@@ -162,6 +162,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Reviewer update saved" not in reviewer_note_body
         or b"Reviewer note saved for this record" not in reviewer_note_body
         or b"Return to CCLD request queue" not in reviewer_note_body
+        or b"Return and refresh queue progress" not in reviewer_note_body
+        or b"Queue progress and note/status cues are derived" not in reviewer_note_body
     ):
         raise RuntimeError("Hosted scaffold reviewer note did not return confirmation.")
     if (
@@ -169,6 +171,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Reviewer update saved" not in reviewer_saved_status_body
         or b"Reviewer status saved for this record" not in reviewer_saved_status_body
         or b"Return to CCLD request queue" not in reviewer_saved_status_body
+        or b"Return and refresh queue progress" not in reviewer_saved_status_body
+        or b"Queue progress and note/status cues are derived" not in reviewer_saved_status_body
     ):
         raise RuntimeError("Hosted scaffold reviewer status did not return confirmation.")
     return payload if isinstance(payload, dict) else {}

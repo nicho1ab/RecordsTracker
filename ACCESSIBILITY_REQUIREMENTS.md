@@ -50,6 +50,9 @@ Accessibility requirements apply to:
 	labels for selected-record identifiers, source URL, raw hash, raw path or
 	local artifact references, connector/capture details, source document/report
 	markers, missing-value wording, and non-conclusion boundary language.
+	Reviewer note/status saved confirmations must expose return-to-queue guidance,
+	same facility/date request-context reminders, queue-progress refresh guidance,
+	and next-record guidance as visible text with descriptive links.
 - The local/test hosted CCLD record request page must use semantic headings,
 	labeled facility/license number and date controls, accessible validation
 	messages, labeled local validated load controls, table captions/headings for

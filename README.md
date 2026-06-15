@@ -41,14 +41,15 @@ experience.
    source-derived records, load or refresh matching CCLD records from validated
    local/test hosted seeded-corpus output, confirm lookup-selected or manually
    entered request context with active facility reference source, review a guided
-   facility/date-scoped complaint queue with triage summaries, progress counts, reviewer note/status
-   cues, source-traceability availability cues, reviewer-status filtering,
+   facility/date-scoped complaint queue with triage summaries, progress counts,
+   reviewer note/status cues, source-traceability availability cues, reviewer-status filtering,
    suggested next-record links, skip-to-main links, visible first-run next-step
    guidance, clearer form/action text, open records in the hosted reviewer UI,
    review clearer selected-record source traceability cues before adding notes or
-   status, see clearer note/status save confirmations, return to see updated progress
-   after notes/statuses, and read first-time workflow help without running live
-   crawling from a browser request.
+   status, see clearer note/status save confirmations, return to the same CCLD
+   request context to resubmit when needed, see updated queue cues, continue to
+   the next record after notes/statuses, and read first-time workflow help
+   without running live crawling from a browser request.
 
 ## Core Principles
 

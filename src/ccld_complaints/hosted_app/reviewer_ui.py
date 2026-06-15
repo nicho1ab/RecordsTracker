@@ -158,12 +158,28 @@ _NEXT_REVIEW_STATUS_ORDER = (
     "reviewed",
 )
 _DEFAULT_ACTOR = object()
+_RETURN_CONTEXT_FIELDS = (
+    "return_facility_number",
+    "return_start_date",
+    "return_end_date",
+    "return_context_origin",
+    "return_lookup_facility_name",
+)
 
 
 @dataclass(frozen=True)
 class ReviewerUiContext:
     workflow_shell_context: ReviewerWorkflowShellContext
     engine: Engine | None = None
+
+
+@dataclass(frozen=True)
+class CcldQueueReturnContext:
+    facility_number: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+    context_origin: str | None = None
+    lookup_facility_name: str | None = None
 
 
 _DEFAULT_REVIEWER_UI_CONTEXT: ReviewerUiContext | None = None
@@ -388,7 +404,13 @@ def _detail_response(
             missing_record_heading="Selected seeded record was not found",
         )
     payload = _json_object(body)
-    return _detail_html_response(status, payload, context, notice=None)
+    return _detail_html_response(
+        status,
+        payload,
+        context,
+        notice=None,
+        return_context=_return_context_from_values(query_values, related_records=None),
+    )
 
 
 def _note_form_response(
@@ -398,6 +420,7 @@ def _note_form_response(
     form = _form_values(request_body)
     source_record_key = _first_form_value(form, "source_record_key")
     note_text = _first_form_value(form, "note_text")
+    return_context = _return_context_from_values(form, related_records=None)
     if not source_record_key:
         return _invalid_form_response(
             title="Reviewer note was not saved",
@@ -431,9 +454,12 @@ def _note_form_response(
         context,
         notice=(
             "Reviewer note saved for this record. The note now appears in "
-            "reviewer-created state below. Return to the CCLD request queue "
-            "and submit the same request to see updated note cues."
+            "reviewer-created state below. Queue progress and note/status cues are "
+            "derived from reviewer-created state. Return to the same CCLD request "
+            "context and submit the same request to see updated note cues before "
+            "continuing to the next record."
         ),
+        return_context=return_context,
     )
 
 
@@ -444,6 +470,7 @@ def _status_form_response(
     form = _form_values(request_body)
     source_record_key = _first_form_value(form, "source_record_key")
     reviewer_status = _first_form_value(form, "reviewer_status")
+    return_context = _return_context_from_values(form, related_records=None)
     if not source_record_key:
         return _invalid_form_response(
             title="Reviewer status was not saved",
@@ -484,9 +511,12 @@ def _status_form_response(
         context,
         notice=(
             "Reviewer status saved for this record. The status now appears in "
-            "reviewer-created state below. Return to the CCLD request queue "
-            "and submit the same request to see updated status cues."
+            "reviewer-created state below. Queue progress and note/status cues are "
+            "derived from reviewer-created state. Return to the same CCLD request "
+            "context and submit the same request to see updated status cues before "
+            "continuing to the next record."
         ),
+        return_context=return_context,
     )
 
 
@@ -496,6 +526,7 @@ def _detail_html_response(
     context: ReviewerUiContext,
     *,
     notice: str | None,
+    return_context: CcldQueueReturnContext,
 ) -> tuple[int, str, bytes]:
     bundle_status, bundle_body = _related_source_derived_context(payload, context)
     if bundle_status != 200:
@@ -506,7 +537,15 @@ def _detail_html_response(
         raise ValueError("Expected related source-derived context records.")
     return _html_response(
         status,
-        _render_detail(payload, notice=notice, related_records=bundle_body),
+        _render_detail(
+            payload,
+            notice=notice,
+            related_records=bundle_body,
+            return_context=_return_context_with_related_defaults(
+                return_context,
+                bundle_body,
+            ),
+        ),
     )
 
 
@@ -951,6 +990,7 @@ def _render_detail(
     *,
     notice: str | None,
     related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
 ) -> str:
     detail = _mapping(payload, "detail")
     source_record = _mapping(detail, "source_record")
@@ -964,10 +1004,10 @@ def _render_detail(
         title="Local/test reviewer detail",
         heading="Local/test reviewer detail",
         main=f"""
-    {_render_notice(notice, source_record_key, related_records)}
+    {_render_notice(notice, source_record_key, related_records, return_context)}
     {_render_scope_notice(_mapping(payload, 'workflow_shell'))}
-        {_render_detail_first_run_steps(source_record_key, related_records)}
-        {_render_detail_navigation(source_record_key, related_records)}
+        {_render_detail_first_run_steps(source_record_key, related_records, return_context)}
+        {_render_detail_navigation(source_record_key, related_records, return_context)}
         {_render_record_summary_section(source_record, related_records, detail)}
     <section aria-labelledby="source-derived-heading">
       <h2 id="source-derived-heading">Source-derived record</h2>
@@ -1004,17 +1044,18 @@ def _render_detail(
                 )}
         {_render_source_context_section(related_records, source_record_key)}
     {_render_reviewer_state_section(detail)}
-        {_render_review_actions(source_record_key)}
+        {_render_review_actions(source_record_key, return_context)}
         {_render_detail_feedback_guidance(source_record, related_records)}""",
     )
 
 
 def _render_detail_first_run_steps(
-        source_record_key: str,
-        related_records: list[Mapping[str, Any]],
+    source_record_key: str,
+    related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
 ) -> str:
-        ccld_request_href = _ccld_request_href(related_records)
-        return f"""<section aria-labelledby="detail-first-run-heading">
+    ccld_request_href = _ccld_request_href(related_records, return_context)
+    return f"""<section aria-labelledby="detail-first-run-heading">
             <h2 id="detail-first-run-heading">First-run detail steps</h2>
             <ol>
                 <li>Confirm the selected complaint record in the record summary.</li>
@@ -1033,12 +1074,10 @@ def _render_detail_first_run_steps(
 def _render_detail_navigation(
     source_record_key: str,
     related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
 ) -> str:
-    detail_href = (
-        f"{REVIEWER_UI_DETAIL_PATH}?"
-        f"{urlencode({'source_record_key': source_record_key})}"
-    )
-    ccld_request_href = _ccld_request_href(related_records)
+    detail_href = _reviewer_detail_href(source_record_key, return_context)
+    ccld_request_href = _ccld_request_href(related_records, return_context)
     return f"""<section aria-labelledby="detail-navigation-heading">
       <h2 id="detail-navigation-heading">Detail navigation</h2>
             <ul>
@@ -1465,12 +1504,112 @@ def _facility_context_value(
     return _display_value(value)
 
 
-def _ccld_request_href(related_records: list[Mapping[str, Any]]) -> str:
+def _ccld_request_href(
+    related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext | None = None,
+) -> str:
+    if return_context is not None and return_context.facility_number:
+        query_values = {
+            "facility_number": return_context.facility_number,
+            "start_date": return_context.start_date or "",
+            "end_date": return_context.end_date or "",
+            "request_context_origin": return_context.context_origin or "manual_entry",
+            "lookup_facility_name": return_context.lookup_facility_name or "",
+        }
+        return f"{CCLD_RECORD_REQUEST_PATH}?{urlencode(query_values)}"
     facility = _facility_context(related_records)
     facility_number = _facility_context_value(facility, "external_facility_number")
     if facility_number == "unknown":
         return CCLD_RECORD_REQUEST_PATH
     return f"{CCLD_RECORD_REQUEST_PATH}?{urlencode({'facility_number': facility_number})}"
+
+
+def _return_context_from_values(
+    values: Mapping[str, list[str]],
+    *,
+    related_records: list[Mapping[str, Any]] | None,
+) -> CcldQueueReturnContext:
+    context = CcldQueueReturnContext(
+        facility_number=_optional_form_value(values, "return_facility_number"),
+        start_date=_optional_form_value(values, "return_start_date"),
+        end_date=_optional_form_value(values, "return_end_date"),
+        context_origin=_optional_form_value(values, "return_context_origin"),
+        lookup_facility_name=_optional_form_value(values, "return_lookup_facility_name"),
+    )
+    if related_records is None:
+        return context
+    return _return_context_with_related_defaults(context, related_records)
+
+
+def _return_context_with_related_defaults(
+    context: CcldQueueReturnContext,
+    related_records: list[Mapping[str, Any]],
+) -> CcldQueueReturnContext:
+    if context.facility_number:
+        return context
+    facility = _facility_context(related_records)
+    facility_number = _facility_context_value(facility, "external_facility_number")
+    if facility_number == "unknown":
+        return context
+    return CcldQueueReturnContext(
+        facility_number=facility_number,
+        start_date=context.start_date,
+        end_date=context.end_date,
+        context_origin=context.context_origin or "prefilled_link",
+        lookup_facility_name=context.lookup_facility_name,
+    )
+
+
+def _return_context_hidden_inputs(return_context: CcldQueueReturnContext) -> str:
+    return "\n".join(
+        f'<input type="hidden" name="{_escape(name)}" value="{_escape(value)}">'
+        for name, value in _return_context_form_values(return_context)
+    )
+
+
+def _return_context_hidden_summary(return_context: CcldQueueReturnContext) -> str:
+    if return_context.facility_number is None:
+        return ""
+    return f"""<section aria-labelledby="return-context-heading">
+            <h3 id="return-context-heading">Return to the same CCLD queue</h3>
+            <p>After saving a note or status, return to this same local/test CCLD request
+            context and submit the request again to see queue progress and note/status cues
+            derived from reviewer-created state.</p>
+            <dl>
+                <dt>Facility/license number to reuse</dt>
+                <dd>{_escape(return_context.facility_number)}</dd>
+                <dt>Date range to reuse</dt>
+                <dd>{_escape(_return_context_date_range(return_context))}</dd>
+            </dl>
+        </section>"""
+
+
+def _return_context_form_values(
+    return_context: CcldQueueReturnContext,
+) -> tuple[tuple[str, str], ...]:
+    return tuple(
+        (name, value or "")
+        for name, value in (
+            ("return_facility_number", return_context.facility_number),
+            ("return_start_date", return_context.start_date),
+            ("return_end_date", return_context.end_date),
+            ("return_context_origin", return_context.context_origin),
+            ("return_lookup_facility_name", return_context.lookup_facility_name),
+        )
+    )
+
+
+def _return_context_date_range(return_context: CcldQueueReturnContext) -> str:
+    if return_context.start_date is None and return_context.end_date is None:
+        return "not provided"
+    start_date = return_context.start_date or "earliest available"
+    end_date = return_context.end_date or "latest available"
+    return f"{start_date} to {end_date}"
+
+
+def _optional_form_value(values: Mapping[str, list[str]], key: str) -> str | None:
+    value = _first_form_value(values, key)
+    return value or None
 
 
 def _date_summary(values: Mapping[str, Any]) -> str:
@@ -1553,7 +1692,10 @@ def _render_reviewer_state_section(detail: Mapping[str, Any]) -> str:
     </section>"""
 
 
-def _render_review_actions(source_record_key: str) -> str:
+def _render_review_actions(
+    source_record_key: str,
+    return_context: CcldQueueReturnContext,
+) -> str:
         return f"""<section id="review-actions-heading" aria-labelledby="review-actions-title">
             <h2 id="review-actions-title">Reviewer actions</h2>
             <p>These local/test actions write reviewer-created state through the
@@ -1562,8 +1704,9 @@ def _render_review_actions(source_record_key: str) -> str:
             <p>Review the source traceability section first. Then add a short note when source
             traceability, wording, missing values, or review context needs follow-up. Set a
             status to keep queue progress understandable.</p>
-            {_render_note_form(source_record_key)}
-            {_render_status_form(source_record_key)}
+            {_return_context_hidden_summary(return_context)}
+            {_render_note_form(source_record_key, return_context)}
+            {_render_status_form(source_record_key, return_context)}
         </section>"""
 
 
@@ -1600,11 +1743,15 @@ def _actor_label(created_by: Mapping[str, Any]) -> str:
     return actor_category
 
 
-def _render_note_form(source_record_key: str) -> str:
+def _render_note_form(
+        source_record_key: str,
+        return_context: CcldQueueReturnContext,
+) -> str:
     return f"""<section aria-labelledby="note-form-heading">
     <h3 id="note-form-heading">Add reviewer note</h3>
       <form action="{REVIEWER_UI_NOTE_PATH}" method="post">
         <input type="hidden" name="source_record_key" value="{_escape(source_record_key)}">
+                {_return_context_hidden_inputs(return_context)}
         <p>
                     <label for="note_text">Reviewer note for this record</label>
                     <textarea id="note_text" name="note_text" rows="4" required
@@ -1618,7 +1765,10 @@ def _render_note_form(source_record_key: str) -> str:
     </section>"""
 
 
-def _render_status_form(source_record_key: str) -> str:
+def _render_status_form(
+    source_record_key: str,
+    return_context: CcldQueueReturnContext,
+) -> str:
     options = "\n".join(
         _render_status_option(status)
         for status in REVIEWER_STATUS_VALUES
@@ -1627,6 +1777,7 @@ def _render_status_form(source_record_key: str) -> str:
             <h3 id="status-form-heading">Set reviewer status</h3>
       <form action="{REVIEWER_UI_STATUS_PATH}" method="post">
         <input type="hidden" name="source_record_key" value="{_escape(source_record_key)}">
+                {_return_context_hidden_inputs(return_context)}
         <p>
           <label for="reviewer_status">Reviewer queue status for this record</label>
                     <select id="reviewer_status" name="reviewer_status" required
@@ -1701,25 +1852,48 @@ def _render_notice(
         notice: str | None,
         source_record_key: str,
         related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
 ) -> str:
     if notice is None:
         return ""
-    detail_href = (
-        f"{REVIEWER_UI_DETAIL_PATH}?"
-        f"{urlencode({'source_record_key': source_record_key})}"
-    )
-    ccld_request_href = _ccld_request_href(related_records)
+    detail_href = _reviewer_detail_href(source_record_key, return_context)
+    ccld_request_href = _ccld_request_href(related_records, return_context)
     return f"""<section aria-labelledby="form-result-heading">
             <h2 id="form-result-heading">Reviewer update saved</h2>
       <p>{_escape(notice)}</p>
             <p>This confirmation is reviewer-created local/test state. It does not change
             source-derived records or public-source findings.</p>
+            <section aria-labelledby="queue-return-progress-heading">
+                <h3 id="queue-return-progress-heading">Return and refresh queue progress</h3>
+                <p>Queue progress and note/status cues are derived from reviewer-created state.
+                Return to the same CCLD request context, use the same facility/license number
+                and date range, and submit the request again if the local/test queue page needs
+                to refresh its displayed cues.</p>
+                <p>After the queue shows the updated cue, open the suggested next record or the
+                next not-started record to continue review.</p>
+                <dl>
+                    <dt>Same facility/license number</dt>
+                    <dd>{_escape(_display_value(return_context.facility_number))}</dd>
+                    <dt>Same date range</dt>
+                    <dd>{_escape(_return_context_date_range(return_context))}</dd>
+                </dl>
+            </section>
             <ul>
                 <li><a href="#reviewer-state-heading">Review saved notes and statuses below</a></li>
-                <li><a href="{_escape(ccld_request_href)}">Return to CCLD request queue</a></li>
+                <li><a href="{_escape(ccld_request_href)}">Return to CCLD request queue
+                with the same request context</a></li>
                 <li><a href="{_escape(detail_href)}">Refresh this reviewer detail</a></li>
             </ul>
     </section>"""
+
+
+def _reviewer_detail_href(
+    source_record_key: str,
+    return_context: CcldQueueReturnContext,
+) -> str:
+    query_values = {"source_record_key": source_record_key}
+    query_values.update(dict(_return_context_form_values(return_context)))
+    return f"{REVIEWER_UI_DETAIL_PATH}?{urlencode(query_values)}"
 
 
 def _page(*, title: str, heading: str, main: str) -> str:

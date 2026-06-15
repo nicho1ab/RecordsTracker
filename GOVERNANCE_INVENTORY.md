@@ -37,7 +37,8 @@
   guidance, safe related seeded bundle context,
   reviewer-created notes/statuses, CCLD return links, and record-specific
   feedback clues, submit note/status forms through those existing workflow
-  actions, see clearer saved-state confirmations and return-to-queue next steps,
+  actions, see clearer saved-state confirmations, same-request return-to-queue
+  progress guidance, and next-record steps,
   and see read-after-write
   reviewer-created state without exposing sensitive narrative fields, a browser-
   accessible local/test CCLD facility lookup page at `/ccld/facilities` that

@@ -103,6 +103,10 @@ sensitive narrative content. Reviewer detail source traceability tests should
 cover selected-record identifiers, available source URL/raw hash/raw path or
 artifact references, missing-value wording, non-conclusion boundary language,
 pre-note/status source-review guidance, and no-mutation behavior.
+Reviewer note/status confirmation tests should cover return-to-same-queue
+guidance, same facility/date request-context reminders, queue cues derived from
+reviewer-created state, resubmit-to-refresh wording, next-record guidance, and
+preserved no-mutation behavior.
 Hosted CCLD record request UI tests must prove the browser-accessible local/test
 request page accepts only CCLD digit facility/license numbers plus optional
 valid date ranges, returns accessible validation guidance for missing or invalid
