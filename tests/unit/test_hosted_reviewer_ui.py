@@ -310,6 +310,19 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Feedback clues for this record" in html
     assert "If source traceability fields are confusing or missing" in html
     assert "copy the tester feedback checklist" in normalized_html
+    assert "Return request context" in html
+    assert "facility/license number 157806098; date range not provided" in html
+    assert "Record-specific feedback handoff" in html
+    assert "Carry these observations into the existing manual feedback checklist" in (
+        normalized_html
+    )
+    assert "Source traceability observations" in html
+    assert "Source context confusion" in html
+    assert "Request-context fit" in html
+    assert "whether this complaint seemed unexpected" in normalized_html
+    assert "Note/status behavior" in html
+    assert "Queue refresh behavior" in html
+    assert "confusing labels, wording, keyboard flow" in normalized_html
     assert "/ccld/records/request?facility_number=157806098" in html
     assert "/ccld/facilities" in html
     assert "/ccld/help" in html
@@ -432,6 +445,8 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert "same facility/license number and date range" in normalized_html
     assert "submit the request again" in html
     assert "continuing to the next record" in html
+    assert "manual feedback checklist" in html
+    assert "record-specific observation" in html
     assert "157806098" in html
     assert "2022-08-01 to 2022-08-31" in html
     assert "return_facility_number=157806098" in html
@@ -551,6 +566,8 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "Queue progress and note/status cues are derived from reviewer-created state" in html
     assert "submit the request again" in html
     assert "continuing to the next record" in html
+    assert "manual feedback checklist" in html
+    assert "record-specific observation" in html
     assert "return_facility_number=157806098" in html
     assert "Review saved notes and statuses below" in html
     assert "reviewer_status_scaffold" in html

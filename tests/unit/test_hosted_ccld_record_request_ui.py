@@ -279,6 +279,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "<dt>Not started</dt>" in html
     assert "<dd>1</dd>" in html
     assert "Queue triage summary" in html
+    assert "record-specific reviewer-detail observations" in normalized_html
     assert "Records with reviewer notes" in html
     assert "Records with reviewer status" in html
     assert "Records with source traceability available" in html

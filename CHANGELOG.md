@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Improved local/test reviewer detail feedback handoff cues so testers know which
+	record-specific observations to carry into the existing manual CCLD feedback
+	checklist after source traceability review, note/status confirmation, and
+	return-to-queue refresh without adding persisted feedback, schema changes,
+	new note/status behavior, live browser retrieval, connector execution, or
+	non-CCLD scope.
 - Improved local/test CCLD request no-match and local validated load guidance so
 	testers can confirm facility/date criteria, understand results depend on
 	currently loaded local/test data, use the existing load/refresh path when

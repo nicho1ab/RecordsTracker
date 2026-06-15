@@ -123,6 +123,11 @@ feedback guidance, non-conclusion boundary wording, no-match search, missing-rec
 status form, and blocked-request next-step guidance, unauthenticated, disabled or revoked, role-denied, out-of-scope,
 and source-read-versus-reviewer-state permission separation blocking, no-secret
 HTML output, successful audit creation, and no source-derived mutation.
+Record-specific feedback handoff coverage should verify that detail pages tell
+testers what source traceability, source context, note/status confirmation,
+same-queue return, queue refresh, unexpected-record, confusing label, wording,
+keyboard-flow, or next-step observations to carry into the existing manual
+checklist without adding feedback persistence.
 
 Hosted CCLD request and import/reload tests should cover digit-only facility/
 license input, optional date ranges, empty hosted source-derived state, loading

@@ -157,6 +157,10 @@ CCLD request queue so the updated note/status cues can be checked.
 Use the same facility/date request context when returning to the queue. In this
 local/test MVP, you may need to submit the same request again to refresh queue
 progress and note/status cues before continuing to the next record.
+The reviewer detail feedback handoff cue tells you which record-specific source
+traceability, source context, note/status confirmation, same-queue return, queue
+refresh, unexpected-record, confusing-label, wording, keyboard-flow, or next-step
+observations to carry into the existing manual feedback checklist.
 The local/test browser pages include skip-to-main links, visible start-here or
 next-step guidance, specific button/link text, and manual checklist copy
 instructions so a first-time tester can use keyboard navigation and visible page
