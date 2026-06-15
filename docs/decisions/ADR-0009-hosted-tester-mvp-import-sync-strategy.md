@@ -38,6 +38,15 @@ source-record shell, and semantic/accessibility validation. This ADR still does
 not approve import/sync implementation, hosted live crawling, hosted connector
 execution, reset/reload implementation, or production data population.
 
+Superseding note: ADR-0016 later approved a narrow controlled browser-triggered,
+server-executed CCLD retrieval-job boundary. That approval applies only to
+CCLD-only, facility/date/type-bounded, authenticated, permissioned,
+rate-limited, server-side retrieval jobs with raw source preservation,
+validation, PostgreSQL import, safe job status, and mocked-network tests. ADR-0009
+still blocks direct browser crawling, statewide crawling, automatic source
+expansion, non-CCLD sources, private/authenticated source scraping, and any
+retrieval implementation outside ADR-0016.
+
 ## Decision
 
 The hosted tester MVP will treat the existing Python ingestion and extraction
@@ -67,10 +76,11 @@ timestamps, raw source links where available, report context where available,
 extraction audit context, original extracted values, extraction confidence, and
 warnings where available.
 
-The hosted tester MVP will not directly run connector discovery, live fetch, or
-crawling workflows. Direct hosted live crawling, hosted connector execution, or
-automatic source expansion is not approved unless a later ADR explicitly
-approves it.
+The hosted tester MVP will not directly run unbounded connector discovery, live
+fetch, or crawling workflows. Direct hosted live crawling, hosted connector
+execution, or automatic source expansion is not approved unless a later ADR
+explicitly approves it. ADR-0016 is that later approval only for controlled
+browser-triggered, server-executed CCLD retrieval jobs inside its boundaries.
 
 ## Options Considered
 

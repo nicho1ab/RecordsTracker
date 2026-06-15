@@ -217,7 +217,7 @@ When PostgreSQL mode is selected but no migrated/imported database context is
 available, pages show setup-required guidance. They do not silently fall back to
 fixtures, run live CCLD retrieval, execute connectors, mutate source-derived
 records, or expose raw narrative fields. Retrieval job result display remains
-deferred until retrieval jobs are approved and implemented.
+deferred until the ADR-0016 controlled retrieval-job implementation is added.
 
 ## Open the CCLD record request page
 

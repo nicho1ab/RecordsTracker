@@ -54,6 +54,29 @@ Supabase/Neon, or another host, use
 to keep app runtime, PostgreSQL, raw files, secrets, backups, and future retrieval
 jobs separated.
 
+## Future controlled CCLD retrieval jobs
+
+ADR-0016 approves controlled browser-triggered, server-executed CCLD retrieval
+jobs, but this branch does not implement them. When implemented, operators must
+verify before enabling the workflow that production mode requires authenticated
+tester access, retrieval trigger permission and scope checks are enforced,
+server-side CCLD source allowlists are configured, date range and request limits
+are conservative, rate limits, timeout limits, and retry limits are active, raw
+source artifact storage is mounted and backed up, PostgreSQL migrations have
+run, and logs/status output are secret-safe.
+
+During operation, treat job states such as queued, running, completed,
+completed_with_warnings, failed, blocked_by_validation, and rate_limited as
+workflow states only. They are not public-source completeness, legal, harm,
+abuse, neglect, liability, or facility-wide conclusions. For failed jobs, check
+safe job status first, then operator logs. Do not expose raw stack traces,
+tokens, cookies, private headers, connection strings, provider claims, GitHub
+tokens, private URLs, or unnecessary narrative content in support notes.
+
+Backups for retrieval-enabled deployments must cover both PostgreSQL and raw
+source artifacts. A database backup alone is not enough when source-derived rows
+reference raw artifact paths or raw hashes.
+
 ## Run fixture-backed sample ingestion
 
 Use committed fixtures to populate the local sample database without making live

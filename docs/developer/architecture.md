@@ -164,6 +164,9 @@ logging, export generation, reset/reload, and tester data retention. ADR-0014
 now chooses a managed standards-based OpenID Connect/OAuth 2.0
 provider class and role implementation direction. ADR-0015 now chooses
 PostgreSQL and Alembic-managed migrations for hosted tester MVP persistence.
+ADR-0016 now approves controlled browser-triggered, server-executed CCLD
+retrieval jobs as the next narrow source-ingestion boundary, while leaving
+implementation pending.
 The scaffold now includes minimal PostgreSQL/Alembic wiring and a controlled
 seeded corpus import path: no-secret database URL configuration validation, an
 Alembic script location, a narrow domain migration for import batch metadata and
@@ -225,10 +228,9 @@ The scaffold does not implement real provider login, token validation, sessions,
 cookies, auth middleware, role or user storage, production domain schema beyond
 the seeded import table group, reviewer-created state scaffold table, and audit
 event scaffold table, production API framework behavior, production import automation, stateful queues,
-annotations, corrections, exports, tester feedback, full audit trail, reset/reload
-execution, hosted live crawling, hosted connector execution, deployment,
-source-derived canonical field changes, full reviewer-created workflow
-persistence, or extraction behavior. Its database-backed reads, auth guards,
+annotations, corrections, exports, full audit trail, reset/reload execution,
+controlled retrieval jobs, deployment, source-derived canonical field changes,
+full reviewer-created workflow persistence, or extraction behavior. Its database-backed reads, auth guards,
 source-derived read routes, reviewer workflow shell, reviewer-created state
 scaffold service, reviewer-created state read routes, audit event scaffold
 service, audit history read routes, reset/reload dry-run, and planning metadata
@@ -237,7 +239,7 @@ local/test service seams. The local non-Docker workflow does not require Docker,
 QNAP Container Station, Azure, AWS, a public URL, secrets, or cloud resources.
 The optional QNAP-first Docker runtime provides a portable app/PostgreSQL
 container envelope only and does not add production auth, public URL behavior,
-hosted live crawling, connector execution, or production import automation.
+implemented retrieval jobs, or production import automation.
 
 See `docs/developer/hosted-scaffold.md` for local run and smoke-check commands.
 

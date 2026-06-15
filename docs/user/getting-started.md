@@ -235,10 +235,15 @@ feedback is not configured, the page says so and does not send feedback.
 An optional QNAP-first Docker Compose runtime is available for production-like
 testing with PostgreSQL in Docker. It uses the same hosted scaffold pages, keeps
 real database settings in an untracked `.env` file, and does not add production
-sign-in, public hosting approval, browser-triggered live CCLD retrieval, or
-connector execution. Developers should use
+sign-in, public hosting approval, completed CCLD retrieval jobs, or connector
+execution. Developers should use
 [docs/developer/qnap-docker-runtime.md](../developer/qnap-docker-runtime.md) for
 those runtime steps.
+
+ADR-0016 now approves a future controlled browser-triggered, server-executed
+CCLD retrieval job, but that workflow is not implemented yet. Until the
+implementation lands, use the outside-browser live-fetch and artifact-builder
+handoff described above when local validated records need to be prepared.
 
 Return to `/ccld/records/request` and use the local validated CCLD load action
 to load or refresh matching source-derived rows from that JSON artifact. The

@@ -234,9 +234,41 @@ manual table joins.
 For the CCLD-only MVP path, the first browser step should accept a CCLD
 facility/license number and optional date range, then retrieve, prepare, or show
 CCLD records for that scope before sending the user into reviewer pages. Hosted
-browser requests must not run live crawling unless a later approved architecture
-decision adds a safe execution model with tests, audit, rate limits, and source
-traceability preservation.
+browser requests must not run live crawling directly. ADR-0016 now approves a
+safe execution model where the browser triggers a bounded CCLD retrieval job and
+the server performs controlled discovery/fetch, raw source preservation,
+deterministic extraction, validation, PostgreSQL import, safe job status, and
+existing hosted-queue review.
+
+### Controlled CCLD retrieval job
+
+The next hosted CCLD implementation may add browser-triggered, server-executed
+retrieval jobs inside the ADR-0016 boundary. The user-facing request must accept
+only a CCLD facility/license number, one allowed record type or all supported
+record types, and a bounded start/end date. The server must validate those
+inputs, create a retrieval job, use a CCLD source-domain and URL-pattern
+allowlist, preserve raw source artifacts in configured server-side storage,
+compute raw source hashes, extract/normalize deterministically, validate records,
+import source-derived records into PostgreSQL, expose safe job status and result
+counts, and link the tester back to the existing hosted queue.
+
+The job path must require authenticated tester access before production use and
+must require role/scope permission to trigger retrieval. It must enforce a date
+range maximum, record type allowlist, facility/license validation, per-job
+request limit, per-user or per-actor rate limit, timeout limit, retry limit,
+safe failure messages, secret-safe logging, audit/status events, raw artifact
+path/hash preservation, import validation status, duplicate/idempotency
+expectations, operator runbook expectations, and backup/restore expectations for
+PostgreSQL and raw artifacts. Tests must mock network retrieval; CI must not
+make live CCLD calls.
+
+The retrieval job path must not provide connector credentials, GitHub tokens,
+server-side secrets, provider tokens, cookies, private headers, or arbitrary URL
+input to the browser. It must not implement direct browser crawling, statewide
+crawling, automatic source expansion, non-CCLD sources, private/authenticated
+source scraping, legal/facility-wide/public-source completeness conclusions,
+harm/abuse/neglect/liability conclusions, or unsupported automated complaint
+findings.
 
 ### Complaint review queue
 
@@ -404,8 +436,10 @@ presented as complete statewide coverage or official facility conclusions.
 
 Source-derived hosted tester records must enter the tester environment through
 the controlled import/sync boundary accepted by ADR-0009, starting with
-snapshot imports from validated pipeline output unless a later ADR approves a
-different import mechanism.
+snapshot imports from validated pipeline output. ADR-0016 now also approves a
+future controlled browser-triggered, server-executed CCLD retrieval job as a
+different CCLD-only source-derived import path once implementation adds and
+tests the required controls.
 
 ADR-0015 chooses PostgreSQL as the hosted tester MVP persistence store and
 Alembic-managed migrations as the migration tooling direction. Future seeded
