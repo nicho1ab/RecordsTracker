@@ -246,6 +246,9 @@ public-record review notes.
    to capture the current production-mode auth boundary, deferred login/OIDC
    work, and host-local provider placeholder expectations before inviting
    testers.
+- Use [docs/developer/qnap-pilot-tester-invitation-decision.md](docs/developer/qnap-pilot-tester-invitation-decision.md)
+   to record who may be invited, what role/scope they receive, how access can be
+   revoked, and which evidence packet must be complete before invitations.
 - Use `scripts/summarize-qnap-pilot-route-evidence.ps1` after the app is running
    and the QNAP verifier passes to capture a GET-only hosted route evidence
    summary without running imports, retrieval, or GitHub calls.

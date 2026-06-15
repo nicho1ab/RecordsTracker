@@ -240,6 +240,15 @@ reviewer routes, treats missing retrieval-job detail as an expected safe state,
 checks forbidden private markers, avoids response-body printing by default, and
 does not run imports, retrieval, live CCLD calls, GitHub calls, POST requests, or
 reviewer-created mutations.
+QNAP tester invitation decision documentation tests should prove the guide
+exists, is linked from the QNAP operator/auth docs, requires explicitly approved
+named testers or a small approved group, records role/scope and revocation
+decisions, states real login/OIDC/sessions/cookies/user tables/invitation
+workflow are not implemented, keeps local-dev fixture auth out of production
+authentication, requires verifier/seeded evidence/route evidence/auth readiness/
+feedback/retrieval decisions/backups/known limitations before invitation, and
+forbids secrets, callback URLs, broad default admin access, public-source
+completeness, and legal/facility-wide conclusions.
 
 Controlled CCLD retrieval job tests cover the ADR-0016 boundary before and after
 browser-triggered retrieval is enabled. Tests should prove only facility/license

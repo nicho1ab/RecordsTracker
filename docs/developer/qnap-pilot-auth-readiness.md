@@ -6,7 +6,9 @@ yet, which host-local settings must stay safe, and what auth evidence operators
 should capture.
 
 This guide complements the [QNAP pilot operator checklist](qnap-pilot-operator-checklist.md),
-[QNAP Docker runtime guide](qnap-docker-runtime.md), ADR-0011, and ADR-0014.
+[QNAP Docker runtime guide](qnap-docker-runtime.md),
+[QNAP pilot tester invitation decision](qnap-pilot-tester-invitation-decision.md),
+ADR-0011, and ADR-0014.
 
 ## 1. Current Auth Boundary
 
@@ -41,7 +43,8 @@ This guide complements the [QNAP pilot operator checklist](qnap-pilot-operator-c
 
 Do not invite real testers until there is a deliberate access-control decision
 for how they will authenticate and how their access will be provisioned,
-limited, reviewed, and revoked.
+limited, reviewed, and revoked. Record that decision in
+[QNAP pilot tester invitation decision](qnap-pilot-tester-invitation-decision.md).
 
 ## 3. Host-Local Placeholder Guidance
 

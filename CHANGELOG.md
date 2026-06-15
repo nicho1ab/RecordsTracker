@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added `docs/developer/qnap-pilot-tester-invitation-decision.md`, a concise
+	operator decision gate for who may be invited to the QNAP pilot, role/scope
+	limits, approval and revocation expectations, deferred real auth/invitation
+	implementation, required evidence packet contents, and no-secret/no-conclusion
+	guardrails before inviting early external stakeholder organization testers.
 - Added `scripts/summarize-qnap-pilot-route-evidence.ps1`, an optional GET-only
 	QNAP pilot route evidence command that probes expected hosted routes, accepts
 	expected protected/setup-required/safe-empty states, and avoids imports,
