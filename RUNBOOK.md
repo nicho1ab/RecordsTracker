@@ -78,6 +78,16 @@ linkage counts, route results, feedback configuration decision, retrieval
 configuration decision, and backup acknowledgements using the seeded import
 evidence guide.
 
+Optional read-only evidence summary command:
+
+```powershell
+.\scripts\summarize-qnap-pilot-seeded-import-evidence.ps1 -EnvFile .env
+```
+
+The command does not run imports, retrieval, live CCLD calls, GitHub calls, or
+print secrets, raw artifact contents, raw server-specific paths, or legal/source-
+completeness conclusions.
+
 After containers are running, verify the pilot workflow:
 
 ```powershell

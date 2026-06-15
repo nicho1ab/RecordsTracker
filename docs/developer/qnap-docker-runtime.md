@@ -119,6 +119,8 @@ Before inviting early testers, use the full
 [QNAP pilot operator checklist](qnap-pilot-operator-checklist.md).
 For proof that PostgreSQL-backed CCLD source-derived rows are actually imported,
 use [QNAP pilot seeded import evidence](qnap-pilot-seeded-import-evidence.md).
+The optional `scripts/summarize-qnap-pilot-seeded-import-evidence.ps1` command
+summarizes that evidence without mutating data or printing secrets/raw artifacts.
 
 From the repository root on any Docker host, first validate the untracked pilot
 environment file:
@@ -159,6 +161,13 @@ route surface:
 
 ```powershell
 .\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env -CheckContainers -BaseUrl http://<host-name-or-ip>:<CCLD_HOSTED_PORT>
+```
+
+After importing a validated hosted CCLD artifact or seeded corpus, capture a
+read-only imported-data summary:
+
+```powershell
+.\scripts\summarize-qnap-pilot-seeded-import-evidence.ps1 -EnvFile .env
 ```
 
 The route checks are bounded and read-only. They do not run live CCLD retrieval,

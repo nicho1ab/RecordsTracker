@@ -6,6 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 VERIFIER = ROOT / "scripts" / "verify-qnap-pilot-workflow.ps1"
+EVIDENCE_SCRIPT = ROOT / "scripts" / "summarize-qnap-pilot-seeded-import-evidence.ps1"
 
 
 def read_repo_text(relative_path: str) -> str:
@@ -29,6 +30,19 @@ def run_verifier(*args: str) -> subprocess.CompletedProcess[str]:
         raise AssertionError("PowerShell is required for verifier behavior tests.")
     return subprocess.run(
         [shell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(VERIFIER), *args],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+def run_evidence_summary(*args: str) -> subprocess.CompletedProcess[str]:
+    shell = shutil.which("pwsh") or shutil.which("powershell")
+    if shell is None:
+        raise AssertionError("PowerShell is required for evidence summary tests.")
+    return subprocess.run(
+        [shell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(EVIDENCE_SCRIPT), *args],
         cwd=ROOT,
         text=True,
         capture_output=True,
@@ -269,6 +283,130 @@ def test_qnap_pilot_workflow_script_checks_env_compose_and_routes() -> None:
     assert "github_pat_[A-Za-z0-9_]" in script
 
 
+def test_qnap_seeded_import_evidence_script_checks_safe_read_only_summary() -> None:
+    script = read_repo_text("scripts/summarize-qnap-pilot-seeded-import-evidence.ps1")
+    normalized_script = " ".join(script.split())
+
+    for required_text in (
+        "param(",
+        "$EnvFile = \".env\"",
+        "$ComposeFile = \"docker-compose.qnap.yml\"",
+        "$DatabaseService = \"postgres\"",
+        "SkipDatabaseCheck",
+        "Read-EnvValues",
+        "Invoke-PostgresScalar",
+        "hosted_import_batches",
+        "hosted_source_derived_records",
+        "CCLD_HOSTED_PAGE_DATA_MODE",
+        "CCLD_RETRIEVAL_DEMO_MODE=mock-success",
+        "GitHub feedback decision: half-configured readiness error",
+        "Retrieval configuration decision: enabled without raw storage readiness error",
+        "Source-derived row counts by entity type",
+        "Rows with source URL",
+        "Rows with raw SHA-256 linkage",
+        "Rows with connector name",
+        "Rows with source artifact identity",
+        "Most recent import batch timestamp",
+        "Raw artifact contents printed: no",
+        "Raw server-specific paths printed: no",
+        "Secrets printed: no",
+    ):
+        assert required_text in script
+
+    for required_text in (
+        "does not mutate data, run imports, run retrieval, call live CCLD, or call GitHub",
+        "no public-source completeness, legal, facility-wide, harm, abuse, neglect, "
+        "or liability conclusion",
+    ):
+        assert required_text in normalized_script
+
+    forbidden_text = (
+        "Invoke-WebRequest",
+        "raw_path FROM",
+        "SELECT raw_path",
+        "raw artifact viewer",
+        "ghp_",
+        "github_pat_",
+        "https://github.com/",
+        "C:\\",
+        "OneDrive",
+        "/share/",
+    )
+    for text in forbidden_text:
+        assert text not in script
+
+
+def test_qnap_seeded_import_evidence_script_handles_env_example_without_database() -> None:
+    result = run_evidence_summary("-EnvFile", ".env.example", "-SkipDatabaseCheck")
+
+    assert result.returncode == 0
+    output = result.stdout + result.stderr
+    assert "QNAP pilot seeded import evidence summary" in output
+    assert "Expected page-data mode is PostgreSQL-backed" in output
+    assert "GitHub feedback decision: disabled intentionally" in output
+    assert "Retrieval configuration decision: disabled intentionally" in output
+    assert "Local-dev mock-success retrieval mode is not enabled" in output
+    assert "Skipping PostgreSQL evidence queries" in output
+    assert "placeholder" in output
+    assert "Raw artifact contents printed: no" in output
+    assert "Raw server-specific paths printed: no" in output
+    assert "Secrets printed: no" in output
+
+
+def test_qnap_seeded_import_evidence_script_handles_missing_env_safely(
+    tmp_path: Path,
+) -> None:
+    missing_env = tmp_path / "missing.env"
+
+    result = run_evidence_summary("-EnvFile", str(missing_env), "-SkipDatabaseCheck")
+
+    assert result.returncode == 0
+    output = result.stdout + result.stderr
+    assert "was not found" in output
+    assert "Skipping PostgreSQL evidence queries" in output
+    assert "no readiness failures" in output
+
+
+def test_qnap_seeded_import_evidence_script_detects_readiness_failures(
+    tmp_path: Path,
+) -> None:
+    half_feedback_env = write_env_file(
+        tmp_path / "half-feedback.env",
+        {"GITHUB_FEEDBACK_REPO": "example/repo", "GITHUB_FEEDBACK_TOKEN": ""},
+    )
+    retrieval_without_raw_env = write_env_file(
+        tmp_path / "retrieval-without-raw.env",
+        {"CCLD_RETRIEVAL_ENABLED": "enabled", "CCLD_RETRIEVAL_RAW_DIR": ""},
+    )
+    mock_success_env = write_env_file(
+        tmp_path / "mock-success.env",
+        {"CCLD_RETRIEVAL_DEMO_MODE": "mock-success"},
+    )
+
+    half_feedback = run_evidence_summary(
+        "-EnvFile", str(half_feedback_env), "-SkipDatabaseCheck"
+    )
+    retrieval_without_raw = run_evidence_summary(
+        "-EnvFile", str(retrieval_without_raw_env), "-SkipDatabaseCheck"
+    )
+    mock_success = run_evidence_summary(
+        "-EnvFile", str(mock_success_env), "-SkipDatabaseCheck"
+    )
+
+    assert half_feedback.returncode != 0
+    assert "half-configured readiness error" in (
+        half_feedback.stdout + half_feedback.stderr
+    )
+    assert retrieval_without_raw.returncode != 0
+    assert "enabled without raw storage readiness error" in (
+        retrieval_without_raw.stdout + retrieval_without_raw.stderr
+    )
+    assert mock_success.returncode != 0
+    assert "CCLD_RETRIEVAL_DEMO_MODE=mock-success" in (
+        mock_success.stdout + mock_success.stderr
+    )
+
+
 def test_dockerfile_preserves_no_secret_portable_app_start() -> None:
     dockerfile = read_repo_text("Dockerfile")
 
@@ -405,6 +543,9 @@ def test_qnap_pilot_seeded_import_evidence_doc_exists_and_covers_required_steps(
         "Do not expose raw artifacts to testers",
         "Do not enable `CCLD_RETRIEVAL_DEMO_MODE=mock-success` for QNAP pilot mode",
         "Do not use fixture-demo mode as QNAP pilot seeded import evidence",
+        "scripts/summarize-qnap-pilot-seeded-import-evidence.ps1",
+        "-SkipDatabaseCheck",
+        "does not run imports, run retrieval, call live CCLD, call GitHub",
     ):
         assert required_text in searchable_text
 
@@ -424,6 +565,9 @@ def test_qnap_pilot_seeded_import_evidence_doc_is_linked_from_operator_guides() 
         "docs/developer/qnap-docker-runtime.md": "qnap-pilot-seeded-import-evidence.md",
         "docs/developer/qnap-pilot-operator-checklist.md": "qnap-pilot-seeded-import-evidence.md",
         "docs/developer/testing.md": "QNAP seeded import evidence documentation tests",
+        "docs/developer/qnap-pilot-seeded-import-evidence.md": (
+            "scripts/summarize-qnap-pilot-seeded-import-evidence.ps1"
+        ),
     }
 
     for path, link in required_links.items():

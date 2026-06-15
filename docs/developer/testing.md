@@ -221,6 +221,12 @@ page data mode, migrations, source-derived imported record counts, raw artifact
 backup, untracked `.env`, no public-source completeness or legal conclusions,
 and keeps local-dev mock-success out of QNAP pilot mode while avoiding real
 secrets.
+QNAP seeded import evidence command tests should prove the optional PowerShell
+command exists, accepts `-EnvFile`, parses placeholder `.env.example` without
+requiring Docker when `-SkipDatabaseCheck` is used, flags half-configured GitHub
+feedback, flags retrieval enabled without raw storage, rejects QNAP mock-success
+mode, and avoids secrets, raw artifact contents, raw server paths, imports,
+retrieval, live CCLD calls, GitHub calls, and legal/completeness conclusions.
 
 Controlled CCLD retrieval job tests cover the ADR-0016 boundary before and after
 browser-triggered retrieval is enabled. Tests should prove only facility/license
