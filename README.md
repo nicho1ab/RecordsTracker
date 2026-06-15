@@ -101,6 +101,10 @@ experience.
    feedback persistence, and read first-time workflow help
    and, when retrieval is configured, trigger a server-executed CCLD retrieval
    job without running browser scraping.
+- Presents the existing hosted tester pages with a shared local/test pilot shell,
+   consistent navigation, readable cards, clearer first-run actions, visible
+   limitations, and accessible focus/table/form styling without adding new
+   routes, workflows, frontend dependencies, exports, auth, or deployment behavior.
 
 ## Core Principles
 

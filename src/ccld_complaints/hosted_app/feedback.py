@@ -21,6 +21,7 @@ from ccld_complaints.hosted_app.auth import (
     HostedScopeDeniedError,
     require_permission,
 )
+from ccld_complaints.hosted_app.ui_shell import render_page_shell
 
 FEEDBACK_PATH = "/feedback"
 GITHUB_FEEDBACK_REPO_ENV = "GITHUB_FEEDBACK_REPO"
@@ -193,6 +194,15 @@ def render_feedback_page(context: FeedbackContext) -> str:
         heading="Tester feedback",
         main=f"""
     {_configuration_notice(context.github_config)}
+    <section aria-labelledby="feedback-purpose-heading">
+      <h2 id="feedback-purpose-heading">What feedback is for</h2>
+      <p>Use this page for pilot UI problems, confusing wording, missing local/test
+      guidance, unexpected queue or reviewer-detail behavior, and requests for future
+      CCLD workflow improvements.</p>
+      <p>Do not include credentials, provider claims, raw source narrative, raw artifact
+      material, server paths, tokens, connection details, or personal contact details in
+      feedback. GitHub Projects are not required; feedback is classified with labels.</p>
+    </section>
     {_feedback_form({})}
 """,
     )
@@ -434,32 +444,15 @@ def _error_summary(errors: Sequence[str]) -> str:
 
 
 def _page(*, title: str, heading: str, main: str) -> str:
-    return f"""<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{html.escape(title)} - CCLD Records Review</title>
-</head>
-<body>
-  <a href="#main-content">Skip to main feedback content</a>
-  <header>
-    <p>Server-side GitHub Issues feedback intake.</p>
-    <h1>{html.escape(heading)}</h1>
-  </header>
-  <nav aria-label="Feedback navigation">
-    <ul>
-      <li><a href="/">Scaffold home</a></li>
-      <li><a href="/ccld/help">CCLD workflow help</a></li>
-      <li><a href="/auth/status">Auth status</a></li>
-    </ul>
-  </nav>
-  <main id="main-content" tabindex="-1">
-{main}
-  </main>
-</body>
-</html>
-"""
+        return render_page_shell(
+                title=title,
+                heading=heading,
+                main=main,
+                skip_label="Skip to main feedback content",
+                nav_label="Feedback navigation",
+                eyebrow="Server-side GitHub Issues feedback intake.",
+                extra_nav_links=(("Auth status", "/auth/status"),),
+        )
 
 
 def _form_values(request_body: bytes | None) -> Mapping[str, list[str]]:

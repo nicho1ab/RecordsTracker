@@ -104,6 +104,7 @@ from ccld_complaints.hosted_app.source_derived_routes import (
     SourceDerivedApiContext,
     route_source_derived_api_response,
 )
+from ccld_complaints.hosted_app.ui_shell import render_page_shell
 
 APP_NAME = "CCLD Records Review"
 SCAFFOLD_NOTICE = "Local/test scaffold only: not a production reviewer workflow."
@@ -733,43 +734,35 @@ def render_related_facility_context(record: SampleSourceRecord) -> str:
 
 
 def render_app_shell() -> str:
-    page_title = html.escape(APP_NAME)
-    notice = html.escape(SCAFFOLD_NOTICE)
-    return f"""<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{page_title}</title>
-</head>
-<body>
-  <a href="#main-content">Skip to main CCLD review content</a>
-  <header>
-    <p>{notice}</p>
-    <h1>{page_title}</h1>
-    <p>Request CCLD facility records, load validated local/test records, and review
-    source-derived complaint records with notes and status.</p>
-  </header>
-  <nav aria-label="CCLD records review navigation">
-    <ul>
-      <li><a href="{CCLD_RECORD_REQUEST_PATH}">Request CCLD records</a></li>
-    <li><a href="{CCLD_RETRIEVAL_JOBS_PATH}">View retrieval job history</a></li>
-      <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find CCLD facility</a></li>
-      <li><a href="{CCLD_HELP_PATH}">How this works</a></li>
-      <li><a href="#start">Start first CCLD review</a></li>
-      <li><a href="/reviewer">Review loaded local/test records</a></li>
-    <li><a href="{FEEDBACK_PATH}">Send tester feedback</a></li>
-      <li><a href="#feedback">Feedback guidance</a></li>
-      <li><a href="#boundaries">Local/test boundaries</a></li>
-      <li><a href="/health">Health check</a></li>
-    </ul>
-  </nav>
-  <main id="main-content" tabindex="-1">
-    <section id="start" aria-labelledby="start-heading">
+        return render_page_shell(
+                title=APP_NAME,
+                heading=APP_NAME,
+                skip_label="Skip to main CCLD review content",
+                nav_label="CCLD records review navigation",
+                eyebrow=SCAFFOLD_NOTICE,
+                extra_nav_links=(
+                        ("Start first CCLD review", "#start"),
+                        ("Feedback guidance", "#feedback"),
+                        ("Local/test boundaries", "#boundaries"),
+                        ("Health check", "/health"),
+                ),
+                main=f"""    <section id="start" aria-labelledby="start-heading">
       <h2 id="start-heading">Start here: CCLD facility request</h2>
+            <p>Request CCLD facility records, load validated local/test records, and review
+            source-derived complaint records with notes and status.</p>
       <p>Start a CCLD review session here. Find a CCLD facility in the local/test
       reference CSV or enter a facility/license number manually, then add an optional
       date range and review matching loaded local/test CCLD records in a guided queue.</p>
+            <section aria-labelledby="primary-actions-heading">
+                <h3 id="primary-actions-heading">Primary pilot actions</h3>
+                <ul>
+                    <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find a facility</a></li>
+                    <li><a href="{CCLD_RECORD_REQUEST_PATH}">Request or review loaded
+                    CCLD records</a></li>
+                      <li><a href="/reviewer">Review loaded local/test records</a></li>
+                    <li><a href="{FEEDBACK_PATH}">Submit or copy tester feedback</a></li>
+                </ul>
+            </section>
       <ol>
         <li>Open facility lookup if you do not know the facility/license number.</li>
         <li>Confirm whether the request context came from facility lookup or manual entry,
@@ -838,11 +831,8 @@ def render_app_shell() -> str:
         <li>Production sign-in, sessions, cookies, exports, deployment, and public
         launch behavior remain deferred.</li>
       </ul>
-    </section>
-  </main>
-</body>
-</html>
-"""
+        </section>""",
+        )
 
 
 def render_source_record_list(filters: SourceRecordFilters | None = None) -> str:
@@ -1488,27 +1478,22 @@ def _auth_required_response(heading: str, message: str) -> tuple[int, str, bytes
 
 
 def _auth_html_response(status: int, heading: str, message: str) -> tuple[int, str, bytes]:
-    body = f"""<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{html.escape(heading)} - {html.escape(APP_NAME)}</title>
-</head>
-<body>
-  <a href="#main-content">Skip to main content</a>
-  <header>
-    <p>{html.escape(SCAFFOLD_NOTICE)}</p>
-    <h1>{html.escape(heading)}</h1>
-  </header>
-  <main id="main-content" tabindex="-1">
+    body = render_page_shell(
+        title=heading,
+        heading=heading,
+        skip_label="Skip to main content",
+        nav_label="Auth placeholder navigation",
+        eyebrow=SCAFFOLD_NOTICE,
+        extra_nav_links=(
+            ("Open sign-in placeholder", AUTH_LOGIN_PATH),
+            ("Health check", "/health"),
+        ),
+        main=f"""
     <p>{html.escape(message)}</p>
     <p><a href="{AUTH_LOGIN_PATH}">Open sign-in placeholder</a></p>
     <p><a href="/">Return to scaffold home</a></p>
-  </main>
-</body>
-</html>
-""".encode()
+""",
+    ).encode()
     return status, "text/html; charset=utf-8", body
 
 

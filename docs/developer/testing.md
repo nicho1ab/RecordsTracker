@@ -207,6 +207,11 @@ guidance, active reference-source messages, selected facility carry-forward into
 direct browser crawling, no connector execution, no persistence, no source-derived/reviewer-created/audit/
 import/operational metadata mutation, accessible headings/labels/captions/link
 text, and no-secret HTML output.
+Hosted UI polish tests should prove the shared local/test shell renders on the
+home, facility lookup, CCLD request/help, reviewer, and feedback pages with a
+skip link, consistent navigation, source-of-record limitation footer, visible
+focus styles, responsive CSS, readable table/form styling, and no new routes,
+workflows, auth, retrieval capability, exports, or frontend dependencies.
 Hosted CCLD artifact builder tests should build fixture-backed validated SQLite
 output, convert it into hosted seeded-corpus JSON, validate the JSON through the
 existing hosted seeded parser, import it through the existing hosted seeded

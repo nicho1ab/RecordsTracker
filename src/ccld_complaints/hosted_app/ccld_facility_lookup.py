@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
+from ccld_complaints.hosted_app.ui_shell import render_page_shell
+
 CCLD_FACILITY_LOOKUP_PATH = "/ccld/facilities"
 CCLD_RECORD_REQUEST_PATH = "/ccld/records/request"
 DEFAULT_CCLD_FACILITY_REFERENCE_PATH = Path(
@@ -499,92 +501,13 @@ def _render_message_page(*, title: str, heading: str, message: str) -> str:
 
 
 def _page(*, title: str, heading: str, main: str) -> str:
-    return f"""<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{_escape(title)}</title>
-  <style>
-    body {{
-      color: #1f2937;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      line-height: 1.5;
-      margin: 0;
-    }}
-    header, main, footer {{
-      margin: 0 auto;
-      max-width: 72rem;
-      padding: 1rem;
-    }}
-    header {{
-      border-bottom: 1px solid #d1d5db;
-    }}
-    nav ul {{
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      list-style: none;
-      padding: 0;
-    }}
-    section {{
-      border-bottom: 1px solid #e5e7eb;
-      padding: 1rem 0;
-    }}
-    label {{
-      display: block;
-      font-weight: 650;
-      margin-bottom: 0.25rem;
-    }}
-    input {{
-      box-sizing: border-box;
-      font: inherit;
-      max-width: 24rem;
-      padding: 0.45rem;
-      width: 100%;
-    }}
-    button {{
-      font: inherit;
-      padding: 0.55rem 0.8rem;
-    }}
-    table {{
-      border-collapse: collapse;
-      width: 100%;
-    }}
-    caption {{
-      font-weight: 650;
-      margin-bottom: 0.5rem;
-      text-align: left;
-    }}
-    th, td {{
-      border: 1px solid #d1d5db;
-      padding: 0.5rem;
-      text-align: left;
-      vertical-align: top;
-    }}
-  </style>
-</head>
-<body>
-    <a href="#main-content">Skip to main CCLD facility lookup content</a>
-  <header>
-    <h1>{_escape(heading)}</h1>
-    <nav aria-label="Hosted scaffold navigation">
-      <ul>
-        <li><a href="/">Home</a></li>
-        <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find CCLD facility</a></li>
-        <li><a href="{CCLD_RECORD_REQUEST_PATH}">CCLD record request</a></li>
-        <li><a href="/ccld/help">How this works</a></li>
-      </ul>
-    </nav>
-  </header>
-    <main id="main-content" tabindex="-1">
-{main}
-  </main>
-  <footer>
-    <p>Local/test hosted reviewer scaffold.</p>
-  </footer>
-</body>
-</html>"""
+        return render_page_shell(
+                title=title,
+                heading=heading,
+                main=main,
+                skip_label="Skip to main CCLD facility lookup content",
+                nav_label="Hosted scaffold navigation",
+        )
 
 
 def _first_query_value(query_values: dict[str, list[str]], key: str) -> str:
