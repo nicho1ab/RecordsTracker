@@ -8,7 +8,9 @@ tester pilot. It complements `.env.example`,
 capturing proof that PostgreSQL-backed source-derived CCLD records are loaded
 before testers begin review. Use
 [QNAP pilot auth readiness](qnap-pilot-auth-readiness.md) when capturing the
-current production-mode auth boundary and deferred real-login work.
+current production-mode auth boundary and deferred real-login work. Use
+[QNAP pilot tester invitation decision](qnap-pilot-tester-invitation-decision.md)
+before inviting testers.
 
 ## 1. Pilot Purpose And Scope
 
@@ -36,6 +38,8 @@ current production-mode auth boundary and deferred real-login work.
   callback URLs, private URLs, or account-specific settings are in committed
   files.
 - Confirm the auth readiness notes are reviewed before inviting testers.
+- Confirm the tester invitation/access-control decision is recorded before
+  inviting testers.
 - Confirm the operator has a plan for collecting route-check evidence and known
   limitation acknowledgements before inviting testers.
 
@@ -182,6 +186,8 @@ docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic u
 - Capture auth readiness evidence that production auth mode is active,
   local-dev auth is disabled, `/auth/status` is safe, and real login/session
   work remains deferred.
+- Capture the tester invitation/access-control decision: who is invited, role,
+  scope, approval, revocation plan, and feedback triage owner.
 - Capture seeded import evidence that `hosted_import_batches` and
   `hosted_source_derived_records` contain validated PostgreSQL-backed CCLD rows
   before treating the pilot as tester-ready. The optional read-only
@@ -229,3 +235,5 @@ docker compose -f docker-compose.qnap.yml --env-file .env up --build -d
 - Do not treat completed retrieval as proof of public-source completeness.
 - Do not make legal, facility-wide, harm, abuse, neglect, liability, or
   completeness conclusions from the hosted pilot.
+- Do not invite testers until the access method, role/scope, and revocation plan
+  are deliberately approved.

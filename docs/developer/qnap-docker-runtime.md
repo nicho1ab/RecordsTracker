@@ -122,6 +122,9 @@ Before inviting early testers, use the full
 For auth readiness, use [QNAP pilot auth readiness](qnap-pilot-auth-readiness.md)
 to confirm production auth mode, disabled local-dev auth, safe `/auth/status`,
 and deferred real login/session work.
+Before inviting testers, use
+[QNAP pilot tester invitation decision](qnap-pilot-tester-invitation-decision.md)
+to record approved invitees, role/scope, revocation, and evidence requirements.
 For proof that PostgreSQL-backed CCLD source-derived rows are actually imported,
 use [QNAP pilot seeded import evidence](qnap-pilot-seeded-import-evidence.md).
 The optional `scripts/summarize-qnap-pilot-seeded-import-evidence.ps1` command

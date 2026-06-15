@@ -34,6 +34,10 @@ Use
 to capture the current production-mode auth boundary, deferred login/OIDC work,
 and no-secret host-local provider settings before inviting testers.
 Use
+[docs/developer/qnap-pilot-tester-invitation-decision.md](docs/developer/qnap-pilot-tester-invitation-decision.md)
+to record the invitation/access-control decision, tester role/scope, revocation
+plan, and required evidence packet before inviting testers.
+Use
 [docs/developer/qnap-pilot-seeded-import-evidence.md](docs/developer/qnap-pilot-seeded-import-evidence.md)
 to capture proof that validated CCLD source-derived rows are imported into
 PostgreSQL before treating the pilot as tester-ready.
