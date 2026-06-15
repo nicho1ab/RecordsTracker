@@ -478,6 +478,13 @@ the governed primary future review experience.
 	templates, new note fields, parser/extraction changes, schema, persistence,
 	source scoring, source verification workflow, live browser retrieval, connector
 	execution, or non-CCLD scope.
+- Improved local/test reviewer detail feedback checklist bridge cues so testers
+	can carry source traceability, source-confidence, field-note, note/status
+	confirmation, return-to-queue, queue refresh, next-record, wording, label, or
+	workflow-friction observations into the existing manual checklist without
+	adding duplicate checklist behavior, persisted feedback, exports, schema
+	changes, parser/extraction changes, live browser retrieval, connector
+	execution, or non-CCLD scope.
 
 - Improved the local/test CCLD facility lookup and request/result queue context
 	confirmation so testers can see whether a request came from lookup selection or

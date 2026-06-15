@@ -234,7 +234,7 @@ clear available/missing traceability cues, source-confidence cues for present,
 missing, and proxy-flagged local/test complaint fields, field-note guidance for
 cautious reviewer-created observations, safe related seeded bundle context,
 reviewer-created notes/statuses, CCLD return links, and record-specific
-feedback handoff cues, submit a bounded reviewer note, submit
+feedback handoff and checklist bridge cues, submit a bounded reviewer note, submit
 a bounded reviewer status, see a saved-state confirmation with same-request
 return-to-queue progress and next-record navigation guidance, and see
 read-after-write reviewer-created state on the page. No-search-results,
@@ -258,6 +258,9 @@ completeness assertions.
 Field-note guidance is also presentation-only. It does not generate notes, store
 note templates, add note fields, edit source-derived records, or create source-
 verification workflow behavior.
+Feedback checklist bridge cues point to the existing manual checklist only. They
+do not create a duplicate checklist, persist feedback, send feedback, export
+feedback, or add a feedback workflow.
 
 The UI does not implement production sign-in, real OpenID Connect login, auth
 middleware, token validation, sessions, cookies, provider registration, client

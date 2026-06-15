@@ -95,7 +95,8 @@
   note/status indicators, open detail, view safe source traceability fields plus
   clear local/test missing-value guidance, view presentation-only source-confidence
   cues for present, missing, and proxy-flagged local/test complaint fields, view
-  field-note guidance for cautious reviewer-created observations, and safe related
+  field-note guidance for cautious reviewer-created observations, view feedback
+  checklist bridge cues that point to the existing manual checklist, and safe related
   seeded bundle context, see record-summary and record-specific feedback handoff guidance,
   submit a bounded reviewer note, submit a bounded reviewer status, see
   saved-state confirmations with same-request return-to-queue progress and
@@ -114,7 +115,8 @@
   clear reviewer-created state, execute persisted planning or execution-plan metadata, mutate
   planning metadata or reviewer-created state through reads, add source-confidence
   scoring, generate reviewer notes, store note templates, add note fields,
-  automate source verification, assert source completeness, change parser/
+  create duplicate checklists, persist feedback, export feedback, automate source
+  verification, assert source completeness, change parser/
   extraction behavior, add schema/persistence, persist
   audit events beyond successful reviewer-created state scaffold writes,
   authenticate browser users, validate

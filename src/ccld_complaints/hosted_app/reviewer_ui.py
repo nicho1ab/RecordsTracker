@@ -2039,6 +2039,9 @@ def _render_detail_feedback_guidance(
             <p>If source traceability fields are confusing or missing, report the field label and
             the wording shown on this page. Do not treat missing local/test traceability display
             as proof of public-source completeness or absence.</p>
+            <p>Feedback remains manual-copy only. Return to the same CCLD request queue,
+            resubmit the request when needed, and use the existing manual feedback checklist;
+            this detail page does not create a second checklist or save feedback.</p>
             <dl>
                 <dt>Facility/license number</dt>
                 <dd>{_escape(_facility_context_value(facility, 'external_facility_number'))}</dd>
@@ -2068,6 +2071,25 @@ def _render_detail_feedback_guidance(
                     context and resubmitting showed understandable progress and status cues.</li>
                     <li>Friction: confusing labels, wording, keyboard flow, or next steps that
                     slowed record review.</li>
+                </ul>
+            </section>
+            <section aria-labelledby="feedback-checklist-bridge-heading">
+                <h3 id="feedback-checklist-bridge-heading">Manual feedback checklist bridge</h3>
+                <p>Use the existing manual feedback checklist on the CCLD request queue for
+                record-specific observations from this detail. Do not create a separate
+                checklist from this page.</p>
+                <ul>
+                    <li>Source traceability: note fields that were easy to confirm, missing, or
+                    confusing.</li>
+                    <li>Source-confidence cues: note present values, values not available in the
+                    local/test record, or proxy-flag context that affected review.</li>
+                    <li>Field-note uncertainty: note wording you were unsure how to phrase after
+                    checking source traceability.</li>
+                    <li>Note/status confirmation: note whether the saved reviewer-created state
+                    appeared and stayed separate from source-derived fields.</li>
+                    <li>Return-to-queue flow: note whether returning to the same request context,
+                    refreshing queue progress, or choosing the suggested next record was
+                    confusing.</li>
                 </ul>
             </section>
             <ul>
@@ -2135,7 +2157,8 @@ def _render_notice(
                 on the same request context and existing reviewer-created note/status cues.</p>
                 <p>If the saved confirmation, same-context return link, or refreshed queue cue
                 did not behave as expected, include that record-specific observation in the
-                manual feedback checklist.</p>
+                existing manual feedback checklist. Also carry forward any source traceability,
+                source-confidence, or field-note wording that was confusing for this record.</p>
                 <dl>
                     <dt>Same facility/license number</dt>
                     <dd>{_escape(_display_value(return_context.facility_number))}</dd>

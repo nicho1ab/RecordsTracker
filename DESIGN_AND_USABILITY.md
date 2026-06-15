@@ -124,6 +124,11 @@ should tell testers what source traceability, source context, note/status
 confirmation, same-queue return, queue refresh, unexpected-record, confusing
 label, wording, keyboard-flow, or next-step observations to carry into the
 existing manual checklist without adding a new feedback workflow.
+Reviewer detail checklist bridge cues should connect source-confidence,
+field-note, source-traceability, note/status confirmation, and return-to-queue
+observations to that same existing manual checklist. They must not duplicate the
+checklist, create a new feedback form, persist feedback, send feedback, or imply
+export/audit workflow behavior.
 Reviewer detail and request-queue navigation should make next-record movement
 clear without implying persisted assignment, record claiming, or production
 workflow state. Suggested-next cues should remain derived from the current

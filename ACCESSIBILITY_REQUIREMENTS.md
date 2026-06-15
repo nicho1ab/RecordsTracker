@@ -64,6 +64,9 @@ Accessibility requirements apply to:
 	Reviewer detail feedback handoff cues must be visible text near detail feedback
 	guidance and must name record-specific observations a tester can carry into the
 	manual checklist without requiring JavaScript or persisted feedback.
+	Reviewer detail checklist bridge cues must visibly point to the existing manual
+	feedback checklist and must not rely on JavaScript, color, a second checklist,
+	or persisted feedback state.
 - The local/test hosted CCLD record request page must use semantic headings,
 	labeled facility/license number and date controls, accessible validation
 	messages, labeled local validated load controls, table captions/headings for

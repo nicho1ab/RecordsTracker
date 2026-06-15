@@ -54,7 +54,8 @@ experience.
    before adding notes or status, use field-note guidance to phrase reviewer-
    created observations cautiously, describe missing local/test values without
    implying public-source absence or data loss, use record-specific feedback
-   handoff cues, see clearer note/status
+   handoff and checklist bridge cues to carry observations into the existing
+   manual feedback checklist, see clearer note/status
    save confirmations, return to the same CCLD
    request context to resubmit when needed, see updated queue cues, continue to
    the next suggested queue record after notes/statuses without persisted queue
