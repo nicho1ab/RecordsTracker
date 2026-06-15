@@ -242,6 +242,9 @@ public-record review notes.
    for QNAP pilot mode.
 - Use [docs/developer/qnap-pilot-operator-checklist.md](docs/developer/qnap-pilot-operator-checklist.md)
    for the operator checklist before inviting early ylc.org testers.
+- Use [docs/developer/qnap-pilot-seeded-import-evidence.md](docs/developer/qnap-pilot-seeded-import-evidence.md)
+   to capture proof that validated CCLD source-derived rows are imported into
+   PostgreSQL before treating the QNAP pilot as tester-ready.
 - Use [docs/developer/cloud-portability-deployment.md](docs/developer/cloud-portability-deployment.md)
    to compare QNAP, AWS, Azure, DigitalOcean, Render, Fly.io, Railway, Supabase,
    and Neon deployment shapes while keeping app runtime, PostgreSQL, raw file

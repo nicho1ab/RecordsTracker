@@ -29,6 +29,10 @@ On the Docker host, use this QNAP pilot setup path:
 Use the full operator checklist in
 [docs/developer/qnap-pilot-operator-checklist.md](docs/developer/qnap-pilot-operator-checklist.md)
 before inviting early testers.
+Use
+[docs/developer/qnap-pilot-seeded-import-evidence.md](docs/developer/qnap-pilot-seeded-import-evidence.md)
+to capture proof that validated CCLD source-derived rows are imported into
+PostgreSQL before treating the pilot as tester-ready.
 
 1. Copy `.env.example` to `.env` and keep `.env` untracked.
 2. Replace the PostgreSQL password placeholder.
@@ -67,6 +71,12 @@ Run migrations manually when needed:
 ```powershell
 docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic upgrade head
 ```
+
+After importing a validated CCLD hosted artifact or seeded corpus, capture
+validated import batch counts, source-derived row counts, safe traceability
+linkage counts, route results, feedback configuration decision, retrieval
+configuration decision, and backup acknowledgements using the seeded import
+evidence guide.
 
 After containers are running, verify the pilot workflow:
 
