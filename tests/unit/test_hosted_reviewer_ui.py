@@ -297,6 +297,9 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "appear below after saving" in normalized_html
     assert "Save reviewer note for this record" in html
     assert f"action=\"{REVIEWER_UI_NOTE_PATH}\"" in html
+    assert "Return to the same CCLD queue" in html
+    assert "submit the request again to see queue progress" in normalized_html
+    assert "return_facility_number" in html
     assert "Set reviewer status" in html
     assert "Reviewer queue status for this record" in html
     assert "Status is reviewer-created local/test state for" in normalized_html
@@ -386,6 +389,11 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
                 {
                     "source_record_key": COMPLAINT_KEY,
                     "note_text": "Review source traceability before export.",
+                    "return_facility_number": "157806098",
+                    "return_start_date": "2022-08-01",
+                    "return_end_date": "2022-08-31",
+                    "return_context_origin": "facility_lookup",
+                    "return_lookup_facility_name": "A. MIRIAM JAMISON",
                 }
             ),
             reviewer_ui_context=reviewer_ui_context_for_connection(
@@ -403,6 +411,7 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
         [audit_event] = connection.execute(select(hosted_audit_events)).mappings().all()
 
     html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
@@ -418,6 +427,14 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert "Reviewer note saved for this record" in html
     assert "The note now appears in reviewer-created state below" in html
     assert "Return to CCLD request queue" in html
+    assert "Return and refresh queue progress" in html
+    assert "Queue progress and note/status cues are derived from reviewer-created state" in html
+    assert "same facility/license number and date range" in normalized_html
+    assert "submit the request again" in html
+    assert "continuing to the next record" in html
+    assert "157806098" in html
+    assert "2022-08-01 to 2022-08-31" in html
+    assert "return_facility_number=157806098" in html
     assert "Review saved notes and statuses below" in html
     assert "Review source traceability before export." in html
     assert "reviewer_note_scaffold" in html
@@ -495,6 +512,9 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
                 {
                     "source_record_key": COMPLAINT_KEY,
                     "reviewer_status": "needs_follow_up",
+                    "return_facility_number": "157806098",
+                    "return_start_date": "2022-08-01",
+                    "return_end_date": "2022-08-31",
                 }
             ),
             reviewer_ui_context=reviewer_ui_context_for_connection(
@@ -527,6 +547,11 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "Reviewer status saved for this record" in html
     assert "The status now appears in reviewer-created state below" in html
     assert "Return to CCLD request queue" in html
+    assert "Return and refresh queue progress" in html
+    assert "Queue progress and note/status cues are derived from reviewer-created state" in html
+    assert "submit the request again" in html
+    assert "continuing to the next record" in html
+    assert "return_facility_number=157806098" in html
     assert "Review saved notes and statuses below" in html
     assert "reviewer_status_scaffold" in html
     assert "needs_follow_up" in html

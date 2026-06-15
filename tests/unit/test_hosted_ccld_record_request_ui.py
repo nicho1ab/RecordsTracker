@@ -267,6 +267,8 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Start over with a different CCLD facility" in html
     assert "This queue is tied to the request context confirmed above" in normalized_html
     assert "CCLD review queue" in html
+    assert "return here with the same facility/date request context" in normalized_html
+    assert "note/status cues derived from reviewer-created state" in normalized_html
     assert "First-run queue steps" in html
     assert "Read the queue progress and triage summaries" in html
     assert "Return to this request page and copy the feedback checklist" in normalized_html
@@ -292,6 +294,9 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "A. MIRIAM JAMISON" in html
     assert "32-CR-20220407124448" in html
     assert detail_href in html
+    assert "return_facility_number=157806098" in html
+    assert "return_start_date=2022-08-01" in html
+    assert "return_end_date=2022-08-31" in html
     assert "Complete source traceability" in html
     assert "Records with source traceability available</dt>" in html
     assert "No reviewer notes or status yet" in html
@@ -392,6 +397,12 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
     assert "Reviewer status saved for this record" in status_html
     assert "Return to CCLD request queue" in note_html
     assert "Return to CCLD request queue" in status_html
+    assert "Queue progress and note/status cues are derived from reviewer-created state" in (
+        note_html
+    )
+    assert "Queue progress and note/status cues are derived from reviewer-created state" in (
+        status_html
+    )
     assert reviewed_status == 200
     assert "Latest reviewer status: Reviewed" in reviewed_html
     assert "1 reviewer note(s)" in reviewed_html

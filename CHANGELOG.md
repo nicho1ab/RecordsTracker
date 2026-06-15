@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Improved local/test reviewer note/status saved confirmations and queue wording
+	so testers know queue progress and note/status cues are derived from
+	reviewer-created state, may require resubmitting the same CCLD request context,
+	and can continue to the next record without adding persistence, queue state,
+	live retrieval, connector execution, schema changes, or non-CCLD scope.
 - Improved the local/test reviewer detail source traceability section with clearer
 	selected-record identifiers, available/missing traceability cues, local/test
 	boundary language, and pre-note/status guidance without adding schema,
