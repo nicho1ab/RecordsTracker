@@ -61,21 +61,32 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert "Local/test reviewer records" in html
     assert "Local/test reviewer UI shell" in html
     assert "Search seeded review records" in html
+    assert "Open CCLD request or queue" in html
+    assert "Open CCLD workflow help" in html
     assert "Seeded source-derived review list" in html
+    assert "Reviewer queue triage summary" in html
+    assert "Total visible records" in html
+    assert "Records with reviewer notes" in html
+    assert "Records with reviewer status" in html
+    assert "Records with source traceability available" in html
+    assert "Suggested next record to open" in html
     assert "Reviewer state" in html
     assert "Notes" in html
     assert "Latest status" in html
+    assert "Suggested queue cue" in html
     assert "Latest reviewer state at" in html
     assert "No reviewer state yet" in html
     assert "No reviewer notes" in html
     assert "No reviewer status" in html
     assert "No reviewer-created state yet" in html
+    assert "Source traceability available" in html
+    assert "Open next to begin review" in html
     assert "32-CR-20220407124448" in html
     assert COMPLAINT_KEY in html
-    assert "6088c9627374baac647e2f2a54f6e389cb68c1b92db42da00020aaf508a853bd" in html
+    assert "raw SHA-256" in html
     assert "Source-derived records remain separate from reviewer-created notes" in normalized_html
     assert "This shell does not implement production sign-in" in normalized_html
-    assert "Open detail" in html
+    assert "Open reviewer detail for 32-CR-20220407124448" in html
     assert_no_secret_html(html)
 
 
@@ -108,6 +119,8 @@ def test_reviewer_ui_landing_shows_reviewer_created_state_indicators() -> None:
     assert "Reviewed" in html
     assert "1 reviewer note" in html
     assert "reviewed" in html
+    assert "Reviewer queue triage summary" in html
+    assert "Open only if reviewed context needs checking" in html
     assert status_row.created_at in html
     assert note.created_at in html or status_row.created_at in html
     assert "No reviewer state yet" not in html

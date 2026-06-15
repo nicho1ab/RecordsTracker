@@ -137,12 +137,26 @@ _SOURCE_CONTEXT_ENTITY_ORDER = {
     "extraction_audit": 5,
 }
 _REVIEWER_STATUS_LABELS = {
-    "not_started": "Needs review",
+    "not_started": "Not started",
     "in_review": "In review",
-    "needs_follow_up": "Needs review",
+    "needs_follow_up": "Needs follow-up",
     "reviewed": "Reviewed",
     "blocked": "Blocked",
 }
+_REVIEWER_STATUS_ORDER = (
+    "not_started",
+    "in_review",
+    "needs_follow_up",
+    "reviewed",
+    "blocked",
+)
+_NEXT_REVIEW_STATUS_ORDER = (
+    "not_started",
+    "in_review",
+    "needs_follow_up",
+    "blocked",
+    "reviewed",
+)
 _DEFAULT_ACTOR = object()
 
 
@@ -543,7 +557,7 @@ def _render_record_list(
     )
     if not rows:
         rows = """        <tr>
-                    <td colspan="10">No seeded source-derived review records match the
+                    <td colspan="11">No seeded source-derived review records match the
                     current search.</td>
         </tr>"""
         returned_count = _int_value(_mapping(queue, "pagination"), "returned_count")
@@ -555,10 +569,18 @@ def _render_record_list(
     {_render_scope_notice(workflow)}
     <section aria-labelledby="reviewer-search-heading">
       <h2 id="reviewer-search-heading">Find seeded review records</h2>
+            <p>Use this list when you need the broader local/test reviewer queue outside a
+            specific CCLD request result. For the first MVP path, start from the CCLD
+            facility lookup or request page when possible.</p>
+            {_render_reviewer_queue_navigation()}
       <form action="{REVIEWER_UI_RECORDS_PATH}" method="get">
         <p>
           <label for="q">Search seeded review records</label>
-          <input id="q" name="q" type="search" value="{_escape(search_query)}">
+                    <input id="q" name="q" type="search" value="{_escape(search_query)}"
+                        aria-describedby="reviewer-search-help">
+                    <span id="reviewer-search-help">Search by source record key,
+                    complaint control number, finding, source document ID, or facility ID
+                    already loaded locally.</span>
         </p>
         <p>
           <button type="submit">Search</button>
@@ -570,19 +592,22 @@ def _render_record_list(
     <section aria-labelledby="reviewer-list-heading">
       <h2 id="reviewer-list-heading">Seeded source-derived review list</h2>
             <p>Showing {len(records)} of {returned_count} seeded complaint records.</p>
+                        {_render_reviewer_queue_summary(records, state_summaries)}
       <table>
-        <caption>Seeded local/test source-derived records available for reviewer actions</caption>
+                <caption>Seeded local/test CCLD complaint records available for reviewer
+                actions</caption>
         <thead>
           <tr>
-            <th scope="col">Open</th>
+                        <th scope="col">Review action</th>
                         <th scope="col">Source record key</th>
             <th scope="col">Complaint control number</th>
             <th scope="col">Facility ID</th>
             <th scope="col">Finding</th>
-            <th scope="col">Raw SHA-256</th>
+                        <th scope="col">Source traceability cue</th>
                         <th scope="col">Reviewer state</th>
                         <th scope="col">Notes</th>
                         <th scope="col">Latest status</th>
+                                                <th scope="col">Suggested queue cue</th>
                         <th scope="col">Latest reviewer state at</th>
           </tr>
         </thead>
@@ -620,6 +645,65 @@ def _render_no_results_notice(
         </section>"""
 
 
+def _render_reviewer_queue_navigation() -> str:
+    return f"""<nav aria-label="Reviewer queue navigation">
+            <ul>
+                <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find a CCLD facility</a></li>
+                <li><a href="{CCLD_RECORD_REQUEST_PATH}">Open CCLD request or queue</a></li>
+                <li><a href="{CCLD_HELP_PATH}">Open CCLD workflow help</a></li>
+            </ul>
+        </nav>"""
+
+
+def _render_reviewer_queue_summary(
+    records: list[Mapping[str, Any]],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+) -> str:
+    counts = _reviewer_queue_status_counts(records, state_summaries)
+    note_count = sum(
+        1
+        for record in records
+        if _summary_int(_state_summary_for_item(record, state_summaries), "note_count") > 0
+    )
+    status_count = sum(
+        1
+        for record in records
+        if _summary_optional_string(
+            _state_summary_for_item(record, state_summaries),
+            "latest_status",
+        )
+    )
+    traceability_count = sum(1 for record in records if _has_visible_traceability(record))
+    next_record = _next_review_item(records, state_summaries)
+    return f"""<section aria-labelledby="reviewer-queue-summary-heading">
+        <h3 id="reviewer-queue-summary-heading">Reviewer queue triage summary</h3>
+        <p>This summary uses only loaded source-derived records and existing reviewer-created
+        note/status rows. It does not save queue state or change source-derived records.</p>
+        <dl>
+            <dt>Total visible records</dt>
+            <dd>{len(records)}</dd>
+            <dt>Not started</dt>
+            <dd>{counts['not_started']}</dd>
+            <dt>In review</dt>
+            <dd>{counts['in_review']}</dd>
+            <dt>Needs follow-up</dt>
+            <dd>{counts['needs_follow_up']}</dd>
+            <dt>Reviewed</dt>
+            <dd>{counts['reviewed']}</dd>
+            <dt>Blocked</dt>
+            <dd>{counts['blocked']}</dd>
+            <dt>Records with reviewer notes</dt>
+            <dd>{note_count}</dd>
+            <dt>Records with reviewer status</dt>
+            <dd>{status_count}</dd>
+            <dt>Records with source traceability available</dt>
+            <dd>{traceability_count}</dd>
+            <dt>Suggested next record to open</dt>
+            <dd>{_next_review_item_markup(next_record, state_summaries)}</dd>
+        </dl>
+    </section>"""
+
+
 def _render_review_item_row(
     item: Mapping[str, Any],
     state_summaries: Mapping[str, Mapping[str, Any]],
@@ -634,18 +718,129 @@ def _render_review_item_row(
         f"{urlencode({'source_record_key': source_record_key})}"
     )
     state_summary = state_summaries.get(source_record_key, _empty_state_summary())
+    action_label = _review_action_label(original_values)
     return f"""        <tr>
-          <td><a href="{_escape(detail_href)}">Open detail</a></td>
+            <td><a href="{_escape(detail_href)}">{_escape(action_label)}</a></td>
           <td>{_escape(source_record_key)}</td>
           <td>{_escape(_optional_string(original_values, 'complaint_control_number'))}</td>
           <td>{_escape(_optional_string(identity, 'facility_id'))}</td>
           <td>{_escape(_optional_string(original_values, 'finding'))}</td>
-          <td>{_escape(_optional_string(source_document, 'raw_sha256'))}</td>
+          <td>{_escape(_source_traceability_cue(source_document))}</td>
           <td>{_escape(_state_summary_text(state_summary))}</td>
           <td>{_escape(_notes_indicator_text(state_summary))}</td>
           <td>{_escape(_latest_status_text(state_summary))}</td>
+          <td>{_escape(_queue_cue_text(state_summary))}</td>
           <td>{_escape(_latest_created_at_text(state_summary))}</td>
         </tr>"""
+
+
+def _review_action_label(original_values: Mapping[str, Any]) -> str:
+    complaint_control_number = original_values.get("complaint_control_number")
+    if _has_display_value(complaint_control_number):
+        return f"Open reviewer detail for {_display_value(complaint_control_number)}"
+    return "Open reviewer detail for this complaint record"
+
+
+def _source_traceability_cue(source_document: Mapping[str, Any]) -> str:
+    fields = (
+        ("source URL", source_document.get("source_url")),
+        ("raw SHA-256", source_document.get("raw_sha256")),
+        ("connector", source_document.get("connector_name")),
+        ("retrieval time", source_document.get("retrieved_at")),
+    )
+    present = [label for label, value in fields if _has_display_value(value)]
+    if len(present) == len(fields):
+        return "Source traceability available: source URL, raw SHA-256, connector, retrieval time."
+    if present:
+        return "Partial source traceability available: " + ", ".join(present) + "."
+    return "Source traceability not visible in this local/test row."
+
+
+def _queue_cue_text(summary: Mapping[str, Any]) -> str:
+    status = _reviewer_queue_status(summary)
+    note_count = _summary_int(summary, "note_count")
+    if status == "not_started" and note_count == 0:
+        return "Open next to begin review."
+    if status == "not_started":
+        return "Open next to review existing notes."
+    if status == "in_review":
+        return "Open next to continue review."
+    if status == "needs_follow_up":
+        return "Open next to resolve follow-up."
+    if status == "blocked":
+        return "Open when blocker context is needed."
+    return "Open only if reviewed context needs checking."
+
+
+def _reviewer_queue_status(summary: Mapping[str, Any]) -> str:
+    latest_status = _summary_optional_string(summary, "latest_status")
+    if latest_status in _REVIEWER_STATUS_LABELS:
+        return latest_status
+    return "not_started"
+
+
+def _reviewer_queue_status_counts(
+    records: list[Mapping[str, Any]],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+) -> dict[str, int]:
+    counts = {status: 0 for status in _REVIEWER_STATUS_ORDER}
+    for record in records:
+        counts[_reviewer_queue_status(_state_summary_for_item(record, state_summaries))] += 1
+    return counts
+
+
+def _state_summary_for_item(
+    item: Mapping[str, Any],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+) -> Mapping[str, Any]:
+    source_record = _mapping(item, "source_record")
+    identity = _mapping(source_record, "identity")
+    source_record_key = _string(identity, "source_record_key")
+    return state_summaries.get(source_record_key, _empty_state_summary())
+
+
+def _has_visible_traceability(item: Mapping[str, Any]) -> bool:
+    source_record = _mapping(item, "source_record")
+    source_document = _mapping(source_record, "source_document")
+    return all(
+        _has_display_value(source_document.get(key))
+        for key in ("source_url", "raw_sha256", "connector_name", "retrieved_at")
+    )
+
+
+def _next_review_item(
+    records: list[Mapping[str, Any]],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+) -> Mapping[str, Any] | None:
+    for status in _NEXT_REVIEW_STATUS_ORDER:
+        for record in records:
+            if _reviewer_queue_status(_state_summary_for_item(record, state_summaries)) == status:
+                return record
+    return None
+
+
+def _next_review_item_markup(
+    item: Mapping[str, Any] | None,
+    state_summaries: Mapping[str, Mapping[str, Any]],
+) -> str:
+    if item is None:
+        return "No visible seeded complaint record is available."
+    source_record = _mapping(item, "source_record")
+    identity = _mapping(source_record, "identity")
+    original_values = _mapping(source_record, "original_values")
+    source_record_key = _string(identity, "source_record_key")
+    detail_href = (
+        f"{REVIEWER_UI_DETAIL_PATH}?"
+        f"{urlencode({'source_record_key': source_record_key})}"
+    )
+    status = _REVIEWER_STATUS_LABELS[
+        _reviewer_queue_status(_state_summary_for_item(item, state_summaries))
+    ]
+    label = _display_value(original_values.get("complaint_control_number") or source_record_key)
+    return (
+        f'<a href="{_escape(detail_href)}">Open reviewer detail for {_escape(label)}</a> '
+        f'({_escape(status)})'
+    )
 
 
 def _state_summaries_by_source_record(

@@ -49,7 +49,9 @@
   validated hosted seeded-corpus output through the existing source-derived
   import path, renders matching complaints as a guided facility/date-scoped
   request result queue with first-time help, progress counts, reviewer-status
-  filtering, and a structured copyable tester feedback checklist, links matches
+  filtering, reviewer note/status cues, source-traceability availability cues,
+  suggested next-record links, filtered-empty guidance, and a structured
+  copyable tester feedback checklist, links matches
   into the reviewer UI, and explains the explicit
   external CCLD live-fetch and local/test artifact-builder commands when broader retrieval is needed without
   running live crawling, connector execution, reviewer-created state mutation,

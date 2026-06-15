@@ -130,7 +130,9 @@ deferred no-match behavior, reviewer UI links after load, no browser live
 crawling, no generic connector execution, no reviewer-created state or audit
 mutation, no operational metadata mutation, guided request result queue
 rendering, help page rendering, contextual facility/date/load/review help,
-first-time workflow overview, deterministic copyable feedback checklist guidance
+first-time workflow overview, queue triage summaries, reviewer note/status cues,
+source-traceability availability cues, suggested next-record links,
+filtered-empty guidance, deterministic copyable feedback checklist guidance
 without persistence, accessibility-oriented headings/labels/captions/link text,
 and no-secret HTML output.
 Hosted CCLD facility lookup tests should cover committed tiny fixture fallback,

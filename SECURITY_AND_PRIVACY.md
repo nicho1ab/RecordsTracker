@@ -112,7 +112,9 @@ seeded complaint rows into the reviewer UI. The page can also render first-time
 workflow help, feedback guidance without persistence, a structured copyable
 feedback checklist that testers must paste into an external channel manually,
 and a guided request result queue over safe CCLD complaint context with progress
-counts and status filters derived from existing reviewer-created state. Its HTML output must
+counts, reviewer note/status cues, source-traceability availability cues,
+suggested next-record links, filtered-empty guidance, and status filters derived
+from existing reviewer-created state. Its HTML output must
 remain limited to safe scalar source-derived context, source traceability-style
 identifiers, reviewer-state indicators, queue counts, local/test boundary text,
 local validated load counts, non-persistent checklist prompts, and the explicit

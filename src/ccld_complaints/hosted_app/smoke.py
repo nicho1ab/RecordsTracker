@@ -4,13 +4,26 @@ import argparse
 import json
 import threading
 from typing import Any
-from urllib.request import urlopen
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 from ccld_complaints.hosted_app.app import create_server, format_host
 
 
 def _read_url(url: str) -> tuple[int, bytes]:
     with urlopen(url, timeout=5) as response:
+        return response.status, response.read()
+
+
+def _post_form_url(url: str, payload: dict[str, str]) -> tuple[int, bytes]:
+    body = urlencode(payload).encode("utf-8")
+    request = Request(
+        url,
+        data=body,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        method="POST",
+    )
+    with urlopen(request, timeout=5) as response:
         return response.status, response.read()
 
 
@@ -29,6 +42,14 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
                 f"{base_url}/ccld/facilities?q=orchard"
             )
             ccld_status, ccld_body = _read_url(f"{base_url}/ccld/records/request")
+            ccld_queue_status, ccld_queue_body = _post_form_url(
+                f"{base_url}/ccld/records/request",
+                {
+                    "facility_number": "157806098",
+                    "start_date": "2022-08-01",
+                    "end_date": "2022-08-31",
+                },
+            )
             reviewer_status, reviewer_body = _read_url(f"{base_url}/reviewer")
             reviewer_detail_status, reviewer_detail_body = _read_url(
                 f"{base_url}/reviewer/records/detail?"
@@ -67,6 +88,14 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Feedback guidance" not in ccld_body
     ):
         raise RuntimeError("Hosted scaffold CCLD request shell did not return the request page.")
+    if (
+        ccld_queue_status != 200
+        or b"CCLD review queue" not in ccld_queue_body
+        or b"Queue triage summary" not in ccld_queue_body
+        or b"Suggested next record to open" not in ccld_queue_body
+        or b"Copy tester feedback checklist" not in ccld_queue_body
+    ):
+        raise RuntimeError("Hosted scaffold CCLD request queue did not return triage guidance.")
     if (
         ccld_facilities_status != 200
         or b"Find CCLD facility" not in ccld_facilities_body

@@ -61,6 +61,13 @@ _STATUS_LABELS = {
     "reviewed": "Reviewed",
     "blocked": "Blocked",
 }
+_NEXT_REVIEW_STATUS_ORDER = (
+    "not_started",
+    "in_review",
+    "needs_follow_up",
+    "blocked",
+    "reviewed",
+)
 _SECRET_HTML_MARKERS = (
     "authorization",
     "client_secret",
@@ -613,9 +620,7 @@ def _render_matched_result(
     filtered_queue_items = _filtered_queue_items(queue_items, request.reviewer_status_filter)
     rows = "\n".join(_render_queue_row(request, item) for item in filtered_queue_items)
     if not rows:
-        rows = """          <tr>
-            <td colspan="8">No complaint records are available in this CCLD request result.</td>
-          </tr>"""
+        rows = _render_empty_filtered_queue_row(request)
     load_text = _load_status_text(import_reload_result)
     return _page(
         title="CCLD request results",
@@ -637,7 +642,9 @@ def _render_matched_result(
             or set a reviewer status.</p>
             <p>After reviewing a record, return here and submit the same request to see
             progress and reviewer status updates from existing reviewer-created state.</p>
+            {_render_queue_navigation()}
             {_render_queue_progress_summary(queue_items)}
+            {_render_queue_triage_summary(request, queue_items)}
             {_render_queue_filter_form(request)}
             <p>Showing {len(filtered_queue_items)} of {len(queue_items)} matching complaint
             record(s) for queue filter {_escape(_status_label(request.reviewer_status_filter))}.</p>
@@ -820,6 +827,8 @@ def _render_queue_progress_summary(items: tuple[CcldRequestQueueItem, ...]) -> s
     counts = _queue_status_counts(items)
     return f"""<section aria-labelledby="queue-progress-heading">
       <h3 id="queue-progress-heading">Queue progress summary</h3>
+            <p>Counts use existing reviewer-created status rows. Records without a saved
+            status are counted as not started.</p>
       <dl>
         <dt>Total matching complaint records</dt>
         <dd>{len(items)}</dd>
@@ -837,6 +846,88 @@ def _render_queue_progress_summary(items: tuple[CcldRequestQueueItem, ...]) -> s
     </section>"""
 
 
+def _render_queue_navigation() -> str:
+    return f"""<nav aria-label="CCLD queue actions">
+      <ul>
+        <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find another CCLD facility</a></li>
+        <li><a href="{CCLD_RECORD_REQUEST_PATH}">Start a new CCLD request</a></li>
+        <li><a href="{CCLD_HELP_PATH}">Open CCLD workflow help</a></li>
+        <li><a href="{REVIEWER_UI_RECORDS_PATH}">Open reviewer records list</a></li>
+        <li><a href="#feedback-checklist-section">Copy tester feedback checklist</a></li>
+      </ul>
+    </nav>"""
+
+
+def _render_queue_triage_summary(
+    request: CcldRecordRequest,
+    items: tuple[CcldRequestQueueItem, ...],
+) -> str:
+    next_item = _next_queue_item(items)
+    next_record_markup = _next_record_markup(next_item)
+    note_count = sum(1 for item in items if _summary_int(item.reviewer_state, "note_count") > 0)
+    status_count = sum(
+        1 for item in items if _summary_optional_string(item.reviewer_state, "latest_status")
+    )
+    traceability_count = sum(1 for item in items if _has_source_traceability(item.complaint_record))
+    request_scope = _facility_scope_for_summary(request)
+    date_scope = _date_scope_text(request)
+    return f"""<section aria-labelledby="queue-triage-heading">
+      <h3 id="queue-triage-heading">Queue triage summary</h3>
+      <p>Use this summary to decide what to open first. It is derived from the current
+      local/test request, existing source-derived traceability fields, and existing
+      reviewer-created notes/statuses.</p>
+      <dl>
+        <dt>Request scope</dt>
+                <dd>{_escape(request_scope)}; date range {_escape(date_scope)}</dd>
+        <dt>Records with reviewer notes</dt>
+        <dd>{note_count}</dd>
+        <dt>Records with reviewer status</dt>
+        <dd>{status_count}</dd>
+        <dt>Records with source traceability available</dt>
+        <dd>{traceability_count}</dd>
+        <dt>Suggested next record to open</dt>
+        <dd>{next_record_markup}</dd>
+      </dl>
+      <p>The feedback checklist below uses these queue counts and reviewer-state cues so
+      testers can report missing records, confusing wording, or unexpected filter behavior.</p>
+    </section>"""
+
+
+def _facility_scope_for_summary(request: CcldRecordRequest) -> str:
+    return f"facility/license number {request.facility_number}"
+
+
+def _next_record_markup(item: CcldRequestQueueItem | None) -> str:
+    if item is None:
+        return "No matching complaint record is available for this request."
+    complaint = _mapping(item.complaint_record, "original_values")
+    source_record_key = _string(item.complaint_record, "source_record_key")
+    detail_href = f"{REVIEWER_UI_DETAIL_PATH}?{urlencode({'source_record_key': source_record_key})}"
+    label = _display_value(complaint.get("complaint_control_number") or source_record_key)
+    status = _status_label(_queue_status(item))
+    return (
+        f'<a href="{_escape(detail_href)}">Open reviewer detail for '
+        f'{_escape(label)}</a> ({_escape(status)})'
+    )
+
+
+def _next_queue_item(
+    items: tuple[CcldRequestQueueItem, ...],
+) -> CcldRequestQueueItem | None:
+    for status in _NEXT_REVIEW_STATUS_ORDER:
+        for item in items:
+            if _queue_status(item) == status:
+                return item
+    return None
+
+
+def _has_source_traceability(record: Mapping[str, Any]) -> bool:
+    return all(
+        _has_display_value(_optional_string(record, key))
+        for key in ("source_url", "raw_sha256", "connector_name", "retrieved_at")
+    )
+
+
 def _render_feedback_checklist_section(
     request: CcldRecordRequest,
     queue_items: tuple[CcldRequestQueueItem, ...],
@@ -852,7 +943,8 @@ def _render_feedback_checklist_section(
         matching_source_record_count=matching_source_record_count,
         local_facility_record_count=local_facility_record_count,
     )
-    return f"""    <section aria-labelledby="feedback-checklist-heading">
+    return f"""    <section id="feedback-checklist-section"
+        aria-labelledby="feedback-checklist-heading">
       <h2 id="feedback-checklist-heading">Copyable tester feedback checklist</h2>
       <p id="feedback-checklist-help">This app does not save or send this feedback.
       Copy the checklist into the agreed external feedback channel after adding any tester
@@ -1000,6 +1092,14 @@ def _render_queue_filter_form(request: CcldRecordRequest) -> str:
     </form>"""
 
 
+def _render_empty_filtered_queue_row(request: CcldRecordRequest) -> str:
+        return f"""          <tr>
+                        <td colspan="8">No complaint records match the selected queue status filter:
+                        {_escape(_status_label(request.reviewer_status_filter))}. Choose All queue
+                        records to return to the full CCLD request queue.</td>
+                    </tr>"""
+
+
 def _status_filter_option(value: str, *, selected: bool) -> str:
     selected_attribute = " selected" if selected else ""
     return (
@@ -1091,8 +1191,9 @@ def _render_queue_row(request: CcldRecordRequest, item: CcldRequestQueueItem) ->
     )
     source_record_key = _string(item.complaint_record, "source_record_key")
     detail_href = f"{REVIEWER_UI_DETAIL_PATH}?{urlencode({'source_record_key': source_record_key})}"
+    action_label = _queue_action_label(item)
     return f"""          <tr>
-            <td><a href="{_escape(detail_href)}">Review this complaint record</a></td>
+            <td><a href="{_escape(detail_href)}">{_escape(action_label)}</a></td>
             <td>{_escape(_facility_scope_text(request.facility_number, item.facility_name))}</td>
             <td>{_escape(_date_scope_text(request))}</td>
             <td>{_escape(_complaint_date_summary(complaint))}</td>
@@ -1101,6 +1202,14 @@ def _render_queue_row(request: CcldRecordRequest, item: CcldRequestQueueItem) ->
             <td>{_escape(_reviewer_state_text(item.reviewer_state))}</td>
             <td>{_escape(_loaded_context_text(item))}</td>
           </tr>"""
+
+
+def _queue_action_label(item: CcldRequestQueueItem) -> str:
+    complaint = _mapping(item.complaint_record, "original_values")
+    complaint_control_number = complaint.get("complaint_control_number")
+    if _has_display_value(complaint_control_number):
+        return f"Open reviewer detail for {_display_value(complaint_control_number)}"
+    return "Open reviewer detail for this complaint record"
 
 
 def _render_reviewer_link(

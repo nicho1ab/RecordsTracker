@@ -109,7 +109,9 @@ complaint records into the hosted reviewer UI, shows a clear no-match and
 external pipeline plan when local validated records do not match, renders a
 guided facility/date-scoped request result queue with first-time workflow help,
 contextual field/action help, source traceability summaries, reviewer-state
-indicators, progress counts, reviewer-status filtering, meaningful reviewer
+indicators, queue triage summaries, reviewer note/status cues,
+source-traceability availability cues, suggested next-record links,
+filtered-empty guidance, progress counts, reviewer-status filtering, meaningful reviewer
 links, read-after-write queue updates after reviewer note/status actions, and
 deterministic copyable feedback checklist guidance without persistence, does not
 run live crawling, execute connectors, mutate reviewer-created state from the

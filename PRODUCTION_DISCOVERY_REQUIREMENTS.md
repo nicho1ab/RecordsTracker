@@ -155,11 +155,12 @@ source-derived rows. The page now includes first-time user workflow guidance,
 contextual help for facility/date/load/review terms, a `/ccld/help` page, and a
 facility/date-scoped complaint review queue with source traceability summaries,
 loaded-record context, reviewer-state indicators, progress counts, reviewer-
-status filtering, reviewer-detail actions, and a structured copyable tester
-feedback checklist for manual external sharing. Queue state is derived from
-existing source-derived records plus existing reviewer-created note/status rows;
-it is not persisted as a separate queue state model. Feedback is not persisted by
-the app in this slice.
+status filtering, reviewer note/status cues, source-traceability availability
+cues, suggested next-record links, filtered-empty guidance, reviewer-detail
+actions, and a structured copyable tester feedback checklist for manual external
+sharing. Queue state is derived from existing source-derived records plus
+existing reviewer-created note/status rows; it is not persisted as a separate
+queue state model. Feedback is not persisted by the app in this slice.
 The local/test CCLD facility lookup page at `/ccld/facilities` reads configured
 full local/test CCLD program facility reference CSV rows when available, falls
 back to the committed tiny fixture when needed, searches safe scalar fields,
