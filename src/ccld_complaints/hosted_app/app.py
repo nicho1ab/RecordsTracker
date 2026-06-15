@@ -43,6 +43,7 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     CCLD_HELP_PATH,
     CCLD_RECORD_REQUEST_PATH,
+    CCLD_RETRIEVAL_JOBS_PATH,
     CCLD_UI_PREFIX,
     CcldRecordRequestUiContext,
     ccld_record_request_context_for_reviewer_context,
@@ -751,6 +752,7 @@ def render_app_shell() -> str:
   <nav aria-label="CCLD records review navigation">
     <ul>
       <li><a href="{CCLD_RECORD_REQUEST_PATH}">Request CCLD records</a></li>
+    <li><a href="{CCLD_RETRIEVAL_JOBS_PATH}">View retrieval job history</a></li>
       <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find CCLD facility</a></li>
       <li><a href="{CCLD_HELP_PATH}">How this works</a></li>
       <li><a href="#start">Start first CCLD review</a></li>
@@ -780,6 +782,7 @@ def render_app_shell() -> str:
       </ol>
       <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find CCLD facility</a></p>
       <p><a href="{CCLD_RECORD_REQUEST_PATH}">Request CCLD records</a></p>
+            <p><a href="{CCLD_RETRIEVAL_JOBS_PATH}">View retrieval job history</a></p>
     </section>
     <section id="workflow" aria-labelledby="workflow-heading">
       <h2 id="workflow-heading">Workflow overview</h2>

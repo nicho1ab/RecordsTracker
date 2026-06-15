@@ -251,6 +251,14 @@ show what you entered, whether records were imported, where to review imported
 records, and when to use `/feedback` for confusing wording or behavior. The
 browser does not scrape or receive connector credentials.
 
+Open `http://127.0.0.1:8000/ccld/retrieval/jobs` to see recent controlled
+retrieval job history for the current local/test scope. The page shows the
+facility/license number, date range, record type, job state, timestamps,
+imported-record count, safe warnings or errors, and a review-queue link when a
+job imported records. Use it to check what was submitted and what happened after
+the initial request page. It is not an audit export, source-completeness report,
+or legal conclusion.
+
 Return to `/ccld/records/request` and use the local validated CCLD load action
 to load or refresh matching source-derived rows from that JSON artifact. The
 artifact builder and request page do not run live CCLD retrieval from the

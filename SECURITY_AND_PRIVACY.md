@@ -104,6 +104,16 @@ source scraping, and direct browser crawling remain prohibited. Retrieval job
 metadata is operational metadata and remains separate from source-derived
 records, reviewer-created state, audit events, and feedback issues.
 
+The retrieval job history page at `/ccld/retrieval/jobs` is a read-only status
+surface over that existing operational metadata. It must require the same
+authenticated local/test or production workflow access as the CCLD request flow,
+show only safe request context, job state, timestamps, result counts, warning or
+error summaries, status messages, raw-artifact-preserved indicators, and review
+links when records were imported. It must not expose provider subjects or
+issuers, raw provider claims, tokens, cookies, private headers, connection
+strings, client secrets, raw stack traces, raw source narrative content, raw
+artifact file contents, or server-specific absolute paths.
+
 The current tester feedback seam can create GitHub Issues server-side only when
 `GITHUB_FEEDBACK_REPO` and `GITHUB_FEEDBACK_TOKEN` are configured on the host.
 The token must never be rendered into HTML, JavaScript, logs, tests, issue

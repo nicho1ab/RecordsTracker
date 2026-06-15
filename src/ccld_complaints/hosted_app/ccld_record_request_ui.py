@@ -9,6 +9,12 @@ from datetime import date
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
+from ccld_complaints.hosted_app.auth import (
+    HostedAccountDisabledError,
+    HostedAuthenticationRequiredError,
+    HostedRoleDeniedError,
+    HostedScopeDeniedError,
+)
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_LOOKUP_PATH,
     CcldFacilityReferenceSource,
@@ -25,7 +31,9 @@ from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
     RECORD_TYPE_LABELS,
     SUPPORTED_RECORD_TYPES,
     CcldRetrievalContext,
+    CcldRetrievalJobHistoryEntry,
     CcldRetrievalJobResult,
+    list_recent_ccld_retrieval_jobs,
     run_ccld_retrieval_job,
     validate_ccld_retrieval_request,
 )
@@ -47,6 +55,7 @@ from ccld_complaints.hosted_app.source_derived_routes import (
 CCLD_UI_PREFIX = "/ccld"
 CCLD_RECORD_REQUEST_PATH = f"{CCLD_UI_PREFIX}/records/request"
 CCLD_HELP_PATH = f"{CCLD_UI_PREFIX}/help"
+CCLD_RETRIEVAL_JOBS_PATH = f"{CCLD_UI_PREFIX}/retrieval/jobs"
 _IMPORT_RELOAD_ACTION_FIELD = "ccld_import_reload_action"
 _IMPORT_RELOAD_ACTION_VALUE = "load_local_validated_ccld_records"
 _RETRIEVAL_ACTION_FIELD = "ccld_retrieval_action"
@@ -199,7 +208,12 @@ def route_ccld_record_request_ui_response(
     request_body: bytes | None = None,
 ) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
-    if parsed_url.path not in {CCLD_UI_PREFIX, CCLD_RECORD_REQUEST_PATH, CCLD_HELP_PATH}:
+    if parsed_url.path not in {
+        CCLD_UI_PREFIX,
+        CCLD_RECORD_REQUEST_PATH,
+        CCLD_HELP_PATH,
+        CCLD_RETRIEVAL_JOBS_PATH,
+    }:
         return _html_response(
             404,
             _render_message_page(
@@ -226,6 +240,9 @@ def route_ccld_record_request_ui_response(
             ),
         )
     if method == "GET":
+        if parsed_url.path == CCLD_RETRIEVAL_JOBS_PATH:
+            status, markup = _retrieval_job_history_response(context)
+            return _html_response(status, markup)
         query_values = parse_qs(parsed_url.query, keep_blank_values=True)
         selected_facility_number = _first_form_value(query_values, "facility_number")
         return _html_response(
@@ -496,6 +513,8 @@ def _render_request_form(
                     city, county, ZIP code, type, status, or facility/license number</a></p>
                     <p><a href="{CCLD_HELP_PATH}">Read how this CCLD review workflow
                     works</a></p>
+                    <p><a href="{CCLD_RETRIEVAL_JOBS_PATH}">View controlled retrieval job
+                    history</a></p>
                 </section>
                 {_render_workflow_overview()}
     <section aria-labelledby="request-form-heading">
@@ -606,6 +625,7 @@ def _render_help_page() -> str:
             in the reviewer UI.</p>
             <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find a CCLD facility</a></p>
             <p><a href="{CCLD_RECORD_REQUEST_PATH}">Open the CCLD record request form</a></p>
+            <p><a href="{CCLD_RETRIEVAL_JOBS_PATH}">Open controlled retrieval job history</a></p>
         </section>""",
         )
 
@@ -1250,6 +1270,208 @@ def _render_retrieval_next_steps(result: CcldRetrievalJobResult, imported_count:
               feedback type; do not put source credentials or private values in feedback.</p>
               <p><a href="{_FEEDBACK_PATH}">Send tester feedback</a></p>
             </section>"""
+
+
+def _retrieval_job_history_response(
+    context: CcldRecordRequestUiContext,
+) -> tuple[int, str]:
+    source_context = context.reviewer_ui_context.workflow_shell_context.source_derived_api_context
+    try:
+        jobs = list_recent_ccld_retrieval_jobs(
+            source_context.connection,
+            source_context.actor,
+            scope=source_context.scope,
+        )
+    except HostedAuthenticationRequiredError as error:
+        return 401, _render_retrieval_history_blocked_page(str(error))
+    except (HostedAccountDisabledError, HostedRoleDeniedError, HostedScopeDeniedError) as error:
+        return 403, _render_retrieval_history_blocked_page(str(error))
+    return 200, _render_retrieval_job_history_page(
+        jobs,
+        retrieval_configured=context.retrieval_context is not None,
+    )
+
+
+def _render_retrieval_history_blocked_page(message: str) -> str:
+    return _render_message_page(
+        title="Retrieval job history requires access",
+        heading="Retrieval job history requires access",
+        message=message,
+        guidance=(
+            "Sign in with an allowed tester or operator account before viewing controlled "
+            "CCLD retrieval job history."
+        ),
+        links=(("Return to CCLD request", CCLD_RECORD_REQUEST_PATH),),
+    )
+
+
+def _render_retrieval_job_history_page(
+    jobs: tuple[CcldRetrievalJobHistoryEntry, ...],
+    *,
+    retrieval_configured: bool,
+) -> str:
+    rows = "\n".join(_render_retrieval_history_row(job) for job in jobs)
+    if not rows:
+        rows = """        <tr>
+          <td colspan="9">No retrieval jobs have been submitted for this authorized scope.</td>
+        </tr>"""
+    setup_text = (
+        "Controlled retrieval is configured for this runtime."
+        if retrieval_configured
+        else (
+            "Controlled retrieval setup is missing for this runtime. Existing job history can "
+            "still be read when metadata exists, but new jobs cannot be submitted until an "
+            "operator enables retrieval and server-side raw source storage."
+        )
+    )
+    return _page(
+        title="Controlled CCLD retrieval job history",
+        heading="Controlled CCLD retrieval job history",
+        main=f"""    <section aria-labelledby="retrieval-history-purpose-heading">
+      <h2 id="retrieval-history-purpose-heading">Recent controlled retrieval jobs</h2>
+      <p>This page shows recent controlled CCLD retrieval jobs for the current authorized
+      local/test scope. It is status/history visibility only, not an audit export.</p>
+      <p>{_escape(setup_text)}</p>
+      <p>Job states are workflow states. They do not prove public-source completeness,
+      legal conclusions, facility-wide conclusions, or harm conclusions.</p>
+      <p><a href="{CCLD_RECORD_REQUEST_PATH}">Submit or change a CCLD record request</a></p>
+    </section>
+    <section aria-labelledby="retrieval-history-table-heading">
+      <h2 id="retrieval-history-table-heading">Job history</h2>
+      <table>
+        <caption>Recent controlled CCLD retrieval jobs and safe status summaries</caption>
+        <thead>
+          <tr>
+            <th scope="col">Job and state</th>
+            <th scope="col">Requested facility/date/type</th>
+            <th scope="col">Timestamps</th>
+            <th scope="col">Records imported</th>
+            <th scope="col">Status message</th>
+            <th scope="col">Safe warnings</th>
+            <th scope="col">Safe errors</th>
+            <th scope="col">Raw/source artifact status</th>
+            <th scope="col">Next step</th>
+          </tr>
+        </thead>
+        <tbody>
+{rows}
+        </tbody>
+      </table>
+    </section>
+    <section aria-labelledby="retrieval-history-help-heading">
+      <h2 id="retrieval-history-help-heading">What to do if a job looks wrong</h2>
+      <p>For failed, blocked, warning, or confusing jobs, use the safe state, count, and
+      message shown here first. Operators can check server logs without sharing private
+      values. Testers can send feedback with the facility/date/type request and the visible
+      job state.</p>
+      <p><a href="{_FEEDBACK_PATH}">Send tester feedback</a></p>
+      <p><a href="{CCLD_HELP_PATH}">Read CCLD workflow help</a></p>
+    </section>""",
+    )
+
+
+def _render_retrieval_history_row(job: CcldRetrievalJobHistoryEntry) -> str:
+    imported_count = job.result_counts.get("imported_source_derived_records", 0)
+    return f"""        <tr>
+          <td>
+            <p>{_escape(job.retrieval_job_id)}</p>
+            <dl>
+              <dt>Job state</dt>
+              <dd>{_escape(_retrieval_state_label(job.job_state))}</dd>
+              <dt>Machine-readable state</dt>
+              <dd>{_escape(job.job_state)}</dd>
+            </dl>
+          </td>
+          <td>
+            <dl>
+              <dt>Facility/license number</dt>
+              <dd>{_escape(job.facility_number)}</dd>
+              <dt>Record type</dt>
+              <dd>{_escape(RECORD_TYPE_LABELS.get(job.record_type, job.record_type))}</dd>
+              <dt>Date range</dt>
+              <dd>{_escape(job.start_date)} to {_escape(job.end_date)}</dd>
+            </dl>
+          </td>
+          <td>
+            <dl>
+              <dt>Created at</dt>
+              <dd>{_escape(job.created_at)}</dd>
+              <dt>Started timestamp</dt>
+              <dd>not separately tracked in this first slice</dd>
+              <dt>Completed or last updated at</dt>
+              <dd>{_escape(_completed_or_updated_text(job))}</dd>
+            </dl>
+          </td>
+          <td>{imported_count}</td>
+          <td>{_escape(job.safe_message)}</td>
+          <td>{_render_history_message_list(job.warnings)}</td>
+          <td>{_render_history_message_list(job.errors)}</td>
+          <td>{_escape(_raw_artifact_status(job))}</td>
+          <td>{_render_history_next_step(job, imported_count)}</td>
+        </tr>"""
+
+
+def _render_history_message_list(values: tuple[str, ...]) -> str:
+    items = _safe_list_items(values) or "        <li>none</li>"
+    return f"<ul>\n{items}\n            </ul>"
+
+
+def _completed_or_updated_text(job: CcldRetrievalJobHistoryEntry) -> str:
+    if job.job_state in {"queued", "running"}:
+        return f"not completed yet; last updated {job.updated_at}"
+    return job.updated_at
+
+
+def _raw_artifact_status(job: CcldRetrievalJobHistoryEntry) -> str:
+    if job.source_artifact_identity:
+        return "raw artifact preserved; source artifact identity available; raw paths not shown"
+    if job.result_counts.get("retrieved_record_bundles", 0) > 0:
+        return "raw artifact storage used; raw paths not shown"
+    return "no raw artifact path shown"
+
+
+def _render_history_next_step(job: CcldRetrievalJobHistoryEntry, imported_count: int) -> str:
+    queue_link = _retrieval_history_queue_link(job) if imported_count > 0 else ""
+    feedback_link = f'<p><a href="{_FEEDBACK_PATH}">Send tester feedback</a></p>'
+    if job.job_state == "completed" and imported_count > 0:
+        return queue_link
+    if job.job_state == "completed_with_warnings" and imported_count > 0:
+        return (
+            "<p>Review imported records, then check warning details.</p>"
+            f"{queue_link}{feedback_link}"
+        )
+    if job.job_state == "completed_with_warnings":
+        return (
+            "<p>No records were imported. Review warnings and adjust the request.</p>"
+            f"{feedback_link}"
+        )
+    if job.job_state == "failed":
+        return f"<p>Retry later or ask an operator to inspect server logs.</p>{feedback_link}"
+    if job.job_state == "blocked_by_validation":
+        return f"<p>Change the facility/date/type request before retrying.</p>{feedback_link}"
+    if job.job_state == "rate_limited":
+        return (
+            "<p>Wait for an active retrieval job to finish before trying again.</p>"
+            f"{feedback_link}"
+        )
+    if job.job_state == "running":
+        return f"<p>Refresh this history page later; do not resubmit repeatedly.</p>{feedback_link}"
+    return f"<p>Wait for the server-side job to start, then refresh later.</p>{feedback_link}"
+
+
+def _retrieval_history_queue_link(job: CcldRetrievalJobHistoryEntry) -> str:
+    query = urlencode(
+        {
+            "facility_number": job.facility_number,
+            "start_date": job.start_date,
+            "end_date": job.end_date,
+            "record_type": job.record_type,
+        }
+    )
+    return (
+        f'<p><a href="{CCLD_RECORD_REQUEST_PATH}?{_escape(query)}">'
+        "Review imported records in the CCLD queue</a></p>"
+    )
 
 
 def _render_retrieval_action(
@@ -2489,6 +2711,7 @@ def _page(*, title: str, heading: str, main: str) -> str:
             <ul>
                 <li><a href="/">Home</a></li>
                 <li><a href="{CCLD_RECORD_REQUEST_PATH}">CCLD record request</a></li>
+                <li><a href="{CCLD_RETRIEVAL_JOBS_PATH}">Retrieval job history</a></li>
                 <li><a href="{CCLD_HELP_PATH}">How this works</a></li>
                 <li><a href="{REVIEWER_UI_RECORDS_PATH}">Reviewer records</a></li>
             </ul>

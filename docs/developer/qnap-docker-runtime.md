@@ -194,13 +194,17 @@ After starting the runtime, check the health route and core local/test pages:
 - `/feedback`
 - `/ccld/facilities`
 - `/ccld/records/request`
+- `/ccld/retrieval/jobs`
 - `/ccld/help`
 - `/reviewer`
 
 The scaffold should continue to identify itself as local/test. It should not
 claim real OIDC login, token handling, sessions, cookies, public launch, or
 source completeness. Retrieval job pages should show safe setup-required state
-unless retrieval is explicitly enabled with server-side storage.
+unless retrieval is explicitly enabled with server-side storage. The retrieval
+history page should show safe empty-history or recent-job status over existing
+operational metadata only; it is not an audit export or source-completeness
+report.
 
 In production auth mode, protected workflow routes such as `/ccld/records/request`
 and `/reviewer` return a sign-in-required page until a real provider-backed

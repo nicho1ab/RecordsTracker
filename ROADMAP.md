@@ -247,6 +247,12 @@ the governed primary future review experience.
 	PostgreSQL source-derived import, safe status/result counts, and queue links,
 	without adding production OIDC, cloud deployment, non-CCLD sources, direct
 	browser crawling, statewide crawling, or unsupported conclusions.
+- Added a small retrieval job history/status page over existing operational
+	metadata so testers and operators can see recent controlled CCLD retrieval jobs,
+	facility/date/type request context, state, timestamps, imported-record counts,
+	safe warning/error summaries, review-queue links when records were imported,
+	and feedback guidance without adding audit export, broader audit UI, scheduler
+	behavior, or new retrieval capability.
 - Added the first QNAP-first, cloud-portable Docker Compose runtime envelope for
 	the hosted CCLD scaffold with a Python app container, PostgreSQL in Docker,
 	Alembic startup migration wiring, health checks, named volumes, `.env.example`,

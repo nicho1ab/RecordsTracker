@@ -21,6 +21,7 @@ from ccld_complaints.connectors.ccld.facility_reports import (
 )
 from ccld_complaints.hosted_app.auth import (
     RETRIEVAL_JOB_TRIGGER_PERMISSION,
+    SOURCE_DERIVED_READ_PERMISSION,
     AuthenticatedActor,
     AuthorizationTarget,
     HostedAccessScope,
@@ -175,6 +176,23 @@ class CcldRetrievalJobResult:
     record_type: str
     start_date: str
     end_date: str
+    source_artifact_identity: str | None
+    result_counts: Mapping[str, int]
+    warnings: tuple[str, ...]
+    errors: tuple[str, ...]
+    safe_message: str
+
+
+@dataclass(frozen=True)
+class CcldRetrievalJobHistoryEntry:
+    retrieval_job_id: str
+    job_state: RetrievalJobState
+    facility_number: str
+    record_type: str
+    start_date: str
+    end_date: str
+    created_at: str
+    updated_at: str
     source_artifact_identity: str | None
     result_counts: Mapping[str, int]
     warnings: tuple[str, ...]
@@ -357,6 +375,32 @@ def run_ccld_retrieval_job(
             data_mutations_performed=False,
         )
     return final_job
+
+
+def list_recent_ccld_retrieval_jobs(
+    connection: Connection,
+    actor: AuthenticatedActor | None,
+    *,
+    scope: HostedAccessScope,
+    limit: int = 25,
+) -> tuple[CcldRetrievalJobHistoryEntry, ...]:
+    require_permission(
+        actor,
+        permission=SOURCE_DERIVED_READ_PERMISSION,
+        scope=scope,
+        target=AuthorizationTarget("source_derived_record_list", scope.scope_id),
+    )
+    bounded_limit = max(1, min(limit, 100))
+    rows = connection.execute(
+        select(hosted_ccld_retrieval_jobs)
+        .where(
+            hosted_ccld_retrieval_jobs.c.source_scope_type == scope.scope_type,
+            hosted_ccld_retrieval_jobs.c.source_scope_id == scope.scope_id,
+        )
+        .order_by(hosted_ccld_retrieval_jobs.c.created_at.desc())
+        .limit(bounded_limit)
+    ).mappings()
+    return tuple(_history_entry_from_row(dict(row)) for row in rows)
 
 
 def validate_ccld_source_url(
@@ -674,6 +718,24 @@ def _job_result_from_row(
         warnings=_string_tuple(row["warnings"]),
         errors=_string_tuple(row["errors"]),
         safe_message=str(row["safe_message"]),
+    )
+
+
+def _history_entry_from_row(row: Mapping[str, Any]) -> CcldRetrievalJobHistoryEntry:
+    return CcldRetrievalJobHistoryEntry(
+        retrieval_job_id=str(row["retrieval_job_id"]),
+        job_state=cast(RetrievalJobState, row["job_state"]),
+        facility_number=str(row["facility_number"]),
+        record_type=str(row["record_type"]),
+        start_date=str(row["start_date"]),
+        end_date=str(row["end_date"]),
+        created_at=str(row["created_at"]),
+        updated_at=str(row["updated_at"]),
+        source_artifact_identity=cast(str | None, row["source_artifact_identity"]),
+        result_counts=_int_mapping(row["result_counts"]),
+        warnings=tuple(_safe_error_message_text(item) for item in _string_tuple(row["warnings"])),
+        errors=tuple(_safe_error_message_text(item) for item in _string_tuple(row["errors"])),
+        safe_message=_safe_error_message_text(str(row["safe_message"])),
     )
 
 

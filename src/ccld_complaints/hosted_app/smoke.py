@@ -54,6 +54,9 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
                     f"{base_url}/ccld/facilities?q=orchard"
                 )
                 ccld_status, ccld_body = _read_url(f"{base_url}/ccld/records/request")
+                ccld_retrieval_history_status, ccld_retrieval_history_body = _read_url(
+                    f"{base_url}/ccld/retrieval/jobs"
+                )
                 ccld_queue_status, ccld_queue_body = _post_form_url(
                     f"{base_url}/ccld/records/request",
                     {
@@ -153,12 +156,22 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Reviewer-status filter" not in ccld_body
         or b"Record type" not in ccld_body
         or b"Run controlled CCLD retrieval" not in ccld_body
+        or b"Retrieval job history" not in ccld_body
         or b"Confirm request context" not in ccld_body
         or b"validated CCLD load" not in ccld_body
         or b"Feedback guidance" not in ccld_body
         or b"Skip to main CCLD request content" not in ccld_body
     ):
         raise RuntimeError("Hosted scaffold CCLD request shell did not return the request page.")
+    if (
+        ccld_retrieval_history_status != 200
+        or b"Controlled CCLD retrieval job history" not in ccld_retrieval_history_body
+        or b"No retrieval jobs have been submitted" not in ccld_retrieval_history_body
+        or b"Controlled retrieval setup is missing" not in ccld_retrieval_history_body
+        or b"Submit or change a CCLD record request" not in ccld_retrieval_history_body
+        or b"Send tester feedback" not in ccld_retrieval_history_body
+    ):
+        raise RuntimeError("Hosted scaffold retrieval job history did not return safe guidance.")
     if (
         ccld_queue_status != 200
         or b"CCLD review queue" not in ccld_queue_body
