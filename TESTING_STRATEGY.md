@@ -89,8 +89,9 @@ list-level reviewer-created note/status indicators and latest reviewer-created
 timestamp are visible, plain-language detail record summaries are visible, safe
 source traceability fields and safe related seeded bundle context are visible,
 sensitive narrative fields remain hidden, note/status forms delegate to the
-existing workflow actions, read-after-write reviewer-created state appears in
-the page, CCLD return navigation and record-specific feedback guidance are
+existing workflow actions, note/status saved confirmations include next-step
+links, read-after-write reviewer-created state appears in the page, CCLD return
+navigation and record-specific feedback guidance are
 visible, unauthenticated, disabled or revoked, role-denied, and out-of-scope
 contexts are blocked with visible next steps, no-match search, missing-record,
 and invalid note/status form states show clear accessible guidance,

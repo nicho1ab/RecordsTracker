@@ -271,12 +271,16 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Reviewer actions" in html
     assert "Set a status to keep queue progress understandable" in normalized_html
     assert "Add reviewer note" in html
+    assert "Reviewer note for this record" in html
     assert "Use safe plain text" in html
+    assert "appear below after saving" in normalized_html
     assert "Save reviewer note for this record" in html
     assert f"action=\"{REVIEWER_UI_NOTE_PATH}\"" in html
     assert "Set reviewer status" in html
+    assert "Reviewer queue status for this record" in html
     assert "Status is reviewer-created local/test state for" in normalized_html
     assert "Save reviewer status for this record" in html
+    assert ">Needs follow-up</option>" in html
     assert f"action=\"{REVIEWER_UI_STATUS_PATH}\"" in html
     assert "Reviewer-created state is stored separately" in normalized_html
     assert "Feedback clues for this record" in html
@@ -356,7 +360,11 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
         "audit_events": 1,
         "reset_reload_planning_metadata": 0,
     }
-    assert "Reviewer note saved through the existing local/test workflow action." in html
+    assert "Reviewer update saved" in html
+    assert "Reviewer note saved for this record" in html
+    assert "The note now appears in reviewer-created state below" in html
+    assert "Return to CCLD request queue" in html
+    assert "Review saved notes and statuses below" in html
     assert "Review source traceability before export." in html
     assert "reviewer_note_scaffold" in html
     assert "Reviewer-created payload kinds present" in html
@@ -407,7 +415,9 @@ def test_reviewer_ui_invalid_note_submission_has_clear_error_without_mutation() 
 
     assert missing_status == 400
     assert "Reviewer note was not saved" in missing_html
-    assert "Reviewer note text is required." in missing_html
+    assert "Enter safe plain text before saving a reviewer note for this record." in (
+        missing_html
+    )
     assert "What you can do next" in missing_html
     assert "Return to selected record detail" in missing_html
     assert blocked_value_status == 400
@@ -459,7 +469,11 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
         "audit_events": 1,
         "reset_reload_planning_metadata": 0,
     }
-    assert "Reviewer status saved through the existing local/test workflow action." in html
+    assert "Reviewer update saved" in html
+    assert "Reviewer status saved for this record" in html
+    assert "The status now appears in reviewer-created state below" in html
+    assert "Return to CCLD request queue" in html
+    assert "Review saved notes and statuses below" in html
     assert "reviewer_status_scaffold" in html
     assert "needs_follow_up" in html
     assert "Reviewer statuses present" in html
@@ -509,11 +523,14 @@ def test_reviewer_ui_invalid_status_submission_has_clear_error_without_mutation(
 
     assert missing_status == 400
     assert "Reviewer status was not saved" in missing_html
-    assert "Choose a reviewer status before saving." in missing_html
+    assert "Choose a reviewer queue status before saving this record." in missing_html
     assert "Return to selected record detail" in missing_html
     assert invalid_status == 400
     assert "Reviewer status was not saved" in invalid_html
     assert "reviewer_status must be one of" in invalid_html
+    assert "Status values update queue cues but do not change source-derived records" in (
+        " ".join(invalid_html.split())
+    )
     assert "Return to selected record detail" in invalid_html
     assert counts["reviewer_created_state"] == 0
     assert counts["audit_events"] == 0

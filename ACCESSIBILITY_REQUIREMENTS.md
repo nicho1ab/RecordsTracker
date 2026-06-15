@@ -45,7 +45,8 @@ Accessibility requirements apply to:
 	indicators, and reviewer-created state, and visible error or blocked-request
 	messages with useful next-step links. Reviewer detail pages must include
 	accessible record-summary, source-traceability, related-context, reviewer-state,
-	action, navigation, and feedback-guidance sections with meaningful link text.
+	action, saved-confirmation, navigation, and feedback-guidance sections with
+	meaningful link text.
 - The local/test hosted CCLD record request page must use semantic headings,
 	labeled facility/license number and date controls, accessible validation
 	messages, labeled local validated load controls, table captions/headings for

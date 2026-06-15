@@ -144,6 +144,9 @@ pages include a plain-language record summary, source traceability, related
 context, reviewer notes/statuses, CCLD return links, and feedback clues for the
 selected record. After adding a note or status in reviewer detail, return to the
 CCLD request page and submit the same request to see updated progress.
+When a note or status is saved, the detail page confirms the reviewer-created
+update, shows it in the reviewer-created state section, and links back to the
+CCLD request queue so the updated note/status cues can be checked.
 The local/test browser pages include skip-to-main links, visible start-here or
 next-step guidance, specific button/link text, and manual checklist copy
 instructions so a first-time tester can use keyboard navigation and visible page
