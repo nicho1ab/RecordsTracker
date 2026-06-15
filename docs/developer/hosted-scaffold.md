@@ -239,6 +239,23 @@ CCLD_RETRIEVAL_ENABLED=enabled
 CCLD_RETRIEVAL_RAW_DIR=/app/data/raw/ccld/retrieval
 ```
 
+For local scaffold validation only, developers may also enable a fixture-backed
+successful retrieval demo while running explicit local-dev auth and fixture-demo
+page data:
+
+```powershell
+$env:CCLD_RETRIEVAL_ENABLED = "enabled"
+$env:CCLD_RETRIEVAL_RAW_DIR = "data\raw\ccld\retrieval-demo"
+$env:CCLD_RETRIEVAL_DEMO_MODE = "mock-success"
+.\scripts\run-hosted-scaffold.ps1 -Port 8000
+```
+
+This mode uses committed CCLD fixtures through a local fixture client. It does
+not make live CCLD calls, does not call GitHub, does not prove public-source
+completeness, and is unavailable unless explicit local-dev auth/scaffold mode is
+allowed. Do not use `CCLD_RETRIEVAL_DEMO_MODE=mock-success` for QNAP, pilot-like,
+or production runtime.
+
 Tests use mocked CCLD retrieval only. CI must not make live CCLD calls. Direct
 browser scraping, non-CCLD sources, statewide crawling, private/authenticated
 source scraping, production OIDC, deployment changes, and legal/completeness

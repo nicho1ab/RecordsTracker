@@ -193,6 +193,11 @@
   unsupported automated complaint findings remain out of scope. Unsupported
   record types remain unavailable; all supported record types currently resolves
   to complaint records only.
+- `CCLD_RETRIEVAL_DEMO_MODE=mock-success` is a local-dev scaffold validation mode
+  only. It uses committed fixtures to demonstrate successful retrieval/import/
+  history/detail/queue behavior without live CCLD calls. It is not production
+  retrieval, not public-source completeness proof, and must not be enabled for
+  QNAP, pilot-like, or production runtime.
 - Retrieval status messages are workflow states, not source conclusions. A
   completed-with-warnings, failed, blocked-by-validation, or rate-limited state
   tells you what happened to the job, not whether CCLD has complete records for a

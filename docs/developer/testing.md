@@ -251,6 +251,12 @@ raw-artifact-preserved indicators without raw file contents or server paths, no
 private values in HTML, no source-derived or reviewer-created mutation, existing
 history behavior, existing request/status behavior, existing `/feedback`
 behavior, and no live CCLD calls.
+Local-dev mock-success retrieval tests should cover explicit
+`CCLD_RETRIEVAL_DEMO_MODE=mock-success` gating, default setup-required behavior
+when it is not configured, production/anonymous blocking when it is configured
+outside local-dev mode, successful fixture-backed job creation/import/status,
+history/detail/queue links, no live CCLD client use, no GitHub calls, no private
+HTML values, and preserved reviewer-created state separation.
 
 Docker runtime tests should statically validate `Dockerfile`,
 `docker-compose.qnap.yml`, and `.env.example` for the QNAP-first PostgreSQL

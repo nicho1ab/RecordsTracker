@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added an explicit local-dev controlled retrieval demo mode,
+	`CCLD_RETRIEVAL_DEMO_MODE=mock-success`, for scaffold validation. When local-dev
+	auth, retrieval enablement, and raw storage are explicitly configured, the
+	browser can run a fixture-backed successful retrieval that creates a job,
+	preserves mocked raw artifact/hash metadata through the existing path, imports
+	source-derived rows, and links to status, history, detail, and queue pages
+	without making live CCLD calls or enabling fake behavior in production mode.
 - Added a small controlled CCLD retrieval job detail page at
 	`/ccld/retrieval/jobs/detail?job_id=`. History rows now link to a read-only
 	detail view for one job showing safe request context, state, timestamps,

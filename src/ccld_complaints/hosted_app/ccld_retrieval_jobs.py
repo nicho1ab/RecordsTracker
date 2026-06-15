@@ -46,13 +46,20 @@ CCLD_RETRIEVAL_PER_JOB_LIMIT_ENV = "CCLD_RETRIEVAL_PER_JOB_LIMIT"
 CCLD_RETRIEVAL_RATE_LIMIT_PER_ACTOR_ENV = "CCLD_RETRIEVAL_RATE_LIMIT_PER_ACTOR"
 CCLD_RETRIEVAL_TIMEOUT_SECONDS_ENV = "CCLD_RETRIEVAL_TIMEOUT_SECONDS"
 CCLD_RETRIEVAL_RETRY_LIMIT_ENV = "CCLD_RETRIEVAL_RETRY_LIMIT"
+CCLD_RETRIEVAL_DEMO_MODE_ENV = "CCLD_RETRIEVAL_DEMO_MODE"
 CCLD_RETRIEVAL_ENABLED_VALUE = "enabled"
+CCLD_RETRIEVAL_DEMO_MODE_MOCK_SUCCESS = "mock-success"
 DEFAULT_MAX_DATE_RANGE_DAYS = 366
 DEFAULT_PER_JOB_REQUEST_LIMIT = 5
 DEFAULT_RATE_LIMIT_PER_ACTOR = 3
 DEFAULT_RETRY_LIMIT = 1
 CCLD_SOURCE_HOST = "www.ccld.dss.ca.gov"
 CCLD_CONNECTOR_NAME = "ccld_facility_reports"
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_DEMO_FACILITY_DETAIL_FIXTURE = (
+    _REPO_ROOT / "tests/fixtures/ccld/raw/157806098_facility_detail.html"
+)
+_DEMO_REPORT_FIXTURE = _REPO_ROOT / "tests/fixtures/ccld/raw/157806098_inx3.html"
 SUPPORTED_RECORD_TYPES = ("complaints", "all_supported")
 RECORD_TYPE_LABELS = {
     "complaints": "Complaint records",
@@ -133,6 +140,7 @@ class CcldRetrievalClient(Protocol):
 class CcldRetrievalConfig:
     enabled: bool
     raw_dir: Path | None
+    demo_mode: str | None = None
     max_date_range_days: int = DEFAULT_MAX_DATE_RANGE_DAYS
     per_job_request_limit: int = DEFAULT_PER_JOB_REQUEST_LIMIT
     rate_limit_per_actor: int = DEFAULT_RATE_LIMIT_PER_ACTOR
@@ -142,6 +150,10 @@ class CcldRetrievalConfig:
     @property
     def configured(self) -> bool:
         return self.enabled and self.raw_dir is not None
+
+    @property
+    def mock_success_demo_enabled(self) -> bool:
+        return self.demo_mode == CCLD_RETRIEVAL_DEMO_MODE_MOCK_SUCCESS
 
 
 @dataclass(frozen=True)
@@ -212,6 +224,23 @@ class CcldHttpRetrievalClient:
         return _fetch_url(source_url, timeout_seconds=timeout_seconds)
 
 
+class CcldFixtureRetrievalClient:
+    def __init__(
+        self,
+        *,
+        facility_detail_fixture: Path = _DEMO_FACILITY_DETAIL_FIXTURE,
+        report_fixture: Path = _DEMO_REPORT_FIXTURE,
+    ) -> None:
+        self.facility_detail_fixture = facility_detail_fixture
+        self.report_fixture = report_fixture
+
+    def fetch_facility_detail(self, facility_number: str, *, timeout_seconds: int) -> str:
+        return self.facility_detail_fixture.read_text(encoding="utf-8")
+
+    def fetch_report(self, source_url: str, *, timeout_seconds: int) -> bytes:
+        return self.report_fixture.read_bytes()
+
+
 def load_ccld_retrieval_config(
     environ: Mapping[str, str] | None = None,
 ) -> CcldRetrievalConfig:
@@ -224,6 +253,7 @@ def load_ccld_retrieval_config(
     return CcldRetrievalConfig(
         enabled=enabled,
         raw_dir=Path(raw_dir_value) if raw_dir_value else None,
+        demo_mode=_demo_mode(active_environ.get(CCLD_RETRIEVAL_DEMO_MODE_ENV, "")),
         max_date_range_days=_positive_int_env(
             active_environ,
             CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS_ENV,
@@ -250,6 +280,13 @@ def load_ccld_retrieval_config(
             DEFAULT_RETRY_LIMIT,
         ),
     )
+
+
+def _demo_mode(raw_value: str) -> str | None:
+    normalized = raw_value.strip().lower()
+    if normalized == CCLD_RETRIEVAL_DEMO_MODE_MOCK_SUCCESS:
+        return normalized
+    return None
 
 
 def validate_ccld_retrieval_request(

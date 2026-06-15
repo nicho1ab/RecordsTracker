@@ -87,6 +87,15 @@ request context, state, created/updated/completed timing, imported counts,
 warnings/errors, raw-artifact-preserved status, and next-step links without
 showing raw artifact contents, raw server paths, stack traces, or private values.
 
+For local scaffold validation only, developers can set
+`CCLD_RETRIEVAL_DEMO_MODE=mock-success` together with explicit local-dev auth,
+`CCLD_RETRIEVAL_ENABLED=enabled`, and `CCLD_RETRIEVAL_RAW_DIR` to run a
+fixture-backed successful retrieval from the browser. This mode uses committed
+fixtures, does not make live CCLD calls, does not call GitHub, and must not be
+enabled in production or QNAP/pilot-like runtime. It proves the local-dev
+successful job/import/history/detail/queue path only; it does not prove public-
+source completeness.
+
 Backups for retrieval-enabled deployments must cover both PostgreSQL and raw
 source artifacts. A database backup alone is not enough when source-derived rows
 reference raw artifact paths or raw hashes.
