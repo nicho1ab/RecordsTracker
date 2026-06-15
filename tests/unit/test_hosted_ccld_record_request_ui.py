@@ -270,8 +270,13 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "- Not started: 1" in html
     assert "- Reviewer notes present: no" in html
     assert "- Reviewer statuses present: no" in html
+    assert "- Facility lookup used or skipped:" in html
+    assert "- Source traceability cues were easy to find:" in html
+    assert "- Saved confirmation appeared as expected:" in html
+    assert "- Queue showed updated note/status after returning" in html
     assert "- Records that seemed missing:" in html
-    assert "Copy this checklist into the agreed external feedback channel manually." in html
+    assert "- Records that seemed unexpected:" in html
+    assert "- Manual-copy only: copy this checklist" in html
     assert "Open reviewer records" in html
     assert "did not run live retrieval" in html
     assert "run-ccld-live-fetch.ps1 -FacilityNumber 157806098" in html
@@ -543,20 +548,42 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     assert first_checklist.startswith("CCLD tester feedback checklist")
     assert "- Source scope: CCLD public complaint records only" in first_checklist
     assert "- Facility/license number: 157806098" in first_checklist
-    assert "- Date range: 2022-08-01 to 2022-08-31" in first_checklist
+    assert "- Facility lookup used or skipped:" in first_checklist
+    assert "- Date range requested: 2022-08-01 to 2022-08-31" in first_checklist
+    assert "- Request criteria that felt unclear:" in first_checklist
     assert "- Matching source-derived rows shown: 6" in first_checklist
     assert "- Matching complaint records in queue: 1" in first_checklist
+    assert "Queue triage and filters" in first_checklist
     assert "- Local validated records loaded or refreshed: no" in first_checklist
     assert "- Reviewer-created rows read for this queue: 0" in first_checklist
+    assert "Queue records to spot-check" in first_checklist
+    assert "source traceability cue: Complete source traceability" in first_checklist
+    assert "reviewer note/status cue: No reviewer notes or status yet" in first_checklist
+    assert "Reviewer detail and note/status confirmation" in first_checklist
+    assert "- Source traceability cues were easy to find:" in first_checklist
+    assert "- Saved confirmation appeared as expected:" in first_checklist
+    assert "- Return-to-queue link worked:" in first_checklist
+    assert "- Queue showed updated note/status after returning and resubmitting:" in (
+        first_checklist
+    )
+    assert "Missing, unexpected, or confusing results" in first_checklist
     assert "- Records that seemed missing:" in first_checklist
-    assert "- Confusing terms or instructions:" in first_checklist
-    assert "- Unexpected queue or filter behavior:" in first_checklist
-    assert "- Workflow friction:" in first_checklist
+    assert "- Records that seemed unexpected:" in first_checklist
+    assert "- Facility lookup wording that was confusing:" in first_checklist
+    assert "- Request, queue, or reviewer-detail wording that was confusing:" in (
+        first_checklist
+    )
+    assert "- Keyboard, reading-order, or checklist-copy friction:" in first_checklist
     assert "- Suggested enhancements:" in first_checklist
-    assert "- The app does not persist this feedback." in first_checklist
+    assert "- Manual-copy only: copy this checklist" in first_checklist
+    assert "- The app does not store, send, email, export, or persist this feedback." in (
+        first_checklist
+    )
+    assert "Rendering this checklist does not change source-derived records" in first_checklist
     assert "- Browser pages did not run live CCLD retrieval or connector execution." in (
         first_checklist
     )
+    assert "Missing local/test rows are not proof" in first_checklist
     assert "Select the checklist text, copy it, paste it" in " ".join(first_html.split())
     assert "CCLD public portal remains the source of record" in first_checklist
     assert "provider" not in first_checklist.casefold()
