@@ -236,6 +236,13 @@ The first implementation tests also cover the request-page record type dropdown,
 safe setup-required state when retrieval configuration is missing, mocked
 successful retrieval/import, queue links after import, and feedback route
 separation.
+Retrieval job history/status tests should cover `/ccld/retrieval/jobs` rendering
+for an allowed local/test actor, production anonymous blocking, safe empty state,
+recent job rows with facility/date/type/state/timestamps/counts, warning versus
+failed guidance, queue links only after imports, `/feedback` guidance for
+confusing or failing jobs, no raw private values in HTML, no source-derived row
+mutation during reads, existing request/status behavior, existing `/feedback`
+behavior, and no live CCLD calls.
 
 Docker runtime tests should statically validate `Dockerfile`,
 `docker-compose.qnap.yml`, and `.env.example` for the QNAP-first PostgreSQL
