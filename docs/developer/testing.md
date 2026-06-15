@@ -132,6 +132,10 @@ Next-record navigation coverage should verify that queue and detail pages tell
 testers how to return to the same request context, resubmit when needed, and use
 suggested-next cues derived from existing reviewer-created state without
 implying persisted assignment, record claiming, or workflow-engine state.
+Filtered-empty queue coverage should verify that the selected reviewer-status
+filter, same request context, all-status recovery action, reviewer-created-state
+basis, no-missing-record wording, and manual feedback guidance render without
+changing queue behavior or persisted state.
 
 Hosted CCLD request and import/reload tests should cover digit-only facility/
 license input, optional date ranges, empty hosted source-derived state, loading

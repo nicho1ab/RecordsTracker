@@ -151,6 +151,10 @@ source-traceability availability cues, suggested next-record links, clear
 filtered-empty states, and meaningful reviewer-detail actions are product
 requirements when they reduce confusion without adding new persistence or
 changing note/status behavior.
+Filtered-empty queue states should explain that records are hidden by the
+selected reviewer-status filter for the same facility/date request context, not
+necessarily missing from local/test data or public source material, and should
+provide a clear way to show all records again.
 First-run accessibility polish is also MVP usability work, not cosmetic polish:
 skip-to-main links, clear start-here sections, visible next-step instructions,
 specific button/link text, and manual feedback-copy guidance are required when

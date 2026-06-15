@@ -81,6 +81,9 @@ Accessibility requirements apply to:
 	or layout alone.
 	Next-record navigation guidance must be visible text and must not rely on
 	automatic refresh, JavaScript, assignment state, or record-claiming behavior.
+	Filtered-empty queue recovery guidance must expose the active filter, same
+	facility/date request context, all-records recovery action, and reviewer-
+	created-state basis for status filters as visible text.
 	Request-context confirmation must expose lookup versus manual-entry origin,
 	facility/license number, date range, active facility reference source, and
 	change-facility/date navigation as visible text with descriptive links.
