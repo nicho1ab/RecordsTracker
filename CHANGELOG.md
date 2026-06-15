@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Changed core hosted page data selection so production-style runtime defaults to
+	PostgreSQL-backed page data via `CCLD_HOSTED_PAGE_DATA_MODE=postgres`, while
+	fixture/demo reads are isolated behind explicit `fixture-demo` mode. Facility
+	lookup can now render from staged PostgreSQL source-derived facility records,
+	request queues and reviewer detail continue to use the existing database-backed
+	source-derived and reviewer-created route contexts, and missing PostgreSQL
+	setup shows safe operator guidance without weakening source traceability,
+	mutating source-derived records, exposing raw narrative fields, or adding live
+	crawling, cloud-specific code, retrieval jobs, data dumps, or secrets.
 - Added the first provider-agnostic hosted tester auth runtime boundary for the
 	YLC pilot direction: production mode now blocks anonymous browser workflow
 	routes, explicit local-dev mode enables the fixture tester actor for local

@@ -69,6 +69,15 @@ claims, tokens, cookies, private headers, or secrets. Protected service helpers 
 unauthenticated, disabled or revoked, role-denied, and out-of-scope actors
 before future reviewer-created workflows are enabled.
 
+The current page-data seam defaults production-style runtime to
+`CCLD_HOSTED_PAGE_DATA_MODE=postgres`. PostgreSQL-backed pages must use the
+hosted source-derived/import/reviewer-created service contexts and show
+setup-required guidance when data is unavailable. Fixture/demo reads are allowed
+only through explicit local/demo configuration. Pages must not silently expose
+fixtures as production data, expose raw narrative source text, mutate
+source-derived records through review actions, or run live retrieval or connector
+execution.
+
 The current source-derived HTTP/API read route seam is local/test only and must
 receive an explicit fixture or test actor context from the caller. It reuses the
 auth boundary to reject unauthenticated, disabled or revoked, role-denied, and

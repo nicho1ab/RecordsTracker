@@ -23,6 +23,7 @@ services:
         condition: service_healthy
     environment:
       CCLD_HOSTED_TESTER_DATABASE_URL: postgresql+psycopg://${CCLD_POSTGRES_USER:-ccld_app}:${CCLD_POSTGRES_PASSWORD:?Set CCLD_POSTGRES_PASSWORD in an untracked .env file}@postgres:5432/${CCLD_POSTGRES_DB:-ccld_records}
+      CCLD_HOSTED_PAGE_DATA_MODE: ${CCLD_HOSTED_PAGE_DATA_MODE:-postgres}
       CCLD_HOSTED_TESTER_AUTH_MODE: ${CCLD_HOSTED_TESTER_AUTH_MODE:-production}
       CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS: ${CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS:-managed-oidc-oauth2}
       CCLD_HOSTED_TESTER_OIDC_ISSUER: ${CCLD_HOSTED_TESTER_OIDC_ISSUER:-}

@@ -15,6 +15,7 @@ from ccld_complaints.hosted_app.auth import (
     HostedAccountStatus,
     HostedActorCategory,
     HostedTesterRole,
+    load_hosted_auth_runtime_config,
 )
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_LOOKUP_PATH,
@@ -48,6 +49,15 @@ FIXTURE = Path("tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json
 TEST_SCOPE = LOCAL_REVIEWER_UI_SCOPE
 
 
+def _local_dev_auth_config() -> Any:
+    return load_hosted_auth_runtime_config(
+        environ={
+            "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
+            "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
+        }
+    )
+
+
 def test_ccld_facility_reference_loads_safe_lookup_columns() -> None:
     records = load_ccld_facility_reference()
 
@@ -64,6 +74,51 @@ def test_ccld_facility_reference_loads_safe_lookup_columns() -> None:
         closed_date="",
     )
     assert {record.facility_number for record in records} == {"900000001", "900000002"}
+
+
+def test_postgres_mode_without_database_shows_setup_required_state() -> None:
+    status, content_type, body = route_response(
+        CCLD_FACILITY_LOOKUP_PATH,
+        auth_runtime_config=_local_dev_auth_config(),
+        page_data_mode="postgres",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 503
+    assert content_type == "text/html; charset=utf-8"
+    assert "Facility search setup required" in html
+    assert "Run Alembic migrations" in html
+    assert "fixture-demo mode" in html
+    assert_no_secret_html(html)
+
+
+def test_postgres_mode_facility_lookup_uses_source_derived_records() -> None:
+    with _seeded_connection() as connection:
+        context = ccld_record_request_context_for_reviewer_context(
+            reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(roles=("tester_reviewer",)),
+            )
+        )
+        status, content_type, body = route_response(
+            f"{CCLD_FACILITY_LOOKUP_PATH}?q=157806098",
+            auth_runtime_config=_local_dev_auth_config(),
+            page_data_mode="postgres",
+            ccld_record_request_ui_context=context,
+        )
+        counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Active source: PostgreSQL source-derived facility records." in html
+    assert "hosted_source_derived_records" in html
+    assert "157806098" in html
+    assert "A. MIRIAM JAMISON CHILDREN" in html
+    assert "Tiny committed CCLD facility fixture fallback" not in html
+    assert counts == _empty_reviewer_counts()
+    assert_no_secret_html(html)
 
 
 def test_active_ccld_facility_reference_uses_tiny_fallback_when_full_csv_unset(
@@ -152,7 +207,10 @@ def test_ccld_facility_lookup_route_renders_configured_full_csv_source(
     )
     monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(full_csv))
 
-    status, content_type, body = route_response(f"{CCLD_FACILITY_LOOKUP_PATH}?q=fullerton")
+    status, content_type, body = route_response(
+        f"{CCLD_FACILITY_LOOKUP_PATH}?q=fullerton",
+        page_data_mode="fixture-demo",
+    )
     html = body.decode("utf-8")
 
     assert status == 200
@@ -175,7 +233,10 @@ def test_configured_missing_full_csv_falls_back_with_guidance(
     missing_path = tmp_path / "missing-ccld-facilities.csv"
     monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(missing_path))
 
-    status, content_type, body = route_response(f"{CCLD_FACILITY_LOOKUP_PATH}?q=orchard")
+    status, content_type, body = route_response(
+        f"{CCLD_FACILITY_LOOKUP_PATH}?q=orchard",
+        page_data_mode="fixture-demo",
+    )
     html = body.decode("utf-8")
 
     assert status == 200
@@ -195,7 +256,10 @@ def test_configured_malformed_full_csv_falls_back_with_guidance(
     malformed_path.write_text("Facility Name,Facility City\nBad Row,Nowhere\n", encoding="utf-8")
     monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(malformed_path))
 
-    status, content_type, body = route_response(f"{CCLD_FACILITY_LOOKUP_PATH}?q=orchard")
+    status, content_type, body = route_response(
+        f"{CCLD_FACILITY_LOOKUP_PATH}?q=orchard",
+        page_data_mode="fixture-demo",
+    )
     html = body.decode("utf-8")
 
     assert status == 200
@@ -247,7 +311,10 @@ def test_ccld_facility_search_is_bounded_and_deterministic() -> None:
 
 
 def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
-    status, content_type, body = route_response(CCLD_FACILITY_LOOKUP_PATH)
+    status, content_type, body = route_response(
+        CCLD_FACILITY_LOOKUP_PATH,
+        page_data_mode="fixture-demo",
+    )
     html = body.decode("utf-8")
     normalized_html = " ".join(html.split())
 
@@ -256,7 +323,7 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert "Find CCLD facility" in html
     assert "Skip to main CCLD facility lookup content" in html
     assert '<main id="main-content" tabindex="-1">' in html
-    assert "CCLD-only local/test facility lookup" in html
+    assert "CCLD-only facility lookup" in html
     assert "Start here: find a facility" in html
     assert "Use a matching result to carry the facility/license number" in normalized_html
     assert "Search local/test facility reference" in html
@@ -272,7 +339,10 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
 
 
 def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
-    status, content_type, body = route_response(f"{CCLD_FACILITY_LOOKUP_PATH}?q=orchard")
+    status, content_type, body = route_response(
+        f"{CCLD_FACILITY_LOOKUP_PATH}?q=orchard",
+        page_data_mode="fixture-demo",
+    )
     html = body.decode("utf-8")
     normalized_html = " ".join(html.split())
     request_href = f"{CCLD_RECORD_REQUEST_PATH}?facility_number=900000001"
@@ -300,7 +370,10 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
 
 
 def test_ccld_facility_lookup_page_shows_no_match_guidance() -> None:
-    status, content_type, body = route_response(f"{CCLD_FACILITY_LOOKUP_PATH}?q=no-match")
+    status, content_type, body = route_response(
+        f"{CCLD_FACILITY_LOOKUP_PATH}?q=no-match",
+        page_data_mode="fixture-demo",
+    )
     html = body.decode("utf-8")
     normalized_html = " ".join(html.split())
 
@@ -350,7 +423,10 @@ def test_ccld_facility_lookup_does_not_mutate_hosted_tables() -> None:
         before_source_rows = _source_rows(connection)
         before_counts = _table_counts(connection)
 
-        status, _content_type, body = route_response(f"{CCLD_FACILITY_LOOKUP_PATH}?q=valley")
+        status, _content_type, body = route_response(
+            f"{CCLD_FACILITY_LOOKUP_PATH}?q=valley",
+            page_data_mode="fixture-demo",
+        )
 
         after_source_rows = _source_rows(connection)
         after_counts = _table_counts(connection)

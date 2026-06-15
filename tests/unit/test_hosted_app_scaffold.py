@@ -208,10 +208,12 @@ def test_explicit_local_dev_auth_mode_allows_default_workflow_actor() -> None:
     reviewer_status, _content_type, reviewer_body = route_response(
         "/reviewer",
         auth_runtime_config=auth_config,
+        page_data_mode="fixture-demo",
     )
     ccld_status, _content_type, ccld_body = route_response(
         "/ccld",
         auth_runtime_config=auth_config,
+        page_data_mode="fixture-demo",
     )
 
     reviewer_html = reviewer_body.decode("utf-8")

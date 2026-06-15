@@ -25,7 +25,8 @@ if (-not (Test-Path $python)) { $python = "python" }
 $env:PYTHONPATH = Join-Path $PWD "src"
 if (-not $env:CCLD_HOSTED_TESTER_AUTH_MODE) { $env:CCLD_HOSTED_TESTER_AUTH_MODE = "local-dev" }
 if (-not $env:CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH) { $env:CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH = "enabled" }
+if (-not $env:CCLD_HOSTED_PAGE_DATA_MODE) { $env:CCLD_HOSTED_PAGE_DATA_MODE = "fixture-demo" }
 
 Write-Host "Starting local hosted tester MVP scaffold at http://${HostName}:$Port/"
-Write-Host "Scaffold only: explicit local-dev tester auth mode; no real OIDC flow or production auth."
+Write-Host "Scaffold only: explicit local-dev tester auth and fixture-demo data mode."
 & $python -m ccld_complaints.hosted_app --host $HostName --port $Port
