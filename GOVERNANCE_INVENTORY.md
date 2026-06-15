@@ -33,7 +33,8 @@
   browser-accessible local/test reviewer UI shell that lets a local tester list/
   search seeded source-derived records, see list-level reviewer-created
   note/status indicators, open detail, view a plain-language record summary,
-  safe source traceability fields, safe related seeded bundle context,
+  safe source traceability fields with clearer selected-record and missing-value
+  guidance, safe related seeded bundle context,
   reviewer-created notes/statuses, CCLD return links, and record-specific
   feedback clues, submit note/status forms through those existing workflow
   actions, see clearer saved-state confirmations and return-to-queue next steps,

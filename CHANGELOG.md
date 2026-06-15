@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Improved the local/test reviewer detail source traceability section with clearer
+	selected-record identifiers, available/missing traceability cues, local/test
+	boundary language, and pre-note/status guidance without adding schema,
+	persistence, live retrieval, connector execution, legal/completeness
+	conclusions, or non-CCLD scope.
 - Improved the local/test CCLD facility lookup and request flow with visible
 	request-context confirmation showing whether the request came from lookup or
 	manual entry, the facility/license number, date range, active facility

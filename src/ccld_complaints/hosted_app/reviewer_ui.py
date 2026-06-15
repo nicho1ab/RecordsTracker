@@ -996,32 +996,12 @@ def _render_detail(
         </tbody>
       </table>
     </section>
-    <section aria-labelledby="traceability-heading">
-      <h2 id="traceability-heading">Source traceability</h2>
-      <dl>
-        <dt>Source URL</dt>
-        <dd>{_escape(_string(source_document, 'source_url'))}</dd>
-        <dt>Raw SHA-256</dt>
-        <dd>{_escape(_string(source_document, 'raw_sha256'))}</dd>
-        <dt>Raw artifact path</dt>
-        <dd>{_escape(_optional_string(source_document, 'raw_path'))}</dd>
-        <dt>Connector name</dt>
-        <dd>{_escape(_string(source_document, 'connector_name'))}</dd>
-        <dt>Connector version</dt>
-        <dd>{_escape(_string(source_document, 'connector_version'))}</dd>
-        <dt>Retrieved at</dt>
-        <dd>{_escape(_string(source_document, 'retrieved_at'))}</dd>
-        <dt>Source document ID</dt>
-        <dd>{_escape(_string(source_document, 'source_document_id'))}</dd>
-        <dt>Report index</dt>
-        <dd>{_escape(str(source_traceability.get('report_index', 'unknown')))}</dd>
-        <dt>Import batch ID</dt>
-        <dd>{_escape(_string(import_batch, 'import_batch_id'))}</dd>
-        <dt>Import validation status</dt>
-        <dd>{_escape(_string(import_batch, 'validation_status'))}</dd>
-      </dl>
-            {_render_traceability_summary(source_document, source_traceability, import_batch)}
-    </section>
+                {_render_source_traceability_section(
+                        identity,
+                        source_document,
+                        source_traceability,
+                        import_batch,
+                )}
         {_render_source_context_section(related_records, source_record_key)}
     {_render_reviewer_state_section(detail)}
         {_render_review_actions(source_record_key)}
@@ -1037,9 +1017,12 @@ def _render_detail_first_run_steps(
         return f"""<section aria-labelledby="detail-first-run-heading">
             <h2 id="detail-first-run-heading">First-run detail steps</h2>
             <ol>
-                <li>Review the record summary and source traceability sections.</li>
+                <li>Confirm the selected complaint record in the record summary.</li>
+                <li>Review the source traceability fields and source-context cues before adding
+                reviewer-created notes or status.</li>
                 <li>Check whether reviewer notes or statuses already exist.</li>
-                <li>Add a note or status only if it helps the local/test review queue.</li>
+                <li>Add a note or status only after checking the source context and only if it
+                helps the local/test review queue.</li>
                 <li><a href="{_escape(ccld_request_href)}">Return to the CCLD request queue</a>
                 and copy the tester feedback checklist when ready.</li>
             </ol>
@@ -1065,6 +1048,7 @@ def _render_detail_navigation(
                 <li><a href="{REVIEWER_UI_RECORDS_PATH}">Back to reviewer records</a></li>
                 <li><a href="{_escape(detail_href)}">Refresh this seeded detail</a></li>
                 <li><a href="#record-summary-heading">Review record summary</a></li>
+                <li><a href="#traceability-heading">Review source traceability</a></li>
                 <li><a href="#source-context-heading">Review source-derived context</a></li>
                 <li><a href="#reviewer-state-heading">Review notes and statuses</a></li>
                 <li><a href="#review-actions-heading">Add note or status</a></li>
@@ -1113,6 +1097,147 @@ def _render_record_summary_section(
     </section>"""
 
 
+def _render_source_traceability_section(
+    identity: Mapping[str, Any],
+    source_document: Mapping[str, Any],
+    source_traceability: Mapping[str, Any],
+    import_batch: Mapping[str, Any],
+) -> str:
+    return f"""<section id="traceability-heading" aria-labelledby="traceability-title">
+      <h2 id="traceability-title">Source traceability</h2>
+      <p>Use these fields to confirm which local/test source-derived complaint record is
+      selected and how it remains tied to preserved public-source material before adding a
+      reviewer-created note or status.</p>
+      <p>Missing values are shown as <q>not available in this local/test record</q>. A missing
+      local/test value is not proof that the public source lacks a record or that any event did
+      or did not happen.</p>
+      <p>This page is a local/test review aid. It does not make legal, facility-wide,
+      completeness, harm, abuse, neglect, liability, or automated complaint-finding
+      conclusions.</p>
+      <table>
+        <caption>Selected complaint source traceability fields</caption>
+        <thead>
+          <tr>
+            <th scope="col">Traceability cue</th>
+            <th scope="col">Value shown for this selected record</th>
+            <th scope="col">How to use it during local/test review</th>
+          </tr>
+        </thead>
+        <tbody>
+{_render_traceability_field_rows(identity, source_document, source_traceability, import_batch)}
+        </tbody>
+      </table>
+      {_render_traceability_summary(source_document, source_traceability, import_batch)}
+    </section>"""
+
+
+def _render_traceability_field_rows(
+    identity: Mapping[str, Any],
+    source_document: Mapping[str, Any],
+    source_traceability: Mapping[str, Any],
+    import_batch: Mapping[str, Any],
+) -> str:
+    fields = (
+        (
+            "Selected source record key",
+            identity.get("source_record_key"),
+            "Use this when reporting which reviewer detail page was open.",
+        ),
+        (
+            "Stable source identity",
+            identity.get("stable_source_id"),
+            "Use this to distinguish the selected complaint from related local/test rows.",
+        ),
+        (
+            "Source document ID",
+            source_document.get("source_document_id"),
+            "Use this to connect the complaint to its source document row.",
+        ),
+        (
+            "Source URL",
+            source_document.get("source_url"),
+            "Use this as the public-source pointer when checking the source of record.",
+        ),
+        (
+            "Raw SHA-256",
+            source_document.get("raw_sha256"),
+            "Use this to identify the preserved raw source bytes in local/test evidence.",
+        ),
+        (
+            "Raw artifact path",
+            source_document.get("raw_path"),
+            "Use this local/test path when available; do not treat a missing path as source loss.",
+        ),
+        (
+            "Source artifact identity",
+            source_traceability.get("source_artifact_identity"),
+            "Use this to identify the local/test seeded-corpus artifact used for this page.",
+        ),
+        (
+            "Report index or source page marker",
+            source_traceability.get("report_index"),
+            "Use this to match the selected detail back to the CCLD report/page marker "
+            "when present.",
+        ),
+        (
+            "Connector name and version",
+            _connector_label(source_document),
+            "Use this to report which deterministic local/test connector produced the row.",
+        ),
+        (
+            "Retrieved at capture time",
+            source_document.get("retrieved_at"),
+            "Use this as the local/test capture timestamp, not as a public-source "
+            "completeness claim.",
+        ),
+        (
+            "Import batch ID",
+            import_batch.get("import_batch_id"),
+            "Use this to identify the local/test seeded import batch.",
+        ),
+        (
+            "Import validation status",
+            import_batch.get("validation_status"),
+            "Use this to report local/test artifact validation state without changing source data.",
+        ),
+        (
+            "Raw hash validation status",
+            import_batch.get("raw_hash_validation_status"),
+            "Use this to report local/test hash validation state.",
+        ),
+    )
+    return "\n".join(
+        _render_traceability_field_row(label, value, guidance)
+        for label, value, guidance in fields
+    )
+
+
+def _render_traceability_field_row(label: str, value: object, guidance: str) -> str:
+    return f"""          <tr>
+            <th scope="row">{_escape(label)}</th>
+            <td>{_escape(_traceability_value(value))}</td>
+            <td>{_escape(guidance)}</td>
+          </tr>"""
+
+
+def _connector_label(source_document: Mapping[str, Any]) -> str:
+    connector_name = source_document.get("connector_name")
+    connector_version = source_document.get("connector_version")
+    if _has_display_value(connector_name) and _has_display_value(connector_version):
+        return f"{connector_name} {connector_version}"
+    if _has_display_value(connector_name):
+        return str(connector_name)
+    if _has_display_value(connector_version):
+        return str(connector_version)
+    return ""
+
+
+def _traceability_value(value: object) -> str:
+    if not _has_display_value(value):
+        return "not available in this local/test record"
+    return _display_value(value)
+
+
 def _render_traceability_summary(
         source_document: Mapping[str, Any],
         source_traceability: Mapping[str, Any],
@@ -1149,8 +1274,10 @@ def _render_traceability_summary(
 
 
 def _render_traceability_summary_row(label: str, value: object) -> str:
-        visibility = "available" if _has_display_value(value) else "unknown or unavailable"
-        return f"""          <tr>
+    visibility = (
+        "available" if _has_display_value(value) else "not available in this local/test record"
+    )
+    return f"""          <tr>
                         <th scope="row">{_escape(label)}</th>
                         <td>{_escape(visibility)}</td>
                     </tr>"""
@@ -1432,8 +1559,9 @@ def _render_review_actions(source_record_key: str) -> str:
             <p>These local/test actions write reviewer-created state through the
             existing authenticated workflow actions. They do not edit source-derived
             fields.</p>
-            <p>Add a short note when source traceability, wording, missing values, or review
-            context needs follow-up. Set a status to keep queue progress understandable.</p>
+            <p>Review the source traceability section first. Then add a short note when source
+            traceability, wording, missing values, or review context needs follow-up. Set a
+            status to keep queue progress understandable.</p>
             {_render_note_form(source_record_key)}
             {_render_status_form(source_record_key)}
         </section>"""
@@ -1528,6 +1656,9 @@ def _render_detail_feedback_guidance(
             <p>If this detail looks wrong or incomplete, return to the CCLD request page and copy
             the tester feedback checklist. Include the record identifiers below and describe what
             looked missing, confusing, or unexpected.</p>
+            <p>If source traceability fields are confusing or missing, report the field label and
+            the wording shown on this page. Do not treat missing local/test traceability display
+            as proof of public-source completeness or absence.</p>
             <dl>
                 <dt>Facility/license number</dt>
                 <dd>{_escape(_facility_context_value(facility, 'external_facility_number'))}</dd>

@@ -99,7 +99,10 @@ source-derived rows are not mutated by UI actions,
 reviewer-created state and audit rows are created only through the existing
 services, and HTML does not expose secrets, tokens, cookies, private headers,
 raw provider claims, private URLs, hosted URLs, credentials, or unnecessary
-sensitive narrative content.
+sensitive narrative content. Reviewer detail source traceability tests should
+cover selected-record identifiers, available source URL/raw hash/raw path or
+artifact references, missing-value wording, non-conclusion boundary language,
+pre-note/status source-review guidance, and no-mutation behavior.
 Hosted CCLD record request UI tests must prove the browser-accessible local/test
 request page accepts only CCLD digit facility/license numbers plus optional
 valid date ranges, returns accessible validation guidance for missing or invalid

@@ -150,6 +150,9 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         reviewer_detail_status != 200
         or b"Local/test reviewer detail" not in reviewer_detail_body
         or b"Record summary" not in reviewer_detail_body
+        or b"Selected complaint source traceability fields" not in reviewer_detail_body
+        or b"not available in this local/test record" not in reviewer_detail_body
+        or b"does not make legal, facility-wide" not in reviewer_detail_body
         or b"Feedback clues for this record" not in reviewer_detail_body
         or b"First-run detail steps" not in reviewer_detail_body
     ):

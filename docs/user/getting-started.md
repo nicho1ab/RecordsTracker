@@ -147,7 +147,9 @@ progress counts, reviewer note/status cues, source-traceability availability
 cues, suggested next-record links, and a reviewer-status filter. Reviewer detail
 pages include a plain-language record summary, source traceability, related
 context, reviewer notes/statuses, CCLD return links, and feedback clues for the
-selected record. After adding a note or status in reviewer detail, return to the
+selected record. The detail page explains available and missing source
+traceability values with local/test wording and asks you to review source context
+before adding reviewer-created notes or status. After adding a note or status in reviewer detail, return to the
 CCLD request page and submit the same request to see updated progress.
 When a note or status is saved, the detail page confirms the reviewer-created
 update, shows it in the reviewer-created state section, and links back to the
