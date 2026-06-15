@@ -243,6 +243,14 @@ failed guidance, queue links only after imports, `/feedback` guidance for
 confusing or failing jobs, no raw private values in HTML, no source-derived row
 mutation during reads, existing request/status behavior, existing `/feedback`
 behavior, and no live CCLD calls.
+Retrieval job detail tests should also cover
+`/ccld/retrieval/jobs/detail?job_id=` links from history rows, allowed local/test
+detail rendering, production anonymous blocking, safe missing/invalid job ID
+states, completed job queue links, warning versus failed/rate-limited guidance,
+raw-artifact-preserved indicators without raw file contents or server paths, no
+private values in HTML, no source-derived or reviewer-created mutation, existing
+history behavior, existing request/status behavior, existing `/feedback`
+behavior, and no live CCLD calls.
 
 Docker runtime tests should statically validate `Dockerfile`,
 `docker-compose.qnap.yml`, and `.env.example` for the QNAP-first PostgreSQL

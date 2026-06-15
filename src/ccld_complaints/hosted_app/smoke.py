@@ -13,8 +13,11 @@ from ccld_complaints.hosted_app.app import create_server, format_host
 
 
 def _read_url(url: str) -> tuple[int, bytes]:
-    with urlopen(url, timeout=5) as response:
-        return response.status, response.read()
+    try:
+        with urlopen(url, timeout=5) as response:
+            return response.status, response.read()
+    except HTTPError as error:
+        return int(error.code), error.read()
 
 
 def _post_form_url(url: str, payload: dict[str, str]) -> tuple[int, bytes]:
@@ -56,6 +59,15 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
                 ccld_status, ccld_body = _read_url(f"{base_url}/ccld/records/request")
                 ccld_retrieval_history_status, ccld_retrieval_history_body = _read_url(
                     f"{base_url}/ccld/retrieval/jobs"
+                )
+                ccld_retrieval_detail_status, ccld_retrieval_detail_body = _read_url(
+                    f"{base_url}/ccld/retrieval/jobs/detail?job_id=missing-job"
+                )
+                (
+                    ccld_retrieval_detail_invalid_status,
+                    ccld_retrieval_detail_invalid_body,
+                ) = _read_url(
+                    f"{base_url}/ccld/retrieval/jobs/detail?job_id=..%2Fprivate"
                 )
                 ccld_queue_status, ccld_queue_body = _post_form_url(
                     f"{base_url}/ccld/records/request",
@@ -172,6 +184,22 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Send tester feedback" not in ccld_retrieval_history_body
     ):
         raise RuntimeError("Hosted scaffold retrieval job history did not return safe guidance.")
+    if (
+        ccld_retrieval_detail_status != 404
+        or b"Retrieval job detail not found" not in ccld_retrieval_detail_body
+        or b"Return to retrieval job history" not in ccld_retrieval_detail_body
+        or b"Submit or change a CCLD request" not in ccld_retrieval_detail_body
+    ):
+        raise RuntimeError("Hosted scaffold retrieval job detail did not return safe not-found.")
+    if (
+        ccld_retrieval_detail_invalid_status != 400
+        or b"Retrieval job detail needs a valid job ID"
+        not in ccld_retrieval_detail_invalid_body
+        or b"Return to retrieval job history" not in ccld_retrieval_detail_invalid_body
+    ):
+        raise RuntimeError(
+            "Hosted scaffold retrieval job detail did not return safe invalid state."
+        )
     if (
         ccld_queue_status != 200
         or b"CCLD review queue" not in ccld_queue_body

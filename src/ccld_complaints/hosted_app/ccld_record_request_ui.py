@@ -33,6 +33,7 @@ from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
     CcldRetrievalContext,
     CcldRetrievalJobHistoryEntry,
     CcldRetrievalJobResult,
+    get_ccld_retrieval_job,
     list_recent_ccld_retrieval_jobs,
     run_ccld_retrieval_job,
     validate_ccld_retrieval_request,
@@ -56,6 +57,7 @@ CCLD_UI_PREFIX = "/ccld"
 CCLD_RECORD_REQUEST_PATH = f"{CCLD_UI_PREFIX}/records/request"
 CCLD_HELP_PATH = f"{CCLD_UI_PREFIX}/help"
 CCLD_RETRIEVAL_JOBS_PATH = f"{CCLD_UI_PREFIX}/retrieval/jobs"
+CCLD_RETRIEVAL_JOB_DETAIL_PATH = f"{CCLD_RETRIEVAL_JOBS_PATH}/detail"
 _IMPORT_RELOAD_ACTION_FIELD = "ccld_import_reload_action"
 _IMPORT_RELOAD_ACTION_VALUE = "load_local_validated_ccld_records"
 _RETRIEVAL_ACTION_FIELD = "ccld_retrieval_action"
@@ -213,6 +215,7 @@ def route_ccld_record_request_ui_response(
         CCLD_RECORD_REQUEST_PATH,
         CCLD_HELP_PATH,
         CCLD_RETRIEVAL_JOBS_PATH,
+        CCLD_RETRIEVAL_JOB_DETAIL_PATH,
     }:
         return _html_response(
             404,
@@ -242,6 +245,9 @@ def route_ccld_record_request_ui_response(
     if method == "GET":
         if parsed_url.path == CCLD_RETRIEVAL_JOBS_PATH:
             status, markup = _retrieval_job_history_response(context)
+            return _html_response(status, markup)
+        if parsed_url.path == CCLD_RETRIEVAL_JOB_DETAIL_PATH:
+            status, markup = _retrieval_job_detail_response(context, parsed_url.query)
             return _html_response(status, markup)
         query_values = parse_qs(parsed_url.query, keep_blank_values=True)
         selected_facility_number = _first_form_value(query_values, "facility_number")
@@ -1372,8 +1378,10 @@ def _render_retrieval_job_history_page(
 
 def _render_retrieval_history_row(job: CcldRetrievalJobHistoryEntry) -> str:
     imported_count = job.result_counts.get("imported_source_derived_records", 0)
+    detail_href = _retrieval_job_detail_href(job.retrieval_job_id)
     return f"""        <tr>
           <td>
+            <p><a href="{_escape(detail_href)}">View retrieval job details</a></p>
             <p>{_escape(job.retrieval_job_id)}</p>
             <dl>
               <dt>Job state</dt>
@@ -1409,6 +1417,208 @@ def _render_retrieval_history_row(job: CcldRetrievalJobHistoryEntry) -> str:
           <td>{_escape(_raw_artifact_status(job))}</td>
           <td>{_render_history_next_step(job, imported_count)}</td>
         </tr>"""
+
+
+def _retrieval_job_detail_response(
+    context: CcldRecordRequestUiContext,
+    query: str,
+) -> tuple[int, str]:
+    query_values = parse_qs(query, keep_blank_values=True)
+    retrieval_job_id = _safe_retrieval_job_id(_first_form_value(query_values, "job_id"))
+    if retrieval_job_id is None:
+        return 400, _render_retrieval_job_detail_invalid_page()
+    source_context = context.reviewer_ui_context.workflow_shell_context.source_derived_api_context
+    try:
+        job = get_ccld_retrieval_job(
+            source_context.connection,
+            source_context.actor,
+            scope=source_context.scope,
+            retrieval_job_id=retrieval_job_id,
+        )
+    except HostedAuthenticationRequiredError as error:
+        return 401, _render_retrieval_history_blocked_page(str(error))
+    except (HostedAccountDisabledError, HostedRoleDeniedError, HostedScopeDeniedError) as error:
+        return 403, _render_retrieval_history_blocked_page(str(error))
+    if job is None:
+        return 404, _render_retrieval_job_detail_not_found_page()
+    return 200, _render_retrieval_job_detail_page(job)
+
+
+def _safe_retrieval_job_id(value: str) -> str | None:
+    if not value or len(value) > 96:
+        return None
+    if not re.match(r"^[A-Za-z0-9_.:-]+$", value):
+        return None
+    return value
+
+
+def _render_retrieval_job_detail_invalid_page() -> str:
+    return _render_message_page(
+        title="Retrieval job detail needs a valid job ID",
+        heading="Retrieval job detail needs a valid job ID",
+        message="The retrieval job detail page needs a valid job ID from the history page.",
+        guidance="Open retrieval job history and choose a job detail link.",
+        links=(
+            ("Return to retrieval job history", CCLD_RETRIEVAL_JOBS_PATH),
+            ("Return to CCLD request", CCLD_RECORD_REQUEST_PATH),
+        ),
+    )
+
+
+def _render_retrieval_job_detail_not_found_page() -> str:
+    return _render_message_page(
+        title="Retrieval job detail not found",
+        heading="Retrieval job detail not found",
+        message="No retrieval job metadata matched that job ID in this authorized scope.",
+        guidance=(
+            "Return to retrieval job history to choose a recent job. This is a metadata "
+            "lookup state, not a public-source conclusion."
+        ),
+        links=(
+            ("Return to retrieval job history", CCLD_RETRIEVAL_JOBS_PATH),
+            ("Submit or change a CCLD request", CCLD_RECORD_REQUEST_PATH),
+        ),
+    )
+
+
+def _render_retrieval_job_detail_page(job: CcldRetrievalJobHistoryEntry) -> str:
+    imported_count = job.result_counts.get("imported_source_derived_records", 0)
+    count_items = _render_detail_count_items(job.result_counts)
+    warning_items = _safe_list_items(job.warnings) or "        <li>none</li>"
+    error_items = _safe_list_items(job.errors) or "        <li>none</li>"
+    return _page(
+        title="Controlled CCLD retrieval job detail",
+        heading="Controlled CCLD retrieval job detail",
+        main=f"""    <section aria-labelledby="retrieval-detail-summary-heading">
+      <h2 id="retrieval-detail-summary-heading">Job summary</h2>
+      <p>This read-only page shows one controlled CCLD retrieval job from existing
+      operational metadata. It is not an audit export, raw artifact viewer, scheduler,
+      or source-completeness report.</p>
+      <p>{_escape(_retrieval_state_intro_for_history(job))}</p>
+      <dl>
+        <dt>Retrieval job ID</dt>
+        <dd>{_escape(job.retrieval_job_id)}</dd>
+        <dt>Job state</dt>
+        <dd>{_escape(_retrieval_state_label(job.job_state))}</dd>
+        <dt>Machine-readable state</dt>
+        <dd>{_escape(job.job_state)}</dd>
+        <dt>Status message</dt>
+        <dd>{_escape(job.safe_message)}</dd>
+        <dt>Facility/license number</dt>
+        <dd>{_escape(job.facility_number)}</dd>
+        <dt>Record type</dt>
+        <dd>{_escape(RECORD_TYPE_LABELS.get(job.record_type, job.record_type))}</dd>
+        <dt>Date range</dt>
+        <dd>{_escape(job.start_date)} to {_escape(job.end_date)}</dd>
+        <dt>Created at</dt>
+        <dd>{_escape(job.created_at)}</dd>
+        <dt>Started timestamp</dt>
+        <dd>not separately tracked in this first slice</dd>
+        <dt>Last updated at</dt>
+        <dd>{_escape(job.updated_at)}</dd>
+        <dt>Completed timestamp</dt>
+        <dd>{_escape(_completed_timestamp_text(job))}</dd>
+        <dt>Records imported</dt>
+        <dd>{imported_count}</dd>
+        <dt>Raw artifact preservation</dt>
+        <dd>{_escape(_raw_artifact_status(job))}</dd>
+      </dl>
+    </section>
+    <section aria-labelledby="retrieval-detail-counts-heading">
+      <h2 id="retrieval-detail-counts-heading">Result counts</h2>
+      <dl>
+{count_items}
+      </dl>
+    </section>
+    <section aria-labelledby="retrieval-detail-warning-heading">
+      <h2 id="retrieval-detail-warning-heading">Safe warnings</h2>
+      <ul>
+{warning_items}
+      </ul>
+    </section>
+    <section aria-labelledby="retrieval-detail-error-heading">
+      <h2 id="retrieval-detail-error-heading">Safe errors</h2>
+      <ul>
+{error_items}
+      </ul>
+    </section>
+    {_render_retrieval_detail_next_steps(job, imported_count)}
+    <section aria-labelledby="retrieval-detail-boundary-heading">
+      <h2 id="retrieval-detail-boundary-heading">Display boundary</h2>
+      <p>This page does not show raw source narrative content, raw artifact file contents,
+      provider identifiers, private configuration values, raw stack traces, or server-specific
+      raw paths. Raw artifacts remain server-side.</p>
+    </section>""",
+    )
+
+
+def _render_detail_count_items(counts: Mapping[str, int]) -> str:
+    if not counts:
+        return "        <dt>Result counts</dt>\n        <dd>none</dd>"
+    return "\n".join(
+        f"        <dt>{_escape(_count_label(name))}</dt>\n        <dd>{count}</dd>"
+        for name, count in sorted(counts.items())
+    )
+
+
+def _retrieval_state_intro_for_history(job: CcldRetrievalJobHistoryEntry) -> str:
+    result = CcldRetrievalJobResult(
+        retrieval_job_id=job.retrieval_job_id,
+        job_state=job.job_state,
+        facility_number=job.facility_number,
+        record_type=job.record_type,
+        start_date=job.start_date,
+        end_date=job.end_date,
+        source_artifact_identity=job.source_artifact_identity,
+        result_counts=job.result_counts,
+        warnings=job.warnings,
+        errors=job.errors,
+        safe_message=job.safe_message,
+    )
+    return _retrieval_state_intro(result)
+
+
+def _completed_timestamp_text(job: CcldRetrievalJobHistoryEntry) -> str:
+    if job.job_state in {"queued", "running"}:
+        return "not completed yet"
+    return job.updated_at
+
+
+def _render_retrieval_detail_next_steps(
+    job: CcldRetrievalJobHistoryEntry,
+    imported_count: int,
+) -> str:
+    queue_link = _retrieval_history_queue_link(job) if imported_count > 0 else ""
+    if job.job_state == "completed" and imported_count > 0:
+        message = "Open imported records in the CCLD queue and review source traceability."
+    elif job.job_state == "completed_with_warnings" and imported_count > 0:
+        message = "Review imported records, then include warning details if sending feedback."
+    elif job.job_state == "completed_with_warnings":
+        message = "No records were imported. Review warnings and adjust the request if needed."
+    elif job.job_state == "failed":
+        message = (
+            "Retry later or ask an operator to inspect server logs without sharing "
+            "private values."
+        )
+    elif job.job_state == "blocked_by_validation":
+        message = "Change the facility/date/type request before retrying retrieval."
+    elif job.job_state == "rate_limited":
+        message = "Wait for an active retrieval job to finish before trying again."
+    elif job.job_state == "running":
+        message = "Refresh job history later; do not resubmit repeatedly."
+    else:
+        message = "Wait for the server-side job to start, then refresh job history later."
+    return f"""    <section aria-labelledby="retrieval-detail-next-heading">
+      <h2 id="retrieval-detail-next-heading">What to do next</h2>
+      <p>{_escape(message)}</p>
+      {queue_link}
+      <ul>
+        <li><a href="{CCLD_RETRIEVAL_JOBS_PATH}">Return to retrieval job history</a></li>
+        <li><a href="{CCLD_RECORD_REQUEST_PATH}">Submit or change a CCLD record request</a></li>
+        <li><a href="{CCLD_HELP_PATH}">Read CCLD workflow help</a></li>
+        <li><a href="{_FEEDBACK_PATH}">Send tester feedback</a></li>
+      </ul>
+    </section>"""
 
 
 def _render_history_message_list(values: tuple[str, ...]) -> str:
@@ -1472,6 +1682,10 @@ def _retrieval_history_queue_link(job: CcldRetrievalJobHistoryEntry) -> str:
         f'<p><a href="{CCLD_RECORD_REQUEST_PATH}?{_escape(query)}">'
         "Review imported records in the CCLD queue</a></p>"
     )
+
+
+def _retrieval_job_detail_href(retrieval_job_id: str) -> str:
+    return f"{CCLD_RETRIEVAL_JOB_DETAIL_PATH}?{urlencode({'job_id': retrieval_job_id})}"
 
 
 def _render_retrieval_action(

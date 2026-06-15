@@ -257,7 +257,11 @@ facility/license number, date range, record type, job state, timestamps,
 imported-record count, safe warnings or errors, and a review-queue link when a
 job imported records. Use it to check what was submitted and what happened after
 the initial request page. It is not an audit export, source-completeness report,
-or legal conclusion.
+or legal conclusion. Use a history-row detail link to open one job at
+`/ccld/retrieval/jobs/detail?job_id=` when you need the same safe status,
+timestamp, count, raw-artifact-preserved, review-link, help, history, and
+feedback context for a single job. The detail page does not show raw source
+narrative content, raw artifact contents, raw server paths, or private values.
 
 Return to `/ccld/records/request` and use the local validated CCLD load action
 to load or refresh matching source-derived rows from that JSON artifact. The

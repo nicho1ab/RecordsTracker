@@ -403,6 +403,31 @@ def list_recent_ccld_retrieval_jobs(
     return tuple(_history_entry_from_row(dict(row)) for row in rows)
 
 
+def get_ccld_retrieval_job(
+    connection: Connection,
+    actor: AuthenticatedActor | None,
+    *,
+    scope: HostedAccessScope,
+    retrieval_job_id: str,
+) -> CcldRetrievalJobHistoryEntry | None:
+    require_permission(
+        actor,
+        permission=SOURCE_DERIVED_READ_PERMISSION,
+        scope=scope,
+        target=AuthorizationTarget("source_derived_record_list", scope.scope_id),
+    )
+    row = connection.execute(
+        select(hosted_ccld_retrieval_jobs).where(
+            hosted_ccld_retrieval_jobs.c.source_scope_type == scope.scope_type,
+            hosted_ccld_retrieval_jobs.c.source_scope_id == scope.scope_id,
+            hosted_ccld_retrieval_jobs.c.retrieval_job_id == retrieval_job_id,
+        )
+    ).mappings().one_or_none()
+    if row is None:
+        return None
+    return _history_entry_from_row(dict(row))
+
+
 def validate_ccld_source_url(
     source_url: str,
     *,

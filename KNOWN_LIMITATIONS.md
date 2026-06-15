@@ -198,6 +198,11 @@
     legal conclusion, or proof that all CCLD records for a facility/date range were
     found. It does not show raw source narrative content, raw artifact file
     contents, or server-specific raw paths.
+- The local hosted scaffold `/ccld/retrieval/jobs/detail?job_id=` page shows one
+    controlled retrieval job's safe operational metadata only. It is not a raw
+    artifact viewer, audit record, CSV export, legal conclusion, or source-
+    completeness report, and it does not show raw source narrative content, raw
+    artifact file contents, raw server paths, stack traces, or private values.
 - The local hosted scaffold `/facilities` list and detail pages use committed
     tiny public-source facility fixtures and manifest placeholder metadata only.
     The facility detail source coverage panel and related source-record links
