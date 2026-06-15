@@ -94,8 +94,9 @@
   seeded source-derived complaint record, see list-level reviewer-created
   note/status indicators, open detail, view safe source traceability fields plus
   safe related seeded bundle context, see record-summary and feedback guidance,
-  submit a bounded reviewer note, submit a bounded reviewer status, and see
-  read-after-write reviewer-created state.
+  submit a bounded reviewer note, submit a bounded reviewer status, see
+  saved-state confirmations with return-to-queue links, and see read-after-write
+  reviewer-created state.
   No-search-results, missing-record, invalid-form, and permission-blocked states
   provide local/test next-step links but do not diagnose production access or
   data availability.

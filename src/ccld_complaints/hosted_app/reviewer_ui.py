@@ -401,13 +401,13 @@ def _note_form_response(
     if not source_record_key:
         return _invalid_form_response(
             title="Reviewer note was not saved",
-            message="Select a seeded record before saving a reviewer note.",
+            message="Open a reviewer detail record before saving a reviewer note.",
             source_record_key=None,
         )
     if not note_text:
         return _invalid_form_response(
             title="Reviewer note was not saved",
-            message="Reviewer note text is required.",
+            message="Enter safe plain text before saving a reviewer note for this record.",
             source_record_key=source_record_key,
         )
     status, _content_type, body = route_reviewer_workflow_shell_response(
@@ -430,8 +430,9 @@ def _note_form_response(
         payload,
         context,
         notice=(
-            "Reviewer note saved through the existing local/test "
-            "workflow action."
+            "Reviewer note saved for this record. The note now appears in "
+            "reviewer-created state below. Return to the CCLD request queue "
+            "and submit the same request to see updated note cues."
         ),
     )
 
@@ -446,13 +447,13 @@ def _status_form_response(
     if not source_record_key:
         return _invalid_form_response(
             title="Reviewer status was not saved",
-            message="Select a seeded record before saving a reviewer status.",
+            message="Open a reviewer detail record before saving a reviewer status.",
             source_record_key=None,
         )
     if not reviewer_status:
         return _invalid_form_response(
             title="Reviewer status was not saved",
-            message="Choose a reviewer status before saving.",
+            message="Choose a reviewer queue status before saving this record.",
             source_record_key=source_record_key,
         )
     status, _content_type, body = route_reviewer_workflow_shell_response(
@@ -469,7 +470,11 @@ def _status_form_response(
             body,
             title="Reviewer status was not saved",
             heading="Reviewer status was not saved",
-            guidance="Return to the detail page and choose one of the listed statuses.",
+            guidance=(
+                "Return to the detail page and choose one of the listed local/test "
+                "reviewer statuses. Status values update queue cues but do not change "
+                "source-derived records."
+            ),
             links=_retry_links(source_record_key),
         )
     payload = _json_object(body)
@@ -478,8 +483,9 @@ def _status_form_response(
         payload,
         context,
         notice=(
-            "Reviewer status saved through the existing local/test "
-            "workflow action."
+            "Reviewer status saved for this record. The status now appears in "
+            "reviewer-created state below. Return to the CCLD request queue "
+            "and submit the same request to see updated status cues."
         ),
     )
 
@@ -958,7 +964,7 @@ def _render_detail(
         title="Local/test reviewer detail",
         heading="Local/test reviewer detail",
         main=f"""
-    {_render_notice(notice)}
+    {_render_notice(notice, source_record_key, related_records)}
     {_render_scope_notice(_mapping(payload, 'workflow_shell'))}
         {_render_detail_first_run_steps(source_record_key, related_records)}
         {_render_detail_navigation(source_record_key, related_records)}
@@ -1472,11 +1478,12 @@ def _render_note_form(source_record_key: str) -> str:
       <form action="{REVIEWER_UI_NOTE_PATH}" method="post">
         <input type="hidden" name="source_record_key" value="{_escape(source_record_key)}">
         <p>
-          <label for="note_text">Reviewer note</label>
+                    <label for="note_text">Reviewer note for this record</label>
                     <textarea id="note_text" name="note_text" rows="4" required
                         aria-describedby="note-text-help"></textarea>
-                      <span id="note-text-help">Use safe plain text. Notes are reviewer-created
-                    local/test state and do not change the source-derived record.</span>
+                                            <span id="note-text-help">
+                                        Use safe plain text. Notes appear below after saving.
+                                        They do not change the source-derived record.</span>
         </p>
                 <p><button type="submit">Save reviewer note for this record</button></p>
       </form>
@@ -1493,13 +1500,14 @@ def _render_status_form(source_record_key: str) -> str:
       <form action="{REVIEWER_UI_STATUS_PATH}" method="post">
         <input type="hidden" name="source_record_key" value="{_escape(source_record_key)}">
         <p>
-          <label for="reviewer_status">Reviewer status</label>
+          <label for="reviewer_status">Reviewer queue status for this record</label>
                     <select id="reviewer_status" name="reviewer_status" required
                         aria-describedby="reviewer-status-help">
 {options}
           </select>
                     <span id="reviewer-status-help">Status is reviewer-created local/test state for
-                    queue progress. It is not a public-source finding.</span>
+                    queue progress, appears below after saving, and is not a public-source
+                    finding.</span>
         </p>
                 <p><button type="submit">Save reviewer status for this record</button></p>
       </form>
@@ -1538,7 +1546,7 @@ def _render_detail_feedback_guidance(
 
 
 def _render_status_option(status: str) -> str:
-    label = status.replace("_", " ")
+    label = _REVIEWER_STATUS_LABELS.get(status, status.replace("_", " "))
     return f'            <option value="{_escape(status)}">{_escape(label)}</option>'
 
 
@@ -1558,12 +1566,28 @@ def _render_scope_notice(workflow: Mapping[str, Any]) -> str:
     </section>"""
 
 
-def _render_notice(notice: str | None) -> str:
+def _render_notice(
+        notice: str | None,
+        source_record_key: str,
+        related_records: list[Mapping[str, Any]],
+) -> str:
     if notice is None:
         return ""
+    detail_href = (
+        f"{REVIEWER_UI_DETAIL_PATH}?"
+        f"{urlencode({'source_record_key': source_record_key})}"
+    )
+    ccld_request_href = _ccld_request_href(related_records)
     return f"""<section aria-labelledby="form-result-heading">
-      <h2 id="form-result-heading">Saved</h2>
+            <h2 id="form-result-heading">Reviewer update saved</h2>
       <p>{_escape(notice)}</p>
+            <p>This confirmation is reviewer-created local/test state. It does not change
+            source-derived records or public-source findings.</p>
+            <ul>
+                <li><a href="#reviewer-state-heading">Review saved notes and statuses below</a></li>
+                <li><a href="{_escape(ccld_request_href)}">Return to CCLD request queue</a></li>
+                <li><a href="{_escape(detail_href)}">Refresh this reviewer detail</a></li>
+            </ul>
     </section>"""
 
 

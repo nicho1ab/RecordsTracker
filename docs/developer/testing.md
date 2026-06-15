@@ -138,7 +138,9 @@ without persistence, accessibility-oriented headings/labels/captions/link text,
 and no-secret HTML output.
 Hosted reviewer UI shell tests should also cover skip-to-main links, CCLD
 workflow navigation, first-run detail steps, and record-specific note/status
-button text while preserving existing read/write behavior.
+button text, saved-state confirmation wording, return-to-queue links, and
+read-after-write detail state while preserving existing read/write and audit
+behavior.
 Hosted CCLD facility lookup tests should cover committed tiny fixture fallback,
 configured full local/test CCLD facility reference CSV loading, safe scalar field
 display, partial and case-insensitive matching by facility/license number,

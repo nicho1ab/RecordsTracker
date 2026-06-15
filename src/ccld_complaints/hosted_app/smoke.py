@@ -55,6 +55,24 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
                 f"{base_url}/reviewer/records/detail?"
                 "source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448"
             )
+            reviewer_note_status, reviewer_note_body = _post_form_url(
+                f"{base_url}/reviewer/records/note",
+                {
+                    "source_record_key": (
+                        "complaint:ccld:complaint:32-CR-20220407124448"
+                    ),
+                    "note_text": "Smoke confirmation note.",
+                },
+            )
+            reviewer_saved_status, reviewer_saved_status_body = _post_form_url(
+                f"{base_url}/reviewer/records/status",
+                {
+                    "source_record_key": (
+                        "complaint:ccld:complaint:32-CR-20220407124448"
+                    ),
+                    "reviewer_status": "in_review",
+                },
+            )
             help_status, help_body = _read_url(f"{base_url}/ccld/help")
         finally:
             server.shutdown()
@@ -130,6 +148,20 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"First-run detail steps" not in reviewer_detail_body
     ):
         raise RuntimeError("Hosted scaffold reviewer detail did not return usable guidance.")
+    if (
+        reviewer_note_status != 200
+        or b"Reviewer update saved" not in reviewer_note_body
+        or b"Reviewer note saved for this record" not in reviewer_note_body
+        or b"Return to CCLD request queue" not in reviewer_note_body
+    ):
+        raise RuntimeError("Hosted scaffold reviewer note did not return confirmation.")
+    if (
+        reviewer_saved_status != 200
+        or b"Reviewer update saved" not in reviewer_saved_status_body
+        or b"Reviewer status saved for this record" not in reviewer_saved_status_body
+        or b"Return to CCLD request queue" not in reviewer_saved_status_body
+    ):
+        raise RuntimeError("Hosted scaffold reviewer status did not return confirmation.")
     return payload if isinstance(payload, dict) else {}
 
 
