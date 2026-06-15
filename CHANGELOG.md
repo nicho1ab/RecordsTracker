@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Added the first provider-agnostic hosted tester auth runtime boundary for the
+	external stakeholder organization pilot direction: production mode now blocks anonymous browser workflow
+	routes, explicit local-dev mode enables the fixture tester actor for local
+	scaffold testing, `/auth/login`, `/auth/logout`, and `/auth/status` expose safe
+	placeholders/status only, reviewer pages show a safe signed-in tester label,
+	QNAP/env docs list OIDC/OAuth2 placeholder variables, and focused tests cover
+	production blocking, local-dev opt-in, role/scope permissions, disabled or
+	revoked actors, out-of-scope actors, and no-secret output without adding custom
+	password storage, sessions, cookies, token handling, raw provider claims,
+	provider secrets, hosted URLs, or the user's employer-specific assumptions.
 - Added a portable QNAP-first Docker Compose runtime envelope for the hosted CCLD
 	scaffold with a Python app container, PostgreSQL container, named volumes,
 	health checks, Alembic startup migration guidance, no-secret `.env.example`,

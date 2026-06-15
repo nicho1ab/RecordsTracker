@@ -5,6 +5,9 @@ validation, local review, and production-discovery for public complaint and
 facility report records from the California Community Care Licensing Division
 public portal.
 
+The hosted product direction is a public-interest project for early external stakeholder organization
+testers. It is not a the user's employer project.
+
 The initial proof of concept proved Python connectors, preserved raw source
 files, SQLite storage, Datasette local review, and source-traceable exports. The
 current phase is production-discovery for a source-traceable public-record review
@@ -41,6 +44,11 @@ experience.
    migration startup, and no-secret environment examples. The same configuration
    model is intended to remain portable to AWS, Azure, DigitalOcean, Render,
    Fly.io, or another host later.
+- Adds a provider-agnostic hosted tester auth boundary: production runtime mode
+   blocks anonymous workflow pages and actions, while explicit local-dev mode
+   supplies the fixture tester actor for local scaffold validation. Real OIDC
+   login, token handling, sessions, cookies, user tables, and provider-specific
+   secrets remain outside this branch.
 - Includes a local/test hosted CCLD record request page where a tester can enter
    a CCLD facility/license number and optional date range, read matching seeded
    source-derived records, load or refresh matching CCLD records from validated
@@ -198,7 +206,9 @@ public-record review notes.
    for the optional production-like Docker runtime. QNAP Docker is the first
    practical deployment target, PostgreSQL runs in Docker for this runtime, and
    QNAP-specific paths or backup locations belong in deployment configuration or
-   operator notes rather than application code.
+   operator notes rather than application code. The guide also lists the
+   provider-agnostic OIDC/OAuth2 environment placeholders for external stakeholder organization pilot auth
+   planning.
 - Use [docs/developer/hosted-scaffold.md](docs/developer/hosted-scaffold.md) to
    run the local hosted tester MVP scaffold. The scaffold is a placeholder app
    shell with a controlled seeded corpus import path for validated local

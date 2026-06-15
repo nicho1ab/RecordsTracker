@@ -29,6 +29,7 @@ from ccld_complaints.hosted_app.auth import (
     get_authorized_source_derived_record_by_key,
     list_authorized_source_derived_records,
     load_hosted_auth_config,
+    load_hosted_auth_runtime_config,
     require_permission,
 )
 from ccld_complaints.hosted_app.seeded_import import (
@@ -81,6 +82,68 @@ def test_hosted_auth_config_accepts_managed_oidc_provider_class_only() -> None:
 def test_hosted_auth_config_can_require_provider_class() -> None:
     with pytest.raises(HostedAuthConfigError, match=AUTH_PROVIDER_CLASS_ENV):
         load_hosted_auth_config(environ={}, require_provider_class=True)
+
+
+def test_hosted_auth_runtime_defaults_to_production_without_local_dev_actor() -> None:
+    config = load_hosted_auth_runtime_config(environ={})
+
+    assert config.mode == "production"
+    assert config.production_mode is True
+    assert config.local_dev_auth_enabled is False
+    assert config.local_dev_actor_allowed is False
+    assert config.safe_summary["custom_password_storage"] is False
+    assert config.safe_summary["real_oidc_flow_implemented"] is False
+    assert config.safe_summary["sessions_or_cookies_implemented"] is False
+
+
+def test_hosted_auth_runtime_allows_explicit_local_dev_actor_mode_only() -> None:
+    config = load_hosted_auth_runtime_config(
+        environ={
+            "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
+            "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
+            AUTH_PROVIDER_CLASS_ENV: MANAGED_OIDC_OAUTH2_PROVIDER_CLASS,
+        }
+    )
+
+    assert config.mode == "local-dev"
+    assert config.provider_class == "managed-oidc-oauth2"
+    assert config.local_dev_actor_allowed is True
+
+
+def test_hosted_auth_runtime_rejects_local_dev_actor_in_production() -> None:
+    with pytest.raises(HostedAuthConfigError, match="LOCAL_DEV_AUTH"):
+        load_hosted_auth_runtime_config(
+            environ={
+                "CCLD_HOSTED_TESTER_AUTH_MODE": "production",
+                "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
+            }
+        )
+
+
+def test_hosted_auth_runtime_uses_placeholder_oidc_config_without_echoing_secrets() -> None:
+    config = load_hosted_auth_runtime_config(
+        environ={
+            "CCLD_HOSTED_TESTER_AUTH_MODE": "production",
+            AUTH_PROVIDER_CLASS_ENV: MANAGED_OIDC_OAUTH2_PROVIDER_CLASS,
+            "CCLD_HOSTED_TESTER_OIDC_ISSUER": "<provider-issuer-placeholder>",
+            "CCLD_HOSTED_TESTER_OIDC_CLIENT_ID": "<provider-client-id-placeholder>",
+            "CCLD_HOSTED_TESTER_OIDC_CALLBACK_PATH": "/auth/callback",
+            "CCLD_HOSTED_TESTER_OIDC_SCOPES": "openid profile",
+        }
+    )
+
+    assert config.oidc.configured is True
+    assert config.oidc.safe_summary == {
+        "issuer_configured": True,
+        "client_id_configured": True,
+        "callback_path": "/auth/callback",
+        "scopes": ["openid", "profile"],
+    }
+
+    with pytest.raises(HostedAuthConfigError, match="secret-like"):
+        load_hosted_auth_runtime_config(
+            environ={"CCLD_HOSTED_TESTER_OIDC_CLIENT_ID": "contains-token-value"}
+        )
 
 
 def test_require_permission_returns_audit_ready_context_for_active_actor() -> None:

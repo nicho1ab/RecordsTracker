@@ -50,6 +50,15 @@ rejected, secret-like inputs and real URLs are rejected without echoing values,
 user-role-admin permission and scope are required, ordering is deterministic,
 and no hosted scaffold tables are mutated or persisted auth configuration is
 created.
+Hosted auth runtime boundary tests must prove production mode is the default,
+anonymous browser workflow routes are blocked in production when no authenticated
+route context is available, public help remains readable, explicit local-dev
+mode is required before the fixture tester actor can be used, local-dev actor
+mode is rejected in production mode, role/scope checks still cover source-derived
+read, feedback submission, retrieval job trigger, import/reload, and admin-style
+actions, disabled or revoked actors are rejected, signed-in labels are safe, and
+HTML/JSON output does not expose provider subjects, issuers, raw claims, tokens,
+cookies, private headers, hosted URLs, or secrets.
 Audit coverage planning tests must prove authenticated audit/admin-style access,
 unauthenticated, disabled or revoked, role-denied, and out-of-scope rejection,
 deterministic ordering, no secret exposure, no audit row creation, no

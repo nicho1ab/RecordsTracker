@@ -17,7 +17,16 @@ from ccld_complaints.hosted_app.source_derived_reads import (
 )
 
 AUTH_PROVIDER_CLASS_ENV = "CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS"
+AUTH_MODE_ENV = "CCLD_HOSTED_TESTER_AUTH_MODE"
+LOCAL_DEV_AUTH_ENV = "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH"
+OIDC_ISSUER_ENV = "CCLD_HOSTED_TESTER_OIDC_ISSUER"
+OIDC_CLIENT_ID_ENV = "CCLD_HOSTED_TESTER_OIDC_CLIENT_ID"
+OIDC_CALLBACK_PATH_ENV = "CCLD_HOSTED_TESTER_OIDC_CALLBACK_PATH"
+OIDC_SCOPES_ENV = "CCLD_HOSTED_TESTER_OIDC_SCOPES"
 MANAGED_OIDC_OAUTH2_PROVIDER_CLASS = "managed-oidc-oauth2"
+PRODUCTION_AUTH_MODE = "production"
+LOCAL_DEV_AUTH_MODE = "local-dev"
+LOCAL_DEV_AUTH_ENABLED_VALUE = "enabled"
 AUTH_REQUIRED_CLAIMS = (
     "sub",
     "iss",
@@ -27,6 +36,7 @@ AUTH_REQUIRED_CLAIMS = (
 )
 
 AuthProviderClass = Literal["managed-oidc-oauth2"]
+HostedAuthMode = Literal["production", "local-dev"]
 HostedAccountStatus = Literal["active", "disabled", "revoked"]
 HostedActorCategory = Literal["admin", "tester", "operator", "system"]
 HostedAccessScopeType = Literal["project", "corpus", "seeded_corpus", "test_project"]
@@ -46,6 +56,7 @@ HostedPermission = Literal[
     "export_prepare",
     "export_finalize",
     "feedback_submit",
+    "retrieval_job_trigger",
     "import_reload",
     "reset_destructive",
     "user_role_admin",
@@ -64,6 +75,8 @@ AuthorizationTargetType = Literal[
 SOURCE_DERIVED_READ_PERMISSION: HostedPermission = "source_derived_read"
 REVIEWER_STATE_READ_PERMISSION: HostedPermission = "reviewer_state_read"
 REVIEWER_STATE_WRITE_PERMISSION: HostedPermission = "reviewer_state_write"
+FEEDBACK_SUBMIT_PERMISSION: HostedPermission = "feedback_submit"
+RETRIEVAL_JOB_TRIGGER_PERMISSION: HostedPermission = "retrieval_job_trigger"
 IMPORT_RELOAD_PERMISSION: HostedPermission = "import_reload"
 USER_ROLE_ADMIN_PERMISSION: HostedPermission = "user_role_admin"
 AUDIT_READ_PERMISSION: HostedPermission = "audit_read"
@@ -79,6 +92,7 @@ ROLE_PERMISSIONS: Mapping[HostedTesterRole, frozenset[HostedPermission]] = {
             "export_prepare",
             "export_finalize",
             "feedback_submit",
+            "retrieval_job_trigger",
             "import_reload",
             "reset_destructive",
             "user_role_admin",
@@ -93,6 +107,7 @@ ROLE_PERMISSIONS: Mapping[HostedTesterRole, frozenset[HostedPermission]] = {
             "correction_propose",
             "export_prepare",
             "feedback_submit",
+            "retrieval_job_trigger",
         }
     ),
     "read_only_tester": frozenset({"source_derived_read", "reviewer_state_read"}),
@@ -144,6 +159,56 @@ class HostedAuthConfig:
     @property
     def safe_provider_class(self) -> str:
         return "<unset>" if self.provider_class is None else self.provider_class
+
+
+@dataclass(frozen=True)
+class HostedOidcRuntimeConfig:
+    issuer: str | None
+    client_id: str | None
+    callback_path: str | None
+    scopes: tuple[str, ...]
+
+    @property
+    def configured(self) -> bool:
+        return bool(self.issuer and self.client_id and self.callback_path)
+
+    @property
+    def safe_summary(self) -> Mapping[str, object]:
+        return {
+            "issuer_configured": self.issuer is not None,
+            "client_id_configured": self.client_id is not None,
+            "callback_path": self.callback_path or "<unset>",
+            "scopes": list(self.scopes),
+        }
+
+
+@dataclass(frozen=True)
+class HostedAuthRuntimeConfig:
+    mode: HostedAuthMode
+    provider_class: AuthProviderClass | None
+    oidc: HostedOidcRuntimeConfig
+    local_dev_auth_enabled: bool
+
+    @property
+    def production_mode(self) -> bool:
+        return self.mode == PRODUCTION_AUTH_MODE
+
+    @property
+    def local_dev_actor_allowed(self) -> bool:
+        return self.mode == LOCAL_DEV_AUTH_MODE and self.local_dev_auth_enabled
+
+    @property
+    def safe_summary(self) -> Mapping[str, object]:
+        return {
+            "mode": self.mode,
+            "provider_class": self.provider_class or "<unset>",
+            "oidc": self.oidc.safe_summary,
+            "local_dev_auth_enabled": self.local_dev_auth_enabled,
+            "local_dev_actor_allowed": self.local_dev_actor_allowed,
+            "custom_password_storage": False,
+            "real_oidc_flow_implemented": False,
+            "sessions_or_cookies_implemented": False,
+        }
 
 
 @dataclass(frozen=True)
@@ -254,6 +319,28 @@ def load_hosted_auth_config(
     )
 
 
+def load_hosted_auth_runtime_config(
+    environ: Mapping[str, str] | None = None,
+) -> HostedAuthRuntimeConfig:
+    active_environ = os.environ if environ is None else environ
+    mode = _auth_mode(active_environ.get(AUTH_MODE_ENV, ""))
+    provider_config = load_hosted_auth_config(environ=active_environ)
+    local_dev_auth_enabled = (
+        active_environ.get(LOCAL_DEV_AUTH_ENV, "").strip().lower()
+        == LOCAL_DEV_AUTH_ENABLED_VALUE
+    )
+    if mode == PRODUCTION_AUTH_MODE and local_dev_auth_enabled:
+        raise HostedAuthConfigError(
+            f"{LOCAL_DEV_AUTH_ENV} must not be enabled when {AUTH_MODE_ENV} is production."
+        )
+    return HostedAuthRuntimeConfig(
+        mode=mode,
+        provider_class=provider_config.provider_class,
+        oidc=_oidc_runtime_config(active_environ),
+        local_dev_auth_enabled=local_dev_auth_enabled,
+    )
+
+
 def validate_auth_provider_class(provider_class: str) -> AuthProviderClass:
     normalized_provider_class = provider_class.strip().lower()
     if normalized_provider_class != MANAGED_OIDC_OAUTH2_PROVIDER_CLASS:
@@ -261,6 +348,61 @@ def validate_auth_provider_class(provider_class: str) -> AuthProviderClass:
             f"{AUTH_PROVIDER_CLASS_ENV} must be {MANAGED_OIDC_OAUTH2_PROVIDER_CLASS!r}."
         )
     return cast(AuthProviderClass, normalized_provider_class)
+
+
+def _auth_mode(raw_mode: str) -> HostedAuthMode:
+    normalized_mode = raw_mode.strip().lower() or PRODUCTION_AUTH_MODE
+    if normalized_mode not in {PRODUCTION_AUTH_MODE, LOCAL_DEV_AUTH_MODE}:
+        raise HostedAuthConfigError(
+            f"{AUTH_MODE_ENV} must be 'production' or 'local-dev'."
+        )
+    return cast(HostedAuthMode, normalized_mode)
+
+
+def _oidc_runtime_config(environ: Mapping[str, str]) -> HostedOidcRuntimeConfig:
+    issuer = _optional_config_value(environ, OIDC_ISSUER_ENV)
+    client_id = _optional_config_value(environ, OIDC_CLIENT_ID_ENV)
+    callback_path = _optional_config_value(environ, OIDC_CALLBACK_PATH_ENV)
+    scopes = tuple(
+        scope
+        for scope in (_optional_config_value(environ, OIDC_SCOPES_ENV) or "").split()
+        if scope
+    )
+    if callback_path is not None and not callback_path.startswith("/"):
+        raise HostedAuthConfigError(f"{OIDC_CALLBACK_PATH_ENV} must be a path placeholder.")
+    for env_name, value in (
+        (OIDC_CLIENT_ID_ENV, client_id),
+        (OIDC_CALLBACK_PATH_ENV, callback_path),
+        (OIDC_SCOPES_ENV, " ".join(scopes) if scopes else None),
+    ):
+        if value is not None:
+            _reject_secret_like_config(env_name, value)
+    return HostedOidcRuntimeConfig(
+        issuer=issuer,
+        client_id=client_id,
+        callback_path=callback_path,
+        scopes=scopes,
+    )
+
+
+def _optional_config_value(environ: Mapping[str, str], env_name: str) -> str | None:
+    value = environ.get(env_name, "").strip()
+    return value or None
+
+
+def _reject_secret_like_config(env_name: str, value: str) -> None:
+    normalized = value.casefold()
+    forbidden_markers = (
+        "client_secret",
+        "cookie",
+        "password",
+        "private_key",
+        "refresh_token",
+        "secret",
+        "token",
+    )
+    if any(marker in normalized for marker in forbidden_markers):
+        raise HostedAuthConfigError(f"{env_name} must not contain secret-like data.")
 
 
 def require_permission(

@@ -16,6 +16,7 @@ from ccld_complaints.hosted_app.auth import (
     HostedAccountStatus,
     HostedActorCategory,
     HostedTesterRole,
+    load_hosted_auth_runtime_config,
 )
 from ccld_complaints.hosted_app.ccld_facility_lookup import CCLD_FACILITY_LOOKUP_PATH
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
@@ -47,8 +48,20 @@ TEST_SCOPE = LOCAL_REVIEWER_UI_SCOPE
 COMPLAINT_KEY = "complaint:ccld:complaint:32-CR-20220407124448"
 
 
+def _local_dev_auth_config() -> Any:
+    return load_hosted_auth_runtime_config(
+        environ={
+            "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
+            "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
+        }
+    )
+
+
 def test_ccld_record_request_page_renders_from_default_context() -> None:
-    status, content_type, body = route_response("/ccld")
+    status, content_type, body = route_response(
+        "/ccld",
+        auth_runtime_config=_local_dev_auth_config(),
+    )
     html = body.decode("utf-8")
     normalized_html = " ".join(html.split())
 
@@ -126,7 +139,8 @@ def test_ccld_record_request_prefills_selected_facility_from_lookup() -> None:
     status, content_type, body = route_response(
         f"{CCLD_RECORD_REQUEST_PATH}?"
         "facility_number=900000001&request_context_origin=facility_lookup"
-        "&lookup_facility_name=Synthetic+Orchard+Child+Care"
+        "&lookup_facility_name=Synthetic+Orchard+Child+Care",
+        auth_runtime_config=_local_dev_auth_config(),
     )
     html = body.decode("utf-8")
 
@@ -146,7 +160,10 @@ def test_ccld_record_request_prefills_selected_facility_from_lookup() -> None:
 
 
 def test_ccld_record_request_manual_entry_shows_context_confirmation() -> None:
-    status, content_type, body = route_response(CCLD_RECORD_REQUEST_PATH)
+    status, content_type, body = route_response(
+        CCLD_RECORD_REQUEST_PATH,
+        auth_runtime_config=_local_dev_auth_config(),
+    )
     html = body.decode("utf-8")
     normalized_html = " ".join(html.split())
 

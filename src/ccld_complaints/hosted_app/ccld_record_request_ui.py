@@ -183,19 +183,6 @@ def route_ccld_record_request_ui_response(
     request_body: bytes | None = None,
 ) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
-    if context is None:
-        return _html_response(
-            503,
-            _render_message_page(
-                title="CCLD record request unavailable",
-                heading="CCLD record request unavailable",
-                message="Local/test CCLD record request context is not configured.",
-                guidance=(
-                    "Return to the hosted scaffold home and retry the local/test request page."
-                ),
-                links=(("Hosted scaffold home", "/"),),
-            ),
-        )
     if parsed_url.path not in {CCLD_UI_PREFIX, CCLD_RECORD_REQUEST_PATH, CCLD_HELP_PATH}:
         return _html_response(
             404,
@@ -209,6 +196,19 @@ def route_ccld_record_request_ui_response(
         )
     if method == "GET" and parsed_url.path == CCLD_HELP_PATH:
         return _html_response(200, _render_help_page())
+    if context is None:
+        return _html_response(
+            503,
+            _render_message_page(
+                title="CCLD record request unavailable",
+                heading="CCLD record request unavailable",
+                message="Local/test CCLD record request context is not configured.",
+                guidance=(
+                    "Return to the hosted scaffold home and retry the local/test request page."
+                ),
+                links=(("Hosted scaffold home", "/"),),
+            ),
+        )
     if method == "GET":
         query_values = parse_qs(parsed_url.query, keep_blank_values=True)
         selected_facility_number = _first_form_value(query_values, "facility_number")

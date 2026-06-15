@@ -15,6 +15,7 @@ from ccld_complaints.hosted_app.app import (
     route_response,
     source_record_filters_from_query,
 )
+from ccld_complaints.hosted_app.auth import load_hosted_auth_runtime_config
 from ccld_complaints.hosted_app.smoke import run_scaffold_smoke_check
 
 
@@ -153,6 +154,75 @@ def test_routes_return_shell_health_and_not_found() -> None:
     assert missing_status == 404
     assert missing_content_type == "text/plain; charset=utf-8"
     assert missing_body == b"Not found"
+
+
+def test_auth_placeholders_and_status_are_no_secret() -> None:
+    login_status, login_content_type, login_body = route_response("/auth/login")
+    logout_status, logout_content_type, logout_body = route_response("/auth/logout")
+    status_status, status_content_type, status_body = route_response("/auth/status")
+
+    login_html = login_body.decode("utf-8")
+    logout_html = logout_body.decode("utf-8")
+    auth_payload = json.loads(status_body)
+
+    assert login_status == 200
+    assert login_content_type == "text/html; charset=utf-8"
+    assert "Managed OIDC sign-in not configured" in login_html
+    assert "does not exchange auth codes" in login_html
+    assert logout_status == 200
+    assert logout_content_type == "text/html; charset=utf-8"
+    assert "No browser session is created" in logout_html
+    assert status_status == 200
+    assert status_content_type == "application/json; charset=utf-8"
+    assert auth_payload["auth"]["mode"] == "production"
+    serialized = (login_html + logout_html + status_body.decode("utf-8")).casefold()
+    assert "provider_subject" not in serialized
+    assert "provider_issuer" not in serialized
+    assert "client_secret" not in serialized
+
+
+def test_production_mode_blocks_anonymous_workflow_routes() -> None:
+    reviewer_status, reviewer_content_type, reviewer_body = route_response("/reviewer")
+    ccld_status, ccld_content_type, ccld_body = route_response("/ccld")
+    help_status, help_content_type, help_body = route_response("/ccld/help")
+
+    assert reviewer_status == 401
+    assert reviewer_content_type == "text/html; charset=utf-8"
+    assert "Reviewer access requires sign-in" in reviewer_body.decode("utf-8")
+    assert ccld_status == 401
+    assert ccld_content_type == "text/html; charset=utf-8"
+    assert "CCLD workflow access requires sign-in" in ccld_body.decode("utf-8")
+    assert help_status == 200
+    assert help_content_type == "text/html; charset=utf-8"
+    assert "How CCLD review works" in help_body.decode("utf-8")
+
+
+def test_explicit_local_dev_auth_mode_allows_default_workflow_actor() -> None:
+    auth_config = load_hosted_auth_runtime_config(
+        environ={
+            "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
+            "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
+        }
+    )
+
+    reviewer_status, _content_type, reviewer_body = route_response(
+        "/reviewer",
+        auth_runtime_config=auth_config,
+    )
+    ccld_status, _content_type, ccld_body = route_response(
+        "/ccld",
+        auth_runtime_config=auth_config,
+    )
+
+    reviewer_html = reviewer_body.decode("utf-8")
+    ccld_html = ccld_body.decode("utf-8")
+
+    assert reviewer_status == 200
+    assert "Signed in as Local Test Reviewer" in reviewer_html
+    assert "provider_subject" not in reviewer_html
+    assert "provider_issuer" not in reviewer_html
+    assert ccld_status == 200
+    assert "CCLD record request" in ccld_html
 
 
 def test_source_record_list_route_labels_sample_read_only_scope() -> None:

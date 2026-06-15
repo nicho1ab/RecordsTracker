@@ -9,7 +9,11 @@ container settings, named volumes, and environment variables so the same model
 can move later to AWS, Azure, DigitalOcean, Render, Fly.io, or another host
 without hard-coding QNAP paths into application code.
 
-This runtime does not add production authentication, hosted live CCLD retrieval,
+This runtime includes the first provider-agnostic auth boundary for the external stakeholder organization pilot
+direction: production mode blocks anonymous workflow routes unless an
+authenticated route context exists, and explicit local-dev mode is available only
+for local scaffold validation. It does not add a real OIDC login flow, token
+handling, sessions, cookies, custom password storage, hosted live CCLD retrieval,
 browser-triggered connector execution, production import automation, public URL
 behavior, or a hosted deployment in this repository branch.
 
@@ -35,6 +39,22 @@ Required values:
   in the untracked host `.env` file.
 - `CCLD_HOSTED_PORT`: host port mapped to container port `8000`.
 
+Provider-agnostic hosted tester auth values:
+
+- `CCLD_HOSTED_TESTER_AUTH_MODE`: use `production` for QNAP/pilot-like runtime;
+  use `local-dev` only for local scaffold validation.
+- `CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS`: must be `managed-oidc-oauth2`.
+- `CCLD_HOSTED_TESTER_OIDC_ISSUER`: provider issuer placeholder kept in the
+  untracked deployment `.env` file.
+- `CCLD_HOSTED_TESTER_OIDC_CLIENT_ID`: provider client ID placeholder kept in
+  the untracked deployment `.env` file.
+- `CCLD_HOSTED_TESTER_OIDC_CALLBACK_PATH`: path placeholder such as
+  `/auth/callback`; do not commit real hosted callback URLs.
+- `CCLD_HOSTED_TESTER_OIDC_SCOPES`: space-separated OIDC scopes such as
+  `openid profile`.
+- `CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH`: keep `disabled` for production mode; set
+  to `enabled` only with `local-dev` mode for local scaffold validation.
+
 Optional value:
 
 - `CCLD_FACILITY_REFERENCE_CSV`: container path for a local/test facility
@@ -43,6 +63,10 @@ Optional value:
 The app receives `CCLD_HOSTED_TESTER_DATABASE_URL` from Compose. Do not commit a
 database connection string. Do not print the connection string in logs, docs,
 tests, screenshots, or support notes.
+
+Do not commit provider secrets, tenant-specific private values, hosted callback
+URLs, tokens, cookies, or raw provider claims. This branch documents the auth
+configuration seam and safe route placeholders only.
 
 ## Start Locally or on QNAP
 
@@ -128,14 +152,16 @@ After starting the runtime, check the health route and core local/test pages:
 
 - `/`
 - `/health`
+- `/auth/status`
+- `/auth/login`
 - `/ccld/facilities`
 - `/ccld/records/request`
 - `/ccld/help`
 - `/reviewer`
 
 The scaffold should continue to identify itself as local/test. It should not
-claim production authentication, live browser retrieval, connector execution,
-public launch, or source completeness.
+claim real OIDC login, token handling, sessions, cookies, live browser retrieval,
+connector execution, public launch, or source completeness.
 
 ## Portability Notes
 
