@@ -14,6 +14,41 @@ For changes to Datasette views, generated metadata, saved queries, CSV exports,
 review bundle files, or script output, also review the local output checklist in
 `docs/developer/accessibility.md`.
 
+For changes to Docker runtime files, validate the static Docker/env tests and,
+when Docker is available, run a bounded Compose configuration check against the
+no-secret example environment before relying on the runtime.
+
+## Run QNAP-first Docker runtime
+
+The first production-like runtime target is QNAP Docker with PostgreSQL in
+Docker. The configuration remains portable and must not hard-code QNAP paths in
+application code.
+
+On the Docker host, copy `.env.example` to `.env`, replace placeholder values,
+and run:
+
+```powershell
+docker compose -f docker-compose.qnap.yml --env-file .env up --build -d
+```
+
+Check the health route:
+
+```text
+http://<host-name-or-ip>:<CCLD_HOSTED_PORT>/health
+```
+
+Run migrations manually when needed:
+
+```powershell
+docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic upgrade head
+```
+
+Back up PostgreSQL with `pg_dump` from the `postgres` service and store dumps
+outside the repository. Restore only into a maintenance window or stopped app
+container so application writes cannot race with restore. Detailed QNAP volume,
+backup, restore, and portability guidance lives in
+[docs/developer/qnap-docker-runtime.md](docs/developer/qnap-docker-runtime.md).
+
 ## Run fixture-backed sample ingestion
 
 Use committed fixtures to populate the local sample database without making live

@@ -13,6 +13,11 @@ Public complaint and inspection records are available through the CCLD public po
 The project is in production-discovery for a source-traceable public-record
 review solution.
 
+The first production-like runtime assumption is QNAP Docker with PostgreSQL in
+Docker. Application configuration and persistence boundaries must remain
+portable enough to move later to AWS, Azure, DigitalOcean, Render, Fly.io, or
+another host without hard-coding QNAP-specific paths into application code.
+
 The proof of concept has proven ingestion, deterministic extraction, raw source
 preservation, source traceability, local review, and source-traceable exports.
 Current work should define product and architecture requirements for reviewer

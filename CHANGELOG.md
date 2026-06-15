@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added a portable QNAP-first Docker Compose runtime envelope for the hosted CCLD
+	scaffold with a Python app container, PostgreSQL container, named volumes,
+	health checks, Alembic startup migration guidance, no-secret `.env.example`,
+	QNAP deployment notes, cloud portability notes, and static tests for the Docker
+	and environment examples without adding production auth, hosted deployment,
+	browser-triggered live retrieval, connector execution, schema changes, or
+	optional paid platform dependencies.
 - Improved first-run local/test CCLD review session orientation across home,
   request/help, queue, reviewer detail, and feedback checklist wording so testers
   can follow facility lookup, request context, loaded local/test queue, reviewer

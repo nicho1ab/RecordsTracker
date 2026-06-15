@@ -9,10 +9,11 @@ workflow seams; it is still not a production reviewer application or stateful
 hosted tester workflow.
 
 The scaffold is local-first and must run on a Windows development workstation
-before any QNAP, Azure, AWS, public hosting, or public URL work is attempted.
-It uses Python standard-library HTTP tooling to avoid creating a final
-production frontend, API, database, authentication, hosting, or deployment
-commitment.
+for ordinary development. A separate QNAP-first Docker Compose runtime now exists
+for production-like validation with PostgreSQL in Docker, but it packages the
+same scaffold and does not approve public hosting or production auth. It uses
+Python standard-library HTTP tooling to avoid creating a final production
+frontend, API, database, authentication, hosting, or deployment commitment.
 
 ## Required local tools
 
@@ -24,7 +25,9 @@ commitment.
   SQLAlchemy, and the PostgreSQL driver used by the scaffolded migration
   wiring.
 
-Node.js is not required. Docker is not required. QNAP Container Station is not required.
+Node.js is not required. Docker is not required for the local non-Docker
+developer workflow. QNAP Container Station is not required for local scaffold
+smoke, boundary tests, or seeded artifact parsing tests.
 No local PostgreSQL server is required for scaffold smoke, boundary tests, or
 seeded artifact parsing tests. A PostgreSQL-compatible database URL is required
 only when a developer explicitly runs Alembic migrations or the seeded corpus
@@ -59,7 +62,9 @@ PostgreSQL server, QNAP, cloud resources, and a public URL are not required for
 local scaffold smoke, boundary tests, or seeded artifact parsing tests.
 
 The local setup check does not install software, does not require admin rights,
-does not create secrets, and does not contact cloud services.
+does not create secrets, and does not contact cloud services. It does not
+validate the optional Docker runtime; use the Compose checks in
+`docs/developer/qnap-docker-runtime.md` when working on that path.
 
 ## Install dependencies
 
@@ -106,6 +111,31 @@ When selecting the next hosted scaffold task, apply the product-benefit gate in
 work should be next only when it directly improves the CCLD local/test tester
 workflow or removes a concrete MVP-blocking risk; otherwise keep it tracked as
 deferred readiness.
+
+## Start the production-like Docker runtime
+
+QNAP Docker is the first practical production-like runtime target. The runtime
+uses Docker Compose, the existing Python hosted scaffold app, PostgreSQL in
+Docker, named volumes, health checks, and Alembic migrations on app startup. It
+keeps QNAP-specific host paths out of application code so the same environment
+and volume model can move later to AWS, Azure, DigitalOcean, Render, Fly.io, or
+another host.
+
+Copy `.env.example` to an untracked `.env` file on the Docker host, replace
+placeholder values, then run:
+
+```powershell
+docker compose -f docker-compose.qnap.yml --env-file .env up --build -d
+```
+
+Open the hosted scaffold at the configured host port and check `/health` before
+using the CCLD pages. See [qnap-docker-runtime.md](qnap-docker-runtime.md) for
+environment variables, migrations, volumes, backup/restore, health checks, and
+portability notes.
+
+This Docker runtime does not add production sign-in, sessions, cookies, hosted
+live retrieval, browser-triggered connector execution, public URL approval,
+monitoring, production import automation, or a new frontend framework.
 
 ## Open the CCLD record request page
 
@@ -594,7 +624,9 @@ role persistence, full reviewer-created workflows, full audit coverage, audit UI
 audit export, export builders, reset/reload execution, reviewer-created state archive or clear behavior, production import
 automation, production API framework behavior, hosted live crawling, hosted
 connector execution, QNAP, Azure, AWS, public hosting, public URLs, or
-production deployment.
+production deployment. The QNAP-first Docker runtime provides a production-like
+container and PostgreSQL envelope only; it does not change those application
+feature boundaries.
 
 ## Run the smoke check
 
