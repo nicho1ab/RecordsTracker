@@ -131,6 +131,12 @@ keeps QNAP-specific host paths out of application code so the same environment
 and volume model can move later to AWS, Azure, DigitalOcean, Render, Fly.io, or
 another host.
 
+Before starting a QNAP pilot, validate the untracked `.env` and Compose shape:
+
+```powershell
+.\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env
+```
+
 Copy `.env.example` to an untracked `.env` file on the Docker host, replace
 placeholder values, then run:
 
@@ -142,6 +148,13 @@ Open the hosted scaffold at the configured host port and check `/health` before
 using the CCLD pages. See [qnap-docker-runtime.md](qnap-docker-runtime.md) for
 environment variables, migrations, volumes, backup/restore, health checks, and
 portability notes.
+
+When the containers are running, the same pilot checker can also verify container
+state and routes:
+
+```powershell
+.\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env -CheckContainers -BaseUrl http://<host-name-or-ip>:<CCLD_HOSTED_PORT>
+```
 
 This Docker runtime does not add production sign-in, sessions, cookies, hosted
 live retrieval, browser-triggered connector execution, public URL approval,

@@ -28,6 +28,15 @@ On the Docker host, copy `.env.example` to `.env`, replace placeholder values,
 and run:
 
 ```powershell
+.\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env
+```
+
+The pilot check validates the required untracked environment shape, PostgreSQL
+page-data mode, production auth boundary defaults, retrieval raw artifact path,
+and Docker Compose configuration before containers are started. It warns about
+placeholder values that must be replaced before inviting testers.
+
+```powershell
 docker compose -f docker-compose.qnap.yml --env-file .env up --build -d
 ```
 
@@ -42,6 +51,17 @@ Run migrations manually when needed:
 ```powershell
 docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic upgrade head
 ```
+
+After containers are running, verify the pilot workflow:
+
+```powershell
+.\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env -CheckContainers -BaseUrl http://<host-name-or-ip>:<CCLD_HOSTED_PORT>
+```
+
+The route probe checks the landing page, health, auth status, feedback, CCLD
+facility/request/retrieval/history/help surfaces, and reviewer route status
+without making live CCLD or GitHub calls. Protected routes may return setup or
+sign-in-required states until production auth and imported data are configured.
 
 Back up PostgreSQL with `pg_dump` from the `postgres` service and store dumps
 outside the repository. Restore only into a maintenance window or stopped app

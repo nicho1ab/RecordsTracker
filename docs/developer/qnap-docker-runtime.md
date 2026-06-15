@@ -107,7 +107,18 @@ screenshots, or docs.
 
 ## Start Locally or on QNAP
 
-From the repository root on any Docker host:
+From the repository root on any Docker host, first validate the untracked pilot
+environment file:
+
+```powershell
+.\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env
+```
+
+That check verifies required `.env` keys, PostgreSQL-backed page mode, production
+auth boundary defaults, retrieval raw artifact storage path, and Docker Compose
+configuration. It warns when deployment values still look like placeholders.
+
+Then start the app and PostgreSQL:
 
 ```powershell
 docker compose -f docker-compose.qnap.yml --env-file .env up --build -d
@@ -129,6 +140,37 @@ QNAP Container Station users can import or run the Compose file from the repo
 working copy. Keep QNAP-specific host paths, share names, snapshots, and backup
 locations in QNAP configuration or local operations notes, not in application
 code.
+
+After startup, verify containers, PostgreSQL readiness, Alembic state, and the
+route surface:
+
+```powershell
+.\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env -CheckContainers -BaseUrl http://<host-name-or-ip>:<CCLD_HOSTED_PORT>
+```
+
+The route checks are bounded and read-only. They do not run live CCLD retrieval,
+do not call GitHub, and do not prove public-source completeness.
+
+## Pilot Modes
+
+Use these modes deliberately:
+
+- Local workstation demo: `CCLD_HOSTED_TESTER_AUTH_MODE=local-dev`,
+  `CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH=enabled`, and
+  `CCLD_HOSTED_PAGE_DATA_MODE=fixture-demo`. This is only for local scaffold
+  validation.
+- Local-dev mock-success retrieval validation: same local-dev settings plus
+  `CCLD_RETRIEVAL_ENABLED=enabled`, `CCLD_RETRIEVAL_RAW_DIR=<local-or-container-raw-dir>`,
+  and `CCLD_RETRIEVAL_DEMO_MODE=mock-success`. This uses committed fixtures and
+  must not be used for QNAP/pilot-like runtime.
+- QNAP pilot mode: `CCLD_HOSTED_PAGE_DATA_MODE=postgres`,
+  `CCLD_HOSTED_TESTER_AUTH_MODE=production`,
+  `CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH=disabled`, PostgreSQL configured, and
+  `CCLD_RETRIEVAL_DEMO_MODE` blank.
+- Production-like configured retrieval: QNAP pilot mode plus
+  `CCLD_RETRIEVAL_ENABLED=enabled`, a persistent `CCLD_RETRIEVAL_RAW_DIR`, and
+  conservative retrieval limits. Supported retrieval remains complaint records;
+  `all_supported` still resolves to complaints only.
 
 ## Migrations
 
