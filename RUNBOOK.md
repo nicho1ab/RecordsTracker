@@ -101,6 +101,18 @@ After containers are running, verify the pilot workflow:
 .\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env -CheckContainers -BaseUrl http://<host-name-or-ip>:<CCLD_HOSTED_PORT>
 ```
 
+Optional GET-only route evidence summary after the app is running:
+
+```powershell
+.\scripts\summarize-qnap-pilot-route-evidence.ps1 -BaseUrl http://<host-name-or-ip>:<CCLD_HOSTED_PORT>
+```
+
+The route evidence command accepts expected protected, setup-required, safe-empty,
+and missing-job states. It does not run imports, retrieval, feedback submission,
+live CCLD calls, GitHub calls, or reviewer-created writes, and it must not print
+secrets, raw artifacts, raw server paths, cookies, provider subjects, provider
+issuers, or response bodies.
+
 The route probe checks the landing page, health, auth status, feedback, CCLD
 facility/request/retrieval/history/help surfaces, and reviewer route status
 without making live CCLD or GitHub calls. Protected routes may return setup or

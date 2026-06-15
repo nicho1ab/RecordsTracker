@@ -168,6 +168,16 @@ route surface:
 .\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env -CheckContainers -BaseUrl http://<host-name-or-ip>:<CCLD_HOSTED_PORT>
 ```
 
+For a concise GET-only route evidence packet, run:
+
+```powershell
+.\scripts\summarize-qnap-pilot-route-evidence.ps1 -BaseUrl http://<host-name-or-ip>:<CCLD_HOSTED_PORT>
+```
+
+Expected protected, setup-required, safe-empty, and missing-job states are valid
+readiness evidence. The route evidence command does not run imports, retrieval,
+feedback submission, live CCLD calls, GitHub calls, or reviewer-created writes.
+
 After importing a validated hosted CCLD artifact or seeded corpus, capture a
 read-only imported-data summary:
 
