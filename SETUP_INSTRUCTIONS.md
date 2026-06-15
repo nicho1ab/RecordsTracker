@@ -32,6 +32,22 @@ Run the standard checks before completing a task:
 .\scripts\docs.ps1
 ```
 
+## Optional Docker runtime check
+
+The local Python workflow above remains the default developer setup and does not
+require Docker. For the production-like QNAP-first runtime, copy `.env.example`
+to an untracked `.env` file on the Docker host, replace placeholder values, and
+run:
+
+```powershell
+docker compose -f docker-compose.qnap.yml --env-file .env up --build -d
+```
+
+The Compose runtime starts the hosted scaffold app plus PostgreSQL in Docker,
+runs Alembic migrations before app startup, and exposes the scaffold on
+`CCLD_HOSTED_PORT`. Keep real database passwords and host-specific QNAP paths out
+of Git. See [docs/developer/qnap-docker-runtime.md](docs/developer/qnap-docker-runtime.md).
+
 ## Run the fixture-backed sample workflow
 
 Populate the local sample database from committed fixtures:

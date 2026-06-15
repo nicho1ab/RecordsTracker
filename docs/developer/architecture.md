@@ -134,7 +134,9 @@ HTTP app shell. It provides a placeholder page and health route for smoke
 validation on a Windows development workstation. Its local setup check verifies
 Python and development-tool prerequisites without installing software, requiring
 admin rights, or requiring Node, Docker, QNAP, Azure, AWS, cloud resources, or a
-public URL.
+public URL. The optional QNAP-first Docker Compose runtime is separate from the
+local setup check and packages the same scaffold with PostgreSQL in Docker for
+production-like validation.
 
 The scaffold also includes a local-only read-only source-derived view shell over
 fixture/sample records. This view is an app-facing placeholder for source-record
@@ -231,8 +233,11 @@ source-derived read routes, reviewer workflow shell, reviewer-created state
 scaffold service, reviewer-created state read routes, audit event scaffold
 service, audit history read routes, reset/reload dry-run, and planning metadata
 read routes are limited to
-local/test service seams. It does not require Docker, QNAP Container Station,
-Azure, AWS, a public URL, secrets, or cloud resources.
+local/test service seams. The local non-Docker workflow does not require Docker,
+QNAP Container Station, Azure, AWS, a public URL, secrets, or cloud resources.
+The optional QNAP-first Docker runtime provides a portable app/PostgreSQL
+container envelope only and does not add production auth, public URL behavior,
+hosted live crawling, connector execution, or production import automation.
 
 See `docs/developer/hosted-scaffold.md` for local run and smoke-check commands.
 

@@ -105,6 +105,26 @@
   separate from reviewer-created state. The current scaffold is an
   implementation path toward that direction, not a final production framework,
   hosted live crawler, import automation path, or stateful reviewer workflow.
+- Runtime direction: QNAP Docker is the first practical production-like runtime
+  target. The current runtime envelope uses Docker Compose with a Python app
+  container, PostgreSQL in Docker, named volumes, health checks, Alembic startup
+  migration guidance, and no-secret environment examples. Application code must
+  stay portable enough to move later to AWS, Azure, DigitalOcean, Render, Fly.io,
+  or another host; QNAP-specific filesystem paths and backup locations belong in
+  deployment docs or host-local configuration.
+- Public hosted deployment, public URL behavior, hosted live crawling, hosted
+  connector execution, production monitoring, incident response, and operational
+  support. The QNAP-first Docker Compose runtime envelope now exists for
+  production-like validation, but it is not by itself a public deployment,
+  production auth implementation, monitoring stack, or operational support model.
+- Public URL behavior, cloud deployment beyond the QNAP-first runtime envelope,
+  hosted connector execution, and hosted live crawling remain deferred. The
+  runtime envelope is portable Docker/PostgreSQL packaging, not approval for a
+  public launch or production auth.
+- Future deployment/hosting decision: public URL behavior, cloud deployment
+  beyond the QNAP-first runtime envelope, DNS, app registration, managed cloud
+  database, deployment credential choices, production monitoring, and operational
+  support remain deferred and must not be implied by local scaffold tooling.
 - Local-only scaffold status: the scaffold is local/test only, local to a
   development workstation, and not backed by live public data, ignored raw CSVs,
   generated profiling outputs, SQLite-backed sample UI routes, real provider
@@ -209,9 +229,9 @@
   reset/reload command or API implementation, tester feedback persistence,
   full reviewer-created state workflows, annotations, corrections, queues, and
   review-state behavior beyond the narrow scaffold table.
-- QNAP, Azure, AWS, cloud deployment, public URL behavior, hosted live crawling,
-  hosted connector execution, production monitoring, incident response, and
-  operational support.
+- Public hosted deployment, cloud deployment beyond the QNAP-first runtime
+  envelope, public URL behavior, hosted live crawling, hosted connector
+  execution, production monitoring, incident response, and operational support.
 
 ## Deferred readiness and product-benefit gate
 
@@ -292,8 +312,8 @@ without creating avoidable rework.
 - Local-only/sample-only boundaries remain active. Sample records must stay
   clearly marked as fixture/sample records and must not be presented as live,
   database-backed, complete, statewide, official, or production data.
-- QNAP, Azure, AWS, public URL, cloud deployment, hosted connector execution,
-  and hosted live crawling remain deferred.
+- Public URL behavior, cloud deployment beyond the QNAP-first runtime envelope,
+  hosted connector execution, and hosted live crawling remain deferred.
 
 ## Gap analysis
 
@@ -352,9 +372,10 @@ without creating avoidable rework.
   real provider login, token validation, session handling, middleware, provider
   registration, hosted URLs, and persistent role/scope assignments remain
   deferred.
-- Future deployment/hosting decision: QNAP, Azure, AWS, public URL, cloud
-  deployment, DNS, app registration, cloud database, and deployment credential
-  choices remain deferred and must not be implied by local scaffold tooling.
+- Future deployment/hosting decision: public URL behavior, cloud deployment
+  beyond the QNAP-first runtime envelope, DNS, app registration, managed cloud
+  database, deployment credential choices, production monitoring, and operational
+  support remain deferred and must not be implied by local scaffold tooling.
 - Future audit, reviewer-state, correction, export, feedback, and reset/reload
   workflows: ADR-0013 defines the operational boundaries for audit, export,
   reset/reload, and retention. Implementations must still preserve them as

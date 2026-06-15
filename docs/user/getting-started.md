@@ -214,10 +214,10 @@ persisted by the app; copy it into the agreed external feedback channel
 manually. Full/raw facility CSV files must stay out of the repository. The
 lookup and request pages do not run live CCLD retrieval, execute connectors,
 persist lookup or feedback data, or mutate reviewer notes/statuses from the
-browser request page. When matching local validated records are
-unavailable, it shows the explicit live-fetch command that must be run outside
-the hosted UI. After that outside-browser CCLD pipeline output is validated, a
-developer/tester can build the local/test hosted seeded-corpus JSON artifact with:
+browser request page. When matching local validated records are unavailable, it
+shows the explicit live-fetch command that must be run outside the hosted UI.
+After that outside-browser CCLD pipeline output is validated, a developer/tester
+can build the local/test hosted seeded-corpus JSON artifact with:
 
 Deferred production-readiness work such as auth provider integration, audit UI,
 exports, reset/reload execution, deployment, and persisted feedback remains
@@ -227,6 +227,14 @@ workflow unless it unlocks tester value or resolves a concrete MVP-blocking risk
 ```powershell
 .\scripts\build-hosted-ccld-artifact.ps1 -DbPath data\processed\ccld.sqlite -FacilityNumber 157806098 -Overwrite
 ```
+
+An optional QNAP-first Docker Compose runtime is available for production-like
+testing with PostgreSQL in Docker. It uses the same hosted scaffold pages, keeps
+real database settings in an untracked `.env` file, and does not add production
+sign-in, public hosting approval, browser-triggered live CCLD retrieval, or
+connector execution. Developers should use
+[docs/developer/qnap-docker-runtime.md](../developer/qnap-docker-runtime.md) for
+those runtime steps.
 
 Return to `/ccld/records/request` and use the local validated CCLD load action
 to load or refresh matching source-derived rows from that JSON artifact. The

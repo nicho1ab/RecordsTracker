@@ -129,7 +129,8 @@ def build_local_check_report() -> list[LocalCheck]:
         informational_boundary("Node/npm", "Not required for the Python stdlib hosted scaffold."),
         informational_boundary(
             "Docker",
-            "Not required for local hosted scaffold setup or validation.",
+            "Not required for local non-Docker scaffold setup or validation; "
+            "used only for the optional QNAP-first runtime.",
         ),
         informational_boundary(
             "PostgreSQL server",
@@ -138,7 +139,8 @@ def build_local_check_report() -> list[LocalCheck]:
         ),
         informational_boundary(
             "QNAP/cloud/public URL",
-            "Deferred and not required for local scaffold work.",
+            "Not required for local scaffold work; public URLs and cloud deployment "
+            "remain deferred.",
         ),
     ]
 

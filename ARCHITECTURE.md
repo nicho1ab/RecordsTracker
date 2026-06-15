@@ -105,6 +105,13 @@ imports, reviewer-created state, audit events, export packet state, tester
 feedback, reset/reload metadata, and auth role/scope references. SQLite and
 Datasette remain retained for validation, inspection, debugging, local
 exploration, export support, and transition comparison.
+The first production-like runtime envelope is QNAP-first Docker Compose with a
+Python app container and PostgreSQL in Docker. Application configuration must
+remain host-portable: QNAP-specific host paths, backup locations, share names,
+and operator procedures belong in deployment docs or host-local configuration,
+not application code. The same environment-variable, migration, and persistent-
+volume model should be movable later to AWS, Azure, DigitalOcean, Render, Fly.io,
+or another host without a major rewrite.
 
 The earlier hosted scaffold sample pages remain local-only and sample-only. The
 Python standard-library app shell still includes health and smoke validation,
@@ -372,6 +379,14 @@ retention implementation PRs validate the concrete layer.
   deployment, full audit coverage, audit UI, audit export, retention automation,
   production import automation, and hosted export builders remain unimplemented
   until focused implementation PRs validate the affected layer.
+- QNAP Docker is the first practical production-like runtime target, using the
+  committed Dockerfile and Compose file with PostgreSQL in Docker, named volumes,
+  health checks, Alembic startup migration wiring, and no-secret environment
+  examples. This runtime envelope does not approve public URL behavior,
+  production auth, hosted live crawling, connector execution, production import
+  automation, monitoring, incident response, or a QNAP-specific application
+  code path. Later cloud deployment should preserve the same environment and
+  persistence contracts where possible.
 
 ## Accessibility
 

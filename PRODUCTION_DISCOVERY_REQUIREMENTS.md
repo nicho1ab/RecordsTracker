@@ -33,7 +33,10 @@ live public data, perform real provider login, authorize production HTTP
 routes, persist reviewer-created state, create queues, support annotations,
 corrections, exports, feedback, audit trail, reset/reload, hosted live crawling,
 hosted connector execution, read ignored raw CSVs or generated profiling
-outputs, deployment, QNAP, Azure, AWS, or public URL behavior.
+outputs, public deployment, production auth, Azure, AWS, cloud deployment,
+production operations, or public URL behavior. A QNAP-first Docker Compose
+runtime envelope now exists for production-like app/PostgreSQL validation, but it
+does not make the scaffold hosted tester-ready.
 
 Minimal PostgreSQL/Alembic project wiring now exists for local/test validation:
 dependency declarations, no-secret database URL validation, an Alembic script
