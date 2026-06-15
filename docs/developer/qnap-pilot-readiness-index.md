@@ -133,6 +133,26 @@ how they will authenticate, what they can access, and how access can be revoked.
 
 ## 7. Capture Evidence Packet
 
+Optional local command:
+
+```powershell
+.\scripts\build-qnap-pilot-evidence-packet.ps1 -EnvFile .env -BaseUrl http://<host-name-or-ip>:<CCLD_HOSTED_PORT> -KnownLimitationsAcknowledged
+```
+
+For placeholder/template validation without Docker/PostgreSQL checks or a
+running server:
+
+```powershell
+.\scripts\build-qnap-pilot-evidence-packet.ps1 -EnvFile .env.example -SkipDatabaseCheck -AllowRouteUnavailable -BaseUrl http://127.0.0.1:9
+```
+
+The packet command is optional, local, read-only operator convenience. It uses
+the existing verifier, seeded import evidence, and route evidence scripts, then
+writes redacted Markdown under ignored `data/processed/qnap-pilot-evidence/`.
+It is not an audit export, legal report, product export packet, public report,
+GitHub issue, or official certification. Operators must review generated packets
+before sharing them, and generated evidence files must not be committed.
+
 The evidence packet should include:
 
 - QNAP verifier output summary.

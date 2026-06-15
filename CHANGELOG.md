@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added `scripts/build-qnap-pilot-evidence-packet.ps1`, an optional read-only
+	local command that assembles a redacted Markdown QNAP pilot evidence packet
+	under ignored `data/processed/qnap-pilot-evidence/` from the existing verifier,
+	seeded import evidence, route evidence, and operator decisions without creating
+	an audit export, product export packet, public report, GitHub issue, or
+	certification.
 - Added `docs/developer/qnap-pilot-readiness-index.md`, an ordered pre-invite
 	readiness path that ties together QNAP scope, environment setup, seeded import
 	evidence, route evidence, auth readiness, tester invitation decisions, evidence

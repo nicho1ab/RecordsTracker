@@ -43,6 +43,11 @@ Use
 [docs/developer/qnap-pilot-seeded-import-evidence.md](docs/developer/qnap-pilot-seeded-import-evidence.md)
 to capture proof that validated CCLD source-derived rows are imported into
 PostgreSQL before treating the pilot as tester-ready.
+Use the optional local evidence packet command only after the separate verifier,
+seeded evidence, route evidence, auth readiness, tester invitation, feedback,
+retrieval, backup, and known-limitation decisions are understood. It assembles a
+redacted Markdown packet under ignored `data/processed/qnap-pilot-evidence/` for
+operator review; generated packets must not be committed.
 
 1. Copy `.env.example` to `.env` and keep `.env` untracked.
 2. Replace the PostgreSQL password placeholder.
@@ -123,6 +128,26 @@ The route probe checks the landing page, health, auth status, feedback, CCLD
 facility/request/retrieval/history/help surfaces, and reviewer route status
 without making live CCLD or GitHub calls. Protected routes may return setup or
 sign-in-required states until production auth and imported data are configured.
+
+Optional local redacted evidence packet assembly:
+
+```powershell
+.\scripts\build-qnap-pilot-evidence-packet.ps1 -EnvFile .env -BaseUrl http://<host-name-or-ip>:<CCLD_HOSTED_PORT> -KnownLimitationsAcknowledged
+```
+
+For placeholder/template validation without Docker/PostgreSQL checks or a
+running server:
+
+```powershell
+.\scripts\build-qnap-pilot-evidence-packet.ps1 -EnvFile .env.example -SkipDatabaseCheck -AllowRouteUnavailable -BaseUrl http://127.0.0.1:9
+```
+
+The packet command is read-only and local. It runs the existing verifier, seeded
+evidence, and route evidence scripts, redacts captured output defensively, and
+writes Markdown under ignored `data/processed/qnap-pilot-evidence/`. It does not
+run imports, retrieval, feedback submission, live CCLD calls, GitHub calls, POST
+requests, product exports, audit exports, public reports, or certifications.
+Operators must review generated packets before sharing them.
 
 Back up PostgreSQL with `pg_dump` from the `postgres` service and store dumps
 outside the repository. Restore only into a maintenance window or stopped app

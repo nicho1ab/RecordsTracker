@@ -13,6 +13,11 @@ prints the safe summary described below. It is read-only: it does not run
 imports, run retrieval, call live CCLD, call GitHub, print secrets, print raw
 artifact contents, print raw server-specific paths, or make public-source
 completeness or legal conclusions.
+The optional `scripts/build-qnap-pilot-evidence-packet.ps1` command can later
+assemble a redacted local Markdown packet from this summary, the QNAP verifier,
+route evidence, and operator decisions. It writes under ignored
+`data/processed/qnap-pilot-evidence/` and is not an audit export, legal report,
+product export packet, public report, GitHub issue, or certification.
 
 ## 1. Purpose
 
@@ -171,6 +176,8 @@ Keep the packet small and safe:
   retrieval missing-job detail, `/feedback`, `/ccld/help`, and `/reviewer`.
 - Optional `scripts/summarize-qnap-pilot-route-evidence.ps1` output after the app
   is running and the QNAP verifier passes.
+- Optional `scripts/build-qnap-pilot-evidence-packet.ps1` output path, after the
+  operator reviews the generated redacted Markdown packet.
 - GitHub feedback decision: intentionally disabled or fully configured.
 - Controlled retrieval decision: intentionally disabled or fully configured with
   persistent raw artifact storage.
