@@ -173,11 +173,14 @@ live fetch command when live public requests are intended, validate the SQLite
 output, run the local/test artifact builder, then return to the request page to
 load or refresh the generated hosted seeded-corpus JSON.
 The feedback section is guidance-only; it explains what a tester should capture
-about missing records, confusing wording, unexpected queue or filter behavior,
-workflow friction, or desired features. Request results also include a structured
+about facility lookup, request criteria, missing or unexpected records, source
+traceability cues, reviewer detail, note/status confirmation, return-to-queue
+behavior, confusing wording, unexpected queue or filter behavior, workflow
+friction, or desired features. Request results also include a structured
 copyable checklist with the facility/date request, matching record counts, queue
-status counts, local validated load context, source-traceability cue context, and
-reviewer note/status context.
+status counts, local validated load context, source-traceability cue context,
+reviewer note/status context, reviewer-detail confirmation prompts, and
+manual-copy/non-persistence boundary reminders.
 The app does not save or send that checklist; testers must copy it into the
 agreed external feedback channel manually.
 

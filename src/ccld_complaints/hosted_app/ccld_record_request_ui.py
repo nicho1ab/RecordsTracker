@@ -559,8 +559,10 @@ def _render_feedback_guidance_section() -> str:
             <h2 id="feedback-guidance-heading">Feedback guidance</h2>
             <p>This local/test app does not store, send, email, export, or otherwise persist
             feedback. Useful tester feedback includes the facility/license number, requested
-            date range, records that seemed missing, confusing wording, unexpected queue or
-            filter behavior, workflow friction, and suggested improvements.</p>
+            date range, lookup or request criteria that felt unclear, records that seemed
+            missing or unexpected, source traceability cues, note/status confirmation behavior,
+            return-to-queue behavior, confusing wording, workflow friction, and suggested
+            improvements.</p>
             <p>After submitting a CCLD request, copy the structured checklist into the agreed
             external feedback channel. The checklist is CCLD-only and reflects only the current
             local/test request and queue state.</p>
@@ -995,15 +997,27 @@ def _feedback_checklist_text(
     lines = [
         "CCLD tester feedback checklist",
         "",
-        "Request context",
+        "Request and lookup context",
         "- Source scope: CCLD public complaint records only",
         "- Local/test app: yes",
+        "- Facility lookup used or skipped:",
         f"- Facility/license number: {request.facility_number}",
-        f"- Date range: {_date_scope_text(request)}",
+        f"- Date range requested: {_date_scope_text(request)}",
+        "- Request criteria that felt unclear:",
+        "- Records that seemed outside the requested facility/date scope:",
+        "",
+        "Queue triage and filters",
         f"- Queue filter used: {_status_label(request.reviewer_status_filter)}",
         f"- Matching source-derived rows shown: {matching_source_record_count}",
         f"- Matching complaint records in queue: {len(queue_items)}",
         f"- Local facility rows before date filtering: {local_facility_record_count}",
+        f"- Not started: {counts['not_started']}",
+        f"- In review: {counts['in_review']}",
+        f"- Needs follow-up: {counts['needs_follow_up']}",
+        f"- Reviewed: {counts['reviewed']}",
+        f"- Blocked: {counts['blocked']}",
+        "- Queue triage summary matched expectations:",
+        "- Filter behavior that seemed unexpected:",
         "",
         "Local validated load context",
         f"- Load action submitted on this request: {_yes_no(import_reload_result is not None)}",
@@ -1015,32 +1029,38 @@ def _feedback_checklist_text(
         "- Local validated rows outside this request: "
         f"{_feedback_skipped_count(import_reload_result)}",
         "",
-        "Queue status counts",
-        f"- Not started: {counts['not_started']}",
-        f"- In review: {counts['in_review']}",
-        f"- Needs follow-up: {counts['needs_follow_up']}",
-        f"- Reviewed: {counts['reviewed']}",
-        f"- Blocked: {counts['blocked']}",
-        "",
         "Reviewer-created state considered",
         f"- Reviewer-created rows read for this queue: {reviewer_state_rows}",
         f"- Reviewer notes present: {_yes_no(reviewer_note_count > 0)}",
         f"- Reviewer statuses present: {_yes_no(reviewer_status_count > 0)}",
         "",
-        "Queue records",
+        "Queue records to spot-check",
         *_feedback_queue_record_lines(queue_items),
         "",
-        "Tester observations to add before copying externally",
+        "Reviewer detail and note/status confirmation",
+        "- Reviewer detail record opened:",
+        "- Source traceability cues were easy to find:",
+        "- Reviewer note/status action used:",
+        "- Saved confirmation appeared as expected:",
+        "- Saved note/status was visible after save:",
+        "- Return-to-queue link worked:",
+        "- Queue showed updated note/status after returning and resubmitting:",
+        "",
+        "Missing, unexpected, or confusing results",
         "- Records that seemed missing:",
-        "- Confusing terms or instructions:",
-        "- Unexpected queue or filter behavior:",
-        "- Workflow friction:",
+        "- Records that seemed unexpected:",
+        "- Facility lookup wording that was confusing:",
+        "- Request, queue, or reviewer-detail wording that was confusing:",
+        "- Keyboard, reading-order, or checklist-copy friction:",
         "- Suggested enhancements:",
         "",
         "Boundary reminders",
-        "- The app does not persist this feedback.",
-        "- Copy this checklist into the agreed external feedback channel manually.",
+        "- Manual-copy only: copy this checklist into the agreed external feedback channel.",
+        "- The app does not store, send, email, export, or persist this feedback.",
+        "- Rendering this checklist does not change source-derived records, "
+        "reviewer-created state, audit rows, import batches, or operational metadata.",
         "- Browser pages did not run live CCLD retrieval or connector execution.",
+        "- Missing local/test rows are not proof that CCLD has no public records.",
         "- The CCLD public portal remains the source of record.",
     ]
     return "\n".join(lines)
@@ -1082,6 +1102,8 @@ def _feedback_queue_record_line(item: CcldRequestQueueItem) -> str:
     return (
         f"- {_display_value(complaint_control_number)}; "
         f"reviewer status: {_status_label(_queue_status(item))}; "
+        f"source traceability cue: {_traceability_summary(item.complaint_record)}; "
+        f"reviewer note/status cue: {_reviewer_state_text(item.reviewer_state)}; "
         f"loaded source records in bundle: {item.related_record_count}"
     )
 

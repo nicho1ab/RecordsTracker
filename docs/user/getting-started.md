@@ -151,11 +151,15 @@ The local/test browser pages include skip-to-main links, visible start-here or
 next-step guidance, specific button/link text, and manual checklist copy
 instructions so a first-time tester can use keyboard navigation and visible page
 text to move through the MVP flow.
-The feedback checklist is not saved by the app; copy it into the agreed external
-feedback channel manually. Full/raw facility CSV files must stay out of the
-repository. The lookup and request pages do not run live CCLD retrieval, execute
-connectors, persist lookup or feedback data, or mutate reviewer notes/statuses
-from the browser request page. When matching local validated records are
+The feedback checklist prompts for facility lookup, request criteria, queue
+triage and filters, source traceability cues, reviewer detail, note/status save
+confirmation, return-to-queue behavior, missing or unexpected records, confusing
+wording, and copy friction. It is not saved, sent, emailed, exported, or
+persisted by the app; copy it into the agreed external feedback channel
+manually. Full/raw facility CSV files must stay out of the repository. The
+lookup and request pages do not run live CCLD retrieval, execute connectors,
+persist lookup or feedback data, or mutate reviewer notes/statuses from the
+browser request page. When matching local validated records are
 unavailable, it shows the explicit live-fetch command that must be run outside
 the hosted UI. After that outside-browser CCLD pipeline output is validated, a
 developer/tester can build the local/test hosted seeded-corpus JSON artifact with:
