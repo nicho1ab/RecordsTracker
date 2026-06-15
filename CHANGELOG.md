@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Added ADR-0016 approving a narrow browser-triggered, server-executed CCLD
+	retrieval job boundary for future implementation. The decision keeps retrieval
+	CCLD-only, authenticated, facility/date/type bounded, server-side, raw-source-
+	preserving, PostgreSQL-imported, rate-limited, secret-safe, and test-mocked,
+	while leaving live retrieval implementation, connector code changes, schema
+	changes, production OIDC, deployment changes, GitHub feedback export, GitHub
+	Projects, UI redesign, non-CCLD sources, direct browser crawling, statewide
+	crawling, and legal/completeness conclusions deferred.
 - Added server-side GitHub Issues tester feedback intake at `/feedback` with an
 	accessible form, exact feedback type options for bug reports, feature
 	requests, and new data sources, safe validation/unconfigured/success/failure

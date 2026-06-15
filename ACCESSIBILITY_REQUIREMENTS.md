@@ -123,6 +123,13 @@ Accessibility requirements apply to:
 	description, expose validation errors as visible text, provide safe
 	unconfigured, success, and failure states, and keep submit controls keyboard
 	operable without requiring JavaScript.
+- Future controlled CCLD retrieval job pages or status panels must expose job
+	state, validation blocks, rate-limit messages, safe warnings, result counts,
+	and queue links as visible text with semantic headings, labeled controls,
+	keyboard-operable refresh/navigation actions, and non-color-only status. They
+	must not require JavaScript to understand whether a job is queued, running,
+	completed, completed with warnings, failed, blocked by validation, or
+	rate-limited.
 - CCLD local/test pages must use consistent plain-language terms for repeated
 	concepts so screen reader users and first-time testers do not have to infer
 	that different phrases refer to the same request, queue, reviewer-created

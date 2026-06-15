@@ -113,6 +113,19 @@ not application code. The same environment-variable, migration, and persistent-
 volume model should be movable later to AWS, Azure, DigitalOcean, Render, Fly.io,
 or another host without a major rewrite.
 
+ADR-0016 approves the next narrow source-ingestion boundary: browser-triggered,
+server-executed CCLD retrieval jobs. The browser may submit only bounded CCLD
+facility/license, record-type, and date-range inputs; the server or worker must
+perform controlled CCLD discovery/fetch, raw artifact preservation, raw hash
+computation, deterministic extraction/normalization, validation, PostgreSQL
+import, safe job status, and existing hosted-queue review. This supersedes the
+previous permanent blocker only for CCLD-only, facility/date/type-bounded,
+authenticated, permissioned, rate-limited retrieval jobs. Direct browser
+scraping, statewide crawling, automatic source expansion, non-CCLD sources,
+private/authenticated source scraping, production OIDC implementation,
+deployment changes, schema changes, and legal/completeness conclusions remain
+unapproved until focused work explicitly adds and tests them.
+
 The earlier hosted scaffold sample pages remain local-only and sample-only. The
 Python standard-library app shell still includes health and smoke validation,
 local setup checks, and a read-only `/source-records` list/detail shell over
@@ -319,10 +332,13 @@ retention implementation PRs validate the concrete layer.
   preserve the Python extraction pipeline and local SQLite/Datasette validation
   path while planning a hosted relational review-state store and hosted
   reviewer app/API boundary.
-- Hosted tester MVP source-derived records should enter the hosted environment
-  through controlled imports from validated pipeline output; direct hosted live
-  crawling or connector execution is not approved for the tester MVP without a
-  later ADR.
+- Hosted tester MVP source-derived records may enter the hosted environment
+  through controlled imports from validated pipeline output, or through the
+  ADR-0016-approved browser-triggered, server-executed CCLD retrieval job
+  boundary once implemented. Retrieval jobs must remain CCLD-only,
+  facility/date/type bounded, server-side, raw-source-preserving,
+  PostgreSQL-imported, authenticated, permissioned, rate-limited, and tested
+  without live CCLD calls in CI.
 - Future hosted schema work must preserve clear physical separation between
   import metadata, source-derived imported records, reviewer-created state,
   audit events, export packet state, tester feedback, and operational/reset
@@ -382,11 +398,13 @@ retention implementation PRs validate the concrete layer.
 - QNAP Docker is the first practical production-like runtime target, using the
   committed Dockerfile and Compose file with PostgreSQL in Docker, named volumes,
   health checks, Alembic startup migration wiring, and no-secret environment
-  examples. This runtime envelope does not approve public URL behavior,
-  production auth, hosted live crawling, connector execution, production import
-  automation, monitoring, incident response, or a QNAP-specific application
-  code path. Later cloud deployment should preserve the same environment and
-  persistence contracts where possible.
+  examples. This runtime envelope does not implement public URL behavior,
+  production auth, retrieval jobs, production import automation, monitoring,
+  incident response, or a QNAP-specific application code path. ADR-0016 approves
+  a future controlled CCLD retrieval-job boundary that this runtime or a
+  portable worker/container/task can host after a focused implementation branch.
+  Later cloud deployment should preserve the same environment and persistence
+  contracts where possible.
 
 ## Accessibility
 

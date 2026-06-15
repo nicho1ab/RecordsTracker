@@ -78,6 +78,31 @@ fixtures as production data, expose raw narrative source text, mutate
 source-derived records through review actions, or run live retrieval or connector
 execution.
 
+ADR-0016 approves a future controlled browser-triggered, server-executed CCLD
+retrieval job boundary. The browser may submit only a CCLD facility/license
+number, allowed record type or all supported record types, and bounded start/end
+dates. The browser must not scrape, crawl, fetch source pages, receive connector
+credentials, receive GitHub tokens, receive provider tokens, receive cookies, or
+receive server-side secrets. Server-side retrieval must require authenticated
+tester access before production use, require a retrieval permission and matching
+project/corpus scope, validate facility/date/type inputs, use a CCLD source
+domain and URL-pattern allowlist, enforce date-range maximums, record-type
+allowlists, per-job request limits, per-user or per-actor rate limits, timeout
+limits, retry limits, and safe job states. It must preserve raw CCLD source
+artifacts in configured server-side storage before extraction, compute raw
+SHA-256 hashes, deterministically extract/normalize, validate before PostgreSQL
+import, and expose only safe status, counts, warnings, and queue links to
+testers. It must not expose raw stack traces, tokens, cookies, private headers,
+connection strings, provider claims, GitHub tokens, private URLs, server-specific
+absolute paths, or unnecessary narrative content in HTML, JSON, logs, audit/
+status events, tests, screenshots, issue bodies, or docs.
+
+Controlled retrieval remains CCLD-only. Statewide crawling, automatic source
+expansion, non-CCLD sources, private or authenticated source scraping, and direct
+browser crawling remain prohibited. Retrieval job metadata is operational
+metadata and must remain separate from source-derived records, reviewer-created
+state, audit events, and feedback issues.
+
 The current tester feedback seam can create GitHub Issues server-side only when
 `GITHUB_FEEDBACK_REPO` and `GITHUB_FEEDBACK_TOKEN` are configured on the host.
 The token must never be rendered into HTML, JavaScript, logs, tests, issue

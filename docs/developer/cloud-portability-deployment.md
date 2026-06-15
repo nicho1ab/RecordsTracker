@@ -85,7 +85,7 @@ Start with QNAP Docker and keep the same boundaries when moving cloudward:
    adapter.
 5. Keep auth provider configuration in the host secret store.
 6. Keep server-side retrieval jobs separate from request-time browser code when
-   a later ADR approves them.
+  ADR-0016 retrieval implementation is added.
 7. Validate `/health`, `/auth/status`, `/ccld/help`, `/feedback`, and protected
   workflow behavior before inviting testers.
 8. Validate `/feedback` in unconfigured mode and with a mocked or non-production
@@ -135,16 +135,19 @@ is not enough if hosted rows reference raw paths or raw hashes.
 
 ## Server-Side Retrieval Jobs
 
-Browser-triggered CCLD retrieval jobs are not implemented in this branch. When a
-later ADR approves them, keep job execution host-portable:
+ADR-0016 approves controlled browser-triggered, server-executed CCLD retrieval
+jobs. They are not implemented in this branch. When implementation is added,
+keep job execution host-portable:
 
-- Browser submits bounded inputs only.
+- Browser submits bounded CCLD facility/license, record-type, and date-range
+  inputs only.
 - Server or worker performs retrieval.
 - Raw source evidence is preserved in configured raw storage.
 - Source-derived records are validated before PostgreSQL import.
 - Rate limits, job status, audit/status metadata, and safe error messages are
   enforced by application services.
 - Job workers should run as a separate process/container/task where possible.
+- Tests must mock network retrieval; CI must not make live CCLD calls.
 
 Do not build retrieval jobs around provider-specific queues until the project
 chooses that host or adds a portable abstraction.
@@ -171,14 +174,14 @@ Before any public or pilot launch claim:
 - HTTPS/custom domain is configured by the host or reverse proxy.
 - Logs do not expose secrets, raw provider claims, cookies, tokens, private
   headers, or unnecessary narrative source text.
-- Retrieval jobs remain disabled unless a later ADR and implementation approve
-  them.
+- Retrieval jobs remain disabled unless ADR-0016 implementation work has added
+  and validated the controlled server-side job path.
 - Known limitations and support/incident notes are current.
 
 ## Non-Goals
 
 This guide does not implement cloud deployment, provision resources, choose a
-final cloud provider, create DNS, configure TLS, create app registrations, enable
-retrieval jobs, add provider SDKs, or replace the QNAP-first path. It is a
+final cloud provider, create DNS, configure TLS, create app registrations,
+implement retrieval jobs, add provider SDKs, or replace the QNAP-first path. It is a
 portable checklist so a later move does not require rethinking app, database,
 storage, secrets, and backup boundaries from scratch.

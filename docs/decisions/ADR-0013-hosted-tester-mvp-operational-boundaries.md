@@ -23,6 +23,12 @@ allowed scaffold-first implementation while keeping business workflows,
 schemas, authentication implementation, imports, exports, audit logging,
 reset/reload, and reviewer-created state persistence deferred.
 
+Superseding note: ADR-0016 later approved controlled browser-triggered,
+server-executed CCLD retrieval jobs. That approval does not weaken this ADR's
+operational separation requirements; retrieval jobs must add audit/status event,
+raw artifact, validation, idempotency, backup/restore, rate-limit, timeout,
+retry, and safe-error controls before implementation.
+
 The next product-enabling decision is the minimum operational boundary needed
 before implementation branches can move toward authenticated testers using a
 seeded, source-traceable corpus to search facilities, review complaint and
@@ -179,10 +185,12 @@ mixing source-derived imported records and reviewer-created state.
 
 Seeded tester corpus reload must load source-derived data only from validated
 pipeline output or an approved export artifact produced by the existing
-pipeline. Reload must not use hosted live crawling, hosted connector execution,
-automatic public-source expansion, ignored raw CSVs, generated profiling
-outputs, or ad hoc manual data entry unless a later ADR explicitly approves a
-different mechanism.
+pipeline. ADR-0016 also approves a separate controlled server-executed CCLD
+retrieval job path for future source-derived imports. Reload must not use
+unbounded hosted live crawling, generic hosted connector execution, automatic
+public-source expansion, ignored raw CSVs, generated profiling outputs, or ad
+hoc manual data entry unless a later ADR explicitly approves a different
+mechanism.
 
 Reloaded source-derived records must preserve stable source-derived identities,
 source traceability, import batch metadata, raw hash context, connector

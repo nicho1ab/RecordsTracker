@@ -178,7 +178,12 @@ state reads, and include a structured copyable feedback checklist without adding
 feedback persistence.
 That UI must keep source-derived records visibly separate from reviewer-created
 notes/statuses and avoid implying production readiness or public-source
-completeness.
+completeness. ADR-0016 now approves a future controlled browser-triggered,
+server-executed CCLD retrieval job boundary; until that implementation exists,
+current pages must not imply that live retrieval is available. When implemented,
+job status UI must stay explicit, semantic, accessible, and non-conclusive,
+showing safe state/count/warning messages rather than raw stack traces,
+secrets, or public-source completeness claims.
 The workflow-completion version can add progress counts and reviewer-status
 filters derived from existing reviewer-created state so testers can distinguish
 not-started, in-review, needs-follow-up, reviewed, and blocked records without

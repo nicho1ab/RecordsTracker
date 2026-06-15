@@ -28,6 +28,16 @@ references, or reset/reload metadata are not canonical source-derived fields
 unless a later data contract, schema, documentation, migration, and test update
 explicitly adds them.
 
+ADR-0016 approves future controlled browser-triggered, server-executed CCLD
+retrieval jobs. Retrieval job metadata, job state, rate-limit state, safe result
+counts, warnings, failure summaries, raw artifact locations, import validation
+status, and operational status events are operational metadata, not canonical
+source-derived fields. Imported records produced by a future retrieval job must
+still use the existing canonical source-derived fields and traceability rules,
+including source URL, raw SHA-256 hash, retrieval timestamp, connector name,
+connector version, raw path or artifact reference where available, and
+extraction audit context where available.
+
 The current hosted PostgreSQL/Alembic scaffold adds configuration validation,
 an Alembic script location, a narrow seeded corpus import migration, and
 boundary descriptors for persistence/API table groups. The seeded import tables
