@@ -7,6 +7,7 @@ should capture.
 
 This guide complements the [QNAP pilot operator checklist](qnap-pilot-operator-checklist.md),
 [QNAP Docker runtime guide](qnap-docker-runtime.md),
+[QNAP pilot readiness index](qnap-pilot-readiness-index.md),
 [QNAP pilot tester invitation decision](qnap-pilot-tester-invitation-decision.md),
 ADR-0011, and ADR-0014.
 

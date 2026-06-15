@@ -242,6 +242,8 @@ public-record review notes.
    for QNAP pilot mode.
 - Use [docs/developer/qnap-pilot-operator-checklist.md](docs/developer/qnap-pilot-operator-checklist.md)
    for the operator checklist before inviting early ylc.org testers.
+- Use [docs/developer/qnap-pilot-readiness-index.md](docs/developer/qnap-pilot-readiness-index.md)
+   for the ordered pre-invite QNAP pilot readiness path.
 - Use [docs/developer/qnap-pilot-auth-readiness.md](docs/developer/qnap-pilot-auth-readiness.md)
    to capture the current production-mode auth boundary, deferred login/OIDC
    work, and host-local provider placeholder expectations before inviting

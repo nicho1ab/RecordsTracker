@@ -775,6 +775,97 @@ def test_qnap_pilot_tester_invitation_decision_doc_is_linked_from_guides() -> No
         assert link in read_repo_text(path)
 
 
+def test_qnap_pilot_readiness_index_exists_and_covers_ordered_path() -> None:
+    index = read_repo_text("docs/developer/qnap-pilot-readiness-index.md")
+    normalized = " ".join(index.split())
+    searchable_text = f"{index}\n{normalized}"
+
+    for required_text in (
+        "QNAP Pilot Readiness Index",
+        "ordered pre-invite path",
+        "QNAP Docker is the first pilot runtime, not a permanent platform lock-in",
+        "ylc.org-oriented pilot validation",
+        "CCLD-only",
+        "PostgreSQL-backed hosted page data",
+        "does not prove public-source completeness",
+        "QNAP Docker runtime guide",
+        ".env.example",
+        "QNAP pilot operator checklist",
+        ".\\scripts\\verify-qnap-pilot-workflow.ps1 -EnvFile .env",
+        "QNAP pilot seeded import evidence",
+        ".\\scripts\\summarize-qnap-pilot-seeded-import-evidence.ps1 -EnvFile .env",
+        ".\\scripts\\summarize-qnap-pilot-seeded-import-evidence.ps1 "
+        "-EnvFile .env.example -SkipDatabaseCheck",
+        ".\\scripts\\summarize-qnap-pilot-route-evidence.ps1 -BaseUrl "
+        "http://<host-name-or-ip>:<CCLD_HOSTED_PORT> -TimeoutSeconds 10",
+        ".\\scripts\\summarize-qnap-pilot-route-evidence.ps1 -BaseUrl "
+        "http://127.0.0.1:9 -TimeoutSeconds 1 -AllowUnavailable",
+        "QNAP pilot auth readiness",
+        "ADR-0011",
+        "ADR-0014",
+        "CCLD_HOSTED_TESTER_AUTH_MODE=production",
+        "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH=disabled",
+        "Real login, OIDC/OAuth2 callback handling, sessions, cookies, user tables",
+        "QNAP pilot tester invitation decision",
+        "Who may be invited",
+        "Which role and scope each tester receives",
+        "How access can be revoked",
+        "QNAP verifier output summary",
+        "Seeded import evidence command output",
+        "Route evidence command output",
+        "Auth readiness decision",
+        "Tester invitation/access-control decision",
+        "Feedback configuration decision",
+        "Retrieval configuration decision",
+        "PostgreSQL backup plan",
+        "Raw artifact backup plan",
+        "Known limitations acknowledged",
+        "Do not invite early testers until all of these are true",
+        "`.env` is configured on the host and remains untracked",
+        "QNAP verifier passes",
+        "PostgreSQL migrations and data readiness are confirmed",
+        "Route evidence is captured",
+        "Auth readiness has been reviewed",
+        "Access method, role/scope, approval, and revocation are deliberately decided",
+        "Feedback and retrieval configuration decisions are documented",
+        "Real OIDC/login",
+        "User tables",
+        "Invitation workflow implementation",
+        "Identity provider integration",
+        "New retrieval record types",
+        "Non-CCLD sources",
+        "Raw artifact viewer",
+        "Broader UI redesign",
+    ):
+        assert required_text in searchable_text
+
+    assert "ghp_" not in index
+    assert "github_pat_" not in index
+    assert "https://github.com/" not in index
+    assert "C:\\" not in index
+    assert "OneDrive" not in index
+    assert "client_" + "secret" + "=" not in index.casefold()
+
+
+def test_qnap_pilot_readiness_index_is_linked_from_guides() -> None:
+    required_links = {
+        "README.md": "docs/developer/qnap-pilot-readiness-index.md",
+        "RUNBOOK.md": "docs/developer/qnap-pilot-readiness-index.md",
+        "docs/developer/qnap-docker-runtime.md": "qnap-pilot-readiness-index.md",
+        "docs/developer/qnap-pilot-operator-checklist.md": (
+            "qnap-pilot-readiness-index.md"
+        ),
+        "docs/developer/qnap-pilot-auth-readiness.md": "qnap-pilot-readiness-index.md",
+        "docs/developer/qnap-pilot-tester-invitation-decision.md": (
+            "qnap-pilot-readiness-index.md"
+        ),
+        "docs/developer/testing.md": "QNAP readiness index documentation tests",
+    }
+
+    for path, link in required_links.items():
+        assert link in read_repo_text(path)
+
+
 def test_qnap_pilot_seeded_import_evidence_doc_exists_and_covers_required_steps() -> None:
     evidence = read_repo_text("docs/developer/qnap-pilot-seeded-import-evidence.md")
     normalized = " ".join(evidence.split())
