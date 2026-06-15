@@ -52,8 +52,9 @@ Portable groups:
   `CCLD_HOSTED_TESTER_OIDC_ISSUER`, `CCLD_HOSTED_TESTER_OIDC_CLIENT_ID`,
   `CCLD_HOSTED_TESTER_OIDC_CALLBACK_PATH`, and
   `CCLD_HOSTED_TESTER_OIDC_SCOPES`.
-- Feedback placeholders: `GITHUB_FEEDBACK_REPO`, `GITHUB_FEEDBACK_TOKEN`, and
-  optional `GITHUB_FEEDBACK_DEFAULT_LABELS`.
+- Feedback settings: leave `GITHUB_FEEDBACK_REPO` and `GITHUB_FEEDBACK_TOKEN`
+  blank to intentionally disable GitHub feedback, or configure both values in
+  host secrets to enable it. `GITHUB_FEEDBACK_DEFAULT_LABELS` is optional.
 - Optional local reference data: `CCLD_FACILITY_REFERENCE_CSV`, only when a
   local or mounted facility reference CSV is intentionally used.
 - Optional controlled retrieval settings: `CCLD_RETRIEVAL_ENABLED`,
