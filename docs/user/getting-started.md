@@ -162,6 +162,10 @@ still confusing after source traceability review.
 Reviewer detail also bridges those record-specific observations into the existing
 manual feedback checklist on the CCLD request queue; it does not create a second
 checklist or save feedback.
+The request queue uses the same checklist for queue observations and reviewer-
+detail observations, including filter confusion, source-confidence questions,
+note/status confirmation behavior, return-to-queue refresh behavior, and next-
+record navigation confusion.
 Missing local/test values should be described as not available in the local/test
 record, not as public-source absence, record incompleteness, or data loss. After adding a note or status in reviewer detail, return to the
 CCLD request page and submit the same request to see updated progress.

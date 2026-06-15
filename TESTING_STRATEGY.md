@@ -130,6 +130,10 @@ to the existing manual feedback checklist without duplicating it, cover source
 traceability, source-confidence, field-note uncertainty, note/status confirmation,
 return-to-queue, queue refresh, and next-record observations, remain no-secret,
 and do not add feedback persistence, export behavior, or mutations.
+Queue-to-detail checklist continuity tests should prove queue pages and reviewer
+detail pages point queue-level and detail-level observations to the same existing
+manual checklist, preserve single-checklist/manual-copy behavior, and do not add
+feedback persistence, export behavior, or mutations.
 Reviewer detail next-record navigation tests should prove return-to-same-queue
 guidance, note/status confirmation next-record wording, queue suggested-next
 wording, and no-assignment/no-claim/no-workflow-state boundaries render while

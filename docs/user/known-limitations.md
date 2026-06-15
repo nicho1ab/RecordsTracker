@@ -142,7 +142,8 @@
   consistent plain-language terminology, and reviewer-
   status filters derived from existing reviewer-created state, includes a
   structured copyable feedback checklist for manual external
-  sharing, and links matching rows into the reviewer UI.
+  sharing, provides queue-to-detail continuity cues for using that same
+  checklist, and links matching rows into the reviewer UI.
   No-match pages explain that they searched currently loaded local/test source-
   derived rows only, show local rows available before date filtering and local
   validated load state, prompt criteria changes when the active context is wrong,
@@ -154,7 +155,7 @@
   presentation aids only and do not create persisted workflow state.
   It does not run live retrieval, execute connectors, mutate reviewer-created
   state from the request page, create audit rows from the request page, persist
-  feedback, persist operational metadata, prove public-source completeness, or
+  feedback, create duplicate checklists, persist operational metadata, prove public-source completeness, or
   support non-CCLD sources. When records are missing
   from the local validated output or outside the requested date range, it
   explains the explicit outside-browser CCLD live-fetch and local/test artifact-

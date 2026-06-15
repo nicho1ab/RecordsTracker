@@ -721,6 +721,10 @@ def _render_matched_result(
             <p>After saving a note or status on reviewer detail, return here with the same
             facility/date request context and submit the same local/test request again to see
             queue progress and note/status cues derived from reviewer-created state.</p>
+            <p>Use the same manual feedback checklist for queue and reviewer-detail
+            observations. Queue filter confusion, source-confidence questions, detail wording,
+            note/status confirmation, return-to-queue refresh, and suggested-next-record
+            observations all belong in that single checklist.</p>
             {_render_queue_first_run_steps()}
             {_render_queue_navigation()}
             {_render_queue_progress_summary(queue_items)}
@@ -1064,6 +1068,9 @@ def _render_queue_triage_summary(
     <p>The manual feedback checklist below uses these queue counts and reviewer-created
         note/status cues so testers can report missing records, record-specific
         reviewer-detail observations, confusing wording, or unexpected filter behavior.</p>
+    <p>Carry both queue-level observations and reviewer-detail observations into that same
+        manual feedback checklist; this queue does not create a second checklist or persist
+        feedback.</p>
     </section>"""
 
 
@@ -1193,6 +1200,9 @@ def _render_feedback_checklist_section(
             Select the checklist text, copy it, paste it into the agreed external feedback
             channel, and add any tester observations before sending. The checklist is generated
             from this CCLD-only local/test request and queue state.</p>
+        <p>Use this same manual checklist for queue observations, reviewer-detail
+        observations, note/status confirmation behavior, return-to-queue refresh behavior,
+        filtered-empty recovery, no-match/load guidance, and confusing wording or labels.</p>
       <p>
         <label for="feedback-checklist">Structured CCLD feedback checklist</label>
         <textarea id="feedback-checklist" rows="28" readonly
