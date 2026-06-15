@@ -193,4 +193,8 @@
   unsupported automated complaint findings remain out of scope. Unsupported
   record types remain unavailable; all supported record types currently resolves
   to complaint records only.
+- Retrieval status messages are workflow states, not source conclusions. A
+  completed-with-warnings, failed, blocked-by-validation, or rate-limited state
+  tells you what happened to the job, not whether CCLD has complete records for a
+  facility/date range.
 - Datasette accessibility depends partly on the installed Datasette version, browser, and assistive technology. Validate keyboard navigation, table headers, focus visibility, and exported table usability before treating a release as stable.

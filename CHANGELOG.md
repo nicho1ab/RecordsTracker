@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Improved controlled CCLD retrieval status usability. Setup-required, validation,
+	queued/running/completed/completed-with-warnings/failed/rate-limited, and result
+	states now use clearer tester and operator guidance, include safe request/job
+	context and result counts, distinguish warning states from failures, and point
+	confusing states to `/feedback` without broadening retrieval beyond the
+	complaint-only ADR-0016 slice.
 - Implemented the first controlled browser-triggered, server-executed CCLD
 	retrieval job slice. The CCLD request page now includes record type selection
 	for complaint records or all supported record types, currently resolving to
