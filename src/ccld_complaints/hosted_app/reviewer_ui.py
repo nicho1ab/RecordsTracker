@@ -649,11 +649,11 @@ def _render_record_list(
             <th scope="col">Facility ID</th>
             <th scope="col">Finding</th>
                         <th scope="col">Source traceability cue</th>
-                        <th scope="col">Reviewer state</th>
+                        <th scope="col">Reviewer-created note/status cue</th>
                         <th scope="col">Notes</th>
                         <th scope="col">Latest status</th>
-                                                <th scope="col">Suggested queue cue</th>
-                        <th scope="col">Latest reviewer state at</th>
+                                                <th scope="col">Suggested next-record cue</th>
+                        <th scope="col">Latest reviewer-created note/status at</th>
           </tr>
         </thead>
         <tbody>
@@ -737,9 +737,9 @@ def _render_reviewer_queue_summary(
             <dd>{counts['reviewed']}</dd>
             <dt>Blocked</dt>
             <dd>{counts['blocked']}</dd>
-            <dt>Records with reviewer notes</dt>
+            <dt>Records with reviewer-created notes</dt>
             <dd>{note_count}</dd>
-            <dt>Records with reviewer status</dt>
+            <dt>Records with reviewer-created status</dt>
             <dd>{status_count}</dd>
             <dt>Records with source traceability available</dt>
             <dd>{traceability_count}</dd>
@@ -940,7 +940,7 @@ def _state_summary_text(summary: Mapping[str, Any]) -> str:
     total_rows = _summary_int(summary, "total_rows")
     latest_status = _summary_optional_string(summary, "latest_status")
     if total_rows == 0:
-        return "No reviewer state yet"
+        return "No reviewer-created note/status yet"
     if latest_status is None:
         return "Needs review"
     return _REVIEWER_STATUS_LABELS.get(latest_status, latest_status.replace("_", " "))
@@ -949,23 +949,23 @@ def _state_summary_text(summary: Mapping[str, Any]) -> str:
 def _notes_indicator_text(summary: Mapping[str, Any]) -> str:
     note_count = _summary_int(summary, "note_count")
     if note_count == 0:
-        return "No reviewer notes"
+        return "No reviewer-created notes"
     if note_count == 1:
-        return "1 reviewer note"
-    return f"{note_count} reviewer notes"
+        return "1 reviewer-created note"
+    return f"{note_count} reviewer-created notes"
 
 
 def _latest_status_text(summary: Mapping[str, Any]) -> str:
     latest_status = _summary_optional_string(summary, "latest_status")
     if latest_status is None:
-        return "No reviewer status"
+        return "No reviewer-created status"
     return latest_status
 
 
 def _latest_created_at_text(summary: Mapping[str, Any]) -> str:
     latest_created_at = _summary_optional_string(summary, "latest_created_at")
     if latest_created_at is None:
-        return "No reviewer-created state yet"
+        return "No reviewer-created note/status yet"
     return latest_created_at
 
 
@@ -1135,7 +1135,7 @@ def _render_record_summary_section(
         <dd>{_escape(_string(identity, 'source_record_key'))}</dd>
         <dt>Source document ID</dt>
         <dd>{_escape(_string(source_document, 'source_document_id'))}</dd>
-        <dt>Reviewer status recorded</dt>
+        <dt>Reviewer-created status recorded</dt>
         <dd>{_escape(reviewer_statuses)}</dd>
       </dl>
     </section>"""
@@ -1672,7 +1672,7 @@ def _render_reviewer_state_section(detail: Mapping[str, Any]) -> str:
       <dl>
         <dt>Total associated rows</dt>
         <dd>{_escape(str(_int_value(summary, 'total_associated_rows')))}</dd>
-        <dt>Reviewer statuses present</dt>
+        <dt>Reviewer-created statuses present</dt>
         <dd>{_escape(statuses)}</dd>
                 <dt>Reviewer-created payload kinds present</dt>
                 <dd>{_escape(payload_kinds)}</dd>

@@ -120,6 +120,11 @@ Filtered-empty queue tests should prove the active reviewer-status filter, same
 facility/date request context, clear-filter action, reviewer-created-state basis,
 manual feedback guidance, and no-missing-record/no-public-absence wording render
 without mutating source-derived, reviewer-created, audit, import, or operational rows.
+Terminology consistency tests should prove the app uses the selected plain-
+language terms for CCLD request context, facility/date request, loaded local/test
+CCLD records, source-derived records, reviewer-created notes/status, reviewer-
+status filter, suggested next record, and manual feedback checklist on the
+changed pages without changing behavior.
 Hosted CCLD record request UI tests must prove the browser-accessible local/test
 request page accepts only CCLD digit facility/license numbers plus optional
 valid date ranges, returns accessible validation guidance for missing or invalid

@@ -237,7 +237,7 @@ def render_ccld_facility_lookup_page(query: str = "") -> str:
                 <li>Use a matching result to carry the facility/license number into the CCLD
                 request form.</li>
                 <li>On the request page, submit the facility and optional date range to open the
-                review queue.</li>
+                CCLD review queue.</li>
             </ol>
         </section>
     {_render_lookup_form(result.query)}

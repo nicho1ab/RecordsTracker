@@ -120,7 +120,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"CCLD facility/license number" not in ccld_body
         or b"Find a CCLD facility" not in ccld_body
         or b"Workflow overview" not in ccld_body
-        or b"Queue status filter" not in ccld_body
+        or b"Reviewer-status filter" not in ccld_body
         or b"Confirm request context" not in ccld_body
         or b"validated CCLD load" not in ccld_body
         or b"Feedback guidance" not in ccld_body
@@ -171,7 +171,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         help_status != 200
         or b"How CCLD review works" not in help_body
-        or b"Review queue" not in help_body
+        or b"CCLD review queue" not in help_body
         or b"Feedback guidance" not in help_body
     ):
         raise RuntimeError("Hosted scaffold CCLD help page did not return guided help.")

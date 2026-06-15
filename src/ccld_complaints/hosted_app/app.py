@@ -716,7 +716,7 @@ def render_app_shell() -> str:
       <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find CCLD facility</a></li>
       <li><a href="{CCLD_HELP_PATH}">How this works</a></li>
       <li><a href="#start">Start first CCLD review</a></li>
-      <li><a href="/reviewer">Review loaded records</a></li>
+      <li><a href="/reviewer">Review loaded local/test records</a></li>
       <li><a href="#feedback">Feedback guidance</a></li>
       <li><a href="#boundaries">Local/test boundaries</a></li>
       <li><a href="/health">Health check</a></li>
@@ -746,8 +746,8 @@ def render_app_shell() -> str:
         <li>Confirm the facility/license number, date range, request origin, and active
         local/test facility reference source before reviewing queue results.</li>
         <li>Request records for one CCLD facility/license number.</li>
-        <li>Use already loaded records or load validated local/test CCLD output.</li>
-        <li>Open the facility/date-scoped review queue.</li>
+        <li>Use loaded local/test CCLD records or load local validated records.</li>
+        <li>Open the facility/date CCLD review queue.</li>
         <li>Review source traceability, then add reviewer notes or status in the
         reviewer UI.</li>
         <li>Copy the request-result checklist and add feedback about missing records,
@@ -757,12 +757,12 @@ def render_app_shell() -> str:
     <section id="terms" aria-labelledby="terms-heading">
       <h2 id="terms-heading">What the main words mean</h2>
       <dl>
-        <dt>Loaded records</dt>
+        <dt>Loaded local/test CCLD records</dt>
         <dd>Validated local/test CCLD source-derived records staged from hosted
         seeded-corpus JSON.</dd>
-        <dt>Review queue</dt>
+        <dt>CCLD review queue</dt>
         <dd>A facility/date-scoped list of matching complaint records ready for review.</dd>
-        <dt>Reviewer notes and status</dt>
+        <dt>Reviewer-created notes/status</dt>
         <dd>Reviewer-created local/test state stored separately from source-derived records.</dd>
       </dl>
       <p><a href="{CCLD_HELP_PATH}">Read the full CCLD workflow help</a></p>
