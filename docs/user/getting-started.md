@@ -241,7 +241,9 @@ execution. Developers should use
 those runtime steps. Operators can use `scripts/verify-qnap-pilot-workflow.ps1`
 to verify the untracked `.env`, Docker Compose configuration, running containers,
 PostgreSQL readiness, and route surface before inviting testers. QNAP is the
-first pilot runtime, not a permanent platform lock-in.
+first pilot runtime, not a permanent platform lock-in. Operators should also use
+the [QNAP pilot operator checklist](../developer/qnap-pilot-operator-checklist.md)
+before inviting early testers.
 
 The hosted request page now includes the first controlled browser-triggered,
 server-executed CCLD retrieval job slice for complaint records. When the server

@@ -129,7 +129,10 @@ def test_qnap_verifier_rejects_mock_success_without_override(tmp_path: Path) -> 
     result = run_verifier("-EnvFile", str(env_file), "-SkipComposeConfig")
 
     assert result.returncode != 0
-    assert "requires -AllowLocalDevDemo" in (result.stderr + result.stdout)
+    output = result.stderr + result.stdout
+    assert "CCLD_RETRIEVAL_DEMO_MODE=mock-success" in output
+    assert "AllowLocalDevDemo" in output
+    assert "production validation" in output
 
 
 def test_qnap_verifier_detects_retrieval_enabled_without_raw_storage(tmp_path: Path) -> None:
@@ -144,7 +147,10 @@ def test_qnap_verifier_detects_retrieval_enabled_without_raw_storage(tmp_path: P
     result = run_verifier("-EnvFile", str(env_file), "-SkipComposeConfig")
 
     assert result.returncode != 0
-    assert "requires CCLD_RETRIEVAL_RAW_DIR" in (result.stderr + result.stdout)
+    output = result.stderr + result.stdout
+    assert "CCLD_RETRIEVAL_ENABLED=enabled" in output
+    assert "CCLD_RETRIEVAL_RAW_DIR" in output
+    assert "raw artifacts" in output
 
 
 def test_qnap_verifier_detects_partial_github_feedback(tmp_path: Path) -> None:
@@ -295,8 +301,66 @@ def test_qnap_runtime_doc_keeps_qnap_specifics_out_of_app_code() -> None:
     assert "pg_dump" in guide
     assert "pg_restore" in guide
     assert "GitHub Projects are not required" in normalized_guide
+    assert "qnap-pilot-operator-checklist.md" in guide
     assert "C:\\" not in guide
     assert "/share/" not in guide
+
+
+def test_qnap_pilot_operator_checklist_exists_and_covers_required_steps() -> None:
+    checklist = read_repo_text("docs/developer/qnap-pilot-operator-checklist.md")
+    normalized = " ".join(checklist.split())
+    searchable_text = f"{checklist}\n{normalized}"
+
+    for required_text in (
+        "QNAP Docker is the first pilot runtime, not a permanent platform lock-in",
+        "early ylc.org tester validation",
+        "does not prove public-source completeness",
+        "legal, facility-wide, harm, abuse, neglect, liability",
+        "Confirm the repository checkout is current",
+        "Docker and Docker Compose",
+        "PostgreSQL data volume backup",
+        "raw artifact storage",
+        "Copy `.env.example` to `.env`",
+        "Keep `CCLD_HOSTED_PAGE_DATA_MODE=postgres`",
+        "Keep `CCLD_HOSTED_TESTER_AUTH_MODE=production`",
+        "Keep `CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH=disabled`",
+        "Keep `CCLD_RETRIEVAL_DEMO_MODE=` blank",
+        "Do not half-configure GitHub feedback",
+        ".\\scripts\\verify-qnap-pilot-workflow.ps1 -EnvFile .env",
+        "docker compose -f docker-compose.qnap.yml --env-file .env config",
+        "docker compose -f docker-compose.qnap.yml --env-file .env up --build -d",
+        "alembic upgrade head",
+        "app container can write",
+        "/ccld/retrieval/jobs/detail?job_id=missing-job",
+        "Optional Local-Dev-Only Mock-Success Verification",
+        "verifier output summary",
+        "GitHub feedback decision",
+        "controlled retrieval decision",
+        "PostgreSQL backup location",
+        "raw artifact backup location",
+        "Do not commit `.env`",
+        "Do not expose raw artifacts to testers",
+    ):
+        assert required_text in searchable_text
+
+    assert "raw artifact viewer" not in normalized.casefold()
+    assert "ghp_" not in checklist
+    assert "github_pat_" not in checklist
+    assert "C:\\" not in checklist
+    assert "OneDrive" not in checklist
+
+
+def test_qnap_pilot_operator_checklist_is_linked_from_guides() -> None:
+    required_links = {
+        "README.md": "docs/developer/qnap-pilot-operator-checklist.md",
+        "RUNBOOK.md": "docs/developer/qnap-pilot-operator-checklist.md",
+        "docs/developer/qnap-docker-runtime.md": "qnap-pilot-operator-checklist.md",
+        "docs/developer/hosted-scaffold.md": "qnap-pilot-operator-checklist.md",
+        "docs/user/getting-started.md": "../developer/qnap-pilot-operator-checklist.md",
+    }
+
+    for path, link in required_links.items():
+        assert link in read_repo_text(path)
 
 
 def test_cloud_portability_guide_compares_hosts_without_credentials() -> None:

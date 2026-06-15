@@ -113,6 +113,9 @@ screenshots, or docs.
 
 ## Start Locally or on QNAP
 
+Before inviting early testers, use the full
+[QNAP pilot operator checklist](qnap-pilot-operator-checklist.md).
+
 From the repository root on any Docker host, first validate the untracked pilot
 environment file:
 
