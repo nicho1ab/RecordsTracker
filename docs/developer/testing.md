@@ -266,6 +266,17 @@ deferred items, and avoids raw artifact contents, response bodies, provider
 subjects, provider issuers, cookies, tokens, callback URLs, tenant IDs,
 connection strings, private URLs, client secrets, and public-source/legal/
 facility-wide conclusion language.
+QNAP access-method decision documentation tests should prove the guide exists,
+is linked from the readiness index, auth readiness, tester invitation decision,
+operator checklist, runtime guide, RUNBOOK, and README, states real login/OIDC,
+sessions, cookies, user tables, and invitation workflow are not implemented,
+says local-dev fixture auth is not production authentication, requires
+production auth mode and disabled local-dev auth for QNAP, lists allowed
+temporary access-method categories, includes required decision fields and a
+revocation method, forbids anonymous public tester URLs and committed/pasted
+secrets including provider callback/private/hosted URLs, says the access
+decision belongs in the evidence packet, and forbids public-source completeness,
+legal, and facility-wide conclusions.
 
 Controlled CCLD retrieval job tests cover the ADR-0016 boundary before and after
 browser-triggered retrieval is enabled. Tests should prove only facility/license

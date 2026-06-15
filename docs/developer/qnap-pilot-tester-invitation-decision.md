@@ -6,6 +6,10 @@ accounts, links, or credentials are shared.
 
 Use it as part of the ordered
 [QNAP pilot readiness index](qnap-pilot-readiness-index.md).
+Record the temporary access method first in the
+[QNAP pilot access-method decision](qnap-pilot-access-method-decision.md) before
+any external tester link, credential, network rule, VPN rule, or reverse proxy
+route is shared.
 
 This decision is required before inviting early external stakeholder organization testers.
 
@@ -24,6 +28,8 @@ tester authentication is not implemented yet.
   invitation workflow.
 - Confirm that this guide does not implement identity provider integration,
   access management, account storage, or deployment.
+- Confirm that the access method has already been deliberately recorded, scoped,
+  given an expiration date, and paired with a revocation method.
 
 ## 2. Who May Be Invited
 
@@ -109,6 +115,7 @@ Before sending invitations, confirm the evidence packet contains:
 - Seeded import evidence command output.
 - Route evidence command output.
 - Auth readiness notes reviewed.
+- Access-method decision recorded.
 - Feedback configuration decision: intentionally disabled or fully configured.
 - Retrieval configuration decision: intentionally disabled or fully configured
   with persistent raw artifact storage.
@@ -122,6 +129,7 @@ Before sending invitations, confirm the evidence packet contains:
 ## 7. Do-Not-Do List
 
 - Do not invite testers until the access method is deliberately approved.
+- Do not share any access path until the access-method decision is recorded.
 - Do not use local-dev fixture auth as production authentication.
 - Do not share `.env` or secrets.
 - Do not commit provider secrets, callback URLs, tokens, tenant IDs, private

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added `docs/developer/qnap-pilot-access-method-decision.md`, a concise
+	pre-invite operator scaffold for recording the temporary QNAP pilot access
+	method, limits, owner, scope, expiration, revocation path, evidence-packet
+	relationship, and deferred production-auth work before any external tester
+	link, credential, network rule, VPN rule, or reverse proxy route is shared.
 - Added `scripts/build-qnap-pilot-evidence-packet.ps1`, an optional read-only
 	local command that assembles a redacted Markdown QNAP pilot evidence packet
 	under ignored `data/processed/qnap-pilot-evidence/` from the existing verifier,
