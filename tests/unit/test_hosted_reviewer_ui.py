@@ -5,7 +5,7 @@ from typing import Any, cast
 from urllib.parse import quote, urlencode
 
 import pytest
-from sqlalchemy import create_engine, func, select
+from sqlalchemy import create_engine, func, select, update
 from sqlalchemy.engine import Connection
 
 from ccld_complaints.hosted_app.app import route_response
@@ -201,7 +201,8 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Skip to main reviewer content" in html
     assert '<main id="main-content" tabindex="-1">' in html
     assert "First-run detail steps" in html
-    assert "Review the record summary and source traceability sections" in html
+    assert "Confirm the selected complaint record" in html
+    assert "Review the source traceability fields and source-context cues" in html
     assert "Return to the CCLD request queue" in html
     assert "Detail navigation" in html
     assert "Return to CCLD request or queue" in html
@@ -209,6 +210,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Open CCLD workflow help" in html
     assert "Back to reviewer records" in html
     assert "Review record summary" in html
+    assert "Review source traceability" in html
     assert "Review source-derived context" in html
     assert "Prepare tester feedback" in html
     assert "Record summary" in html
@@ -229,11 +231,29 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "complaint_control_number" in html
     assert "32-CR-20220407124448" in html
     assert "Source traceability" in html
+    assert "Selected complaint source traceability fields" in html
+    assert "Use these fields to confirm which local/test source-derived complaint record" in (
+        normalized_html
+    )
+    assert "Missing values are shown as" in html
+    assert "not available in this local/test record" in html
+    assert "not proof that the public source lacks a record" in normalized_html
+    assert "does not make legal, facility-wide, completeness, harm, abuse, neglect" in (
+        normalized_html
+    )
+    assert "Selected source record key" in html
+    assert "Stable source identity" in html
     assert "Visible source traceability summary" in html
     assert "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports" in html
     assert "Raw SHA-256" in html
     assert "6088c9627374baac647e2f2a54f6e389cb68c1b92db42da00020aaf508a853bd" in html
+    assert "Source artifact identity" in html
+    assert "Report index or source page marker" in html
+    assert "Retrieved at capture time" in html
+    assert "Raw hash validation status" in html
+    assert "Use this to report local/test artifact validation state" in html
     assert "Connector name" in html
+    assert "Connector name and version" in html
     assert "ccld_facility_reports" in html
     assert "Source document ID" in html
     assert "ccld:document:157806098:3" in html
@@ -269,6 +289,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Latest reviewer-created row" in html
     assert "No reviewer-created state has been recorded" in html
     assert "Reviewer actions" in html
+    assert "Review the source traceability section first" in html
     assert "Set a status to keep queue progress understandable" in normalized_html
     assert "Add reviewer note" in html
     assert "Reviewer note for this record" in html
@@ -284,10 +305,43 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert f"action=\"{REVIEWER_UI_STATUS_PATH}\"" in html
     assert "Reviewer-created state is stored separately" in normalized_html
     assert "Feedback clues for this record" in html
+    assert "If source traceability fields are confusing or missing" in html
     assert "copy the tester feedback checklist" in normalized_html
     assert "/ccld/records/request?facility_number=157806098" in html
     assert "/ccld/facilities" in html
     assert "/ccld/help" in html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_detail_missing_traceability_uses_clear_non_conclusive_wording() -> None:
+    with _seeded_connection() as connection:
+        connection.execute(update(hosted_source_derived_records).values(raw_path=None))
+        before_counts = _table_counts(connection)
+
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 0,
+        "audit_events": 0,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert "Raw artifact path" in html
+    assert "not available in this local/test record" in html
+    assert "do not treat a missing path as source loss" in html
+    assert "not proof that the public source lacks a record" in normalized_html
+    assert "does not make legal, facility-wide, completeness" in normalized_html
     assert_no_secret_html(html)
 
 

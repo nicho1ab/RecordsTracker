@@ -95,6 +95,12 @@ summary, clear source-traceability explanation, related source/facility/context
 sections, visible reviewer-created state summaries, understandable note/status
 actions, clear saved-state confirmations, CCLD queue/request/help navigation,
 and feedback clues for reporting missing or confusing records.
+Reviewer detail source traceability should help testers identify the selected
+complaint record, distinguish source-derived identifiers from reviewer-created
+state, understand which traceability fields are visible or missing in the
+local/test record, and avoid treating missing local/test values as public-source
+absence, completeness, legal, facility-wide, harm, abuse, neglect, liability, or
+automated-finding conclusions.
 
 The first browser-accessible CCLD record request page is a local/test, server-
 rendered HTML surface at `/ccld/records/request`. Its design purpose is to
