@@ -51,6 +51,7 @@ _IMPORT_RELOAD_ACTION_FIELD = "ccld_import_reload_action"
 _IMPORT_RELOAD_ACTION_VALUE = "load_local_validated_ccld_records"
 _RETRIEVAL_ACTION_FIELD = "ccld_retrieval_action"
 _RETRIEVAL_ACTION_VALUE = "run_controlled_ccld_retrieval"
+_FEEDBACK_PATH = "/feedback"
 _REQUEST_CONTEXT_ORIGIN_FIELD = "request_context_origin"
 _LOOKUP_FACILITY_NAME_FIELD = "lookup_facility_name"
 _FACILITY_NUMBER_RE = re.compile(r"^\d+$")
@@ -362,19 +363,7 @@ def _post_request_response(
         if context.retrieval_context is None:
             return _html_response(
                 503,
-                _render_message_page(
-                    title="Controlled CCLD retrieval setup required",
-                    heading="Controlled CCLD retrieval setup required",
-                    message=(
-                        "Controlled CCLD retrieval is not configured with both database "
-                        "context and server-side raw source storage. No retrieval job was created."
-                    ),
-                    guidance=(
-                        "Configure server-side retrieval storage and keep browser requests "
-                        "bounded to CCLD facility/date/type inputs."
-                    ),
-                    links=(("Return to CCLD request", CCLD_RECORD_REQUEST_PATH),),
-                ),
+                _render_retrieval_setup_required_page(),
             )
         retrieval_validation = validate_ccld_retrieval_request(
             form_values,
@@ -707,6 +696,47 @@ def _render_feedback_guidance_section() -> str:
         </section>"""
 
 
+def _render_retrieval_setup_required_page() -> str:
+        return _page(
+                title="Controlled CCLD retrieval setup required",
+                heading="Controlled CCLD retrieval setup required",
+                main=f"""    <section aria-labelledby="retrieval-setup-heading">
+            <h2 id="retrieval-setup-heading">No retrieval job was created</h2>
+            <p>Controlled CCLD retrieval needs a database-backed request context, retrieval
+            enablement, and configured server-side raw source storage before the browser can
+            trigger a job.</p>
+            <dl>
+                <dt>What you entered</dt>
+                <dd>The browser submitted a CCLD facility/date/type request.</dd>
+                <dt>What happened</dt>
+                <dd>The server blocked retrieval before creating a job because setup is
+                incomplete.</dd>
+                <dt>Records imported</dt>
+                <dd>none</dd>
+            </dl>
+        </section>
+        <section aria-labelledby="retrieval-setup-operator-heading">
+            <h2 id="retrieval-setup-operator-heading">Operator setup checklist</h2>
+            <ul>
+                <li>Run PostgreSQL migrations, including the retrieval job metadata migration.</li>
+                <li>Use PostgreSQL-backed page data for the hosted runtime.</li>
+                <li>Enable controlled retrieval in host configuration.</li>
+                <li>Configure a server-side raw artifact directory on persistent storage.</li>
+                <li>Keep retrieval CCLD-only, complaint-only for now, and server-executed.</li>
+            </ul>
+            <p>No connector credentials or server-side private values are shown to the browser.</p>
+        </section>
+        <section aria-labelledby="retrieval-setup-next-heading">
+            <h2 id="retrieval-setup-next-heading">What to do next</h2>
+            <p>Return to the request page to review records that are already loaded, or ask an
+            operator to configure controlled retrieval. If this message is confusing, send a bug
+            report from the feedback page and include the facility/date/type request.</p>
+            <p><a href="{CCLD_RECORD_REQUEST_PATH}">Return to CCLD request</a></p>
+            <p><a href="{_FEEDBACK_PATH}">Send tester feedback</a></p>
+        </section>""",
+        )
+
+
 def _render_record_type_options(selected_record_type: str) -> str:
     options: list[str] = []
     for record_type in SUPPORTED_RECORD_TYPES:
@@ -728,9 +758,21 @@ def _render_invalid_request(errors: tuple[str, ...]) -> str:
       <ul>
 {error_items}
       </ul>
-    <p>Return to the CCLD-only request page and retry with a facility/license
-    number and valid dates.</p>
+        <p>Return to the CCLD-only request page and retry with a facility/license
+        number, supported record type, and valid bounded dates.</p>
+        <section aria-labelledby="request-error-next-heading">
+            <h3 id="request-error-next-heading">What to check next</h3>
+            <ul>
+                <li>Facility/license number must contain digits only.</li>
+                <li>Record type must be complaint records or all supported record types.</li>
+                <li>All supported record types currently means complaint records only.</li>
+                <li>Start and end dates must use YYYY-MM-DD and stay within the allowed range.</li>
+            </ul>
+            <p>If the validation wording is confusing, use the feedback page to send a bug
+            report or feature request with the facility/date/type values you tried.</p>
+        </section>
       <p><a href="{CCLD_RECORD_REQUEST_PATH}">Return to CCLD request</a></p>
+            <p><a href="{_FEEDBACK_PATH}">Send tester feedback</a></p>
     </section>""",
     )
 
@@ -1098,7 +1140,8 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
     warning_items = _safe_list_items(result.warnings) or "        <li>none</li>"
     error_items = _safe_list_items(result.errors) or "        <li>none</li>"
     queue_link = ""
-    if result.job_state in {"completed", "completed_with_warnings"}:
+    imported_count = result.result_counts.get("imported_source_derived_records", 0)
+    if result.job_state in {"completed", "completed_with_warnings"} and imported_count > 0:
         queue_link = (
             f'            <p><a href="{CCLD_RECORD_REQUEST_PATH}?'
             f'facility_number={_escape(result.facility_number)}&amp;'
@@ -1109,16 +1152,26 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
         )
     return f"""    <section aria-labelledby="retrieval-job-summary-heading">
             <h2 id="retrieval-job-summary-heading">Controlled CCLD retrieval job status</h2>
-            <p>{_escape(result.safe_message)}</p>
+            <p>{_escape(_retrieval_state_intro(result))}</p>
             <dl>
                 <dt>Job state</dt>
+                <dd>{_escape(_retrieval_state_label(result.job_state))}</dd>
+                <dt>Machine-readable state</dt>
                 <dd>{_escape(result.job_state)}</dd>
+                <dt>Status message</dt>
+                <dd>{_escape(result.safe_message)}</dd>
                 <dt>Retrieval job ID</dt>
                 <dd>{_escape(result.retrieval_job_id)}</dd>
+                <dt>Facility/license number</dt>
+                <dd>{_escape(result.facility_number)}</dd>
                 <dt>Record type</dt>
                 <dd>{_escape(RECORD_TYPE_LABELS.get(result.record_type, result.record_type))}</dd>
                 <dt>Date range</dt>
                 <dd>{_escape(result.start_date)} to {_escape(result.end_date)}</dd>
+                <dt>Retrieval job created</dt>
+                <dd>yes</dd>
+                <dt>Records imported</dt>
+                <dd>{imported_count}</dd>
 {count_items}
             </dl>
             <h3>Safe warnings</h3>
@@ -1133,8 +1186,70 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
             artifacts, computed hashes, validated records, and imported source-derived rows
             when the job completed. No connector credentials or server-side private values
             are shown.</p>
+            {_render_retrieval_next_steps(result, imported_count)}
 {queue_link}
         </section>"""
+
+
+def _retrieval_state_intro(result: CcldRetrievalJobResult) -> str:
+    if result.job_state == "completed":
+        return "Controlled CCLD retrieval completed and imported validated records."
+    if result.job_state == "completed_with_warnings":
+        return "Controlled CCLD retrieval completed with warnings; review the counts below."
+    if result.job_state == "failed":
+        return "Controlled CCLD retrieval failed safely; no raw details are shown here."
+    if result.job_state == "blocked_by_validation":
+        return "Controlled CCLD retrieval was blocked by validation before import."
+    if result.job_state == "rate_limited":
+        return "Controlled CCLD retrieval was rate-limited for this tester."
+    if result.job_state == "running":
+        return "Controlled CCLD retrieval is running on the server."
+    if result.job_state == "queued":
+        return "Controlled CCLD retrieval is queued for server-side work."
+    return result.safe_message
+
+
+def _retrieval_state_label(state: str) -> str:
+    labels = {
+        "queued": "Queued",
+        "running": "Running",
+        "completed": "Completed",
+        "completed_with_warnings": "Completed with warnings",
+        "failed": "Failed",
+        "blocked_by_validation": "Blocked by validation",
+        "rate_limited": "Rate limited",
+    }
+    return labels.get(state, state)
+
+
+def _render_retrieval_next_steps(result: CcldRetrievalJobResult, imported_count: int) -> str:
+    if result.job_state == "completed" and imported_count > 0:
+        message = "Open the imported records in the queue and review source traceability."
+    elif result.job_state == "completed_with_warnings" and imported_count > 0:
+        message = "Review imported records, then include warning details if sending feedback."
+    elif result.job_state == "completed_with_warnings":
+        message = "No records were imported; check warnings and adjust the request if needed."
+    elif result.job_state == "failed":
+        message = (
+            "Retry later or ask an operator to inspect server logs without sharing "
+            "private values."
+        )
+    elif result.job_state == "blocked_by_validation":
+        message = "Change the facility/date/type request before retrying retrieval."
+    elif result.job_state == "rate_limited":
+        message = "Wait for an active retrieval job to finish before trying again."
+    elif result.job_state == "running":
+        message = "Refresh the request status later; do not resubmit repeatedly."
+    else:
+        message = "Wait for the server-side job to start, then refresh status later."
+    return f"""            <section aria-labelledby="retrieval-next-steps-heading">
+              <h3 id="retrieval-next-steps-heading">What to do next</h3>
+              <p>{_escape(message)}</p>
+              <p>If the status, counts, or next step is confusing, use the feedback page for a
+              bug report or feature request. For a new source request, use the new data source
+              feedback type; do not put source credentials or private values in feedback.</p>
+              <p><a href="{_FEEDBACK_PATH}">Send tester feedback</a></p>
+            </section>"""
 
 
 def _render_retrieval_action(
@@ -1146,6 +1261,10 @@ def _render_retrieval_action(
             <h2 id="retrieval-action-heading">Controlled CCLD retrieval setup required</h2>
             <p>Server-side retrieval is not configured with database context and raw source
             storage in this runtime. No retrieval job will be created from this browser page.</p>
+            <p>Operators should enable retrieval only after PostgreSQL migrations, raw artifact
+            storage, auth boundary, rate limits, and CCLD source allowlists are ready.</p>
+            <p>If this setup state is confusing, use the feedback page to send a bug report.</p>
+            <p><a href="/feedback">Send tester feedback</a></p>
         </section>"""
     return f"""    <section aria-labelledby="retrieval-action-heading">
             <h2 id="retrieval-action-heading">Controlled CCLD retrieval</h2>

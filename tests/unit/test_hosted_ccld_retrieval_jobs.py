@@ -21,11 +21,13 @@ from ccld_complaints.hosted_app.auth import (
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     CCLD_RECORD_REQUEST_PATH,
     CcldRecordRequestUiContext,
+    _render_retrieval_job_summary,
     ccld_record_request_context_for_reviewer_context,
 )
 from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
     CcldRetrievalConfig,
     CcldRetrievalContext,
+    CcldRetrievalJobResult,
     hosted_ccld_retrieval_jobs,
     validate_ccld_source_url,
 )
@@ -102,10 +104,15 @@ def test_retrieval_form_renders_record_type_and_safe_setup_state() -> None:
         page_data_mode="fixture-demo",
     )
     blocked_html = blocked_body.decode("utf-8")
+    blocked_normalized = " ".join(blocked_html.split())
 
     assert blocked_status == 503
     assert "Controlled CCLD retrieval setup required" in blocked_html
     assert "No retrieval job was created" in blocked_html
+    assert "Operator setup checklist" in blocked_html
+    assert "retrieval enablement" in blocked_normalized
+    assert "server-side raw source storage" in blocked_normalized
+    assert "Send tester feedback" in blocked_html
     assert_no_secret_html(blocked_html)
 
 
@@ -130,6 +137,9 @@ def test_retrieval_validation_blocks_bad_inputs_before_mutation(tmp_path: Path) 
     assert status == 400
     assert "Choose a supported CCLD record type." in html
     assert "Date range must be 30 days or fewer" in html
+    assert "What to check next" in html
+    assert "All supported record types currently means complaint records only" in html
+    assert "Send tester feedback" in html
     assert counts == _empty_counts()
     assert_no_secret_html(html)
 
@@ -186,9 +196,15 @@ def test_controlled_retrieval_imports_records_and_links_queue(tmp_path: Path) ->
     assert jobs[0]["authorization_permission"] == "retrieval_job_trigger"
     assert "Controlled CCLD retrieval job status" in html
     assert "Job state" in html
-    assert "completed" in html
+    assert "Completed" in html
+    assert "Retrieval job created" in html
+    assert "Records imported" in html
     assert "Imported source derived records" in normalized
+    assert "Controlled CCLD retrieval completed and imported validated records" in html
+    assert "What to do next" in html
+    assert "Open the imported records in the queue" in html
     assert "Open imported records in this CCLD queue" in html
+    assert "Send tester feedback" in html
     assert "CCLD request accepted" in html
     assert "Open reviewer detail" in html
     assert_no_secret_html(html)
@@ -232,8 +248,12 @@ def test_retrieval_failure_is_safe_and_does_not_import(tmp_path: Path) -> None:
     assert counts["source_records"] == 0
     assert counts["retrieval_jobs"] == 1
     assert jobs[0]["job_state"] == "completed_with_warnings"
+    assert "Completed with warnings" in html
+    assert "No records were imported" in html
     assert "Controlled CCLD retrieval completed with no matching imported records" in html
     assert "Report 39 failed during fetch" in html
+    assert "Safe warnings" in html
+    assert "Safe errors" in html
     assert "traceback" not in html.casefold()
     assert_no_secret_html(html)
 
@@ -287,7 +307,28 @@ def test_retrieval_rate_limit_blocks_without_network_call(tmp_path: Path) -> Non
     assert client.facility_detail_calls == []
     assert "rate_limited" in html
     assert "rate-limited" in html
+    assert "Rate limited" in html
+    assert "Wait for an active retrieval job to finish" in html
     assert_no_secret_html(html)
+
+
+def test_retrieval_status_summary_explains_queued_running_and_failed_states() -> None:
+    queued_html = _render_retrieval_job_summary(_job_result("queued"))
+    running_html = _render_retrieval_job_summary(_job_result("running"))
+    failed_html = _render_retrieval_job_summary(
+        _job_result("failed", errors=("Controlled retrieval failed safely.",))
+    )
+
+    assert "Queued" in queued_html
+    assert "Wait for the server-side job to start" in queued_html
+    assert "Running" in running_html
+    assert "Refresh the request status later" in running_html
+    assert "Failed" in failed_html
+    assert "Retry later or ask an operator" in failed_html
+    assert "Traceback" not in failed_html
+    assert_no_secret_html(queued_html)
+    assert_no_secret_html(running_html)
+    assert_no_secret_html(failed_html)
 
 
 def test_anonymous_production_retrieval_is_blocked() -> None:
@@ -372,6 +413,26 @@ def _request_context(
     return ccld_record_request_context_for_reviewer_context(
         reviewer_context,
         retrieval_context=retrieval_context,
+    )
+
+
+def _job_result(
+    state: str,
+    *,
+    errors: tuple[str, ...] = (),
+) -> CcldRetrievalJobResult:
+    return CcldRetrievalJobResult(
+        retrieval_job_id=f"ccld-retrieval-157806098-{state}",
+        job_state=cast(Any, state),
+        facility_number="157806098",
+        record_type="complaints",
+        start_date="2022-08-01",
+        end_date="2022-08-31",
+        source_artifact_identity=None,
+        result_counts={},
+        warnings=(),
+        errors=errors,
+        safe_message="test status",
     )
 
 

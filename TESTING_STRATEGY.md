@@ -85,6 +85,11 @@ The first implemented slice also tests request-page controls, safe setup-require
 state when retrieval config is missing, mocked successful import into
 PostgreSQL-backed source-derived tables, queue linking, safe failure states,
 feedback route separation, and existing page-data/reviewer note/status behavior.
+Status usability tests should also prove setup-required pages describe missing
+operator configuration without exposing private values, validation states explain
+facility/date/type issues, completed-with-warnings is distinct from failed,
+rate-limited and failed states provide safe next steps, and confusing retrieval
+states point to `/feedback`.
 GitHub Issues feedback intake tests must prove the feedback page renders, the
 feedback type dropdown has exactly bug report, feature request, and new data
 source options, description and submit controls are accessible, missing values

@@ -199,6 +199,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         ccld_retrieval_setup_status != 503
         or b"Controlled CCLD retrieval setup required" not in ccld_retrieval_setup_body
         or b"No retrieval job was created" not in ccld_retrieval_setup_body
+        or b"Operator setup checklist" not in ccld_retrieval_setup_body
+        or b"Send tester feedback" not in ccld_retrieval_setup_body
     ):
         raise RuntimeError("Hosted scaffold retrieval setup state did not return safe guidance.")
     if (
