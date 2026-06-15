@@ -1099,6 +1099,9 @@ def _render_detail_first_run_steps(
     ccld_request_href = _ccld_request_href(related_records, return_context)
     return f"""<section aria-labelledby="detail-first-run-heading">
             <h2 id="detail-first-run-heading">First-run detail steps</h2>
+            <p>This is the reviewer detail step of the same CCLD review session. Use it to
+            confirm source traceability, read source-confidence cues and field-note guidance,
+            and save reviewer notes/status only as tester-created observations.</p>
             <ol>
                 <li>Confirm the selected complaint record in the record summary.</li>
                 <li>Review the source traceability fields and source-context cues before adding

@@ -134,6 +134,15 @@ for queue-level and detail-level observations. Queue filters, filtered-empty
 states, no-match/load states, reviewer detail, note/status confirmation,
 return-to-queue refresh, and next-record confusion should point to one checklist
 without adding another checklist or workflow.
+First-run review session orientation should make the end-to-end local/test CCLD
+path visible from home, request/help, queue, and reviewer detail: facility lookup
+or manual entry, request-context confirmation, loaded local/test queue, reviewer
+detail source traceability, source-confidence cues, field-note guidance,
+reviewer-created note/status observations, same-queue refresh, next-record
+continuation, and manual feedback checklist copy. Orientation must not imply a
+saved session, persisted queue state, duplicate checklist, feedback persistence,
+auth, workflow engine, browser live fetch, connector execution, or artifact
+building from browser requests.
 Reviewer detail and request-queue navigation should make next-record movement
 clear without implying persisted assignment, record claiming, or production
 workflow state. Suggested-next cues should remain derived from the current

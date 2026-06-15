@@ -134,6 +134,16 @@ Queue-to-detail checklist continuity tests should prove queue pages and reviewer
 detail pages point queue-level and detail-level observations to the same existing
 manual checklist, preserve single-checklist/manual-copy behavior, and do not add
 feedback persistence, export behavior, or mutations.
+First-run review session orientation tests should prove home, request/help, queue,
+reviewer detail, note/status confirmation, and checklist surfaces describe the
+current CCLD-only path in order: facility lookup or manual entry, request-context
+confirmation, loaded local/test queue, reviewer detail source traceability,
+source-confidence cues, field-note guidance, reviewer-created note/status
+observations, same-queue refresh, next-record continuation, and manual checklist
+copy. Tests should also prove the wording does not add saved sessions, persisted
+queue state, duplicate checklists, feedback persistence, live browser fetch,
+connector execution, artifact building, schema changes, auth, workflow-engine
+state, or mutations.
 Reviewer detail next-record navigation tests should prove return-to-same-queue
 guidance, note/status confirmation next-record wording, queue suggested-next
 wording, and no-assignment/no-claim/no-workflow-state boundaries render while

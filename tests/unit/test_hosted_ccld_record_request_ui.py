@@ -65,7 +65,17 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "Reviewer-status filter" in html
     assert "Records with no saved reviewer status are counted" in normalized_html
     assert "Show CCLD request queue" in html
-    assert "Workflow overview" in html
+    assert "Review session path" in html
+    assert "Start this review session by confirming the CCLD request context" in (
+        normalized_html
+    )
+    assert "Facility lookup helps fill the facility/license number" in normalized_html
+    assert "Submit the facility/date request to search loaded local/test CCLD records" in (
+        normalized_html
+    )
+    assert "do not create a saved review session, persisted queue state" in (
+        normalized_html
+    )
     assert "Key terms" in html
     assert "Feedback guidance" in html
     assert "structured checklist" in html
@@ -84,7 +94,17 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "How CCLD review works" in html
     assert "What this local/test app does" in html
-    assert "Workflow overview" in html
+    assert "Review session path" in html
+    assert "Start with facility lookup when you need the facility/license number" in (
+        normalized_html
+    )
+    assert "Use reviewer detail to check source traceability, source-confidence cues" in (
+        normalized_html
+    )
+    assert "finish by copying the single manual feedback checklist" in normalized_html
+    assert "do not create a saved review session, persisted queue state" in (
+        normalized_html
+    )
     assert "Facility/license number" in html
     assert "Date range" in html
     assert "CCLD request context" in html
@@ -287,7 +307,9 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     )
     assert "First-run queue steps" in html
     assert "Read the queue progress and triage summaries" in html
-    assert "Return to this request page and copy the feedback checklist" in normalized_html
+    assert "check source traceability, source-confidence cues" in normalized_html
+    assert "Return to this same request page, resubmit when needed" in normalized_html
+    assert "Copy the single manual feedback checklist" in normalized_html
     assert "Facility/date-scoped CCLD complaint records ready for review" in html
     assert "Queue progress summary" in html
     assert "Counts use existing reviewer-created status rows" in normalized_html
@@ -734,6 +756,7 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     assert "source traceability cue: Complete source traceability" in first_checklist
     assert "reviewer note/status cue: No reviewer-created notes/status yet" in first_checklist
     assert "Reviewer detail and note/status confirmation" in first_checklist
+    assert "- Review session path was clear from home/request/help:" in first_checklist
     assert "- Source traceability cues were easy to find:" in first_checklist
     assert "- Source-confidence cues or missing local/test fields to mention:" in (
         first_checklist
@@ -754,6 +777,9 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     assert "- Suggested enhancements:" in first_checklist
     assert "- Manual-copy only: copy this checklist" in first_checklist
     assert "- The app does not store, send, email, export, or persist this feedback." in (
+        first_checklist
+    )
+    assert "does not create a saved review session, persisted queue state, or second checklist" in (
         first_checklist
     )
     assert "Rendering this checklist does not change source-derived records" in first_checklist

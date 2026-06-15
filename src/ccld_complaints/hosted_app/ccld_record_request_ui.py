@@ -441,6 +441,9 @@ def _render_request_form(
                     <p>The public CCLD portal remains the source of record. This page reads or
                     loads local/test source-derived records only; it does not run live crawling
                     or browser-triggered connector execution.</p>
+                    <p>Start this review session by confirming the CCLD request context.
+                    Facility lookup helps fill the facility/license number; the request queue
+                    then uses loaded local/test CCLD records for that facility/date context.</p>
                     <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find a CCLD facility by name,
                     city, county, ZIP code, type, status, or facility/license number</a></p>
                     <p><a href="{CCLD_HELP_PATH}">Read how this CCLD review workflow
@@ -549,20 +552,28 @@ def _render_help_page() -> str:
 
 def _render_workflow_overview() -> str:
         return """    <section aria-labelledby="workflow-overview-heading">
-            <h2 id="workflow-overview-heading">Workflow overview</h2>
+            <h2 id="workflow-overview-heading">Review session path</h2>
             <ol>
-                <li>Look up a CCLD facility in local/test reference data or enter a
-                facility/license number manually.</li>
-                <li>Enter or confirm the optional date range.</li>
-                <li>Use records already loaded locally or load validated CCLD records from a
-                hosted seeded-corpus JSON artifact.</li>
-                <li>Review the matching complaint records in the facility/date-scoped review
-                queue.</li>
-                <li>Open a record in the reviewer UI, then add a reviewer note or reviewer
-                status when helpful.</li>
-                <li>Provide feedback about missing records, confusing wording, friction, or
-                desired features.</li>
+                <li>Start with facility lookup when you need the facility/license number, or
+                use manual entry when you already know it.</li>
+                <li>Confirm the CCLD request context: facility/license number, optional date
+                range, lookup/manual-entry origin, and active local/test facility reference
+                source.</li>
+                <li>Submit the facility/date request to search loaded local/test CCLD records.
+                If no local match appears, use the no-match/load guidance without treating it as
+                public-source absence.</li>
+                <li>Use the CCLD review queue to choose a suggested next record, filter by
+                reviewer-created status, or spot queue wording that belongs in feedback.</li>
+                <li>Use reviewer detail to check source traceability, source-confidence cues,
+                and field-note guidance before saving reviewer notes/status as tester-created
+                observations.</li>
+                <li>Return to the same queue/request context, resubmit when needed to refresh
+                progress, continue to the next record, and finish by copying the single manual
+                feedback checklist.</li>
             </ol>
+            <p>The browser pages do not create a saved review session, persisted queue state,
+            second checklist, feedback persistence, live CCLD fetch, connector execution, or
+            artifact building.</p>
         </section>"""
 
 
@@ -1026,8 +1037,12 @@ def _render_queue_first_run_steps() -> str:
             <ol>
                 <li>Read the queue progress and triage summaries.</li>
                 <li>Open the suggested next complaint record in reviewer detail.</li>
-                <li>Add a reviewer note or status only from the detail page when useful.</li>
-                <li>Return to this request page and copy the feedback checklist.</li>
+                <li>On detail, check source traceability, source-confidence cues, and
+                field-note guidance before saving reviewer notes/status.</li>
+                <li>Return to this same request page, resubmit when needed to refresh queue
+                progress, and continue with the next suggested record.</li>
+                <li>Copy the single manual feedback checklist for both queue and detail
+                observations.</li>
             </ol>
         </section>"""
 
@@ -1277,6 +1292,7 @@ def _feedback_checklist_text(
         *_feedback_queue_record_lines(queue_items),
         "",
         "Reviewer detail and note/status confirmation",
+        "- Review session path was clear from home/request/help:",
         "- Reviewer detail record opened:",
         "- Source traceability cues were easy to find:",
         "- Source-confidence cues or missing local/test fields to mention:",
@@ -1297,6 +1313,8 @@ def _feedback_checklist_text(
         "Boundary reminders",
         "- Manual-copy only: copy this checklist into the agreed external feedback channel.",
         "- The app does not store, send, email, export, or persist this feedback.",
+        "- The app does not create a saved review session, persisted queue state, "
+        "or second checklist.",
         "- Rendering this checklist does not change source-derived records, "
         "reviewer-created state, audit rows, import batches, or operational metadata.",
         "- Browser pages did not run live CCLD retrieval or connector execution.",

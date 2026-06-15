@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Improved first-run local/test CCLD review session orientation across home,
+  request/help, queue, reviewer detail, and feedback checklist wording so testers
+  can follow facility lookup, request context, loaded local/test queue, reviewer
+  detail source review, note/status confirmation, same-queue refresh, next-record
+  continuation, and manual checklist copy behavior without adding saved sessions,
+  persisted queue state, duplicate checklist behavior, feedback persistence,
+  schema changes, auth, workflow-engine behavior, live browser retrieval,
+  connector execution, artifact building from browser requests, or non-CCLD scope.
 - Improved local/test CCLD queue-to-detail checklist continuity so testers know
 	queue observations and reviewer-detail observations belong in the same existing
 	manual feedback checklist without adding duplicate checklist behavior, feedback
