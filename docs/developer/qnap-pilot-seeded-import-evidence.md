@@ -8,6 +8,12 @@ only on fixture-demo or scaffold assumptions.
 This guide complements the [QNAP pilot operator checklist](qnap-pilot-operator-checklist.md),
 [QNAP Docker runtime guide](qnap-docker-runtime.md), and `RUNBOOK.md`.
 
+The optional `scripts/summarize-qnap-pilot-seeded-import-evidence.ps1` command
+prints the safe summary described below. It is read-only: it does not run
+imports, run retrieval, call live CCLD, call GitHub, print secrets, print raw
+artifact contents, print raw server-specific paths, or make public-source
+completeness or legal conclusions.
+
 ## 1. Purpose
 
 - Capture early QNAP hosted tester readiness evidence.
@@ -42,6 +48,18 @@ Run the QNAP verifier first:
 
 ```powershell
 .\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env
+```
+
+Then run the optional read-only evidence summary:
+
+```powershell
+.\scripts\summarize-qnap-pilot-seeded-import-evidence.ps1 -EnvFile .env
+```
+
+For placeholder/template review without running Docker/PostgreSQL checks:
+
+```powershell
+.\scripts\summarize-qnap-pilot-seeded-import-evidence.ps1 -EnvFile .env.example -SkipDatabaseCheck
 ```
 
 When containers are running, include container and route checks:
@@ -142,6 +160,7 @@ sent server-side.
 Keep the packet small and safe:
 
 - QNAP verifier output summary.
+- Optional seeded import evidence command output summary.
 - Docker Compose config validation success.
 - Alembic current output or migration success.
 - Validated `hosted_import_batches` count.
