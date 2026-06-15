@@ -173,6 +173,11 @@ whether it came from facility lookup or manual entry, which facility/license
 number and date range are being used, which local/test facility reference source
 is active, and how to change facility/date criteria before reviewing queue
 results.
+CCLD local/test pages should use the same plain-language terms for repeated
+concepts: facility/license number, CCLD request context, facility/date request,
+loaded local/test CCLD records, source-derived records, source traceability,
+reviewer-created notes/status, reviewer-status filter, suggested next record,
+and manual feedback checklist.
 
 Near-term hosted work should pass the deferred-readiness/product-benefit gate in
 `GOVERNANCE_INVENTORY.md`. MVP usability is not cosmetic polish: user-friendly

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Improved local/test CCLD terminology consistency across home, facility lookup,
+	request/help, queue, reviewer detail, note/status, no-match/load, filtered-
+	empty, next-record, and manual feedback checklist wording without changing
+	behavior, persistence, schema, queue assignment, workflow-engine behavior,
+	live browser retrieval, connector execution, or non-CCLD scope.
 - Improved local/test CCLD queue filtered-empty recovery guidance so testers can
 	see when a reviewer-status filter hides all rows, clear the filter for the same
 	facility/date request context, and report confusing filter behavior without

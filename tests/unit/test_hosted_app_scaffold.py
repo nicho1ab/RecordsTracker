@@ -119,7 +119,7 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "Production sign-in, sessions, cookies, exports, deployment" in normalized_html
     assert "Request CCLD records" in html
     assert "How this works" in html
-    assert "Review loaded records" in html
+    assert "Review loaded local/test records" in html
     assert "/reviewer" in html
 
 

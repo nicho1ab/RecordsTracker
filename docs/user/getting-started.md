@@ -134,6 +134,11 @@ check whether the request came from facility lookup or manual entry, which
 facility/license number and date range are being used, and which local/test
 facility reference source is active. Use the change-facility/date links when the
 context is not the one you intended.
+Across the hosted CCLD pages, the same terms are used for the same ideas:
+facility/license number, CCLD request context, facility/date request, loaded
+local/test CCLD records, source-derived records, source traceability, reviewer-
+created notes/status, reviewer-status filter, suggested next record, and manual
+feedback checklist.
 
 The request page accepts a CCLD facility/license number and optional date range,
 reads existing seeded

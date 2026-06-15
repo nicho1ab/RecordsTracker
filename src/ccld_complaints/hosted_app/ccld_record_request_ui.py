@@ -264,7 +264,7 @@ def validate_ccld_record_request(
     if start_date is not None and end_date is not None and end_date < start_date:
         errors.append("End date must not be before start date.")
     if reviewer_status_filter not in _STATUS_FILTER_VALUES:
-        errors.append("Choose a supported reviewer status queue filter.")
+        errors.append("Choose a supported reviewer-status filter.")
     if request_context_origin and request_context_origin not in _REQUEST_CONTEXT_ORIGIN_VALUES:
         errors.append("Choose a supported CCLD request context.")
     if errors:
@@ -490,7 +490,7 @@ def _render_request_form(
                     records are not proof that CCLD has no records for that period.</span>
         </p>
                 <p>
-                    <label for="reviewer_status_filter">Queue status filter</label>
+                    <label for="reviewer_status_filter">Reviewer-status filter</label>
                     <select id="reviewer_status_filter" name="reviewer_status_filter"
                         aria-describedby="queue-status-filter-help">
                         <option value="all">All queue records</option>
@@ -500,9 +500,9 @@ def _render_request_form(
                         <option value="reviewed">Reviewed</option>
                         <option value="blocked">Blocked</option>
                     </select>
-                    <span id="queue-status-filter-help">Queue status is derived from existing
-                    local/test reviewer-created status rows. Records with no status are counted
-                    as not started.</span>
+                    <span id="queue-status-filter-help">The reviewer-status filter is derived
+                    from existing local/test reviewer-created note/status rows. Records with no
+                    saved reviewer status are counted as not started.</span>
                 </p>
                 <p><button type="submit">Show CCLD request queue</button></p>
       </form>
@@ -511,8 +511,8 @@ def _render_request_form(
     {_render_feedback_guidance_section()}
     <section aria-labelledby="request-boundary-heading">
       <h2 id="request-boundary-heading">What happens next</h2>
-            <p>If matching CCLD source records are already loaded, this page shows a
-            review queue with one row per matching complaint record. If not, it can
+            <p>If matching CCLD source-derived records are already loaded, this page shows a
+            CCLD review queue with one row per matching complaint record. If not, it can
             offer a bounded local validated CCLD load, then explain the outside-browser
             live-fetch and artifact-builder handoff.</p>
     </section>""",
@@ -539,7 +539,7 @@ def _render_help_page() -> str:
         <section aria-labelledby="help-next-action-heading">
             <h2 id="help-next-action-heading">Next action</h2>
             <p>Start by looking up a facility or entering a facility/license number manually.
-            After records are loaded, use the review queue links to open each complaint record
+            After records are loaded, use the CCLD review queue links to open each complaint record
             in the reviewer UI.</p>
             <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find a CCLD facility</a></p>
             <p><a href="{CCLD_RECORD_REQUEST_PATH}">Open the CCLD record request form</a></p>
@@ -575,21 +575,35 @@ def _render_key_terms_section() -> str:
                 <dt>Facility lookup</dt>
                 <dd>A local/test search over committed CCLD facility reference CSV fields such
                 as facility/license number, name, city, county, ZIP code, type, and status.</dd>
+                <dt>CCLD request context</dt>
+                <dd>The facility/license number, optional date range, request origin, and active
+                local/test facility reference source used for this request.</dd>
+                <dt>Facility/date request</dt>
+                <dd>A CCLD request for one facility/license number and optional date range.</dd>
                 <dt>Date range</dt>
                 <dd>An optional filter over dates already extracted into local/test CCLD records.
                 It is not a live public-source search.</dd>
-                <dt>Loaded records</dt>
+                <dt>Loaded local/test CCLD records</dt>
                 <dd>Validated local/test CCLD records staged from hosted seeded-corpus JSON into
-                hosted source-derived rows.</dd>
-                <dt>Source records</dt>
+                source-derived records.</dd>
+                <dt>Source-derived records</dt>
                 <dd>Source-derived facility, source document, complaint, allegation, event, or
                 extraction audit rows that preserve original values and source traceability.</dd>
-                <dt>Review queue</dt>
+                <dt>CCLD review queue</dt>
                 <dd>The facility/date-scoped list of matching complaint records to review next.</dd>
-                <dt>Reviewer notes</dt>
-                <dd>Reviewer-created local/test notes stored separately from source-derived
-                records.</dd>
-                <dt>Reviewer status</dt>
+                <dt>Reviewer-created notes/status</dt>
+                <dd>Reviewer-created local/test note/status rows stored separately from
+                source-derived records.</dd>
+                <dt>Reviewer-status filter</dt>
+                <dd>A queue filter based on existing reviewer-created status rows. Records with
+                no saved reviewer status are counted as not started.</dd>
+                <dt>Suggested next record</dt>
+                <dd>Local/test navigation help derived from the current request context and
+                reviewer-created note/status cues, not an assignment or record claim.</dd>
+                <dt>Manual feedback checklist</dt>
+                <dd>The copyable checklist testers paste into the agreed external feedback
+                channel. The app does not save or send it.</dd>
+                <dt>Reviewer status value</dt>
                 <dd>A bounded local/test review state such as needs review, in review, reviewed,
                 blocked, or needs follow-up. It is not a public-source finding.</dd>
             </dl>
@@ -723,7 +737,7 @@ def _render_matched_result(
                         <th scope="col">Complaint and report dates</th>
                         <th scope="col">Source document/report</th>
                         <th scope="col">Source traceability summary</th>
-                        <th scope="col">Reviewer state indicator</th>
+                        <th scope="col">Reviewer-created note/status cue</th>
                         <th scope="col">Loaded record context</th>
           </tr>
         </thead>
@@ -1032,18 +1046,18 @@ def _render_queue_triage_summary(
       <dl>
         <dt>Request scope</dt>
                 <dd>{_escape(request_scope)}; date range {_escape(date_scope)}</dd>
-        <dt>Records with reviewer notes</dt>
+        <dt>Records with reviewer-created notes</dt>
         <dd>{note_count}</dd>
-        <dt>Records with reviewer status</dt>
+        <dt>Records with reviewer-created status</dt>
         <dd>{status_count}</dd>
         <dt>Records with source traceability available</dt>
         <dd>{traceability_count}</dd>
         <dt>Suggested next record to open</dt>
         <dd>{next_record_markup}</dd>
       </dl>
-      <p>The feedback checklist below uses these queue counts and reviewer-state cues so
-            testers can report missing records, record-specific reviewer-detail observations,
-            confusing wording, or unexpected filter behavior.</p>
+    <p>The manual feedback checklist below uses these queue counts and reviewer-created
+        note/status cues so testers can report missing records, record-specific
+        reviewer-detail observations, confusing wording, or unexpected filter behavior.</p>
     </section>"""
 
 
@@ -1240,8 +1254,8 @@ def _feedback_checklist_text(
         "",
         "Reviewer-created state considered",
         f"- Reviewer-created rows read for this queue: {reviewer_state_rows}",
-        f"- Reviewer notes present: {_yes_no(reviewer_note_count > 0)}",
-        f"- Reviewer statuses present: {_yes_no(reviewer_status_count > 0)}",
+        f"- Reviewer-created notes present: {_yes_no(reviewer_note_count > 0)}",
+        f"- Reviewer-created statuses present: {_yes_no(reviewer_status_count > 0)}",
         "",
         "Queue records to spot-check",
         *_feedback_queue_record_lines(queue_items),
@@ -1313,7 +1327,7 @@ def _feedback_queue_record_line(item: CcldRequestQueueItem) -> str:
         f"reviewer status: {_status_label(_queue_status(item))}; "
         f"source traceability cue: {_traceability_summary(item.complaint_record)}; "
         f"reviewer note/status cue: {_reviewer_state_text(item.reviewer_state)}; "
-        f"loaded source records in bundle: {item.related_record_count}"
+        f"loaded source-derived records in bundle: {item.related_record_count}"
     )
 
 
@@ -1331,21 +1345,23 @@ def _render_queue_filter_form(request: CcldRecordRequest) -> str:
       <input type="hidden" name="start_date" value="{_escape(request.start_date or '')}">
       <input type="hidden" name="end_date" value="{_escape(request.end_date or '')}">
       <p>
-        <label for="queue_status_filter_result">Filter queue by reviewer status</label>
+        <label for="queue_status_filter_result">Reviewer-status filter for this queue</label>
         <select id="queue_status_filter_result" name="reviewer_status_filter"
           aria-describedby="queue-status-filter-result-help">
 {options}
         </select>
-        <span id="queue-status-filter-result-help">Filtering uses existing reviewer-created
-        status rows. It does not change source-derived records or save queue state.</span>
+                <span id="queue-status-filter-result-help">Filtering uses existing
+                reviewer-created note/status rows. It does not change source-derived records
+                or save queue state.</span>
       </p>
-      <p><button type="submit">Apply queue status filter</button></p>
+            <p><button type="submit">Apply reviewer-status filter</button></p>
     </form>"""
 
 
 def _render_empty_filtered_queue_row(request: CcldRecordRequest) -> str:
         return f"""          <tr>
-                        <td colspan="8">No complaint records match the selected queue status filter:
+                        <td colspan="8">No complaint records match the selected
+                        reviewer-status filter:
                         {_escape(_status_label(request.reviewer_status_filter))}. The filter is
                         hiding rows for the same request context; choose All queue records to
                         return to the full CCLD request queue.</td>
@@ -1593,7 +1609,7 @@ def _traceability_summary(record: Mapping[str, Any]) -> str:
 
 def _loaded_context_text(item: CcldRequestQueueItem) -> str:
     return (
-        f"{item.related_record_count} loaded source records in bundle; "
+        f"{item.related_record_count} loaded source-derived records in bundle; "
         f"{item.allegation_count} allegation rows; "
         f"{item.extraction_audit_count} extraction audit rows."
     )
@@ -1658,13 +1674,13 @@ def _reviewer_state_text(summary: Mapping[str, Any]) -> str:
     note_count = _summary_int(summary, "note_count")
     latest_status = _summary_optional_string(summary, "latest_status")
     if total_rows == 0:
-        return "No reviewer notes or status yet."
+        return "No reviewer-created notes/status yet."
     parts = [f"{total_rows} reviewer-created row(s)"]
-    parts.append(f"{note_count} reviewer note(s)")
+    parts.append(f"{note_count} reviewer-created note(s)")
     if latest_status is None:
-        parts.append("No reviewer status yet")
+        parts.append("No reviewer-created status yet")
     else:
-        parts.append(f"Latest reviewer status: {_status_label(latest_status)}")
+        parts.append(f"Latest reviewer-created status: {_status_label(latest_status)}")
     return "; ".join(parts) + "."
 
 

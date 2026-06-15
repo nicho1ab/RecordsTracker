@@ -460,6 +460,11 @@ the governed primary future review experience.
 	facility/date request context, clear the filter, and continue review without
 	adding persisted queue state, queue assignment, workflow-engine behavior,
 	schema changes, live browser retrieval, connector execution, or non-CCLD scope.
+- Improved local/test CCLD terminology consistency across request, queue,
+	reviewer detail, help, no-match/load, filtered-empty, next-record, and manual
+	feedback checklist wording without changing behavior, schema, persistence,
+	queue assignment, workflow-engine behavior, live browser retrieval, connector
+	execution, or non-CCLD scope.
 - Improved the local/test CCLD facility lookup and request/result queue context
 	confirmation so testers can see whether a request came from lookup selection or
 	manual entry, confirm the facility/license number, date range, active facility
