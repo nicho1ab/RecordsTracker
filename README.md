@@ -45,6 +45,8 @@ experience.
    reviewer note/status cues, source-traceability availability cues, reviewer-status filtering,
    suggested next-record links, skip-to-main links, visible first-run next-step
    guidance, clearer form/action text, open records in the hosted reviewer UI,
+   use clearer no-match and local validated load guidance when currently loaded
+   local/test data has no matching records,
    review clearer selected-record source traceability cues before adding notes or
    status, see clearer note/status save confirmations, return to the same CCLD
    request context to resubmit when needed, see updated queue cues, continue to

@@ -173,6 +173,13 @@ new source-derived rows staged, existing rows refreshed, duplicate rows avoided,
 local validated rows outside the request, any deferred reason, source
 traceability summaries, loaded-record bundle context, and reviewer-state
 indicators from existing reviewer-created state reads.
+No-match pages also explain that the request searched only currently loaded
+local/test source-derived rows. They show the searched facility/license number,
+date range, local rows available before date filtering, and local validated load
+state; prompt testers to change facility/date criteria when the active context is
+wrong; and tell testers to use the manual feedback checklist when records seem
+missing or unexpected. A no-match result is not a public-source absence,
+record-completeness, legal, or facility-wide conclusion.
 
 The page does not run live crawling, execute connectors, write reviewer-created
 state, create audit rows, persist operational metadata, destructively delete or

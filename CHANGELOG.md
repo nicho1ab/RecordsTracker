@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Improved local/test CCLD request no-match and local validated load guidance so
+	testers can confirm facility/date criteria, understand results depend on
+	currently loaded local/test data, use the existing load/refresh path when
+	appropriate, and follow the outside-browser live-fetch/artifact-builder
+	workflow without adding browser retrieval, connector execution, persistence,
+	schema changes, or non-CCLD scope.
 - Improved local/test reviewer note/status saved confirmations and queue wording
 	so testers know queue progress and note/status cues are derived from
 	reviewer-created state, may require resubmitting the same CCLD request context,

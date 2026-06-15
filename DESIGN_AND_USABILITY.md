@@ -119,6 +119,11 @@ must not offer non-CCLD source selection, imply hosted live crawling, imply
 generic connector execution, or hide the required outside-browser handoff when
 broader retrieval requires an explicit live-fetch command and local/test
 artifact build command before browser load/refresh.
+No-match states should also explain that the browser searched currently loaded
+local/test source-derived rows only, prompt testers to confirm facility/date
+criteria before assuming records are missing, and point to the existing local
+validated load or outside-browser preparation workflow without running those
+steps from the browser.
 The next guided version of that page can organize matching complaints as a
 facility/date-scoped review queue, provide first-time workflow and key-term
 help, show reviewer notes/status indicators from existing reviewer-created

@@ -467,6 +467,19 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     normalized_html = " ".join(html.split())
     assert "confirm the request context below" in normalized_html
     assert "change the facility/date criteria before reviewing results" in normalized_html
+    assert "How to interpret this no-match result" in html
+    assert "currently loaded local/test source-derived rows only" in normalized_html
+    assert "did not run live CCLD retrieval, connector execution" in normalized_html
+    assert "Facility/license number searched" in html
+    assert "Date range searched" in html
+    assert "Loaded local/test rows for this facility before date filtering" in html
+    assert "Local validated load state" in html
+    assert "not submitted for this request" in html
+    assert "Change the facility/license number or date range" in normalized_html
+    assert "use the local validated CCLD load action" in html
+    assert "outside-browser live fetch and artifact-builder workflow" in normalized_html
+    assert "copy the feedback checklist" in html
+    assert "not a public-source absence" in html
     assert "Confirm request context" in html
     assert "Change facility/date criteria for this request" in html
     assert "Copyable tester feedback checklist" in html
@@ -550,6 +563,10 @@ def test_ccld_record_request_empty_hosted_records_offers_local_validated_load() 
     assert counts == _empty_unloaded_counts()
     assert "No matching local/test CCLD records found" in html
     assert "Load local validated CCLD records" in html
+    assert "How to interpret this no-match result" in html
+    assert "currently loaded local/test source-derived rows only" in " ".join(html.split())
+    assert "Loaded local/test rows for this facility before date filtering" in html
+    assert "not submitted for this request" in html
     assert "Copyable tester feedback checklist" in html
     assert "- Local facility rows before date filtering: 0" in html
     assert "does not run live public web requests" in html
@@ -717,8 +734,12 @@ def test_ccld_record_request_local_validated_load_defers_when_dates_do_not_match
     assert counts == _empty_unloaded_counts()
     assert "Local validated CCLD load result" in html
     assert "Load executed: no." in html
+    assert "reads prepared hosted seeded-corpus JSON only" in " ".join(html.split())
     assert "No local validated CCLD records matched" in html
+    assert "submitted, but no matching local validated rows were loaded" in html
     assert "No matching local/test CCLD records found" in html
+    assert "How to interpret this no-match result" in html
+    assert "outside-browser live fetch and artifact-builder workflow" in " ".join(html.split())
     assert_no_secret_html(html)
 
 
