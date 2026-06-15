@@ -108,6 +108,12 @@ present, which expected values are not available in the local/test record, and
 when an existing proxy flag applies, but they must not create confidence scores,
 automated source verification, source-completeness assertions, source absence
 claims, legal conclusions, or new source-derived fields.
+Reviewer detail field-note guidance should help testers turn those cues into
+cautious reviewer-created observations. It should use short examples or action
+phrases only as visible writing guidance; it must not generate notes, store note
+templates, create new note fields, edit source-derived records, or imply public-
+source absence, record completeness, official findings, legal conclusions, or
+facility-wide conclusions.
 Reviewer note/status confirmations should make the return path clear: saved
 notes/statuses are reviewer-created state, queue progress and note/status cues
 are derived from that state, the tester may need to resubmit the same local/test
