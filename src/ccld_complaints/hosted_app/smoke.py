@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import threading
 from typing import Any
 from urllib.parse import urlencode
@@ -28,72 +29,80 @@ def _post_form_url(url: str, payload: dict[str, str]) -> tuple[int, bytes]:
 
 
 def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str, object]:
-    with create_server(host, port) as server:
-        thread = threading.Thread(target=server.serve_forever, daemon=True)
-        thread.start()
-        bound_host, bound_port = server.server_address[:2]
-        base_url = f"http://{format_host(bound_host)}:{bound_port}"
-        try:
-            health_status, health_body = _read_url(f"{base_url}/health")
-            root_status, root_body = _read_url(f"{base_url}/")
-            records_status, records_body = _read_url(f"{base_url}/source-records")
-            facilities_status, facilities_body = _read_url(f"{base_url}/facilities")
-            ccld_facilities_status, ccld_facilities_body = _read_url(
-                f"{base_url}/ccld/facilities?q=orchard"
-            )
-            ccld_status, ccld_body = _read_url(f"{base_url}/ccld/records/request")
-            ccld_queue_status, ccld_queue_body = _post_form_url(
-                f"{base_url}/ccld/records/request",
-                {
-                    "facility_number": "157806098",
-                    "start_date": "2022-08-01",
-                    "end_date": "2022-08-31",
-                },
-            )
-            ccld_filtered_status, ccld_filtered_body = _post_form_url(
-                f"{base_url}/ccld/records/request",
-                {
-                    "facility_number": "157806098",
-                    "start_date": "2022-08-01",
-                    "end_date": "2022-08-31",
-                    "reviewer_status_filter": "blocked",
-                },
-            )
-            ccld_no_match_status, ccld_no_match_body = _post_form_url(
-                f"{base_url}/ccld/records/request",
-                {
-                    "facility_number": "157806098",
-                    "start_date": "2023-01-01",
-                    "end_date": "2023-12-31",
-                },
-            )
-            reviewer_status, reviewer_body = _read_url(f"{base_url}/reviewer")
-            reviewer_detail_status, reviewer_detail_body = _read_url(
-                f"{base_url}/reviewer/records/detail?"
-                "source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448"
-            )
-            reviewer_note_status, reviewer_note_body = _post_form_url(
-                f"{base_url}/reviewer/records/note",
-                {
-                    "source_record_key": (
-                        "complaint:ccld:complaint:32-CR-20220407124448"
-                    ),
-                    "note_text": "Smoke confirmation note.",
-                },
-            )
-            reviewer_saved_status, reviewer_saved_status_body = _post_form_url(
-                f"{base_url}/reviewer/records/status",
-                {
-                    "source_record_key": (
-                        "complaint:ccld:complaint:32-CR-20220407124448"
-                    ),
-                    "reviewer_status": "in_review",
-                },
-            )
-            help_status, help_body = _read_url(f"{base_url}/ccld/help")
-        finally:
-            server.shutdown()
-            thread.join(timeout=5)
+    previous_auth_mode = os.environ.get("CCLD_HOSTED_TESTER_AUTH_MODE")
+    previous_local_dev_auth = os.environ.get("CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH")
+    os.environ["CCLD_HOSTED_TESTER_AUTH_MODE"] = "local-dev"
+    os.environ["CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH"] = "enabled"
+    try:
+        with create_server(host, port) as server:
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            bound_host, bound_port = server.server_address[:2]
+            base_url = f"http://{format_host(bound_host)}:{bound_port}"
+            try:
+                health_status, health_body = _read_url(f"{base_url}/health")
+                root_status, root_body = _read_url(f"{base_url}/")
+                records_status, records_body = _read_url(f"{base_url}/source-records")
+                facilities_status, facilities_body = _read_url(f"{base_url}/facilities")
+                ccld_facilities_status, ccld_facilities_body = _read_url(
+                    f"{base_url}/ccld/facilities?q=orchard"
+                )
+                ccld_status, ccld_body = _read_url(f"{base_url}/ccld/records/request")
+                ccld_queue_status, ccld_queue_body = _post_form_url(
+                    f"{base_url}/ccld/records/request",
+                    {
+                        "facility_number": "157806098",
+                        "start_date": "2022-08-01",
+                        "end_date": "2022-08-31",
+                    },
+                )
+                ccld_filtered_status, ccld_filtered_body = _post_form_url(
+                    f"{base_url}/ccld/records/request",
+                    {
+                        "facility_number": "157806098",
+                        "start_date": "2022-08-01",
+                        "end_date": "2022-08-31",
+                        "reviewer_status_filter": "blocked",
+                    },
+                )
+                ccld_no_match_status, ccld_no_match_body = _post_form_url(
+                    f"{base_url}/ccld/records/request",
+                    {
+                        "facility_number": "157806098",
+                        "start_date": "2023-01-01",
+                        "end_date": "2023-12-31",
+                    },
+                )
+                reviewer_status, reviewer_body = _read_url(f"{base_url}/reviewer")
+                reviewer_detail_status, reviewer_detail_body = _read_url(
+                    f"{base_url}/reviewer/records/detail?"
+                    "source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448"
+                )
+                reviewer_note_status, reviewer_note_body = _post_form_url(
+                    f"{base_url}/reviewer/records/note",
+                    {
+                        "source_record_key": (
+                            "complaint:ccld:complaint:32-CR-20220407124448"
+                        ),
+                        "note_text": "Smoke confirmation note.",
+                    },
+                )
+                reviewer_saved_status, reviewer_saved_status_body = _post_form_url(
+                    f"{base_url}/reviewer/records/status",
+                    {
+                        "source_record_key": (
+                            "complaint:ccld:complaint:32-CR-20220407124448"
+                        ),
+                        "reviewer_status": "in_review",
+                    },
+                )
+                help_status, help_body = _read_url(f"{base_url}/ccld/help")
+            finally:
+                server.shutdown()
+                thread.join(timeout=5)
+    finally:
+        _restore_env("CCLD_HOSTED_TESTER_AUTH_MODE", previous_auth_mode)
+        _restore_env("CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH", previous_local_dev_auth)
 
     payload = json.loads(health_body.decode("utf-8"))
     if health_status != 200 or payload.get("status") != "ok":
@@ -237,6 +246,13 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     ):
         raise RuntimeError("Hosted scaffold reviewer status did not return confirmation.")
     return payload if isinstance(payload, dict) else {}
+
+
+def _restore_env(key: str, value: str | None) -> None:
+    if value is None:
+        os.environ.pop(key, None)
+    else:
+        os.environ[key] = value
 
 
 def main(argv: list[str] | None = None) -> int:

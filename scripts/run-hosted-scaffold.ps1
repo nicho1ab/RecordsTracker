@@ -23,7 +23,9 @@ $ErrorActionPreference = "Stop"
 $python = Join-Path $PWD ".venv\Scripts\python.exe"
 if (-not (Test-Path $python)) { $python = "python" }
 $env:PYTHONPATH = Join-Path $PWD "src"
+if (-not $env:CCLD_HOSTED_TESTER_AUTH_MODE) { $env:CCLD_HOSTED_TESTER_AUTH_MODE = "local-dev" }
+if (-not $env:CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH) { $env:CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH = "enabled" }
 
 Write-Host "Starting local hosted tester MVP scaffold at http://${HostName}:$Port/"
-Write-Host "Scaffold only: no authentication, records, workflows, cloud hosting, QNAP, Azure, or AWS."
+Write-Host "Scaffold only: explicit local-dev tester auth mode; no real OIDC flow or production auth."
 & $python -m ccld_complaints.hosted_app --host $HostName --port $Port

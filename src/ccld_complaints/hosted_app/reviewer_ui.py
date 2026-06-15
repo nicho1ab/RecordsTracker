@@ -395,6 +395,7 @@ def _record_list_response(
             filtered_records,
             search_query,
             state_summaries,
+            actor_label=_signed_in_actor_label(context),
         ),
     )
 
@@ -582,6 +583,7 @@ def _detail_html_response(
                 return_context,
                 bundle_body,
             ),
+            actor_label=_signed_in_actor_label(context),
         ),
     )
 
@@ -630,6 +632,8 @@ def _render_record_list(
     records: list[Mapping[str, Any]],
     search_query: str,
     state_summaries: Mapping[str, Mapping[str, Any]],
+    *,
+    actor_label: str | None,
 ) -> str:
     queue = _mapping(payload, "queue")
     workflow = _mapping(payload, "workflow_shell")
@@ -647,6 +651,7 @@ def _render_record_list(
     return _page(
         title="Local/test reviewer records",
         heading="Local/test reviewer records",
+        actor_label=actor_label,
         main=f"""
     {_render_scope_notice(workflow)}
     <section aria-labelledby="reviewer-search-heading">
@@ -1031,6 +1036,7 @@ def _render_detail(
     notice: str | None,
     related_records: list[Mapping[str, Any]],
     return_context: CcldQueueReturnContext,
+    actor_label: str | None,
 ) -> str:
     detail = _mapping(payload, "detail")
     source_record = _mapping(detail, "source_record")
@@ -1043,6 +1049,7 @@ def _render_detail(
     return _page(
         title="Local/test reviewer detail",
         heading="Local/test reviewer detail",
+        actor_label=actor_label,
         main=f"""
     {_render_notice(notice, source_record_key, related_records, return_context)}
     {_render_scope_notice(_mapping(payload, 'workflow_shell'))}
@@ -2191,7 +2198,10 @@ def _reviewer_detail_href(
     return f"{REVIEWER_UI_DETAIL_PATH}?{urlencode(query_values)}"
 
 
-def _page(*, title: str, heading: str, main: str) -> str:
+def _page(*, title: str, heading: str, main: str, actor_label: str | None = None) -> str:
+    signed_in_markup = (
+        f"<p>Signed in as {_escape(actor_label)}.</p>" if actor_label else ""
+    )
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -2203,6 +2213,7 @@ def _page(*, title: str, heading: str, main: str) -> str:
     <a href="#main-content">Skip to main reviewer content</a>
   <header>
     <p>Local/test only: source-derived review viewing with reviewer note/status actions.</p>
+        {signed_in_markup}
     <h1>{_escape(heading)}</h1>
   </header>
   <nav aria-label="Local/test reviewer navigation">
@@ -2222,6 +2233,15 @@ def _page(*, title: str, heading: str, main: str) -> str:
 </body>
 </html>
 """
+
+
+def _signed_in_actor_label(context: ReviewerUiContext) -> str | None:
+    actor = context.workflow_shell_context.source_derived_api_context.actor
+    if actor is None:
+        return None
+    if actor.display_name and actor.display_name.strip():
+        return actor.display_name.strip()
+    return actor.actor_category
 
 
 def _render_blocked_page(*, title: str, heading: str, message: str) -> str:

@@ -11,9 +11,12 @@ hosted tester workflow.
 The scaffold is local-first and must run on a Windows development workstation
 for ordinary development. A separate QNAP-first Docker Compose runtime now exists
 for production-like validation with PostgreSQL in Docker, but it packages the
-same scaffold and does not approve public hosting or production auth. It uses
-Python standard-library HTTP tooling to avoid creating a final production
-frontend, API, database, authentication, hosting, or deployment commitment.
+same scaffold and does not approve public hosting. The first provider-agnostic
+auth runtime boundary exists for YLC pilot planning: production mode blocks
+anonymous workflow routes, and explicit local-dev mode supplies the fixture
+tester actor for local validation only. It uses Python standard-library HTTP
+tooling to avoid creating a final production frontend, API, database,
+authentication, hosting, or deployment commitment.
 
 ## Required local tools
 
@@ -95,8 +98,13 @@ Run the scaffold from the repository root:
 
 Open `http://127.0.0.1:8000/` on the same workstation. The page must identify
 itself as a local/test scaffold. It may link to the local/test reviewer UI shell
-but must not imply that production authentication, full reviewer workflows,
-cloud hosting, QNAP, Azure, AWS, or public URLs are available.
+but must not imply that real OIDC login, token handling, sessions, cookies, full
+reviewer workflows, cloud hosting, QNAP, Azure, AWS, or public URLs are
+available. The PowerShell script explicitly sets `CCLD_HOSTED_TESTER_AUTH_MODE`
+to `local-dev` and `CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH` to `enabled` when those
+variables are not already set, so local browser workflow pages can use the
+fixture tester actor. Production/QNAP runtime should keep local-dev auth
+disabled.
 The home page includes a skip-to-main link and visible start-here guidance for
 the first CCLD review session path: facility lookup or manual entry, CCLD
 request-context confirmation, loaded local/test queue, reviewer detail source
@@ -136,6 +144,43 @@ portability notes.
 This Docker runtime does not add production sign-in, sessions, cookies, hosted
 live retrieval, browser-triggered connector execution, public URL approval,
 monitoring, production import automation, or a new frontend framework.
+
+## Auth Runtime Boundary
+
+The hosted auth boundary follows ADR-0014's managed OpenID Connect/OAuth 2.0
+provider class without choosing a provider-specific tenant or committing secrets.
+Production mode is the default. In production mode, browser workflow pages such
+as `/reviewer` and `/ccld/records/request` return sign-in-required guidance when
+no authenticated route context is available; public landing, health, and CCLD
+help pages remain readable.
+
+The scaffold includes safe placeholders:
+
+- `/auth/login`: describes the managed OIDC sign-in seam without redirecting,
+  exchanging auth codes, or creating sessions.
+- `/auth/logout`: explains that no scaffold browser session exists in this
+  branch.
+- `/auth/status`: returns a non-secret configuration summary that reports mode,
+  whether OIDC placeholders are configured, and whether local-dev actor mode is
+  allowed.
+
+Provider-specific deployment values belong only in untracked host configuration:
+
+```text
+CCLD_HOSTED_TESTER_AUTH_MODE=production
+CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS=managed-oidc-oauth2
+CCLD_HOSTED_TESTER_OIDC_ISSUER=<provider-issuer-placeholder>
+CCLD_HOSTED_TESTER_OIDC_CLIENT_ID=<provider-client-id-placeholder>
+CCLD_HOSTED_TESTER_OIDC_CALLBACK_PATH=/auth/callback
+CCLD_HOSTED_TESTER_OIDC_SCOPES=openid profile
+CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH=disabled
+```
+
+Do not commit provider secrets, hosted callback URLs, tenant-private values,
+tokens, cookies, raw provider claims, or real user identifiers. Reviewer pages may
+show a safe signed-in tester label when an actor context is present, but they
+must not render provider subjects, issuers, raw claims, tokens, cookies, or
+private headers.
 
 ## Open the CCLD record request page
 

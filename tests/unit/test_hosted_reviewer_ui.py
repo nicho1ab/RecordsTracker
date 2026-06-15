@@ -16,6 +16,7 @@ from ccld_complaints.hosted_app.auth import (
     HostedAccountStatus,
     HostedActorCategory,
     HostedTesterRole,
+    load_hosted_auth_runtime_config,
 )
 from ccld_complaints.hosted_app.reset_reload_dry_run import (
     hosted_reset_reload_planning_metadata,
@@ -960,7 +961,10 @@ def test_reviewer_ui_rejects_note_write_without_reviewer_state_write() -> None:
 
 
 def test_reviewer_ui_default_route_context_is_browser_accessible() -> None:
-    status, content_type, body = route_response("/reviewer")
+    status, content_type, body = route_response(
+        "/reviewer",
+        auth_runtime_config=_local_dev_auth_config(),
+    )
     html = body.decode("utf-8")
 
     assert status == 200
@@ -968,6 +972,15 @@ def test_reviewer_ui_default_route_context_is_browser_accessible() -> None:
     assert "Local/test reviewer records" in html
     assert "32-CR-20220407124448" in html
     assert_no_secret_html(html)
+
+
+def _local_dev_auth_config() -> Any:
+    return load_hosted_auth_runtime_config(
+        environ={
+            "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
+            "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
+        }
+    )
 
 
 def assert_no_secret_html(markup: str) -> None:
