@@ -228,6 +228,10 @@ workflow unless it unlocks tester value or resolves a concrete MVP-blocking risk
 .\scripts\build-hosted-ccld-artifact.ps1 -DbPath data\processed\ccld.sqlite -FacilityNumber 157806098 -Overwrite
 ```
 
+When the hosted app is configured for GitHub Issues feedback, use `/feedback` to
+submit bug reports, feature requests, or new data source suggestions. If GitHub
+feedback is not configured, the page says so and does not send feedback.
+
 An optional QNAP-first Docker Compose runtime is available for production-like
 testing with PostgreSQL in Docker. It uses the same hosted scaffold pages, keeps
 real database settings in an untracked `.env` file, and does not add production

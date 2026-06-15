@@ -53,6 +53,9 @@ experience.
    import, and reviewer-created service contexts when configured. Fixture/demo
    page reads remain available only through explicit local demo mode for tests and
    workstation validation.
+- Provides a server-side GitHub Issues tester feedback route at `/feedback` when
+   configured with server-side `GITHUB_FEEDBACK_REPO` and `GITHUB_FEEDBACK_TOKEN`.
+   Feedback is classified with labels, not GitHub Projects or issue types.
 - Includes a local/test hosted CCLD record request page where a tester can enter
    a CCLD facility/license number and optional date range, read matching seeded
    source-derived records, load or refresh matching CCLD records from validated
@@ -212,8 +215,9 @@ public-record review notes.
    QNAP-specific paths or backup locations belong in deployment configuration or
    operator notes rather than application code. The guide also lists the
    provider-agnostic OIDC/OAuth2 environment placeholders for YLC pilot auth
-   planning and the `CCLD_HOSTED_PAGE_DATA_MODE` setting for PostgreSQL-backed
-   pages versus explicit fixture-demo mode.
+   planning, the `CCLD_HOSTED_PAGE_DATA_MODE` setting for PostgreSQL-backed
+   pages versus explicit fixture-demo mode, and server-side GitHub feedback
+   environment placeholders.
 - Use [docs/developer/cloud-portability-deployment.md](docs/developer/cloud-portability-deployment.md)
    to compare QNAP, AWS, Azure, DigitalOcean, Render, Fly.io, Railway, Supabase,
    and Neon deployment shapes while keeping app runtime, PostgreSQL, raw file

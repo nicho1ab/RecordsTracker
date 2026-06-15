@@ -134,6 +134,12 @@ for queue-level and detail-level observations. Queue filters, filtered-empty
 states, no-match/load states, reviewer detail, note/status confirmation,
 return-to-queue refresh, and next-record confusion should point to one checklist
 without adding another checklist or workflow.
+The `/feedback` route is now the first real tester feedback workflow. It should
+use an accessible feedback type dropdown, multiline description field, clear
+validation, safe unconfigured state, and safe success/failure messages. GitHub
+Issues feedback classification should use labels rather than GitHub Projects or
+issue types. Existing checklist cues should point testers toward what to include
+in feedback without duplicating the feedback form.
 First-run review session orientation should make the end-to-end local/test CCLD
 path visible from home, request/help, queue, and reviewer detail: facility lookup
 or manual entry, request-context confirmation, loaded local/test queue, reviewer

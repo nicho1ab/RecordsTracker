@@ -57,6 +57,12 @@ Provider-agnostic hosted tester auth values:
 - `CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH`: keep `disabled` for production mode; set
   to `enabled` only with `local-dev` mode for local scaffold validation.
 
+Optional server-side GitHub Issues feedback values:
+
+- `GITHUB_FEEDBACK_REPO`: target repository in `owner/repo` format.
+- `GITHUB_FEEDBACK_TOKEN`: server-side token used only by the app process.
+- `GITHUB_FEEDBACK_DEFAULT_LABELS`: optional comma-separated extra labels.
+
 Optional value:
 
 - `CCLD_FACILITY_REFERENCE_CSV`: container path for a local/test facility
@@ -75,7 +81,9 @@ have source-derived rows to read.
 
 Do not commit provider secrets, tenant-specific private values, hosted callback
 URLs, tokens, cookies, or raw provider claims. This branch documents the auth
-configuration seam and safe route placeholders only.
+configuration seam and safe route placeholders only. Do not expose
+`GITHUB_FEEDBACK_TOKEN` in browser HTML, JavaScript, logs, issue bodies, tests,
+screenshots, or docs.
 
 ## Start Locally or on QNAP
 
@@ -163,6 +171,7 @@ After starting the runtime, check the health route and core local/test pages:
 - `/health`
 - `/auth/status`
 - `/auth/login`
+- `/feedback`
 - `/ccld/facilities`
 - `/ccld/records/request`
 - `/ccld/help`

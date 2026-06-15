@@ -78,6 +78,17 @@ fixtures as production data, expose raw narrative source text, mutate
 source-derived records through review actions, or run live retrieval or connector
 execution.
 
+The current tester feedback seam can create GitHub Issues server-side only when
+`GITHUB_FEEDBACK_REPO` and `GITHUB_FEEDBACK_TOKEN` are configured on the host.
+The token must never be rendered into HTML, JavaScript, logs, tests, issue
+bodies, screenshots, or documentation. Feedback issue bodies may include only
+safe context such as feedback type, description, safe page path, timestamp, app
+version when configured, and safe actor display label. They must not include
+tokens, cookies, raw provider claims, provider subject or issuer values, private
+headers, connection strings, raw source narrative text, hosted/private URLs, or
+secrets. GitHub Projects and GitHub issue types are not required; labels are the
+reliable classification mechanism.
+
 The current source-derived HTTP/API read route seam is local/test only and must
 receive an explicit fixture or test actor context from the caller. It reuses the
 auth boundary to reject unauthenticated, disabled or revoked, role-denied, and
