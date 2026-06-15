@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added the final QNAP pilot readiness completion marker to the readiness index,
+	clarifying that the documented pre-invite operator path is complete after real
+	pilot inputs, the access-method decision, and the evidence packet are supplied,
+	while production OIDC, production deployment, anonymous public access, and
+	broader product functionality remain unimplemented.
 - Added `docs/developer/qnap-pilot-access-method-decision.md`, a concise
 	pre-invite operator scaffold for recording the temporary QNAP pilot access
 	method, limits, owner, scope, expiration, revocation path, evidence-packet

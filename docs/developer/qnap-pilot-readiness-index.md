@@ -201,7 +201,21 @@ Do not invite early testers until all of these are true:
 - No public-source completeness, legal, facility-wide, harm, abuse, neglect,
   liability, or rights-deprivation conclusions are made from pilot evidence.
 
-## 9. Deferred Items
+## 9. Completion Marker
+
+After the access-method decision is recorded and the evidence packet is
+generated from real pilot inputs, the QNAP pilot pre-invite readiness path is
+complete.
+
+Complete means the repository has the documented operator path and local commands
+needed to prepare the pilot. It does not mean production OIDC, production
+deployment, anonymous public access, or broader product functionality is
+implemented.
+
+Do not add more readiness-only branches after this unless a concrete validation,
+security, privacy, data-integrity, or tester-blocking defect is found.
+
+## 10. Deferred Items
 
 These remain deferred and must not be implied by readiness evidence:
 
