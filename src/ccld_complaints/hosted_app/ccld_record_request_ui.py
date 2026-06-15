@@ -9,7 +9,11 @@ from datetime import date
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
-from ccld_complaints.hosted_app.ccld_facility_lookup import CCLD_FACILITY_LOOKUP_PATH
+from ccld_complaints.hosted_app.ccld_facility_lookup import (
+    CCLD_FACILITY_LOOKUP_PATH,
+    CcldFacilityReferenceSource,
+    load_active_ccld_facility_reference,
+)
 from ccld_complaints.hosted_app.ccld_import_reload import (
     CcldImportReloadContext,
     CcldImportReloadRequest,
@@ -37,6 +41,8 @@ CCLD_RECORD_REQUEST_PATH = f"{CCLD_UI_PREFIX}/records/request"
 CCLD_HELP_PATH = f"{CCLD_UI_PREFIX}/help"
 _IMPORT_RELOAD_ACTION_FIELD = "ccld_import_reload_action"
 _IMPORT_RELOAD_ACTION_VALUE = "load_local_validated_ccld_records"
+_REQUEST_CONTEXT_ORIGIN_FIELD = "request_context_origin"
+_LOOKUP_FACILITY_NAME_FIELD = "lookup_facility_name"
 _FACILITY_NUMBER_RE = re.compile(r"^\d+$")
 _DATE_FIELDS = (
     "complaint_received_date",
@@ -68,6 +74,16 @@ _NEXT_REVIEW_STATUS_ORDER = (
     "blocked",
     "reviewed",
 )
+_REQUEST_CONTEXT_ORIGIN_VALUES = (
+    "manual_entry",
+    "facility_lookup",
+    "prefilled_link",
+)
+_REQUEST_CONTEXT_ORIGIN_LABELS = {
+    "manual_entry": "Manual facility/license entry",
+    "facility_lookup": "Facility lookup result",
+    "prefilled_link": "Prefilled facility/license link",
+}
 _SECRET_HTML_MARKERS = (
     "authorization",
     "client_secret",
@@ -90,6 +106,8 @@ class CcldRecordRequest:
     start_date: str | None = None
     end_date: str | None = None
     reviewer_status_filter: str = "all"
+    request_context_origin: str = "manual_entry"
+    lookup_facility_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -193,12 +211,19 @@ def route_ccld_record_request_ui_response(
         return _html_response(200, _render_help_page())
     if method == "GET":
         query_values = parse_qs(parsed_url.query, keep_blank_values=True)
+        selected_facility_number = _first_form_value(query_values, "facility_number")
         return _html_response(
             200,
             _render_request_form(
-                selected_facility_number=_first_form_value(query_values, "facility_number"),
+                selected_facility_number=selected_facility_number,
                 selected_start_date=_first_form_value(query_values, "start_date"),
                 selected_end_date=_first_form_value(query_values, "end_date"),
+                request_context_origin=_request_context_origin_from_values(
+                    query_values,
+                    has_prefilled_facility=bool(selected_facility_number),
+                ),
+                lookup_facility_name=_optional_lookup_facility_name(query_values),
+                reference_source=load_active_ccld_facility_reference(),
             ),
         )
     if method == "POST":
@@ -222,6 +247,7 @@ def validate_ccld_record_request(
     start_date = _optional_date_value(form_values, "start_date")
     end_date = _optional_date_value(form_values, "end_date")
     reviewer_status_filter = _first_form_value(form_values, "reviewer_status_filter") or "all"
+    request_context_origin = _first_form_value(form_values, _REQUEST_CONTEXT_ORIGIN_FIELD)
     errors: list[str] = []
     if not facility_number:
         errors.append("Facility/license number is required.")
@@ -239,6 +265,8 @@ def validate_ccld_record_request(
         errors.append("End date must not be before start date.")
     if reviewer_status_filter not in _STATUS_FILTER_VALUES:
         errors.append("Choose a supported reviewer status queue filter.")
+    if request_context_origin and request_context_origin not in _REQUEST_CONTEXT_ORIGIN_VALUES:
+        errors.append("Choose a supported CCLD request context.")
     if errors:
         return CcldRecordRequestValidation(request=None, errors=tuple(errors))
     return CcldRecordRequestValidation(
@@ -247,6 +275,8 @@ def validate_ccld_record_request(
             start_date=start_date.isoformat() if start_date is not None else None,
             end_date=end_date.isoformat() if end_date is not None else None,
             reviewer_status_filter=reviewer_status_filter,
+            request_context_origin=request_context_origin or "manual_entry",
+            lookup_facility_name=_optional_lookup_facility_name(form_values),
         ),
         errors=(),
     )
@@ -395,11 +425,11 @@ def _render_request_form(
     selected_facility_number: str = "",
     selected_start_date: str = "",
     selected_end_date: str = "",
+    request_context_origin: str = "manual_entry",
+    lookup_facility_name: str | None = None,
+    reference_source: CcldFacilityReferenceSource | None = None,
 ) -> str:
-    selected_message = ""
-    if selected_facility_number:
-        selected_message = f"""      <p>Selected facility/license number from lookup:
-      {_escape(selected_facility_number)}. Confirm the date range, then request CCLD records.</p>"""
+    active_reference_source = reference_source or load_active_ccld_facility_reference()
     return _page(
                 title="Request CCLD records",
                 heading="Request CCLD records",
@@ -423,8 +453,20 @@ def _render_request_form(
             review. Use dates only when you want to narrow the request to complaint,
             visit, report, signed, or retrieval dates already represented in local/test
             source-derived records.</p>
-            {selected_message}
+            {_render_request_context_confirmation(
+                facility_number=selected_facility_number,
+                start_date=selected_start_date or None,
+                end_date=selected_end_date or None,
+                request_context_origin=request_context_origin,
+                lookup_facility_name=lookup_facility_name,
+                reference_source=active_reference_source,
+                include_change_links=False,
+            )}
       <form action="{CCLD_RECORD_REQUEST_PATH}" method="post">
+        <input type="hidden" name="{_REQUEST_CONTEXT_ORIGIN_FIELD}"
+                    value="{_escape(request_context_origin)}">
+        <input type="hidden" name="{_LOOKUP_FACILITY_NAME_FIELD}"
+                    value="{_escape(lookup_facility_name or '')}">
         <p>
           <label for="facility_number">CCLD facility/license number</label>
                     <input id="facility_number" name="facility_number" inputmode="numeric"
@@ -594,6 +636,7 @@ def _render_request_result(
     import_reload_result: CcldImportReloadResult | None = None,
     import_reload_available: bool = False,
 ) -> str:
+    reference_source = load_active_ccld_facility_reference()
     if result.matched_records:
         return _render_matched_result(
             request,
@@ -601,12 +644,14 @@ def _render_request_result(
             state_summaries=state_summaries,
             import_reload_result=import_reload_result,
             import_reload_available=import_reload_available,
+            reference_source=reference_source,
         )
     return _render_no_match_result(
         request,
         result,
         import_reload_result=import_reload_result,
         import_reload_available=import_reload_available,
+        reference_source=reference_source,
     )
 
 
@@ -617,6 +662,7 @@ def _render_matched_result(
     state_summaries: Mapping[str, Mapping[str, Any]],
     import_reload_result: CcldImportReloadResult | None,
     import_reload_available: bool,
+    reference_source: CcldFacilityReferenceSource,
 ) -> str:
     queue_items = _request_queue_items(result, state_summaries)
     filtered_queue_items = _filtered_queue_items(queue_items, request.reviewer_status_filter)
@@ -636,9 +682,22 @@ def _render_matched_result(
                         <p>The hosted UI did not run live retrieval, browser connector execution,
                         or SQLite conversion.</p>
     </section>
+    {_render_request_context_confirmation(
+                        facility_number=request.facility_number,
+                        start_date=request.start_date,
+                        end_date=request.end_date,
+                        request_context_origin=request.request_context_origin,
+                        lookup_facility_name=request.lookup_facility_name,
+                        reference_source=reference_source,
+                        include_change_links=True,
+                )}
     {_render_import_reload_summary(import_reload_result)}
         <section aria-labelledby="review-queue-heading">
             <h2 id="review-queue-heading">CCLD review queue</h2>
+            <p>This queue is tied to the request context confirmed above: the displayed
+            facility/license number, date range, request origin, and local/test facility
+            reference source. Open each complaint record only after confirming the context is
+            the intended one.</p>
             <p>This queue is scoped to the requested facility/license number and date range.
             Open each complaint record to inspect source traceability, add a reviewer note,
             or set a reviewer status.</p>
@@ -677,6 +736,7 @@ def _render_matched_result(
                         import_reload_result=import_reload_result,
                         matching_source_record_count=len(result.matched_records),
                         local_facility_record_count=len(result.all_facility_records),
+                    reference_source=reference_source,
                 )}
         {_render_feedback_guidance_section()}
         {_render_import_reload_action(request, import_reload_available, refresh=True)}
@@ -690,6 +750,7 @@ def _render_no_match_result(
     *,
     import_reload_result: CcldImportReloadResult | None,
     import_reload_available: bool,
+    reference_source: CcldFacilityReferenceSource,
 ) -> str:
     local_count = len(result.all_facility_records)
     return _page(
@@ -701,11 +762,20 @@ def _render_no_match_result(
             {_escape(request.facility_number)} and the requested date range.</p>
       {_render_date_scope(request)}
       <p>Rows for this facility currently available before date filtering: {local_count}.</p>
-        <p>Next step for first-time testers: use the local validated CCLD load action if
-        available, or run the outside-browser pipeline steps below before retrying this
-        request.</p>
+        <p>Before loading or running outside-browser pipeline steps, confirm the request
+        context below. If the facility/license number, date range, or lookup/manual-entry
+        context is wrong, change the facility/date criteria before reviewing results.</p>
       <p><a href="{CCLD_RECORD_REQUEST_PATH}">Return to CCLD request</a></p>
     </section>
+        {_render_request_context_confirmation(
+                facility_number=request.facility_number,
+                start_date=request.start_date,
+                end_date=request.end_date,
+                request_context_origin=request.request_context_origin,
+                lookup_facility_name=request.lookup_facility_name,
+                reference_source=reference_source,
+                include_change_links=True,
+            )}
         {_render_import_reload_summary(import_reload_result)}
                 {_render_feedback_checklist_section(
                         request,
@@ -713,6 +783,7 @@ def _render_no_match_result(
                         import_reload_result=import_reload_result,
                         matching_source_record_count=0,
                         local_facility_record_count=local_count,
+                reference_source=reference_source,
                 )}
         {_render_import_reload_action(request, import_reload_available, refresh=False)}
     {_render_pipeline_plan(request)}""",
@@ -808,6 +879,10 @@ def _render_import_reload_action(
             <p id="local-load-help">Use this only after the CCLD pipeline output has been
             validated and converted into hosted seeded-corpus JSON outside the browser.</p>
             <form action="{CCLD_RECORD_REQUEST_PATH}" method="post">
+                <input type="hidden" name="{_REQUEST_CONTEXT_ORIGIN_FIELD}"
+                    value="{_escape(request.request_context_origin)}">
+                <input type="hidden" name="{_LOOKUP_FACILITY_NAME_FIELD}"
+                    value="{_escape(request.lookup_facility_name or '')}">
                 <input type="hidden" name="facility_number"
                     value="{_escape(request.facility_number)}">
                 <input type="hidden" name="start_date" value="{_escape(request.start_date or "")}">
@@ -953,6 +1028,7 @@ def _render_feedback_checklist_section(
     import_reload_result: CcldImportReloadResult | None,
     matching_source_record_count: int,
     local_facility_record_count: int,
+    reference_source: CcldFacilityReferenceSource,
 ) -> str:
     checklist = _feedback_checklist_text(
         request,
@@ -960,6 +1036,7 @@ def _render_feedback_checklist_section(
         import_reload_result=import_reload_result,
         matching_source_record_count=matching_source_record_count,
         local_facility_record_count=local_facility_record_count,
+        reference_source=reference_source,
     )
     return f"""    <section id="feedback-checklist-section"
         aria-labelledby="feedback-checklist-heading">
@@ -983,6 +1060,7 @@ def _feedback_checklist_text(
     import_reload_result: CcldImportReloadResult | None,
     matching_source_record_count: int,
     local_facility_record_count: int,
+    reference_source: CcldFacilityReferenceSource,
 ) -> str:
     counts = _queue_status_counts(queue_items)
     reviewer_state_rows = sum(
@@ -1000,7 +1078,10 @@ def _feedback_checklist_text(
         "Request and lookup context",
         "- Source scope: CCLD public complaint records only",
         "- Local/test app: yes",
-        "- Facility lookup used or skipped:",
+        "- Facility lookup used or skipped: "
+        f"{_request_origin_label(request.request_context_origin)}",
+        f"- Selected lookup facility name: {_display_value(request.lookup_facility_name)}",
+        f"- Active facility reference source: {reference_source.label}",
         f"- Facility/license number: {request.facility_number}",
         f"- Date range requested: {_date_scope_text(request)}",
         "- Request criteria that felt unclear:",
@@ -1114,6 +1195,10 @@ def _render_queue_filter_form(request: CcldRecordRequest) -> str:
         for value in _STATUS_FILTER_VALUES
     )
     return f"""<form action="{CCLD_RECORD_REQUEST_PATH}" method="post">
+      <input type="hidden" name="{_REQUEST_CONTEXT_ORIGIN_FIELD}"
+        value="{_escape(request.request_context_origin)}">
+      <input type="hidden" name="{_LOOKUP_FACILITY_NAME_FIELD}"
+        value="{_escape(request.lookup_facility_name or '')}">
       <input type="hidden" name="facility_number" value="{_escape(request.facility_number)}">
       <input type="hidden" name="start_date" value="{_escape(request.start_date or '')}">
       <input type="hidden" name="end_date" value="{_escape(request.end_date or '')}">
@@ -1489,6 +1574,119 @@ def _date_scope_text(request: CcldRecordRequest) -> str:
     start_date = request.start_date or "earliest available"
     end_date = request.end_date or "latest available"
     return f"{start_date} to {end_date}"
+
+
+def _date_scope_from_values(start_date: str | None, end_date: str | None) -> str:
+    if start_date is None and end_date is None:
+        return "not provided"
+    start_display = start_date or "earliest available"
+    end_display = end_date or "latest available"
+    return f"{start_display} to {end_display}"
+
+
+def _render_request_context_confirmation(
+    *,
+    facility_number: str,
+    start_date: str | None,
+    end_date: str | None,
+    request_context_origin: str,
+    lookup_facility_name: str | None,
+    reference_source: CcldFacilityReferenceSource,
+    include_change_links: bool,
+) -> str:
+    facility_display = facility_number if facility_number.strip() else "not entered yet"
+    lookup_name_markup = ""
+    if lookup_facility_name:
+        lookup_name_markup = f"""
+        <dt>Selected lookup facility name</dt>
+        <dd>{_escape(lookup_facility_name)}</dd>"""
+    warning_markup = ""
+    if reference_source.warnings:
+        warning_items = "\n".join(
+            f"        <li>{_escape(warning)}</li>" for warning in reference_source.warnings
+        )
+        warning_markup = f"""      <ul>
+{warning_items}
+      </ul>"""
+    change_links = ""
+    if include_change_links:
+        change_href = _request_change_href(
+            facility_number=facility_number,
+            start_date=start_date,
+            end_date=end_date,
+            request_context_origin=request_context_origin,
+            lookup_facility_name=lookup_facility_name,
+        )
+        change_links = f"""      <p>If this context is not the one you intended, change the
+      facility/date criteria before reviewing queue results.</p>
+      <ul>
+        <li><a href="{_escape(change_href)}">Change facility/date criteria for this request</a></li>
+        <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Start over with a different CCLD facility</a></li>
+      </ul>"""
+    return f"""    <section aria-labelledby="request-context-confirmation-heading">
+      <h2 id="request-context-confirmation-heading">Confirm request context</h2>
+      <p>Use this context before reviewing the queue. Facility reference rows are
+      local/test lookup assistance only; CCLD public portal material remains the source of
+      record.</p>
+      <dl>
+        <dt>Request started from</dt>
+        <dd>{_escape(_request_origin_label(request_context_origin))}</dd>
+        <dt>Facility/license number being requested</dt>
+        <dd>{_escape(facility_display)}</dd>{lookup_name_markup}
+        <dt>Date range being requested</dt>
+        <dd>{_escape(_date_scope_from_values(start_date, end_date))}</dd>
+        <dt>Active facility reference source</dt>
+        <dd>{_escape(reference_source.label)}</dd>
+        <dt>Reference rows loaded for lookup</dt>
+        <dd>{len(reference_source.records)}</dd>
+      </dl>
+{warning_markup}
+{change_links}
+    </section>"""
+
+
+def _request_change_href(
+    *,
+    facility_number: str,
+    start_date: str | None,
+    end_date: str | None,
+    request_context_origin: str,
+    lookup_facility_name: str | None,
+) -> str:
+    query_values = {
+        "facility_number": facility_number,
+        "start_date": start_date or "",
+        "end_date": end_date or "",
+        _REQUEST_CONTEXT_ORIGIN_FIELD: request_context_origin,
+        _LOOKUP_FACILITY_NAME_FIELD: lookup_facility_name or "",
+    }
+    return f"{CCLD_RECORD_REQUEST_PATH}?{urlencode(query_values)}"
+
+
+def _request_origin_label(value: str) -> str:
+    return _REQUEST_CONTEXT_ORIGIN_LABELS.get(value, "Manual facility/license entry")
+
+
+def _request_context_origin_from_values(
+    values: Mapping[str, list[str]],
+    *,
+    has_prefilled_facility: bool,
+) -> str:
+    raw_value = _first_form_value(values, _REQUEST_CONTEXT_ORIGIN_FIELD)
+    if raw_value in _REQUEST_CONTEXT_ORIGIN_VALUES:
+        return raw_value
+    if has_prefilled_facility:
+        return "prefilled_link"
+    return "manual_entry"
+
+
+def _optional_lookup_facility_name(values: Mapping[str, list[str]]) -> str | None:
+    value = _first_form_value(values, _LOOKUP_FACILITY_NAME_FIELD).strip()
+    if not value:
+        return None
+    if len(value) > 120:
+        return value[:117].rstrip() + "..."
+    return value
 
 
 def _is_ccld_record(record: Mapping[str, Any]) -> bool:

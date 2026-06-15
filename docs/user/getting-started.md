@@ -129,6 +129,11 @@ the lookup falls back to the committed tiny fixture CSV. The page shows which
 reference source is active. Use a matching facility to carry the facility/license
 number into the request form. Manual entry is still available at
 `http://127.0.0.1:8000/ccld/records/request` when you already know the number.
+The request form and result queue show a request-context confirmation so you can
+check whether the request came from facility lookup or manual entry, which
+facility/license number and date range are being used, and which local/test
+facility reference source is active. Use the change-facility/date links when the
+context is not the one you intended.
 
 The request page accepts a CCLD facility/license number and optional date range,
 reads existing seeded

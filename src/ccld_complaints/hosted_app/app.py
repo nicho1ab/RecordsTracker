@@ -730,7 +730,8 @@ def render_app_shell() -> str:
       matching source-derived complaint records in a guided local/test queue.</p>
       <ol>
         <li>Open facility lookup if you do not know the facility/license number.</li>
-        <li>Submit the CCLD request form for one facility and optional date range.</li>
+        <li>Confirm whether the request context came from facility lookup or manual entry,
+        then submit the CCLD request form for one facility and optional date range.</li>
         <li>Open the suggested queue record, add notes or status, then return to the queue.</li>
         <li>Copy the feedback checklist into the agreed external channel.</li>
       </ol>
@@ -742,6 +743,8 @@ def render_app_shell() -> str:
       <ol>
         <li>Look up a CCLD facility by local/test reference fields or enter a
         facility/license number manually.</li>
+        <li>Confirm the facility/license number, date range, request origin, and active
+        local/test facility reference source before reviewing queue results.</li>
         <li>Request records for one CCLD facility/license number.</li>
         <li>Use already loaded records or load validated local/test CCLD output.</li>
         <li>Open the facility/date-scoped review queue.</li>

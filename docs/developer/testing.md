@@ -133,7 +133,8 @@ rendering, help page rendering, contextual facility/date/load/review help,
 first-time workflow overview, queue triage summaries, reviewer note/status cues,
 source-traceability availability cues, suggested next-record links,
 filtered-empty guidance, skip-to-main links, visible next-step guidance,
-specific form/action text, deterministic copyable feedback checklist guidance
+specific form/action text, lookup-selected and manual-entry request-context
+confirmation, deterministic copyable feedback checklist guidance
 without persistence, accessibility-oriented headings/labels/captions/link text,
 and no-secret HTML output.
 Hosted reviewer UI shell tests should also cover skip-to-main links, CCLD
@@ -147,7 +148,7 @@ display, partial and case-insensitive matching by facility/license number,
 facility name, city, county, ZIP code, facility type, and status, bounded result
 lists, empty-search and no-match guidance, missing or malformed full CSV fallback
 guidance, active reference-source messages, selected facility carry-forward into
-`/ccld/records/request`, manual entry preservation, no browser live retrieval, no
+`/ccld/records/request` with lookup-origin context, manual entry preservation, no browser live retrieval, no
 connector execution, no persistence, no source-derived/reviewer-created/audit/
 import/operational metadata mutation, accessible headings/labels/captions/link
 text, and no-secret HTML output.

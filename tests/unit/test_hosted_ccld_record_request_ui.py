@@ -100,15 +100,43 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
 
 def test_ccld_record_request_prefills_selected_facility_from_lookup() -> None:
     status, content_type, body = route_response(
-        f"{CCLD_RECORD_REQUEST_PATH}?facility_number=900000001"
+        f"{CCLD_RECORD_REQUEST_PATH}?"
+        "facility_number=900000001&request_context_origin=facility_lookup"
+        "&lookup_facility_name=Synthetic+Orchard+Child+Care"
     )
     html = body.decode("utf-8")
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Selected facility/license number from lookup" in html
+    assert "Confirm request context" in html
+    assert "Facility lookup result" in html
+    assert "Facility/license number being requested" in html
+    assert "Synthetic Orchard Child Care" in html
+    assert "Active facility reference source" in html
     assert "value=\"900000001\"" in html
+    assert "name=\"request_context_origin\"" in html
+    assert "value=\"facility_lookup\"" in html
+    assert "name=\"lookup_facility_name\"" in html
     assert "Find a CCLD facility by name" in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_record_request_manual_entry_shows_context_confirmation() -> None:
+    status, content_type, body = route_response(CCLD_RECORD_REQUEST_PATH)
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Confirm request context" in html
+    assert "Manual facility/license entry" in html
+    assert "Facility/license number being requested" in html
+    assert "not entered yet" in html
+    assert "Date range being requested" in html
+    assert "not provided" in html
+    assert "Facility reference rows are local/test lookup assistance only" in normalized_html
+    assert "name=\"request_context_origin\"" in html
+    assert "value=\"manual_entry\"" in html
     assert_no_secret_html(html)
 
 
@@ -229,6 +257,15 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Found 6 local/test CCLD source-derived row(s)" in normalized_html
     assert "facility/license number 157806098" in html
     assert "Date range: 2022-08-01 to 2022-08-31." in html
+    assert "Confirm request context" in html
+    assert "Request started from" in html
+    assert "Manual facility/license entry" in html
+    assert "Facility/license number being requested" in html
+    assert "Date range being requested" in html
+    assert "Active facility reference source" in html
+    assert "Change facility/date criteria for this request" in html
+    assert "Start over with a different CCLD facility" in html
+    assert "This queue is tied to the request context confirmed above" in normalized_html
     assert "CCLD review queue" in html
     assert "First-run queue steps" in html
     assert "Read the queue progress and triage summaries" in html
@@ -271,6 +308,8 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "- Reviewer notes present: no" in html
     assert "- Reviewer statuses present: no" in html
     assert "- Facility lookup used or skipped:" in html
+    assert "- Facility lookup used or skipped: Manual facility/license entry" in html
+    assert "- Active facility reference source:" in html
     assert "- Source traceability cues were easy to find:" in html
     assert "- Saved confirmation appeared as expected:" in html
     assert "- Queue showed updated note/status after returning" in html
@@ -414,7 +453,11 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert counts == _empty_reviewer_counts()
     assert "No matching local/test CCLD records found" in html
     assert "Rows for this facility currently available before date filtering: 6" in html
-    assert "Next step for first-time testers" in html
+    normalized_html = " ".join(html.split())
+    assert "confirm the request context below" in normalized_html
+    assert "change the facility/date criteria before reviewing results" in normalized_html
+    assert "Confirm request context" in html
+    assert "Change facility/date criteria for this request" in html
     assert "Copyable tester feedback checklist" in html
     assert "- Matching source-derived rows shown: 0" in html
     assert "- Matching complaint records in queue: 0" in html
@@ -424,6 +467,52 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert "does not run live CCLD retrieval or import" in html
     assert "build-hosted-ccld-artifact.ps1" in html
     assert "Browser requests still do not run live CCLD retrieval" in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_record_request_queue_preserves_lookup_selected_context() -> None:
+    with _seeded_connection() as connection:
+        before_source_rows = _source_rows(connection)
+
+        status, content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "facility_number": "157806098",
+                    "start_date": "2022-08-01",
+                    "end_date": "2022-08-31",
+                    "request_context_origin": "facility_lookup",
+                    "lookup_facility_name": "A. MIRIAM JAMISON",
+                }
+            ),
+            ccld_record_request_ui_context=_context(connection),
+        )
+
+        after_source_rows = _source_rows(connection)
+        counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+    checklist = _feedback_checklist(html)
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert counts == _empty_reviewer_counts()
+    assert "Confirm request context" in html
+    assert "Facility lookup result" in html
+    assert "Selected lookup facility name" in html
+    assert "A. MIRIAM JAMISON" in html
+    assert "Date range being requested" in html
+    assert "2022-08-01 to 2022-08-31" in html
+    assert "This queue is tied to the request context confirmed above" in " ".join(
+        html.split()
+    )
+    assert "request_context_origin" in html
+    assert "lookup_facility_name" in html
+    assert "- Facility lookup used or skipped: Facility lookup result" in checklist
+    assert "- Selected lookup facility name: A. MIRIAM JAMISON" in checklist
+    assert "- Active facility reference source:" in checklist
     assert_no_secret_html(html)
 
 
@@ -548,7 +637,9 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     assert first_checklist.startswith("CCLD tester feedback checklist")
     assert "- Source scope: CCLD public complaint records only" in first_checklist
     assert "- Facility/license number: 157806098" in first_checklist
-    assert "- Facility lookup used or skipped:" in first_checklist
+    assert "- Facility lookup used or skipped: Manual facility/license entry" in first_checklist
+    assert "- Selected lookup facility name: unknown" in first_checklist
+    assert "- Active facility reference source:" in first_checklist
     assert "- Date range requested: 2022-08-01 to 2022-08-31" in first_checklist
     assert "- Request criteria that felt unclear:" in first_checklist
     assert "- Matching source-derived rows shown: 6" in first_checklist
