@@ -238,7 +238,10 @@ real database settings in an untracked `.env` file, and does not add production
 sign-in, public hosting approval, completed CCLD retrieval jobs, or connector
 execution. Developers should use
 [docs/developer/qnap-docker-runtime.md](../developer/qnap-docker-runtime.md) for
-those runtime steps.
+those runtime steps. Operators can use `scripts/verify-qnap-pilot-workflow.ps1`
+to verify the untracked `.env`, Docker Compose configuration, running containers,
+PostgreSQL readiness, and route surface before inviting testers. QNAP is the
+first pilot runtime, not a permanent platform lock-in.
 
 The hosted request page now includes the first controlled browser-triggered,
 server-executed CCLD retrieval job slice for complaint records. When the server

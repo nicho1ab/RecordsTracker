@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added a QNAP hosted tester pilot workflow checker at
+	`scripts/verify-qnap-pilot-workflow.ps1`. It validates required untracked `.env`
+	keys, PostgreSQL/page-data/auth/retrieval raw-storage settings, Compose config,
+	optional running container/PostgreSQL/Alembic state, and optional route probes
+	without committing secrets, adding deployment automation, enabling production
+	fake data, or adding retrieval capability.
 - Added an explicit local-dev controlled retrieval demo mode,
 	`CCLD_RETRIEVAL_DEMO_MODE=mock-success`, for scaffold validation. When local-dev
 	auth, retrieval enablement, and raw storage are explicitly configured, the

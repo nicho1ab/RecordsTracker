@@ -181,6 +181,10 @@
     public URL approval, fully production-ready hosted CCLD retrieval, production import
     automation, monitoring, incident response, or a guarantee that external
     testers can safely access the app yet.
+- The QNAP pilot workflow checker validates env, Compose, optional containers,
+    PostgreSQL readiness, Alembic state, and route status. It does not start a
+    public deployment, create cloud resources, replace host backups, implement
+    production sign-in, or make source-completeness/legal conclusions.
 - Controlled browser-triggered CCLD retrieval has a first ADR-0016 implementation
     slice for CCLD complaint records. It remains CCLD-only, facility/date/type
     bounded, authenticated, permissioned, server-side, rate-limited,

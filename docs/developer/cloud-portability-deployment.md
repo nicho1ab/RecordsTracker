@@ -60,6 +60,9 @@ Portable groups:
   `CCLD_RETRIEVAL_RAW_DIR`, `CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS`,
   `CCLD_RETRIEVAL_PER_JOB_LIMIT`, `CCLD_RETRIEVAL_RATE_LIMIT_PER_ACTOR`,
   `CCLD_RETRIEVAL_TIMEOUT_SECONDS`, and `CCLD_RETRIEVAL_RETRY_LIMIT`.
+- Local-dev retrieval demo: `CCLD_RETRIEVAL_DEMO_MODE=mock-success` only for
+  explicit local-dev fixture/demo validation. Leave it blank for QNAP,
+  production-like, and future cloud hosts.
 
 Do not commit real issuer URLs, callback URLs, tenant identifiers, client
 secrets, tokens, cookies, private headers, database URLs, cloud credentials, or
@@ -90,9 +93,14 @@ Start with QNAP Docker and keep the same boundaries when moving cloudward:
 5. Keep auth provider configuration in the host secret store.
 6. Keep server-side retrieval jobs separate from request-time browser code when
   ADR-0016 retrieval implementation is added.
-7. Validate `/health`, `/auth/status`, `/ccld/help`, `/feedback`, and protected
+7. Use `scripts/verify-qnap-pilot-workflow.ps1` for the QNAP pilot as a concrete
+   example of env, Compose, container, and route verification. Later hosts should
+   keep equivalent checks for database, raw storage, secrets, migrations, health,
+   auth status, feedback, CCLD request, retrieval history/detail, and reviewer
+   routes.
+8. Validate `/health`, `/auth/status`, `/ccld/help`, `/feedback`, and protected
   workflow behavior before inviting testers.
-8. Validate `/feedback` in unconfigured mode and with a mocked or non-production
+9. Validate `/feedback` in unconfigured mode and with a mocked or non-production
   GitHub Issues configuration before accepting tester feedback.
 
 ## Raw File Storage Migration
