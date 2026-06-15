@@ -691,6 +691,90 @@ def test_qnap_pilot_auth_readiness_doc_is_linked_from_operator_guides() -> None:
         assert link in read_repo_text(path)
 
 
+def test_qnap_pilot_tester_invitation_decision_doc_covers_required_steps() -> None:
+    guide = read_repo_text("docs/developer/qnap-pilot-tester-invitation-decision.md")
+    normalized = " ".join(guide.split())
+    searchable_text = f"{guide}\n{normalized}"
+
+    for required_text in (
+        "QNAP Pilot Tester Invitation Decision",
+        "required before inviting early ylc.org testers",
+        "real external tester authentication is not implemented yet",
+        "operator decision gate, not an implementation of access control",
+        "explicitly approved named individuals or a small approved group",
+        "Operator/admin",
+        "Tester reviewer",
+        "Read-only tester",
+        "Developer/operator",
+        "System/process identity",
+        "Do not grant broad admin/operator access by default",
+        "The QNAP pilot environment only",
+        "seeded or imported test corpus",
+        "CCLD-only review workflows",
+        "Approved pilot routes only",
+        "Do not grant broad future-data, all-project, statewide, private-source",
+        "Who approved the tester or tester group",
+        "Which role and scope each tester receives",
+        "How access will be revoked",
+        "Who can perform revocation",
+        "How revocation will be recorded",
+        "How tester feedback and GitHub Issues will be triaged",
+        "Real login",
+        "Real OIDC/OAuth2 callback handling",
+        "Sessions or cookies",
+        "User tables",
+        "Self-service signup",
+        "tester invitation workflow",
+        "Local-dev fixture auth is not production authentication",
+        "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH=disabled",
+        "CCLD_HOSTED_TESTER_AUTH_MODE=production",
+        "QNAP verifier output",
+        "Seeded import evidence command output",
+        "Route evidence command output",
+        "Auth readiness notes reviewed",
+        "Feedback configuration decision",
+        "Retrieval configuration decision",
+        "PostgreSQL backup plan",
+        "Raw artifact backup plan",
+        "Known limitations acknowledged",
+        "no public-source completeness, legal, facility-wide, harm",
+        "Do not invite testers until the access method is deliberately approved",
+        "Do not use local-dev fixture auth as production authentication",
+        "Do not share `.env` or secrets",
+        "Do not commit provider secrets, callback URLs, tokens, tenant IDs",
+        "Do not treat tester feedback, review notes, route evidence",
+        "rights-deprivation conclusions",
+    ):
+        assert required_text in searchable_text
+
+    assert "ghp_" not in guide
+    assert "github_pat_" not in guide
+    assert "https://github.com/" not in guide
+    assert "C:\\" not in guide
+    assert "OneDrive" not in guide
+    assert "client_" + "secret" + "=" not in guide.casefold()
+
+
+def test_qnap_pilot_tester_invitation_decision_doc_is_linked_from_guides() -> None:
+    required_links = {
+        "README.md": "docs/developer/qnap-pilot-tester-invitation-decision.md",
+        "RUNBOOK.md": "docs/developer/qnap-pilot-tester-invitation-decision.md",
+        "docs/developer/qnap-docker-runtime.md": (
+            "qnap-pilot-tester-invitation-decision.md"
+        ),
+        "docs/developer/qnap-pilot-operator-checklist.md": (
+            "qnap-pilot-tester-invitation-decision.md"
+        ),
+        "docs/developer/qnap-pilot-auth-readiness.md": (
+            "qnap-pilot-tester-invitation-decision.md"
+        ),
+        "docs/developer/testing.md": "QNAP tester invitation decision documentation tests",
+    }
+
+    for path, link in required_links.items():
+        assert link in read_repo_text(path)
+
+
 def test_qnap_pilot_seeded_import_evidence_doc_exists_and_covers_required_steps() -> None:
     evidence = read_repo_text("docs/developer/qnap-pilot-seeded-import-evidence.md")
     normalized = " ".join(evidence.split())
