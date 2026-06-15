@@ -125,7 +125,9 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Request started from" not in ccld_queue_body
         or b"Change facility/date criteria for this request" not in ccld_queue_body
         or b"Queue triage summary" not in ccld_queue_body
+        or b"Continue review guidance" not in ccld_queue_body
         or b"Suggested next record to open" not in ccld_queue_body
+        or b"official workflow state" not in ccld_queue_body
         or b"Copy tester feedback checklist" not in ccld_queue_body
         or b"Reviewer detail and note/status confirmation" not in ccld_queue_body
         or b"Manual-copy only" not in ccld_queue_body
@@ -173,6 +175,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Feedback clues for this record" not in reviewer_detail_body
         or b"Record-specific feedback handoff" not in reviewer_detail_body
         or b"Source traceability observations" not in reviewer_detail_body
+        or b"suggested next record to continue" not in reviewer_detail_body
+        or b"not a persisted assignment" not in reviewer_detail_body
         or b"First-run detail steps" not in reviewer_detail_body
     ):
         raise RuntimeError("Hosted scaffold reviewer detail did not return usable guidance.")
@@ -183,6 +187,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Return to CCLD request queue" not in reviewer_note_body
         or b"Return and refresh queue progress" not in reviewer_note_body
         or b"Queue progress and note/status cues are derived" not in reviewer_note_body
+        or b"suggested next record is not a persisted assignment" not in reviewer_note_body
         or b"manual feedback checklist" not in reviewer_note_body
     ):
         raise RuntimeError("Hosted scaffold reviewer note did not return confirmation.")
@@ -193,6 +198,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Return to CCLD request queue" not in reviewer_saved_status_body
         or b"Return and refresh queue progress" not in reviewer_saved_status_body
         or b"Queue progress and note/status cues are derived" not in reviewer_saved_status_body
+        or b"suggested next record is not a persisted assignment" not in reviewer_saved_status_body
         or b"manual feedback checklist" not in reviewer_saved_status_body
     ):
         raise RuntimeError("Hosted scaffold reviewer status did not return confirmation.")

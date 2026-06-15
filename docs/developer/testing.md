@@ -128,6 +128,10 @@ testers what source traceability, source context, note/status confirmation,
 same-queue return, queue refresh, unexpected-record, confusing label, wording,
 keyboard-flow, or next-step observations to carry into the existing manual
 checklist without adding feedback persistence.
+Next-record navigation coverage should verify that queue and detail pages tell
+testers how to return to the same request context, resubmit when needed, and use
+suggested-next cues derived from existing reviewer-created state without
+implying persisted assignment, record claiming, or workflow-engine state.
 
 Hosted CCLD request and import/reload tests should cover digit-only facility/
 license input, optional date ranges, empty hosted source-derived state, loading

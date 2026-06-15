@@ -111,6 +111,10 @@ should tell testers what source traceability, source context, note/status
 confirmation, same-queue return, queue refresh, unexpected-record, confusing
 label, wording, keyboard-flow, or next-step observations to carry into the
 existing manual checklist without adding a new feedback workflow.
+Reviewer detail and request-queue navigation should make next-record movement
+clear without implying persisted assignment, record claiming, or production
+workflow state. Suggested-next cues should remain derived from the current
+facility/date request context and existing reviewer-created note/status rows.
 
 The first browser-accessible CCLD record request page is a local/test, server-
 rendered HTML surface at `/ccld/records/request`. Its design purpose is to
