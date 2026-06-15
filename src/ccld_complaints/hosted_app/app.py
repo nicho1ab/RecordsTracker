@@ -49,6 +49,11 @@ from ccld_complaints.hosted_app.ccld_record_request_ui import (
     default_ccld_record_request_ui_context,
     route_ccld_record_request_ui_response,
 )
+from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
+    CcldHttpRetrievalClient,
+    CcldRetrievalContext,
+    load_ccld_retrieval_config,
+)
 from ccld_complaints.hosted_app.feedback import (
     FEEDBACK_PATH,
     FeedbackContext,
@@ -1331,8 +1336,34 @@ def _default_ccld_context_for_mode(
     if reviewer_context is None:
         return None
     if page_data_mode == FIXTURE_DEMO_PAGE_DATA_MODE:
-        return default_ccld_record_request_ui_context()
-    return ccld_record_request_context_for_reviewer_context(reviewer_context)
+        fixture_context = default_ccld_record_request_ui_context()
+        return CcldRecordRequestUiContext(
+            reviewer_ui_context=fixture_context.reviewer_ui_context,
+            import_reload_context=fixture_context.import_reload_context,
+            retrieval_context=_default_retrieval_context_for_reviewer_context(
+                fixture_context.reviewer_ui_context
+            ),
+        )
+    return ccld_record_request_context_for_reviewer_context(
+        reviewer_context,
+        retrieval_context=_default_retrieval_context_for_reviewer_context(reviewer_context),
+    )
+
+
+def _default_retrieval_context_for_reviewer_context(
+    reviewer_context: ReviewerUiContext,
+) -> CcldRetrievalContext | None:
+    source_context = reviewer_context.workflow_shell_context.source_derived_api_context
+    config = load_ccld_retrieval_config()
+    if not config.configured:
+        return None
+    return CcldRetrievalContext(
+        connection=source_context.connection,
+        actor=source_context.actor,
+        scope=source_context.scope,
+        config=config,
+        client=CcldHttpRetrievalClient(),
+    )
 
 
 def _default_feedback_context(

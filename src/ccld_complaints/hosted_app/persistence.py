@@ -194,6 +194,25 @@ HOSTED_PERSISTENCE_BOUNDARIES = (
         ),
     ),
     PersistenceBoundary(
+        boundary_id="controlled_ccld_retrieval_jobs",
+        label="Controlled CCLD retrieval job metadata",
+        domain="operations",
+        purpose=(
+            "Future server-side CCLD retrieval job state, safe counts, and raw artifact "
+            "context."
+        ),
+        preserves=(
+            "job state and bounded request context",
+            "authenticated actor attribution",
+            "safe result counts and raw artifact references",
+        ),
+        must_not=(
+            "store source-derived records inside job metadata",
+            "store reviewer-created state inside job metadata",
+            "expose secrets, tokens, cookies, private headers, or provider claims",
+        ),
+    ),
+    PersistenceBoundary(
         boundary_id="auth_identity_scope",
         label="Authenticated actor and role/scope references",
         domain="auth-access",

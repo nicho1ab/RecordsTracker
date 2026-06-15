@@ -78,8 +78,8 @@ fixtures as production data, expose raw narrative source text, mutate
 source-derived records through review actions, or run live retrieval or connector
 execution.
 
-ADR-0016 approves a future controlled browser-triggered, server-executed CCLD
-retrieval job boundary. The browser may submit only a CCLD facility/license
+The current ADR-0016 retrieval seam implements the first controlled browser-
+triggered, server-executed CCLD retrieval job slice. The browser may submit only a CCLD facility/license
 number, allowed record type or all supported record types, and bounded start/end
 dates. The browser must not scrape, crawl, fetch source pages, receive connector
 credentials, receive GitHub tokens, receive provider tokens, receive cookies, or
@@ -97,11 +97,12 @@ connection strings, provider claims, GitHub tokens, private URLs, server-specifi
 absolute paths, or unnecessary narrative content in HTML, JSON, logs, audit/
 status events, tests, screenshots, issue bodies, or docs.
 
-Controlled retrieval remains CCLD-only. Statewide crawling, automatic source
-expansion, non-CCLD sources, private or authenticated source scraping, and direct
-browser crawling remain prohibited. Retrieval job metadata is operational
-metadata and must remain separate from source-derived records, reviewer-created
-state, audit events, and feedback issues.
+Controlled retrieval remains CCLD-only and currently supports complaint records
+only; all supported record types resolves to complaint records. Statewide
+crawling, automatic source expansion, non-CCLD sources, private or authenticated
+source scraping, and direct browser crawling remain prohibited. Retrieval job
+metadata is operational metadata and remains separate from source-derived
+records, reviewer-created state, audit events, and feedback issues.
 
 The current tester feedback seam can create GitHub Issues server-side only when
 `GITHUB_FEEDBACK_REPO` and `GITHUB_FEEDBACK_TOKEN` are configured on the host.

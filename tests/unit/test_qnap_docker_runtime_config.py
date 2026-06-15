@@ -31,6 +31,13 @@ def test_env_example_uses_placeholders_only() -> None:
     assert values["GITHUB_FEEDBACK_REPO"] == "<your-github-org-or-user>/<repository-name>"
     assert values["GITHUB_FEEDBACK_TOKEN"] == "<server-side-github-feedback-token>"
     assert values["GITHUB_FEEDBACK_DEFAULT_LABELS"] == ""
+    assert values["CCLD_RETRIEVAL_ENABLED"] == "disabled"
+    assert values["CCLD_RETRIEVAL_RAW_DIR"] == "/app/data/raw/ccld/retrieval"
+    assert values["CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS"] == "366"
+    assert values["CCLD_RETRIEVAL_PER_JOB_LIMIT"] == "5"
+    assert values["CCLD_RETRIEVAL_RATE_LIMIT_PER_ACTOR"] == "3"
+    assert values["CCLD_RETRIEVAL_TIMEOUT_SECONDS"] == "30"
+    assert values["CCLD_RETRIEVAL_RETRY_LIMIT"] == "1"
     assert values["CCLD_FACILITY_REFERENCE_CSV"] == ""
 
     env_text = read_repo_text(".env.example")
@@ -49,6 +56,9 @@ def test_compose_runtime_uses_postgres_named_volumes_and_healthchecks() -> None:
     assert "CCLD_HOSTED_PAGE_DATA_MODE" in compose
     assert "GITHUB_FEEDBACK_REPO" in compose
     assert "GITHUB_FEEDBACK_TOKEN" in compose
+    assert "CCLD_RETRIEVAL_ENABLED" in compose
+    assert "CCLD_RETRIEVAL_RAW_DIR" in compose
+    assert "CCLD_RETRIEVAL_PER_JOB_LIMIT" in compose
     assert "postgresql+psycopg://${CCLD_POSTGRES_USER" in compose
     assert "alembic upgrade head" in compose
     assert "python -m ccld_complaints.hosted_app --host 0.0.0.0 --port 8000" in compose

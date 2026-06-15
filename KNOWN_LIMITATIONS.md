@@ -178,20 +178,20 @@
     not implemented yet.
 - The QNAP-first Docker Compose runtime is a production-like container envelope
     for the hosted scaffold and PostgreSQL. It is not production authentication,
-    public URL approval, completed hosted CCLD retrieval, production import
+    public URL approval, fully production-ready hosted CCLD retrieval, production import
     automation, monitoring, incident response, or a guarantee that external
-    testers can safely access the app yet. ADR-0016 approves a future controlled
-    browser-triggered, server-executed CCLD retrieval-job boundary, but retrieval
-    jobs are not implemented yet.
-- Controlled browser-triggered CCLD retrieval is approved by ADR-0016 but not
-    implemented. A future implementation must keep retrieval CCLD-only,
-    facility/date/type bounded, authenticated, permissioned, server-side,
-    rate-limited, timeout-limited, retry-limited, raw-source-preserving,
-    PostgreSQL-imported, safe-status, secret-safe, and test-mocked. Direct
+    testers can safely access the app yet.
+- Controlled browser-triggered CCLD retrieval has a first ADR-0016 implementation
+    slice for CCLD complaint records. It remains CCLD-only, facility/date/type
+    bounded, authenticated, permissioned, server-side, rate-limited,
+    timeout-limited, retry-limited, raw-source-preserving, PostgreSQL-imported,
+    safe-status, private-value-safe, and tested with mocked CCLD network retrieval. Direct
     browser crawling, statewide crawling, automatic source expansion, non-CCLD
     sources, private/authenticated source scraping, legal/facility-wide/public-
     source completeness conclusions, harm/abuse/neglect/liability conclusions,
-    and unsupported automated complaint findings remain out of scope.
+    unsupported automated complaint findings, and unsupported record types remain
+    out of scope. All supported record types currently resolves to complaint
+    records only.
 - The local hosted scaffold `/facilities` list and detail pages use committed
     tiny public-source facility fixtures and manifest placeholder metadata only.
     The facility detail source coverage panel and related source-record links
