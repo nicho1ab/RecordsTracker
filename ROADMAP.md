@@ -422,6 +422,12 @@ the governed primary future review experience.
 	complaint-specific detail actions without adding persistence, schema changes,
 	live browser retrieval, connector execution, new note/status behavior, or
 	non-CCLD scope.
+- Improved local/test CCLD first-run accessibility across the home, facility
+	lookup, request/result queue, reviewer records, reviewer detail, and feedback
+	checklist flow with skip links, clearer start-here and next-step guidance,
+	more specific form/action text, and manual checklist copy guidance without
+	adding persistence, schema changes, JavaScript-dependent workflow, live browser
+	retrieval, connector execution, or non-CCLD scope.
 - Added a minimal local/test audit event persistence scaffold with a separate
 	PostgreSQL/Alembic table and service boundary for successful reviewer-created
 	state scaffold writes only, preserving source-derived records and reviewer-

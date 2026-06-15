@@ -24,6 +24,8 @@ Accessibility requirements apply to:
 - Use semantic headings in order.
 - Do not skip heading levels for visual effect.
 - Use descriptive link text.
+- Provide skip-to-main or equivalent page-navigation aids on hosted local/test
+	review pages where repeated navigation appears before primary content.
 - Avoid instructions that rely only on color, position, or shape.
 
 ### Keyboard access
@@ -62,6 +64,9 @@ Accessibility requirements apply to:
 	traceability availability cues, suggested next-record links, filtered-empty
 	guidance, and meaningful reviewer-detail link text as visible text, not color
 	or layout alone.
+	First-run CCLD pages must expose visible start-here or next-step guidance,
+	specific form button text, and manual feedback-copy instructions without
+	requiring JavaScript.
 	Facility lookup controls must have associated labels and help text, lookup
 	results must use table captions or equivalent result headings, selection links
 	must have meaningful text such as "Use this facility", and empty, no-match,

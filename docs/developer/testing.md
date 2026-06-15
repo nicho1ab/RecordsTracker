@@ -132,9 +132,13 @@ mutation, no operational metadata mutation, guided request result queue
 rendering, help page rendering, contextual facility/date/load/review help,
 first-time workflow overview, queue triage summaries, reviewer note/status cues,
 source-traceability availability cues, suggested next-record links,
-filtered-empty guidance, deterministic copyable feedback checklist guidance
+filtered-empty guidance, skip-to-main links, visible next-step guidance,
+specific form/action text, deterministic copyable feedback checklist guidance
 without persistence, accessibility-oriented headings/labels/captions/link text,
 and no-secret HTML output.
+Hosted reviewer UI shell tests should also cover skip-to-main links, CCLD
+workflow navigation, first-run detail steps, and record-specific note/status
+button text while preserving existing read/write behavior.
 Hosted CCLD facility lookup tests should cover committed tiny fixture fallback,
 configured full local/test CCLD facility reference CSV loading, safe scalar field
 display, partial and case-insensitive matching by facility/license number,
