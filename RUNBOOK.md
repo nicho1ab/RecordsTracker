@@ -81,6 +81,12 @@ scheduler, worker console, or source-completeness report. If the history page is
 empty, confirm retrieval is configured and that jobs were submitted in the same
 authorized scope.
 
+Use `/ccld/retrieval/jobs/detail?job_id=<job-id>` from a history-row detail link
+when a tester or operator needs one-job context. The detail page repeats safe
+request context, state, created/updated/completed timing, imported counts,
+warnings/errors, raw-artifact-preserved status, and next-step links without
+showing raw artifact contents, raw server paths, stack traces, or private values.
+
 Backups for retrieval-enabled deployments must cover both PostgreSQL and raw
 source artifacts. A database backup alone is not enough when source-derived rows
 reference raw artifact paths or raw hashes.

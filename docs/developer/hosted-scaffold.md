@@ -265,6 +265,18 @@ imported, and `/feedback` guidance for confusing or failed jobs. It is not an
 audit UI, audit export, CSV export, scheduler, distributed worker queue, or broad
 operational console.
 
+Each history row links to a read-only detail page shaped like:
+
+```text
+http://127.0.0.1:8000/ccld/retrieval/jobs/detail?job_id=<job-id>
+```
+
+The detail page repeats one job's safe request context, state, timestamps,
+imported-record count, warning/error summaries, raw-artifact-preserved status,
+review-queue link when records were imported, and history/request/help/feedback
+links. It does not show raw artifact file contents, raw source narrative text,
+raw server paths, stack traces, provider values, or private configuration.
+
 ## Open the CCLD record request page
 
 The scaffold includes a browser-accessible local/test CCLD facility lookup page at:

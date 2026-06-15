@@ -20,6 +20,7 @@ from ccld_complaints.hosted_app.auth import (
 )
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     CCLD_RECORD_REQUEST_PATH,
+    CCLD_RETRIEVAL_JOB_DETAIL_PATH,
     CCLD_RETRIEVAL_JOBS_PATH,
     CcldRecordRequestUiContext,
     _render_retrieval_job_summary,
@@ -428,6 +429,8 @@ def test_retrieval_job_history_renders_recent_jobs_safely_without_mutation(
     assert "warning-job" in html
     assert "failed-job" in html
     assert "rate-limited-job" in html
+    assert f"{CCLD_RETRIEVAL_JOB_DETAIL_PATH}?job_id=completed-job" in html
+    assert "View retrieval job details" in html
     assert "Facility/license number" in html
     assert "157806098" in html
     assert "Complaint records" in html
@@ -448,6 +451,190 @@ def test_retrieval_job_history_renders_recent_jobs_safely_without_mutation(
     assert "Send tester feedback" in html
     assert "Traceback" not in html
     assert "provider_subject" not in html
+    assert_no_secret_html(html)
+
+
+def test_retrieval_job_detail_renders_completed_job_without_mutation(tmp_path: Path) -> None:
+    with _empty_connection() as connection:
+        context = _request_context(connection, tmp_path)
+        _insert_history_job(
+            connection,
+            "completed-job",
+            state="completed",
+            created_at="2026-06-15T12:00:00+00:00",
+            updated_at="2026-06-15T12:04:00+00:00",
+            result_counts={
+                "imported_source_derived_records": 6,
+                "retrieved_record_bundles": 1,
+            },
+            source_artifact_identity="ccld-retrieval-job:completed-job",
+            raw_storage_path="C:/server/private/raw/artifact.html",
+            safe_message="Controlled CCLD retrieval imported source-derived records.",
+        )
+        before_counts = _table_counts(connection)
+        status, content_type, body = route_response(
+            f"{CCLD_RETRIEVAL_JOB_DETAIL_PATH}?job_id=completed-job",
+            ccld_record_request_ui_context=context,
+        )
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_counts == after_counts
+    assert "Controlled CCLD retrieval job detail" in html
+    assert "completed-job" in html
+    assert "Completed" in html
+    assert "completed" in html
+    assert "Facility/license number" in html
+    assert "157806098" in html
+    assert "Complaint records" in html
+    assert "2022-08-01 to 2022-08-31" in html
+    assert "Created at" in html
+    assert "Started timestamp" in html
+    assert "not separately tracked in this first slice" in html
+    assert "Last updated at" in html
+    assert "Completed timestamp" in html
+    assert "2026-06-15T12:04:00+00:00" in html
+    assert "Records imported" in html
+    assert "<dd>6</dd>" in html
+    assert "Imported source derived records" in html
+    assert "raw artifact preserved; source artifact identity available; raw paths not shown" in html
+    assert "Review imported records in the CCLD queue" in html
+    assert "Return to retrieval job history" in html
+    assert "Submit or change a CCLD record request" in html
+    assert "Read CCLD workflow help" in html
+    assert "Send tester feedback" in html
+    assert "C:/server/private/raw/artifact.html" not in html
+    assert "157806098_inx3" not in html
+    assert_no_secret_html(html)
+
+
+def test_retrieval_job_detail_safe_missing_and_invalid_job_ids(tmp_path: Path) -> None:
+    with _empty_connection() as connection:
+        context = _request_context(connection, tmp_path)
+        missing_status, _content_type, missing_body = route_response(
+            f"{CCLD_RETRIEVAL_JOB_DETAIL_PATH}?job_id=missing-job",
+            ccld_record_request_ui_context=context,
+        )
+        invalid_status, _content_type, invalid_body = route_response(
+            f"{CCLD_RETRIEVAL_JOB_DETAIL_PATH}?job_id=..%2Ftoken-value",
+            ccld_record_request_ui_context=context,
+        )
+        blank_status, _content_type, blank_body = route_response(
+            CCLD_RETRIEVAL_JOB_DETAIL_PATH,
+            ccld_record_request_ui_context=context,
+        )
+        counts = _table_counts(connection)
+
+    missing_html = missing_body.decode("utf-8")
+    invalid_html = invalid_body.decode("utf-8")
+    blank_html = blank_body.decode("utf-8")
+
+    assert missing_status == 404
+    assert "Retrieval job detail not found" in missing_html
+    assert "No retrieval job metadata matched" in missing_html
+    assert "Return to retrieval job history" in missing_html
+    assert invalid_status == 400
+    assert blank_status == 400
+    assert "Retrieval job detail needs a valid job ID" in invalid_html
+    assert "Retrieval job detail needs a valid job ID" in blank_html
+    assert "token-value" not in invalid_html
+    assert counts == _empty_counts()
+    assert_no_secret_html(missing_html)
+    assert_no_secret_html(invalid_html)
+    assert_no_secret_html(blank_html)
+
+
+def test_retrieval_job_detail_distinguishes_warning_failed_and_rate_limited_states(
+    tmp_path: Path,
+) -> None:
+    with _empty_connection() as connection:
+        context = _request_context(connection, tmp_path)
+        _insert_history_job(
+            connection,
+            "warning-job",
+            state="completed_with_warnings",
+            created_at="2026-06-15T12:10:00+00:00",
+            updated_at="2026-06-15T12:14:00+00:00",
+            result_counts={"imported_source_derived_records": 0},
+            warnings=("Report 39 failed during fetch.",),
+            safe_message="Controlled CCLD retrieval completed with no matching imported records.",
+        )
+        _insert_history_job(
+            connection,
+            "failed-job",
+            state="failed",
+            created_at="2026-06-15T12:20:00+00:00",
+            updated_at="2026-06-15T12:21:00+00:00",
+            errors=("Traceback contained token and provider_subject details.",),
+            safe_message="Failure included token and provider_subject values.",
+        )
+        _insert_history_job(
+            connection,
+            "rate-limited-job",
+            state="rate_limited",
+            created_at="2026-06-15T12:30:00+00:00",
+            updated_at="2026-06-15T12:30:00+00:00",
+            safe_message="Controlled CCLD retrieval is rate-limited for this tester.",
+        )
+        warning_status, _content_type, warning_body = route_response(
+            f"{CCLD_RETRIEVAL_JOB_DETAIL_PATH}?job_id=warning-job",
+            ccld_record_request_ui_context=context,
+        )
+        failed_status, _content_type, failed_body = route_response(
+            f"{CCLD_RETRIEVAL_JOB_DETAIL_PATH}?job_id=failed-job",
+            ccld_record_request_ui_context=context,
+        )
+        rate_status, _content_type, rate_body = route_response(
+            f"{CCLD_RETRIEVAL_JOB_DETAIL_PATH}?job_id=rate-limited-job",
+            ccld_record_request_ui_context=context,
+        )
+        counts = _table_counts(connection)
+
+    warning_html = warning_body.decode("utf-8")
+    failed_html = failed_body.decode("utf-8")
+    rate_html = rate_body.decode("utf-8")
+
+    assert warning_status == 200
+    assert "Completed with warnings" in warning_html
+    assert "Report 39 failed during fetch." in warning_html
+    assert "No records were imported. Review warnings" in " ".join(warning_html.split())
+    assert failed_status == 200
+    assert "Failed" in failed_html
+    assert "Retry later or ask an operator to inspect server logs" in " ".join(
+        failed_html.split()
+    )
+    assert "Controlled CCLD retrieval was blocked safely." in failed_html
+    assert "Traceback" not in failed_html
+    assert "provider_subject" not in failed_html
+    assert rate_status == 200
+    assert "Rate limited" in rate_html
+    assert "Wait for an active retrieval job to finish" in " ".join(rate_html.split())
+    assert counts["source_records"] == 0
+    assert counts["reviewer_created_state"] == 0
+    assert counts["audit_events"] == 0
+    assert counts["retrieval_jobs"] == 3
+    assert_no_secret_html(warning_html)
+    assert_no_secret_html(failed_html)
+    assert_no_secret_html(rate_html)
+
+
+def test_anonymous_production_retrieval_job_detail_is_blocked() -> None:
+    auth_config = load_hosted_auth_runtime_config(
+        environ={"CCLD_HOSTED_TESTER_AUTH_MODE": "production"}
+    )
+
+    status, _content_type, body = route_response(
+        f"{CCLD_RETRIEVAL_JOB_DETAIL_PATH}?job_id=completed-job",
+        auth_runtime_config=auth_config,
+        page_data_mode="postgres",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 401
+    assert "CCLD workflow access requires sign-in" in html
     assert_no_secret_html(html)
 
 
@@ -643,6 +830,7 @@ def _insert_history_job(
     warnings: tuple[str, ...] = (),
     errors: tuple[str, ...] = (),
     source_artifact_identity: str | None = None,
+    raw_storage_path: str = "raw",
     safe_message: str = "Controlled CCLD retrieval status is available.",
 ) -> None:
     connection.execute(
@@ -665,7 +853,7 @@ def _insert_history_job(
             request_limit="1",
             retry_limit="0",
             timeout_seconds="5",
-            raw_storage_path="raw",
+            raw_storage_path=raw_storage_path,
             source_artifact_identity=source_artifact_identity,
             result_counts=result_counts or {},
             warnings=list(warnings),

@@ -98,6 +98,15 @@ queue only when records were imported, points confusing or failing jobs to
 `/feedback`, does not expose raw stack traces or private values, does not mutate
 source-derived, reviewer-created, audit, feedback, import, or unrelated
 operational rows, and uses mocked retrieval data only.
+Retrieval job detail tests should prove history rows link to the detail route;
+allowed local/test actors can view one job; anonymous production access is
+blocked; missing or invalid job IDs render safe states; facility/date/type,
+state, timestamps, imported counts, safe status messages, warning/error
+summaries, raw-artifact-preserved indicators, review-queue links, and feedback
+links render without exposing raw file contents, raw server paths, stack traces,
+provider values, tokens, cookies, private headers, connection strings, or
+secrets; and detail reads do not mutate source-derived, reviewer-created,
+feedback, import, audit, or operational rows.
 GitHub Issues feedback intake tests must prove the feedback page renders, the
 feedback type dropdown has exactly bug report, feature request, and new data
 source options, description and submit controls are accessible, missing values

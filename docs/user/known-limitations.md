@@ -202,4 +202,8 @@
   scheduler, source-completeness report, legal conclusion, or proof that all CCLD
   records for a facility/date range were found. It does not show raw source
   narrative content, raw artifact file contents, or server-specific raw paths.
+- Retrieval job detail pages show one job's safe operational metadata only. They
+  are not raw artifact viewers, audit records, legal conclusions, or source-
+  completeness reports, and they do not expose raw source narrative content,
+  raw artifact file contents, raw server paths, stack traces, or private values.
 - Datasette accessibility depends partly on the installed Datasette version, browser, and assistive technology. Validate keyboard navigation, table headers, focus visibility, and exported table usability before treating a release as stable.
