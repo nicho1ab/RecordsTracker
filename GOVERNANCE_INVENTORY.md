@@ -35,8 +35,8 @@
   note/status indicators, open detail, view a plain-language record summary,
   safe source traceability fields with clearer selected-record and missing-value
   guidance, safe related seeded bundle context,
-  reviewer-created notes/statuses, CCLD return links, and record-specific
-  feedback clues, submit note/status forms through those existing workflow
+  reviewer-created notes/statuses, CCLD return links, and clearer record-specific
+  feedback handoff cues, submit note/status forms through those existing workflow
   actions, see clearer saved-state confirmations, same-request return-to-queue
   progress guidance, and next-record steps,
   and see read-after-write

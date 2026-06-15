@@ -106,6 +106,11 @@ notes/statuses are reviewer-created state, queue progress and note/status cues
 are derived from that state, the tester may need to resubmit the same local/test
 facility/date request context to refresh the queue display, and the next record
 should be chosen from the refreshed queue.
+Reviewer detail feedback handoff cues should be record-specific and brief. They
+should tell testers what source traceability, source context, note/status
+confirmation, same-queue return, queue refresh, unexpected-record, confusing
+label, wording, keyboard-flow, or next-step observations to carry into the
+existing manual checklist without adding a new feedback workflow.
 
 The first browser-accessible CCLD record request page is a local/test, server-
 rendered HTML surface at `/ccld/records/request`. Its design purpose is to
