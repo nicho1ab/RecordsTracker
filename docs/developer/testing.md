@@ -134,6 +134,10 @@ Feedback checklist bridge coverage should verify that reviewer detail points
 those observations to the existing manual checklist without rendering a second
 checklist, storing feedback, sending feedback, exporting feedback, or mutating
 source-derived, reviewer-created, audit, import, or operational metadata rows.
+Queue-to-detail checklist continuity coverage should verify that queue pages,
+reviewer detail pages, and note/status confirmations point to the same existing
+manual checklist for queue-level and detail-level observations while preserving
+single-checklist/manual-copy behavior.
 Next-record navigation coverage should verify that queue and detail pages tell
 testers how to return to the same request context, resubmit when needed, and use
 suggested-next cues derived from existing reviewer-created state without

@@ -2078,6 +2078,10 @@ def _render_detail_feedback_guidance(
                 <p>Use the existing manual feedback checklist on the CCLD request queue for
                 record-specific observations from this detail. Do not create a separate
                 checklist from this page.</p>
+                <p>Use that same checklist for queue-level observations and detail-level
+                observations so request context, queue filters, source traceability,
+                source-confidence cues, field-note uncertainty, note/status confirmation,
+                return-to-queue refresh, and suggested-next-record confusion stay together.</p>
                 <ul>
                     <li>Source traceability: note fields that were easy to confirm, missing, or
                     confusing.</li>

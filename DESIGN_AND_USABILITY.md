@@ -129,6 +129,11 @@ field-note, source-traceability, note/status confirmation, and return-to-queue
 observations to that same existing manual checklist. They must not duplicate the
 checklist, create a new feedback form, persist feedback, send feedback, or imply
 export/audit workflow behavior.
+Queue-to-detail checklist continuity cues should use the same manual checklist
+for queue-level and detail-level observations. Queue filters, filtered-empty
+states, no-match/load states, reviewer detail, note/status confirmation,
+return-to-queue refresh, and next-record confusion should point to one checklist
+without adding another checklist or workflow.
 Reviewer detail and request-queue navigation should make next-record movement
 clear without implying persisted assignment, record claiming, or production
 workflow state. Suggested-next cues should remain derived from the current
