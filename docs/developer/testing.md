@@ -254,7 +254,12 @@ from the operator/runtime/auth/tester-decision docs, lists the ordered pre-invit
 path, includes verifier, seeded evidence, and route evidence command shapes,
 requires disabled local-dev auth for QNAP, lists the evidence packet and
 do-not-invite-until checklist, links to ADR-0011 and ADR-0014, and avoids real
-secrets or public-source/legal conclusions.
+secrets or public-source/legal conclusions. They should also prove the final
+completion marker states the QNAP pilot pre-invite readiness path is complete
+only after the access-method decision is recorded and the evidence packet is
+generated from real pilot inputs, and that no more readiness-only branches should
+be added unless a concrete validation, security, privacy, data-integrity, or
+tester-blocking defect is found.
 QNAP evidence packet command tests should prove the optional PowerShell command
 exists, parses, accepts `-EnvFile`, `-BaseUrl`, `-OutputDir`,
 `-SkipDatabaseCheck`, and `-AllowRouteUnavailable`, invokes the existing QNAP
