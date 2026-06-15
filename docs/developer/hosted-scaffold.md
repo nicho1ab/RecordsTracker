@@ -227,16 +227,16 @@ lets a local tester search/select a seeded source-derived complaint record, see
 list-level reviewer-created note/status indicators before opening detail, open
 detail, view a plain-language record summary, safe source traceability fields,
 clear available/missing traceability cues, safe related seeded bundle context,
-reviewer-created notes/statuses, CCLD return
-links, and record-specific feedback clues, submit a bounded reviewer note, submit
+reviewer-created notes/statuses, CCLD return links, and record-specific
+feedback handoff cues, submit a bounded reviewer note, submit
 a bounded reviewer status, see a saved-state confirmation with same-request
 return-to-queue progress guidance, and see read-after-write reviewer-created state on the page. No-search-results,
 missing-record, invalid-form, and permission-blocked states include clear
 browser guidance and links back to useful local/test next steps. Narrative source fields are hidden in the browser shell.
 Reviewer pages include skip-to-main links, CCLD workflow navigation, first-run
 detail steps, source traceability review guidance before note/status actions,
-record-specific note/status action text, same request-context return guidance,
-queue progress refresh wording, and confirmation guidance
+record-specific note/status action text, record-specific feedback handoff cues,
+same request-context return guidance, queue progress refresh wording, and confirmation guidance
 while preserving the existing write and audit paths.
 
 The UI is intentionally plain server-rendered HTML. It reuses the existing

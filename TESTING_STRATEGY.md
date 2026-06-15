@@ -107,6 +107,11 @@ Reviewer note/status confirmation tests should cover return-to-same-queue
 guidance, same facility/date request-context reminders, queue cues derived from
 reviewer-created state, resubmit-to-refresh wording, next-record guidance, and
 preserved no-mutation behavior.
+Reviewer detail feedback handoff tests should prove record-specific cues render
+near detail feedback guidance, identify observations to carry into the existing
+manual checklist, preserve note/status confirmation and return-to-queue wording,
+remain no-secret, and do not mutate source-derived, reviewer-created, audit,
+import, or operational metadata rows during detail rendering.
 Hosted CCLD record request UI tests must prove the browser-accessible local/test
 request page accepts only CCLD digit facility/license numbers plus optional
 valid date ranges, returns accessible validation guidance for missing or invalid

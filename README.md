@@ -48,7 +48,8 @@ experience.
    use clearer no-match and local validated load guidance when currently loaded
    local/test data has no matching records,
    review clearer selected-record source traceability cues before adding notes or
-   status, see clearer note/status save confirmations, return to the same CCLD
+   status, use record-specific feedback handoff cues, see clearer note/status
+   save confirmations, return to the same CCLD
    request context to resubmit when needed, see updated queue cues, continue to
    the next record after notes/statuses, and read first-time workflow help
    without running live crawling from a browser request.

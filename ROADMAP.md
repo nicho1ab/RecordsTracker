@@ -444,6 +444,12 @@ the governed primary future review experience.
 	adjust facility/date criteria, use the existing load/refresh action, or follow
 	the outside-browser live-fetch/artifact-builder workflow without adding browser
 	retrieval, connector execution, persistence, schema changes, or non-CCLD scope.
+- Improved local/test reviewer detail feedback handoff cues so testers can carry
+	record-specific source traceability, source-context, note/status confirmation,
+	same-queue return, queue refresh, and confusing-wording observations into the
+	existing manual feedback checklist without adding persisted feedback, schema
+	changes, new note/status behavior, live browser retrieval, connector execution,
+	or non-CCLD scope.
 - Improved the local/test CCLD facility lookup and request/result queue context
 	confirmation so testers can see whether a request came from lookup selection or
 	manual entry, confirm the facility/license number, date range, active facility

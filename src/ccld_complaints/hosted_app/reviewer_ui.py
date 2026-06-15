@@ -1045,7 +1045,7 @@ def _render_detail(
         {_render_source_context_section(related_records, source_record_key)}
     {_render_reviewer_state_section(detail)}
         {_render_review_actions(source_record_key, return_context)}
-        {_render_detail_feedback_guidance(source_record, related_records)}""",
+        {_render_detail_feedback_guidance(source_record, related_records, return_context)}""",
     )
 
 
@@ -1794,15 +1794,16 @@ def _render_status_form(
 
 
 def _render_detail_feedback_guidance(
-        source_record: Mapping[str, Any],
-        related_records: list[Mapping[str, Any]],
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
 ) -> str:
-        identity = _mapping(source_record, "identity")
-        original_values = _mapping(source_record, "original_values")
-        source_document = _mapping(source_record, "source_document")
-        facility = _facility_context(related_records)
-        ccld_request_href = _ccld_request_href(related_records)
-        return f"""<section id="detail-feedback-heading" aria-labelledby="detail-feedback-title">
+    identity = _mapping(source_record, "identity")
+    original_values = _mapping(source_record, "original_values")
+    source_document = _mapping(source_record, "source_document")
+    facility = _facility_context(related_records)
+    ccld_request_href = _ccld_request_href(related_records, return_context)
+    return f"""<section id="detail-feedback-heading" aria-labelledby="detail-feedback-title">
             <h2 id="detail-feedback-title">Feedback clues for this record</h2>
             <p>If this detail looks wrong or incomplete, return to the CCLD request page and copy
             the tester feedback checklist. Include the record identifiers below and describe what
@@ -1819,12 +1820,42 @@ def _render_detail_feedback_guidance(
                 <dd>{_escape(_string(identity, 'source_record_key'))}</dd>
                 <dt>Source document ID</dt>
                 <dd>{_escape(_string(source_document, 'source_document_id'))}</dd>
+                <dt>Return request context</dt>
+                <dd>{_escape(_detail_feedback_request_context(return_context))}</dd>
             </dl>
+            <section aria-labelledby="record-feedback-handoff-heading">
+                <h3 id="record-feedback-handoff-heading">Record-specific feedback handoff</h3>
+                <p>Carry these observations into the existing manual feedback checklist when
+                they apply. This page does not save, send, export, or persist feedback.</p>
+                <ul>
+                    <li>Source traceability observations: fields that were easy to confirm,
+                    missing, or confusing.</li>
+                    <li>Source context confusion: unclear related source rows, hidden narrative
+                    expectations, or labels that made this complaint hard to identify.</li>
+                    <li>Request-context fit: whether this complaint seemed unexpected for the
+                    facility/date request you used to open it.</li>
+                    <li>Note/status behavior: whether the save confirmation appeared, the saved
+                    reviewer-created state was visible, and the return-to-queue link worked.</li>
+                    <li>Queue refresh behavior: whether returning to the same CCLD request
+                    context and resubmitting showed understandable progress and status cues.</li>
+                    <li>Friction: confusing labels, wording, keyboard flow, or next steps that
+                    slowed record review.</li>
+                </ul>
+            </section>
             <ul>
                 <li><a href="{_escape(ccld_request_href)}">Return to CCLD request or queue</a></li>
                 <li><a href="{CCLD_HELP_PATH}">Open CCLD workflow help</a></li>
             </ul>
         </section>"""
+
+
+def _detail_feedback_request_context(return_context: CcldQueueReturnContext) -> str:
+    if return_context.facility_number is None:
+        return "not carried from a CCLD request queue"
+    return (
+        f"facility/license number {return_context.facility_number}; "
+        f"date range {_return_context_date_range(return_context)}"
+    )
 
 
 def _render_status_option(status: str) -> str:
@@ -1871,6 +1902,9 @@ def _render_notice(
                 to refresh its displayed cues.</p>
                 <p>After the queue shows the updated cue, open the suggested next record or the
                 next not-started record to continue review.</p>
+                <p>If the saved confirmation, same-context return link, or refreshed queue cue
+                did not behave as expected, include that record-specific observation in the
+                manual feedback checklist.</p>
                 <dl>
                     <dt>Same facility/license number</dt>
                     <dd>{_escape(_display_value(return_context.facility_number))}</dd>

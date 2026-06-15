@@ -1040,7 +1040,8 @@ def _render_queue_triage_summary(
         <dd>{next_record_markup}</dd>
       </dl>
       <p>The feedback checklist below uses these queue counts and reviewer-state cues so
-      testers can report missing records, confusing wording, or unexpected filter behavior.</p>
+            testers can report missing records, record-specific reviewer-detail observations,
+            confusing wording, or unexpected filter behavior.</p>
     </section>"""
 
 

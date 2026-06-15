@@ -53,6 +53,9 @@ Accessibility requirements apply to:
 	Reviewer note/status saved confirmations must expose return-to-queue guidance,
 	same facility/date request-context reminders, queue-progress refresh guidance,
 	and next-record guidance as visible text with descriptive links.
+	Reviewer detail feedback handoff cues must be visible text near detail feedback
+	guidance and must name record-specific observations a tester can carry into the
+	manual checklist without requiring JavaScript or persisted feedback.
 - The local/test hosted CCLD record request page must use semantic headings,
 	labeled facility/license number and date controls, accessible validation
 	messages, labeled local validated load controls, table captions/headings for
