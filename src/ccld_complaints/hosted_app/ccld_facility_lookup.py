@@ -3,9 +3,10 @@ from __future__ import annotations
 import csv
 import html
 import os
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
 CCLD_FACILITY_LOOKUP_PATH = "/ccld/facilities"
@@ -196,6 +197,13 @@ def search_ccld_facilities(
 
 
 def route_ccld_facility_lookup_response(path: str) -> tuple[int, str, bytes]:
+    return route_ccld_facility_lookup_response_with_source(path, None)
+
+
+def route_ccld_facility_lookup_response_with_source(
+    path: str,
+    reference_source: CcldFacilityReferenceSource | None,
+) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
     if parsed_url.path != CCLD_FACILITY_LOOKUP_PATH:
         return _html_response(
@@ -208,11 +216,14 @@ def route_ccld_facility_lookup_response(path: str) -> tuple[int, str, bytes]:
         )
     query_values = parse_qs(parsed_url.query, keep_blank_values=True)
     query = _first_query_value(query_values, "q")
-    return _html_response(200, render_ccld_facility_lookup_page(query))
+    return _html_response(200, render_ccld_facility_lookup_page(query, reference_source))
 
 
-def render_ccld_facility_lookup_page(query: str = "") -> str:
-    reference_source = load_active_ccld_facility_reference()
+def render_ccld_facility_lookup_page(
+    query: str = "",
+    reference_source: CcldFacilityReferenceSource | None = None,
+) -> str:
+    reference_source = reference_source or load_active_ccld_facility_reference()
     result = search_ccld_facilities(
         query,
         reference_source.records,
@@ -222,12 +233,12 @@ def render_ccld_facility_lookup_page(query: str = "") -> str:
         title="Find CCLD facility",
         heading="Find CCLD facility",
         main=f"""    <section aria-labelledby="facility-lookup-scope-heading">
-      <h2 id="facility-lookup-scope-heading">CCLD-only local/test facility lookup</h2>
-            <p>This lookup reads a full local/test CCLD facility reference CSV when configured
-            or available, otherwise it falls back to the committed tiny fixture CSV. It helps
-            carry a public facility/license number into the CCLD request workflow.</p>
-      <p>The lookup does not run live CCLD retrieval, query the public portal, import records,
-      persist data, or prove public-source completeness.</p>
+      <h2 id="facility-lookup-scope-heading">CCLD-only facility lookup</h2>
+            <p>This lookup reads PostgreSQL-backed source-derived facility rows when
+            configured for production data, or local fixture/reference CSV rows only when
+            explicit local demo mode is enabled.</p>
+      <p>The lookup does not run live CCLD retrieval, query the public portal, mutate records,
+      or prove public-source completeness.</p>
     </section>
         <section aria-labelledby="facility-first-run-heading">
             <h2 id="facility-first-run-heading">Start here: find a facility</h2>
@@ -250,6 +261,66 @@ def render_ccld_facility_lookup_page(query: str = "") -> str:
       <p><a href="{CCLD_RECORD_REQUEST_PATH}">Open manual CCLD request form</a></p>
     </section>""",
     )
+
+
+def facility_reference_from_source_derived_records(
+    records: Iterable[Mapping[str, Any]],
+    *,
+    warning: str | None = None,
+) -> CcldFacilityReferenceSource:
+    facility_records = tuple(
+        sorted(
+            (
+                _facility_lookup_record_from_source_record(record)
+                for record in records
+                if _source_record_entity_type(record) == "facility"
+            ),
+            key=lambda record: (record.facility_name, record.facility_number),
+        )
+    )
+    warnings = () if warning is None else (warning,)
+    if not facility_records and warning is None:
+        warnings = (
+            "No PostgreSQL-backed source-derived facility rows are loaded yet. "
+            "Run migrations and import a validated CCLD artifact before facility search.",
+        )
+    return CcldFacilityReferenceSource(
+        source_kind="postgres_source_derived",
+        label="PostgreSQL source-derived facility records",
+        path_label="hosted_source_derived_records",
+        records=facility_records,
+        warnings=warnings,
+    )
+
+
+def _source_record_entity_type(record: Mapping[str, Any]) -> str:
+    value = record.get("entity_type")
+    return value if isinstance(value, str) else ""
+
+
+def _facility_lookup_record_from_source_record(
+    record: Mapping[str, Any],
+) -> CcldFacilityLookupRecord:
+    original_values = record.get("original_values")
+    values = original_values if isinstance(original_values, Mapping) else {}
+    facility_number = _source_value(values, "external_facility_number") or _source_value(
+        values, "facility_id"
+    )
+    return CcldFacilityLookupRecord(
+        facility_number=facility_number,
+        facility_name=_source_value(values, "facility_name"),
+        city=_source_value(values, "city"),
+        county=_source_value(values, "county"),
+        zip_code=_source_value(values, "zip_code"),
+        facility_type=_source_value(values, "facility_type"),
+        status=_source_value(values, "status"),
+        closed_date=_source_value(values, "closed_date"),
+    )
+
+
+def _source_value(values: Mapping[str, Any], key: str) -> str:
+    value = values.get(key)
+    return value.strip() if isinstance(value, str) else ""
 
 
 def _record_from_row(row: dict[str, str]) -> CcldFacilityLookupRecord:

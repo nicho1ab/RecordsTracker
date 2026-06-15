@@ -38,6 +38,8 @@ Required values:
 - `CCLD_POSTGRES_PASSWORD`: deployment-specific PostgreSQL password, stored only
   in the untracked host `.env` file.
 - `CCLD_HOSTED_PORT`: host port mapped to container port `8000`.
+- `CCLD_HOSTED_PAGE_DATA_MODE`: use `postgres` for QNAP and future hosted
+  deployments. Use `fixture-demo` only for explicit local demos and tests.
 
 Provider-agnostic hosted tester auth values:
 
@@ -63,6 +65,13 @@ Optional value:
 The app receives `CCLD_HOSTED_TESTER_DATABASE_URL` from Compose. Do not commit a
 database connection string. Do not print the connection string in logs, docs,
 tests, screenshots, or support notes.
+
+In PostgreSQL page-data mode, core workflow pages use the hosted source-derived,
+import, and reviewer-created state services. If the database is not migrated,
+not reachable, or empty, pages show setup-required guidance instead of falling
+back silently to fixture data. Before a QNAP pilot, run migrations and import a
+validated CCLD artifact so facility lookup, request queue, and reviewer detail
+have source-derived rows to read.
 
 Do not commit provider secrets, tenant-specific private values, hosted callback
 URLs, tokens, cookies, or raw provider claims. This branch documents the auth
@@ -162,6 +171,11 @@ After starting the runtime, check the health route and core local/test pages:
 The scaffold should continue to identify itself as local/test. It should not
 claim real OIDC login, token handling, sessions, cookies, live browser retrieval,
 connector execution, public launch, or source completeness.
+
+In production auth mode, protected workflow routes such as `/ccld/records/request`
+and `/reviewer` return a sign-in-required page until a real provider-backed
+actor context is supplied by a later OIDC implementation. Public help remains
+available at `/ccld/help`.
 
 ## Portability Notes
 

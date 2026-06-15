@@ -964,6 +964,7 @@ def test_reviewer_ui_default_route_context_is_browser_accessible() -> None:
     status, content_type, body = route_response(
         "/reviewer",
         auth_runtime_config=_local_dev_auth_config(),
+        page_data_mode="fixture-demo",
     )
     html = body.decode("utf-8")
 

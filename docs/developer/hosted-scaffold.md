@@ -104,7 +104,9 @@ available. The PowerShell script explicitly sets `CCLD_HOSTED_TESTER_AUTH_MODE`
 to `local-dev` and `CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH` to `enabled` when those
 variables are not already set, so local browser workflow pages can use the
 fixture tester actor. Production/QNAP runtime should keep local-dev auth
-disabled.
+disabled. The same script sets `CCLD_HOSTED_PAGE_DATA_MODE=fixture-demo` unless
+the variable is already set, so workstation demos can still use fixture data.
+Production/QNAP runtime should use `CCLD_HOSTED_PAGE_DATA_MODE=postgres`.
 The home page includes a skip-to-main link and visible start-here guidance for
 the first CCLD review session path: facility lookup or manual entry, CCLD
 request-context confirmation, loaded local/test queue, reviewer detail source
@@ -181,6 +183,25 @@ tokens, cookies, raw provider claims, or real user identifiers. Reviewer pages m
 show a safe signed-in tester label when an actor context is present, but they
 must not render provider subjects, issuers, raw claims, tokens, cookies, or
 private headers.
+
+## Page Data Mode
+
+Core hosted pages now choose their data source explicitly:
+
+- `CCLD_HOSTED_PAGE_DATA_MODE=postgres`: production-style mode. Facility lookup
+  reads source-derived facility rows from `hosted_source_derived_records` through
+  the hosted service context, request queues read source-derived records through
+  the source-derived route seam, and reviewer detail composes source-derived plus
+  reviewer-created state from database-backed contexts.
+- `CCLD_HOSTED_PAGE_DATA_MODE=fixture-demo`: local/demo mode only. The scaffold
+  uses the tiny committed fixture corpus and CSV fallback paths for tests and
+  workstation demos.
+
+When PostgreSQL mode is selected but no migrated/imported database context is
+available, pages show setup-required guidance. They do not silently fall back to
+fixtures, run live CCLD retrieval, execute connectors, mutate source-derived
+records, or expose raw narrative fields. Retrieval job result display remains
+deferred until retrieval jobs are approved and implemented.
 
 ## Open the CCLD record request page
 

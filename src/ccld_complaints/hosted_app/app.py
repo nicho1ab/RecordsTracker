@@ -4,11 +4,14 @@ import argparse
 import csv
 import html
 import json
+import os
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
+
+from sqlalchemy import create_engine
 
 from ccld_complaints.hosted_app.audit_coverage_plan import (
     AUDIT_COVERAGE_PLAN_API_PATH,
@@ -32,15 +35,23 @@ from ccld_complaints.hosted_app.auth_provider_integration_plan import (
 )
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_LOOKUP_PATH,
+    CcldFacilityReferenceSource,
+    facility_reference_from_source_derived_records,
     route_ccld_facility_lookup_response,
+    route_ccld_facility_lookup_response_with_source,
 )
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     CCLD_HELP_PATH,
     CCLD_RECORD_REQUEST_PATH,
     CCLD_UI_PREFIX,
     CcldRecordRequestUiContext,
+    ccld_record_request_context_for_reviewer_context,
     default_ccld_record_request_ui_context,
     route_ccld_record_request_ui_response,
+)
+from ccld_complaints.hosted_app.persistence import (
+    HostedDatabaseConfigError,
+    load_hosted_database_config,
 )
 from ccld_complaints.hosted_app.reset_reload_dry_run import (
     SEEDED_CORPUS_RESET_RELOAD_DRY_RUN_API_PATH,
@@ -63,9 +74,12 @@ from ccld_complaints.hosted_app.reviewer_created_state_routes import (
     route_reviewer_created_state_api_response,
 )
 from ccld_complaints.hosted_app.reviewer_ui import (
+  LOCAL_REVIEWER_UI_SCOPE,
     REVIEWER_UI_PREFIX,
     ReviewerUiContext,
     default_local_test_reviewer_ui_context,
+  local_test_reviewer_actor,
+  reviewer_ui_context_for_connection,
     route_reviewer_ui_response,
 )
 from ccld_complaints.hosted_app.reviewer_workflow_shell import (
@@ -83,6 +97,9 @@ SAMPLE_DATA_NOTICE = "Local sample source-derived data only; no live public-sour
 AUTH_LOGIN_PATH = "/auth/login"
 AUTH_LOGOUT_PATH = "/auth/logout"
 AUTH_STATUS_PATH = "/auth/status"
+PAGE_DATA_MODE_ENV = "CCLD_HOSTED_PAGE_DATA_MODE"
+POSTGRES_PAGE_DATA_MODE = "postgres"
+FIXTURE_DEMO_PAGE_DATA_MODE = "fixture-demo"
 PUBLIC_SOURCE_FACILITY_FIXTURE_DIR = (
     Path(__file__).resolve().parents[3]
     / "tests"
@@ -90,6 +107,7 @@ PUBLIC_SOURCE_FACILITY_FIXTURE_DIR = (
     / "public_source_facilities"
 )
 SOURCE_COVERAGE_FACILITY_FIXTURE = "chhs_facility_master_tiny.csv"
+_DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT: ReviewerUiContext | None = None
 
 
 @dataclass(frozen=True)
@@ -1109,12 +1127,14 @@ def route_response(
         ResetReloadPlanningMetadataApiContext | None
     ) = None,
     auth_runtime_config: HostedAuthRuntimeConfig | None = None,
+    page_data_mode: str | None = None,
     reviewer_ui_context: ReviewerUiContext | None = None,
     ccld_record_request_ui_context: CcldRecordRequestUiContext | None = None,
 ) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
     parsed_path = parsed_url.path
     active_auth_config = _active_auth_runtime_config(auth_runtime_config)
+    active_page_data_mode = _active_page_data_mode(page_data_mode)
     if parsed_path in {AUTH_LOGIN_PATH, AUTH_LOGOUT_PATH}:
         return _auth_placeholder_response(parsed_path, active_auth_config)
     if parsed_path == AUTH_STATUS_PATH:
@@ -1123,19 +1143,30 @@ def route_response(
         path = CCLD_HELP_PATH
         parsed_path = CCLD_HELP_PATH
     if parsed_path == CCLD_FACILITY_LOOKUP_PATH:
-        return route_ccld_facility_lookup_response(path)
+        if active_page_data_mode == FIXTURE_DEMO_PAGE_DATA_MODE:
+            return route_ccld_facility_lookup_response(path)
+        active_ccld_context = _default_ccld_context_for_mode(
+            active_auth_config,
+            active_page_data_mode,
+            ccld_record_request_ui_context,
+        )
+        if active_ccld_context is None:
+            return _postgres_setup_required_response("Facility search setup required")
+        facility_reference = _facility_reference_from_context(active_ccld_context)
+        return route_ccld_facility_lookup_response_with_source(path, facility_reference)
     if parsed_path.startswith(CCLD_UI_PREFIX):
-        active_ccld_context = (
-            default_ccld_record_request_ui_context()
-            if ccld_record_request_ui_context is None
-            and active_auth_config.local_dev_actor_allowed
-            else ccld_record_request_ui_context
+        active_ccld_context = _default_ccld_context_for_mode(
+            active_auth_config,
+            active_page_data_mode,
+            ccld_record_request_ui_context,
         )
         if active_ccld_context is None and parsed_path != CCLD_HELP_PATH:
+            if active_auth_config.local_dev_actor_allowed:
+                return _postgres_setup_required_response("CCLD request setup required")
             return _auth_required_response(
                 "CCLD workflow access requires sign-in",
-              "CCLD request, feedback, retrieval, and import actions require "
-              "an authenticated tester or operator in this runtime mode.",
+                "CCLD request, feedback, retrieval, and import actions require "
+                "an authenticated tester or operator in this runtime mode.",
             )
         return route_ccld_record_request_ui_response(
             path,
@@ -1144,17 +1175,18 @@ def route_response(
             request_body=request_body,
         )
     if parsed_path.startswith(REVIEWER_UI_PREFIX):
-        active_reviewer_ui_context = (
-            default_local_test_reviewer_ui_context()
-        if reviewer_ui_context is None
-        and active_auth_config.local_dev_actor_allowed
-            else reviewer_ui_context
+        active_reviewer_ui_context = _default_reviewer_context_for_mode(
+            active_auth_config,
+            active_page_data_mode,
+            reviewer_ui_context,
         )
         if active_reviewer_ui_context is None:
+            if active_auth_config.local_dev_actor_allowed:
+                return _postgres_setup_required_response("Reviewer setup required")
             return _auth_required_response(
                 "Reviewer access requires sign-in",
-              "Reviewer-created notes/status, workflow actions, feedback, "
-              "retrieval jobs, and operational actions are not available anonymously.",
+                "Reviewer-created notes/status, workflow actions, feedback, "
+                "retrieval jobs, and operational actions are not available anonymously.",
             )
         return route_reviewer_ui_response(
             path,
@@ -1240,6 +1272,100 @@ def _active_auth_runtime_config(
         return load_hosted_auth_runtime_config()
     except HostedAuthConfigError:
         return load_hosted_auth_runtime_config(environ={})
+
+
+def _active_page_data_mode(page_data_mode: str | None) -> str:
+    configured_mode = page_data_mode or os.environ.get(PAGE_DATA_MODE_ENV) or ""
+    raw_mode = configured_mode.strip().lower()
+    mode = raw_mode or POSTGRES_PAGE_DATA_MODE
+    if mode not in {POSTGRES_PAGE_DATA_MODE, FIXTURE_DEMO_PAGE_DATA_MODE}:
+        return POSTGRES_PAGE_DATA_MODE
+    return mode
+
+
+def _default_reviewer_context_for_mode(
+    auth_runtime_config: HostedAuthRuntimeConfig,
+    page_data_mode: str,
+    explicit_context: ReviewerUiContext | None,
+) -> ReviewerUiContext | None:
+    if explicit_context is not None:
+        return explicit_context
+    if not auth_runtime_config.local_dev_actor_allowed:
+        return None
+    if page_data_mode == FIXTURE_DEMO_PAGE_DATA_MODE:
+        return default_local_test_reviewer_ui_context()
+    return _default_postgres_reviewer_context()
+
+
+def _default_ccld_context_for_mode(
+    auth_runtime_config: HostedAuthRuntimeConfig,
+    page_data_mode: str,
+    explicit_context: CcldRecordRequestUiContext | None,
+) -> CcldRecordRequestUiContext | None:
+    if explicit_context is not None:
+        return explicit_context
+    reviewer_context = _default_reviewer_context_for_mode(
+        auth_runtime_config,
+        page_data_mode,
+        None,
+    )
+    if reviewer_context is None:
+        return None
+    if page_data_mode == FIXTURE_DEMO_PAGE_DATA_MODE:
+        return default_ccld_record_request_ui_context()
+    return ccld_record_request_context_for_reviewer_context(reviewer_context)
+
+
+def _default_postgres_reviewer_context() -> ReviewerUiContext | None:
+    global _DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT
+    if _DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT is not None:
+        return _DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT
+    try:
+        database_config = load_hosted_database_config()
+    except HostedDatabaseConfigError:
+        return None
+    if database_config.database_url is None:
+        return None
+    engine = create_engine(database_config.database_url)
+    connection = engine.connect()
+    _DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT = reviewer_ui_context_for_connection(
+        connection,
+        actor=local_test_reviewer_actor(),
+        scope=LOCAL_REVIEWER_UI_SCOPE,
+    )
+    return _DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT
+
+
+def _facility_reference_from_context(
+    context: CcldRecordRequestUiContext,
+) -> CcldFacilityReferenceSource:
+    status, _content_type, body = route_source_derived_api_response(
+        "/api/source-derived-records?limit=100",
+        context.reviewer_ui_context.workflow_shell_context.source_derived_api_context,
+    )
+    if status != 200:
+        return facility_reference_from_source_derived_records(
+            (),
+            warning=(
+                "PostgreSQL-backed source-derived facility rows could not be read. "
+                "Confirm the database is migrated, imported, and accessible to this actor."
+            ),
+        )
+    payload = json.loads(body.decode())
+    records = payload.get("records", [])
+    if not isinstance(records, list):
+        records = []
+    return facility_reference_from_source_derived_records(records)
+
+
+def _postgres_setup_required_response(heading: str) -> tuple[int, str, bytes]:
+    return _auth_html_response(
+        503,
+        heading,
+        "PostgreSQL-backed page data is selected, but no migrated/imported hosted "
+        "source-derived database context is available. Run Alembic migrations, import a "
+        "validated CCLD artifact, and keep fixture-demo mode limited to explicit local demos.",
+    )
 
 
 def _auth_status_response(
