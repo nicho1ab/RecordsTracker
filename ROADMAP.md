@@ -250,9 +250,10 @@ the governed primary future review experience.
 - Added a small retrieval job history/status page over existing operational
 	metadata so testers and operators can see recent controlled CCLD retrieval jobs,
 	facility/date/type request context, state, timestamps, imported-record counts,
-	safe warning/error summaries, review-queue links when records were imported,
-	and feedback guidance without adding audit export, broader audit UI, scheduler
-	behavior, or new retrieval capability.
+	safe warning/error summaries, per-job detail pages, review-queue links when
+	records were imported, and feedback guidance without adding audit export,
+	broader audit UI, scheduler behavior, raw artifact viewing, or new retrieval
+	capability.
 - Added the first QNAP-first, cloud-portable Docker Compose runtime envelope for
 	the hosted CCLD scaffold with a Python app container, PostgreSQL in Docker,
 	Alembic startup migration wiring, health checks, named volumes, `.env.example`,

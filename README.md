@@ -65,7 +65,9 @@ experience.
    small `/ccld/retrieval/jobs` page shows recent retrieval job history/status
    from existing operational metadata, including request context, state,
    timestamps, import counts, warning/error summaries, and review links when
-   records were imported. Tests use mocked CCLD retrieval only.
+   records were imported. Each history row can open a read-only detail page for
+   one job with safe timestamps, counts, raw-artifact-preserved status, and next
+   steps. Tests use mocked CCLD retrieval only.
 - Includes a local/test hosted CCLD record request page where a tester can enter
    a CCLD facility/license number and optional date range, read matching seeded
    source-derived records, load or refresh matching CCLD records from validated

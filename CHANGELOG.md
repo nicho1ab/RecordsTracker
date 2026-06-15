@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added a small controlled CCLD retrieval job detail page at
+	`/ccld/retrieval/jobs/detail?job_id=`. History rows now link to a read-only
+	detail view for one job showing safe request context, state, timestamps,
+	imported-record count, warning/error summaries, raw-artifact-preserved status,
+	review-queue links when records were imported, and feedback/help/history links
+	without adding audit export, raw artifact viewing, retrieval capability, new
+	record types, live test calls, or broad UI changes.
 - Added a small controlled CCLD retrieval job history/status page at
 	`/ccld/retrieval/jobs`. The page lists recent jobs from existing operational
 	metadata, shows facility/date/type request context, state, timestamps, import
