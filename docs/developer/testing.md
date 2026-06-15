@@ -211,6 +211,14 @@ artifact, prove deterministic ordering, prove source traceability preservation,
 reject missing or unsafe traceability fields, and prove no live crawling or
 browser-triggered connector execution is required.
 
+Docker runtime tests should statically validate `Dockerfile`,
+`docker-compose.qnap.yml`, and `.env.example` for the QNAP-first PostgreSQL
+runtime. They should prove the examples use placeholder-only environment values,
+PostgreSQL in Docker, named volumes, health checks, Alembic migration startup,
+portable paths, and no committed secrets. When Docker is available, developers
+may also run a bounded Compose configuration validation, but Docker availability
+is not required for the standard local non-Docker scaffold workflow.
+
 Hosted reviewer-created state read route tests must prove persisted scaffold
 rows are readable only through authenticated, active, role/scope-allowed local/
 test routes with reviewer-state read permission. Tests should cover authorized

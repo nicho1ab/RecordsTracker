@@ -172,9 +172,17 @@
 - Production-readiness items such as source-verification planning, auth provider
     integration, audit UI/export, export packet generation, reset/reload execution,
     deployment, database-backed lookup, live browser retrieval, connector
+- Production-readiness items such as source-verification planning, auth provider
+    integration, audit UI/export, export packet generation, reset/reload execution,
+    public deployment, production monitoring, database-backed lookup, live browser retrieval, connector
     execution, non-CCLD sources, and persisted tester feedback remain deferred
     unless they directly unlock tester value or resolve a concrete MVP-blocking
     risk.
+- The QNAP-first Docker Compose runtime is a production-like container envelope
+    for the hosted scaffold and PostgreSQL. It is not production authentication,
+    public URL approval, hosted live CCLD retrieval, browser-triggered connector
+    execution, production import automation, monitoring, incident response, or a
+    guarantee that external testers can safely access the app yet.
 - The local hosted scaffold `/facilities` list and detail pages use committed
     tiny public-source facility fixtures and manifest placeholder metadata only.
     The facility detail source coverage panel and related source-record links

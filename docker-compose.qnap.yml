@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${CCLD_POSTGRES_DB:-ccld_records}
+      POSTGRES_USER: ${CCLD_POSTGRES_USER:-ccld_app}
+      POSTGRES_PASSWORD: ${CCLD_POSTGRES_PASSWORD:?Set CCLD_POSTGRES_PASSWORD in an untracked .env file}
+    volumes:
+      - ccld_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      CCLD_HOSTED_TESTER_DATABASE_URL: postgresql+psycopg://${CCLD_POSTGRES_USER:-ccld_app}:${CCLD_POSTGRES_PASSWORD:?Set CCLD_POSTGRES_PASSWORD in an untracked .env file}@postgres:5432/${CCLD_POSTGRES_DB:-ccld_records}
+      CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS: managed-oidc-oauth2
+      CCLD_FACILITY_REFERENCE_CSV: ${CCLD_FACILITY_REFERENCE_CSV:-}
+    ports:
+      - "${CCLD_HOSTED_PORT:-8000}:8000"
+    volumes:
+      - ccld_processed_data:/app/data/processed
+      - ccld_raw_data:/app/data/raw
+      - ccld_logs:/app/data/logs
+    command: >
+      sh -c "alembic upgrade head &&
+             python -m ccld_complaints.hosted_app --host 0.0.0.0 --port 8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5).read()",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  ccld_postgres_data:
+  ccld_processed_data:
+  ccld_raw_data:
+  ccld_logs:

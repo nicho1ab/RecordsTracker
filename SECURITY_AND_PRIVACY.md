@@ -24,6 +24,14 @@ The initial source is a public portal. Before expanding to new sources, document
 
 Local secrets must use environment variables or untracked `.env` files. `.env` is ignored by Git.
 
+The QNAP-first Docker Compose runtime uses `.env.example` only for placeholders.
+Deployment hosts must keep real PostgreSQL passwords in an untracked `.env` file
+or host-managed secret store. Database URLs, passwords, tokens, provider
+configuration, private URLs, and cloud credentials must not be committed,
+rendered into HTML or browser JavaScript, logged, or copied into tests or docs.
+QNAP-specific host paths and backup locations should stay in host-local
+configuration or operator notes, not application code.
+
 ## Hosted tester access
 
 Hosted tester MVP access must be authenticated and limited to explicitly

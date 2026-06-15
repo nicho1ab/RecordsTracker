@@ -36,6 +36,11 @@ experience.
 - Builds a local/test CCLD-only hosted seeded-corpus JSON artifact from
    validated CCLD SQLite output so `/ccld/records/request` can load or refresh
    those source-derived records through the existing local validated path.
+- Provides a portable QNAP-first Docker Compose runtime envelope for the hosted
+   scaffold with PostgreSQL in Docker, named volumes, health checks, Alembic
+   migration startup, and no-secret environment examples. The same configuration
+   model is intended to remain portable to AWS, Azure, DigitalOcean, Render,
+   Fly.io, or another host later.
 - Includes a local/test hosted CCLD record request page where a tester can enter
    a CCLD facility/license number and optional date range, read matching seeded
    source-derived records, load or refresh matching CCLD records from validated
@@ -189,6 +194,11 @@ public-record review notes.
 - Review [PUBLIC_SOURCE_DATA_INVENTORY.md](PUBLIC_SOURCE_DATA_INVENTORY.md)
    before planning public-source expansion, uploaded CSV profiling,
    multi-source adapters, attorney focus areas, or feedback intake paths.
+- Use [docs/developer/qnap-docker-runtime.md](docs/developer/qnap-docker-runtime.md)
+   for the optional production-like Docker runtime. QNAP Docker is the first
+   practical deployment target, PostgreSQL runs in Docker for this runtime, and
+   QNAP-specific paths or backup locations belong in deployment configuration or
+   operator notes rather than application code.
 - Use [docs/developer/hosted-scaffold.md](docs/developer/hosted-scaffold.md) to
    run the local hosted tester MVP scaffold. The scaffold is a placeholder app
    shell with a controlled seeded corpus import path for validated local
@@ -259,7 +269,9 @@ public-record review notes.
    URLs, user tables, role persistence, full reviewer workflows,
    annotations, corrections, production review status UI, production import automation,
    full audit coverage, new audit writes, audit UI, audit export, reset/reload execution, exports,
-   deployment, QNAP, Azure, or AWS.
+   public deployment, public URL behavior, production operations, Azure, or AWS.
+   The QNAP-first Docker runtime is a production-like app/PostgreSQL container
+   envelope only.
    Start with `scripts/check-hosted-scaffold-local.ps1` to verify local Python
    and development-tool prerequisites without installing software or requiring
    admin rights.

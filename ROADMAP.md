@@ -234,6 +234,13 @@ the governed primary future review experience.
 	without adding schemas, tables, migrations, API routes, imports, reset
 	commands, auth middleware, secrets, deployment, CI configuration, live
 	crawling, or connector execution.
+- Added the first QNAP-first, cloud-portable Docker Compose runtime envelope for
+	the hosted CCLD scaffold with a Python app container, PostgreSQL in Docker,
+	Alembic startup migration wiring, health checks, named volumes, `.env.example`,
+	QNAP deployment guidance, backup/restore notes, and static validation tests
+	without hard-coding QNAP paths into application code or adding production auth,
+	hosted live crawling, connector execution, schema changes, public URLs, or
+	optional paid platform dependencies.
 - Added minimal PostgreSQL/Alembic project wiring for the hosted tester MVP,
 	including no-secret database URL validation, an Alembic script location with no
 	domain migration revisions, scaffold-only persistence/API boundary descriptors,

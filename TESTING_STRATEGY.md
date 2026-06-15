@@ -206,6 +206,14 @@ traceability, rejects missing or unsafe traceability fields, remains no-secret,
 and is compatible with the existing hosted seeded import and CCLD import/reload
 path without running live crawling or browser-triggered connector execution.
 
+QNAP-first Docker runtime tests must statically validate `Dockerfile`,
+`docker-compose.qnap.yml`, and `.env.example` for the production-like
+PostgreSQL runtime envelope. They must prove the examples use placeholder-only
+environment values, PostgreSQL in Docker, named volumes, health checks, Alembic
+startup migration wiring, portable paths, and no committed secrets. When Docker
+is available, run a bounded Compose configuration validation; Docker availability
+is not required for the standard local non-Docker scaffold workflow.
+
 ### Fixture hash and line-ending tests
 
 Raw fixtures with expected SHA-256 hashes must use the line endings required by `.gitattributes`. Expected fixture hashes must match Git-normalized bytes, not platform-specific working-tree bytes. When adding or changing raw fixtures that appear in expected JSON, verify line endings and hashes before committing.
