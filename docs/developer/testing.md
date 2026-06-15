@@ -1,3 +1,7 @@
+Status-usability coverage should assert plain-language labels plus machine-
+readable state, safe status messages, result counts, warning/error separation,
+review links only when records were imported, and `/feedback` guidance for
+confusing retrieval states.
 # Testing
 
 ## Run all tests

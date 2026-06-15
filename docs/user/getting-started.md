@@ -246,8 +246,10 @@ is configured with retrieval enabled, PostgreSQL, and raw source storage, use th
 record type control and the controlled retrieval button to request CCLD complaint
 records for one facility/date range. All supported record types currently means
 complaint records only. If retrieval is not configured, the page shows safe
-setup-required guidance and creates no retrieval job. The browser does not scrape
-or receive connector credentials.
+setup-required guidance and creates no retrieval job. Retrieval status messages
+show what you entered, whether records were imported, where to review imported
+records, and when to use `/feedback` for confusing wording or behavior. The
+browser does not scrape or receive connector credentials.
 
 Return to `/ccld/records/request` and use the local validated CCLD load action
 to load or refresh matching source-derived rows from that JSON artifact. The

@@ -244,6 +244,12 @@ browser scraping, non-CCLD sources, statewide crawling, private/authenticated
 source scraping, production OIDC, deployment changes, and legal/completeness
 conclusions remain out of scope.
 
+Retrieval status pages now distinguish setup-required, validation, queued,
+running, completed, completed-with-warnings, failed, and rate-limited states with
+plain next steps. Safe summaries show what was requested, whether a job was
+created, whether records were imported, where to review imported records, and
+when to send `/feedback` for confusing status or wording.
+
 ## Open the CCLD record request page
 
 The scaffold includes a browser-accessible local/test CCLD facility lookup page at:
