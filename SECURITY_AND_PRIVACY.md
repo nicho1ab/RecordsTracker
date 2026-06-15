@@ -50,13 +50,22 @@ The current hosted auth boundary scaffold validates only the accepted managed
 OIDC/OAuth2 provider class through `CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS` and
 models authenticated actor identity, account status, role assignments,
 project/corpus scopes, authorization targets, and audit-ready actor context for
-local/test use. A narrow local/test auth provider integration planning seam can
+local/test use. The current runtime auth boundary also reads
+`CCLD_HOSTED_TESTER_AUTH_MODE`, `CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH`,
+`CCLD_HOSTED_TESTER_OIDC_ISSUER`, `CCLD_HOSTED_TESTER_OIDC_CLIENT_ID`,
+`CCLD_HOSTED_TESTER_OIDC_CALLBACK_PATH`, and
+`CCLD_HOSTED_TESTER_OIDC_SCOPES` as provider-agnostic environment configuration
+placeholders. Production mode is the default and blocks anonymous workflow pages
+and actions when no authenticated route context exists. Explicit local-dev mode
+can supply the fixture tester actor for local scaffold validation only. A narrow local/test auth provider integration planning seam can
 validate the accepted provider class, require user-role-admin planning access,
 accept only non-secret readiness inputs, and return bounded provider readiness
 steps without persistence. It does not implement provider login, token
 validation, session storage, cookies, callback handling, provider registration,
 hosted URLs, user tables, role tables, provider tenant configuration, client
-secrets, or production auth middleware. Protected service helpers must reject
+secrets, or production auth middleware. The browser may display only a safe
+tester label when available; it must not render provider subjects, issuers, raw
+claims, tokens, cookies, private headers, or secrets. Protected service helpers must reject
 unauthenticated, disabled or revoked, role-denied, and out-of-scope actors
 before future reviewer-created workflows are enabled.
 

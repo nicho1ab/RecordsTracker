@@ -20,14 +20,19 @@ from ccld_complaints.hosted_app.audit_event_routes import (
     AuditEventsApiContext,
     route_audit_events_api_response,
 )
+from ccld_complaints.hosted_app.auth import (
+    HostedAuthConfigError,
+    HostedAuthRuntimeConfig,
+    load_hosted_auth_runtime_config,
+)
 from ccld_complaints.hosted_app.auth_provider_integration_plan import (
     AUTH_PROVIDER_INTEGRATION_PLAN_API_PATH,
     AuthProviderIntegrationPlanContext,
     route_auth_provider_integration_plan_response,
 )
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
-  CCLD_FACILITY_LOOKUP_PATH,
-  route_ccld_facility_lookup_response,
+    CCLD_FACILITY_LOOKUP_PATH,
+    route_ccld_facility_lookup_response,
 )
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     CCLD_HELP_PATH,
@@ -75,6 +80,9 @@ from ccld_complaints.hosted_app.source_derived_routes import (
 APP_NAME = "CCLD Records Review"
 SCAFFOLD_NOTICE = "Local/test scaffold only: not a production reviewer workflow."
 SAMPLE_DATA_NOTICE = "Local sample source-derived data only; no live public-source data is loaded."
+AUTH_LOGIN_PATH = "/auth/login"
+AUTH_LOGOUT_PATH = "/auth/logout"
+AUTH_STATUS_PATH = "/auth/status"
 PUBLIC_SOURCE_FACILITY_FIXTURE_DIR = (
     Path(__file__).resolve().parents[3]
     / "tests"
@@ -1100,22 +1108,35 @@ def route_response(
     reset_reload_planning_metadata_api_context: (
         ResetReloadPlanningMetadataApiContext | None
     ) = None,
+    auth_runtime_config: HostedAuthRuntimeConfig | None = None,
     reviewer_ui_context: ReviewerUiContext | None = None,
     ccld_record_request_ui_context: CcldRecordRequestUiContext | None = None,
 ) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
     parsed_path = parsed_url.path
+    active_auth_config = _active_auth_runtime_config(auth_runtime_config)
+    if parsed_path in {AUTH_LOGIN_PATH, AUTH_LOGOUT_PATH}:
+        return _auth_placeholder_response(parsed_path, active_auth_config)
+    if parsed_path == AUTH_STATUS_PATH:
+        return _auth_status_response(active_auth_config)
     if parsed_path == "/help":
         path = CCLD_HELP_PATH
         parsed_path = CCLD_HELP_PATH
     if parsed_path == CCLD_FACILITY_LOOKUP_PATH:
-      return route_ccld_facility_lookup_response(path)
+        return route_ccld_facility_lookup_response(path)
     if parsed_path.startswith(CCLD_UI_PREFIX):
         active_ccld_context = (
             default_ccld_record_request_ui_context()
             if ccld_record_request_ui_context is None
+            and active_auth_config.local_dev_actor_allowed
             else ccld_record_request_ui_context
         )
+        if active_ccld_context is None and parsed_path != CCLD_HELP_PATH:
+            return _auth_required_response(
+                "CCLD workflow access requires sign-in",
+              "CCLD request, feedback, retrieval, and import actions require "
+              "an authenticated tester or operator in this runtime mode.",
+            )
         return route_ccld_record_request_ui_response(
             path,
             active_ccld_context,
@@ -1125,9 +1146,16 @@ def route_response(
     if parsed_path.startswith(REVIEWER_UI_PREFIX):
         active_reviewer_ui_context = (
             default_local_test_reviewer_ui_context()
-            if reviewer_ui_context is None
+        if reviewer_ui_context is None
+        and active_auth_config.local_dev_actor_allowed
             else reviewer_ui_context
         )
+        if active_reviewer_ui_context is None:
+            return _auth_required_response(
+                "Reviewer access requires sign-in",
+              "Reviewer-created notes/status, workflow actions, feedback, "
+              "retrieval jobs, and operational actions are not available anonymously.",
+            )
         return route_reviewer_ui_response(
             path,
             active_reviewer_ui_context,
@@ -1201,6 +1229,83 @@ def route_response(
         return 200, "application/json; charset=utf-8", body
     body = b"Not found"
     return 404, "text/plain; charset=utf-8", body
+
+
+def _active_auth_runtime_config(
+    auth_runtime_config: HostedAuthRuntimeConfig | None,
+) -> HostedAuthRuntimeConfig:
+    if auth_runtime_config is not None:
+        return auth_runtime_config
+    try:
+        return load_hosted_auth_runtime_config()
+    except HostedAuthConfigError:
+        return load_hosted_auth_runtime_config(environ={})
+
+
+def _auth_status_response(
+    auth_runtime_config: HostedAuthRuntimeConfig,
+) -> tuple[int, str, bytes]:
+    body = json.dumps(
+        {"auth": auth_runtime_config.safe_summary},
+        sort_keys=True,
+    ).encode("utf-8")
+    return 200, "application/json; charset=utf-8", body
+
+
+def _auth_placeholder_response(
+    parsed_path: str,
+    auth_runtime_config: HostedAuthRuntimeConfig,
+) -> tuple[int, str, bytes]:
+    if parsed_path == AUTH_LOGOUT_PATH:
+        heading = "Sign-out placeholder"
+        message = (
+            "No browser session is created by this scaffold slice. Close the browser "
+            "or sign out through the configured managed identity provider when the real "
+            "OIDC flow is implemented."
+        )
+    elif auth_runtime_config.local_dev_actor_allowed:
+        heading = "Local-dev tester mode active"
+        message = (
+            "The scaffold is running with explicit local-dev authenticated tester mode. "
+            "This mode is for local development only and is disabled by default in production."
+        )
+    else:
+        heading = "Managed OIDC sign-in not configured in this slice"
+        message = (
+            "Configure the managed OpenID Connect/OAuth2 provider outside the repository. "
+            "This branch documents the provider-agnostic seam but does not exchange auth "
+            "codes, create sessions, or validate provider credentials."
+        )
+    return _auth_html_response(200, heading, message)
+
+
+def _auth_required_response(heading: str, message: str) -> tuple[int, str, bytes]:
+    return _auth_html_response(401, heading, message)
+
+
+def _auth_html_response(status: int, heading: str, message: str) -> tuple[int, str, bytes]:
+    body = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{html.escape(heading)} - {html.escape(APP_NAME)}</title>
+</head>
+<body>
+  <a href="#main-content">Skip to main content</a>
+  <header>
+    <p>{html.escape(SCAFFOLD_NOTICE)}</p>
+    <h1>{html.escape(heading)}</h1>
+  </header>
+  <main id="main-content" tabindex="-1">
+    <p>{html.escape(message)}</p>
+    <p><a href="{AUTH_LOGIN_PATH}">Open sign-in placeholder</a></p>
+    <p><a href="/">Return to scaffold home</a></p>
+  </main>
+</body>
+</html>
+""".encode()
+    return status, "text/html; charset=utf-8", body
 
 
 class HostedScaffoldHandler(BaseHTTPRequestHandler):
