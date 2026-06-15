@@ -434,6 +434,12 @@ the governed primary future review experience.
 	invalid note/status submissions without changing persistence, audit behavior,
 	source-derived records, schema, live browser retrieval, connector execution, or
 	non-CCLD scope.
+- Improved the local/test CCLD facility lookup and request/result queue context
+	confirmation so testers can see whether a request came from lookup selection or
+	manual entry, confirm the facility/license number, date range, active facility
+	reference source, and change-facility/date links before reviewing queue results
+	without adding persistence, schema changes, live browser retrieval, connector
+	execution, new reviewer behavior, or non-CCLD scope.
 - Added a minimal local/test audit event persistence scaffold with a separate
 	PostgreSQL/Alembic table and service boundary for successful reviewer-created
 	state scaffold writes only, preserving source-derived records and reviewer-

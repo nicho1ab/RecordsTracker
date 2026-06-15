@@ -113,7 +113,8 @@ contextual field/action help, source traceability summaries, reviewer-state
 indicators, queue triage summaries, reviewer note/status cues,
 source-traceability availability cues, suggested next-record links,
 filtered-empty guidance, skip-to-main links, visible next-step guidance,
-specific form/action text, progress counts, reviewer-status filtering,
+specific form/action text, request-context confirmation for lookup-selected and
+manual facility/license entry requests, progress counts, reviewer-status filtering,
 meaningful reviewer links, read-after-write queue updates after reviewer
 note/status actions, and
 deterministic copyable feedback checklist guidance without persistence, does not

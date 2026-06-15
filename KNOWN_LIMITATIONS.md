@@ -126,7 +126,8 @@
     facility/license number and optional date range, reads only existing seeded
     source-derived rows, can load or refresh matching rows from local validated
     hosted seeded-corpus output, renders a guided facility/date-scoped complaint
-    review queue with progress counts, reviewer note/status cues, source-
+    review queue with visible lookup/manual-entry request-context confirmation,
+    progress counts, reviewer note/status cues, source-
     traceability availability cues, suggested next-record links, filtered-empty
     guidance, and reviewer-status filters derived from existing reviewer-created
     state, includes a structured copyable feedback checklist for manual external

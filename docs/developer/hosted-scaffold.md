@@ -121,6 +121,10 @@ reference source and any fallback guidance are visible on the page. The “Use t
 facility” link carries the selected facility/license number into
 `/ccld/records/request`. Manual facility/license entry on the request page remains
 available.
+The request page shows a request-context confirmation for lookup-selected and
+manually entered requests, including the request origin, facility/license number,
+optional date range, active facility reference source, and change-facility/date
+links on result pages.
 The page includes a skip-to-main link, start-here instructions, a labeled search
 field with help text, and a specific search button for local/test CCLD facility
 reference rows.
@@ -143,6 +147,9 @@ records through the local/test hosted route seams, shows matching seeded CCLD
 complaint records as a facility/date-scoped review queue, includes first-time
 workflow and key-term help at `/ccld/help`, and links matching complaint records
 into the hosted reviewer UI detail or list pages.
+Request and result pages visibly confirm whether the context came from facility
+lookup or manual entry, the facility/license number, the date range, and the
+active local/test facility reference source before a tester reviews queue rows.
 The queue includes a triage summary, progress counts, reviewer note/status cues,
 source-traceability availability cues, suggested next-record links, and a
 reviewer-status filter derived from existing reviewer-created note/status rows.

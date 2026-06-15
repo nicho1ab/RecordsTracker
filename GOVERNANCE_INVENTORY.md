@@ -49,7 +49,8 @@
   seeded source-derived rows, can load or refresh matching rows from local
   validated hosted seeded-corpus output through the existing source-derived
   import path, renders matching complaints as a guided facility/date-scoped
-  request result queue with first-time help, progress counts, reviewer-status
+  request result queue with visible lookup/manual-entry request-context
+  confirmation, first-time help, progress counts, reviewer-status
   filtering, reviewer note/status cues, source-traceability availability cues,
   suggested next-record links, filtered-empty guidance, and a structured
   copyable tester feedback checklist, plus skip-to-main links and visible
