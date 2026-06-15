@@ -125,6 +125,11 @@ near detail feedback guidance, identify observations to carry into the existing
 manual checklist, preserve note/status confirmation and return-to-queue wording,
 remain no-secret, and do not mutate source-derived, reviewer-created, audit,
 import, or operational metadata rows during detail rendering.
+Reviewer detail feedback checklist bridge tests should prove bridge cues point
+to the existing manual feedback checklist without duplicating it, cover source
+traceability, source-confidence, field-note uncertainty, note/status confirmation,
+return-to-queue, queue refresh, and next-record observations, remain no-secret,
+and do not add feedback persistence, export behavior, or mutations.
 Reviewer detail next-record navigation tests should prove return-to-same-queue
 guidance, note/status confirmation next-record wording, queue suggested-next
 wording, and no-assignment/no-claim/no-workflow-state boundaries render while

@@ -196,6 +196,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"does not make legal, facility-wide" not in reviewer_detail_body
         or b"Feedback clues for this record" not in reviewer_detail_body
         or b"Record-specific feedback handoff" not in reviewer_detail_body
+        or b"Manual feedback checklist bridge" not in reviewer_detail_body
+        or b"existing manual feedback checklist" not in reviewer_detail_body
         or b"Source traceability observations" not in reviewer_detail_body
         or b"suggested next record to continue" not in reviewer_detail_body
         or b"not a persisted assignment" not in reviewer_detail_body
@@ -210,6 +212,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Return and refresh queue progress" not in reviewer_note_body
         or b"Queue progress and note/status cues are derived" not in reviewer_note_body
         or b"suggested next record is not a persisted assignment" not in reviewer_note_body
+        or b"field-note wording" not in reviewer_note_body
         or b"manual feedback checklist" not in reviewer_note_body
     ):
         raise RuntimeError("Hosted scaffold reviewer note did not return confirmation.")
@@ -221,6 +224,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Return and refresh queue progress" not in reviewer_saved_status_body
         or b"Queue progress and note/status cues are derived" not in reviewer_saved_status_body
         or b"suggested next record is not a persisted assignment" not in reviewer_saved_status_body
+        or b"field-note wording" not in reviewer_saved_status_body
         or b"manual feedback checklist" not in reviewer_saved_status_body
     ):
         raise RuntimeError("Hosted scaffold reviewer status did not return confirmation.")

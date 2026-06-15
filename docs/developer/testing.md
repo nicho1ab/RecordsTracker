@@ -130,6 +130,10 @@ testers what source traceability, source context, note/status confirmation,
 same-queue return, queue refresh, unexpected-record, confusing label, wording,
 keyboard-flow, or next-step observations to carry into the existing manual
 checklist without adding feedback persistence.
+Feedback checklist bridge coverage should verify that reviewer detail points
+those observations to the existing manual checklist without rendering a second
+checklist, storing feedback, sending feedback, exporting feedback, or mutating
+source-derived, reviewer-created, audit, import, or operational metadata rows.
 Next-record navigation coverage should verify that queue and detail pages tell
 testers how to return to the same request context, resubmit when needed, and use
 suggested-next cues derived from existing reviewer-created state without
