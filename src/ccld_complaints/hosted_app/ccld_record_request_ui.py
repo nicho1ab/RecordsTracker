@@ -1176,6 +1176,7 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
             f'record_type={_escape(result.record_type)}">'
             "Open imported records in this CCLD queue</a></p>"
         )
+    detail_href = _retrieval_job_detail_href(result.retrieval_job_id)
     return f"""    <section aria-labelledby="retrieval-job-summary-heading">
             <h2 id="retrieval-job-summary-heading">Controlled CCLD retrieval job status</h2>
             <p>{_escape(_retrieval_state_intro(result))}</p>
@@ -1213,6 +1214,8 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
             when the job completed. No connector credentials or server-side private values
             are shown.</p>
             {_render_retrieval_next_steps(result, imported_count)}
+                <p><a href="{CCLD_RETRIEVAL_JOBS_PATH}">View retrieval job history</a></p>
+                <p><a href="{_escape(detail_href)}">View retrieval job details</a></p>
 {queue_link}
         </section>"""
 

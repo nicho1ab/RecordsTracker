@@ -107,6 +107,13 @@ links render without exposing raw file contents, raw server paths, stack traces,
 provider values, tokens, cookies, private headers, connection strings, or
 secrets; and detail reads do not mutate source-derived, reviewer-created,
 feedback, import, audit, or operational rows.
+Local-dev retrieval demo tests should prove `CCLD_RETRIEVAL_DEMO_MODE=mock-success`
+is disabled by default, rejected outside explicit local-dev auth mode, uses only
+committed fixtures, creates a retrieval job, reaches completed state, imports
+source-derived rows through the existing import path, shows imported counts,
+links to history/detail/queue, keeps setup-required and validation-blocked states
+working, makes no live CCLD or GitHub calls, exposes no private values, and does
+not mutate source-derived or reviewer-created rows through review pages.
 GitHub Issues feedback intake tests must prove the feedback page renders, the
 feedback type dropdown has exactly bug report, feature request, and new data
 source options, description and submit controls are accessible, missing values

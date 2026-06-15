@@ -251,6 +251,13 @@ show what you entered, whether records were imported, where to review imported
 records, and when to use `/feedback` for confusing wording or behavior. The
 browser does not scrape or receive connector credentials.
 
+Developers running the local scaffold can opt into a fixture-backed successful
+retrieval demo with `CCLD_RETRIEVAL_DEMO_MODE=mock-success` only when explicit
+local-dev auth and retrieval raw storage are configured. That demo lets the
+browser exercise the successful job/import/history/detail/queue flow without
+live CCLD calls. It is not production retrieval, not a public-source completeness
+check, and still supports complaint records only.
+
 Open `http://127.0.0.1:8000/ccld/retrieval/jobs` to see recent controlled
 retrieval job history for the current local/test scope. The page shows the
 facility/license number, date range, record type, job state, timestamps,

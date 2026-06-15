@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
+import tempfile
 import threading
 from typing import Any
 from urllib.error import HTTPError
@@ -39,11 +41,18 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     previous_auth_mode = os.environ.get("CCLD_HOSTED_TESTER_AUTH_MODE")
     previous_local_dev_auth = os.environ.get("CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH")
     previous_page_data_mode = os.environ.get("CCLD_HOSTED_PAGE_DATA_MODE")
+    previous_retrieval_enabled = os.environ.get("CCLD_RETRIEVAL_ENABLED")
+    previous_retrieval_raw_dir = os.environ.get("CCLD_RETRIEVAL_RAW_DIR")
+    previous_retrieval_max_range = os.environ.get("CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS")
+    previous_retrieval_demo_mode = os.environ.get("CCLD_RETRIEVAL_DEMO_MODE")
     os.environ["CCLD_HOSTED_TESTER_AUTH_MODE"] = "local-dev"
     os.environ["CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH"] = "enabled"
     os.environ["CCLD_HOSTED_PAGE_DATA_MODE"] = "fixture-demo"
     try:
-        with create_server(host, port) as server:
+        with (
+            tempfile.TemporaryDirectory() as retrieval_raw_dir,
+            create_server(host, port) as server,
+        ):
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
             bound_host, bound_port = server.server_address[:2]
@@ -104,6 +113,35 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
                         "ccld_retrieval_action": "run_controlled_ccld_retrieval",
                     },
                 )
+                os.environ["CCLD_RETRIEVAL_ENABLED"] = "enabled"
+                os.environ["CCLD_RETRIEVAL_RAW_DIR"] = retrieval_raw_dir
+                os.environ["CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS"] = "30"
+                os.environ["CCLD_RETRIEVAL_DEMO_MODE"] = "mock-success"
+                ccld_retrieval_success_status, ccld_retrieval_success_body = _post_form_url(
+                    f"{base_url}/ccld/records/request",
+                    {
+                        "facility_number": "157806098",
+                        "record_type": "complaints",
+                        "start_date": "2022-08-01",
+                        "end_date": "2022-08-31",
+                        "ccld_retrieval_action": "run_controlled_ccld_retrieval",
+                    },
+                )
+                ccld_retrieval_history_after_status, (
+                    ccld_retrieval_history_after_body
+                ) = _read_url(f"{base_url}/ccld/retrieval/jobs")
+                detail_match = re.search(
+                    br"/ccld/retrieval/jobs/detail\?job_id=[A-Za-z0-9_.:-]+",
+                    ccld_retrieval_history_after_body,
+                )
+                if detail_match is None:
+                    ccld_retrieval_success_detail_status = 404
+                    ccld_retrieval_success_detail_body = b""
+                else:
+                    (
+                        ccld_retrieval_success_detail_status,
+                        ccld_retrieval_success_detail_body,
+                    ) = _read_url(f"{base_url}{detail_match.group(0).decode('ascii')}")
                 reviewer_status, reviewer_body = _read_url(f"{base_url}/reviewer")
                 reviewer_detail_status, reviewer_detail_body = _read_url(
                     f"{base_url}/reviewer/records/detail?"
@@ -136,6 +174,10 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         _restore_env("CCLD_HOSTED_TESTER_AUTH_MODE", previous_auth_mode)
         _restore_env("CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH", previous_local_dev_auth)
         _restore_env("CCLD_HOSTED_PAGE_DATA_MODE", previous_page_data_mode)
+        _restore_env("CCLD_RETRIEVAL_ENABLED", previous_retrieval_enabled)
+        _restore_env("CCLD_RETRIEVAL_RAW_DIR", previous_retrieval_raw_dir)
+        _restore_env("CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS", previous_retrieval_max_range)
+        _restore_env("CCLD_RETRIEVAL_DEMO_MODE", previous_retrieval_demo_mode)
 
     payload = json.loads(health_body.decode("utf-8"))
     if health_status != 200 or payload.get("status") != "ok":
@@ -244,6 +286,32 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Send tester feedback" not in ccld_retrieval_setup_body
     ):
         raise RuntimeError("Hosted scaffold retrieval setup state did not return safe guidance.")
+    if (
+        ccld_retrieval_success_status != 200
+        or b"Controlled CCLD retrieval job status" not in ccld_retrieval_success_body
+        or b"Completed" not in ccld_retrieval_success_body
+        or b"Records imported" not in ccld_retrieval_success_body
+        or b"Open imported records in this CCLD queue" not in ccld_retrieval_success_body
+        or b"View retrieval job history" not in ccld_retrieval_success_body
+        or b"View retrieval job details" not in ccld_retrieval_success_body
+    ):
+        raise RuntimeError("Hosted scaffold mock retrieval did not return completed status.")
+    if (
+        ccld_retrieval_history_after_status != 200
+        or b"Controlled CCLD retrieval job history" not in ccld_retrieval_history_after_body
+        or b"View retrieval job details" not in ccld_retrieval_history_after_body
+        or b"Review imported records in the CCLD queue" not in ccld_retrieval_history_after_body
+    ):
+        raise RuntimeError("Hosted scaffold mock retrieval did not appear in history.")
+    if (
+        ccld_retrieval_success_detail_status != 200
+        or b"Controlled CCLD retrieval job detail" not in ccld_retrieval_success_detail_body
+        or b"Completed" not in ccld_retrieval_success_detail_body
+        or b"Records imported" not in ccld_retrieval_success_detail_body
+        or b"Review imported records in the CCLD queue"
+        not in ccld_retrieval_success_detail_body
+    ):
+        raise RuntimeError("Hosted scaffold mock retrieval detail did not return safe status.")
     if (
         ccld_facilities_status != 200
         or b"Find CCLD facility" not in ccld_facilities_body

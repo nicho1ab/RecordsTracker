@@ -254,6 +254,10 @@ the governed primary future review experience.
 	records were imported, and feedback guidance without adding audit export,
 	broader audit UI, scheduler behavior, raw artifact viewing, or new retrieval
 	capability.
+- Added an explicit local-dev mock-success retrieval demo path so the hosted
+	scaffold can validate the successful browser-triggered job/import/status/
+	history/detail/queue flow using committed fixtures only, without live CCLD calls,
+	production fake data mode, non-CCLD sources, or broader retrieval capability.
 - Added the first QNAP-first, cloud-portable Docker Compose runtime envelope for
 	the hosted CCLD scaffold with a Python app container, PostgreSQL in Docker,
 	Alembic startup migration wiring, health checks, named volumes, `.env.example`,
