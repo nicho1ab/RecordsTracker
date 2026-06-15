@@ -198,6 +198,11 @@
   history/detail/queue behavior without live CCLD calls. It is not production
   retrieval, not public-source completeness proof, and must not be enabled for
   QNAP, pilot-like, or production runtime.
+- QNAP Docker is the first pilot runtime, not a permanent platform lock-in. The
+  pilot workflow checker helps operators validate env, Compose, containers,
+  PostgreSQL, and routes, but it does not create cloud resources, implement
+  production sign-in, make legal/source-completeness conclusions, or run live
+  CCLD retrieval in tests.
 - Retrieval status messages are workflow states, not source conclusions. A
   completed-with-warnings, failed, blocked-by-validation, or rate-limited state
   tells you what happened to the job, not whether CCLD has complete records for a

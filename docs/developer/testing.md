@@ -265,6 +265,11 @@ PostgreSQL in Docker, named volumes, health checks, Alembic migration startup,
 portable paths, and no committed secrets. When Docker is available, developers
 may also run a bounded Compose configuration validation, but Docker availability
 is not required for the standard local non-Docker scaffold workflow.
+QNAP pilot workflow tests should statically validate
+`scripts/verify-qnap-pilot-workflow.ps1` for required env checks, Compose config
+validation, optional container/PostgreSQL/Alembic checks, route probes, no-secret
+markers, configurable raw storage, mock-success demo guardrails, and absence of
+hard-coded QNAP-only app paths.
 
 Hosted reviewer-created state read route tests must prove persisted scaffold
 rows are readable only through authenticated, active, role/scope-allowed local/

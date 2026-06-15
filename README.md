@@ -41,7 +41,8 @@ experience.
    those source-derived records through the existing local validated path.
 - Provides a portable QNAP-first Docker Compose runtime envelope for the hosted
    scaffold with PostgreSQL in Docker, named volumes, health checks, Alembic
-   migration startup, and no-secret environment examples. The same configuration
+   migration startup, no-secret environment examples, and a pilot workflow
+   checker for env/Compose/container/route validation. The same configuration
    model is intended to remain portable to AWS, Azure, DigitalOcean, Render,
    Fly.io, or another host later.
 - Adds a provider-agnostic hosted tester auth boundary: production runtime mode
@@ -233,7 +234,9 @@ public-record review notes.
    provider-agnostic OIDC/OAuth2 environment placeholders for YLC pilot auth
    planning, the `CCLD_HOSTED_PAGE_DATA_MODE` setting for PostgreSQL-backed
    pages versus explicit fixture-demo mode, and server-side GitHub feedback
-   environment placeholders.
+   environment placeholders. Use `scripts/verify-qnap-pilot-workflow.ps1` to
+   validate a QNAP pilot `.env`, Compose config, optional running containers,
+   and optional route probes before inviting testers.
 - Use [docs/developer/cloud-portability-deployment.md](docs/developer/cloud-portability-deployment.md)
    to compare QNAP, AWS, Azure, DigitalOcean, Render, Fly.io, Railway, Supabase,
    and Neon deployment shapes while keeping app runtime, PostgreSQL, raw file

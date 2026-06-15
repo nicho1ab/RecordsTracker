@@ -38,6 +38,7 @@ def test_env_example_uses_placeholders_only() -> None:
     assert values["CCLD_RETRIEVAL_RATE_LIMIT_PER_ACTOR"] == "3"
     assert values["CCLD_RETRIEVAL_TIMEOUT_SECONDS"] == "30"
     assert values["CCLD_RETRIEVAL_RETRY_LIMIT"] == "1"
+    assert values["CCLD_RETRIEVAL_DEMO_MODE"] == ""
     assert values["CCLD_FACILITY_REFERENCE_CSV"] == ""
 
     env_text = read_repo_text(".env.example")
@@ -59,6 +60,7 @@ def test_compose_runtime_uses_postgres_named_volumes_and_healthchecks() -> None:
     assert "CCLD_RETRIEVAL_ENABLED" in compose
     assert "CCLD_RETRIEVAL_RAW_DIR" in compose
     assert "CCLD_RETRIEVAL_PER_JOB_LIMIT" in compose
+    assert "CCLD_RETRIEVAL_DEMO_MODE" in compose
     assert "postgresql+psycopg://${CCLD_POSTGRES_USER" in compose
     assert "alembic upgrade head" in compose
     assert "python -m ccld_complaints.hosted_app --host 0.0.0.0 --port 8000" in compose
@@ -71,6 +73,45 @@ def test_compose_runtime_uses_postgres_named_volumes_and_healthchecks() -> None:
     assert "C:\\" not in compose
     assert "/share/" not in compose
     assert "qnap" not in compose.casefold()
+
+
+def test_qnap_pilot_workflow_script_checks_env_compose_and_routes() -> None:
+    script = read_repo_text("scripts/verify-qnap-pilot-workflow.ps1")
+
+    for required_text in (
+        "CCLD_POSTGRES_DB",
+        "CCLD_POSTGRES_USER",
+        "CCLD_POSTGRES_PASSWORD",
+        "CCLD_HOSTED_PAGE_DATA_MODE",
+        "CCLD_HOSTED_TESTER_AUTH_MODE",
+        "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH",
+        "CCLD_RETRIEVAL_ENABLED",
+        "CCLD_RETRIEVAL_RAW_DIR",
+        "CCLD_RETRIEVAL_DEMO_MODE",
+        "mock-success",
+        "AllowLocalDevDemo",
+        "docker compose -f",
+        "pg_isready",
+        "alembic current",
+        "Invoke-WebRequest",
+        "/ccld/retrieval/jobs",
+        "/ccld/retrieval/jobs/detail?job_id=missing-job",
+        "/reviewer",
+    ):
+        assert required_text in script
+
+    normalized_script = " ".join(script.split())
+    assert "QNAP pilot mode should use CCLD_HOSTED_PAGE_DATA_MODE=postgres" in (
+        normalized_script
+    )
+    assert "mock-success demo mode requires local-dev auth" in normalized_script
+    assert "does not make live CCLD retrieval" not in normalized_script
+    assert "C:\\" not in script
+    assert "function Test-PilotEnvValue" in script
+    assert "function Test-NoHostSpecificPath" in script
+    assert 'Stop-CheckFail "$Label must be a portable container path' in script
+    assert "ghp_" not in script
+    assert "github_pat_" not in script
 
 
 def test_dockerfile_preserves_no_secret_portable_app_start() -> None:
@@ -130,6 +171,7 @@ def test_cloud_portability_guide_compares_hosts_without_credentials() -> None:
         "Scheduled backups",
         "Custom domain/HTTPS",
         "Production-Readiness Checklist",
+        "CCLD_RETRIEVAL_DEMO_MODE=mock-success",
     ):
         assert required_text in guide
 

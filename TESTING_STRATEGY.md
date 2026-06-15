@@ -291,6 +291,11 @@ environment values, PostgreSQL in Docker, named volumes, health checks, Alembic
 startup migration wiring, portable paths, and no committed secrets. When Docker
 is available, run a bounded Compose configuration validation; Docker availability
 is not required for the standard local non-Docker scaffold workflow.
+QNAP pilot workflow tests must also prove any setup or verification script keeps
+secrets out of the repo, checks required env values, preserves configurable raw
+artifact storage, keeps mock-success demo mode disabled by default, rejects or
+clearly scopes mock-success outside QNAP/pilot-like runtime, validates Compose
+configuration, and avoids hard-coded QNAP-only application paths.
 
 ### Fixture hash and line-ending tests
 

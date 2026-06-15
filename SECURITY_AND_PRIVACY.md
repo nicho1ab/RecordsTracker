@@ -32,6 +32,11 @@ rendered into HTML or browser JavaScript, logged, or copied into tests or docs.
 QNAP-specific host paths and backup locations should stay in host-local
 configuration or operator notes, not application code.
 
+The QNAP pilot workflow checker reads an untracked env file and runs local
+validation commands. It must not print secret values, commit env files, create
+tokens, or replace host-managed secret storage. Treat warnings about placeholder
+values as deployment readiness prompts, not as permission to commit real values.
+
 ## Hosted tester access
 
 Hosted tester MVP access must be authenticated and limited to explicitly
