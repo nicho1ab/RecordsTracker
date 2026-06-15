@@ -440,6 +440,12 @@ the governed primary future review experience.
 	reference source, and change-facility/date links before reviewing queue results
 	without adding persistence, schema changes, live browser retrieval, connector
 	execution, new reviewer behavior, or non-CCLD scope.
+- Improved the local/test reviewer detail source traceability section so testers
+	can identify the selected complaint record, see available or missing
+	traceability cues with non-conclusive local/test wording, review source context
+	before note/status actions, and return to the CCLD request queue without adding
+	persistence, schema changes, live browser retrieval, connector execution,
+	legal/completeness conclusions, or non-CCLD scope.
 - Added a minimal local/test audit event persistence scaffold with a separate
 	PostgreSQL/Alembic table and service boundary for successful reviewer-created
 	state scaffold writes only, preserving source-derived records and reviewer-

@@ -45,7 +45,8 @@ experience.
    cues, source-traceability availability cues, reviewer-status filtering,
    suggested next-record links, skip-to-main links, visible first-run next-step
    guidance, clearer form/action text, open records in the hosted reviewer UI,
-   see clearer note/status save confirmations, return to see updated progress
+   review clearer selected-record source traceability cues before adding notes or
+   status, see clearer note/status save confirmations, return to see updated progress
    after notes/statuses, and read first-time workflow help without running live
    crawling from a browser request.
 
@@ -218,7 +219,8 @@ public-record review notes.
    note/status indicators before opening detail, view a plain-language record
    summary, safe source traceability fields, safe related seeded bundle context,
    existing reviewer notes/statuses, record-specific feedback clues, and CCLD
-   return links, submit a bounded reviewer note, submit a bounded reviewer status,
+   return links, clearer selected-record source traceability fields and missing-value
+   guidance, submit a bounded reviewer note, submit a bounded reviewer status,
    see clearer saved-state confirmations with return-to-queue links, and see
    read-after-write reviewer-created state through those same existing workflow seams. It also gives clear
    browser guidance for no search results, missing seeded records, invalid note

@@ -92,8 +92,8 @@
     `/reviewer/records` now wraps those existing seams for the tiny seeded
     fixture corpus only: a local tester can list/search a seeded source-derived
         complaint record, see list-level reviewer-created note/status indicators,
-        open detail, view safe source traceability fields plus safe related seeded
-        bundle context, see record-summary and feedback guidance, submit a bounded
+        open detail, view safe source traceability fields plus clearer missing-value
+        guidance and safe related seeded bundle context, see record-summary and feedback guidance, submit a bounded
         reviewer note, submit a bounded reviewer status, see saved-state
         confirmations with return-to-queue links, and see read-after-write
         reviewer-created state.
