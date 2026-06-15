@@ -227,6 +227,12 @@ requiring Docker when `-SkipDatabaseCheck` is used, flags half-configured GitHub
 feedback, flags retrieval enabled without raw storage, rejects QNAP mock-success
 mode, and avoids secrets, raw artifact contents, raw server paths, imports,
 retrieval, live CCLD calls, GitHub calls, and legal/completeness conclusions.
+QNAP auth readiness documentation tests should prove the guide exists, is linked
+from the QNAP operator/runtime docs, requires production auth mode and disabled
+local-dev auth, documents safe `/auth/status`, states that real login/OIDC,
+sessions, cookies, user tables, password login, and tester invitations are not
+implemented yet, warns that provider secrets and callback URLs must not be
+committed, and says local-dev fixture auth is not production authentication.
 
 Controlled CCLD retrieval job tests cover the ADR-0016 boundary before and after
 browser-triggered retrieval is enabled. Tests should prove only facility/license

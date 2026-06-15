@@ -440,6 +440,7 @@ def test_qnap_runtime_doc_keeps_qnap_specifics_out_of_app_code() -> None:
     assert "pg_restore" in guide
     assert "GitHub Projects are not required" in normalized_guide
     assert "qnap-pilot-operator-checklist.md" in guide
+    assert "qnap-pilot-auth-readiness.md" in guide
     assert "C:\\" not in guide
     assert "/share/" not in guide
 
@@ -495,6 +496,67 @@ def test_qnap_pilot_operator_checklist_is_linked_from_guides() -> None:
         "docs/developer/qnap-docker-runtime.md": "qnap-pilot-operator-checklist.md",
         "docs/developer/hosted-scaffold.md": "qnap-pilot-operator-checklist.md",
         "docs/user/getting-started.md": "../developer/qnap-pilot-operator-checklist.md",
+    }
+
+    for path, link in required_links.items():
+        assert link in read_repo_text(path)
+
+
+def test_qnap_pilot_auth_readiness_doc_exists_and_covers_required_steps() -> None:
+    guide = read_repo_text("docs/developer/qnap-pilot-auth-readiness.md")
+    normalized = " ".join(guide.split())
+    searchable_text = f"{guide}\n{normalized}"
+
+    for required_text in (
+        "QNAP Pilot Auth Readiness",
+        "CCLD_HOSTED_TESTER_AUTH_MODE=production",
+        "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH=disabled",
+        "Production mode blocks anonymous workflow routes",
+        "Local-dev fixture auth exists only for local scaffold validation",
+        "it is not production authentication",
+        "`/auth/status` is a safe status/debug route",
+        "must not expose provider subjects, issuers, raw claims, tokens, cookies",
+        "No real login flow",
+        "No real OIDC/OAuth2 callback handling",
+        "No session cookies",
+        "No user table",
+        "No self-service account creation",
+        "No production password login",
+        "No managed identity or provider token exchange",
+        "No tester invitation workflow",
+        "Do not invite real testers until there is a deliberate access-control decision",
+        "client secrets, callback URLs, issuer URLs",
+        "Do not commit provider secrets, callback URLs",
+        "`.env.example` should contain blanks or neutral placeholders only",
+        "QNAP verifier remains the main local readiness check",
+        "QNAP verifier output showing production auth mode and local-dev auth disabled",
+        "Route behavior showing protected workflow routes are blocked",
+        "Decision record that real OIDC/login remains deferred or planned",
+        "Known limitation acknowledgement",
+        "Do not enable local-dev auth for QNAP pilot mode",
+        "Do not set `CCLD_RETRIEVAL_DEMO_MODE=mock-success` in QNAP pilot mode",
+        "Do not paste tokens, callback secrets",
+        "Do not treat local-dev fixture auth as production authentication",
+        "Do not build custom password storage",
+        "Do not use shared tester accounts",
+    ):
+        assert required_text in searchable_text
+
+    assert "ghp_" not in guide
+    assert "github_pat_" not in guide
+    assert "https://github.com/" not in guide
+    assert "C:\\" not in guide
+    assert "OneDrive" not in guide
+    assert "client_" + "secret" + "=" not in guide.casefold()
+
+
+def test_qnap_pilot_auth_readiness_doc_is_linked_from_operator_guides() -> None:
+    required_links = {
+        "README.md": "docs/developer/qnap-pilot-auth-readiness.md",
+        "RUNBOOK.md": "docs/developer/qnap-pilot-auth-readiness.md",
+        "docs/developer/qnap-docker-runtime.md": "qnap-pilot-auth-readiness.md",
+        "docs/developer/qnap-pilot-operator-checklist.md": "qnap-pilot-auth-readiness.md",
+        "docs/developer/testing.md": "QNAP auth readiness documentation tests",
     }
 
     for path, link in required_links.items():
@@ -605,4 +667,4 @@ def test_cloud_portability_guide_compares_hosts_without_credentials() -> None:
     assert "github_pat_" not in guide
     assert "C:\\" not in guide
     assert "OneDrive" not in guide
-    assert "client_secret=" not in guide.casefold()
+    assert "client_" + "secret" + "=" not in guide.casefold()

@@ -30,6 +30,10 @@ Use the full operator checklist in
 [docs/developer/qnap-pilot-operator-checklist.md](docs/developer/qnap-pilot-operator-checklist.md)
 before inviting early testers.
 Use
+[docs/developer/qnap-pilot-auth-readiness.md](docs/developer/qnap-pilot-auth-readiness.md)
+to capture the current production-mode auth boundary, deferred login/OIDC work,
+and no-secret host-local provider settings before inviting testers.
+Use
 [docs/developer/qnap-pilot-seeded-import-evidence.md](docs/developer/qnap-pilot-seeded-import-evidence.md)
 to capture proof that validated CCLD source-derived rows are imported into
 PostgreSQL before treating the pilot as tester-ready.
@@ -55,6 +59,9 @@ page-data mode, production auth boundary defaults, retrieval raw artifact path,
 GitHub feedback configuration state, and Docker Compose configuration before
 containers are started. It warns about placeholder values that must be replaced
 before inviting testers.
+Record `/auth/status` output only as a safe capability summary; do not treat it
+as real login/session evidence, and do not capture provider secrets or callback
+URLs in readiness notes.
 
 ```powershell
 docker compose -f docker-compose.qnap.yml --env-file .env up --build -d

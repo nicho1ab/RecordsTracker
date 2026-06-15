@@ -18,6 +18,8 @@ automation, public URL behavior, or a hosted deployment in this repository
 branch. The first ADR-0016 controlled browser-triggered, server-executed CCLD
 retrieval-job slice can run in this runtime when explicitly configured with
 server-side raw storage and PostgreSQL.
+See [QNAP pilot auth readiness](qnap-pilot-auth-readiness.md) for the operator
+evidence to capture before inviting testers.
 
 ## Files
 
@@ -117,6 +119,9 @@ screenshots, or docs.
 
 Before inviting early testers, use the full
 [QNAP pilot operator checklist](qnap-pilot-operator-checklist.md).
+For auth readiness, use [QNAP pilot auth readiness](qnap-pilot-auth-readiness.md)
+to confirm production auth mode, disabled local-dev auth, safe `/auth/status`,
+and deferred real login/session work.
 For proof that PostgreSQL-backed CCLD source-derived rows are actually imported,
 use [QNAP pilot seeded import evidence](qnap-pilot-seeded-import-evidence.md).
 The optional `scripts/summarize-qnap-pilot-seeded-import-evidence.ps1` command
