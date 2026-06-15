@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added `scripts/summarize-qnap-pilot-seeded-import-evidence.ps1`, an optional
+	read-only QNAP pilot evidence command that summarizes env readiness decisions
+	and PostgreSQL-backed hosted import/source-derived counts without running
+	imports, retrieval, live CCLD calls, GitHub calls, or printing secrets, raw
+	artifacts, raw server paths, or legal/completeness conclusions.
 - Added `docs/developer/qnap-pilot-seeded-import-evidence.md`, a concise
 	operator evidence guide for proving a QNAP pilot can see PostgreSQL-backed
 	validated CCLD source-derived records before inviting testers. The guide covers

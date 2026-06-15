@@ -170,7 +170,9 @@ docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic u
   request, retrieval history/detail, help, and reviewer surfaces.
 - Capture seeded import evidence that `hosted_import_batches` and
   `hosted_source_derived_records` contain validated PostgreSQL-backed CCLD rows
-  before treating the pilot as tester-ready.
+  before treating the pilot as tester-ready. The optional read-only
+  `scripts/summarize-qnap-pilot-seeded-import-evidence.ps1` command can collect
+  the safe count and configuration summary.
 - Record the GitHub feedback decision: intentionally disabled or fully
   configured.
 - Record the controlled retrieval decision: intentionally disabled or fully

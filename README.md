@@ -244,7 +244,10 @@ public-record review notes.
    for the operator checklist before inviting early ylc.org testers.
 - Use [docs/developer/qnap-pilot-seeded-import-evidence.md](docs/developer/qnap-pilot-seeded-import-evidence.md)
    to capture proof that validated CCLD source-derived rows are imported into
-   PostgreSQL before treating the QNAP pilot as tester-ready.
+   PostgreSQL before treating the QNAP pilot as tester-ready. The optional
+   `scripts/summarize-qnap-pilot-seeded-import-evidence.ps1` command produces a
+   safe read-only evidence summary without running imports, retrieval, CCLD live
+   calls, or GitHub calls.
 - Use [docs/developer/cloud-portability-deployment.md](docs/developer/cloud-portability-deployment.md)
    to compare QNAP, AWS, Azure, DigitalOcean, Render, Fly.io, Railway, Supabase,
    and Neon deployment shapes while keeping app runtime, PostgreSQL, raw file
