@@ -4,6 +4,9 @@ Use this guide before inviting early external stakeholder organization testers t
 pilot. It records the access-control decision that must exist before tester
 accounts, links, or credentials are shared.
 
+Use it as part of the ordered
+[QNAP pilot readiness index](qnap-pilot-readiness-index.md).
+
 This decision is required before inviting early external stakeholder organization testers.
 
 This is an operator decision gate, not an implementation of access control. The

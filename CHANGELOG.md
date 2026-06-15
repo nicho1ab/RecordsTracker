@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added `docs/developer/qnap-pilot-readiness-index.md`, an ordered pre-invite
+	readiness path that ties together QNAP scope, environment setup, seeded import
+	evidence, route evidence, auth readiness, tester invitation decisions, evidence
+	packet contents, do-not-invite gates, and deferred work.
 - Added `docs/developer/qnap-pilot-tester-invitation-decision.md`, a concise
 	operator decision gate for who may be invited to the QNAP pilot, role/scope
 	limits, approval and revocation expectations, deferred real auth/invitation

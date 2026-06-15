@@ -26,6 +26,8 @@ application code.
 
 On the Docker host, use this QNAP pilot setup path:
 
+Start with the ordered readiness index in
+[docs/developer/qnap-pilot-readiness-index.md](docs/developer/qnap-pilot-readiness-index.md).
 Use the full operator checklist in
 [docs/developer/qnap-pilot-operator-checklist.md](docs/developer/qnap-pilot-operator-checklist.md)
 before inviting early testers.

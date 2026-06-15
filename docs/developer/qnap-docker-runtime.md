@@ -117,6 +117,8 @@ screenshots, or docs.
 
 ## Start Locally or on QNAP
 
+Before inviting early testers, start with the ordered
+[QNAP pilot readiness index](qnap-pilot-readiness-index.md).
 Before inviting early testers, use the full
 [QNAP pilot operator checklist](qnap-pilot-operator-checklist.md).
 For auth readiness, use [QNAP pilot auth readiness](qnap-pilot-auth-readiness.md)
