@@ -450,6 +450,11 @@ the governed primary future review experience.
 	existing manual feedback checklist without adding persisted feedback, schema
 	changes, new note/status behavior, live browser retrieval, connector execution,
 	or non-CCLD scope.
+- Improved local/test reviewer detail next-record navigation cues so testers can
+	return to the same CCLD facility/date request queue, resubmit when needed, and
+	use refreshed suggested-next-record guidance without adding persisted queue
+	state, queue assignment, automatic record claiming, workflow-engine behavior,
+	schema changes, live browser retrieval, connector execution, or non-CCLD scope.
 - Improved the local/test CCLD facility lookup and request/result queue context
 	confirmation so testers can see whether a request came from lookup selection or
 	manual entry, confirm the facility/license number, date range, active facility

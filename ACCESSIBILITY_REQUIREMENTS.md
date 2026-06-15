@@ -79,6 +79,8 @@ Accessibility requirements apply to:
 	traceability availability cues, suggested next-record links, filtered-empty
 	guidance, and meaningful reviewer-detail link text as visible text, not color
 	or layout alone.
+	Next-record navigation guidance must be visible text and must not rely on
+	automatic refresh, JavaScript, assignment state, or record-claiming behavior.
 	Request-context confirmation must expose lookup versus manual-entry origin,
 	facility/license number, date range, active facility reference source, and
 	change-facility/date navigation as visible text with descriptive links.

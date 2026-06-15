@@ -708,6 +708,7 @@ def _render_matched_result(
             {_render_queue_navigation()}
             {_render_queue_progress_summary(queue_items)}
             {_render_queue_triage_summary(request, queue_items)}
+            {_render_queue_continue_guidance(request, queue_items)}
             {_render_queue_filter_form(request)}
             <p>Showing {len(filtered_queue_items)} of {len(queue_items)} matching complaint
             record(s) for queue filter {_escape(_status_label(request.reviewer_status_filter))}.</p>
@@ -1043,6 +1044,28 @@ def _render_queue_triage_summary(
             testers can report missing records, record-specific reviewer-detail observations,
             confusing wording, or unexpected filter behavior.</p>
     </section>"""
+
+
+def _render_queue_continue_guidance(
+        request: CcldRecordRequest,
+        items: tuple[CcldRequestQueueItem, ...],
+) -> str:
+        next_item = _next_queue_item(items)
+        next_record_markup = _next_record_markup(next_item, request)
+        return f"""<section aria-labelledby="queue-continue-heading">
+            <h3 id="queue-continue-heading">Continue review guidance</h3>
+            <p>The suggested next record is derived from this facility/date request context and
+            existing reviewer-created note/status cues. It is local/test navigation help, not a
+            persisted queue assignment, automatic record claim, official workflow state, or public-
+            source conclusion.</p>
+            <p>After reviewing detail or saving a note/status, return to this same CCLD request
+            queue, submit the same request again when needed, and use the refreshed queue progress
+            and suggested next record to continue.</p>
+            <dl>
+                <dt>Next record guidance</dt>
+                <dd>{next_record_markup}</dd>
+            </dl>
+        </section>"""
 
 
 def _facility_scope_for_summary(request: CcldRecordRequest) -> str:

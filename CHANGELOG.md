@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Improved local/test reviewer detail next-record navigation cues so testers know
+	how to return to the same CCLD facility/date queue, resubmit when needed, and
+	use refreshed suggested-next-record guidance without adding persisted queue
+	state, assignments, automatic record claiming, workflow-engine behavior,
+	schema changes, live browser retrieval, connector execution, or non-CCLD scope.
 - Improved local/test reviewer detail feedback handoff cues so testers know which
 	record-specific observations to carry into the existing manual CCLD feedback
 	checklist after source traceability review, note/status confirmation, and
