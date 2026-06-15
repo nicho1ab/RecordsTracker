@@ -36,6 +36,11 @@ Use
 to capture the current production-mode auth boundary, deferred login/OIDC work,
 and no-secret host-local provider settings before inviting testers.
 Use
+[docs/developer/qnap-pilot-access-method-decision.md](docs/developer/qnap-pilot-access-method-decision.md)
+to record the temporary access method, scope, expiration, and revocation path
+before any external tester link, credential, network rule, VPN rule, or reverse
+proxy route is shared.
+Use
 [docs/developer/qnap-pilot-tester-invitation-decision.md](docs/developer/qnap-pilot-tester-invitation-decision.md)
 to record the invitation/access-control decision, tester role/scope, revocation
 plan, and required evidence packet before inviting testers.

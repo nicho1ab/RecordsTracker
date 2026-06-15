@@ -124,6 +124,10 @@ Before inviting early testers, use the full
 For auth readiness, use [QNAP pilot auth readiness](qnap-pilot-auth-readiness.md)
 to confirm production auth mode, disabled local-dev auth, safe `/auth/status`,
 and deferred real login/session work.
+Before sharing any external tester link, credential, network rule, VPN rule, or
+reverse proxy route, use
+[QNAP pilot access-method decision](qnap-pilot-access-method-decision.md) to
+record the temporary access method, scope, expiration, and revocation path.
 Before inviting testers, use
 [QNAP pilot tester invitation decision](qnap-pilot-tester-invitation-decision.md)
 to record approved invitees, role/scope, revocation, and evidence requirements.

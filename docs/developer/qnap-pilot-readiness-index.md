@@ -101,6 +101,7 @@ connection strings.
 Use:
 
 - [QNAP pilot auth readiness](qnap-pilot-auth-readiness.md).
+- [QNAP pilot access-method decision](qnap-pilot-access-method-decision.md).
 - [ADR-0011](../decisions/ADR-0011-hosted-tester-mvp-auth-access-roles.md).
 - [ADR-0014](../decisions/ADR-0014-hosted-tester-mvp-auth-provider-and-role-implementation.md).
 
@@ -112,6 +113,14 @@ self-service signup, and invitation workflow remain deferred. `/auth/status`
 evidence is a safe capability summary only and must not expose private provider
 values, provider subjects, provider issuers, raw claims, tokens, cookies,
 private headers, callback secrets, or connection strings.
+
+Do not share any external tester link, credential, network rule, VPN rule, or
+reverse proxy route until the access-method decision is recorded. The decision
+must state the selected temporary access method, named testers or approved group,
+role/scope, environment/host scope, start and expiration dates, revocation
+method, feedback triage owner, backup/evidence confirmation, known-limitations
+acknowledgement, and that the method is not production auth unless real OIDC and
+session implementation exists.
 
 ## 6. Confirm Tester Invitation Decision
 
@@ -159,6 +168,7 @@ The evidence packet should include:
 - Seeded import evidence command output.
 - Route evidence command output.
 - Auth readiness decision.
+- Access-method decision.
 - Tester invitation/access-control decision.
 - Feedback configuration decision: intentionally disabled or fully configured.
 - Retrieval configuration decision: intentionally disabled or fully configured
