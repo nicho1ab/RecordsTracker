@@ -115,6 +115,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Queue triage summary" not in ccld_queue_body
         or b"Suggested next record to open" not in ccld_queue_body
         or b"Copy tester feedback checklist" not in ccld_queue_body
+        or b"Reviewer detail and note/status confirmation" not in ccld_queue_body
+        or b"Manual-copy only" not in ccld_queue_body
         or b"First-run queue steps" not in ccld_queue_body
     ):
         raise RuntimeError("Hosted scaffold CCLD request queue did not return triage guidance.")

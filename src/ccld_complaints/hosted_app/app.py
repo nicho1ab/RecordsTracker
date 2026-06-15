@@ -769,9 +769,11 @@ def render_app_shell() -> str:
       <p>This local/test slice does not store feedback. After submitting a CCLD
       request, the result page shows a structured copyable checklist with the
       facility/license number, date range, matching record counts, queue status
-      counts, reviewer note/status context, and blank prompts for missing records,
-      confusing wording, queue surprises, workflow friction, and suggested
-      enhancements. Copy it into the agreed external feedback channel manually.</p>
+      counts, reviewer note/status context, source-traceability cues, reviewer
+      detail confirmation prompts, return-to-queue prompts, and blank prompts for
+      missing or unexpected records, confusing wording, queue surprises, workflow
+      friction, and suggested enhancements. Copy it into the agreed external
+      feedback channel manually.</p>
     </section>
     <section id="boundaries" aria-labelledby="boundaries-heading">
       <h2 id="boundaries-heading">Local/test boundaries</h2>
