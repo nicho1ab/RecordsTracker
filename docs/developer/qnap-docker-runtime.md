@@ -103,7 +103,9 @@ import, and reviewer-created state services. If the database is not migrated,
 not reachable, or empty, pages show setup-required guidance instead of falling
 back silently to fixture data. Before a QNAP pilot, run migrations and import a
 validated CCLD artifact so facility lookup, request queue, and reviewer detail
-have source-derived rows to read.
+have source-derived rows to read. Capture the proof steps in
+[QNAP pilot seeded import evidence](qnap-pilot-seeded-import-evidence.md)
+before inviting testers.
 
 Do not commit provider secrets, tenant-specific private values, hosted callback
 URLs, tokens, cookies, or raw provider claims. This branch documents the auth
@@ -115,6 +117,8 @@ screenshots, or docs.
 
 Before inviting early testers, use the full
 [QNAP pilot operator checklist](qnap-pilot-operator-checklist.md).
+For proof that PostgreSQL-backed CCLD source-derived rows are actually imported,
+use [QNAP pilot seeded import evidence](qnap-pilot-seeded-import-evidence.md).
 
 From the repository root on any Docker host, first validate the untracked pilot
 environment file:

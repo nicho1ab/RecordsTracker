@@ -215,6 +215,13 @@ artifact, prove deterministic ordering, prove source traceability preservation,
 reject missing or unsafe traceability fields, and prove no live crawling or
 browser-triggered connector execution is required.
 
+QNAP seeded import evidence documentation tests should prove the operator guide
+exists, is linked from the QNAP operator/runtime docs, mentions PostgreSQL-backed
+page data mode, migrations, source-derived imported record counts, raw artifact
+backup, untracked `.env`, no public-source completeness or legal conclusions,
+and keeps local-dev mock-success out of QNAP pilot mode while avoiding real
+secrets.
+
 Controlled CCLD retrieval job tests cover the ADR-0016 boundary before and after
 browser-triggered retrieval is enabled. Tests should prove only facility/license
 number, record type or all supported record types, start date, and end date are

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added `docs/developer/qnap-pilot-seeded-import-evidence.md`, a concise
+	operator evidence guide for proving a QNAP pilot can see PostgreSQL-backed
+	validated CCLD source-derived records before inviting testers. The guide covers
+	preconditions, migration/current checks, import batch and source-derived row
+	counts, safe traceability linkage evidence, route evidence, feedback/retrieval
+	decisions, backups, and no-completeness/no-legal-conclusion guardrails.
 - Added `docs/developer/qnap-pilot-operator-checklist.md`, a concise operator
 	checklist for QNAP pilot scope, preflight, `.env` setup, verifier and Compose
 	checks, startup, migrations, raw artifact storage, route verification,
