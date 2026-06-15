@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added a cloud-portability deployment guide comparing QNAP Docker, AWS, Azure,
+  DigitalOcean, Render, Fly.io, Railway, Supabase, and Neon paths for the hosted
+  CCLD runtime. The guide separates app runtime, PostgreSQL, raw file storage,
+  secrets, backups, custom domains/HTTPS, and future retrieval jobs without
+  adding cloud deployment, provider credentials, paid-service dependency, hosted
+  URLs, provider lock-in, or production launch claims.
 - Changed core hosted page data selection so production-style runtime defaults to
 	PostgreSQL-backed page data via `CCLD_HOSTED_PAGE_DATA_MODE=postgres`, while
 	fixture/demo reads are isolated behind explicit `fixture-demo` mode. Facility
