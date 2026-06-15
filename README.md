@@ -251,6 +251,12 @@ public-record review notes.
 - Use [docs/developer/qnap-pilot-tester-invitation-decision.md](docs/developer/qnap-pilot-tester-invitation-decision.md)
    to record who may be invited, what role/scope they receive, how access can be
    revoked, and which evidence packet must be complete before invitations.
+- Use `scripts/build-qnap-pilot-evidence-packet.ps1` only as an optional local
+   operator convenience for assembling a redacted Markdown readiness packet under
+   ignored `data/processed/qnap-pilot-evidence/`. It is read-only and is not an
+   audit export, legal report, product export packet, public report, GitHub
+   issue, or certification. Review generated packets before sharing and do not
+   commit them.
 - Use `scripts/summarize-qnap-pilot-route-evidence.ps1` after the app is running
    and the QNAP verifier passes to capture a GET-only hosted route evidence
    summary without running imports, retrieval, or GitHub calls.

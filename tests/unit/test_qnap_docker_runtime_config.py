@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 VERIFIER = ROOT / "scripts" / "verify-qnap-pilot-workflow.ps1"
 EVIDENCE_SCRIPT = ROOT / "scripts" / "summarize-qnap-pilot-seeded-import-evidence.ps1"
 ROUTE_EVIDENCE_SCRIPT = ROOT / "scripts" / "summarize-qnap-pilot-route-evidence.ps1"
+PACKET_SCRIPT = ROOT / "scripts" / "build-qnap-pilot-evidence-packet.ps1"
 
 
 def read_repo_text(relative_path: str) -> str:
@@ -63,6 +64,27 @@ def run_route_evidence(*args: str) -> subprocess.CompletedProcess[str]:
             "Bypass",
             "-File",
             str(ROUTE_EVIDENCE_SCRIPT),
+            *args,
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+def run_packet_builder(*args: str) -> subprocess.CompletedProcess[str]:
+    shell = shutil.which("pwsh") or shutil.which("powershell")
+    if shell is None:
+        raise AssertionError("PowerShell is required for packet builder tests.")
+    return subprocess.run(
+        [
+            shell,
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(PACKET_SCRIPT),
             *args,
         ],
         cwd=ROOT,
@@ -528,6 +550,220 @@ def test_qnap_route_evidence_script_fails_unavailable_app_by_default() -> None:
     assert "could not be reached" in (result.stdout + result.stderr)
 
 
+def test_qnap_evidence_packet_script_parses_and_declares_safe_contract() -> None:
+    script = read_repo_text("scripts/build-qnap-pilot-evidence-packet.ps1")
+    normalized_script = " ".join(script.split())
+    shell = shutil.which("pwsh") or shutil.which("powershell")
+    if shell is None:
+        raise AssertionError("PowerShell is required for packet builder parse tests.")
+
+    parse_command = (
+        "$tokens = $null; $errors = $null; "
+        f"[System.Management.Automation.Language.Parser]::ParseFile('{PACKET_SCRIPT}', "
+        "[ref]$tokens, [ref]$errors) | Out-Null; "
+        "if ($errors.Count -gt 0) { $errors | ForEach-Object { $_.Message }; exit 1 }"
+    )
+    result = subprocess.run(
+        [shell, "-NoProfile", "-Command", parse_command],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+
+    for required_text in (
+        "param(",
+        '$EnvFile = ".env"',
+        '$BaseUrl = "http://127.0.0.1:8000"',
+        '$OutputDir = "data/processed/qnap-pilot-evidence"',
+        "SkipDatabaseCheck",
+        "AllowRouteUnavailable",
+        "FeedbackDecision",
+        "RetrievalDecision",
+        "AuthDecision",
+        "TesterInvitationDecision",
+        "PostgresBackupPlan",
+        "RawArtifactBackupPlan",
+        "KnownLimitationsAcknowledged",
+        "verify-qnap-pilot-workflow.ps1",
+        "summarize-qnap-pilot-seeded-import-evidence.ps1",
+        "summarize-qnap-pilot-route-evidence.ps1",
+        "Redact-EvidenceText",
+        "Assert-SafeOperatorInput",
+        "OutputDir must be inside the ignored data/processed folder",
+        "Set-Content -LiteralPath $outputFile -Value $packet -Encoding UTF8",
+        "qnap-pilot-evidence-packet-$timestamp.md",
+        "Template validation only",
+        "Known limitations acknowledgement",
+        "This packet is local operator readiness evidence only",
+    ):
+        assert required_text in script
+
+    for required_text in (
+        "does not mutate the app database, run imports, run retrieval, send feedback, "
+        "call GitHub, call live CCLD, or execute POST requests",
+        "not an audit export, legal report, product export packet, public report, "
+        "official certification",
+    ):
+        assert required_text in normalized_script
+
+    for forbidden_text in (
+        "Invoke-WebRequest",
+        "Invoke-RestMethod",
+        "-Method POST",
+        "api.github.com",
+        "https://www.ccld.dss.ca.gov",
+        "run_controlled_ccld_retrieval",
+        "load_local_validated_ccld_records",
+        "create_issue",
+        "docker compose -f docker-compose.qnap.yml --env-file .env up",
+        "C:\\",
+        "OneDrive",
+    ):
+        assert forbidden_text not in script
+
+    assert '"(?i)/share/"' in script
+    assert "client_" + "secret" + "=" not in script.casefold()
+
+
+def test_qnap_evidence_packet_script_builds_redacted_placeholder_packet() -> None:
+    output_dir = ROOT / "data" / "processed" / "qnap-pilot-evidence-test"
+    shutil.rmtree(output_dir, ignore_errors=True)
+    try:
+        result = run_packet_builder(
+            "-EnvFile",
+            ".env.example",
+            "-SkipDatabaseCheck",
+            "-AllowRouteUnavailable",
+            "-BaseUrl",
+            "http://127.0.0.1:9",
+            "-OutputDir",
+            "data/processed/qnap-pilot-evidence-test",
+            "-FeedbackDecision",
+            "disabled intentionally",
+            "-RetrievalDecision",
+            "disabled intentionally",
+            "-AuthDecision",
+            "production boundary reviewed",
+            "-TesterInvitationDecision",
+            "not approved for external testers",
+            "-PostgresBackupPlan",
+            "operator will capture pg_dump before invitation",
+            "-RawArtifactBackupPlan",
+            "operator will back up raw artifact volume before invitation",
+            "-KnownLimitationsAcknowledged",
+        )
+
+        output = result.stdout + result.stderr
+        assert result.returncode == 0, output
+        assert "QNAP pilot evidence packet command completed" in output
+        assert "Template validation only" in output
+        assert "Generated evidence packet: data/processed/qnap-pilot-evidence-test/" in output
+
+        packets = sorted(output_dir.glob("qnap-pilot-evidence-packet-*.md"))
+        assert len(packets) == 1
+        packet = packets[0]
+        assert packet.suffix == ".md"
+        assert "data/processed/*" in read_repo_text(".gitignore")
+        assert packet.relative_to(ROOT).as_posix().startswith("data/processed/")
+
+        packet_text = packet.read_text(encoding="utf-8-sig")
+        normalized_packet = " ".join(packet_text.split())
+        for required_text in (
+            "QNAP Pilot Evidence Packet",
+            "Generated:",
+            "Env file name: .env.example",
+            "Output directory: data/processed/qnap-pilot-evidence",
+            "QNAP Verifier Summary",
+            "Seeded Import Evidence Summary",
+            "Route Evidence Summary",
+            "Operator Decisions",
+            "Auth readiness decision: production boundary reviewed",
+            "Tester invitation/access-control decision: not approved for external testers",
+            "Feedback configuration decision: disabled intentionally",
+            "Retrieval configuration decision: disabled intentionally",
+            "PostgreSQL backup plan: operator will capture pg_dump before invitation",
+            "Raw artifact backup plan: operator will back up raw artifact volume before invitation",
+            "Known limitations acknowledgement: acknowledged",
+            "Deferred Items",
+            "Real OIDC/login",
+            "Invitation workflow implementation",
+            "Non-CCLD sources",
+            "Broader UI redesign",
+            "Conclusion Boundary",
+            "not an audit export, legal report, product export packet, public report",
+            "makes no public-source completeness",
+        ):
+            assert required_text in normalized_packet
+
+        for forbidden_text in (
+            "ghp_",
+            "github_pat_",
+            "provider subjects",
+            "provider issuers",
+            "raw provider claims",
+            "cookies",
+            "tokens",
+            "callback URLs",
+            "tenant IDs",
+            "connection strings",
+            "private URLs",
+            "client secrets",
+            "raw artifact contents",
+            "response bodies",
+            "C:\\",
+            "OneDrive",
+            "/share/",
+        ):
+            assert forbidden_text.casefold() not in packet_text.casefold()
+    finally:
+        shutil.rmtree(output_dir, ignore_errors=True)
+
+
+def test_qnap_evidence_packet_script_refuses_private_operator_values() -> None:
+    result = run_packet_builder(
+        "-EnvFile",
+        ".env.example",
+        "-SkipDatabaseCheck",
+        "-AllowRouteUnavailable",
+        "-BaseUrl",
+        "http://127.0.0.1:9",
+        "-OutputDir",
+        "data/processed/qnap-pilot-evidence-test",
+        "-FeedbackDecision",
+        "http://private.example/operator-note",
+    )
+
+    assert result.returncode != 0
+    output = result.stdout + result.stderr
+    assert "secret-like or private marker" in output
+
+
+def test_qnap_evidence_packet_script_is_linked_from_guides() -> None:
+    required_links = {
+        "README.md": "scripts/build-qnap-pilot-evidence-packet.ps1",
+        "RUNBOOK.md": "scripts\\build-qnap-pilot-evidence-packet.ps1",
+        "docs/developer/qnap-pilot-readiness-index.md": (
+            "scripts\\build-qnap-pilot-evidence-packet.ps1"
+        ),
+        "docs/developer/qnap-pilot-operator-checklist.md": (
+            "scripts/build-qnap-pilot-evidence-packet.ps1"
+        ),
+        "docs/developer/qnap-pilot-seeded-import-evidence.md": (
+            "scripts/build-qnap-pilot-evidence-packet.ps1"
+        ),
+        "docs/developer/qnap-docker-runtime.md": (
+            "scripts/build-qnap-pilot-evidence-packet.ps1"
+        ),
+        "docs/developer/testing.md": "QNAP evidence packet command tests",
+    }
+
+    for path, link in required_links.items():
+        assert link in read_repo_text(path)
+
+
 def test_dockerfile_preserves_no_secret_portable_app_start() -> None:
     dockerfile = read_repo_text("Dockerfile")
 
@@ -800,6 +1036,12 @@ def test_qnap_pilot_readiness_index_exists_and_covers_ordered_path() -> None:
         "http://<host-name-or-ip>:<CCLD_HOSTED_PORT> -TimeoutSeconds 10",
         ".\\scripts\\summarize-qnap-pilot-route-evidence.ps1 -BaseUrl "
         "http://127.0.0.1:9 -TimeoutSeconds 1 -AllowUnavailable",
+        ".\\scripts\\build-qnap-pilot-evidence-packet.ps1 -EnvFile .env",
+        ".\\scripts\\build-qnap-pilot-evidence-packet.ps1 -EnvFile .env.example "
+        "-SkipDatabaseCheck -AllowRouteUnavailable -BaseUrl http://127.0.0.1:9",
+        "data/processed/qnap-pilot-evidence/",
+        "optional, local, read-only operator convenience",
+        "not an audit export, legal report, product export packet, public report",
         "QNAP pilot auth readiness",
         "ADR-0011",
         "ADR-0014",

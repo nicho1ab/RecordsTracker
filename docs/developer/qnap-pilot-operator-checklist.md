@@ -11,7 +11,9 @@ before testers begin review. Use
 [QNAP pilot auth readiness](qnap-pilot-auth-readiness.md) when capturing the
 current production-mode auth boundary and deferred real-login work. Use
 [QNAP pilot tester invitation decision](qnap-pilot-tester-invitation-decision.md)
-before inviting testers.
+before inviting testers. Use `scripts/build-qnap-pilot-evidence-packet.ps1` only
+as optional local operator convenience after separate readiness evidence and
+decisions are understood.
 
 ## 1. Pilot Purpose And Scope
 
@@ -194,6 +196,12 @@ docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic u
   before treating the pilot as tester-ready. The optional read-only
   `scripts/summarize-qnap-pilot-seeded-import-evidence.ps1` command can collect
   the safe count and configuration summary.
+- Optionally assemble the local redacted Markdown packet with
+  `scripts/build-qnap-pilot-evidence-packet.ps1`. The command writes under
+  ignored `data/processed/qnap-pilot-evidence/`, is read-only, and is not an
+  audit export, legal report, product export packet, public report, GitHub
+  issue, or certification. Review generated packets before sharing and do not
+  commit them.
 - Record the GitHub feedback decision: intentionally disabled or fully
   configured.
 - Record the controlled retrieval decision: intentionally disabled or fully
