@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Improved local/test CCLD queue filtered-empty recovery guidance so testers can
+	see when a reviewer-status filter hides all rows, clear the filter for the same
+	facility/date request context, and report confusing filter behavior without
+	adding persisted queue state, assignments, workflow-engine behavior, schema
+	changes, live browser retrieval, connector execution, or non-CCLD scope.
 - Improved local/test reviewer detail next-record navigation cues so testers know
 	how to return to the same CCLD facility/date queue, resubmit when needed, and
 	use refreshed suggested-next-record guidance without adding persisted queue

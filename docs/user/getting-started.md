@@ -161,6 +161,10 @@ Next-record cues are local/test navigation help only. They are derived from the
 current CCLD request context and existing reviewer-created note/status rows;
 they are not persisted queue assignments, automatic record claims, or official
 workflow state.
+If a reviewer-status filter shows no queue rows, the records may simply be hidden
+by that filter for the same facility/date request context. Use the all-records
+recovery action or choose a different status to continue review, and report any
+confusing filter behavior in the manual feedback checklist.
 The reviewer detail feedback handoff cue tells you which record-specific source
 traceability, source context, note/status confirmation, same-queue return, queue
 refresh, unexpected-record, confusing-label, wording, keyboard-flow, or next-step

@@ -432,7 +432,25 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
         blocked_normalized
     )
     assert "No complaint records match the selected queue status filter" in blocked_html
-    assert "Choose All queue records" in blocked_normalized
+    assert "Filtered queue recovery" in blocked_html
+    assert "selected reviewer-status filter hides all queue rows" in blocked_normalized
+    assert "same facility/date request context" in blocked_normalized
+    assert "does not mean records are missing, deleted, or absent" in blocked_normalized
+    assert "Active request context" in blocked_html
+    assert "facility/license number 157806098; date range 2022-08-01 to 2022-08-31" in (
+        blocked_normalized
+    )
+    assert "Selected reviewer-status filter" in blocked_html
+    assert "Queue records before this filter" in blocked_html
+    assert "<dd>1</dd>" in blocked_html
+    assert "Reviewer-status filters use existing reviewer-created state" in blocked_html
+    assert "Records without a saved status are counted as not started" in blocked_normalized
+    assert "Show all queue records for this request" in blocked_html
+    assert "name=\"reviewer_status_filter\" value=\"all\"" in blocked_html
+    assert "return to the full CCLD request queue" in blocked_normalized
+    assert "manual feedback checklist" in blocked_html
+    assert "what you expected to see" in blocked_normalized
+    assert "choose All queue records" in blocked_normalized
     assert counts == {
         "import_batches": 1,
         "source_records": 6,

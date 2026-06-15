@@ -50,6 +50,15 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
                     "end_date": "2022-08-31",
                 },
             )
+            ccld_filtered_status, ccld_filtered_body = _post_form_url(
+                f"{base_url}/ccld/records/request",
+                {
+                    "facility_number": "157806098",
+                    "start_date": "2022-08-01",
+                    "end_date": "2022-08-31",
+                    "reviewer_status_filter": "blocked",
+                },
+            )
             ccld_no_match_status, ccld_no_match_body = _post_form_url(
                 f"{base_url}/ccld/records/request",
                 {
@@ -134,6 +143,14 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"First-run queue steps" not in ccld_queue_body
     ):
         raise RuntimeError("Hosted scaffold CCLD request queue did not return triage guidance.")
+    if (
+        ccld_filtered_status != 200
+        or b"Filtered queue recovery" not in ccld_filtered_body
+        or b"selected reviewer-status filter hides all queue rows" not in ccld_filtered_body
+        or b"Show all queue records for this request" not in ccld_filtered_body
+        or b"same facility/date request context" not in ccld_filtered_body
+    ):
+        raise RuntimeError("Hosted scaffold CCLD filtered queue did not return recovery guidance.")
     if (
         ccld_no_match_status != 200
         or b"No matching local/test CCLD records found" not in ccld_no_match_body

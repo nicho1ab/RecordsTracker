@@ -710,6 +710,7 @@ def _render_matched_result(
             {_render_queue_triage_summary(request, queue_items)}
             {_render_queue_continue_guidance(request, queue_items)}
             {_render_queue_filter_form(request)}
+            {_render_filtered_empty_recovery(request, queue_items, filtered_queue_items)}
             <p>Showing {len(filtered_queue_items)} of {len(queue_items)} matching complaint
             record(s) for queue filter {_escape(_status_label(request.reviewer_status_filter))}.</p>
       <table>
@@ -1068,6 +1069,48 @@ def _render_queue_continue_guidance(
         </section>"""
 
 
+def _render_filtered_empty_recovery(
+        request: CcldRecordRequest,
+        queue_items: tuple[CcldRequestQueueItem, ...],
+        filtered_queue_items: tuple[CcldRequestQueueItem, ...],
+) -> str:
+        if filtered_queue_items or request.reviewer_status_filter == "all":
+                return ""
+        return f"""<section aria-labelledby="filtered-empty-recovery-heading">
+            <h3 id="filtered-empty-recovery-heading">Filtered queue recovery</h3>
+            <p>The selected reviewer-status filter hides all queue rows for this same
+            facility/date request context. This does not mean records are missing, deleted,
+            or absent from local/test data or public source material.</p>
+            <dl>
+                <dt>Active request context</dt>
+                <dd>{_escape(_facility_scope_for_summary(request))}; date range
+                {_escape(_date_scope_text(request))}</dd>
+                <dt>Selected reviewer-status filter</dt>
+                <dd>{_escape(_status_label(request.reviewer_status_filter))}</dd>
+                <dt>Queue records before this filter</dt>
+                <dd>{len(queue_items)}</dd>
+            </dl>
+            <p>Reviewer-status filters use existing reviewer-created state. Records without a saved
+            status are counted as not started. Clear the filter or choose another status to continue
+            reviewing this same request queue.</p>
+            <form action="{CCLD_RECORD_REQUEST_PATH}" method="post">
+                <input type="hidden" name="{_REQUEST_CONTEXT_ORIGIN_FIELD}"
+                    value="{_escape(request.request_context_origin)}">
+                <input type="hidden" name="{_LOOKUP_FACILITY_NAME_FIELD}"
+                    value="{_escape(request.lookup_facility_name or '')}">
+                <input type="hidden" name="facility_number"
+                    value="{_escape(request.facility_number)}">
+                <input type="hidden" name="start_date" value="{_escape(request.start_date or '')}">
+                <input type="hidden" name="end_date" value="{_escape(request.end_date or '')}">
+                <input type="hidden" name="reviewer_status_filter" value="all">
+                <p><button type="submit">Show all queue records for this request</button></p>
+            </form>
+            <p>If the filter behavior is confusing, copy the manual feedback checklist and describe
+            the selected filter, the same facility/date request context, and what you
+            expected to see.</p>
+        </section>"""
+
+
 def _facility_scope_for_summary(request: CcldRecordRequest) -> str:
     return f"facility/license number {request.facility_number}"
 
@@ -1303,8 +1346,9 @@ def _render_queue_filter_form(request: CcldRecordRequest) -> str:
 def _render_empty_filtered_queue_row(request: CcldRecordRequest) -> str:
         return f"""          <tr>
                         <td colspan="8">No complaint records match the selected queue status filter:
-                        {_escape(_status_label(request.reviewer_status_filter))}. Choose All queue
-                        records to return to the full CCLD request queue.</td>
+                        {_escape(_status_label(request.reviewer_status_filter))}. The filter is
+                        hiding rows for the same request context; choose All queue records to
+                        return to the full CCLD request queue.</td>
                     </tr>"""
 
 

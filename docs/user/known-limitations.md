@@ -131,7 +131,7 @@
   review queue with visible lookup/manual-entry request-context confirmation,
   progress counts, reviewer note/status cues, source-
   traceability availability cues, suggested next-record links, filtered-empty
-  guidance, clearer no-match and local validated load guidance, and reviewer-
+  recovery guidance, clearer no-match and local validated load guidance, and reviewer-
   status filters derived from existing reviewer-created state, includes a
   structured copyable feedback checklist for manual external
   sharing, and links matching rows into the reviewer UI.
