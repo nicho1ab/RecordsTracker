@@ -58,6 +58,10 @@ Accessibility requirements apply to:
 	filters must use text labels, form labels, and visible counts rather than
 	color-only indicators. Feedback checklists must have an associated label and
 	help text and must be presented in a copyable control or equivalent plain text.
+	Queue triage summaries must expose counts, reviewer note/status cues, source-
+	traceability availability cues, suggested next-record links, filtered-empty
+	guidance, and meaningful reviewer-detail link text as visible text, not color
+	or layout alone.
 	Facility lookup controls must have associated labels and help text, lookup
 	results must use table captions or equivalent result headings, selection links
 	must have meaningful text such as "Use this facility", and empty, no-match,

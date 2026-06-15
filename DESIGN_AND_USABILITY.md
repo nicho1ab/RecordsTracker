@@ -120,6 +120,12 @@ The workflow-completion version can add progress counts and reviewer-status
 filters derived from existing reviewer-created state so testers can distinguish
 not-started, in-review, needs-follow-up, reviewed, and blocked records without
 adding persisted queue state.
+Queue usability should keep improving through presentation-only guidance when it
+helps testers triage CCLD records: list-level triage summaries, note/status cues,
+source-traceability availability cues, suggested next-record links, clear
+filtered-empty states, and meaningful reviewer-detail actions are product
+requirements when they reduce confusion without adding new persistence or
+changing note/status behavior.
 The CCLD facility lookup version can add a local/test reference-data search path
 before the request page so testers do not need to know the full facility/license
 number. It should support a configured full local/test CSV with a committed tiny

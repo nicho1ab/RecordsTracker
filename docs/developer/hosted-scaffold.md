@@ -137,10 +137,13 @@ records through the local/test hosted route seams, shows matching seeded CCLD
 complaint records as a facility/date-scoped review queue, includes first-time
 workflow and key-term help at `/ccld/help`, and links matching complaint records
 into the hosted reviewer UI detail or list pages.
-The queue includes progress counts and a reviewer-status filter derived from
-existing reviewer-created note/status rows. Records with no reviewer status are
-counted as not started. After a tester saves a note or status in the reviewer UI,
-submitting the same CCLD request again shows the updated queue progress.
+The queue includes a triage summary, progress counts, reviewer note/status cues,
+source-traceability availability cues, suggested next-record links, and a
+reviewer-status filter derived from existing reviewer-created note/status rows.
+Records with no reviewer status are counted as not started. After a tester saves
+a note or status in the reviewer UI, submitting the same CCLD request again
+shows the updated queue progress. Filtered-empty states explain how to return to
+all queue records without implying that public-source records are absent.
 
 When no matching hosted rows are available, the page can offer a bounded local
 validated CCLD load action. That action reads committed local/test hosted
@@ -163,7 +166,8 @@ The feedback section is guidance-only; it explains what a tester should capture
 about missing records, confusing wording, unexpected queue or filter behavior,
 workflow friction, or desired features. Request results also include a structured
 copyable checklist with the facility/date request, matching record counts, queue
-status counts, local validated load context, and reviewer note/status context.
+status counts, local validated load context, source-traceability cue context, and
+reviewer note/status context.
 The app does not save or send that checklist; testers must copy it into the
 agreed external feedback channel manually.
 

@@ -229,22 +229,34 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "CCLD review queue" in html
     assert "Facility/date-scoped CCLD complaint records ready for review" in html
     assert "Queue progress summary" in html
+    assert "Counts use existing reviewer-created status rows" in normalized_html
     assert "Total matching complaint records" in html
     assert "<dt>Not started</dt>" in html
     assert "<dd>1</dd>" in html
+    assert "Queue triage summary" in html
+    assert "Records with reviewer notes" in html
+    assert "Records with reviewer status" in html
+    assert "Records with source traceability available" in html
+    assert "Suggested next record to open" in html
+    assert "Open reviewer detail for 32-CR-20220407124448" in html
+    assert "Find another CCLD facility" in html
+    assert "Start a new CCLD request" in html
+    assert "Open CCLD workflow help" in html
+    assert "Copy tester feedback checklist" in html
     assert "Filter queue by reviewer status" in html
     assert "Apply queue status filter" in html
     assert "Showing 1 of 1 matching complaint" in normalized_html
-    assert "Review this complaint record" in html
     assert "A. MIRIAM JAMISON" in html
     assert "32-CR-20220407124448" in html
     assert detail_href in html
     assert "Complete source traceability" in html
+    assert "Records with source traceability available</dt>" in html
     assert "No reviewer notes or status yet" in html
     assert "1 loaded source records in bundle" not in html
     assert "6 loaded source records in bundle" in html
     assert "Copyable tester feedback checklist" in html
     assert "Structured CCLD feedback checklist" in html
+    assert "id=\"feedback-checklist-section\"" in html
     assert "CCLD tester feedback checklist" in html
     assert "- Matching source-derived rows shown: 6" in html
     assert "- Matching complaint records in queue: 1" in html
@@ -330,6 +342,9 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
     assert reviewed_status == 200
     assert "Latest reviewer status: Reviewed" in reviewed_html
     assert "1 reviewer note(s)" in reviewed_html
+    assert "Records with reviewer notes" in reviewed_html
+    assert "Records with reviewer status" in reviewed_html
+    assert "Suggested next record to open" in reviewed_html
     assert "- Reviewer-created rows read for this queue: 2" in reviewed_html
     assert "- Reviewer notes present: yes" in reviewed_html
     assert "- Reviewer statuses present: yes" in reviewed_html
@@ -337,12 +352,13 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
     assert "Showing 1 of 1 matching complaint record(s) for queue filter Reviewed." in (
         reviewed_normalized
     )
-    assert "Review this complaint record" in reviewed_html
+    assert "Open reviewer detail for 32-CR-20220407124448" in reviewed_html
     assert blocked_status == 200
     assert "Showing 0 of 1 matching complaint record(s) for queue filter Blocked." in (
         blocked_normalized
     )
-    assert "No complaint records are available in this CCLD request result." in blocked_html
+    assert "No complaint records match the selected queue status filter" in blocked_html
+    assert "Choose All queue records" in blocked_normalized
     assert counts == {
         "import_batches": 1,
         "source_records": 6,

@@ -137,12 +137,13 @@ hosted seeded-corpus output, and links matching rows into the hosted reviewer
 UI. It also includes a first-time help page at `/ccld/help`, contextual
 facility/date/load/review help, feedback guidance, a structured copyable feedback
 checklist for the current request and queue state, and a facility/date-scoped
-review queue with one row per matching complaint record, progress counts, and a
-reviewer-status filter. Reviewer detail pages include a plain-language record
-summary, source traceability, related context, reviewer notes/statuses, CCLD
-return links, and feedback clues for the selected record. After adding a note or
-status in reviewer detail, return to the CCLD request page and submit the same
-request to see updated progress.
+review queue with one row per matching complaint record, triage summaries,
+progress counts, reviewer note/status cues, source-traceability availability
+cues, suggested next-record links, and a reviewer-status filter. Reviewer detail
+pages include a plain-language record summary, source traceability, related
+context, reviewer notes/statuses, CCLD return links, and feedback clues for the
+selected record. After adding a note or status in reviewer detail, return to the
+CCLD request page and submit the same request to see updated progress.
 The feedback checklist is not saved by the app; copy it into the agreed external
 feedback channel manually. Full/raw facility CSV files must stay out of the
 repository. The lookup and request pages do not run live CCLD retrieval, execute
