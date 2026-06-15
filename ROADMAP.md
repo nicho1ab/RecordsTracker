@@ -241,6 +241,12 @@ the governed primary future review experience.
   schema changes, connector changes, production OIDC, deployment, direct browser
   crawling, statewide crawling, non-CCLD sources, or legal/completeness
   conclusions in the ADR branch.
+- Implemented the first ADR-0016 controlled retrieval job slice for CCLD
+	complaint records, including request-page record type controls, server-side job
+	state, raw artifact preservation, SHA-256 preservation, mocked retrieval tests,
+	PostgreSQL source-derived import, safe status/result counts, and queue links,
+	without adding production OIDC, cloud deployment, non-CCLD sources, direct
+	browser crawling, statewide crawling, or unsupported conclusions.
 - Added the first QNAP-first, cloud-portable Docker Compose runtime envelope for
 	the hosted CCLD scaffold with a Python app container, PostgreSQL in Docker,
 	Alembic startup migration wiring, health checks, named volumes, `.env.example`,
@@ -649,22 +655,18 @@ resolve a concrete MVP-blocking risk. Deferred readiness work stays tracked, but
 it should be sequenced by user value and MVP risk rather than by implementation
 convenience.
 
-1. Implement the ADR-0016 controlled browser-triggered, server-executed CCLD
-   retrieval job slice so authenticated testers can request facility/date/type-
-   bounded CCLD records from the browser, while tests mock network retrieval and
-   the server preserves raw evidence, validates/imports source-derived records,
-   exposes safe job status, and links results to the hosted queue.
-2. Improve reviewer detail usability for the CCLD local/test review loop,
+1. Improve reviewer detail usability for the CCLD local/test review loop,
 	including source-traceability clarity only when it directly helps testers
 	verify records.
-3. Improve the CCLD request, queue, status/progress, accessibility, and feedback
+2. Improve the CCLD request, queue, controlled retrieval status/progress,
+	accessibility, and feedback
 	workflow where tester confusion or friction remains.
-4. Add additional CCLD fixtures and extraction hardening for representative
+3. Add additional CCLD fixtures and extraction hardening for representative
 	report layouts, missing fields, and edge cases when they protect the CCLD MVP
 	from extraction or validation regressions.
-5. Expand reviewer-created workflow layers only after the current notes/status
+4. Expand reviewer-created workflow layers only after the current notes/status
 	loop proves what additional reviewer state testers need.
-6. Sequence production auth/provider integration, audit/export, reset/reload
+5. Sequence production auth/provider integration, audit/export, reset/reload
 	execution, deployment, database-backed lookup, persisted feedback, and non-CCLD
 	sources only when they unlock a user-facing milestone or remove a concrete
 	MVP-blocking risk.
@@ -739,6 +741,6 @@ define the smallest useful product shape:
 	deployment, database-backed facility lookup, production facility reference
 	import/sync, non-CCLD sources, persisted tester feedback, and broader reviewer
 	workflow layers remain tracked but deferred until the product-benefit gate says
-	they are needed. Controlled browser-triggered CCLD retrieval is no longer a
-	permanent blocker; ADR-0016 approves the boundary and the next branch may
-	implement it.
+	they are needed. Controlled browser-triggered CCLD retrieval now has a first
+	implemented slice for complaint records; broader retrieval capabilities remain
+	bounded by ADR-0016 and future user value.

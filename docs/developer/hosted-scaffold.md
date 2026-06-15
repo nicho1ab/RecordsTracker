@@ -216,8 +216,33 @@ Core hosted pages now choose their data source explicitly:
 When PostgreSQL mode is selected but no migrated/imported database context is
 available, pages show setup-required guidance. They do not silently fall back to
 fixtures, run live CCLD retrieval, execute connectors, mutate source-derived
-records, or expose raw narrative fields. Retrieval job result display remains
-deferred until the ADR-0016 controlled retrieval-job implementation is added.
+records, or expose raw narrative fields. Controlled CCLD retrieval requires a
+configured retrieval context and server-side raw storage; otherwise the request
+page shows setup-required guidance and creates no retrieval job.
+
+## Controlled CCLD Retrieval Jobs
+
+The first ADR-0016 retrieval slice is server-side and CCLD-only. The browser
+submits only facility/license number, record type, start date, and end date.
+Supported record types are `complaints` and `all_supported`; all supported
+currently resolves to complaint records only. The server validates inputs,
+requires retrieval trigger permission, enforces CCLD source URL allowlists,
+preserves raw source artifacts under configured server-side storage, computes raw
+SHA-256 hashes, deterministically extracts/normalizes/validates, imports
+source-derived rows into PostgreSQL, and renders safe job state/result counts.
+
+Retrieval is disabled unless host configuration includes retrieval enablement and
+raw storage, such as:
+
+```text
+CCLD_RETRIEVAL_ENABLED=enabled
+CCLD_RETRIEVAL_RAW_DIR=/app/data/raw/ccld/retrieval
+```
+
+Tests use mocked CCLD retrieval only. CI must not make live CCLD calls. Direct
+browser scraping, non-CCLD sources, statewide crawling, private/authenticated
+source scraping, production OIDC, deployment changes, and legal/completeness
+conclusions remain out of scope.
 
 ## Open the CCLD record request page
 
@@ -481,6 +506,8 @@ wiring includes:
 - `migrations/versions/20260614_0004_reset_reload_operational_metadata.py` with
   one separate reset/reload operational planning metadata scaffold table for
   explicitly requested dry-run planning records only.
+- `migrations/versions/20260615_0005_ccld_retrieval_jobs.py` with one separate
+  controlled CCLD retrieval job operational metadata table.
 - `ccld_complaints.hosted_app.persistence` for no-secret database URL validation
   and ADR-0010 persistence boundary descriptors.
 - `ccld_complaints.hosted_app.auth` for managed OIDC/OAuth2 provider-class
@@ -533,6 +560,9 @@ wiring includes:
 - `ccld_complaints.hosted_app.reset_reload_planning_routes` for local/test
   authenticated JSON list and fetch access over persisted reset/reload planning
   metadata records without mutating data or executing reset/reload.
+- `ccld_complaints.hosted_app.ccld_retrieval_jobs` for controlled server-side
+  CCLD retrieval job validation, job state, raw artifact preservation, mocked-
+  testable retrieval orchestration, and separated operational metadata.
 - `ccld_complaints.cli.import_hosted_seeded_corpus` as a minimal local command
   wrapper for operator-initiated test imports.
 

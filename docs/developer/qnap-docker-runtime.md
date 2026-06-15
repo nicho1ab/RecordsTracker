@@ -13,11 +13,11 @@ This runtime includes the first provider-agnostic auth boundary for the external
 direction: production mode blocks anonymous workflow routes unless an
 authenticated route context exists, and explicit local-dev mode is available only
 for local scaffold validation. It does not add a real OIDC login flow, token
-handling, sessions, cookies, custom password storage, completed hosted CCLD
-retrieval jobs, production import automation, public URL behavior, or a hosted
-deployment in this repository branch. ADR-0016 approves a future controlled
-browser-triggered, server-executed CCLD retrieval-job boundary that can run in
-this runtime or a portable worker/container/task after focused implementation.
+handling, sessions, cookies, custom password storage, production import
+automation, public URL behavior, or a hosted deployment in this repository
+branch. The first ADR-0016 controlled browser-triggered, server-executed CCLD
+retrieval-job slice can run in this runtime when explicitly configured with
+server-side raw storage and PostgreSQL.
 
 ## Files
 
@@ -69,6 +69,19 @@ Optional value:
 
 - `CCLD_FACILITY_REFERENCE_CSV`: container path for a local/test facility
   reference CSV, such as `/app/data/raw/ccld/facility-reference.csv`.
+
+Optional controlled CCLD retrieval job values:
+
+- `CCLD_RETRIEVAL_ENABLED`: set to `enabled` only when server-side raw storage,
+  PostgreSQL, and access boundaries are ready.
+- `CCLD_RETRIEVAL_RAW_DIR`: container path for preserved raw CCLD retrieval
+  artifacts, such as `/app/data/raw/ccld/retrieval`.
+- `CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS`: maximum request date span.
+- `CCLD_RETRIEVAL_PER_JOB_LIMIT`: maximum selected report requests per job.
+- `CCLD_RETRIEVAL_RATE_LIMIT_PER_ACTOR`: active queued/running jobs allowed per
+  actor.
+- `CCLD_RETRIEVAL_TIMEOUT_SECONDS`: per-request retrieval timeout.
+- `CCLD_RETRIEVAL_RETRY_LIMIT`: bounded retry count.
 
 The app receives `CCLD_HOSTED_TESTER_DATABASE_URL` from Compose. Do not commit a
 database connection string. Do not print the connection string in logs, docs,
@@ -144,11 +157,10 @@ map the same responsibilities to managed disks, persistent volumes, or a managed
 database. The app should still receive configuration through environment
 variables and should not depend on QNAP-specific filesystem paths.
 
-When ADR-0016 retrieval jobs are implemented, `ccld_raw_data` or an approved
-server-side raw artifact mount must preserve fetched CCLD source files before
-extraction, and backups must cover both PostgreSQL and raw artifacts. Retrieval
-job workers must use configured server-side storage paths or volumes, not
-browser-provided paths.
+For controlled retrieval jobs, `ccld_raw_data` or an approved server-side raw
+artifact mount preserves fetched CCLD source files before extraction, and
+backups must cover both PostgreSQL and raw artifacts. Retrieval job workers must
+use configured server-side storage paths or volumes, not browser-provided paths.
 
 ## Backup and Restore
 
@@ -186,8 +198,9 @@ After starting the runtime, check the health route and core local/test pages:
 - `/reviewer`
 
 The scaffold should continue to identify itself as local/test. It should not
-claim real OIDC login, token handling, sessions, cookies, completed retrieval
-jobs, public launch, or source completeness.
+claim real OIDC login, token handling, sessions, cookies, public launch, or
+source completeness. Retrieval job pages should show safe setup-required state
+unless retrieval is explicitly enabled with server-side storage.
 
 In production auth mode, protected workflow routes such as `/ccld/records/request`
 and `/reviewer` return a sign-in-required page until a real provider-backed

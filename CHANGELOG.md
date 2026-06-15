@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Implemented the first controlled browser-triggered, server-executed CCLD
+	retrieval job slice. The CCLD request page now includes record type selection
+	for complaint records or all supported record types, currently resolving to
+	complaints only; can trigger a server-side retrieval job when configured;
+	preserves raw source artifacts and SHA-256 hashes; imports validated
+	source-derived rows into PostgreSQL; renders safe job state/result counts; and
+	links completed jobs back to the hosted queue. Tests use mocked CCLD retrieval
+	only and cover validation, auth blocking, source allowlists, rate limits, safe
+	failures, no-secret output, feedback separation, and existing page/reviewer
+	behavior. Production OIDC, cloud deployment, non-CCLD sources, direct browser
+	crawling, statewide crawling, GitHub feedback export, GitHub Projects, and
+	legal/completeness conclusions remain deferred.
 - Added ADR-0016 approving a narrow browser-triggered, server-executed CCLD
 	retrieval job boundary for future implementation. The decision keeps retrieval
 	CCLD-only, authenticated, facility/date/type bounded, server-side, raw-source-

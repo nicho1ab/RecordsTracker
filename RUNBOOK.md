@@ -54,10 +54,10 @@ Supabase/Neon, or another host, use
 to keep app runtime, PostgreSQL, raw files, secrets, backups, and future retrieval
 jobs separated.
 
-## Future controlled CCLD retrieval jobs
+## Controlled CCLD retrieval jobs
 
-ADR-0016 approves controlled browser-triggered, server-executed CCLD retrieval
-jobs, but this branch does not implement them. When implemented, operators must
+ADR-0016 controlled browser-triggered, server-executed CCLD retrieval now has a
+first implementation slice for complaint records. Operators must
 verify before enabling the workflow that production mode requires authenticated
 tester access, retrieval trigger permission and scope checks are enforced,
 server-side CCLD source allowlists are configured, date range and request limits

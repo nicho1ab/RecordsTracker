@@ -56,11 +56,12 @@ experience.
 - Provides a server-side GitHub Issues tester feedback route at `/feedback` when
    configured with server-side `GITHUB_FEEDBACK_REPO` and `GITHUB_FEEDBACK_TOKEN`.
    Feedback is classified with labels, not GitHub Projects or issue types.
-- ADR-0016 approves a future controlled browser-triggered, server-executed CCLD
-   retrieval job boundary. The boundary is CCLD-only, facility/date/type bounded,
-   authenticated, permissioned, server-side, raw-source-preserving,
-   PostgreSQL-imported, safe-status, and test-mocked. Retrieval jobs are not
-   implemented yet.
+- Implements the first ADR-0016 controlled browser-triggered, server-executed
+   CCLD retrieval job slice. When configured with server-side raw storage and a
+   database context, the hosted request flow can trigger CCLD-only,
+   facility/date/type-bounded complaint retrieval, preserve raw artifacts and
+   SHA-256 hashes, import validated source-derived rows into PostgreSQL, and show
+   safe job status/counts. Tests use mocked CCLD retrieval only.
 - Includes a local/test hosted CCLD record request page where a tester can enter
    a CCLD facility/license number and optional date range, read matching seeded
    source-derived records, load or refresh matching CCLD records from validated
@@ -88,7 +89,8 @@ experience.
    the next suggested queue record after notes/statuses without persisted queue
    assignment, record claiming, saved review sessions, duplicate checklists, or
    feedback persistence, and read first-time workflow help
-   without running live crawling from a browser request.
+   and, when retrieval is configured, trigger a server-executed CCLD retrieval
+   job without running browser scraping.
 
 ## Core Principles
 

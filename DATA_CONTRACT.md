@@ -28,11 +28,13 @@ references, or reset/reload metadata are not canonical source-derived fields
 unless a later data contract, schema, documentation, migration, and test update
 explicitly adds them.
 
-ADR-0016 approves future controlled browser-triggered, server-executed CCLD
-retrieval jobs. Retrieval job metadata, job state, rate-limit state, safe result
+ADR-0016 now has a first controlled browser-triggered, server-executed CCLD
+retrieval job slice. Retrieval job metadata, job state, rate-limit state, safe result
 counts, warnings, failure summaries, raw artifact locations, import validation
 status, and operational status events are operational metadata, not canonical
-source-derived fields. Imported records produced by a future retrieval job must
+source-derived fields. The `hosted_ccld_retrieval_jobs` table stores this
+operational metadata separately from source-derived records, reviewer-created
+state, audit events, and feedback issues. Imported records produced by a retrieval job must
 still use the existing canonical source-derived fields and traceability rules,
 including source URL, raw SHA-256 hash, retrieval timestamp, connector name,
 connector version, raw path or artifact reference where available, and
