@@ -54,7 +54,8 @@
   request result queue with visible lookup/manual-entry request-context
   confirmation, first-time help, progress counts, reviewer-status
   filtering, reviewer note/status cues, source-traceability availability cues,
-  suggested next-record links, filtered-empty guidance, and a structured
+  suggested next-record links, clearer no-match/local validated load guidance,
+  filtered-empty guidance, and a structured
   copyable tester feedback checklist, plus skip-to-main links and visible
   first-run next-step guidance, links matches
   into the reviewer UI, and explains the explicit

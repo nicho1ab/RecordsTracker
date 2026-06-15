@@ -132,6 +132,10 @@ deferred no-match behavior, reviewer UI links after load, no browser live
 crawling, no generic connector execution, no reviewer-created state or audit
 mutation, no operational metadata mutation, guided request result queue
 rendering, help page rendering, contextual facility/date/load/review help,
+no-match guidance that distinguishes currently loaded local/test rows from
+public-source absence and tells testers when to change criteria, load local
+validated data, run outside-browser preparation, or report missing/unexpected
+records in the feedback checklist,
 first-time workflow overview, queue triage summaries, reviewer note/status cues,
 source-traceability availability cues, suggested next-record links,
 filtered-empty guidance, skip-to-main links, visible next-step guidance,

@@ -777,6 +777,7 @@ def _render_no_match_result(
                 reference_source=reference_source,
                 include_change_links=True,
             )}
+        {_render_no_match_guidance(request, local_count, import_reload_result)}
         {_render_import_reload_summary(import_reload_result)}
                 {_render_feedback_checklist_section(
                         request,
@@ -810,10 +811,62 @@ def _render_pipeline_plan(request: CcldRecordRequest) -> str:
             the validated SQLite output to create local/test hosted seeded-corpus JSON.</li>
             <li>Return to this page and use the local validated CCLD load action.</li>
       </ol>
+            <p>Use this outside-browser workflow only when the request context is correct and
+            local validated data needs to be prepared or refreshed. Do not treat a no-match
+            page as proof that the CCLD public portal has no matching public records.</p>
             <p>The remaining gap is production-ready automation around the validated
             artifact handoff. Browser requests still do not run live CCLD retrieval,
             connector execution, or SQLite conversion.</p>
     </section>"""
+
+
+def _render_no_match_guidance(
+    request: CcldRecordRequest,
+    local_facility_record_count: int,
+    import_reload_result: CcldImportReloadResult | None,
+) -> str:
+    date_scope = _date_scope_text(request)
+    load_state = _no_match_load_state(import_reload_result)
+    return f"""    <section aria-labelledby="no-match-guidance-heading">
+            <h2 id="no-match-guidance-heading">How to interpret this no-match result</h2>
+            <p>This page searched currently loaded local/test source-derived rows only. It did
+            not run live CCLD retrieval, connector execution, SQLite conversion, or artifact
+            building from the browser.</p>
+            <dl>
+                <dt>Facility/license number searched</dt>
+                <dd>{_escape(request.facility_number)}</dd>
+                <dt>Date range searched</dt>
+                <dd>{_escape(date_scope)}</dd>
+                <dt>Loaded local/test rows for this facility before date filtering</dt>
+                <dd>{local_facility_record_count}</dd>
+                <dt>Local validated load state</dt>
+                <dd>{_escape(load_state)}</dd>
+            </dl>
+            <ol>
+                <li>First confirm the request context above. Change the facility/license number
+                or date range if they are not the intended criteria.</li>
+                <li>If the context is correct and local validated records have not been loaded,
+                use the local validated CCLD load action on this page when available.</li>
+                <li>If local validated output has not been prepared yet, run the existing
+                outside-browser live fetch and artifact-builder workflow, then return here to
+                load or refresh the generated local/test artifact.</li>
+                <li>If records still seem missing or unexpected after checking criteria and
+                local validated data, copy the feedback checklist and include the facility/date
+                request, loaded-row counts, and what seemed missing or unexpected.</li>
+            </ol>
+            <p>A no-match result is a local/test data state, not a public-source absence,
+            record-completeness, legal, or facility-wide conclusion.</p>
+        </section>"""
+
+
+def _no_match_load_state(result: CcldImportReloadResult | None) -> str:
+    if result is None:
+        return "not submitted for this request"
+    if result.import_executed:
+        return "local validated rows were loaded or refreshed"
+    if result.deferred_reasons:
+        return "submitted, but no matching local validated rows were loaded"
+    return "submitted without loading rows"
 
 
 def _render_import_reload_summary(result: CcldImportReloadResult | None) -> str:
@@ -836,6 +889,9 @@ def _render_import_reload_summary(result: CcldImportReloadResult | None) -> str:
     return f"""    <section aria-labelledby="import-reload-summary-heading">
             <h2 id="import-reload-summary-heading">Local validated CCLD load result</h2>
             <p>Load executed: {_yes_no(result.import_executed)}.</p>
+            <p>This result summarizes the existing local/test validated load action. It reads
+            prepared hosted seeded-corpus JSON only; it does not run live CCLD retrieval,
+            connector execution, or artifact building from the browser.</p>
             <dl>
                 <dt>Matching rows before load</dt>
                 <dd>{result.available_before_count}</dd>
@@ -878,7 +934,8 @@ def _render_import_reload_action(
             matching source-derived records through the existing hosted seeded import path.
             It does not run live public web requests.</p>
             <p id="local-load-help">Use this only after the CCLD pipeline output has been
-            validated and converted into hosted seeded-corpus JSON outside the browser.</p>
+            validated and converted into hosted seeded-corpus JSON outside the browser. If the
+            facility/date context is wrong, change the request criteria instead of loading.</p>
             <form action="{CCLD_RECORD_REQUEST_PATH}" method="post">
                 <input type="hidden" name="{_REQUEST_CONTEXT_ORIGIN_FIELD}"
                     value="{_escape(request.request_context_origin)}">
