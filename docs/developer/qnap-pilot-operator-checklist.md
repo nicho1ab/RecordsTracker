@@ -6,7 +6,9 @@ tester pilot. It complements `.env.example`,
 `docs/developer/qnap-docker-runtime.md`. Use
 [QNAP pilot seeded import evidence](qnap-pilot-seeded-import-evidence.md) when
 capturing proof that PostgreSQL-backed source-derived CCLD records are loaded
-before testers begin review.
+before testers begin review. Use
+[QNAP pilot auth readiness](qnap-pilot-auth-readiness.md) when capturing the
+current production-mode auth boundary and deferred real-login work.
 
 ## 1. Pilot Purpose And Scope
 
@@ -33,6 +35,7 @@ before testers begin review.
 - Confirm no real database passwords, GitHub tokens, provider values, hosted
   callback URLs, private URLs, or account-specific settings are in committed
   files.
+- Confirm the auth readiness notes are reviewed before inviting testers.
 - Confirm the operator has a plan for collecting route-check evidence and known
   limitation acknowledgements before inviting testers.
 
@@ -168,6 +171,9 @@ docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic u
 - Capture Alembic current state or migration success.
 - Capture route smoke results for the app shell, auth status, feedback, CCLD
   request, retrieval history/detail, help, and reviewer surfaces.
+- Capture auth readiness evidence that production auth mode is active,
+  local-dev auth is disabled, `/auth/status` is safe, and real login/session
+  work remains deferred.
 - Capture seeded import evidence that `hosted_import_batches` and
   `hosted_source_derived_records` contain validated PostgreSQL-backed CCLD rows
   before treating the pilot as tester-ready. The optional read-only

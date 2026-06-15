@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added `docs/developer/qnap-pilot-auth-readiness.md`, a concise QNAP pilot
+	auth readiness guide covering production auth mode, local-dev auth exclusion,
+	safe `/auth/status` evidence, deferred real OIDC/login/session behavior,
+	host-local provider placeholder handling, and no-secret/no-local-dev guardrails
+	before inviting early testers.
 - Added `scripts/summarize-qnap-pilot-seeded-import-evidence.ps1`, an optional
 	read-only QNAP pilot evidence command that summarizes env readiness decisions
 	and PostgreSQL-backed hosted import/source-derived counts without running

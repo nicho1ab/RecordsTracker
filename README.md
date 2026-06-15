@@ -242,6 +242,10 @@ public-record review notes.
    for QNAP pilot mode.
 - Use [docs/developer/qnap-pilot-operator-checklist.md](docs/developer/qnap-pilot-operator-checklist.md)
    for the operator checklist before inviting early external stakeholder organization testers.
+- Use [docs/developer/qnap-pilot-auth-readiness.md](docs/developer/qnap-pilot-auth-readiness.md)
+   to capture the current production-mode auth boundary, deferred login/OIDC
+   work, and host-local provider placeholder expectations before inviting
+   testers.
 - Use [docs/developer/qnap-pilot-seeded-import-evidence.md](docs/developer/qnap-pilot-seeded-import-evidence.md)
    to capture proof that validated CCLD source-derived rows are imported into
    PostgreSQL before treating the QNAP pilot as tester-ready. The optional
