@@ -365,7 +365,20 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Carry these observations into the existing manual feedback checklist" in (
         normalized_html
     )
+    assert "Feedback remains manual-copy only" in html
+    assert "use the existing manual feedback checklist" in normalized_html
+    assert "does not create a second checklist or save feedback" in normalized_html
+    assert "Manual feedback checklist bridge" in html
+    assert "record-specific observations from this detail" in normalized_html
+    assert "Do not create a separate checklist from this page" in normalized_html
     assert "Source traceability observations" in html
+    assert "Source traceability: note fields that were easy to confirm" in html
+    assert "Source-confidence cues: note present values" in html
+    assert "values not available in the local/test record" in normalized_html
+    assert "proxy-flag context that affected review" in html
+    assert "Field-note uncertainty" in html
+    assert "Note/status confirmation" in html
+    assert "Return-to-queue flow" in html
     assert "Source context confusion" in html
     assert "Request-context fit" in html
     assert "whether this complaint seemed unexpected" in normalized_html
@@ -556,6 +569,10 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert "official workflow state" in html
     assert "manual feedback checklist" in html
     assert "record-specific observation" in html
+    assert "existing manual feedback checklist" in html
+    assert "source traceability, source-confidence, or field-note wording" in (
+        normalized_html
+    )
     assert "157806098" in html
     assert "2022-08-01 to 2022-08-31" in html
     assert "return_facility_number=157806098" in html
@@ -681,6 +698,10 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "official workflow state" in html
     assert "manual feedback checklist" in html
     assert "record-specific observation" in html
+    assert "existing manual feedback checklist" in html
+    assert "source traceability, source-confidence, or field-note wording" in (
+        " ".join(html.split())
+    )
     assert "return_facility_number=157806098" in html
     assert "Review saved notes and statuses below" in html
     assert "reviewer_status_scaffold" in html

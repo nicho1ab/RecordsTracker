@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Improved local/test reviewer detail feedback checklist bridge cues so testers
+	can carry record-specific source traceability, source-confidence, field-note,
+	note/status confirmation, and return-to-queue observations into the existing
+	manual feedback checklist without adding a duplicate checklist, feedback
+	persistence, export behavior, schema changes, parser/extraction changes,
+	source scoring, source verification workflow, live browser retrieval,
+	connector execution, or non-CCLD scope.
 - Improved local/test reviewer detail field-note guidance so testers can phrase
 	reviewer-created notes/status observations cautiously after source traceability
 	and source-confidence review without adding automated note generation, parser,
