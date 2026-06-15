@@ -103,6 +103,13 @@ sensitive narrative content. Reviewer detail source traceability tests should
 cover selected-record identifiers, available source URL/raw hash/raw path or
 artifact references, missing-value wording, non-conclusion boundary language,
 pre-note/status source-review guidance, and no-mutation behavior.
+Reviewer detail source-confidence cue tests should prove present source-derived
+complaint fields are labeled without completeness claims, missing source-derived
+fields use local/test non-conclusive wording, existing proxy flags are described
+only when current fields support them, source traceability review guidance
+remains visible, no confidence score or automated source verification is implied,
+and detail rendering does not mutate source-derived, reviewer-created, audit,
+import, or operational metadata rows.
 Reviewer note/status confirmation tests should cover return-to-same-queue
 guidance, same facility/date request-context reminders, queue cues derived from
 reviewer-created state, resubmit-to-refresh wording, next-record guidance, and
@@ -120,6 +127,9 @@ Filtered-empty queue tests should prove the active reviewer-status filter, same
 facility/date request context, clear-filter action, reviewer-created-state basis,
 manual feedback guidance, and no-missing-record/no-public-absence wording render
 without mutating source-derived, reviewer-created, audit, import, or operational rows.
+Queue source-confidence wording tests should prove queue summaries identify their
+values as source-derived display summaries and direct testers to reviewer detail
+before relying on missing, confusing, or proxy-related fields.
 Terminology consistency tests should prove the app uses the selected plain-
 language terms for CCLD request context, facility/date request, loaded local/test
 CCLD records, source-derived records, reviewer-created notes/status, reviewer-

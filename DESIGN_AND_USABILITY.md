@@ -101,6 +101,13 @@ state, understand which traceability fields are visible or missing in the
 local/test record, and avoid treating missing local/test values as public-source
 absence, completeness, legal, facility-wide, harm, abuse, neglect, liability, or
 automated-finding conclusions.
+Reviewer detail source-confidence cues should stay presentation-only and should
+use existing source-derived fields, traceability fields, missing-value flags, and
+proxy flags only. They may tell testers which loaded complaint values are
+present, which expected values are not available in the local/test record, and
+when an existing proxy flag applies, but they must not create confidence scores,
+automated source verification, source-completeness assertions, source absence
+claims, legal conclusions, or new source-derived fields.
 Reviewer note/status confirmations should make the return path clear: saved
 notes/statuses are reviewer-created state, queue progress and note/status cues
 are derived from that state, the tester may need to resubmit the same local/test
@@ -151,6 +158,10 @@ source-traceability availability cues, suggested next-record links, clear
 filtered-empty states, and meaningful reviewer-detail actions are product
 requirements when they reduce confusion without adding new persistence or
 changing note/status behavior.
+Queue summaries should not overstate confidence in displayed source-derived
+values. When fields look missing, confusing, or proxy-related, the queue should
+direct testers to reviewer detail source-confidence cues before they rely on the
+values in reviewer-created notes/status or manual feedback.
 Filtered-empty queue states should explain that records are hidden by the
 selected reviewer-status filter for the same facility/date request context, not
 necessarily missing from local/test data or public source material, and should

@@ -150,11 +150,14 @@ checklist for the current request and queue state, and a facility/date-scoped
 review queue with one row per matching complaint record, triage summaries,
 progress counts, reviewer note/status cues, source-traceability availability
 cues, suggested next-record links, and a reviewer-status filter. Reviewer detail
-pages include a plain-language record summary, source traceability, related
-context, reviewer notes/statuses, CCLD return links, and feedback clues for the
-selected record. The detail page explains available and missing source
-traceability values with local/test wording and asks you to review source context
-before adding reviewer-created notes or status. After adding a note or status in reviewer detail, return to the
+pages include a plain-language record summary, source traceability, source-
+confidence cues, related context, reviewer notes/statuses, CCLD return links,
+and feedback clues for the selected record. The detail page explains available
+and missing source traceability and complaint-field values with local/test
+wording, names existing proxy flags when the loaded record supports them, and
+asks you to review source context before adding reviewer-created notes or status.
+Missing local/test values should be described as not available in the local/test
+record, not as public-source absence, record incompleteness, or data loss. After adding a note or status in reviewer detail, return to the
 CCLD request page and submit the same request to see updated progress.
 When a note or status is saved, the detail page confirms the reviewer-created
 update, shows it in the reviewer-created state section, and links back to the

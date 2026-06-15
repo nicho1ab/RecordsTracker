@@ -50,6 +50,10 @@ Accessibility requirements apply to:
 	labels for selected-record identifiers, source URL, raw hash, raw path or
 	local artifact references, connector/capture details, source document/report
 	markers, missing-value wording, and non-conclusion boundary language.
+	Reviewer detail source-confidence cues must be visible text with table headers
+	that identify present source-derived fields, local/test missing fields,
+	existing proxy flags when available, and source-traceability review reminders
+	without relying on color, scoring, JavaScript, or automated verification.
 	Reviewer note/status saved confirmations must expose return-to-queue guidance,
 	same facility/date request-context reminders, queue-progress refresh guidance,
 	and next-record guidance as visible text with descriptive links.
@@ -79,6 +83,9 @@ Accessibility requirements apply to:
 	traceability availability cues, suggested next-record links, filtered-empty
 	guidance, and meaningful reviewer-detail link text as visible text, not color
 	or layout alone.
+	Queue pages must use visible wording that source-derived summary values should
+	be checked on reviewer detail when fields look missing, confusing, or proxy-
+	related.
 	Next-record navigation guidance must be visible text and must not rely on
 	automatic refresh, JavaScript, assignment state, or record-claiming behavior.
 	Filtered-empty queue recovery guidance must expose the active filter, same

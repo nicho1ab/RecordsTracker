@@ -50,8 +50,10 @@ experience.
    and help pages,
    use clearer no-match and local validated load guidance when currently loaded
    local/test data has no matching records,
-   review clearer selected-record source traceability cues before adding notes or
-   status, use record-specific feedback handoff cues, see clearer note/status
+   review clearer selected-record source traceability and source-confidence cues
+   before adding notes or status, describe missing local/test values without
+   implying public-source absence or data loss, use record-specific feedback
+   handoff cues, see clearer note/status
    save confirmations, return to the same CCLD
    request context to resubmit when needed, see updated queue cues, continue to
    the next suggested queue record after notes/statuses without persisted queue

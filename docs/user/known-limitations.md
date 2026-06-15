@@ -93,8 +93,9 @@
   for the tiny seeded fixture corpus only: a local tester can list/search a
   seeded source-derived complaint record, see list-level reviewer-created
   note/status indicators, open detail, view safe source traceability fields plus
-  clear local/test missing-value guidance and safe related seeded bundle context,
-  see record-summary and record-specific feedback handoff guidance,
+  clear local/test missing-value guidance, view presentation-only source-confidence
+  cues for present, missing, and proxy-flagged local/test complaint fields, and
+  safe related seeded bundle context, see record-summary and record-specific feedback handoff guidance,
   submit a bounded reviewer note, submit a bounded reviewer status, see
   saved-state confirmations with same-request return-to-queue progress and
   next-record navigation guidance,
@@ -110,7 +111,9 @@
   execute connectors, automate production imports,
   execute reset/reload, delete or overwrite source-derived records, archive or
   clear reviewer-created state, execute persisted planning or execution-plan metadata, mutate
-  planning metadata or reviewer-created state through reads, persist
+  planning metadata or reviewer-created state through reads, add source-confidence
+  scoring, automate source verification, assert source completeness, change parser/
+  extraction behavior, add schema/persistence, persist
   audit events beyond successful reviewer-created state scaffold writes,
   authenticate browser users, validate
   real provider tokens, implement full reviewer workflows,
