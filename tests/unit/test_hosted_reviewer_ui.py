@@ -70,19 +70,18 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert "Seeded source-derived review list" in html
     assert "Reviewer queue triage summary" in html
     assert "Total visible records" in html
-    assert "Records with reviewer notes" in html
-    assert "Records with reviewer status" in html
+    assert "Records with reviewer-created notes" in html
+    assert "Records with reviewer-created status" in html
     assert "Records with source traceability available" in html
     assert "Suggested next record to open" in html
-    assert "Reviewer state" in html
+    assert "Reviewer-created note/status cue" in html
     assert "Notes" in html
     assert "Latest status" in html
-    assert "Suggested queue cue" in html
-    assert "Latest reviewer state at" in html
-    assert "No reviewer state yet" in html
-    assert "No reviewer notes" in html
-    assert "No reviewer status" in html
-    assert "No reviewer-created state yet" in html
+    assert "Suggested next-record cue" in html
+    assert "Latest reviewer-created note/status at" in html
+    assert "No reviewer-created note/status yet" in html
+    assert "No reviewer-created notes" in html
+    assert "No reviewer-created status" in html
     assert "Source traceability available" in html
     assert "Open next to begin review" in html
     assert "32-CR-20220407124448" in html
@@ -121,13 +120,13 @@ def test_reviewer_ui_landing_shows_reviewer_created_state_indicators() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Reviewed" in html
-    assert "1 reviewer note" in html
+    assert "1 reviewer-created note" in html
     assert "reviewed" in html
     assert "Reviewer queue triage summary" in html
     assert "Open only if reviewed context needs checking" in html
     assert status_row.created_at in html
     assert note.created_at in html or status_row.created_at in html
-    assert "No reviewer state yet" not in html
+    assert "No reviewer-created note/status yet" not in html
     assert_no_secret_html(html)
 
 
@@ -227,7 +226,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "157806098" in html
     assert "Facility name" in html
     assert "A. MIRIAM JAMISON" in html
-    assert "Reviewer status recorded" in html
+    assert "Reviewer-created status recorded" in html
     assert "Source-derived record" in html
     assert "These are safe scalar fields from the selected source-derived row" in (
         normalized_html
@@ -583,7 +582,7 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "Review saved notes and statuses below" in html
     assert "reviewer_status_scaffold" in html
     assert "needs_follow_up" in html
-    assert "Reviewer statuses present" in html
+    assert "Reviewer-created statuses present" in html
     assert "Reviewer-created payload kinds present" in html
     assert "Latest reviewer-created row" in html
     assert "Related seeded source-derived context" in html
@@ -703,9 +702,9 @@ def test_reviewer_ui_note_status_writes_are_visible_on_list_after_write() -> Non
     }
     assert "blocked" in status_html
     assert "Blocked" in list_html
-    assert "1 reviewer note" in list_html
+    assert "1 reviewer-created note" in list_html
     assert "blocked" in list_html
-    assert "No reviewer state yet" not in list_html
+    assert "No reviewer-created note/status yet" not in list_html
     assert_no_secret_html(list_html)
 
 

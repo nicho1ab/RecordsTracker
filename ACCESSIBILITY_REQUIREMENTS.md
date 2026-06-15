@@ -95,6 +95,10 @@ Accessibility requirements apply to:
 	must have meaningful text such as "Use this facility", and empty, no-match,
 	too-many-results, active-reference-source, fallback, and malformed-CSV states
 	must be visible without relying on color.
+- CCLD local/test pages must use consistent plain-language terms for repeated
+	concepts so screen reader users and first-time testers do not have to infer
+	that different phrases refer to the same request, queue, reviewer-created
+	note/status, source traceability, or manual feedback checklist behavior.
 
 ### Color and contrast
 

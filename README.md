@@ -46,6 +46,8 @@ experience.
    filtered-empty recovery guidance, suggested next-record links, skip-to-main
    links, visible first-run next-step guidance, clearer form/action text, open
    records in the hosted reviewer UI,
+   see consistent plain-language terms across request, queue, reviewer detail,
+   and help pages,
    use clearer no-match and local validated load guidance when currently loaded
    local/test data has no matching records,
    review clearer selected-record source traceability cues before adding notes or

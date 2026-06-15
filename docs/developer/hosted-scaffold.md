@@ -147,6 +147,10 @@ records through the local/test hosted route seams, shows matching seeded CCLD
 complaint records as a facility/date-scoped review queue, includes first-time
 workflow and key-term help at `/ccld/help`, and links matching complaint records
 into the hosted reviewer UI detail or list pages.
+The CCLD pages use consistent plain-language terms for request context,
+facility/date request, loaded local/test CCLD records, source-derived records,
+reviewer-created notes/status, reviewer-status filters, suggested next records,
+and the manual feedback checklist.
 Request and result pages visibly confirm whether the context came from facility
 lookup or manual entry, the facility/license number, the date range, and the
 active local/test facility reference source before a tester reviews queue rows.
