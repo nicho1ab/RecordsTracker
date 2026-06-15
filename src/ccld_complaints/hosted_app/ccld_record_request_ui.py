@@ -715,6 +715,9 @@ def _render_matched_result(
             <p>This queue is scoped to the requested facility/license number and date range.
             Open each complaint record to inspect source traceability, add a reviewer note,
             or set a reviewer status.</p>
+            <p>Queue rows show source-derived display summaries only. Open reviewer detail and
+            read the source-confidence cues before relying on missing, confusing, or
+            proxy-related fields in reviewer-created notes/status or manual feedback.</p>
             <p>After saving a note or status on reviewer detail, return here with the same
             facility/date request context and submit the same local/test request again to see
             queue progress and note/status cues derived from reviewer-created state.</p>
@@ -738,7 +741,7 @@ def _render_matched_result(
                         <th scope="col">Source document/report</th>
                         <th scope="col">Source traceability summary</th>
                         <th scope="col">Reviewer-created note/status cue</th>
-                        <th scope="col">Loaded record context</th>
+                        <th scope="col">Loaded record/source-confidence context</th>
           </tr>
         </thead>
         <tbody>
@@ -1043,6 +1046,9 @@ def _render_queue_triage_summary(
       <p>Use this summary to decide what to open first. It is derived from the current
       local/test request, existing source-derived traceability fields, and existing
       reviewer-created notes/statuses.</p>
+    <p>Queue summaries do not prove record completeness. Open reviewer detail for
+    source-confidence cues before relying on a summary value that looks missing,
+    confusing, or proxy-related.</p>
       <dl>
         <dt>Request scope</dt>
                 <dd>{_escape(request_scope)}; date range {_escape(date_scope)}</dd>
@@ -1263,6 +1269,7 @@ def _feedback_checklist_text(
         "Reviewer detail and note/status confirmation",
         "- Reviewer detail record opened:",
         "- Source traceability cues were easy to find:",
+        "- Source-confidence cues or missing local/test fields to mention:",
         "- Reviewer note/status action used:",
         "- Saved confirmation appeared as expected:",
         "- Saved note/status was visible after save:",
@@ -1611,7 +1618,8 @@ def _loaded_context_text(item: CcldRequestQueueItem) -> str:
     return (
         f"{item.related_record_count} loaded source-derived records in bundle; "
         f"{item.allegation_count} allegation rows; "
-        f"{item.extraction_audit_count} extraction audit rows."
+        f"{item.extraction_audit_count} extraction audit rows. "
+        "Open detail for source-confidence cues before relying on missing or confusing fields."
     )
 
 

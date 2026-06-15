@@ -137,6 +137,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Continue review guidance" not in ccld_queue_body
         or b"Suggested next record to open" not in ccld_queue_body
         or b"official workflow state" not in ccld_queue_body
+        or b"source-confidence cues" not in ccld_queue_body
         or b"Copy tester feedback checklist" not in ccld_queue_body
         or b"Reviewer detail and note/status confirmation" not in ccld_queue_body
         or b"Manual-copy only" not in ccld_queue_body
@@ -187,6 +188,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Local/test reviewer detail" not in reviewer_detail_body
         or b"Record summary" not in reviewer_detail_body
         or b"Selected complaint source traceability fields" not in reviewer_detail_body
+        or b"Source-confidence cues" not in reviewer_detail_body
+        or b"not a source-confidence score" not in reviewer_detail_body
         or b"not available in this local/test record" not in reviewer_detail_body
         or b"does not make legal, facility-wide" not in reviewer_detail_body
         or b"Feedback clues for this record" not in reviewer_detail_body

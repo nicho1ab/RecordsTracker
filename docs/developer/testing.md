@@ -113,9 +113,10 @@ detail output, and no source-derived mutation.
 Hosted reviewer UI shell tests should cover browser-accessible local/test
 landing and detail HTML pages over the seeded fixture corpus, list-level
 reviewer-created note/status indicators and latest reviewer-created timestamp,
-plain-language record summaries, safe source traceability display, safe related
-seeded bundle context with sensitive narrative fields hidden, clear missing-value
-wording for unavailable local/test traceability values, labeled search/
+plain-language record summaries, safe source traceability display, source-
+confidence cues for present, missing, and proxy-flagged local/test complaint
+fields, safe related seeded bundle context with sensitive narrative fields hidden,
+clear missing-value wording for unavailable local/test traceability values, labeled search/
 note/status controls, note/status form delegation to the existing workflow
 actions, read-after-write reviewer-created state display, same-request
 return-to-queue progress guidance, CCLD return navigation, record-specific
@@ -132,6 +133,10 @@ Next-record navigation coverage should verify that queue and detail pages tell
 testers how to return to the same request context, resubmit when needed, and use
 suggested-next cues derived from existing reviewer-created state without
 implying persisted assignment, record claiming, or workflow-engine state.
+Queue source-confidence wording coverage should verify that queue summaries are
+labeled as source-derived display summaries and point testers to reviewer detail
+before relying on missing, confusing, or proxy-related fields in notes/status or
+manual feedback.
 Filtered-empty queue coverage should verify that the selected reviewer-status
 filter, same request context, all-status recovery action, reviewer-created-state
 basis, no-missing-record wording, and manual feedback guidance render without
