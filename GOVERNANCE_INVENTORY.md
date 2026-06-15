@@ -60,7 +60,7 @@
   filtering, reviewer note/status cues, source-traceability availability cues,
   suggested next-record links, clearer no-match/local validated load guidance,
   filtered-empty recovery guidance, queue-to-detail checklist continuity cues,
-  consistent plain-language terminology, and a structured
+  first-run review session orientation cues, consistent plain-language terminology, and a structured
   copyable tester feedback checklist, plus skip-to-main links and visible
   first-run next-step guidance, links matches
   into the reviewer UI, and explains the explicit

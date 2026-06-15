@@ -202,6 +202,10 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Skip to main reviewer content" in html
     assert '<main id="main-content" tabindex="-1">' in html
     assert "First-run detail steps" in html
+    assert "reviewer detail step of the same CCLD review session" in normalized_html
+    assert "save reviewer notes/status only as tester-created observations" in (
+        normalized_html
+    )
     assert "Confirm the selected complaint record" in html
     assert "Review the source traceability fields and source-context cues" in html
     assert "Return to the CCLD request queue" in html

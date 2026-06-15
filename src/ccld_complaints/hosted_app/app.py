@@ -725,15 +725,19 @@ def render_app_shell() -> str:
   <main id="main-content" tabindex="-1">
     <section id="start" aria-labelledby="start-heading">
       <h2 id="start-heading">Start here: CCLD facility request</h2>
-      <p>Find a CCLD facility in the local/test reference CSV or enter a
-      facility/license number manually, then add an optional date range and review
-      matching source-derived complaint records in a guided local/test queue.</p>
+      <p>Start a CCLD review session here. Find a CCLD facility in the local/test
+      reference CSV or enter a facility/license number manually, then add an optional
+      date range and review matching loaded local/test CCLD records in a guided queue.</p>
       <ol>
         <li>Open facility lookup if you do not know the facility/license number.</li>
         <li>Confirm whether the request context came from facility lookup or manual entry,
         then submit the CCLD request form for one facility and optional date range.</li>
-        <li>Open the suggested queue record, add notes or status, then return to the queue.</li>
-        <li>Copy the feedback checklist into the agreed external channel.</li>
+        <li>Open the suggested queue record in reviewer detail to check source traceability,
+        source-confidence cues, and field-note guidance.</li>
+        <li>Add reviewer notes/status as tester-created observations when useful, then
+        return to the same queue/request context and resubmit when needed to refresh progress.</li>
+        <li>Finish by copying the single manual feedback checklist into the agreed external
+        channel. The app does not save a review session or persist feedback.</li>
       </ol>
       <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find CCLD facility</a></p>
       <p><a href="{CCLD_RECORD_REQUEST_PATH}">Request CCLD records</a></p>
@@ -741,17 +745,18 @@ def render_app_shell() -> str:
     <section id="workflow" aria-labelledby="workflow-heading">
       <h2 id="workflow-heading">Workflow overview</h2>
       <ol>
-        <li>Look up a CCLD facility by local/test reference fields or enter a
-        facility/license number manually.</li>
+        <li>Start with facility lookup when the facility/license number is unknown, or use
+        manual entry when it is known.</li>
         <li>Confirm the facility/license number, date range, request origin, and active
         local/test facility reference source before reviewing queue results.</li>
-        <li>Request records for one CCLD facility/license number.</li>
-        <li>Use loaded local/test CCLD records or load local validated records.</li>
-        <li>Open the facility/date CCLD review queue.</li>
-        <li>Review source traceability, then add reviewer notes or status in the
-        reviewer UI.</li>
-        <li>Copy the request-result checklist and add feedback about missing records,
-        confusing wording, friction, or desired features.</li>
+        <li>Request loaded local/test CCLD records for that facility/date context.</li>
+        <li>Use the CCLD review queue for matching complaint records, no-match/load
+        guidance, reviewer-status filtering, and suggested next-record navigation.</li>
+        <li>Use reviewer detail to check source traceability, source-confidence cues, and
+        field-note guidance before adding reviewer-created notes/status.</li>
+        <li>Return to the same queue/request context, resubmit when needed to refresh
+        note/status cues, continue to the next record, then copy the single manual feedback
+        checklist.</li>
       </ol>
     </section>
     <section id="terms" aria-labelledby="terms-heading">
@@ -785,6 +790,8 @@ def render_app_shell() -> str:
         <li>Browser pages do not run live CCLD retrieval, connector execution, or
         SQLite conversion.</li>
         <li>Reviewer notes and reviewer status do not change source-derived records.</li>
+        <li>No saved review session, persisted queue state, duplicate checklist, or feedback
+        persistence is added by these pages.</li>
         <li>Production sign-in, sessions, cookies, exports, deployment, and public
         launch behavior remain deferred.</li>
       </ul>

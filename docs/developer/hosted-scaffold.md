@@ -93,8 +93,13 @@ itself as a local/test scaffold. It may link to the local/test reviewer UI shell
 but must not imply that production authentication, full reviewer workflows,
 cloud hosting, QNAP, Azure, AWS, or public URLs are available.
 The home page includes a skip-to-main link and visible start-here guidance for
-the first CCLD review path: facility lookup, CCLD request, queue, reviewer
-detail, notes/status, and feedback checklist.
+the first CCLD review session path: facility lookup or manual entry, CCLD
+request-context confirmation, loaded local/test queue, reviewer detail source
+traceability/source-confidence/field-note review, reviewer-created notes/status,
+same-queue refresh, next-record continuation, and manual checklist copy. This is
+orientation only; it does not add saved sessions, persisted queue state, duplicate
+checklists, feedback persistence, auth, workflow-engine behavior, browser live
+fetch, connector execution, or artifact building from browser requests.
 
 When selecting the next hosted scaffold task, apply the product-benefit gate in
 `GOVERNANCE_INVENTORY.md`. Backend readiness, hardening, planning, or checklist
@@ -151,6 +156,9 @@ The CCLD pages use consistent plain-language terms for request context,
 facility/date request, loaded local/test CCLD records, source-derived records,
 reviewer-created notes/status, reviewer-status filters, suggested next records,
 and the manual feedback checklist.
+Home, request/help, queue, reviewer detail, note/status confirmation, and
+checklist wording now orient first-time testers to the same CCLD review session
+path without creating saved review sessions or persisted workflow state.
 Request and result pages visibly confirm whether the context came from facility
 lookup or manual entry, the facility/license number, the date range, and the
 active local/test facility reference source before a tester reviews queue rows.

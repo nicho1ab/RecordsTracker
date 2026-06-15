@@ -138,6 +138,16 @@ Queue-to-detail checklist continuity coverage should verify that queue pages,
 reviewer detail pages, and note/status confirmations point to the same existing
 manual checklist for queue-level and detail-level observations while preserving
 single-checklist/manual-copy behavior.
+First-run review session orientation coverage should verify that home,
+request/help, queue, reviewer detail, note/status confirmation, and checklist
+surfaces explain the current CCLD-only path in order: facility lookup or manual
+entry, request-context confirmation, loaded local/test queue, reviewer detail
+source traceability/source-confidence/field-note review, reviewer-created
+note/status observations, same-queue refresh, next-record continuation, and
+manual checklist copy. Coverage should also prove the wording does not add saved
+sessions, persisted queue state, duplicate checklists, feedback persistence,
+live browser fetch, connector execution, artifact building, schema changes, auth,
+workflow-engine state, or mutations.
 Next-record navigation coverage should verify that queue and detail pages tell
 testers how to return to the same request context, resubmit when needed, and use
 suggested-next cues derived from existing reviewer-created state without
