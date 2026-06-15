@@ -31,8 +31,10 @@ def _post_form_url(url: str, payload: dict[str, str]) -> tuple[int, bytes]:
 def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str, object]:
     previous_auth_mode = os.environ.get("CCLD_HOSTED_TESTER_AUTH_MODE")
     previous_local_dev_auth = os.environ.get("CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH")
+    previous_page_data_mode = os.environ.get("CCLD_HOSTED_PAGE_DATA_MODE")
     os.environ["CCLD_HOSTED_TESTER_AUTH_MODE"] = "local-dev"
     os.environ["CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH"] = "enabled"
+    os.environ["CCLD_HOSTED_PAGE_DATA_MODE"] = "fixture-demo"
     try:
         with create_server(host, port) as server:
             thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -103,6 +105,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     finally:
         _restore_env("CCLD_HOSTED_TESTER_AUTH_MODE", previous_auth_mode)
         _restore_env("CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH", previous_local_dev_auth)
+        _restore_env("CCLD_HOSTED_PAGE_DATA_MODE", previous_page_data_mode)
 
     payload = json.loads(health_body.decode("utf-8"))
     if health_status != 200 or payload.get("status") != "ok":

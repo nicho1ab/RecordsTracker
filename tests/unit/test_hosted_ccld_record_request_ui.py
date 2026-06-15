@@ -61,6 +61,7 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     status, content_type, body = route_response(
         "/ccld",
         auth_runtime_config=_local_dev_auth_config(),
+        page_data_mode="fixture-demo",
     )
     html = body.decode("utf-8")
     normalized_html = " ".join(html.split())
@@ -141,6 +142,7 @@ def test_ccld_record_request_prefills_selected_facility_from_lookup() -> None:
         "facility_number=900000001&request_context_origin=facility_lookup"
         "&lookup_facility_name=Synthetic+Orchard+Child+Care",
         auth_runtime_config=_local_dev_auth_config(),
+        page_data_mode="fixture-demo",
     )
     html = body.decode("utf-8")
 
@@ -163,6 +165,7 @@ def test_ccld_record_request_manual_entry_shows_context_confirmation() -> None:
     status, content_type, body = route_response(
         CCLD_RECORD_REQUEST_PATH,
         auth_runtime_config=_local_dev_auth_config(),
+        page_data_mode="fixture-demo",
     )
     html = body.decode("utf-8")
     normalized_html = " ".join(html.split())

@@ -49,6 +49,10 @@ experience.
    supplies the fixture tester actor for local scaffold validation. Real OIDC
    login, token handling, sessions, cookies, user tables, and provider-specific
    secrets remain outside this branch.
+- Defaults production-style hosted pages to PostgreSQL-backed source-derived,
+   import, and reviewer-created service contexts when configured. Fixture/demo
+   page reads remain available only through explicit local demo mode for tests and
+   workstation validation.
 - Includes a local/test hosted CCLD record request page where a tester can enter
    a CCLD facility/license number and optional date range, read matching seeded
    source-derived records, load or refresh matching CCLD records from validated
@@ -208,7 +212,8 @@ public-record review notes.
    QNAP-specific paths or backup locations belong in deployment configuration or
    operator notes rather than application code. The guide also lists the
    provider-agnostic OIDC/OAuth2 environment placeholders for external stakeholder organization pilot auth
-   planning.
+   planning and the `CCLD_HOSTED_PAGE_DATA_MODE` setting for PostgreSQL-backed
+   pages versus explicit fixture-demo mode.
 - Use [docs/developer/hosted-scaffold.md](docs/developer/hosted-scaffold.md) to
    run the local hosted tester MVP scaffold. The scaffold is a placeholder app
    shell with a controlled seeded corpus import path for validated local

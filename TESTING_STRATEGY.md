@@ -203,6 +203,12 @@ facility/license entry preservation, no live browser retrieval, no connector
 execution, no persistence, no source-derived, reviewer-created, audit, import,
 or operational metadata mutation, accessible headings/labels/captions/link text,
 and no-secret HTML output.
+PostgreSQL-backed page data tests must prove production-style page mode does not
+silently use fixture data, shows setup-required guidance when PostgreSQL context
+is unavailable, reads source-derived facility rows from the hosted source-derived
+table group when a database-backed context is supplied, keeps request queue and
+reviewer detail on source-derived plus reviewer-created route seams, and keeps
+fixture-demo behavior isolated behind explicit local/demo configuration.
 Hosted CCLD import/reload tests must prove local validated artifacts are
 validated before load, source URL/raw SHA-256/raw path/connector traceability is
 preserved, existing source-derived keys are refreshed without duplicates,
