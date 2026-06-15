@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Hardened the QNAP pilot environment template and verifier. `.env.example` now
+	uses clearer QNAP pilot sections, keeps GitHub feedback intentionally disabled
+	by default, keeps mock-success retrieval blank by default, and the verifier now
+	checks missing env files, unsafe local-dev auth, mock-success misuse, retrieval
+	without raw storage, half-configured GitHub feedback, intentional disabled
+	states, placeholder warnings, and committed-looking token patterns.
 - Added a QNAP hosted tester pilot workflow checker at
 	`scripts/verify-qnap-pilot-workflow.ps1`. It validates required untracked `.env`
 	keys, PostgreSQL/page-data/auth/retrieval raw-storage settings, Compose config,

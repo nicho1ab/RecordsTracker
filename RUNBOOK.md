@@ -24,8 +24,19 @@ The first production-like runtime target is QNAP Docker with PostgreSQL in
 Docker. The configuration remains portable and must not hard-code QNAP paths in
 application code.
 
-On the Docker host, copy `.env.example` to `.env`, replace placeholder values,
-and run:
+On the Docker host, use this QNAP pilot setup path:
+
+1. Copy `.env.example` to `.env` and keep `.env` untracked.
+2. Replace the PostgreSQL password placeholder.
+3. Keep `CCLD_HOSTED_PAGE_DATA_MODE=postgres`.
+4. Keep `CCLD_HOSTED_TESTER_AUTH_MODE=production` and
+	`CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH=disabled`.
+5. Keep `CCLD_RETRIEVAL_DEMO_MODE=` blank for QNAP pilot mode.
+6. Keep `CCLD_RETRIEVAL_ENABLED=disabled` until live retrieval is intentionally
+	configured, or set it to `enabled` only with persistent raw artifact storage.
+7. Leave both `GITHUB_FEEDBACK_REPO` and `GITHUB_FEEDBACK_TOKEN` blank to disable
+	GitHub feedback, or configure both values server-side to enable it.
+8. Run the verifier:
 
 ```powershell
 .\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env
@@ -33,8 +44,9 @@ and run:
 
 The pilot check validates the required untracked environment shape, PostgreSQL
 page-data mode, production auth boundary defaults, retrieval raw artifact path,
-and Docker Compose configuration before containers are started. It warns about
-placeholder values that must be replaced before inviting testers.
+GitHub feedback configuration state, and Docker Compose configuration before
+containers are started. It warns about placeholder values that must be replaced
+before inviting testers.
 
 ```powershell
 docker compose -f docker-compose.qnap.yml --env-file .env up --build -d

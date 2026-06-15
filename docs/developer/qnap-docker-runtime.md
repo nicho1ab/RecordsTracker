@@ -61,9 +61,15 @@ Provider-agnostic hosted tester auth values:
 
 Optional server-side GitHub Issues feedback values:
 
-- `GITHUB_FEEDBACK_REPO`: target repository in `owner/repo` format.
-- `GITHUB_FEEDBACK_TOKEN`: server-side token used only by the app process.
+- `GITHUB_FEEDBACK_REPO`: target repository in `owner/repo` format. Leave blank
+  when GitHub feedback is intentionally disabled.
+- `GITHUB_FEEDBACK_TOKEN`: server-side token used only by the app process. Leave
+  blank when GitHub feedback is intentionally disabled.
 - `GITHUB_FEEDBACK_DEFAULT_LABELS`: optional comma-separated extra labels.
+
+GitHub feedback must be either fully configured with both repo and token values,
+or intentionally disabled with both values blank. Half-configured feedback is a
+pilot readiness error.
 
 Optional value:
 
