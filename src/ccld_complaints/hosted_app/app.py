@@ -703,6 +703,7 @@ def render_app_shell() -> str:
   <title>{page_title}</title>
 </head>
 <body>
+  <a href="#main-content">Skip to main CCLD review content</a>
   <header>
     <p>{notice}</p>
     <h1>{page_title}</h1>
@@ -714,18 +715,25 @@ def render_app_shell() -> str:
       <li><a href="{CCLD_RECORD_REQUEST_PATH}">Request CCLD records</a></li>
       <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find CCLD facility</a></li>
       <li><a href="{CCLD_HELP_PATH}">How this works</a></li>
+      <li><a href="#start">Start first CCLD review</a></li>
       <li><a href="/reviewer">Review loaded records</a></li>
       <li><a href="#feedback">Feedback guidance</a></li>
       <li><a href="#boundaries">Local/test boundaries</a></li>
       <li><a href="/health">Health check</a></li>
     </ul>
   </nav>
-  <main>
+  <main id="main-content" tabindex="-1">
     <section id="start" aria-labelledby="start-heading">
-      <h2 id="start-heading">Start with a CCLD facility request</h2>
+      <h2 id="start-heading">Start here: CCLD facility request</h2>
       <p>Find a CCLD facility in the local/test reference CSV or enter a
       facility/license number manually, then add an optional date range and review
       matching source-derived complaint records in a guided local/test queue.</p>
+      <ol>
+        <li>Open facility lookup if you do not know the facility/license number.</li>
+        <li>Submit the CCLD request form for one facility and optional date range.</li>
+        <li>Open the suggested queue record, add notes or status, then return to the queue.</li>
+        <li>Copy the feedback checklist into the agreed external channel.</li>
+      </ol>
       <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find CCLD facility</a></p>
       <p><a href="{CCLD_RECORD_REQUEST_PATH}">Request CCLD records</a></p>
     </section>

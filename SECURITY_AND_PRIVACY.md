@@ -114,7 +114,9 @@ feedback checklist that testers must paste into an external channel manually,
 and a guided request result queue over safe CCLD complaint context with progress
 counts, reviewer note/status cues, source-traceability availability cues,
 suggested next-record links, filtered-empty guidance, and status filters derived
-from existing reviewer-created state. Its HTML output must
+from existing reviewer-created state. It can include skip-to-main links, visible
+first-run next-step guidance, specific form/action text, and manual feedback-copy
+instructions. Its HTML output must
 remain limited to safe scalar source-derived context, source traceability-style
 identifiers, reviewer-state indicators, queue counts, local/test boundary text,
 local validated load counts, non-persistent checklist prompts, and the explicit

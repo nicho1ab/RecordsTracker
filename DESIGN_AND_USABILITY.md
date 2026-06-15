@@ -126,6 +126,11 @@ source-traceability availability cues, suggested next-record links, clear
 filtered-empty states, and meaningful reviewer-detail actions are product
 requirements when they reduce confusion without adding new persistence or
 changing note/status behavior.
+First-run accessibility polish is also MVP usability work, not cosmetic polish:
+skip-to-main links, clear start-here sections, visible next-step instructions,
+specific button/link text, and manual feedback-copy guidance are required when
+they help a tester complete the CCLD facility lookup, request, queue, detail,
+notes/status, and feedback loop without prior explanation.
 The CCLD facility lookup version can add a local/test reference-data search path
 before the request page so testers do not need to know the full facility/license
 number. It should support a configured full local/test CSV with a committed tiny

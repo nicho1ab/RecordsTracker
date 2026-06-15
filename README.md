@@ -42,9 +42,10 @@ experience.
    local/test hosted seeded-corpus output, review a guided facility/date-scoped
    complaint queue with triage summaries, progress counts, reviewer note/status
    cues, source-traceability availability cues, reviewer-status filtering,
-   suggested next-record links, open records in the hosted reviewer UI, return to
-   see updated progress after notes/statuses, and read first-time workflow help
-   without running live crawling from a browser request.
+   suggested next-record links, skip-to-main links, visible first-run next-step
+   guidance, clearer form/action text, open records in the hosted reviewer UI,
+   return to see updated progress after notes/statuses, and read first-time
+   workflow help without running live crawling from a browser request.
 
 ## Core Principles
 
@@ -199,9 +200,10 @@ public-record review notes.
    import tables, links matching rows into the hosted reviewer UI, shows a guided
    facility/date-scoped result queue with contextual help, triage summaries,
    progress/status context, reviewer note/status cues, source-traceability
-   availability cues, suggested next-record links, and a structured copyable
-   feedback checklist intended to be pasted into an external feedback channel
-   manually, and explains the explicit CCLD
+   availability cues, suggested next-record links, skip-to-main page structure,
+   visible first-run next-step guidance, clearer form/action text, and a
+   structured copyable feedback checklist intended to be pasted into an external
+   feedback channel manually, and explains the explicit CCLD
    live-fetch command when broader retrieval is needed. It does not run live
    crawling, execute connectors, mutate reviewer-created state, create audit
    rows, persist lookup or feedback data, commit raw/full facility CSV files, or add non-CCLD sources from browser requests. A

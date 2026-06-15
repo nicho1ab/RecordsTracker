@@ -161,6 +161,10 @@ actions, and a structured copyable tester feedback checklist for manual external
 sharing. Queue state is derived from existing source-derived records plus
 existing reviewer-created note/status rows; it is not persisted as a separate
 queue state model. Feedback is not persisted by the app in this slice.
+The current local/test pages also include skip-to-main links, visible first-run
+next-step guidance, specific form/action text, and manual checklist copy
+instructions so keyboard and visible-text users can complete the MVP flow
+without adding JavaScript, persistence, schemas, or new workflow state.
 The local/test CCLD facility lookup page at `/ccld/facilities` reads configured
 full local/test CCLD program facility reference CSV rows when available, falls
 back to the committed tiny fixture when needed, searches safe scalar fields,

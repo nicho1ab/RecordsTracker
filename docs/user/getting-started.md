@@ -144,6 +144,10 @@ pages include a plain-language record summary, source traceability, related
 context, reviewer notes/statuses, CCLD return links, and feedback clues for the
 selected record. After adding a note or status in reviewer detail, return to the
 CCLD request page and submit the same request to see updated progress.
+The local/test browser pages include skip-to-main links, visible start-here or
+next-step guidance, specific button/link text, and manual checklist copy
+instructions so a first-time tester can use keyboard navigation and visible page
+text to move through the MVP flow.
 The feedback checklist is not saved by the app; copy it into the agreed external
 feedback channel manually. Full/raw facility CSV files must stay out of the
 repository. The lookup and request pages do not run live CCLD retrieval, execute

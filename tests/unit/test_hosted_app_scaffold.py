@@ -102,10 +102,13 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     html = render_app_shell()
     normalized_html = " ".join(html.split())
 
-    assert "<main>" in html
+    assert "Skip to main CCLD review content" in html
+    assert '<main id="main-content" tabindex="-1">' in html
     assert "Local/test scaffold only: not a production reviewer workflow." in html
     assert "Request CCLD facility records" in html
-    assert "Start with a CCLD facility request" in html
+    assert "Start here: CCLD facility request" in html
+    assert "Start first CCLD review" in html
+    assert "Open the suggested queue record" in html
     assert "Find a CCLD facility" in html
     assert "facility/license number manually" in normalized_html
     assert "Workflow overview" in html

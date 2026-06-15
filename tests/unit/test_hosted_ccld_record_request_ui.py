@@ -55,6 +55,8 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "CCLD record request" in html
+    assert "Skip to main CCLD request content" in html
+    assert '<main id="main-content" tabindex="-1">' in html
     assert "CCLD-only local/test request" in html
     assert "CCLD facility/license number" in html
     assert "optional date range" in html
@@ -62,6 +64,7 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert CCLD_FACILITY_LOOKUP_PATH in html
     assert "Queue status filter" in html
     assert "Records with no status are counted" in html
+    assert "Show CCLD request queue" in html
     assert "Workflow overview" in html
     assert "Key terms" in html
     assert "Feedback guidance" in html
@@ -227,6 +230,9 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "facility/license number 157806098" in html
     assert "Date range: 2022-08-01 to 2022-08-31." in html
     assert "CCLD review queue" in html
+    assert "First-run queue steps" in html
+    assert "Read the queue progress and triage summaries" in html
+    assert "Return to this request page and copy the feedback checklist" in normalized_html
     assert "Facility/date-scoped CCLD complaint records ready for review" in html
     assert "Queue progress summary" in html
     assert "Counts use existing reviewer-created status rows" in normalized_html
@@ -257,6 +263,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Copyable tester feedback checklist" in html
     assert "Structured CCLD feedback checklist" in html
     assert "id=\"feedback-checklist-section\"" in html
+    assert "Select the checklist text, copy it, paste it" in normalized_html
     assert "CCLD tester feedback checklist" in html
     assert "- Matching source-derived rows shown: 6" in html
     assert "- Matching complaint records in queue: 1" in html
@@ -400,6 +407,7 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert counts == _empty_reviewer_counts()
     assert "No matching local/test CCLD records found" in html
     assert "Rows for this facility currently available before date filtering: 6" in html
+    assert "Next step for first-time testers" in html
     assert "Copyable tester feedback checklist" in html
     assert "- Matching source-derived rows shown: 0" in html
     assert "- Matching complaint records in queue: 0" in html
@@ -547,6 +555,7 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     assert "- Browser pages did not run live CCLD retrieval or connector execution." in (
         first_checklist
     )
+    assert "Select the checklist text, copy it, paste it" in " ".join(first_html.split())
     assert "CCLD public portal remains the source of record" in first_checklist
     assert "provider" not in first_checklist.casefold()
     assert_no_secret_html(first_html)

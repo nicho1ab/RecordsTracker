@@ -254,9 +254,14 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Find CCLD facility" in html
+    assert "Skip to main CCLD facility lookup content" in html
+    assert '<main id="main-content" tabindex="-1">' in html
     assert "CCLD-only local/test facility lookup" in html
+    assert "Start here: find a facility" in html
+    assert "Use a matching result to carry the facility/license number" in normalized_html
     assert "Search local/test facility reference" in html
     assert "Facility search" in html
+    assert "Search local/test CCLD facilities" in html
     assert "Enter a facility name, facility/license number, city, county, ZIP code" in (
         normalized_html
     )
@@ -277,6 +282,7 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
     assert "Local/test CCLD facility reference matches" in html
     assert "Showing 1 of 1 matching local/test facility reference row" in normalized_html
     assert "Use this facility for CCLD request" in html
+    assert "Start here: find a facility" in html
     assert request_href in html
     assert "900000001" in html
     assert "Synthetic Orchard Child Care" in html

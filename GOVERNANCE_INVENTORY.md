@@ -51,7 +51,8 @@
   request result queue with first-time help, progress counts, reviewer-status
   filtering, reviewer note/status cues, source-traceability availability cues,
   suggested next-record links, filtered-empty guidance, and a structured
-  copyable tester feedback checklist, links matches
+  copyable tester feedback checklist, plus skip-to-main links and visible
+  first-run next-step guidance, links matches
   into the reviewer UI, and explains the explicit
   external CCLD live-fetch and local/test artifact-builder commands when broader retrieval is needed without
   running live crawling, connector execution, reviewer-created state mutation,
