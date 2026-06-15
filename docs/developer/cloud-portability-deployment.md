@@ -27,6 +27,8 @@ Keep these concerns separated across every host:
   snapshots/copies.
 - Auth configuration: managed OIDC/OAuth2 provider settings supplied outside the
   repository.
+- Feedback configuration: GitHub Issues repo and token supplied as server-side
+  secrets only.
 - Page data mode: `CCLD_HOSTED_PAGE_DATA_MODE=postgres` for production-style
   runtime; `fixture-demo` only for explicit local demos/tests.
 
@@ -50,6 +52,8 @@ Portable groups:
   `CCLD_HOSTED_TESTER_OIDC_ISSUER`, `CCLD_HOSTED_TESTER_OIDC_CLIENT_ID`,
   `CCLD_HOSTED_TESTER_OIDC_CALLBACK_PATH`, and
   `CCLD_HOSTED_TESTER_OIDC_SCOPES`.
+- Feedback placeholders: `GITHUB_FEEDBACK_REPO`, `GITHUB_FEEDBACK_TOKEN`, and
+  optional `GITHUB_FEEDBACK_DEFAULT_LABELS`.
 - Optional local reference data: `CCLD_FACILITY_REFERENCE_CSV`, only when a
   local or mounted facility reference CSV is intentionally used.
 
@@ -82,8 +86,10 @@ Start with QNAP Docker and keep the same boundaries when moving cloudward:
 5. Keep auth provider configuration in the host secret store.
 6. Keep server-side retrieval jobs separate from request-time browser code when
    a later ADR approves them.
-7. Validate `/health`, `/auth/status`, `/ccld/help`, and protected workflow
-   behavior before inviting testers.
+7. Validate `/health`, `/auth/status`, `/ccld/help`, `/feedback`, and protected
+  workflow behavior before inviting testers.
+8. Validate `/feedback` in unconfigured mode and with a mocked or non-production
+  GitHub Issues configuration before accepting tester feedback.
 
 ## Raw File Storage Migration
 

@@ -49,6 +49,13 @@ from ccld_complaints.hosted_app.ccld_record_request_ui import (
     default_ccld_record_request_ui_context,
     route_ccld_record_request_ui_response,
 )
+from ccld_complaints.hosted_app.feedback import (
+    FEEDBACK_PATH,
+    FeedbackContext,
+    GitHubRestIssueClient,
+    load_github_feedback_config,
+    route_feedback_response,
+)
 from ccld_complaints.hosted_app.persistence import (
     HostedDatabaseConfigError,
     load_hosted_database_config,
@@ -743,6 +750,7 @@ def render_app_shell() -> str:
       <li><a href="{CCLD_HELP_PATH}">How this works</a></li>
       <li><a href="#start">Start first CCLD review</a></li>
       <li><a href="/reviewer">Review loaded local/test records</a></li>
+    <li><a href="{FEEDBACK_PATH}">Send tester feedback</a></li>
       <li><a href="#feedback">Feedback guidance</a></li>
       <li><a href="#boundaries">Local/test boundaries</a></li>
       <li><a href="/health">Health check</a></li>
@@ -1128,6 +1136,7 @@ def route_response(
     ) = None,
     auth_runtime_config: HostedAuthRuntimeConfig | None = None,
     page_data_mode: str | None = None,
+    feedback_context: FeedbackContext | None = None,
     reviewer_ui_context: ReviewerUiContext | None = None,
     ccld_record_request_ui_context: CcldRecordRequestUiContext | None = None,
 ) -> tuple[int, str, bytes]:
@@ -1139,6 +1148,16 @@ def route_response(
         return _auth_placeholder_response(parsed_path, active_auth_config)
     if parsed_path == AUTH_STATUS_PATH:
         return _auth_status_response(active_auth_config)
+    if parsed_path == FEEDBACK_PATH:
+        active_feedback_context = feedback_context or _default_feedback_context(
+            active_auth_config
+        )
+        return route_feedback_response(
+            path,
+            active_feedback_context,
+            method=method,
+            request_body=request_body,
+        )
     if parsed_path == "/help":
         path = CCLD_HELP_PATH
         parsed_path = CCLD_HELP_PATH
@@ -1314,6 +1333,18 @@ def _default_ccld_context_for_mode(
     if page_data_mode == FIXTURE_DEMO_PAGE_DATA_MODE:
         return default_ccld_record_request_ui_context()
     return ccld_record_request_context_for_reviewer_context(reviewer_context)
+
+
+def _default_feedback_context(
+    auth_runtime_config: HostedAuthRuntimeConfig,
+) -> FeedbackContext:
+    actor = local_test_reviewer_actor() if auth_runtime_config.local_dev_actor_allowed else None
+    return FeedbackContext(
+        actor=actor,
+        scope=LOCAL_REVIEWER_UI_SCOPE,
+        github_config=load_github_feedback_config(),
+        github_client=GitHubRestIssueClient(),
+    )
 
 
 def _default_postgres_reviewer_context() -> ReviewerUiContext | None:

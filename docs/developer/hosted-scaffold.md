@@ -184,6 +184,22 @@ show a safe signed-in tester label when an actor context is present, but they
 must not render provider subjects, issuers, raw claims, tokens, cookies, or
 private headers.
 
+## GitHub Issues Feedback Intake
+
+The `/feedback` route provides the first real tester feedback workflow. It uses
+a server-rendered form with exactly three feedback types: Bug report, Feature
+request, and New data source. Submissions create GitHub Issues only when the
+server has `GITHUB_FEEDBACK_REPO` and `GITHUB_FEEDBACK_TOKEN` configured.
+
+Optional `GITHUB_FEEDBACK_DEFAULT_LABELS` can add comma-separated labels. Every
+app feedback issue receives `feedback`, `from-app`, and `needs-triage`, plus one
+type label: `bug`, `feature-request`, or `new-data-source`.
+
+The token is server-side only. It must not appear in HTML, JavaScript, logs,
+tests, screenshots, issue bodies, or docs. Tests use mocked clients and must not
+make live GitHub API calls. The first implementation creates GitHub Issues
+without local feedback persistence or schema changes.
+
 ## Page Data Mode
 
 Core hosted pages now choose their data source explicitly:
