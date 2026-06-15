@@ -26,6 +26,10 @@ application code.
 
 On the Docker host, use this QNAP pilot setup path:
 
+Use the full operator checklist in
+[docs/developer/qnap-pilot-operator-checklist.md](docs/developer/qnap-pilot-operator-checklist.md)
+before inviting early testers.
+
 1. Copy `.env.example` to `.env` and keep `.env` untracked.
 2. Replace the PostgreSQL password placeholder.
 3. Keep `CCLD_HOSTED_PAGE_DATA_MODE=postgres`.

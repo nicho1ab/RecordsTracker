@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added `docs/developer/qnap-pilot-operator-checklist.md`, a concise operator
+	checklist for QNAP pilot scope, preflight, `.env` setup, verifier and Compose
+	checks, startup, migrations, raw artifact storage, route verification,
+	local-dev-only mock-success validation, readiness evidence, backups, rollback,
+	and do-not-do guardrails before inviting early external stakeholder organization testers.
 - Hardened the QNAP pilot environment template and verifier. `.env.example` now
 	uses clearer QNAP pilot sections, keeps GitHub feedback intentionally disabled
 	by default, keeps mock-success retrieval blank by default, and the verifier now

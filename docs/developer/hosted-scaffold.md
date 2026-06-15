@@ -133,6 +133,9 @@ another host.
 
 Before starting a QNAP pilot, validate the untracked `.env` and Compose shape:
 
+Use the full [QNAP pilot operator checklist](qnap-pilot-operator-checklist.md)
+before inviting early testers.
+
 ```powershell
 .\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env
 ```

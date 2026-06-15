@@ -240,6 +240,8 @@ public-record review notes.
    The template leaves GitHub feedback disabled unless both repo and token values
    are configured on the host, and it keeps local-dev mock-success retrieval blank
    for QNAP pilot mode.
+- Use [docs/developer/qnap-pilot-operator-checklist.md](docs/developer/qnap-pilot-operator-checklist.md)
+   for the operator checklist before inviting early external stakeholder organization testers.
 - Use [docs/developer/cloud-portability-deployment.md](docs/developer/cloud-portability-deployment.md)
    to compare QNAP, AWS, Azure, DigitalOcean, Render, Fly.io, Railway, Supabase,
    and Neon deployment shapes while keeping app runtime, PostgreSQL, raw file
