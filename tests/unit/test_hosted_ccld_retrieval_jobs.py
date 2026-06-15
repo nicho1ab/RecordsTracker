@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -27,6 +28,13 @@ from ccld_complaints.hosted_app.ccld_record_request_ui import (
     ccld_record_request_context_for_reviewer_context,
 )
 from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
+    CCLD_RETRIEVAL_DEMO_MODE_ENV,
+    CCLD_RETRIEVAL_DEMO_MODE_MOCK_SUCCESS,
+    CCLD_RETRIEVAL_ENABLED_ENV,
+    CCLD_RETRIEVAL_ENABLED_VALUE,
+    CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS_ENV,
+    CCLD_RETRIEVAL_RAW_DIR_ENV,
+    CcldHttpRetrievalClient,
     CcldRetrievalConfig,
     CcldRetrievalContext,
     CcldRetrievalJobResult,
@@ -206,10 +214,81 @@ def test_controlled_retrieval_imports_records_and_links_queue(tmp_path: Path) ->
     assert "What to do next" in html
     assert "Open the imported records in the queue" in html
     assert "Open imported records in this CCLD queue" in html
+    assert "View retrieval job history" in html
+    assert "View retrieval job details" in html
     assert "Send tester feedback" in html
     assert "CCLD request accepted" in html
     assert "Open reviewer detail" in html
     assert_no_secret_html(html)
+
+
+def test_local_dev_mock_success_retrieval_flow_imports_and_links_without_live_calls(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_live_call(*args: object, **kwargs: object) -> str:
+        raise AssertionError("live CCLD client should not be used in mock-success mode")
+
+    monkeypatch.setenv(CCLD_RETRIEVAL_ENABLED_ENV, CCLD_RETRIEVAL_ENABLED_VALUE)
+    monkeypatch.setenv(CCLD_RETRIEVAL_RAW_DIR_ENV, str(tmp_path / "raw"))
+    monkeypatch.setenv(CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS_ENV, "30")
+    monkeypatch.setenv(CCLD_RETRIEVAL_DEMO_MODE_ENV, CCLD_RETRIEVAL_DEMO_MODE_MOCK_SUCCESS)
+    monkeypatch.setattr(CcldHttpRetrievalClient, "fetch_facility_detail", fail_live_call)
+
+    status, _content_type, body = route_response(
+        CCLD_RECORD_REQUEST_PATH,
+        method="POST",
+        request_body=_retrieval_form_bytes(),
+        auth_runtime_config=_local_dev_auth_config(),
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+    normalized = " ".join(html.split())
+    job_id = _retrieval_job_id_from_html(html)
+
+    assert status == 200
+    assert "Controlled CCLD retrieval job status" in html
+    assert "Completed" in html
+    assert "Records imported" in html
+    assert "Imported source derived records" in normalized
+    assert "Open imported records in this CCLD queue" in html
+    assert "View retrieval job history" in html
+    assert "View retrieval job details" in html
+    assert "CCLD request accepted" in html
+    assert "Open reviewer detail" in html
+    assert sorted((tmp_path / "raw").glob("*.html"))
+    assert_no_secret_html(html)
+
+    history_status, _content_type, history_body = route_response(
+        CCLD_RETRIEVAL_JOBS_PATH,
+        auth_runtime_config=_local_dev_auth_config(),
+        page_data_mode="fixture-demo",
+    )
+    history_html = history_body.decode("utf-8")
+
+    assert history_status == 200
+    assert job_id in history_html
+    assert "Completed" in history_html
+    assert "Review imported records in the CCLD queue" in history_html
+    assert "View retrieval job details" in history_html
+    assert_no_secret_html(history_html)
+
+    detail_status, _content_type, detail_body = route_response(
+        f"{CCLD_RETRIEVAL_JOB_DETAIL_PATH}?job_id={job_id}",
+        auth_runtime_config=_local_dev_auth_config(),
+        page_data_mode="fixture-demo",
+    )
+    detail_html = detail_body.decode("utf-8")
+
+    assert detail_status == 200
+    assert "Controlled CCLD retrieval job detail" in detail_html
+    assert job_id in detail_html
+    assert "Completed" in detail_html
+    assert "Records imported" in detail_html
+    assert "raw artifact preserved" in detail_html
+    assert "Review imported records in the CCLD queue" in detail_html
+    assert "Return to retrieval job history" in detail_html
+    assert_no_secret_html(detail_html)
 
 
 def test_retrieval_all_supported_resolves_to_complaints(tmp_path: Path) -> None:
@@ -334,11 +413,16 @@ def test_retrieval_status_summary_explains_queued_running_and_failed_states() ->
 
 
 def test_retrieval_job_history_empty_state_renders_for_allowed_local_dev_actor() -> None:
-    status, content_type, body = route_response(
-        CCLD_RETRIEVAL_JOBS_PATH,
-        auth_runtime_config=_local_dev_auth_config(),
-        page_data_mode="fixture-demo",
-    )
+    with _empty_connection() as connection:
+        reviewer_context = reviewer_ui_context_for_connection(
+            connection,
+            actor=_actor(),
+        )
+        request_context = ccld_record_request_context_for_reviewer_context(reviewer_context)
+        status, content_type, body = route_response(
+            CCLD_RETRIEVAL_JOBS_PATH,
+            ccld_record_request_ui_context=request_context,
+        )
     html = body.decode("utf-8")
 
     assert status == 200
@@ -657,6 +741,31 @@ def test_anonymous_production_retrieval_is_blocked() -> None:
     assert_no_secret_html(html)
 
 
+def test_mock_success_mode_is_blocked_outside_local_dev(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(CCLD_RETRIEVAL_ENABLED_ENV, CCLD_RETRIEVAL_ENABLED_VALUE)
+    monkeypatch.setenv(CCLD_RETRIEVAL_RAW_DIR_ENV, str(tmp_path / "raw"))
+    monkeypatch.setenv(CCLD_RETRIEVAL_DEMO_MODE_ENV, CCLD_RETRIEVAL_DEMO_MODE_MOCK_SUCCESS)
+    auth_config = load_hosted_auth_runtime_config(
+        environ={"CCLD_HOSTED_TESTER_AUTH_MODE": "production"}
+    )
+
+    status, _content_type, body = route_response(
+        CCLD_RECORD_REQUEST_PATH,
+        method="POST",
+        request_body=_retrieval_form_bytes(),
+        auth_runtime_config=auth_config,
+        page_data_mode="postgres",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 401
+    assert "CCLD workflow access requires sign-in" in html
+    assert_no_secret_html(html)
+
+
 def test_feedback_route_still_uses_mocked_client() -> None:
     github_config_kwargs: dict[str, Any] = {
         "repo": "example/repo",
@@ -765,6 +874,13 @@ def _retrieval_form_bytes(
             "ccld_retrieval_action": "run_controlled_ccld_retrieval",
         }
     ).encode("utf-8")
+
+
+def _retrieval_job_id_from_html(markup: str) -> str:
+    match = re.search(r"ccld-retrieval-157806098-\d+", markup)
+    if match is None:
+        raise AssertionError("Retrieval job ID not found in response HTML.")
+    return match.group(0)
 
 
 def _local_dev_auth_config() -> Any:

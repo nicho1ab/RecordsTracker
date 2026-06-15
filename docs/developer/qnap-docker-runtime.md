@@ -83,6 +83,11 @@ Optional controlled CCLD retrieval job values:
 - `CCLD_RETRIEVAL_TIMEOUT_SECONDS`: per-request retrieval timeout.
 - `CCLD_RETRIEVAL_RETRY_LIMIT`: bounded retry count.
 
+Do not set `CCLD_RETRIEVAL_DEMO_MODE=mock-success` in QNAP, pilot-like, or
+production runtime. That value is reserved for explicit local-dev scaffold
+validation with fixture-demo data and local-dev auth enabled; it uses committed
+fixtures and does not prove public-source completeness.
+
 The app receives `CCLD_HOSTED_TESTER_DATABASE_URL` from Compose. Do not commit a
 database connection string. Do not print the connection string in logs, docs,
 tests, screenshots, or support notes.

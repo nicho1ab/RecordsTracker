@@ -104,6 +104,16 @@ source scraping, and direct browser crawling remain prohibited. Retrieval job
 metadata is operational metadata and remains separate from source-derived
 records, reviewer-created state, audit events, and feedback issues.
 
+`CCLD_RETRIEVAL_DEMO_MODE=mock-success` is allowed only for explicit local-dev
+scaffold validation when local-dev auth is enabled and retrieval raw storage is
+configured. It uses committed fixtures through a fixture-backed retrieval client,
+does not make live CCLD calls, does not call GitHub, and must not be honored for
+anonymous production, QNAP/pilot-like runtime, or any future public deployment.
+The demo path may create local operational retrieval metadata and local source-
+derived rows through the existing import path, but it must not expose raw
+artifact contents, raw server paths, provider values, tokens, cookies, private
+headers, connection strings, stack traces, or source completeness claims.
+
 The retrieval job history and detail pages at `/ccld/retrieval/jobs` and
 `/ccld/retrieval/jobs/detail?job_id=` are read-only status surfaces over that
 existing operational metadata. They must require the same authenticated local/

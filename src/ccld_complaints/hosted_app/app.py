@@ -51,6 +51,7 @@ from ccld_complaints.hosted_app.ccld_record_request_ui import (
     route_ccld_record_request_ui_response,
 )
 from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
+    CcldFixtureRetrievalClient,
     CcldHttpRetrievalClient,
     CcldRetrievalContext,
     load_ccld_retrieval_config,
@@ -1344,28 +1345,40 @@ def _default_ccld_context_for_mode(
             reviewer_ui_context=fixture_context.reviewer_ui_context,
             import_reload_context=fixture_context.import_reload_context,
             retrieval_context=_default_retrieval_context_for_reviewer_context(
-                fixture_context.reviewer_ui_context
+                fixture_context.reviewer_ui_context,
+                auth_runtime_config,
             ),
         )
     return ccld_record_request_context_for_reviewer_context(
         reviewer_context,
-        retrieval_context=_default_retrieval_context_for_reviewer_context(reviewer_context),
+        retrieval_context=_default_retrieval_context_for_reviewer_context(
+            reviewer_context,
+            auth_runtime_config,
+        ),
     )
 
 
 def _default_retrieval_context_for_reviewer_context(
     reviewer_context: ReviewerUiContext,
+    auth_runtime_config: HostedAuthRuntimeConfig,
 ) -> CcldRetrievalContext | None:
     source_context = reviewer_context.workflow_shell_context.source_derived_api_context
     config = load_ccld_retrieval_config()
     if not config.configured:
         return None
+    if config.mock_success_demo_enabled and not auth_runtime_config.local_dev_actor_allowed:
+        return None
+    retrieval_client = (
+        CcldFixtureRetrievalClient()
+        if config.mock_success_demo_enabled
+        else CcldHttpRetrievalClient()
+    )
     return CcldRetrievalContext(
         connection=source_context.connection,
         actor=source_context.actor,
         scope=source_context.scope,
         config=config,
-        client=CcldHttpRetrievalClient(),
+        client=retrieval_client,
     )
 
 
