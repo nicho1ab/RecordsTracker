@@ -161,6 +161,14 @@ The local/test browser pages include skip-to-main links, visible start-here or
 next-step guidance, specific button/link text, and manual checklist copy
 instructions so a first-time tester can use keyboard navigation and visible page
 text to move through the MVP flow.
+If the request finds no matching rows, the result page searched only currently
+loaded local/test source-derived records. It shows the facility/license number,
+date range, rows already loaded for that facility before date filtering, and the
+local validated load state. Confirm the facility/date context first, then either
+change the criteria, use the local validated load action when prepared data is
+available, or run the outside-browser live-fetch and artifact-builder workflow
+before returning to load/refresh. A no-match page is not proof that the public
+portal has no matching records.
 The feedback checklist prompts for facility lookup, request criteria, queue
 triage and filters, source traceability cues, reviewer detail, note/status save
 confirmation, return-to-queue behavior, missing or unexpected records, confusing

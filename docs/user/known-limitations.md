@@ -130,9 +130,16 @@
   review queue with visible lookup/manual-entry request-context confirmation,
   progress counts, reviewer note/status cues, source-
   traceability availability cues, suggested next-record links, filtered-empty
-  guidance, and reviewer-status filters derived from existing reviewer-created
-  state, includes a structured copyable feedback checklist for manual external
+  guidance, clearer no-match and local validated load guidance, and reviewer-
+  status filters derived from existing reviewer-created state, includes a
+  structured copyable feedback checklist for manual external
   sharing, and links matching rows into the reviewer UI.
+  No-match pages explain that they searched currently loaded local/test source-
+  derived rows only, show local rows available before date filtering and local
+  validated load state, prompt criteria changes when the active context is wrong,
+  point to the existing local validated load or outside-browser preparation
+  workflow, and ask testers to report missing or unexpected records in the manual
+  feedback checklist.
   The local/test pages include skip-to-main links, visible first-run next steps,
   clearer form/action text, and manual checklist copy guidance, but these are
   presentation aids only and do not create persisted workflow state.

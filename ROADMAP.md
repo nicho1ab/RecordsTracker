@@ -439,6 +439,11 @@ the governed primary future review experience.
 	should return to and resubmit the same CCLD facility/date request context when
 	needed, and can continue to the next record without adding queue persistence,
 	schema changes, live browser retrieval, connector execution, or non-CCLD scope.
+- Improved local/test CCLD no-match and local validated load guidance so testers
+	can distinguish currently loaded local/test data from public-source absence,
+	adjust facility/date criteria, use the existing load/refresh action, or follow
+	the outside-browser live-fetch/artifact-builder workflow without adding browser
+	retrieval, connector execution, persistence, schema changes, or non-CCLD scope.
 - Improved the local/test CCLD facility lookup and request/result queue context
 	confirmation so testers can see whether a request came from lookup selection or
 	manual entry, confirm the facility/license number, date range, active facility

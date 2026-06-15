@@ -114,7 +114,8 @@ requests, reads matching rows only from the seeded source-derived route seam,
 can load or refresh matching CCLD rows from local validated hosted seeded-corpus
 output through the existing source-derived import path, links matching seeded
 complaint records into the hosted reviewer UI, shows a clear no-match and
-external pipeline plan when local validated records do not match, renders a
+external pipeline plan when local validated records do not match, distinguishes
+currently loaded local/test data from public-source absence, renders a
 guided facility/date-scoped request result queue with first-time workflow help,
 contextual field/action help, source traceability summaries, reviewer-state
 indicators, queue triage summaries, reviewer note/status cues,

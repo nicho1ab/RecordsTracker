@@ -50,6 +50,14 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
                     "end_date": "2022-08-31",
                 },
             )
+            ccld_no_match_status, ccld_no_match_body = _post_form_url(
+                f"{base_url}/ccld/records/request",
+                {
+                    "facility_number": "157806098",
+                    "start_date": "2023-01-01",
+                    "end_date": "2023-12-31",
+                },
+            )
             reviewer_status, reviewer_body = _read_url(f"{base_url}/reviewer")
             reviewer_detail_status, reviewer_detail_body = _read_url(
                 f"{base_url}/reviewer/records/detail?"
@@ -124,6 +132,15 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"First-run queue steps" not in ccld_queue_body
     ):
         raise RuntimeError("Hosted scaffold CCLD request queue did not return triage guidance.")
+    if (
+        ccld_no_match_status != 200
+        or b"No matching local/test CCLD records found" not in ccld_no_match_body
+        or b"How to interpret this no-match result" not in ccld_no_match_body
+        or b"currently loaded local/test source-derived rows only" not in ccld_no_match_body
+        or b"outside-browser live fetch and artifact-builder workflow" not in ccld_no_match_body
+        or b"not a public-source absence" not in ccld_no_match_body
+    ):
+        raise RuntimeError("Hosted scaffold CCLD no-match result did not return load guidance.")
     if (
         ccld_facilities_status != 200
         or b"Find CCLD facility" not in ccld_facilities_body

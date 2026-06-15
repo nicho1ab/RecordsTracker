@@ -63,7 +63,12 @@ Accessibility requirements apply to:
 	help pages must use semantic headings, table captions or clear section
 	headings, meaningful action link text, and plain-language definitions for
 	facility/license number, date range, loaded records, source records, review
-	queue, reviewer notes, and reviewer status. Queue progress summaries and status
+	queue, reviewer notes, and reviewer status.
+	No-match and local validated load guidance must expose searched criteria,
+	loaded local/test row counts, local validated load state, criteria-correction
+	next steps, outside-browser preparation steps, and feedback checklist guidance
+	as visible text.
+	Queue progress summaries and status
 	filters must use text labels, form labels, and visible counts rather than
 	color-only indicators. Feedback checklists must have an associated label and
 	help text and must be presented in a copyable control or equivalent plain text.
