@@ -48,6 +48,11 @@ outside the repository. Restore only into a maintenance window or stopped app
 container so application writes cannot race with restore. Detailed QNAP volume,
 backup, restore, and portability guidance lives in
 [docs/developer/qnap-docker-runtime.md](docs/developer/qnap-docker-runtime.md).
+For a later move to AWS, Azure, DigitalOcean, Render, Fly.io, Railway,
+Supabase/Neon, or another host, use
+[docs/developer/cloud-portability-deployment.md](docs/developer/cloud-portability-deployment.md)
+to keep app runtime, PostgreSQL, raw files, secrets, backups, and future retrieval
+jobs separated.
 
 ## Run fixture-backed sample ingestion
 

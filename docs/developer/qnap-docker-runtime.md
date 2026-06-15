@@ -192,3 +192,8 @@ contract:
 
 GitHub Projects are not required for this runtime. Optional paid platform
 features are not required.
+
+For migration planning beyond QNAP, see
+[cloud-portability-deployment.md](cloud-portability-deployment.md). That guide
+compares low-cost host options and keeps PostgreSQL, raw file storage, secrets,
+backups, and future retrieval jobs separated from provider-specific app code.
