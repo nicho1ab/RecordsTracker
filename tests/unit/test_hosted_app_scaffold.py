@@ -136,6 +136,50 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "/reviewer" in html
 
 
+def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None:
+    auth_config = load_hosted_auth_runtime_config(
+        environ={
+            "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
+            "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
+        }
+    )
+    route_specs = (
+        ("/", "Skip to main CCLD review content"),
+        ("/ccld/facilities", "Skip to main CCLD facility lookup content"),
+        ("/ccld/records/request", "Skip to main CCLD request content"),
+        ("/ccld/help", "Skip to main CCLD request content"),
+        ("/reviewer", "Skip to main reviewer content"),
+        ("/feedback", "Skip to main feedback content"),
+    )
+
+    for path, skip_text in route_specs:
+        status, content_type, body = route_response(
+            path,
+            auth_runtime_config=auth_config,
+            page_data_mode="fixture-demo",
+        )
+        html = body.decode("utf-8")
+        normalized_html = " ".join(html.split())
+
+        assert status == 200
+        assert content_type == "text/html; charset=utf-8"
+        assert skip_text in html
+        assert '<a class="skip-link" href="#main-content">' in html
+        assert '<nav class="site-nav"' in html
+        assert '<main id="main-content" tabindex="-1">' in html
+        assert 'class="shell page-main"' in html
+        assert "Facility Lookup" in html
+        assert "CCLD record request" in html
+        assert "Retrieval job history" in html
+        assert "Feedback" in html
+        assert "How this works" in html
+        assert "CCLD public portal material remains the source of record" in normalized_html
+        assert "does not prove source completeness" in normalized_html
+        assert "legal findings" in normalized_html
+        assert "button:focus-visible" in html
+        assert "@media (max-width: 760px)" in html
+
+
 def test_routes_return_shell_health_and_not_found() -> None:
     root_status, root_content_type, root_body = route_response("/")
     health_status, health_content_type, health_body = route_response("/health")
