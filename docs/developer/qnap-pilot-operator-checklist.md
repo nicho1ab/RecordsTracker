@@ -148,6 +148,12 @@ docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic u
 - Verify `/ccld/help` is readable.
 - Verify `/reviewer` renders reviewer UI or an expected protected or
   setup-required state.
+- Capture a GET-only route evidence summary with
+  `scripts/summarize-qnap-pilot-route-evidence.ps1` after the app is running and
+  the QNAP verifier passes. Expected protected, setup-required, safe-empty, and
+  missing-job states are acceptable route evidence; route evidence must not show
+  secrets, raw artifacts, raw server paths, cookies, provider subjects, provider
+  issuers, source-completeness claims, or legal conclusions.
 - Verify seeded reviewer detail routes only when fixture/demo data is explicitly
   being used for local workstation validation.
 - Verify reviewer note/status paths only when the pilot mode intentionally
@@ -171,6 +177,8 @@ docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic u
 - Capture Alembic current state or migration success.
 - Capture route smoke results for the app shell, auth status, feedback, CCLD
   request, retrieval history/detail, help, and reviewer surfaces.
+- Capture route evidence command output for the same route surface after the app
+  is running and the QNAP verifier passes.
 - Capture auth readiness evidence that production auth mode is active,
   local-dev auth is disabled, `/auth/status` is safe, and real login/session
   work remains deferred.

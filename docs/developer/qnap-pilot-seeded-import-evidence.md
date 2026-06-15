@@ -169,6 +169,8 @@ Keep the packet small and safe:
 - No raw artifact file contents displayed.
 - Bounded route check results for `/ccld/records/request`, retrieval history,
   retrieval missing-job detail, `/feedback`, `/ccld/help`, and `/reviewer`.
+- Optional `scripts/summarize-qnap-pilot-route-evidence.ps1` output after the app
+  is running and the QNAP verifier passes.
 - GitHub feedback decision: intentionally disabled or fully configured.
 - Controlled retrieval decision: intentionally disabled or fully configured with
   persistent raw artifact storage.
