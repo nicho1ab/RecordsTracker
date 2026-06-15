@@ -59,7 +59,11 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Local/test reviewer records" in html
+    assert "Skip to main reviewer content" in html
+    assert '<main id="main-content" tabindex="-1">' in html
     assert "Local/test reviewer UI shell" in html
+    assert "CCLD request queue" in html
+    assert "CCLD workflow help" in html
     assert "Search seeded review records" in html
     assert "Open CCLD request or queue" in html
     assert "Open CCLD workflow help" in html
@@ -194,6 +198,11 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Local/test reviewer detail" in html
+    assert "Skip to main reviewer content" in html
+    assert '<main id="main-content" tabindex="-1">' in html
+    assert "First-run detail steps" in html
+    assert "Review the record summary and source traceability sections" in html
+    assert "Return to the CCLD request queue" in html
     assert "Detail navigation" in html
     assert "Return to CCLD request or queue" in html
     assert "Find another CCLD facility" in html
@@ -263,9 +272,11 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Set a status to keep queue progress understandable" in normalized_html
     assert "Add reviewer note" in html
     assert "Use safe plain text" in html
+    assert "Save reviewer note for this record" in html
     assert f"action=\"{REVIEWER_UI_NOTE_PATH}\"" in html
     assert "Set reviewer status" in html
     assert "Status is reviewer-created local/test state for" in normalized_html
+    assert "Save reviewer status for this record" in html
     assert f"action=\"{REVIEWER_UI_STATUS_PATH}\"" in html
     assert "Reviewer-created state is stored separately" in normalized_html
     assert "Feedback clues for this record" in html

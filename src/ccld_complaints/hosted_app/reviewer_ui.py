@@ -960,6 +960,7 @@ def _render_detail(
         main=f"""
     {_render_notice(notice)}
     {_render_scope_notice(_mapping(payload, 'workflow_shell'))}
+        {_render_detail_first_run_steps(source_record_key, related_records)}
         {_render_detail_navigation(source_record_key, related_records)}
         {_render_record_summary_section(source_record, related_records, detail)}
     <section aria-labelledby="source-derived-heading">
@@ -1020,6 +1021,24 @@ def _render_detail(
         {_render_review_actions(source_record_key)}
         {_render_detail_feedback_guidance(source_record, related_records)}""",
     )
+
+
+def _render_detail_first_run_steps(
+        source_record_key: str,
+        related_records: list[Mapping[str, Any]],
+) -> str:
+        ccld_request_href = _ccld_request_href(related_records)
+        return f"""<section aria-labelledby="detail-first-run-heading">
+            <h2 id="detail-first-run-heading">First-run detail steps</h2>
+            <ol>
+                <li>Review the record summary and source traceability sections.</li>
+                <li>Check whether reviewer notes or statuses already exist.</li>
+                <li>Add a note or status only if it helps the local/test review queue.</li>
+                <li><a href="{_escape(ccld_request_href)}">Return to the CCLD request queue</a>
+                and copy the tester feedback checklist when ready.</li>
+            </ol>
+            <p>Selected source record key: {_escape(source_record_key)}.</p>
+        </section>"""
 
 
 def _render_detail_navigation(
@@ -1459,7 +1478,7 @@ def _render_note_form(source_record_key: str) -> str:
                       <span id="note-text-help">Use safe plain text. Notes are reviewer-created
                     local/test state and do not change the source-derived record.</span>
         </p>
-        <p><button type="submit">Save reviewer note</button></p>
+                <p><button type="submit">Save reviewer note for this record</button></p>
       </form>
     </section>"""
 
@@ -1482,7 +1501,7 @@ def _render_status_form(source_record_key: str) -> str:
                     <span id="reviewer-status-help">Status is reviewer-created local/test state for
                     queue progress. It is not a public-source finding.</span>
         </p>
-        <p><button type="submit">Save reviewer status</button></p>
+                <p><button type="submit">Save reviewer status for this record</button></p>
       </form>
     </section>"""
 
@@ -1557,6 +1576,7 @@ def _page(*, title: str, heading: str, main: str) -> str:
   <title>{_escape(title)} - CCLD Hosted Tester MVP Scaffold</title>
 </head>
 <body>
+    <a href="#main-content">Skip to main reviewer content</a>
   <header>
     <p>Local/test only: source-derived review viewing with reviewer note/status actions.</p>
     <h1>{_escape(heading)}</h1>
@@ -1564,12 +1584,15 @@ def _page(*, title: str, heading: str, main: str) -> str:
   <nav aria-label="Local/test reviewer navigation">
     <ul>
       <li><a href="/">Scaffold home</a></li>
+            <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find CCLD facility</a></li>
+            <li><a href="{CCLD_RECORD_REQUEST_PATH}">CCLD request queue</a></li>
+            <li><a href="{CCLD_HELP_PATH}">CCLD workflow help</a></li>
       <li><a href="{REVIEWER_UI_PREFIX}">Reviewer home</a></li>
       <li><a href="{REVIEWER_UI_RECORDS_PATH}">Reviewer records</a></li>
       <li><a href="/health">Health check</a></li>
     </ul>
   </nav>
-  <main>
+    <main id="main-content" tabindex="-1">
 {main}
   </main>
 </body>

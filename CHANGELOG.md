@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Improved local/test CCLD first-run accessibility and visible-text guidance
+	across the home page, facility lookup, request/result queue, reviewer records,
+	reviewer detail, and feedback checklist surfaces with skip links, clearer
+	start-here and next-step sections, more specific form/action text, and clearer
+	manual feedback copy guidance without adding persistence, schema changes,
+	live retrieval, connector execution, JavaScript-dependent workflow, or
+	non-CCLD scope.
 - Improved the local/test CCLD request/result queue and reviewer records queue
 	with clearer triage summaries, status/progress counts, reviewer note/status
 	cues, source-traceability availability cues, suggested next-record links,

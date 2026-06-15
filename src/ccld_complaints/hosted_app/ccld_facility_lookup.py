@@ -229,6 +229,17 @@ def render_ccld_facility_lookup_page(query: str = "") -> str:
       <p>The lookup does not run live CCLD retrieval, query the public portal, import records,
       persist data, or prove public-source completeness.</p>
     </section>
+        <section aria-labelledby="facility-first-run-heading">
+            <h2 id="facility-first-run-heading">Start here: find a facility</h2>
+            <ol>
+                <li>Search by facility/license number, facility name, city, county, ZIP code,
+                facility type, or status.</li>
+                <li>Use a matching result to carry the facility/license number into the CCLD
+                request form.</li>
+                <li>On the request page, submit the facility and optional date range to open the
+                review queue.</li>
+            </ol>
+        </section>
     {_render_lookup_form(result.query)}
     {_render_reference_source_section(reference_source)}
     {_render_lookup_results(result)}
@@ -303,7 +314,7 @@ def _render_lookup_form(query: str) -> str:
           <input id="facility_lookup_query" name="q" type="search"
             value="{_escape(query)}" aria-describedby="facility-search-help">
         </p>
-        <p><button type="submit">Search CCLD facilities</button></p>
+                <p><button type="submit">Search local/test CCLD facilities</button></p>
       </form>
     </section>"""
 
@@ -478,6 +489,7 @@ def _page(*, title: str, heading: str, main: str) -> str:
   </style>
 </head>
 <body>
+    <a href="#main-content">Skip to main CCLD facility lookup content</a>
   <header>
     <h1>{_escape(heading)}</h1>
     <nav aria-label="Hosted scaffold navigation">
@@ -489,7 +501,7 @@ def _page(*, title: str, heading: str, main: str) -> str:
       </ul>
     </nav>
   </header>
-  <main>
+    <main id="main-content" tabindex="-1">
 {main}
   </main>
   <footer>

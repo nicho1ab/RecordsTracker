@@ -92,6 +92,9 @@ Open `http://127.0.0.1:8000/` on the same workstation. The page must identify
 itself as a local/test scaffold. It may link to the local/test reviewer UI shell
 but must not imply that production authentication, full reviewer workflows,
 cloud hosting, QNAP, Azure, AWS, or public URLs are available.
+The home page includes a skip-to-main link and visible start-here guidance for
+the first CCLD review path: facility lookup, CCLD request, queue, reviewer
+detail, notes/status, and feedback checklist.
 
 When selecting the next hosted scaffold task, apply the product-benefit gate in
 `GOVERNANCE_INVENTORY.md`. Backend readiness, hardening, planning, or checklist
@@ -118,6 +121,9 @@ reference source and any fallback guidance are visible on the page. The “Use t
 facility” link carries the selected facility/license number into
 `/ccld/records/request`. Manual facility/license entry on the request page remains
 available.
+The page includes a skip-to-main link, start-here instructions, a labeled search
+field with help text, and a specific search button for local/test CCLD facility
+reference rows.
 
 The lookup does not run live CCLD retrieval, execute connectors, persist lookup
 data, mutate source-derived records, mutate reviewer-created state, create audit
@@ -144,6 +150,10 @@ Records with no reviewer status are counted as not started. After a tester saves
 a note or status in the reviewer UI, submitting the same CCLD request again
 shows the updated queue progress. Filtered-empty states explain how to return to
 all queue records without implying that public-source records are absent.
+The request and result pages include skip-to-main links, visible first-run
+next-step guidance, specific request/filter/load action text, and manual
+feedback-copy instructions. These are presentation-only accessibility aids and
+do not change request, import/reload, reviewer note/status, or queue behavior.
 
 When no matching hosted rows are available, the page can offer a bounded local
 validated CCLD load action. That action reads committed local/test hosted
@@ -202,6 +212,9 @@ links, and record-specific feedback clues, submit a bounded reviewer note, submi
 a bounded reviewer status, and see read-after-write reviewer-created state on the page. No-search-results,
 missing-record, invalid-form, and permission-blocked states include clear
 browser guidance and links back to useful local/test next steps. Narrative source fields are hidden in the browser shell.
+Reviewer pages include skip-to-main links, CCLD workflow navigation, first-run
+detail steps, and record-specific note/status action text while preserving the
+existing write paths.
 
 The UI is intentionally plain server-rendered HTML. It reuses the existing
 source-derived route seam, reviewer workflow shell, reviewer-created state

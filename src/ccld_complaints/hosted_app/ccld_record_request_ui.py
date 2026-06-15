@@ -462,7 +462,7 @@ def _render_request_form(
                     local/test reviewer-created status rows. Records with no status are counted
                     as not started.</span>
                 </p>
-        <p><button type="submit">Request CCLD records</button></p>
+                <p><button type="submit">Show CCLD request queue</button></p>
       </form>
     </section>
     {_render_key_terms_section()}
@@ -642,6 +642,7 @@ def _render_matched_result(
             or set a reviewer status.</p>
             <p>After reviewing a record, return here and submit the same request to see
             progress and reviewer status updates from existing reviewer-created state.</p>
+            {_render_queue_first_run_steps()}
             {_render_queue_navigation()}
             {_render_queue_progress_summary(queue_items)}
             {_render_queue_triage_summary(request, queue_items)}
@@ -698,6 +699,9 @@ def _render_no_match_result(
             {_escape(request.facility_number)} and the requested date range.</p>
       {_render_date_scope(request)}
       <p>Rows for this facility currently available before date filtering: {local_count}.</p>
+        <p>Next step for first-time testers: use the local validated CCLD load action if
+        available, or run the outside-browser pipeline steps below before retrying this
+        request.</p>
       <p><a href="{CCLD_RECORD_REQUEST_PATH}">Return to CCLD request</a></p>
     </section>
         {_render_import_reload_summary(import_reload_result)}
@@ -858,6 +862,18 @@ def _render_queue_navigation() -> str:
     </nav>"""
 
 
+def _render_queue_first_run_steps() -> str:
+        return """<section aria-labelledby="queue-first-run-heading">
+            <h3 id="queue-first-run-heading">First-run queue steps</h3>
+            <ol>
+                <li>Read the queue progress and triage summaries.</li>
+                <li>Open the suggested next complaint record in reviewer detail.</li>
+                <li>Add a reviewer note or status only from the detail page when useful.</li>
+                <li>Return to this request page and copy the feedback checklist.</li>
+            </ol>
+        </section>"""
+
+
 def _render_queue_triage_summary(
     request: CcldRecordRequest,
     items: tuple[CcldRequestQueueItem, ...],
@@ -947,9 +963,9 @@ def _render_feedback_checklist_section(
         aria-labelledby="feedback-checklist-heading">
       <h2 id="feedback-checklist-heading">Copyable tester feedback checklist</h2>
       <p id="feedback-checklist-help">This app does not save or send this feedback.
-      Copy the checklist into the agreed external feedback channel after adding any tester
-      observations. The checklist is generated from this CCLD-only local/test request and
-      queue state.</p>
+            Select the checklist text, copy it, paste it into the agreed external feedback
+            channel, and add any tester observations before sending. The checklist is generated
+            from this CCLD-only local/test request and queue state.</p>
       <p>
         <label for="feedback-checklist">Structured CCLD feedback checklist</label>
         <textarea id="feedback-checklist" rows="28" readonly
@@ -1736,6 +1752,7 @@ def _page(*, title: str, heading: str, main: str) -> str:
     </style>
 </head>
 <body>
+    <a href="#main-content">Skip to main CCLD request content</a>
     <header>
         <h1>{_escape(heading)}</h1>
         <nav aria-label="Hosted scaffold navigation">
@@ -1747,7 +1764,7 @@ def _page(*, title: str, heading: str, main: str) -> str:
             </ul>
         </nav>
     </header>
-    <main>
+    <main id="main-content" tabindex="-1">
 {main}
     </main>
     <footer>
