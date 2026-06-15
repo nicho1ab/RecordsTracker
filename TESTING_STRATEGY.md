@@ -110,6 +110,12 @@ only when current fields support them, source traceability review guidance
 remains visible, no confidence score or automated source verification is implied,
 and detail rendering does not mutate source-derived, reviewer-created, audit,
 import, or operational metadata rows.
+Reviewer detail field-note guidance tests should prove guidance renders near the
+source-confidence and source-traceability context, distinguishes reviewer-created
+observations from source-derived fields, explains missing local/test and proxy-
+flag wording cautiously, points UI/data concerns to the manual feedback checklist,
+does not imply generated notes, note templates, source edits, source absence, or
+official findings, and preserves no-mutation behavior.
 Reviewer note/status confirmation tests should cover return-to-same-queue
 guidance, same facility/date request-context reminders, queue cues derived from
 reviewer-created state, resubmit-to-refresh wording, next-record guidance, and

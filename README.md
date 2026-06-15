@@ -51,7 +51,8 @@ experience.
    use clearer no-match and local validated load guidance when currently loaded
    local/test data has no matching records,
    review clearer selected-record source traceability and source-confidence cues
-   before adding notes or status, describe missing local/test values without
+   before adding notes or status, use field-note guidance to phrase reviewer-
+   created observations cautiously, describe missing local/test values without
    implying public-source absence or data loss, use record-specific feedback
    handoff cues, see clearer note/status
    save confirmations, return to the same CCLD

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Improved local/test reviewer detail field-note guidance so testers can phrase
+	reviewer-created notes/status observations cautiously after source traceability
+	and source-confidence review without adding automated note generation, parser,
+	extraction, schema, persistence, source scoring, source verification workflow,
+	new note fields, workflow automation, live browser retrieval, connector
+	execution, or non-CCLD scope.
 - Improved local/test reviewer detail and queue source-confidence cues so testers
 	can see present source-derived fields, missing local/test fields, existing
 	proxy flags, and source-traceability review reminders without adding parser,

@@ -216,6 +216,8 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Open CCLD workflow help" in html
     assert "Back to reviewer records" in html
     assert "Review record summary" in html
+    assert "Review source-confidence cues" in html
+    assert "Review field-note guidance" in html
     assert "Review source traceability" in html
     assert "Review source-derived context" in html
     assert "Prepare tester feedback" in html
@@ -255,6 +257,25 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
         normalized_html
     )
     assert "Use fallback/proxy wording only when this cue says" in normalized_html
+    assert "Field-note guidance" in html
+    assert "Cautious wording for reviewer-created notes/status" in html
+    assert "Reviewer notes/status are reviewer-created observations" in normalized_html
+    assert "they do not edit source-derived fields" in normalized_html
+    assert "Field is present" in html
+    assert "local/test record shows complaint received date" in html
+    assert "Do not say the value is legally verified or an official finding" in normalized_html
+    assert "Field is not available locally" in html
+    assert "Do not say the source does not contain this" in normalized_html
+    assert "the record is incomplete" in html
+    assert "or data was lost" in html
+    assert "Report-date proxy flag is shown" in html
+    assert "local/test cue marks report date as a proxy" in normalized_html
+    assert "Do not use the proxy flag alone" in normalized_html
+    assert "Field remains confusing after source traceability" in html
+    assert "field remained unclear after checking source traceability" in normalized_html
+    assert "Value looks like a UI or data issue" in html
+    assert "Use the manual feedback checklist" in html
+    assert "instead of treating the note as a source-derived edit" in normalized_html
     assert "Source traceability" in html
     assert "Selected complaint source traceability fields" in html
     assert "Use these fields to confirm which local/test source-derived complaint record" in (
@@ -314,7 +335,10 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Latest reviewer-created row" in html
     assert "No reviewer-created state has been recorded" in html
     assert "Reviewer actions" in html
-    assert "Review the source traceability section first" in html
+    assert "Review the source traceability, source-confidence cues, and field-note guidance" in (
+        normalized_html
+    )
+    assert "missing local/test values, proxy flags" in normalized_html
     assert "Set a status to keep queue progress understandable" in normalized_html
     assert "Add reviewer note" in html
     assert "Reviewer note for this record" in html
@@ -381,6 +405,7 @@ def test_reviewer_ui_detail_missing_traceability_uses_clear_non_conclusive_wordi
     assert "Raw artifact path" in html
     assert "not available in this local/test record" in html
     assert "Source-confidence cues" in html
+    assert "Field-note guidance" in html
     assert "First investigation activity date" in html
     assert "local/test missing-field flag is true" in normalized_html
     assert "do not treat a missing path as source loss" in html
@@ -432,6 +457,9 @@ def test_reviewer_ui_detail_source_confidence_proxy_cues_are_non_mutating() -> N
     assert "Visit date" in html
     assert "Not available in this local/test record" in html
     assert "Fallback/proxy-derived delay basis indicated" in normalized_html
+    assert "Field-note guidance" in html
+    assert "local/test cue marks report date as a proxy" in normalized_html
+    assert "Do not use the proxy flag alone" in normalized_html
     assert "Use fallback/proxy wording only when this cue says" in normalized_html
     assert "not a source-confidence score" in normalized_html
     assert "public-source absence finding" in html
@@ -464,6 +492,7 @@ def test_reviewer_ui_detail_render_is_non_mutating() -> None:
         "reset_reload_planning_metadata": 0,
     }
     assert "Record summary" in html
+    assert "Field-note guidance" in html
     assert "Feedback clues for this record" in html
     assert_no_secret_html(html)
 
@@ -536,6 +565,7 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert "Reviewer-created payload kinds present" in html
     assert "Latest reviewer-created row" in html
     assert "Related seeded source-derived context" in html
+    assert "Field-note guidance" in html
     assert "Fixture UI Note Reviewer (tester)" in html
     assert "Reviewer-created; source-derived record unchanged" in html
     assert audit_event["source_record_key"] == COMPLAINT_KEY
@@ -659,6 +689,7 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "Reviewer-created payload kinds present" in html
     assert "Latest reviewer-created row" in html
     assert "Related seeded source-derived context" in html
+    assert "Field-note guidance" in html
     assert "Fixture UI Status Reviewer (tester)" in html
     assert audit_event["source_record_key"] == COMPLAINT_KEY
     assert audit_event["context_metadata"]["state_payload_keys"] == [

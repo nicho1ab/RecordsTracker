@@ -1077,6 +1077,7 @@ def _render_detail(
       </table>
     </section>
         {_render_source_confidence_cues_section(source_record, related_records)}
+        {_render_field_note_guidance_section()}
                 {_render_source_traceability_section(
                         identity,
                         source_document,
@@ -1133,6 +1134,8 @@ def _render_detail_navigation(
                 <li><a href="{REVIEWER_UI_RECORDS_PATH}">Back to reviewer records</a></li>
                 <li><a href="{_escape(detail_href)}">Refresh this seeded detail</a></li>
                 <li><a href="#record-summary-heading">Review record summary</a></li>
+                <li><a href="#source-confidence-heading">Review source-confidence cues</a></li>
+                <li><a href="#field-note-guidance-heading">Review field-note guidance</a></li>
                 <li><a href="#traceability-heading">Review source traceability</a></li>
                 <li><a href="#source-context-heading">Review source-derived context</a></li>
                 <li><a href="#reviewer-state-heading">Review notes and statuses</a></li>
@@ -1333,6 +1336,65 @@ def _render_source_traceability_section(
       </table>
       {_render_traceability_summary(source_document, source_traceability, import_batch)}
     </section>"""
+
+
+def _render_field_note_guidance_section() -> str:
+    return """<section id="field-note-guidance-heading"
+            aria-labelledby="field-note-guidance-title">
+            <h2 id="field-note-guidance-title">Field-note guidance</h2>
+            <p>Use this guidance after checking source traceability and the source-confidence
+            cues. Reviewer notes/status are reviewer-created observations for this local/test
+            queue; they do not edit source-derived fields.</p>
+            <p>Keep notes short and cautious. When a value is unclear, describe what the
+            local/test page showed and what still needs checking rather than making a source,
+            legal, facility-wide, or official finding.</p>
+            <table>
+                <caption>Cautious wording for reviewer-created notes/status</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">What the cue shows</th>
+                        <th scope="col">Careful reviewer-created wording</th>
+                        <th scope="col">Avoid saying</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th scope="row">Field is present</th>
+                        <td>Say the local/test record shows the value and name the field you
+                        checked. Example: local/test record shows complaint received date.</td>
+                        <td>Do not say the value is legally verified or an official finding.</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Field is not available locally</th>
+                        <td>Say the field is not available in this local/test record.</td>
+                        <td>Do not say the source does not contain this, the record is incomplete,
+                        or data was lost.</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Report-date proxy flag is shown</th>
+                        <td>Say the local/test cue marks report date as a proxy before using delay
+                        wording.</td>
+                        <td>Do not use the proxy flag alone to say an investigation did or did not
+                        happen, or that a delay is proven.</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Field remains confusing after source traceability</th>
+                        <td>Say the field remained unclear after checking source traceability and
+                        include the field label or source document ID when useful.</td>
+                        <td>Do not turn uncertainty into a public-source absence or facility-wide
+                        conclusion.</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Value looks like a UI or data issue</th>
+                        <td>Use the manual feedback checklist for suspected wording, display, or
+                        local/test data issues instead of treating the note as a source-derived
+                        edit.</td>
+                        <td>Do not imply the app corrected, edited, or replaced the source-derived
+                        record.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>"""
 
 
 def _render_traceability_field_rows(
@@ -1866,9 +1928,10 @@ def _render_review_actions(
             <p>These local/test actions write reviewer-created state through the
             existing authenticated workflow actions. They do not edit source-derived
             fields.</p>
-            <p>Review the source traceability section first. Then add a short note when source
-            traceability, wording, missing values, or review context needs follow-up. Set a
-            status to keep queue progress understandable.</p>
+            <p>Review the source traceability, source-confidence cues, and field-note guidance
+            first. Then add a short note when source traceability, wording, missing local/test
+            values, proxy flags, or review context needs follow-up. Set a status to keep queue
+            progress understandable.</p>
             {_return_context_hidden_summary(return_context)}
             {_render_note_form(source_record_key, return_context)}
             {_render_status_form(source_record_key, return_context)}
