@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Improved local/test CCLD queue-to-detail checklist continuity so testers know
+	queue observations and reviewer-detail observations belong in the same existing
+	manual feedback checklist without adding duplicate checklist behavior, feedback
+	persistence, export behavior, schema changes, parser/extraction changes,
+	source scoring, source verification workflow, live browser retrieval,
+	connector execution, or non-CCLD scope.
 - Improved local/test reviewer detail feedback checklist bridge cues so testers
 	can carry record-specific source traceability, source-confidence, field-note,
 	note/status confirmation, and return-to-queue observations into the existing

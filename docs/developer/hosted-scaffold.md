@@ -163,6 +163,9 @@ request context and submitting the same CCLD request again shows updated queue
 progress and note/status cues derived from reviewer-created state.
 Filtered-empty states explain how to return to all queue records without
 implying that local/test or public-source records are missing, deleted, or absent.
+Queue and reviewer-detail pages now use short continuity cues to tell testers
+that queue observations and detail observations belong in the same existing
+manual feedback checklist.
 The request and result pages include skip-to-main links, visible first-run
 next-step guidance, specific request/filter/load action text, and manual
 feedback-copy instructions. These are presentation-only accessibility aids and
@@ -261,6 +264,8 @@ verification workflow behavior.
 Feedback checklist bridge cues point to the existing manual checklist only. They
 do not create a duplicate checklist, persist feedback, send feedback, export
 feedback, or add a feedback workflow.
+Queue-to-detail continuity cues use that same checklist for queue-level and
+detail-level observations without adding a new checklist or workflow.
 
 The UI does not implement production sign-in, real OpenID Connect login, auth
 middleware, token validation, sessions, cookies, provider registration, client

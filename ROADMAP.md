@@ -485,6 +485,13 @@ the governed primary future review experience.
 	adding duplicate checklist behavior, persisted feedback, exports, schema
 	changes, parser/extraction changes, live browser retrieval, connector
 	execution, or non-CCLD scope.
+- Improved local/test CCLD queue-to-detail checklist continuity so queue-level
+	observations, reviewer-detail observations, note/status confirmation behavior,
+	return-to-queue refresh behavior, filtered-empty recovery, no-match/load
+	guidance, wording, labels, and workflow friction all point to the same existing
+	manual checklist without adding a second checklist, persisted feedback, export
+	behavior, schema changes, live browser retrieval, connector execution, or
+	non-CCLD scope.
 
 - Improved the local/test CCLD facility lookup and request/result queue context
 	confirmation so testers can see whether a request came from lookup selection or

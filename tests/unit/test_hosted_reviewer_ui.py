@@ -371,6 +371,13 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Manual feedback checklist bridge" in html
     assert "record-specific observations from this detail" in normalized_html
     assert "Do not create a separate checklist from this page" in normalized_html
+    assert "Use that same checklist for queue-level observations and detail-level" in (
+        normalized_html
+    )
+    assert "request context, queue filters, source traceability" in normalized_html
+    assert "return-to-queue refresh, and suggested-next-record confusion stay together" in (
+        normalized_html
+    )
     assert "Source traceability observations" in html
     assert "Source traceability: note fields that were easy to confirm" in html
     assert "Source-confidence cues: note present values" in html

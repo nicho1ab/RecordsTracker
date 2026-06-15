@@ -278,6 +278,13 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     )
     assert "return here with the same facility/date request context" in normalized_html
     assert "note/status cues derived from reviewer-created state" in normalized_html
+    assert "Use the same manual feedback checklist for queue and reviewer-detail" in (
+        normalized_html
+    )
+    assert "Queue filter confusion, source-confidence questions" in normalized_html
+    assert "suggested-next-record observations all belong in that single checklist" in (
+        normalized_html
+    )
     assert "First-run queue steps" in html
     assert "Read the queue progress and triage summaries" in html
     assert "Return to this request page and copy the feedback checklist" in normalized_html
@@ -291,6 +298,10 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Queue summaries do not prove record completeness" in normalized_html
     assert "source-confidence cues before relying on a summary value" in normalized_html
     assert "record-specific reviewer-detail observations" in normalized_html
+    assert "Carry both queue-level observations and reviewer-detail observations" in (
+        normalized_html
+    )
+    assert "does not create a second checklist or persist feedback" in normalized_html
     assert "Continue review guidance" in html
     assert "derived from this facility/date request context" in normalized_html
     assert "not a persisted queue assignment" in normalized_html
@@ -327,6 +338,8 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Structured CCLD feedback checklist" in html
     assert "id=\"feedback-checklist-section\"" in html
     assert "Select the checklist text, copy it, paste it" in normalized_html
+    assert "Use this same manual checklist for queue observations" in normalized_html
+    assert "filtered-empty recovery, no-match/load guidance" in normalized_html
     assert "CCLD tester feedback checklist" in html
     assert "- Matching source-derived rows shown: 6" in html
     assert "- Matching complaint records in queue: 1" in html

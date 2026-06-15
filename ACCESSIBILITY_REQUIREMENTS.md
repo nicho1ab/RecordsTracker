@@ -67,6 +67,9 @@ Accessibility requirements apply to:
 	Reviewer detail checklist bridge cues must visibly point to the existing manual
 	feedback checklist and must not rely on JavaScript, color, a second checklist,
 	or persisted feedback state.
+	Queue-to-detail continuity cues must visibly tell testers to use the same
+	manual feedback checklist for queue observations and reviewer-detail
+	observations without requiring JavaScript or creating a second checklist.
 - The local/test hosted CCLD record request page must use semantic headings,
 	labeled facility/license number and date controls, accessible validation
 	messages, labeled local validated load controls, table captions/headings for
