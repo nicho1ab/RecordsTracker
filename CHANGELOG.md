@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Added server-side GitHub Issues tester feedback intake at `/feedback` with an
+	accessible form, exact feedback type options for bug reports, feature
+	requests, and new data sources, safe validation/unconfigured/success/failure
+	states, server-side `GITHUB_FEEDBACK_REPO` and `GITHUB_FEEDBACK_TOKEN`
+	configuration, label-based classification, mocked-client tests, and no local
+	feedback persistence, live GitHub calls in tests, token exposure, GitHub
+	Projects setup, issue-type dependency, schema changes, retrieval jobs, or
+	source-derived mutations.
 - Added a cloud-portability deployment guide comparing QNAP Docker, AWS, Azure,
   DigitalOcean, Render, Fly.io, Railway, Supabase, and Neon paths for the hosted
   CCLD runtime. The guide separates app runtime, PostgreSQL, raw file storage,

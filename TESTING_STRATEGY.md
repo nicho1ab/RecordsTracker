@@ -59,6 +59,14 @@ read, feedback submission, retrieval job trigger, import/reload, and admin-style
 actions, disabled or revoked actors are rejected, signed-in labels are safe, and
 HTML/JSON output does not expose provider subjects, issuers, raw claims, tokens,
 cookies, private headers, hosted URLs, or secrets.
+GitHub Issues feedback intake tests must prove the feedback page renders, the
+feedback type dropdown has exactly bug report, feature request, and new data
+source options, description and submit controls are accessible, missing values
+validate safely, missing GitHub configuration does not call GitHub, configured
+submission uses only a mocked client, labels are correct, success/failure states
+are safe, tokens and provider claims are not rendered or included in issue
+bodies, tests make no live GitHub calls, feedback submission does not mutate
+source-derived records, and anonymous production submissions are blocked.
 Audit coverage planning tests must prove authenticated audit/admin-style access,
 unauthenticated, disabled or revoked, role-denied, and out-of-scope rejection,
 deterministic ordering, no secret exposure, no audit row creation, no

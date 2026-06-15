@@ -119,6 +119,10 @@ Accessibility requirements apply to:
 	must have meaningful text such as "Use this facility", and empty, no-match,
 	too-many-results, active-reference-source, fallback, and malformed-CSV states
 	must be visible without relying on color.
+- The tester feedback page must provide accessible labels for feedback type and
+	description, expose validation errors as visible text, provide safe
+	unconfigured, success, and failure states, and keep submit controls keyboard
+	operable without requiring JavaScript.
 - CCLD local/test pages must use consistent plain-language terms for repeated
 	concepts so screen reader users and first-time testers do not have to infer
 	that different phrases refer to the same request, queue, reviewer-created

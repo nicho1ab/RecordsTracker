@@ -28,6 +28,9 @@ def test_env_example_uses_placeholders_only() -> None:
     assert values["CCLD_POSTGRES_PASSWORD"] == "replace-with-strong-local-password"
     assert values["CCLD_HOSTED_PORT"] == "8000"
     assert values["CCLD_HOSTED_PAGE_DATA_MODE"] == "postgres"
+    assert values["GITHUB_FEEDBACK_REPO"] == "<your-github-org-or-user>/<repository-name>"
+    assert values["GITHUB_FEEDBACK_TOKEN"] == "<server-side-github-feedback-token>"
+    assert values["GITHUB_FEEDBACK_DEFAULT_LABELS"] == ""
     assert values["CCLD_FACILITY_REFERENCE_CSV"] == ""
 
     env_text = read_repo_text(".env.example")
@@ -44,6 +47,8 @@ def test_compose_runtime_uses_postgres_named_volumes_and_healthchecks() -> None:
     assert "postgres:16-alpine" in compose
     assert "CCLD_HOSTED_TESTER_DATABASE_URL" in compose
     assert "CCLD_HOSTED_PAGE_DATA_MODE" in compose
+    assert "GITHUB_FEEDBACK_REPO" in compose
+    assert "GITHUB_FEEDBACK_TOKEN" in compose
     assert "postgresql+psycopg://${CCLD_POSTGRES_USER" in compose
     assert "alembic upgrade head" in compose
     assert "python -m ccld_complaints.hosted_app --host 0.0.0.0 --port 8000" in compose

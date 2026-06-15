@@ -98,6 +98,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
                         "reviewer_status": "in_review",
                     },
                 )
+                feedback_status, feedback_body = _read_url(f"{base_url}/feedback")
                 help_status, help_body = _read_url(f"{base_url}/ccld/help")
             finally:
                 server.shutdown()
@@ -194,6 +195,13 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Feedback guidance" not in help_body
     ):
         raise RuntimeError("Hosted scaffold CCLD help page did not return guided help.")
+    if (
+        feedback_status != 200
+        or b"Tester feedback" not in feedback_body
+        or b"GitHub issue intake is not configured" not in feedback_body
+        or b"Submit feedback" not in feedback_body
+    ):
+        raise RuntimeError("Hosted scaffold feedback page did not return safe form state.")
     if (
         reviewer_status != 200
         or b"Local/test reviewer records" not in reviewer_body
