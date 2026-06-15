@@ -138,9 +138,10 @@ existing seeded source-derived rows by CCLD facility/license number and optional
 date range, can load or refresh matching rows from local validated hosted
 seeded-corpus output, renders matching complaint records as a guided
 facility/date-scoped review queue with help, feedback guidance, progress counts,
-reviewer-status filters derived from existing reviewer-created state, and a
-structured copyable tester feedback checklist that must be copied externally,
-and links matches into the reviewer UI,
+reviewer-status filters derived from existing reviewer-created state, reviewer
+note/status cues, source-traceability availability cues, suggested next-record
+links, filtered-empty guidance, and a structured copyable tester feedback
+checklist that must be copied externally, and links matches into the reviewer UI,
 a CCLD-only local/test artifact builder that converts validated CCLD SQLite
 pipeline output into hosted seeded-corpus JSON outside browser requests,
 a local/test authenticated reset/reload dry-run route seam, and a local/test
@@ -175,7 +176,8 @@ actions, and see read-after-write reviewer-created state without exposing
 sensitive narrative fields,
 plus a simple server-rendered CCLD request page that accepts only CCLD digit
 facility/license numbers and optional valid date ranges, shows seeded match or
-no-match results, links seeded matches to reviewer pages, and explains the
+no-match results, renders queue triage summaries and source-traceability cues,
+links seeded matches to reviewer pages, and explains the
 external live-fetch command when broader retrieval is needed, plus a local/test
 validated CCLD import/reload service that reads only validated hosted seeded-
 corpus JSON artifacts and stages source-derived rows through the existing

@@ -415,6 +415,13 @@ the governed primary future review experience.
 	status help text, CCLD return navigation, and record-specific feedback clues
 	without adding persistence, schema changes, source-derived mutation, live
 	browser retrieval, connector execution, or non-CCLD scope.
+- Improved the local/test CCLD request/result queue and reviewer records queue
+	so testers can triage matching complaint records with clearer counts,
+	reviewer note/status cues, source-traceability availability cues, suggested
+	next-record links, filtered-empty guidance, CCLD workflow navigation, and
+	complaint-specific detail actions without adding persistence, schema changes,
+	live browser retrieval, connector execution, new note/status behavior, or
+	non-CCLD scope.
 - Added a minimal local/test audit event persistence scaffold with a separate
 	PostgreSQL/Alembic table and service boundary for successful reviewer-created
 	state scaffold writes only, preserving source-derived records and reviewer-

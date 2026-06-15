@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Improved the local/test CCLD request/result queue and reviewer records queue
+	with clearer triage summaries, status/progress counts, reviewer note/status
+	cues, source-traceability availability cues, suggested next-record links,
+	more specific reviewer-detail action text, CCLD workflow navigation, and
+	filtered-empty guidance without adding persistence, schema changes, live
+	retrieval, connector execution, new note/status behavior, or non-CCLD scope.
 - Improved the local/test reviewer detail page with a plain-language record
 	summary, clearer CCLD return navigation, source-traceability explanation,
 	related context guidance, reviewer note/status help text, and record-specific
