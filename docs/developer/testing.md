@@ -233,6 +233,13 @@ local-dev auth, documents safe `/auth/status`, states that real login/OIDC,
 sessions, cookies, user tables, password login, and tester invitations are not
 implemented yet, warns that provider secrets and callback URLs must not be
 committed, and says local-dev fixture auth is not production authentication.
+QNAP route evidence command tests should prove the optional PowerShell command
+exists, accepts `-BaseUrl` and `-TimeoutSeconds`, uses GET-only route probes,
+lists the expected app, health, auth, feedback, CCLD request/retrieval/help, and
+reviewer routes, treats missing retrieval-job detail as an expected safe state,
+checks forbidden private markers, avoids response-body printing by default, and
+does not run imports, retrieval, live CCLD calls, GitHub calls, POST requests, or
+reviewer-created mutations.
 
 Controlled CCLD retrieval job tests cover the ADR-0016 boundary before and after
 browser-triggered retrieval is enabled. Tests should prove only facility/license

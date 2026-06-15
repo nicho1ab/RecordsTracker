@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 VERIFIER = ROOT / "scripts" / "verify-qnap-pilot-workflow.ps1"
 EVIDENCE_SCRIPT = ROOT / "scripts" / "summarize-qnap-pilot-seeded-import-evidence.ps1"
+ROUTE_EVIDENCE_SCRIPT = ROOT / "scripts" / "summarize-qnap-pilot-route-evidence.ps1"
 
 
 def read_repo_text(relative_path: str) -> str:
@@ -43,6 +44,27 @@ def run_evidence_summary(*args: str) -> subprocess.CompletedProcess[str]:
         raise AssertionError("PowerShell is required for evidence summary tests.")
     return subprocess.run(
         [shell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(EVIDENCE_SCRIPT), *args],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+def run_route_evidence(*args: str) -> subprocess.CompletedProcess[str]:
+    shell = shutil.which("pwsh") or shutil.which("powershell")
+    if shell is None:
+        raise AssertionError("PowerShell is required for route evidence tests.")
+    return subprocess.run(
+        [
+            shell,
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(ROUTE_EVIDENCE_SCRIPT),
+            *args,
+        ],
         cwd=ROOT,
         text=True,
         capture_output=True,
@@ -407,6 +429,105 @@ def test_qnap_seeded_import_evidence_script_detects_readiness_failures(
     )
 
 
+def test_qnap_route_evidence_script_checks_safe_get_only_routes() -> None:
+    script = read_repo_text("scripts/summarize-qnap-pilot-route-evidence.ps1")
+    normalized_script = " ".join(script.split())
+
+    for required_text in (
+        "param(",
+        "$BaseUrl = \"http://127.0.0.1:8000\"",
+        "TimeoutSeconds",
+        "AllowUnavailable",
+        "Invoke-RouteEvidenceCheck",
+        "Invoke-WebRequest",
+        "-UseBasicParsing",
+        "-TimeoutSec $TimeoutSeconds",
+        "GET-only: yes",
+        "Response bodies printed: no",
+        "Raw artifact contents printed: no",
+        "Raw server-specific paths printed: no",
+        "Secrets printed: no",
+        "no public-source completeness, legal, facility-wide, harm, abuse, neglect, "
+        "or liability conclusion",
+        "provider_subject",
+        "provider_issuer",
+        "client_secret",
+        "raw provider claims",
+        "connection string",
+        "cookie=",
+        "authorization:",
+        "github_pat_",
+        "ghp_",
+        "safe missing-job detail state",
+    ):
+        assert required_text in normalized_script
+
+    for route in (
+        "/",
+        "/health",
+        "/auth/status",
+        "/feedback",
+        "/ccld/facilities",
+        "/ccld/records/request",
+        "/ccld/retrieval/jobs",
+        "/ccld/retrieval/jobs/detail?job_id=missing-job",
+        "/ccld/help",
+        "/reviewer",
+    ):
+        assert route in script
+
+    for forbidden_text in (
+        "-Method POST",
+        "method=\"POST\"",
+        "run_controlled_ccld_retrieval",
+        "load_local_validated_ccld_records",
+        "create_issue",
+        "raw artifact viewer",
+        "VerboseBodySnippet",
+        "Write-Host $content",
+        "Write-Output $content",
+        "https://www.ccld.dss.ca.gov",
+        "api.github.com",
+        "C:\\",
+        "OneDrive",
+        "/share/",
+    ):
+        assert forbidden_text not in script
+
+
+def test_qnap_route_evidence_script_handles_unavailable_app_safely() -> None:
+    result = run_route_evidence(
+        "-BaseUrl",
+        "http://127.0.0.1:9",
+        "-TimeoutSeconds",
+        "1",
+        "-AllowUnavailable",
+    )
+
+    assert result.returncode == 0
+    output = result.stdout + result.stderr
+    assert "QNAP pilot route evidence summary" in output
+    assert "GET-only: yes" in output
+    assert "no live CCLD calls and no GitHub calls" in output
+    assert "unavailable" in output
+    assert "Response bodies printed: no" in output
+    assert "Raw artifact contents printed: no" in output
+    assert "Raw server-specific paths printed: no" in output
+    assert "Secrets printed: no" in output
+
+
+def test_qnap_route_evidence_script_fails_unavailable_app_by_default() -> None:
+    result = run_route_evidence(
+        "-BaseUrl",
+        "http://127.0.0.1:9",
+        "-TimeoutSeconds",
+        "1",
+    )
+
+    assert result.returncode != 0
+    assert "could not be reached" in (result.stdout + result.stderr)
+
+
 def test_dockerfile_preserves_no_secret_portable_app_start() -> None:
     dockerfile = read_repo_text("Dockerfile")
 
@@ -479,6 +600,8 @@ def test_qnap_pilot_operator_checklist_exists_and_covers_required_steps() -> Non
         "raw artifact backup location",
         "Do not commit `.env`",
         "Do not expose raw artifacts to testers",
+        "scripts/summarize-qnap-pilot-route-evidence.ps1",
+        "Expected protected, setup-required, safe-empty, and missing-job states",
     ):
         assert required_text in searchable_text
 
@@ -496,6 +619,9 @@ def test_qnap_pilot_operator_checklist_is_linked_from_guides() -> None:
         "docs/developer/qnap-docker-runtime.md": "qnap-pilot-operator-checklist.md",
         "docs/developer/hosted-scaffold.md": "qnap-pilot-operator-checklist.md",
         "docs/user/getting-started.md": "../developer/qnap-pilot-operator-checklist.md",
+        "docs/developer/qnap-pilot-operator-checklist.md": (
+            "scripts/summarize-qnap-pilot-route-evidence.ps1"
+        ),
     }
 
     for path, link in required_links.items():
@@ -539,6 +665,8 @@ def test_qnap_pilot_auth_readiness_doc_exists_and_covers_required_steps() -> Non
         "Do not treat local-dev fixture auth as production authentication",
         "Do not build custom password storage",
         "Do not use shared tester accounts",
+        "scripts/summarize-qnap-pilot-route-evidence.ps1",
+        "without printing response bodies, cookies, tokens, provider subjects, provider issuers",
     ):
         assert required_text in searchable_text
 
@@ -608,6 +736,7 @@ def test_qnap_pilot_seeded_import_evidence_doc_exists_and_covers_required_steps(
         "scripts/summarize-qnap-pilot-seeded-import-evidence.ps1",
         "-SkipDatabaseCheck",
         "does not run imports, run retrieval, call live CCLD, call GitHub",
+        "scripts/summarize-qnap-pilot-route-evidence.ps1",
     ):
         assert required_text in searchable_text
 
@@ -630,6 +759,29 @@ def test_qnap_pilot_seeded_import_evidence_doc_is_linked_from_operator_guides() 
         "docs/developer/qnap-pilot-seeded-import-evidence.md": (
             "scripts/summarize-qnap-pilot-seeded-import-evidence.ps1"
         ),
+    }
+
+    for path, link in required_links.items():
+        assert link in read_repo_text(path)
+
+
+def test_qnap_route_evidence_script_is_linked_from_guides() -> None:
+    required_links = {
+        "README.md": "scripts/summarize-qnap-pilot-route-evidence.ps1",
+        "RUNBOOK.md": "scripts\\summarize-qnap-pilot-route-evidence.ps1",
+        "docs/developer/qnap-docker-runtime.md": (
+            "scripts\\summarize-qnap-pilot-route-evidence.ps1"
+        ),
+        "docs/developer/qnap-pilot-operator-checklist.md": (
+            "scripts/summarize-qnap-pilot-route-evidence.ps1"
+        ),
+        "docs/developer/qnap-pilot-auth-readiness.md": (
+            "scripts/summarize-qnap-pilot-route-evidence.ps1"
+        ),
+        "docs/developer/qnap-pilot-seeded-import-evidence.md": (
+            "scripts/summarize-qnap-pilot-route-evidence.ps1"
+        ),
+        "docs/developer/testing.md": "QNAP route evidence command tests",
     }
 
     for path, link in required_links.items():

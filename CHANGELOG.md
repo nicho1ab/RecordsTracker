@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added `scripts/summarize-qnap-pilot-route-evidence.ps1`, an optional GET-only
+	QNAP pilot route evidence command that probes expected hosted routes, accepts
+	expected protected/setup-required/safe-empty states, and avoids imports,
+	retrieval, GitHub calls, response-body printing, secrets, raw artifacts, raw
+	server paths, and legal/completeness conclusions.
 - Added `docs/developer/qnap-pilot-auth-readiness.md`, a concise QNAP pilot
 	auth readiness guide covering production auth mode, local-dev auth exclusion,
 	safe `/auth/status` evidence, deferred real OIDC/login/session behavior,

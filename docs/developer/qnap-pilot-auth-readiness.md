@@ -68,6 +68,10 @@ Capture a small auth readiness packet:
   production mode when applicable, such as `/ccld/records/request`,
   `/ccld/retrieval/jobs`, `/ccld/retrieval/jobs/detail?job_id=missing-job`, and
   `/reviewer`.
+- Optional `scripts/summarize-qnap-pilot-route-evidence.ps1` output showing the
+  same protected/setup-required/safe route states without printing response
+  bodies, cookies, tokens, provider subjects, provider issuers, raw artifacts,
+  raw server paths, or secrets.
 - Feedback behavior showing configured feedback submission requires an allowed
   authenticated actor, while unconfigured feedback does not call GitHub.
 - Decision record that real OIDC/login remains deferred or planned, including
