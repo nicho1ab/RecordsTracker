@@ -789,6 +789,8 @@ def _render_reviewer_queue_summary(
         )
     )
     traceability_count = sum(1 for record in records if _has_visible_traceability(record))
+    delay_count = sum(1 for record in records if _has_delay_flag(_mapping(_mapping(record, "source_record"), "original_values")))
+    missing_date_count = sum(1 for record in records if _has_missing_date_flag(_mapping(_mapping(record, "source_record"), "original_values")))
     next_record = _next_review_item(records, state_summaries)
     status_cards = "\n".join(
         f"        <div class=\"stat-card\"><strong>{count}</strong><span>{_escape(label)}</span></div>"
@@ -805,7 +807,12 @@ def _render_reviewer_queue_summary(
         <div class="stat-grid" aria-label="Reviewer status counts">
 {status_cards}
         </div>
-        <p class="helper-text">{note_count} with notes; {status_count} with reviewer status; {traceability_count} with source traceability available. {_next_review_item_markup(next_record, state_summaries)}</p>
+        <div class="metric-strip" aria-label="Review flag summary">
+            <div class="metric-card"><strong>{delay_count}</strong><span>Delay indicators</span></div>
+            <div class="metric-card"><strong>{missing_date_count}</strong><span>Missing dates</span></div>
+            <div class="metric-card"><strong>{traceability_count}</strong><span>Source traceability available</span></div>
+        </div>
+        <p class="helper-text">{note_count} with notes; {status_count} with reviewer status. {_next_review_item_markup(next_record, state_summaries)}</p>
     </section>"""
 
 
@@ -856,7 +863,6 @@ def _render_review_item_card(
         control_number = _display_value(original_values.get("complaint_control_number") or source_record_key)
         facility_number = _optional_string(identity, "facility_id")
         finding = _optional_string(original_values, "finding")
-        dates = _date_summary(original_values)
         return f"""        <article class="result-card work-item" aria-labelledby="record-{_escape(source_record_key)}-heading">
                     <div>
                         <p class="stage-kicker">{_escape(_queue_cue_text(state_summary))}</p>
@@ -866,8 +872,14 @@ def _render_review_item_card(
                         <dl>
                             <dt>Facility/license</dt>
                             <dd>{_escape(facility_number)}</dd>
-                            <dt>Key dates</dt>
-                            <dd>{_escape(dates)}</dd>
+                            <dt>Complaint received</dt>
+                            <dd>{_escape(_optional_string(original_values, 'complaint_received_date'))}</dd>
+                            <dt>Visit date</dt>
+                            <dd>{_escape(_optional_string(original_values, 'visit_date'))}</dd>
+                            <dt>Report date</dt>
+                            <dd>{_escape(_optional_string(original_values, 'report_date'))}</dd>
+                            <dt>Signed</dt>
+                            <dd>{_escape(_optional_string(original_values, 'date_signed'))}</dd>
                             <dt>Reviewer-created notes</dt>
                             <dd>{_escape(_notes_indicator_text(state_summary))}</dd>
                             <dt>Source traceability</dt>
@@ -907,6 +919,29 @@ def _source_traceability_cue(source_document: Mapping[str, Any]) -> str:
     if present:
         return "Partial source traceability available: " + ", ".join(present) + "."
     return "Source traceability not visible in this local/test row."
+
+
+def _has_delay_flag(original_values: Mapping[str, Any]) -> bool:
+    return any(
+        original_values.get(field_name) is True
+        for field_name in (
+            "review_delay_over_30_days",
+            "review_delay_over_60_days",
+            "review_delay_over_90_days",
+            "review_delay_over_120_days",
+        )
+    )
+
+
+def _has_missing_date_flag(original_values: Mapping[str, Any]) -> bool:
+    return any(
+        original_values.get(field_name) is True
+        for field_name in (
+            "missing_first_activity_date",
+            "missing_visit_date",
+            "missing_report_date",
+        )
+    )
 
 
 def _render_review_flag_chips(
@@ -1167,6 +1202,9 @@ def _render_detail(
         actor_label=actor_label,
         main=f"""
     {_render_notice(notice, source_record_key, related_records, return_context)}
+                <div class="detail-shell">
+                    <div class="detail-top-grid">
+                        <div>
                 <section class="hero-card" aria-labelledby="detail-hero-heading">
                     <p class="launch-kicker">Complaint review workspace</p>
                     <h2 id="detail-hero-heading">Complaint overview</h2>
@@ -1176,13 +1214,17 @@ def _render_detail(
                 </section>
         {_render_record_summary_section(source_record, related_records, detail)}
                 {_render_key_date_cards(original_values)}
-                                {_render_source_traceability_section(
-                                                identity,
-                                                source_document,
-                                                source_traceability,
-                                                import_batch,
-                                )}
+                        </div>
+                        <aside aria-label="Reviewer-created notes and status">
         {_render_reviewer_state_section(detail)}
+                        </aside>
+                    </div>
+                                                                {_render_source_traceability_section(
+                                                                                                identity,
+                                                                                                source_document,
+                                                                                                source_traceability,
+                                                                                                import_batch,
+                                                                )}
         <section aria-labelledby="source-derived-heading">
                         <h2 id="source-derived-heading">Source-derived full field details</h2>
             <p>These are safe scalar fields from the selected source-derived row. Narrative
@@ -1213,14 +1255,21 @@ def _render_detail(
       </table>
             </details>
     </section>
+                <details class="technical-details">
+                    <summary>Source-confidence cues</summary>
         {_render_source_confidence_cues_section(source_record, related_records)}
+                </details>
+                <details class="technical-details">
+                    <summary>Field-note and technical context</summary>
         {_render_field_note_guidance_section()}
         {_render_source_context_section(related_records, source_record_key)}
+                </details>
         {_render_review_actions(source_record_key, return_context)}
         {_render_detail_navigation(source_record_key, related_records, return_context)}
     {_render_scope_notice(_mapping(payload, 'workflow_shell'))}
         {_render_detail_first_run_steps(source_record_key, related_records, return_context)}
-        {_render_detail_feedback_guidance(source_record, related_records, return_context)}""",
+                {_render_detail_feedback_guidance(source_record, related_records, return_context)}
+                </div>""",
     )
 
 

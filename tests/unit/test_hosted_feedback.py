@@ -75,6 +75,9 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "Tell us what blocked legal review" in html
     assert "A complaint record looked missing or unexpected." in html
     assert "The source traceability summary was hard to use." in html
+    assert "support-layout" in html
+    assert "What not to include" in html
+    assert "Useful examples" in html
     assert "Choose the best feedback type" in html
     assert "Bug report" in html
     assert "Feature request" in html

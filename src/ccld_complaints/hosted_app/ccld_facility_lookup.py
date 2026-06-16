@@ -680,14 +680,17 @@ def _render_result_card(record: CcldFacilityLookupRecord) -> str:
     href = f"{CCLD_RECORD_REQUEST_PATH}?{urlencode(query_values)}"
     geo_parts = [record.city, record.county, record.zip_code]
     geo = ", ".join(p for p in geo_parts if p)
-    type_status_parts = [record.facility_type, record.status]
-    type_status = " \u2022 ".join(p for p in type_status_parts if p)
+    type_status = " ".join(
+        f'<span class="badge badge-muted">{_escape(value)}</span>'
+        for value in (record.facility_type, record.status)
+        if value
+    )
     return f"""        <article class="result-card" aria-labelledby="facility-{_escape(record.facility_number)}-heading">
           <div>
             <h3 id="facility-{_escape(record.facility_number)}-heading">{_escape(record.facility_name)}</h3>
             <p><span class="badge badge-muted">{_escape(record.facility_number)}</span></p>
             {f'<p class="sr-note">{_escape(geo)}</p>' if geo else ''}
-            {f'<p class="sr-note">{_escape(type_status)}</p>' if type_status else ''}
+                        {f'<p>{type_status}</p>' if type_status else ''}
           </div>
           <p><a class="button" href="{_escape(href)}" aria-label="Review {_escape(record.facility_name)} facility complaint records">Review this facility</a></p>
         </article>"""

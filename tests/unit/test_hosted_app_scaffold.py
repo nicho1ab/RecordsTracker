@@ -191,6 +191,24 @@ def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None
         assert "@media (max-width: 760px)" in html
 
 
+def test_final_product_shell_uses_compact_unboxed_workflow_design() -> None:
+    html = render_app_shell()
+
+    assert "--bg: #F5F7FA" in html
+    assert "--line-soft: #E6EBF0" in html
+    assert "section {" in html
+    assert "box-shadow: var(--shadow);\n      margin: 0 0 1rem;\n      padding: 1rem;" not in html
+    assert ".guided-stepper" in html
+    assert "border-bottom: 1px solid var(--line-soft)" in html
+    assert ".stepper-item.is-current" in html
+    assert "border-bottom: 3px solid var(--blue)" in html
+    assert ".step-index" in html
+    assert "display: none;" in html
+    assert '<nav class="site-nav"' in html
+    assert "Health check</a>" not in html
+    assert "Commands</a>" not in html
+
+
 def test_routes_return_shell_health_and_not_found() -> None:
     root_status, root_content_type, root_body = route_response("/")
     health_status, health_content_type, health_body = route_response("/health")

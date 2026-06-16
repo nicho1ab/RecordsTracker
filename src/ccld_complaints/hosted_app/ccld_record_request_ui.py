@@ -748,12 +748,18 @@ def _render_help_page() -> str:
             next_action="Start facility review or open the section you need",
                                 main=f"""    <section class="hero-card" aria-labelledby="help-purpose-heading">
                         <p class="launch-kicker">Product help</p>
-                        <h2 id="help-purpose-heading">What this tool helps you do</h2>
-                        <p>CCLD RecordsTracker helps legal users select a facility, retrieve public complaint records, review key dates and findings, check source traceability, and flag records that need attorney review.</p>
+                            <h2 id="help-purpose-heading">Use RecordsTracker for facility complaint review</h2>
+                            <p>Learn how to retrieve complaint records, review source-derived values, and add reviewer-created notes/status safely.</p>
                 </section>
                 <section class="help-details" aria-labelledby="help-topics-heading">
                     <h2 id="help-topics-heading">Help topics</h2>
                     <details open>
+                        <summary id="help-purpose-topic-heading">What this tool helps you do</summary>
+                        <p>Use RecordsTracker to select a facility, retrieve public CCLD complaint records,
+                        review key source-derived values, and identify records that need source-traceable
+                        attorney review.</p>
+                    </details>
+                    <details>
                         <summary id="help-how-heading">How to review a facility</summary>
                         <p>Facility lookup or manual entry fills a CCLD facility/license number. The
                         request page uses that context and a date range to retrieve or show matching
@@ -1129,7 +1135,6 @@ def _render_result_focus_panel(
         detail_link = (
             f'<a class="button button-secondary" href="{_escape(_retrieval_job_detail_href(retrieval_result.retrieval_job_id))}">View job details</a>'
         )
-    stat_grid = _render_retrieval_count_grid(retrieval_result.result_counts, imported_count) if retrieval_result is not None else ""
     return f"""<section class="hero-card" aria-labelledby="request-result-heading">
       <p class="stage-kicker">Result</p>
       <h2 id="request-result-heading">{_escape(headline)}</h2>
@@ -1146,7 +1151,6 @@ def _render_result_focus_panel(
                 <dt>Load state</dt>
                 <dd>{_escape(load_text)}</dd>
             </dl>
-      {stat_grid}
       <div class="form-actions">
                 <a class="button" href="{REVIEWER_UI_RECORDS_PATH}">Open review queue</a>
         {detail_link}
@@ -1185,10 +1189,13 @@ def _render_no_match_result(
                 include_change_links=True,
             )}
         <details class="technical-details">
-            <summary>Technical retrieval details and feedback handoff</summary>
+            <summary>Technical retrieval details</summary>
         {_render_no_match_guidance(request, local_count, import_reload_result, retrieval_result)}
         {_render_import_reload_summary(import_reload_result)}
         {_render_retrieval_job_summary(retrieval_result)}
+        </details>
+        <details class="technical-details">
+            <summary>Copy details for feedback</summary>
                 {_render_feedback_checklist_section(
                         request,
                         (),
@@ -1197,6 +1204,9 @@ def _render_no_match_result(
                         local_facility_record_count=local_count,
                 reference_source=reference_source,
                 )}
+        </details>
+        <details class="technical-details">
+            <summary>Advanced local/operator actions</summary>
         {_render_import_reload_action(request, import_reload_available, refresh=False)}
         {_render_retrieval_action(request, retrieval_available)}
     {_render_pipeline_plan(request)}
@@ -1491,9 +1501,9 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
             <p><span class="{status_class}">{_escape(_retrieval_state_label(result.job_state))}</span>
             <span class="{mode_class}">{_escape(mode_label)}</span></p>
             <p>{_escape(_retrieval_state_intro(result))}</p>
-            {stat_grid}
                         <details class="technical-details">
                             <summary>Technical job details</summary>
+            {stat_grid}
                         <dl>
                 <dt>Job state</dt>
                 <dd>{_escape(_retrieval_state_label(result.job_state))}</dd>
@@ -1698,10 +1708,17 @@ def _render_retrieval_job_history_page(
     retrieval_configured: bool,
 ) -> str:
     rows = "\n".join(_render_retrieval_history_row(job) for job in jobs)
+    job_cards = "\n".join(_render_retrieval_history_card(job) for job in jobs)
     if not rows:
         rows = """        <tr>
           <td colspan="9">No retrieval jobs have been submitted for this authorized scope.</td>
         </tr>"""
+        job_cards = """        <article class="empty-state-card result-card">
+                    <div>
+                        <h3>No retrieval jobs yet</h3>
+                        <p>No retrieval jobs have been submitted for this authorized scope.</p>
+                    </div>
+                </article>"""
     setup_text = (
         "Controlled retrieval is configured for this runtime."
         if retrieval_configured
@@ -1729,7 +1746,12 @@ def _render_retrieval_job_history_page(
     </section>
         {_render_retrieval_history_summary(jobs)}
     <section aria-labelledby="retrieval-history-table-heading">
-    <h2 id="retrieval-history-table-heading">Job worklist</h2>
+        <h2 id="retrieval-history-table-heading">Job list</h2>
+            <div class="result-list" aria-label="Retrieval jobs">
+{job_cards}
+            </div>
+            <details class="technical-details">
+                <summary>Table view</summary>
       <table>
         <caption>Recent controlled CCLD retrieval jobs and safe status summaries</caption>
         <thead>
@@ -1749,6 +1771,7 @@ def _render_retrieval_job_history_page(
 {rows}
         </tbody>
       </table>
+            </details>
     </section>
     <section aria-labelledby="retrieval-history-help-heading">
       <h2 id="retrieval-history-help-heading">What to do if a job looks wrong</h2>
@@ -1785,6 +1808,31 @@ def _render_retrieval_history_summary(
 {cards}
       </div>
     </section>"""
+
+
+def _render_retrieval_history_card(job: CcldRetrievalJobHistoryEntry) -> str:
+        imported_count = job.result_counts.get("imported_source_derived_records", 0)
+        detail_href = _retrieval_job_detail_href(job.retrieval_job_id)
+        mode_label = _retrieval_mode_label_from_message(job.safe_message)
+        return f"""        <article class="result-card work-item" aria-labelledby="job-{_escape(job.retrieval_job_id)}-heading">
+                    <div>
+                        <p><span class="{_status_badge_class(job.job_state)}">{_escape(_retrieval_state_label(job.job_state))}</span>
+                        <span class="{_mode_badge_class(mode_label)}">{_escape(mode_label)}</span></p>
+                        <h3 id="job-{_escape(job.retrieval_job_id)}-heading">Facility {_escape(job.facility_number)} retrieval</h3>
+                        <dl>
+                            <dt>Date range</dt>
+                            <dd>{_escape(job.start_date)} to {_escape(job.end_date)}</dd>
+                            <dt>Records imported</dt>
+                            <dd>{imported_count}</dd>
+                            <dt>Warning/error summary</dt>
+                            <dd>{len(job.warnings)} warning(s); {len(job.errors)} error(s)</dd>
+                            <dt>Status message</dt>
+                            <dd>{_escape(job.safe_message)}</dd>
+                        </dl>
+                    </div>
+                      <div>{_render_history_next_step(job, imported_count)}</div>
+                    <p><a class="button button-secondary" href="{_escape(detail_href)}">View job details</a></p>
+                </article>"""
 
 
 def _render_retrieval_history_row(job: CcldRetrievalJobHistoryEntry) -> str:
@@ -1919,12 +1967,8 @@ def _render_retrieval_job_detail_page(job: CcldRetrievalJobHistoryEntry) -> str:
       or source-completeness report.</p>
       <p>{_escape(_retrieval_state_intro_for_history(job))}</p>
     <dl class="summary-list">
-        <dt>Retrieval job ID</dt>
-        <dd>{_escape(job.retrieval_job_id)}</dd>
         <dt>Job state</dt>
         <dd>{_escape(_retrieval_state_label(job.job_state))}</dd>
-        <dt>Machine-readable state</dt>
-        <dd>{_escape(job.job_state)}</dd>
         <dt>Status message</dt>
         <dd>{_escape(job.safe_message)}</dd>
         <dt>Retrieval mode</dt>
@@ -1935,18 +1979,8 @@ def _render_retrieval_job_detail_page(job: CcldRetrievalJobHistoryEntry) -> str:
         <dd>{_escape(RECORD_TYPE_LABELS.get(job.record_type, job.record_type))}</dd>
         <dt>Date range</dt>
         <dd>{_escape(job.start_date)} to {_escape(job.end_date)}</dd>
-        <dt>Created at</dt>
-        <dd>{_escape(job.created_at)}</dd>
-        <dt>Started timestamp</dt>
-        <dd>not separately tracked in this first slice</dd>
-        <dt>Last updated at</dt>
-        <dd>{_escape(job.updated_at)}</dd>
-        <dt>Completed timestamp</dt>
-        <dd>{_escape(_completed_timestamp_text(job))}</dd>
         <dt>Records imported</dt>
         <dd>{imported_count}</dd>
-        <dt>Raw artifact preservation</dt>
-        <dd>{_escape(_raw_artifact_status(job))}</dd>
       </dl>
     </section>
         {_render_retrieval_detail_next_steps(job, imported_count)}
@@ -1956,6 +1990,20 @@ def _render_retrieval_job_detail_page(job: CcldRetrievalJobHistoryEntry) -> str:
       <h2 id="retrieval-detail-counts-heading">Result counts</h2>
             {count_cards}
       <dl>
+      <dt>Retrieval job ID</dt>
+      <dd>{_escape(job.retrieval_job_id)}</dd>
+      <dt>Machine-readable state</dt>
+      <dd>{_escape(job.job_state)}</dd>
+      <dt>Created at</dt>
+      <dd>{_escape(job.created_at)}</dd>
+      <dt>Started timestamp</dt>
+      <dd>not separately tracked in this first slice</dd>
+      <dt>Last updated at</dt>
+      <dd>{_escape(job.updated_at)}</dd>
+      <dt>Completed timestamp</dt>
+      <dd>{_escape(_completed_timestamp_text(job))}</dd>
+      <dt>Raw artifact preservation</dt>
+      <dd>{_escape(_raw_artifact_status(job))}</dd>
 {count_items}
       </dl>
     </section>
