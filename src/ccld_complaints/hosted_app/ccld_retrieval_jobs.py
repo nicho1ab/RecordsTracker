@@ -49,6 +49,8 @@ CCLD_RETRIEVAL_RETRY_LIMIT_ENV = "CCLD_RETRIEVAL_RETRY_LIMIT"
 CCLD_RETRIEVAL_DEMO_MODE_ENV = "CCLD_RETRIEVAL_DEMO_MODE"
 CCLD_RETRIEVAL_ENABLED_VALUE = "enabled"
 CCLD_RETRIEVAL_DEMO_MODE_MOCK_SUCCESS = "mock-success"
+RETRIEVAL_MODE_LIVE_PUBLIC = "live_public_ccld"
+RETRIEVAL_MODE_FIXTURE_MOCK = "fixture_mock_success"
 DEFAULT_MAX_DATE_RANGE_DAYS = 366
 DEFAULT_PER_JOB_REQUEST_LIMIT = 5
 DEFAULT_RATE_LIMIT_PER_ACTOR = 3
@@ -154,6 +156,12 @@ class CcldRetrievalConfig:
     @property
     def mock_success_demo_enabled(self) -> bool:
         return self.demo_mode == CCLD_RETRIEVAL_DEMO_MODE_MOCK_SUCCESS
+
+    @property
+    def retrieval_mode(self) -> str:
+        if self.mock_success_demo_enabled:
+            return RETRIEVAL_MODE_FIXTURE_MOCK
+        return RETRIEVAL_MODE_LIVE_PUBLIC
 
 
 @dataclass(frozen=True)
@@ -381,7 +389,10 @@ def run_ccld_retrieval_job(
         context,
         job.retrieval_job_id,
         state="running",
-        safe_message="Controlled CCLD retrieval job is running on the server.",
+        safe_message=_mode_status_message(
+            context.config,
+            "Controlled CCLD retrieval job is running on the server.",
+        ),
         result_counts={},
         warnings=(),
         errors=(),
@@ -518,6 +529,7 @@ def _execute_job(
             candidate,
             retrieval_request,
         ),
+        allow_report_list_fallback=not context.config.mock_success_demo_enabled,
     )
     matching_records = tuple(
         record
@@ -529,12 +541,32 @@ def _execute_job(
             f"{len(result.records) - len(matching_records)} retrieved record bundle(s) "
             "were outside the requested date range."
         ]
-        if len(result.records) != len(matching_records)
+        if result.records and matching_records and len(result.records) != len(matching_records)
         else []
     )
-    if not result.candidates:
+    if result.discovered_count == 0:
         warnings.append(
-            "No CCLD complaint report links were found for the requested facility/date range."
+            "No CCLD complaint report links were discovered for the requested facility."
+        )
+    elif not result.candidates:
+        warnings.append(
+            "CCLD complaint report links were found for this facility, but none had a "
+            "discovered report date inside the requested date range."
+        )
+    elif not result.records and result.failures:
+        warnings.append(
+            "Selected CCLD complaint report links were found, but no report bundles were "
+            "retrieved or validated; the live source may be unavailable or an unsupported "
+            "layout may have been encountered."
+        )
+    elif not result.records:
+        warnings.append(
+            "Selected CCLD complaint report links produced no extracted complaint record bundles."
+        )
+    elif not matching_records:
+        warnings.append(
+            "CCLD complaint reports were fetched and extracted, but no normalized complaint "
+            "records matched the requested facility/date range after validation."
         )
     warnings.extend(_failure_warnings(result.failures))
     if not matching_records:
@@ -542,7 +574,10 @@ def _execute_job(
             context,
             retrieval_job_id,
             state="completed_with_warnings" if warnings else "completed",
-            safe_message="Controlled CCLD retrieval completed with no matching imported records.",
+            safe_message=_mode_status_message(
+                context.config,
+                "Controlled CCLD retrieval completed with no matching imported records.",
+            ),
             result_counts={
                 "discovered_report_candidates": result.discovered_count,
                 "selected_report_candidates": len(result.candidates),
@@ -575,7 +610,10 @@ def _execute_job(
         context,
         retrieval_job_id,
         state="completed_with_warnings" if warnings else "completed",
-        safe_message="Controlled CCLD retrieval imported source-derived records.",
+        safe_message=_mode_status_message(
+            context.config,
+            "Controlled CCLD retrieval imported source-derived records.",
+        ),
         result_counts=counts,
         warnings=tuple(warnings),
         errors=(),
@@ -732,7 +770,7 @@ def _persist_initial_job(
         "result_counts": dict(result_counts),
         "warnings": [],
         "errors": [],
-        "safe_message": safe_message,
+        "safe_message": _mode_status_message(context.config, safe_message),
         "data_mutations_performed": data_mutations_performed,
     }
     context.connection.execute(hosted_ccld_retrieval_jobs.insert().values(**values))
@@ -747,7 +785,7 @@ def _persist_initial_job(
         result_counts=result_counts,
         warnings=(),
         errors=(),
-        safe_message=safe_message,
+        safe_message=_mode_status_message(context.config, safe_message),
     )
 
 
@@ -865,10 +903,29 @@ def _fetch_url(source_url: str, *, timeout_seconds: int) -> bytes:
 
 
 def _failure_warnings(failures: Sequence[Any]) -> list[str]:
-    return [
-        f"Report {failure.candidate.report_index} failed during {failure.stage}."
-        for failure in failures
-    ]
+    warnings = []
+    for failure in failures:
+        if failure.stage == "fetch":
+            warnings.append(
+                f"Report {failure.candidate.report_index} failed during fetch; the public "
+                "source may be unavailable or returned an unsupported response."
+            )
+        elif failure.stage in {"extract", "normalize", "validate", "emit"}:
+            warnings.append(
+                f"Report {failure.candidate.report_index} failed during {failure.stage}; "
+                "the source layout or imported record shape may be unsupported."
+            )
+        else:
+            warnings.append(
+                f"Report {failure.candidate.report_index} failed during {failure.stage}."
+            )
+    return warnings
+
+
+def _mode_status_message(config: CcldRetrievalConfig, message: str) -> str:
+    if config.retrieval_mode == RETRIEVAL_MODE_FIXTURE_MOCK:
+        return f"Controlled CCLD retrieval (fixture/mock mode): {message}"
+    return f"Controlled CCLD retrieval (live public CCLD mode): {message}"
 
 
 def _int_mapping(value: object) -> Mapping[str, int]:

@@ -155,13 +155,16 @@
   guidance, but these are presentation aids only and do not create saved review
   sessions, persisted queue state, persisted workflow state, duplicate checklists,
   or feedback persistence.
-  It does not run live retrieval, execute connectors, mutate reviewer-created
-  state from the request page, create audit rows from the request page, persist
-  feedback, create duplicate checklists, persist operational metadata, prove public-source completeness, or
-  support non-CCLD sources. When records are missing
-  from the local validated output or outside the requested date range, it
-  explains the explicit outside-browser CCLD live-fetch and local/test artifact-
-  builder handoff. The artifact builder converts validated CCLD SQLite pipeline
+  It can trigger controlled server-side CCLD complaint retrieval only when the
+  runtime is explicitly configured for retrieval and server-side raw storage.
+  The browser still does not scrape CCLD, receive connector credentials, or
+  receive raw artifact paths. The request page does not mutate reviewer-created
+  state, create audit rows from the request page, persist feedback, create
+  duplicate checklists, prove public-source completeness, or support non-CCLD
+  sources. When records are missing from the local validated output or outside
+  the requested date range, it explains the configured retrieval action or the
+  explicit outside-browser CCLD live-fetch and local/test artifact-builder
+  handoff. The artifact builder converts validated CCLD SQLite pipeline
   output into hosted seeded-corpus JSON outside browser requests, but it is
   still a local/test step and does not prove public-source completeness or
   automate production imports.
@@ -187,8 +190,10 @@
   safe-status, private-value-safe, and tested without live CCLD calls in CI. It
   discovers complaint-section report links for the requested facility and
   prefilters discovered links to the requested date range before fetching
-  reports. The
-  browser must not scrape or receive connector credentials,
+  reports. A local live startup command can use the public CCLD HTTP connector
+  for explicitly submitted browser retrieval jobs, while a separate fixture/mock
+  startup command remains available for offline validation. The browser must not
+  scrape or receive connector credentials,
   GitHub tokens, provider tokens, cookies, private headers, or server-side
   secrets. Statewide crawling, automatic source expansion, non-CCLD sources,
   private/authenticated source scraping, legal/facility-wide/public-source

@@ -516,8 +516,10 @@ def _render_request_form(
                     for one facility/license number, load validated local CCLD output when it is
                     available, and continue into a reviewer queue for notes and status.</p>
                     <p>The public CCLD portal remains the source of record. This page reads or
-                    loads local/test source-derived records only; it does not run live crawling
-                    or browser-triggered connector execution.</p>
+                    loads local/test source-derived records, and when retrieval is configured
+                    it can trigger a controlled server-side retrieval job. The browser does not
+                    crawl CCLD directly, receive connector credentials, or receive raw artifact
+                    paths.</p>
                     <p>Start this review session by confirming the CCLD request context.
                     Facility lookup helps fill the facility/license number; the request queue
                     then uses loaded local/test CCLD records for that facility/date context.</p>
@@ -868,8 +870,7 @@ def _render_matched_result(
             row(s) for facility/license number {_escape(request.facility_number)}.</p>
       {_render_date_scope(request)}
                         <p>{_escape(load_text)}</p>
-                        <p>The hosted UI did not run live retrieval, browser connector execution,
-                        or SQLite conversion.</p>
+                        <p>{_escape(_request_execution_boundary_text(retrieval_result))}</p>
     </section>
     {_render_request_context_confirmation(
                         facility_number=request.facility_number,
@@ -979,7 +980,7 @@ def _render_no_match_result(
                 reference_source=reference_source,
                 include_change_links=True,
             )}
-        {_render_no_match_guidance(request, local_count, import_reload_result)}
+        {_render_no_match_guidance(request, local_count, import_reload_result, retrieval_result)}
         {_render_import_reload_summary(import_reload_result)}
         {_render_retrieval_job_summary(retrieval_result)}
                 {_render_feedback_checklist_section(
@@ -1004,9 +1005,10 @@ def _render_pipeline_plan(request: CcldRecordRequest) -> str:
     )
     return f"""<section aria-labelledby="pipeline-plan-heading">
       <h2 id="pipeline-plan-heading">CCLD pipeline step still required</h2>
-            <p>This hosted UI does not run live CCLD retrieval or import. To retrieve
-            records beyond the existing local/test seeded corpus, run the existing
-            explicit CCLD pipeline outside the hosted UI.</p>
+            <p>When controlled retrieval is configured, use the browser retrieval action on
+            this page for a bounded CCLD facility/date/type request. When controlled
+            retrieval is not configured or a separate SQLite/Datasette validation run is
+            needed, use the existing explicit CCLD pipeline outside the hosted UI.</p>
       <ol>
         <li>Run <code>{live_fetch_command}</code>
                 when live public requests are intended.</li>
@@ -1018,9 +1020,9 @@ def _render_pipeline_plan(request: CcldRecordRequest) -> str:
             <p>Use this outside-browser workflow only when the request context is correct and
             local validated data needs to be prepared or refreshed. Do not treat a no-match
             page as proof that the CCLD public portal has no matching public records.</p>
-            <p>The remaining gap is production-ready automation around the validated
-            artifact handoff. Browser requests still do not run live CCLD retrieval,
-            connector execution, or SQLite conversion.</p>
+                <p>The browser remains a trigger only. Server-side retrieval, raw preservation,
+                extraction, validation, and import happen only when controlled retrieval is
+                explicitly configured; SQLite conversion remains outside the browser path.</p>
     </section>"""
 
 
@@ -1028,14 +1030,13 @@ def _render_no_match_guidance(
     request: CcldRecordRequest,
     local_facility_record_count: int,
     import_reload_result: CcldImportReloadResult | None,
+    retrieval_result: CcldRetrievalJobResult | None,
 ) -> str:
     date_scope = _date_scope_text(request)
     load_state = _no_match_load_state(import_reload_result)
     return f"""    <section aria-labelledby="no-match-guidance-heading">
             <h2 id="no-match-guidance-heading">How to interpret this no-match result</h2>
-            <p>This page searched currently loaded local/test source-derived rows only. It did
-            not run live CCLD retrieval, connector execution, SQLite conversion, or artifact
-            building from the browser.</p>
+            <p>{_escape(_request_execution_boundary_text(retrieval_result))}</p>
             <dl>
                 <dt>Facility/license number searched</dt>
                 <dd>{_escape(request.facility_number)}</dd>
@@ -1061,6 +1062,21 @@ def _render_no_match_guidance(
             <p>A no-match result is a local/test data state, not a public-source absence,
             record-completeness, legal, or facility-wide conclusion.</p>
         </section>"""
+
+
+def _request_execution_boundary_text(
+    retrieval_result: CcldRetrievalJobResult | None,
+) -> str:
+    if retrieval_result is None:
+        return (
+            "This page searched currently loaded local/test source-derived rows only. It did not "
+            "submit a controlled retrieval job for this request."
+        )
+    return (
+        "The browser triggered a controlled server-side CCLD retrieval job. The browser did "
+        "not scrape, fetch source pages directly, run SQLite conversion, receive connector "
+        "credentials, or receive raw artifact paths."
+    )
 
 
 def _no_match_load_state(result: CcldImportReloadResult | None) -> str:
@@ -1193,6 +1209,8 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
                 <dd>{_escape(result.job_state)}</dd>
                 <dt>Status message</dt>
                 <dd>{_escape(result.safe_message)}</dd>
+                <dt>Retrieval mode</dt>
+                <dd>{_escape(_retrieval_mode_label_from_message(result.safe_message))}</dd>
                 <dt>Retrieval job ID</dt>
                 <dd>{_escape(result.retrieval_job_id)}</dd>
                 <dt>Facility/license number</dt>
@@ -1255,6 +1273,15 @@ def _retrieval_state_label(state: str) -> str:
         "rate_limited": "Rate limited",
     }
     return labels.get(state, state)
+
+
+def _retrieval_mode_label_from_message(message: str) -> str:
+    normalized = message.casefold()
+    if "fixture/mock mode" in normalized:
+        return "Fixture/mock demo"
+    if "live public ccld mode" in normalized:
+        return "Live public CCLD"
+    return "Not recorded"
 
 
 def _render_retrieval_next_steps(result: CcldRetrievalJobResult, imported_count: int) -> str:
@@ -1397,6 +1424,8 @@ def _render_retrieval_history_row(job: CcldRetrievalJobHistoryEntry) -> str:
               <dd>{_escape(_retrieval_state_label(job.job_state))}</dd>
               <dt>Machine-readable state</dt>
               <dd>{_escape(job.job_state)}</dd>
+                            <dt>Retrieval mode</dt>
+                            <dd>{_escape(_retrieval_mode_label_from_message(job.safe_message))}</dd>
             </dl>
           </td>
           <td>
@@ -1513,6 +1542,8 @@ def _render_retrieval_job_detail_page(job: CcldRetrievalJobHistoryEntry) -> str:
         <dd>{_escape(job.job_state)}</dd>
         <dt>Status message</dt>
         <dd>{_escape(job.safe_message)}</dd>
+        <dt>Retrieval mode</dt>
+        <dd>{_escape(_retrieval_mode_label_from_message(job.safe_message))}</dd>
         <dt>Facility/license number</dt>
         <dd>{_escape(job.facility_number)}</dd>
         <dt>Record type</dt>
@@ -2072,7 +2103,8 @@ def _feedback_checklist_text(
         "or second checklist.",
         "- Rendering this checklist does not change source-derived records, "
         "reviewer-created state, audit rows, import batches, or operational metadata.",
-        "- Browser pages did not run live CCLD retrieval or connector execution.",
+        "- Browser pages only trigger controlled server-side retrieval when the retrieval "
+        "action is explicitly submitted.",
         "- Missing local/test rows are not proof that CCLD has no public records.",
         "- The CCLD public portal remains the source of record.",
     ]
