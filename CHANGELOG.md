@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Redesigned the hosted CCLD UI as an attorney-focused public-record review
+	workspace: the product shell is now `CCLD RecordsTracker`, the workflow strip is
+	compact and legal-review oriented, home starts with facility complaint review,
+	facility lookup uses `Review this facility`, retrieval results lead with
+	`Complaint records ready for attorney review`, recovery and job pages keep
+	technical details secondary, reviewer queue/detail pages lead with complaint
+	summaries, source traceability, cautiously labeled review flags, and
+	reviewer-created/source-derived separation, and feedback/help use legal-review
+	support language. The redesign uses existing safe source-derived and
+	reviewer-created values only; it does not add backend behavior, schemas,
+	migrations, exports, sources, or unsupported legal/facility-wide conclusions.
+
 - Fixed route-aware top navigation: `/ccld/help` now highlights `Help` instead
 	of `Retrieve`. Root cause: `_render_help_page()` called the shared `_page()`
 	helper without setting `active_path`, so it inherited the default

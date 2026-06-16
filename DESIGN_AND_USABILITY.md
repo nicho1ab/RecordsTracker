@@ -250,6 +250,16 @@ cautious-language, tester feedback, and reviewer-state boundaries.
 ## Design principles
 
 - Prefer review workflows over raw implementation exposure.
+- Hosted CCLD pages should present as an attorney-focused public-record review
+  workspace: serious, calm, source-traceability focused, and organized around
+  selecting a facility, retrieving complaint records, reviewing key dates and
+  findings, identifying cautious review flags, opening records for legal review,
+  and preserving source-derived versus reviewer-created separation.
+- Review flag wording must stay cautious. Use terms such as `Review flag`,
+  `Needs source check`, `Possible delay indicator`, `Missing in local record`,
+  and `Source traceability available`. Do not use UI language that implies
+  legal conclusions, official findings, source completeness, facility-wide
+  conclusions, verified harm, abuse, neglect, liability, or rights-deprivation.
 - Make the first useful screen obvious after a script completes.
 - Preserve the public portal as the source of record.
 - Keep every derived record connected to source URL, raw hash, connector details,

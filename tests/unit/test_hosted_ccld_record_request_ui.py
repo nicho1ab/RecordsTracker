@@ -75,7 +75,9 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "Retrieve complaint records" in html
     assert "Skip to main CCLD request content" in html
     assert '<main id="main-content" tabindex="-1">' in html
-    assert "Start with one facility, one date range" in html
+    assert "Retrieve complaint records for a facility" in html
+    assert "Attorney intake wizard" in html
+    assert "Choose complaint date range" in html or "Which facility should be reviewed?" in html
     assert 'for="facility-search-input"' in html
     assert "facility-suggestion-list" in html
     assert "Which facility should be reviewed?" in html
@@ -98,13 +100,13 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Help" in html
-    assert "Use the pilot without reading a manual" in html
-    assert "How the guided workflow works" in html
-    assert "Live public CCLD retrieval" in html
-    assert "Fixture/mock demo" in html
-    assert "Source-derived vs reviewer-created" in html
-    assert "What 0 imported can mean" in html
-    assert "What this app does not prove" in html
+    assert "What this tool helps you do" in html
+    assert "How to review a facility" in html
+    assert "What review flags mean" in html
+    assert "How source traceability works" in html
+    assert "How reviewer-created notes/status work" in html
+    assert "Live public CCLD retrieval and fixture/mock mode" in html
+    assert "What the app does not prove" in html
     assert "How to send useful feedback" in html
     assert "Source-derived records" in html
     assert "reviewer-created notes/status" in normalized_html
@@ -134,7 +136,11 @@ def test_ccld_record_request_prefills_selected_facility_from_lookup() -> None:
     assert "name=\"request_context_origin\"" in html
     assert "value=\"facility_lookup\"" in html
     assert "name=\"lookup_facility_name\"" in html
-    assert "Set the complaint date range" in html
+    assert "Choose complaint date range" in html
+    assert (
+        "Use the date range to narrow complaint, visit, report, signed, or retrieval dates"
+        in html
+    )
     assert_no_secret_html(html)
 
 
@@ -270,7 +276,8 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert content_type == "text/html; charset=utf-8"
     assert before_source_rows == after_source_rows
     assert counts == _empty_reviewer_counts()
-    assert "Complaint records ready for review" in html
+    assert "Complaint records ready for attorney review" in html
+    assert "Open review queue" in html
     assert "Matching source-derived rows shown" in html
     assert "facility/license number 157806098" in html
     assert "2022-08-01 to 2022-08-31" in html
@@ -680,7 +687,7 @@ def test_ccld_record_request_loads_local_validated_output_then_shows_matches() -
     assert "Load executed: yes." in html
     assert "New source-derived rows staged" in html
     assert "validated_seeded_corpus.json" in html
-    assert "Complaint records ready for review" in html
+    assert "Complaint records ready for attorney review" in html
     assert "Matching source-derived rows shown" in html
     assert "- Load action submitted on this request: yes" in html
     assert "- Local validated records loaded or refreshed: yes" in html
