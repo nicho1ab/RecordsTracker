@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import json
+import os
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +24,12 @@ from ccld_complaints.hosted_app.auth import (
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_LOOKUP_PATH,
     CCLD_RECORD_REQUEST_PATH,
+)
+from ccld_complaints.hosted_app.facility_case_brief import (
+    FacilityCaseBrief,
+    FacilityCaseBriefRecord,
+    render_facility_case_brief,
+    render_record_flag_reason_section,
 )
 from ccld_complaints.hosted_app.reviewer_created_state import REVIEWER_STATUS_VALUES
 from ccld_complaints.hosted_app.reviewer_created_state_routes import (
@@ -672,17 +679,10 @@ def _render_record_list(
                 heading="Complaint records ready for review",
         actor_label=actor_label,
         main=f"""
-        <section class="hero-card" aria-labelledby="reviewer-queue-heading">
-                        <p class="launch-kicker">Legal review work queue</p>
-                        <h2 id="reviewer-queue-heading">Complaint records ready for review</h2>
-                        <p>Review key dates, findings, source traceability, and reviewer-created notes/status.</p>
-            <p><a class="button" href="{_next_review_item_href(_next_review_item(records, state_summaries))}">Open next record</a></p>
-                        <p class="sr-note">Source-derived records stay separate from reviewer-created notes/status.</p>
-        </section>
+        {_render_reviewer_case_brief(records, state_summaries)}
                 {no_results_notice}
         <section aria-labelledby="reviewer-list-heading">
                         <h2 id="reviewer-list-heading">Worklist</h2>
-                                                {_render_reviewer_queue_summary(records, state_summaries)}
                 <div class="result-list" aria-label="Complaint records ready for review">
         {cards}
                 </div>
@@ -814,6 +814,159 @@ def _render_reviewer_queue_summary(
         </div>
         <p class="helper-text">{note_count} with notes; {status_count} with reviewer status. {_next_review_item_markup(next_record, state_summaries)}</p>
     </section>"""
+
+
+def _render_reviewer_case_brief(
+    records: list[Mapping[str, Any]],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+) -> str:
+    case_records = tuple(
+        _case_brief_record_from_review_item(index, record, state_summaries)
+        for index, record in enumerate(records)
+    )
+    if not case_records:
+        return """        <section class="hero-card" aria-labelledby="reviewer-queue-heading">
+                        <p class="launch-kicker">Legal review work queue</p>
+                        <h2 id="reviewer-queue-heading">Complaint records ready for review</h2>
+                        <p>No complaint records are currently visible in this reviewer queue.</p>
+        </section>"""
+    first_record = case_records[0]
+    return render_facility_case_brief(
+        FacilityCaseBrief(
+            facility_number=first_record.facility_number,
+            facility_name=first_record.facility_name,
+            date_range="not provided",
+            mode_label=_runtime_mode_label_for_reviewer(),
+            mode_badge_class=_mode_badge_class_for_reviewer(_runtime_mode_label_for_reviewer()),
+            records=case_records,
+            record_count_label="Complaint records visible",
+            full_queue_href=REVIEWER_UI_RECORDS_PATH,
+        )
+    )
+
+
+def _case_brief_record_from_review_item(
+    index: int,
+    item: Mapping[str, Any],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+) -> FacilityCaseBriefRecord:
+    source_record = _mapping(item, "source_record")
+    identity = _mapping(source_record, "identity")
+    source_document = _mapping(source_record, "source_document")
+    original_values = _mapping(source_record, "original_values")
+    source_record_key = _string(identity, "source_record_key")
+    state_summary = state_summaries.get(source_record_key, _empty_state_summary())
+    latest_status = _summary_optional_string(state_summary, "latest_status")
+    detail_href = f"{REVIEWER_UI_DETAIL_PATH}?{urlencode({'source_record_key': source_record_key})}"
+    facility_number = _optional_string(identity, "facility_id")
+    facility_name = _optional_string(original_values, "facility_name")
+    if facility_name == "unknown":
+        facility_name = ""
+    return FacilityCaseBriefRecord(
+        source_record_key=source_record_key,
+        detail_href=detail_href,
+        complaint_control_number=_display_value(
+            original_values.get("complaint_control_number") or source_record_key
+        ),
+        finding=_optional_string(original_values, "finding"),
+        complaint_received_date=_optional_string(original_values, "complaint_received_date"),
+        visit_date=_optional_string(original_values, "visit_date"),
+        report_date=_optional_string(original_values, "report_date"),
+        date_signed=_optional_string(original_values, "date_signed"),
+        facility_number=facility_number,
+        facility_name=facility_name,
+        has_source_traceability=_has_visible_traceability_document(source_document),
+        reviewer_status=latest_status,
+        reviewer_status_label=_REVIEWER_STATUS_LABELS.get(latest_status or "", latest_status),
+        reviewer_note_count=_summary_int(state_summary, "note_count"),
+        delay_thresholds=_delay_thresholds(original_values),
+        missing_first_activity_date=original_values.get("missing_first_activity_date") is True,
+        missing_visit_date=not _has_display_value(original_values.get("visit_date")),
+        missing_report_date=not _has_display_value(original_values.get("report_date")),
+        missing_signed_date=not _has_display_value(original_values.get("date_signed")),
+        report_date_used_as_proxy=original_values.get("report_date_used_as_proxy") is True,
+        order_index=index,
+    )
+
+
+def _render_detail_flag_reason_section(
+    source_record: Mapping[str, Any],
+    detail: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> str:
+    record = _case_brief_record_from_detail(source_record, detail, related_records, return_context)
+    return render_record_flag_reason_section(record)
+
+
+def _case_brief_record_from_detail(
+    source_record: Mapping[str, Any],
+    detail: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> FacilityCaseBriefRecord:
+    identity = _mapping(source_record, "identity")
+    source_document = _mapping(source_record, "source_document")
+    original_values = _mapping(source_record, "original_values")
+    state_summary = _mapping(detail, "associated_reviewer_created_state_summary")
+    source_record_key = _string(identity, "source_record_key")
+    reviewer_statuses = tuple(_string_items(state_summary.get("reviewer_statuses_present", [])))
+    reviewer_status = reviewer_statuses[0] if reviewer_statuses else None
+    facility = _facility_context(related_records)
+    facility_number = return_context.facility_number or _facility_context_value(facility, "external_facility_number")
+    facility_name = _facility_context_value(facility, "facility_name")
+    return FacilityCaseBriefRecord(
+        source_record_key=source_record_key,
+        detail_href=_reviewer_detail_href(source_record_key, return_context),
+        complaint_control_number=_display_value(
+            original_values.get("complaint_control_number") or source_record_key
+        ),
+        finding=_optional_string(original_values, "finding"),
+        complaint_received_date=_optional_string(original_values, "complaint_received_date"),
+        visit_date=_optional_string(original_values, "visit_date"),
+        report_date=_optional_string(original_values, "report_date"),
+        date_signed=_optional_string(original_values, "date_signed"),
+        facility_number=facility_number,
+        facility_name=facility_name,
+        has_source_traceability=_has_visible_traceability_document(source_document),
+        reviewer_status=reviewer_status,
+        reviewer_status_label=_REVIEWER_STATUS_LABELS.get(reviewer_status or "", reviewer_status),
+        reviewer_note_count=_int_value(state_summary, "total_associated_rows"),
+        delay_thresholds=_delay_thresholds(original_values),
+        missing_first_activity_date=original_values.get("missing_first_activity_date") is True,
+        missing_visit_date=not _has_display_value(original_values.get("visit_date")),
+        missing_report_date=not _has_display_value(original_values.get("report_date")),
+        missing_signed_date=not _has_display_value(original_values.get("date_signed")),
+        report_date_used_as_proxy=original_values.get("report_date_used_as_proxy") is True,
+        order_index=0,
+    )
+
+
+def _delay_thresholds(values: Mapping[str, Any]) -> tuple[int, ...]:
+    thresholds: list[int] = []
+    for days in (30, 60, 90, 120):
+        if values.get(f"review_delay_over_{days}_days") is True:
+            thresholds.append(days)
+    return tuple(thresholds)
+
+
+def _runtime_mode_label_for_reviewer() -> str:
+    demo_mode = os.environ.get("CCLD_RETRIEVAL_DEMO_MODE", "").strip().casefold()
+    retrieval_enabled = os.environ.get("CCLD_RETRIEVAL_ENABLED", "").strip().casefold()
+    raw_dir = os.environ.get("CCLD_RETRIEVAL_RAW_DIR", "").strip()
+    if demo_mode == "mock-success":
+        return "Fixture/mock demo"
+    if retrieval_enabled == "enabled" and raw_dir:
+        return "Live public CCLD"
+    return "Retrieval not configured"
+
+
+def _mode_badge_class_for_reviewer(label: str) -> str:
+    if label == "Live public CCLD":
+        return "badge badge-live"
+    if label == "Fixture/mock demo":
+        return "badge badge-demo"
+    return "badge badge-muted"
 
 
 def _render_review_item_row(
@@ -1213,6 +1366,7 @@ def _render_detail(
                     <p><span class="badge badge-muted">Finding: {_escape(_optional_string(original_values, 'finding'))}</span></p>
                     {_render_review_flag_chips(original_values, source_document)}
                 </section>
+            {_render_detail_flag_reason_section(source_record, detail, related_records, return_context)}
         {_render_record_summary_section(source_record, related_records, detail)}
                 {_render_key_date_cards(original_values)}
                         </div>

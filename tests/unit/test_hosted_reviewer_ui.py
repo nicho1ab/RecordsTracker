@@ -60,14 +60,21 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Complaint records ready for review" in html
-    assert "Legal review work queue" in html
+    assert "Facility case brief" in html
+    assert "Complaint records visible" in html
+    assert "Records with review flags" in html
+    assert "Reviewer-created notes/statuses" in html
+    assert "Findings represented" in html
+    assert "Suggested first record for review" in html
+    assert "Why open this first" in html
+    assert "Open priority record" in html
+    assert "Open full queue" in html
     assert "Skip to main reviewer content" in html
     assert '<main id="main-content" tabindex="-1">' in html
     assert "Technical runtime details" in html
     assert "Local/test reviewer UI shell" not in html
     assert "fixture actor context" not in normalized_html
     assert "seeded corpus scope" not in normalized_html
-    assert "Open next record" in html
     assert "review-chip" in html
     assert "Source traceability available" in html
     assert "Worklist" in html
@@ -75,14 +82,12 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert "Show table view" in html
     assert "Source-derived records stay separate" in normalized_html
     assert "Worklist" in html
-    assert "Queue status summary" in html
+    assert "Queue status summary" not in html
     assert "Source traceability available" in html
     assert "Open record" in html
-    assert "Not started" in html
-    assert "with notes" in html
-    assert "with reviewer status" in html
+    assert "No reviewer-created status recorded yet" in html
+    assert "Reviewer-created notes/statuses" in html
     assert "Source traceability available" in html
-    assert "Open next record" in html
     assert "Reviewer status" in html
     assert "Reviewer-created notes" in html
     assert "Complaint received date" in html
@@ -134,7 +139,9 @@ def test_reviewer_ui_landing_shows_reviewer_created_state_indicators() -> None:
     assert "Reviewed" in html
     assert "1 reviewer-created note" in html
     assert "reviewed" in html
-    assert "Queue status summary" in html
+    assert "Facility case brief" in html
+    assert "Reviewer-created notes/statuses" in html
+    assert "Queue status summary" not in html
     assert "Reviewed" in html
     assert "Reviewer-created notes" in html
     assert "No reviewer-created note/status yet" not in html
@@ -209,6 +216,10 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "32-CR-20220407124448" in html
     assert "Complaint overview" in html
+    assert "Why this record is flagged" in html
+    assert "screening aids, not legal conclusions" in normalized_html
+    assert "Needs source check: first activity date missing locally" in html
+    assert "Source traceability available" in html
     assert "Key dates and finding" in html
     assert "Skip to main reviewer content" in html
     assert '<main id="main-content" tabindex="-1">' in html
