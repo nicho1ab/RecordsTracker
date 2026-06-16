@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Productized the hosted `CCLD RecordsTracker Pilot` guided UI so it no longer
+	foregrounds scaffold-style navigation or runtime language: the stepper is more
+	compact, Home is a simpler launch screen, developer/operator commands are
+	collapsed, primary navigation excludes diagnostic links, request recovery keeps
+	technical preparation details collapsed, and the reviewer queue leads with a
+	worklist, `Open next record`, compact status counts, and collapsed technical
+	runtime details while preserving behavior and safety boundaries.
 - Replaced the hosted CCLD pilot page stack with a guided `CCLD RecordsTracker
 	Pilot` workflow assistant: launch-screen home, compact functional stepper,
 	progressive facility/date/retrieve request flow, focused imported-record and

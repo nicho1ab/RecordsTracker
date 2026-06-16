@@ -196,7 +196,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if b"Skip to main CCLD review content" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return skip navigation.")
     if (
-        b"Retrieve complaint records and move straight into source-traceable review"
+        b"Start a CCLD complaint review"
         not in root_body
     ):
         raise RuntimeError("Hosted scaffold app shell did not return review session orientation.")

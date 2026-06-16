@@ -212,10 +212,11 @@ renders on the home, facility lookup, CCLD request/help, retrieval job history/
 detail, reviewer, and feedback pages with the `CCLD RecordsTracker Pilot` product
 name, mode badge for Live public CCLD, Fixture/mock demo, or Retrieval not
 configured, compact functional stepper with current/completed/future states and
-next-action guidance, active navigation, skip link, source-of-record limitation
-footer, visible focus styles, responsive CSS, readable table/form styling, and no
-new routes, workflows, auth, exports, public deployment, non-CCLD scope, or
-frontend dependencies. Request-page tests should also prove progressive states
+next-action guidance, readable non-wrapping labels, active workflow navigation
+without developer/diagnostic links in the primary nav, skip link, source-of-
+record limitation footer, visible focus styles, responsive CSS, readable table/
+form styling, and no new routes, workflows, auth, exports, public deployment,
+non-CCLD scope, or frontend dependencies. Request-page tests should also prove progressive states
 for no facility, selected facility, date-range-ready request, and retrieval
 result/recovery; native facility type-ahead or datalist options; fixed complaint-
 record type; distinct retrieve/show-queue actions; selected facility confirmation;

@@ -495,7 +495,7 @@ def _page(*, title: str, heading: str, main: str) -> str:
                 skip_label="Skip to main feedback content",
                 nav_label="Feedback navigation",
                 eyebrow="Server-side GitHub Issues feedback intake.",
-                extra_nav_links=(("Auth status", "/auth/status"),),
+                extra_nav_links=(),
                 active_path=FEEDBACK_PATH,
                 step_id="feedback",
                 next_action="Choose feedback type and submit useful details",

@@ -85,9 +85,10 @@ experience.
    uses native type-ahead plus secondary manual facility entry, provides focused
    result and recovery states, preserves source traceability, and keeps source-
    derived records separate from reviewer-created notes/status.
-- Presents hosted tester pages with a compact functional stepper, launch-screen
-   home, product-grade facility selector, status-center retrieval pages,
-   worklist-style reviewer queue, summary-first reviewer detail workspace,
+- Presents hosted tester pages with a compact non-wrapping progress component,
+   simplified workflow navigation, launch-screen home, collapsed developer/
+   operator details, product-grade facility selector, status-center retrieval
+   pages, worklist-style reviewer queue, summary-first reviewer detail workspace,
    card-prefilled feedback, collapsible help, accessible focus/table/form
    styling, and concise source-of-record boundary language without adding new
    routes, workflows, frontend dependencies, exports, auth, public deployment, or

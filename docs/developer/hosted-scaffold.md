@@ -150,16 +150,18 @@ The demo startup output labels Fixture/mock demo mode, prints exact local URLs,
 and states that it does not make live CCLD calls.
 The home page is now a guided launch screen for `CCLD RecordsTracker Pilot`: it
 shows the active retrieval mode, one dominant `Start review` action, secondary
-facility/queue/jobs/feedback actions lower on the page, collapsed developer/local
-commands, and concise source-of-record boundary language. The local/test hosted
-pages share a compact functional stepper, progressive request workflow, native
-facility type-ahead with manual fallback, focused retrieval result/recovery
-states, status-center job pages, worklist-style reviewer queue, summary-first
-reviewer detail workspace, card-prefilled feedback, collapsible help, skip-to-
-main links, strong focus styling, readable tables/forms, and mode badges for
-Live public CCLD, Fixture/mock demo, and Retrieval not configured. This
-presentation work does not add routes, workflows, frontend dependencies, auth,
-exports, deployment, non-CCLD scope, or new state behavior.
+facility/queue/jobs/feedback actions lower on the page, collapsed developer/
+operator commands, and concise source-of-record boundary language. The hosted
+pages share a compact non-wrapping progress component, simplified workflow
+navigation without diagnostic links in the primary nav, progressive request
+workflow, native facility type-ahead with manual fallback, focused retrieval
+result/recovery states, status-center job pages, worklist-style reviewer queue
+with technical runtime details collapsed, summary-first reviewer detail
+workspace, card-prefilled feedback, collapsible help, skip-to-main links, strong
+focus styling, readable tables/forms, and mode badges for Live public CCLD,
+Fixture/mock demo, and Retrieval not configured. This presentation work does not
+add routes, workflows, frontend dependencies, auth, exports, deployment, non-CCLD
+scope, or new state behavior.
 
 When selecting the next hosted scaffold task, apply the product-benefit gate in
 `GOVERNANCE_INVENTORY.md`. Backend readiness, hardening, planning, or checklist

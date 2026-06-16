@@ -553,7 +553,7 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert "- Matching complaint records in queue: 0" in html
     assert "- Local facility rows before date filtering: 6" in html
     assert "- None shown for this request." in html
-    assert "CCLD pipeline step still required" in html
+    assert "Technical preparation path" in html
     assert "When controlled retrieval is configured" in html
     assert "use the browser retrieval action" in html
     assert "Server-side retrieval, raw preservation" in html
