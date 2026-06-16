@@ -252,12 +252,18 @@ def _step_id_for_path(active_path: str | None) -> str:
     return "facility"
   if active_path == "/ccld/records/request":
     return "retrieve"
-  if active_path == "/ccld/retrieval/jobs":
+  if active_path == "/ccld/retrieval/jobs" or (
+    active_path is not None and active_path.startswith("/ccld/retrieval/jobs/")
+  ):
     return "review_results"
-  if active_path == "/reviewer":
+  if active_path == "/reviewer" or (
+    active_path is not None and active_path.startswith("/reviewer/")
+  ):
     return "review_records"
   if active_path == "/feedback":
     return "feedback"
+  if active_path == "/ccld/help":
+    return "start"
   return "start"
 
 
