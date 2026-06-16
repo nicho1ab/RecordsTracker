@@ -384,7 +384,6 @@ def _render_lookup_form(query: str) -> str:
 
 def _render_reference_source_section(source: CcldFacilityReferenceSource) -> str:
     warning_markup = ""
-    default_full_path = DEFAULT_FULL_CCLD_FACILITY_REFERENCE_PATH.as_posix()
     if source.warnings:
         warning_items = "\n".join(
             f"        <li>{_escape(warning)}</li>" for warning in source.warnings
@@ -395,18 +394,20 @@ def _render_reference_source_section(source: CcldFacilityReferenceSource) -> str
     card_class = "warning-card" if source.source_kind == "tiny_fixture_fallback" else "summary-card"
     return f"""    <section class="{card_class}" aria-labelledby="reference-source-heading">
       <h2 id="reference-source-heading">Facility reference source</h2>
-      <p id="reference-source-help">Active source: {_escape(source.label)}.</p>
+            <p id="reference-source-help">Active source: {_escape(source.label)}.</p>
       <dl aria-describedby="reference-source-help">
-        <dt>Reference path</dt>
-        <dd>{_escape(source.path_label)}</dd>
         <dt>Rows loaded for lookup</dt>
         <dd>{len(source.records)}</dd>
       </dl>
 {warning_markup}
-    <p>Full local/test CSV support is read-only. Full facility CSV files must stay outside
-    the repository and are not imported or persisted by this app.</p>
+        <p>Reference data is lookup assistance only. It is not imported, persisted, or source-completeness proof.</p>
+        <details>
+            <summary>Developer reference setup</summary>
+            <p>Full local/test CSV support is read-only. Full facility CSV files must stay outside
+            the repository and are not imported or persisted by this app.</p>
             <p>To use a full local/test CSV, set <code>{CCLD_FACILITY_REFERENCE_CSV_ENV}</code>
-            or place the file at <code>{default_full_path}</code>.</p>
+            or configure the documented ignored local reference location. Local paths are not shown in the browser.</p>
+        </details>
     </section>"""
 
 
@@ -425,7 +426,7 @@ def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
       You can also continue with manual facility/license number entry.</p>
     <p><a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Open manual CCLD request form</a></p>
     </section>"""
-    rows = "\n".join(_render_result_row(record) for record in result.returned_records)
+    cards = "\n".join(_render_result_card(record) for record in result.returned_records)
     more_guidance = ""
     if result.has_more_matches:
         more_guidance = f"""      <p>Showing the first {len(result.returned_records)} of
@@ -437,46 +438,28 @@ def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
     return f"""    <section aria-labelledby="facility-results-heading">
       <h2 id="facility-results-heading">Facility lookup results</h2>
 {more_guidance}
-      <table>
-        <caption>Local/test CCLD facility reference matches</caption>
-        <thead>
-          <tr>
-            <th scope="col">Action</th>
-            <th scope="col">Facility/license number</th>
-            <th scope="col">Facility name</th>
-            <th scope="col">City</th>
-            <th scope="col">County</th>
-            <th scope="col">ZIP code</th>
-            <th scope="col">Facility type</th>
-            <th scope="col">Status</th>
-            <th scope="col">Closed date in reference file</th>
-          </tr>
-        </thead>
-        <tbody>
-{rows}
-        </tbody>
-      </table>
+            <div class="result-list" aria-label="Local/test CCLD facility reference matches">
+{cards}
+            </div>
     </section>"""
 
 
-def _render_result_row(record: CcldFacilityLookupRecord) -> str:
+def _render_result_card(record: CcldFacilityLookupRecord) -> str:
     query_values = {
         "facility_number": record.facility_number,
         "request_context_origin": "facility_lookup",
         "lookup_facility_name": record.facility_name,
     }
     href = f"{CCLD_RECORD_REQUEST_PATH}?{urlencode(query_values)}"
-    return f"""          <tr>
-            <td><a class="button" href="{_escape(href)}">Use for retrieval</a></td>
-            <td>{_escape(record.facility_number)}</td>
-            <td>{_escape(record.facility_name)}</td>
-            <td>{_escape(_display_value(record.city))}</td>
-            <td>{_escape(_display_value(record.county))}</td>
-            <td>{_escape(_display_value(record.zip_code))}</td>
-            <td>{_escape(_display_value(record.facility_type))}</td>
-            <td>{_escape(_display_value(record.status))}</td>
-            <td>{_escape(_display_value(record.closed_date))}</td>
-          </tr>"""
+    return f"""        <article class="result-card" aria-labelledby="facility-{_escape(record.facility_number)}-heading">
+          <div>
+            <h3 id="facility-{_escape(record.facility_number)}-heading">{_escape(record.facility_name)}</h3>
+            <p><strong>{_escape(record.facility_number)}</strong></p>
+            <p>{_escape(_display_value(record.city))}, {_escape(_display_value(record.county))} {_escape(_display_value(record.zip_code))}</p>
+            <p>{_escape(_display_value(record.facility_type))} - {_escape(_display_value(record.status))}</p>
+          </div>
+          <p><a class="button" href="{_escape(href)}">Use for retrieval</a></p>
+        </article>"""
 
 
 def _render_message_page(*, title: str, heading: str, message: str) -> str:

@@ -191,11 +191,14 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     payload = json.loads(health_body.decode("utf-8"))
     if health_status != 200 or payload.get("status") != "ok":
         raise RuntimeError("Hosted scaffold health check did not return ok.")
-    if root_status != 200 or b"not a production reviewer workflow" not in root_body:
-        raise RuntimeError("Hosted scaffold app shell did not return the placeholder notice.")
+    if root_status != 200 or b"Guided CCLD-only complaint retrieval and review" not in root_body:
+        raise RuntimeError("Hosted scaffold app shell did not return the guided launch notice.")
     if b"Skip to main CCLD review content" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return skip navigation.")
-    if b"Retrieve, review, and annotate public CCLD complaint records" not in root_body:
+    if (
+        b"Retrieve complaint records and move straight into source-traceable review"
+        not in root_body
+    ):
         raise RuntimeError("Hosted scaffold app shell did not return review session orientation.")
     if (
         records_status != 200
@@ -212,12 +215,11 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         ccld_status != 200
         or b"Retrieve complaint records" not in ccld_body
-        or b"Facility/license number" not in ccld_body
+        or b"Facility search" not in ccld_body
         or b"facility-reference-options" not in ccld_body
-        or b"No facility selected yet" not in ccld_body
-        or b"Reviewer-status filter" not in ccld_body
-        or b"Record type" not in ccld_body
-        or b"Show current queue" not in ccld_body
+        or b"Which facility should be reviewed?" not in ccld_body
+        or b"Confirm facility" not in ccld_body
+        or b"Search facility name, license number, city, ZIP, type, or status" not in ccld_body
         or b"Retrieval not configured" not in ccld_body
         or b"Skip to main CCLD request content" not in ccld_body
     ):
@@ -331,10 +333,10 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         help_status != 200
         or b"Help" not in help_body
-        or b"How the pilot works" not in help_body
+            or b"How the guided workflow works" not in help_body
         or b"Live public CCLD retrieval" not in help_body
         or b"Fixture/mock demo" not in help_body
-        or b"What 0 imported records can mean" not in help_body
+            or b"What 0 imported can mean" not in help_body
     ):
         raise RuntimeError("Hosted scaffold CCLD help page did not return guided help.")
     if (
@@ -348,7 +350,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         reviewer_status != 200
         or b"Complaint records ready for review" not in reviewer_body
-            or b"Queue records" not in reviewer_body
+            or b"Worklist" not in reviewer_body
         or b"Skip to main reviewer content" not in reviewer_body
     ):
         raise RuntimeError("Hosted scaffold reviewer UI shell did not return the seeded list.")

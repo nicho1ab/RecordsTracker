@@ -90,12 +90,12 @@ from ccld_complaints.hosted_app.reviewer_created_state_routes import (
     route_reviewer_created_state_api_response,
 )
 from ccld_complaints.hosted_app.reviewer_ui import (
-  LOCAL_REVIEWER_UI_SCOPE,
+    LOCAL_REVIEWER_UI_SCOPE,
     REVIEWER_UI_PREFIX,
     ReviewerUiContext,
     default_local_test_reviewer_ui_context,
-  local_test_reviewer_actor,
-  reviewer_ui_context_for_connection,
+    local_test_reviewer_actor,
+    reviewer_ui_context_for_connection,
     route_reviewer_ui_response,
 )
 from ccld_complaints.hosted_app.reviewer_workflow_shell import (
@@ -741,28 +741,29 @@ def render_app_shell() -> str:
                                 heading="CCLD RecordsTracker Pilot",
                 skip_label="Skip to main CCLD review content",
                 nav_label="CCLD records review navigation",
-                eyebrow=SCAFFOLD_NOTICE,
+                eyebrow="Guided CCLD-only complaint retrieval and review.",
                                 active_path="/",
                 step_id="start",
-                next_action="Start retrieval by selecting a facility",
+                next_action="Start review",
                 extra_nav_links=(
                                                 ("Start", "#start"),
+                                                ("Support actions", "#support-actions"),
                                                 ("Commands", "#commands"),
                                                 ("Boundaries", "#boundaries"),
                         ("Health check", "/health"),
                 ),
                                 main=f"""    <section id="start" class="hero-card" aria-labelledby="start-heading">
-            <h2 id="start-heading">Retrieve, review, and annotate public CCLD complaint records</h2>
-            <p>Start with a facility, choose a complaint date range, run live public CCLD retrieval
-            when configured, then review imported source-derived records with separate
-            reviewer-created notes/status.</p>
+            <p class="launch-kicker">Start review</p>
+            <h2 id="start-heading">Retrieve complaint records and move straight into source-traceable review.</h2>
+            <p class="launch-value">Pick one CCLD facility, set a date range, retrieve complaint records, confirm the result, work the queue, review a complaint, and send feedback from the same guided path.</p>
             <p class="sr-note">CCLD public portal remains the source of record.</p>
+            <p><a class="button button-large" href="{CCLD_RECORD_REQUEST_PATH}">Start review</a></p>
             <div class="action-grid">
                 <section class="action-card" aria-labelledby="home-retrieve-heading">
                     <h3 id="home-retrieve-heading">Retrieve complaint records</h3>
                     <p>Choose a facility and date range, then retrieve public CCLD complaint records
                     for review.</p>
-                    <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Retrieve complaint records</a></p>
+                    <p><a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Retrieve complaint records</a></p>
                 </section>
                 <section class="action-card" aria-labelledby="home-facility-heading">
                     <h3 id="home-facility-heading">Find a facility</h3>

@@ -119,12 +119,12 @@ def test_retrieval_form_renders_record_type_and_safe_setup_state() -> None:
     assert status == 200
     assert "Retrieve complaint records" in html
     assert "facility-reference-options" in html
-    assert 'name="record_type" value="complaints"' in html
-    assert "Complaint records" in html
-    assert "This pilot currently supports CCLD complaint records only" in normalized
-    assert "Show current queue" in html
-    assert "Clear" in html
-    assert "No facility selected yet" in html
+    assert "Confirm facility" in html
+    assert "Search facility name, license number, city, ZIP, type, or status" in html
+    assert "Retrieval stays CCLD-only" in normalized
+    assert "Confirm facility" in html
+    assert "Find facility" in html
+    assert "Which facility should be reviewed?" in html
     assert_no_secret_html(html)
 
     blocked_status, _content_type, blocked_body = route_response(
@@ -238,7 +238,7 @@ def test_controlled_retrieval_imports_records_and_links_queue(tmp_path: Path) ->
     assert "View retrieval job history" in html
     assert "View job details" in html
     assert "Send tester feedback" in html
-    assert "CCLD request accepted" in html
+    assert "Records imported and ready for review" in html
     assert "Open reviewer detail" in html
     assert_no_secret_html(html)
 
@@ -357,7 +357,7 @@ def test_local_dev_mock_success_retrieval_flow_imports_and_links_without_live_ca
     assert "Review imported records" in html
     assert "View retrieval job history" in html
     assert "View job details" in html
-    assert "CCLD request accepted" in html
+    assert "Records imported and ready for review" in html
     assert "Open reviewer detail" in html
     assert sorted((tmp_path / "raw").glob("*.html"))
     assert_no_secret_html(html)

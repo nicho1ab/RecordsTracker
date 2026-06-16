@@ -68,7 +68,7 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert "Filter queue" in html
     assert "Open CCLD request or queue" in html
     assert "Open CCLD workflow help" in html
-    assert "Queue records" in html
+    assert "Worklist" in html
     assert "Queue status summary" in html
     assert "List values are source-derived display summaries" in normalized_html
     assert "Open reviewer detail for source-confidence cues" in normalized_html

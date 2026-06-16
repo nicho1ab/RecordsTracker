@@ -77,20 +77,19 @@ experience.
    raw storage, and real public CCLD HTTP retrieval. For offline validation, run
    `.\scripts\run-hosted-complaint-retrieval-demo.ps1 -Port 8000` to use
    fixture-backed `mock-success` retrieval. Tests use mocked CCLD retrieval only.
-- Includes a product-grade local/test hosted `CCLD RecordsTracker Pilot` UI where
-   a tester can start from a polished launchpad, see the active retrieval mode,
-   select a facility through native type-ahead suggestions or manual digit entry,
-   choose a complaint date range, retrieve complaint records when configured,
-   show the current queue without running retrieval, review imported
-   source-derived complaint records, and add reviewer-created notes/status where
-   supported. The request page keeps complaint records as the fixed record type,
-   shows compact request-context cards, provides high-impact retrieval result
-   cards with safe counts/warnings/errors, preserves source traceability, and
-   keeps source-derived records separate from reviewer-created notes/status.
-- Presents hosted tester pages with a shared product shell, central guided
-   stepper/wizard, active navigation, readable cards, count/stat grids, accessible
-   focus/table/form styling, scannable help cards, tester-friendly feedback
-   cards, and concise source-of-record boundary language without adding new
+- Includes a guided local/test hosted `CCLD RecordsTracker Pilot` workflow
+   assistant where a tester starts review, selects a facility, sets a complaint
+   date range, retrieves records, confirms the result, works the review queue,
+   opens a complaint review workspace, and sends feedback. The request page uses
+   progressive disclosure, keeps complaint records as the fixed record type,
+   uses native type-ahead plus secondary manual facility entry, provides focused
+   result and recovery states, preserves source traceability, and keeps source-
+   derived records separate from reviewer-created notes/status.
+- Presents hosted tester pages with a compact functional stepper, launch-screen
+   home, product-grade facility selector, status-center retrieval pages,
+   worklist-style reviewer queue, summary-first reviewer detail workspace,
+   card-prefilled feedback, collapsible help, accessible focus/table/form
+   styling, and concise source-of-record boundary language without adding new
    routes, workflows, frontend dependencies, exports, auth, public deployment, or
    non-CCLD scope.
 

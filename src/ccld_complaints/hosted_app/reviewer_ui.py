@@ -651,11 +651,20 @@ def _render_record_list(
     rows = "\n".join(
         _render_review_item_row(record, state_summaries) for record in records
     )
+    cards = "\n".join(
+        _render_review_item_card(record, state_summaries) for record in records
+    )
     if not rows:
         rows = """        <tr>
                     <td colspan="11">No seeded source-derived review records match the
                     current search.</td>
         </tr>"""
+        cards = """        <article class="empty-state-card result-card">
+          <div>
+            <h3>No matching complaint records</h3>
+            <p>No seeded source-derived review records match the current search.</p>
+          </div>
+        </article>"""
         returned_count = _int_value(_mapping(queue, "pagination"), "returned_count")
     no_results_notice = _render_no_results_notice(search_query, records)
     return _page(
@@ -668,6 +677,7 @@ def _render_record_list(
             <p>Review imported source-derived complaint records, then add reviewer-created
             notes/status where supported. Source-derived data and reviewer-created state remain
             separate.</p>
+            <p><a class="button" href="{_next_review_item_href(_next_review_item(records, state_summaries))}">Open next record</a></p>
             <p>{_next_review_item_markup(_next_review_item(records, state_summaries), state_summaries)}</p>
         </section>
         {_render_scope_notice(workflow)}
@@ -692,9 +702,14 @@ def _render_record_list(
     </section>
         {no_results_notice}
     <section aria-labelledby="reviewer-list-heading">
-            <h2 id="reviewer-list-heading">Queue records</h2>
+            <h2 id="reviewer-list-heading">Worklist</h2>
                         <p>Showing {len(records)} of {returned_count} complaint records.</p>
                         {_render_reviewer_queue_summary(records, state_summaries)}
+        <div class="result-list" aria-label="Complaint records ready for review">
+    {cards}
+        </div>
+        <details>
+          <summary>Show table view</summary>
       <table>
                                 <caption>Complaint records ready for review with source-derived fields and
                                 reviewer-created status cues</caption>
@@ -717,6 +732,7 @@ def _render_record_list(
 {rows}
         </tbody>
       </table>
+            </details>
     </section>""",
     )
 
@@ -841,6 +857,53 @@ def _render_review_item_row(
                     <td>{_escape(_source_traceability_cue(source_document))}</td>
                     <td>{_escape(source_record_key)}</td>
         </tr>"""
+
+
+def _render_review_item_card(
+        item: Mapping[str, Any],
+        state_summaries: Mapping[str, Mapping[str, Any]],
+) -> str:
+        source_record = _mapping(item, "source_record")
+        identity = _mapping(source_record, "identity")
+        source_document = _mapping(source_record, "source_document")
+        original_values = _mapping(source_record, "original_values")
+        source_record_key = _string(identity, "source_record_key")
+        detail_href = (
+                f"{REVIEWER_UI_DETAIL_PATH}?"
+                f"{urlencode({'source_record_key': source_record_key})}"
+        )
+        state_summary = state_summaries.get(source_record_key, _empty_state_summary())
+        control_number = _display_value(original_values.get("complaint_control_number") or source_record_key)
+        facility_number = _optional_string(identity, "facility_id")
+        finding = _optional_string(original_values, "finding")
+        dates = _date_summary(original_values)
+        return f"""        <article class="result-card work-item" aria-labelledby="record-{_escape(source_record_key)}-heading">
+                    <div>
+                        <p class="stage-kicker">{_escape(_queue_cue_text(state_summary))}</p>
+                        <h3 id="record-{_escape(source_record_key)}-heading">{_escape(control_number)}</h3>
+                        <p><span class="badge badge-muted">Finding: {_escape(finding)}</span> <span class="badge badge-muted">Reviewer status: {_escape(_latest_status_text(state_summary))}</span></p>
+                        <dl>
+                            <dt>Facility/license</dt>
+                            <dd>{_escape(facility_number)}</dd>
+                            <dt>Key dates</dt>
+                            <dd>{_escape(dates)}</dd>
+                            <dt>Reviewer-created notes</dt>
+                            <dd>{_escape(_notes_indicator_text(state_summary))}</dd>
+                            <dt>Source traceability</dt>
+                            <dd>{_escape(_source_traceability_cue(source_document))}</dd>
+                        </dl>
+                    </div>
+                    <p><a class="button" href="{_escape(detail_href)}">Open record</a></p>
+                </article>"""
+
+
+def _next_review_item_href(item: Mapping[str, Any] | None) -> str:
+        if item is None:
+                return REVIEWER_UI_RECORDS_PATH
+        source_record = _mapping(item, "source_record")
+        identity = _mapping(source_record, "identity")
+        source_record_key = _string(identity, "source_record_key")
+        return f"{REVIEWER_UI_DETAIL_PATH}?{urlencode({'source_record_key': source_record_key})}"
 
 
 def _review_action_label(original_values: Mapping[str, Any]) -> str:
@@ -1086,10 +1149,12 @@ def _render_detail(
                                                 import_batch,
                                 )}
         {_render_reviewer_state_section(detail)}
-    <section aria-labelledby="source-derived-heading">
-            <h2 id="source-derived-heading">Source-derived field details</h2>
+        <section aria-labelledby="source-derived-heading">
+                        <h2 id="source-derived-heading">Source-derived full field details</h2>
             <p>These are safe scalar fields from the selected source-derived row. Narrative
             source text is hidden in this local/test browser UI.</p>
+            <details>
+                <summary>Show source-derived fields</summary>
       <dl>
         <dt>Source record key</dt>
         <dd>{_escape(source_record_key)}</dd>
@@ -1112,6 +1177,7 @@ def _render_detail(
 {_render_original_value_rows(original_values)}
         </tbody>
       </table>
+            </details>
     </section>
         {_render_source_confidence_cues_section(source_record, related_records)}
         {_render_field_note_guidance_section()}
@@ -1210,6 +1276,8 @@ def _render_detail_navigation(
                 <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find another CCLD facility</a></li>
                 <li><a href="{CCLD_HELP_PATH}">Open CCLD workflow help</a></li>
                 <li><a href="{REVIEWER_UI_RECORDS_PATH}">Back to reviewer records</a></li>
+                <li><a href="/ccld/retrieval/jobs">Job history</a></li>
+                <li><a href="/feedback">Feedback</a></li>
                 <li><a href="{_escape(detail_href)}">Refresh this seeded detail</a></li>
                 <li><a href="#record-summary-heading">Review record summary</a></li>
                 <li><a href="#source-confidence-heading">Review source-confidence cues</a></li>
