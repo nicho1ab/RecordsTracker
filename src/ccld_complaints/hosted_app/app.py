@@ -749,37 +749,12 @@ def render_app_shell() -> str:
             <div>
                 <p class="launch-kicker">Attorney review workspace</p>
                 <h2 id="start-heading">Start a facility complaint review</h2>
-                <p class="launch-value">Retrieve CCLD public complaint records, review key dates and findings, and flag records that need source-traceable legal review.</p>
-                <p class="boundary-note">Records are source-derived review aids. The app highlights review flags and source-traceable issues; it does not make legal findings or prove source completeness.</p>
+                <p class="launch-value">Find the facility, choose the complaint date range, retrieve CCLD records, then open the queue for source-traceable review.</p>
             </div>
             <div class="attorney-hero-actions" aria-label="Primary actions">
                 <a class="button button-large" href="{CCLD_RECORD_REQUEST_PATH}">Start facility review</a>
                 <a class="button button-secondary" href="/reviewer">Open review queue</a>
             </div>
-        </section>
-        <section id="workflow-cards" aria-labelledby="workflow-cards-heading">
-            <h2 id="workflow-cards-heading">Facility complaint review path</h2>
-            <div class="workflow-cards">
-                <section class="action-card" aria-labelledby="select-facility-card-heading">
-                    <h3 id="select-facility-card-heading">Select a facility</h3>
-                    <p>Search by facility name or license number.</p>
-                    <p><a class="button button-secondary" href="{CCLD_FACILITY_LOOKUP_PATH}">Find facility</a></p>
-                </section>
-                <section class="action-card" aria-labelledby="retrieve-records-card-heading">
-                    <h3 id="retrieve-records-card-heading">Retrieve complaint records</h3>
-                    <p>Pull complaint records for a bounded date range.</p>
-                    <p><a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Retrieve records</a></p>
-                </section>
-                <section class="action-card" aria-labelledby="review-flags-card-heading">
-                    <h3 id="review-flags-card-heading">Review flags and source traceability</h3>
-                    <p>See delays, missing fields, findings, and source links before adding reviewer notes.</p>
-                    <p><a class="button button-secondary" href="/reviewer">Open queue</a></p>
-                </section>
-            </div>
-        </section>
-        <section id="boundaries" class="quiet-section" aria-labelledby="boundaries-heading">
-            <h2 id="boundaries-heading">Review boundary</h2>
-            <p>Source-derived records stay separate from reviewer-created notes/status. Imported rows support review; they do not prove source completeness, facility-wide conclusions, or legal conclusions.</p>
         </section>
         <section id="commands" class="quiet-section" aria-labelledby="commands-heading">
             <details>
@@ -801,15 +776,6 @@ def render_app_shell() -> str:
                     <p>Starts the local pilot runtime with retrieval setup guidance.</p>
                 </section>
             </div>
-            </details>
-            <details>
-                <summary>Technical boundaries</summary>
-                <ul>
-                    <li>No non-CCLD sources, authentication/session/account work, exports, public
-                    deployment behavior, or unrelated workflow features.</li>
-                    <li>No legal, facility-wide, completeness, harm, abuse, neglect, liability, or
-                    rights-deprivation conclusions.</li>
-                </ul>
             </details>
         </section>""",
         )

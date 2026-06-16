@@ -389,17 +389,16 @@ def render_ccld_facility_lookup_page(
                         <p class="launch-kicker">Facility intake</p>
             <h2 id="facility-lookup-scope-heading">Find a facility</h2>
                         <p class="launch-value">Search by facility name, license number, city, ZIP, type, or status.</p>
-                        <p class="boundary-note">Use the selected facility to retrieve CCLD public complaint records for attorney review. CCLD public portal remains the source of record.</p>
                     </div>
         </section>
     {_render_facility_combobox_section(reference_source, query, limited_note)}
     {_render_lookup_results(result)}
     {_render_reference_details_section(reference_source)}
-        <section class="quiet-section" aria-labelledby="manual-entry-heading">
-            <h2 id="manual-entry-heading">Enter a facility/license number directly</h2>
+        <details class="technical-details">
+            <summary id="manual-entry-heading">Enter a facility/license number directly</summary>
             <p>If you already know the CCLD facility/license number, type it on the request form.</p>
             <p><a class="button-quiet" href="{CCLD_RECORD_REQUEST_PATH}">Open request form</a></p>
-        </section>""",
+        </details>""",
     )
 
 
@@ -643,10 +642,7 @@ def _render_reference_details_section(source: CcldFacilityReferenceSource) -> st
 
 def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
     if result.empty_search:
-        return """    <section class="empty-state-card" aria-labelledby="facility-results-heading">
-      <h2 id="facility-results-heading">Facility results</h2>
-    <p>Search the facility reference by name, license number, city, ZIP, type, or status.</p>
-    </section>"""
+                return ""
     if not result.returned_records:
         return f"""    <section class="empty-state-card" aria-labelledby="facility-results-heading">
       <h2 id="facility-results-heading">Facility results</h2>

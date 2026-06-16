@@ -955,7 +955,8 @@ def _render_review_flag_chips(
         f'                            <li><span class="review-chip">{_escape(label)}</span></li>'
         for label in flags
     )
-    return f"""                        <ul class="flag-list" aria-label="Review flags">
+    return f"""                        <p class="sr-note">Review flags</p>
+                        <ul class="flag-list" aria-label="Review flags">
 {items}
                         </ul>"""
 
@@ -999,16 +1000,16 @@ def _queue_cue_text(summary: Mapping[str, Any]) -> str:
     status = _reviewer_queue_status(summary)
     note_count = _summary_int(summary, "note_count")
     if status == "not_started" and note_count == 0:
-        return "Open next to begin review."
+        return "Priority: not started"
     if status == "not_started":
-        return "Open next to review existing notes."
+        return "Priority: note present"
     if status == "in_review":
-        return "Open next to continue review."
+        return "Priority: in review"
     if status == "needs_follow_up":
-        return "Open next to resolve follow-up."
+        return "Priority: needs follow-up"
     if status == "blocked":
-        return "Open when blocker context is needed."
-    return "Open only if reviewed context needs checking."
+        return "Priority: blocked"
+    return "Priority: reviewed"
 
 
 def _reviewer_queue_status(summary: Mapping[str, Any]) -> str:
@@ -1265,10 +1266,19 @@ def _render_detail(
         {_render_source_context_section(related_records, source_record_key)}
                 </details>
         {_render_review_actions(source_record_key, return_context)}
+        <details class="technical-details">
+        <summary>Detail navigation</summary>
         {_render_detail_navigation(source_record_key, related_records, return_context)}
+        </details>
     {_render_scope_notice(_mapping(payload, 'workflow_shell'))}
+        <details class="technical-details">
+        <summary>First-run detail steps</summary>
         {_render_detail_first_run_steps(source_record_key, related_records, return_context)}
-                {_render_detail_feedback_guidance(source_record, related_records, return_context)}
+        </details>
+        <details class="technical-details">
+        <summary>Feedback handoff details</summary>
+            {_render_detail_feedback_guidance(source_record, related_records, return_context)}
+        </details>
                 </div>""",
     )
 
@@ -1391,7 +1401,6 @@ def _render_record_summary_section(
         reviewer_statuses = "None recorded"
     return f"""<section aria-labelledby="record-summary-heading">
       <h2 id="record-summary-heading">Record summary</h2>
-            <p>This summary orients the selected CCLD complaint record before attorney review of source traceability, related context, and reviewer-created notes or status.</p>
             <dl class="summary-list">
         <dt>Complaint control number</dt>
         <dd>{_escape(_optional_string(original_values, 'complaint_control_number'))}</dd>

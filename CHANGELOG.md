@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Reduced the hosted CCLD RecordsTracker UI with a So What information-
+	architecture pass: Home now has one dominant start decision, Facility no longer
+	renders a generic empty results panel before search, Retrieve focuses on
+	facility/date intake, result pages collapse diagnostics, queue guidance,
+	feedback checklists, and advanced local/operator actions, Jobs collapse
+	runtime/boundary guidance and table views, Reviewer detail keeps summary,
+	traceability, and reviewer-created state first while moving navigation/help
+	handoffs into details, Feedback is form-first, and Help no longer repeats the
+	workflow indicator. The change preserves CCLD-only scope, live/fixture mode
+	separation, source traceability, cautious legal-boundary language, accessibility,
+	and existing retrieval behavior.
+
 - Implemented the final product-ready hosted CCLD visual design: ordinary page
 	sections are no longer framed as stacked scaffold cards, the shared shell uses
 	the specified restrained legal-review palette, the workflow rail is compact and

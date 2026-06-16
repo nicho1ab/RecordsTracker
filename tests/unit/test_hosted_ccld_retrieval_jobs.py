@@ -121,7 +121,7 @@ def test_retrieval_form_renders_record_type_and_safe_setup_state() -> None:
     assert "facility-suggestion-list" in html
     assert "Confirm facility" in html
     assert "Search by name, license number, city, ZIP, type, or status." in html
-    assert "Retrieval stays CCLD-only" in normalized
+    assert "Review boundary" not in normalized
     assert "Confirm facility" in html
     assert "Find facility" in html
     assert "Which facility should be reviewed?" in html
