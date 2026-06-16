@@ -276,6 +276,14 @@ cautious-language, tester feedback, and reviewer-state boundaries.
   reminders, machine-readable state, feedback checklists, local/operator
   commands, or explanatory panels compete with the page's main legal-review
   decision.
+- Facility-centered case briefs should answer what to review about the facility
+  and why before presenting the full worklist. They may summarize only existing
+  safe source-derived values and reviewer-created note/status cues: facility
+  scope, complaint record counts, source traceability availability, cautious
+  review-flag counts, findings represented, reviewer-created notes/statuses, and
+  one suggested first record with explainable source-derived reasons. They must
+  not present an automated legal score, legal conclusion, facility-wide
+  conclusion, source-completeness claim, or proof that no complaint exists.
 - Use the restrained legal-review visual system: page background `#F5F7FA`,
   white surfaces, tinted support panels near `#EEF7F6`, primary text near
   `#17212B`, muted slate text, deep teal primary actions, accessible blue focus,

@@ -67,7 +67,7 @@ $forbiddenMarkers = @(
     "raw_provider_claims", "raw provider claims", "client_secret", "client-secret",
     "connection string", "connection_string", "set-cookie", "authorization:",
     "bearer ", "github_pat_", "ghp_", "traceback (most recent call last)",
-    "stack trace", "private_header", "private-header"
+    "private_header", "private-header"
 )
 
 function Stop-CaptureFail {

@@ -46,6 +46,11 @@ from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
     run_ccld_retrieval_job,
     validate_ccld_retrieval_request,
 )
+from ccld_complaints.hosted_app.facility_case_brief import (
+    FacilityCaseBrief,
+    FacilityCaseBriefRecord,
+    render_facility_case_brief,
+)
 from ccld_complaints.hosted_app.reviewer_created_state_routes import (
     REVIEWER_CREATED_STATE_API_PREFIX,
     route_reviewer_created_state_api_response,
@@ -1031,7 +1036,8 @@ def _render_matched_result(
                 heading="Retrieval result",
         step_id="review_results",
         next_action="Review imported records",
-                main=f"""    {_render_result_focus_panel(request, result, retrieval_result, load_text)}
+            main=f"""    {_render_result_focus_panel(request, result, retrieval_result, load_text)}
+        {_render_request_case_brief(request, queue_items, retrieval_result)}
     {_render_request_context_confirmation(
                         facility_number=request.facility_number,
                         start_date=request.start_date,
@@ -1140,15 +1146,12 @@ def _render_result_focus_panel(
                 <dt>Load state</dt>
                 <dd>{_escape(load_text)}</dd>
             </dl>
-      <div class="form-actions">
-                <a class="button" href="{REVIEWER_UI_RECORDS_PATH}">Open review queue</a>
-                <details class="technical-details secondary-actions">
-                    <summary>Other actions</summary>
-        {detail_link}
-        <a class="button button-quiet" href="{CCLD_RECORD_REQUEST_PATH}">Run another retrieval</a>
-                <a class="button button-quiet" href="{_FEEDBACK_PATH}">Send feedback</a>
-                </details>
-      </div>
+            <details class="technical-details secondary-actions">
+                <summary>Other result actions</summary>
+                {detail_link}
+                <p><a href="{CCLD_RECORD_REQUEST_PATH}">Run another retrieval</a></p>
+                <p><a href="{_FEEDBACK_PATH}">Send feedback</a></p>
+            </details>
     </section>"""
 
 
@@ -2236,6 +2239,80 @@ def _render_queue_progress_summary(items: tuple[CcldRequestQueueItem, ...]) -> s
         <dd>{counts['blocked']}</dd>
       </dl>
     </section>"""
+
+
+def _render_request_case_brief(
+    request: CcldRecordRequest,
+    items: tuple[CcldRequestQueueItem, ...],
+    retrieval_result: CcldRetrievalJobResult | None,
+) -> str:
+    records = tuple(
+        _case_brief_record_from_queue_item(index, request, item)
+        for index, item in enumerate(items)
+    )
+    if not records:
+        return ""
+    facility_name = next((item.facility_name for item in items if item.facility_name), "")
+    mode_label = (
+        _retrieval_mode_label_from_message(retrieval_result.safe_message)
+        if retrieval_result is not None
+        else _runtime_mode_label()
+    )
+    return render_facility_case_brief(
+        FacilityCaseBrief(
+            facility_number=request.facility_number,
+            facility_name=facility_name or request.lookup_facility_name or "",
+            date_range=_date_scope_text(request),
+            mode_label=mode_label,
+            mode_badge_class=_mode_badge_class(mode_label),
+            records=records,
+            record_count_label="Complaint records visible/imported",
+            full_queue_href=REVIEWER_UI_RECORDS_PATH,
+        )
+    )
+
+
+def _case_brief_record_from_queue_item(
+    index: int,
+    request: CcldRecordRequest,
+    item: CcldRequestQueueItem,
+) -> FacilityCaseBriefRecord:
+    complaint = _mapping(item.complaint_record, "original_values")
+    source_record_key = _string(item.complaint_record, "source_record_key")
+    latest_status = _summary_optional_string(item.reviewer_state, "latest_status")
+    return FacilityCaseBriefRecord(
+        source_record_key=source_record_key,
+        detail_href=_reviewer_detail_href_for_request(source_record_key, request=request),
+        complaint_control_number=_display_value(
+            complaint.get("complaint_control_number") or source_record_key
+        ),
+        finding=_optional_string(complaint, "finding") or "unknown",
+        complaint_received_date=_optional_string(complaint, "complaint_received_date") or "",
+        visit_date=_optional_string(complaint, "visit_date") or "",
+        report_date=_optional_string(complaint, "report_date") or "",
+        date_signed=_optional_string(complaint, "date_signed") or "",
+        facility_number=request.facility_number,
+        facility_name=item.facility_name or request.lookup_facility_name or "",
+        has_source_traceability=_has_source_traceability(item.complaint_record),
+        reviewer_status=latest_status,
+        reviewer_status_label=_status_label(latest_status) if latest_status else None,
+        reviewer_note_count=_summary_int(item.reviewer_state, "note_count"),
+        delay_thresholds=_delay_thresholds(complaint),
+        missing_first_activity_date=complaint.get("missing_first_activity_date") is True,
+        missing_visit_date=not _has_display_value(complaint.get("visit_date")),
+        missing_report_date=not _has_display_value(complaint.get("report_date")),
+        missing_signed_date=not _has_display_value(complaint.get("date_signed")),
+        report_date_used_as_proxy=complaint.get("report_date_used_as_proxy") is True,
+        order_index=index,
+    )
+
+
+def _delay_thresholds(values: Mapping[str, Any]) -> tuple[int, ...]:
+    thresholds: list[int] = []
+    for days in (30, 60, 90, 120):
+        if values.get(f"review_delay_over_{days}_days") is True:
+            thresholds.append(days)
+    return tuple(thresholds)
 
 
 def _render_queue_navigation() -> str:

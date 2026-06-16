@@ -247,6 +247,17 @@ focused on their own primary questions. These tests should preserve existing
 retrieval behavior, fixture/mock separation, live-call mocks in CI, source-
 derived versus reviewer-created separation, no-secret HTML checks, and cautious
 non-conclusion wording.
+Facility case brief tests should prove successful retrieval results and reviewer
+queues lead with a facility-centered brief when complaint records exist. Cover
+facility/license context, complaint counts, source traceability counts, review-
+flag counts, findings represented, reviewer-created notes/status cues, one
+suggested first record, `Open priority record`, `Open full queue`, and cautious
+"why open this first" reasons derived from source-derived flags and reviewer-
+created status only. Detail-page tests should prove the selected record shows a
+near-top "why this record is flagged" section while full source-derived details
+remain lower or collapsed. Tests must reject legal, facility-wide, harm, abuse,
+neglect, liability, rights-deprivation, source-completeness, and no-complaint
+proof claims.
 Hosted UI evidence packet tests should verify that
 `scripts/capture-hosted-ui-evidence.ps1` exists, accepts `-BaseUrl`, `-Mode`,
 `-OutputDir`, viewport, timeout, and `-AllowUnavailable` parameters, captures

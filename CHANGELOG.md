@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Added a facility-centered attorney case brief to successful hosted CCLD
+	retrieval results and the reviewer queue. The brief summarizes facility scope,
+	complaint record counts, review flags, findings represented, source
+	traceability availability, reviewer-created notes/statuses, and a suggested
+	first record to open with cautious source-derived reasons. Reviewer detail now
+	also shows a compact "Why this record is flagged" section near the top. This
+	uses existing source-derived and reviewer-created state only; no retrieval,
+	extraction, schema, migration, auth, export, or deployment behavior changed.
+
 - Added a repeatable hosted UI evidence packet workflow: `capture-hosted-ui-evidence.ps1`
 	captures canonical RecordsTracker routes from an already-running local hosted
 	URL into ignored `data/processed/ui-evidence/` with manifest, route status,

@@ -275,7 +275,23 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert before_source_rows == after_source_rows
     assert counts == _empty_reviewer_counts()
     assert "Complaint records ready for attorney review" in html
-    assert "Open review queue" in html
+    assert "Facility case brief" in html
+    assert "Complaint records visible/imported" in html
+    assert "Records with review flags" in html
+    assert "Reviewer-created notes/statuses" in html
+    assert "Possible delay indicators" in html
+    assert "Missing first activity date" in html
+    assert "Missing local key dates" not in html
+    assert "Needs source check" in html
+    assert "Findings represented" in html
+    assert "Findings are source-derived categories, not legal conclusions" in html
+    assert "Suggested first record for review" in html
+    assert "Why open this first" in html
+    assert "No reviewer-created status recorded yet" in html
+    assert "Needs source check: first activity date missing locally" in html
+    assert "Source traceability available" in html
+    assert "Open priority record" in html
+    assert "Open full queue" in html
     assert "Matching source-derived rows shown" in html
     assert "facility/license number 157806098" in html
     assert "2022-08-01 to 2022-08-31" in html
