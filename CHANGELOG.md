@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Added a repeatable hosted UI evidence packet workflow: `capture-hosted-ui-evidence.ps1`
+	captures canonical RecordsTracker routes from an already-running local hosted
+	URL into ignored `data/processed/ui-evidence/` with manifest, route status,
+	HTML/text snapshots, lightweight accessibility summaries, assertion notes, and
+	optional screenshots when local tooling is available. Added a convenience
+	wrapper, developer documentation, and tests without changing app routes,
+	retrieval, extraction, schemas, auth, reviewer-created state, exports, or
+	deployment behavior.
+
 - Reduced the hosted CCLD RecordsTracker UI with a So What information-
 	architecture pass: Home now has one dominant start decision, Facility no longer
 	renders a generic empty results panel before search, Retrieve focuses on
