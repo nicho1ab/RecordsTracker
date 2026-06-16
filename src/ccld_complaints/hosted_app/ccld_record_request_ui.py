@@ -741,6 +741,7 @@ def _render_help_page() -> str:
         return _page(
                 title="How CCLD review works",
                                 heading="Help",
+            active_path=CCLD_HELP_PATH,
             step_id="start",
             next_action="Start retrieval or use the relevant workflow step",
                                 main=f"""    <section class="hero-card" aria-labelledby="help-purpose-heading">
@@ -1862,6 +1863,7 @@ def _render_retrieval_job_detail_invalid_page() -> str:
             ("Return to retrieval job history", CCLD_RETRIEVAL_JOBS_PATH),
             ("Return to CCLD request", CCLD_RECORD_REQUEST_PATH),
         ),
+        active_path=CCLD_RETRIEVAL_JOBS_PATH,
     )
 
 
@@ -1878,6 +1880,7 @@ def _render_retrieval_job_detail_not_found_page() -> str:
             ("Return to retrieval job history", CCLD_RETRIEVAL_JOBS_PATH),
             ("Submit or change a CCLD request", CCLD_RECORD_REQUEST_PATH),
         ),
+        active_path=CCLD_RETRIEVAL_JOBS_PATH,
     )
 
 
@@ -3262,6 +3265,7 @@ def _render_message_page(
     message: str,
     guidance: str,
     links: tuple[tuple[str, str], ...],
+    active_path: str | None = None,
 ) -> str:
     link_items = "\n".join(
         f'        <li><a href="{_escape(href)}">{_escape(label)}</a></li>' for label, href in links
@@ -3269,6 +3273,7 @@ def _render_message_page(
     return _page(
         title=title,
         heading=heading,
+        active_path=active_path if active_path is not None else CCLD_RECORD_REQUEST_PATH,
         main=f"""    <section aria-labelledby="message-heading">
             <h2 id="message-heading">{_escape(heading)}</h2>
             <p>{_escape(message)}</p>

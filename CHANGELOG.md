@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Fixed route-aware top navigation: `/ccld/help` now highlights `Help` instead
+	of `Retrieve`. Root cause: `_render_help_page()` called the shared `_page()`
+	helper without setting `active_path`, so it inherited the default
+	`CCLD_RECORD_REQUEST_PATH`. Fix: pass `active_path=CCLD_HELP_PATH` explicitly.
+	Also fixed `/ccld/retrieval/jobs/detail` error pages (not-found and invalid-ID)
+	that similarly defaulted to showing `Retrieve` as active; they now show `Jobs`.
+	Added `active_path` parameter to `_render_message_page()`. Expanded
+	`_step_id_for_path()` to cover `/ccld/help` and sub-paths of `/reviewer` and
+	`/ccld/retrieval/jobs`. Added 4 regression tests covering exact `aria-current`
+	placement for all primary nav routes and confirming no substring-match false
+	positives.
 - Replaced the facility selector on `/ccld/facilities` and `/ccld/records/request`
 	with a polished inline type-ahead combobox: accessible label/input pair,
 	concise placeholder, JSON-embedded reference data, keyboard-navigable
