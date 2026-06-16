@@ -111,19 +111,22 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "Guided CCLD-only complaint retrieval and review." in html
     assert "CCLD RecordsTracker Pilot" in html
     assert "Retrieval not configured" in html
-    assert "Retrieve complaint records and move straight into source-traceable review" in html
-    assert "Retrieve complaint records" in html
-    assert "Find a facility" in html
-    assert "Review imported records" in html
-    assert "View retrieval jobs" in html
+    assert "Start a CCLD complaint review" in html
+    assert "Start review" in html
+    assert "Find facility" in html
+    assert "Review queue" in html
+    assert "View jobs" in html
     assert "Send feedback" in html
-    assert "Pilot workflow" in html
-    assert "Pick a facility" in html
-    assert "Local commands" in html
+    assert "Review boundary" in html
+    assert "Developer/operator commands" in html
+    assert '<section class="action-card"' not in html
+    assert "Commands</a>" not in html
+    assert "Health check</a>" not in html
+    assert "Local pilot runtime" in html
     assert "Live public CCLD retrieval" in html
     assert "Fixture/mock demo" in html
-    assert "Ordinary scaffold" in html
-    assert "Boundary note" in html
+    assert "Starts the local pilot runtime" in html
+    assert "Review boundary" in html
     assert "No non-CCLD sources" in normalized_html
     assert "Source-derived records stay separate from reviewer-created notes/status" in html
     assert "/reviewer" in html
@@ -167,7 +170,7 @@ def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None
         if path != "/feedback":
             assert "Future step" in html
         assert "Next best action" in html
-        assert "Date range" in html
+        assert "Dates" in html
         assert "Result" in html
         assert "Queue" in html
         assert "Facility" in html
@@ -175,6 +178,10 @@ def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None
         assert "Review" in html
         assert "Jobs" in html
         assert "Feedback" in html
+        assert "Feedbac k" not in html
+        assert "Commands</a>" not in html
+        assert "Health check</a>" not in html
+        assert "Auth status</a>" not in html
         assert "Help" in html
         assert "CCLD public portal remains the source of record" in normalized_html
         assert "does not prove source coverage" in normalized_html

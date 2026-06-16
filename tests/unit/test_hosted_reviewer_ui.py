@@ -62,21 +62,24 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert "Complaint records ready for review" in html
     assert "Skip to main reviewer content" in html
     assert '<main id="main-content" tabindex="-1">' in html
-    assert "Local/test reviewer UI shell" in html
-    assert "CCLD request queue" in html
-    assert "CCLD workflow help" in html
-    assert "Filter queue" in html
-    assert "Open CCLD request or queue" in html
-    assert "Open CCLD workflow help" in html
+    assert "Technical runtime details" in html
+    assert "Local/test reviewer UI shell" not in html
+    assert "fixture actor context" not in normalized_html
+    assert "seeded corpus scope" not in normalized_html
+    assert "Open next record" in html
+    assert "Worklist" in html
+    assert "Filter or search queue" in html
+    assert "Show table view" in html
+    assert "Source-derived records stay separate" in normalized_html
     assert "Worklist" in html
     assert "Queue status summary" in html
-    assert "List values are source-derived display summaries" in normalized_html
-    assert "Open reviewer detail for source-confidence cues" in normalized_html
-    assert "Total visible records" in html
-    assert "Records with reviewer-created notes" in html
-    assert "Records with reviewer-created status" in html
-    assert "Records with source traceability available" in html
-    assert "Suggested next record to open" in html
+    assert "source traceability available" in normalized_html
+    assert "Open record" in html
+    assert "Not started" in html
+    assert "with notes" in html
+    assert "with reviewer status" in html
+    assert "source traceability available" in normalized_html
+    assert "Open next record" in html
     assert "Reviewer status" in html
     assert "Reviewer-created notes" in html
     assert "Complaint received date" in html
@@ -90,8 +93,11 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert "32-CR-20220407124448" in html
     assert COMPLAINT_KEY in html
     assert "raw SHA-256" in html
-    assert "Source-derived records remain separate from reviewer-created notes" in normalized_html
-    assert "This shell does not implement production sign-in" in normalized_html
+    assert (
+        "Source-derived records stay separate from reviewer-created notes/status"
+        in normalized_html
+    )
+    assert "This runtime does not add production sign-in" in normalized_html
     assert "Open record 32-CR-20220407124448" in html
     assert_no_secret_html(html)
 

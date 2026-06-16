@@ -585,7 +585,7 @@ def _render_facility_selection_state(reference_source: CcldFacilityReferenceSour
         return f"""<section class="workflow-panel" aria-labelledby="facility-selector-heading">
             <p class="stage-kicker">Select facility</p>
             <h2 id="facility-selector-heading">Which facility should be reviewed?</h2>
-            <p class="helper-text">Search suggestions use safe local facility reference fields. Manual digit entry remains available.</p>
+            <p class="helper-text">Search suggestions use facility reference fields. Manual digit entry remains available.</p>
             <form action="{CCLD_RECORD_REQUEST_PATH}" method="get">
                 <p>
                     <label for="facility_number">Facility search</label>
@@ -606,8 +606,8 @@ def _render_facility_selection_state(reference_source: CcldFacilityReferenceSour
             </form>
             {warning_markup}
         </section>
-        <section class="warning-card compact-boundary" aria-labelledby="request-boundary-heading">
-            <h2 id="request-boundary-heading">Boundary</h2>
+        <section class="quiet-section" aria-labelledby="request-boundary-heading">
+            <h2 id="request-boundary-heading">Review boundary</h2>
             <p>Retrieval stays CCLD-only. Absence of imported records is not proof that no complaints exist.</p>
             <p><a href="{CCLD_HELP_PATH}">Help</a></p>
         </section>"""
@@ -1264,8 +1264,9 @@ def _render_pipeline_plan(request: CcldRecordRequest) -> str:
         f"-FacilityNumber {_escape(request.facility_number)} "
         "-Limit 1 -MaxRequests 5"
     )
-    return f"""<section aria-labelledby="pipeline-plan-heading">
-      <h2 id="pipeline-plan-heading">CCLD pipeline step still required</h2>
+    return f"""<section class="quiet-section" aria-labelledby="pipeline-plan-heading">
+            <details>
+            <summary id="pipeline-plan-heading">Technical preparation path</summary>
             <p>When controlled retrieval is configured, use the browser retrieval action on
             this page for a bounded CCLD facility/date/type request. When controlled
             retrieval is not configured or a separate SQLite/Datasette validation run is
@@ -1284,7 +1285,8 @@ def _render_pipeline_plan(request: CcldRecordRequest) -> str:
                 <p>The browser remains a trigger only. Server-side retrieval, raw preservation,
                 extraction, validation, and import happen only when controlled retrieval is
                 explicitly configured; SQLite conversion remains outside the browser path.</p>
-    </section>"""
+            </details>
+        </section>"""
 
 
 def _render_no_match_guidance(
