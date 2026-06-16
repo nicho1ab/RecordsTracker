@@ -14,6 +14,25 @@ For changes to Datasette views, generated metadata, saved queries, CSV exports,
 review bundle files, or script output, also review the local output checklist in
 `docs/developer/accessibility.md`.
 
+For hosted UI changes, generate a repeatable local UI evidence packet instead of
+relying on manual screenshots. Use
+[docs/developer/ui-evidence-review.md](docs/developer/ui-evidence-review.md) and
+the current port convention: `8003` for live public CCLD mode, `8010` for
+fixture/mock demo mode, and avoid `8000` unless a branch handoff says it is the
+active server.
+
+```powershell
+.\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8003 -Mode live
+```
+
+```powershell
+.\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture
+```
+
+Generated packets are ignored under `data/processed/ui-evidence/` and are local
+review evidence only, not audit exports, legal reports, source-completeness
+reports, or production monitoring artifacts.
+
 For changes to Docker runtime files, validate the static Docker/env tests and,
 when Docker is available, run a bounded Compose configuration check against the
 no-secret example environment before relying on the runtime.

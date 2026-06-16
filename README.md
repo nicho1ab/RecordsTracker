@@ -210,6 +210,23 @@ This path was manually verified with facility/license number `157806098` and
 date range `2022-08-01` to `2022-08-31`, which imported one live public CCLD
 complaint bundle as source-derived rows into the local reviewer queue.
 
+For repeatable hosted UI review evidence, capture the running local UI instead
+of relying on manual screenshots. Use `8003` for live public CCLD mode and
+`8010` for fixture/mock mode unless a task handoff says otherwise:
+
+```powershell
+.\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8003 -Mode live
+```
+
+```powershell
+.\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture
+```
+
+See [docs/developer/ui-evidence-review.md](docs/developer/ui-evidence-review.md)
+for stale-port cleanup, packet contents, screenshot behavior, and sharing
+boundaries. Generated evidence is local and ignored under
+`data/processed/ui-evidence/`.
+
 To profile ignored local public-source CSV examples before any source expansion
 implementation is proposed, run:
 
@@ -256,6 +273,9 @@ public-record review notes.
    analysis. It also defines the deferred-readiness/product-benefit gate used to
    decide whether future backend readiness, hardening, planning, or checklist
    work should happen now or remain deferred behind user-facing CCLD MVP value.
+- Use [docs/developer/ui-evidence-review.md](docs/developer/ui-evidence-review.md)
+   to generate repeatable hosted UI evidence packets for future UI review instead
+   of uploading manual screenshots one route at a time.
 - Review [PUBLIC_SOURCE_DATA_INVENTORY.md](PUBLIC_SOURCE_DATA_INVENTORY.md)
    before planning public-source expansion, uploaded CSV profiling,
    multi-source adapters, attorney focus areas, or feedback intake paths.
