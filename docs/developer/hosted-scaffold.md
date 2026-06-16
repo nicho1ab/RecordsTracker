@@ -107,6 +107,28 @@ fixture tester actor. Production/QNAP runtime should keep local-dev auth
 disabled. The same script sets `CCLD_HOSTED_PAGE_DATA_MODE=fixture-demo` unless
 the variable is already set, so workstation demos can still use fixture data.
 Production/QNAP runtime should use `CCLD_HOSTED_PAGE_DATA_MODE=postgres`.
+
+To start the same local scaffold with controlled complaint retrieval enabled in
+fixture-backed demo mode, use the explicit one-command wrapper instead:
+
+```powershell
+.\scripts\run-hosted-complaint-retrieval-demo.ps1 -Port 8000
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000/
+http://127.0.0.1:8000/ccld/records/request
+http://127.0.0.1:8000/ccld/retrieval/jobs
+http://127.0.0.1:8000/reviewer
+```
+
+The wrapper sets explicit local-dev auth, fixture/demo page data, controlled
+retrieval enablement, `CCLD_RETRIEVAL_DEMO_MODE=mock-success`, and ignored local
+raw source storage under `data/raw/ccld/retrieval-demo`. Normal
+`run-hosted-scaffold.ps1` startup remains unchanged and still shows the setup-
+required state when retrieval configuration is incomplete.
 The home page includes a skip-to-main link and visible start-here guidance for
 the first CCLD review session path: facility lookup or manual entry, CCLD
 request-context confirmation, loaded local/test queue, reviewer detail source
@@ -263,15 +285,12 @@ CCLD_RETRIEVAL_ENABLED=enabled
 CCLD_RETRIEVAL_RAW_DIR=/app/data/raw/ccld/retrieval
 ```
 
-For local scaffold validation only, developers may also enable a fixture-backed
-successful retrieval demo while running explicit local-dev auth and fixture-demo
-page data:
+For local scaffold validation only, use the one-command wrapper to enable a
+fixture-backed successful retrieval demo while running explicit local-dev auth
+and fixture/demo page data:
 
 ```powershell
-$env:CCLD_RETRIEVAL_ENABLED = "enabled"
-$env:CCLD_RETRIEVAL_RAW_DIR = "data\raw\ccld\retrieval-demo"
-$env:CCLD_RETRIEVAL_DEMO_MODE = "mock-success"
-.\scripts\run-hosted-scaffold.ps1 -Port 8000
+.\scripts\run-hosted-complaint-retrieval-demo.ps1 -Port 8000
 ```
 
 This mode uses committed CCLD fixtures through a local fixture client. It does

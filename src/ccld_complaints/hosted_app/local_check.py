@@ -162,6 +162,8 @@ def format_text_report(report: list[LocalCheck]) -> str:
             "",
             "This check does not install software and does not require admin rights.",
             "Start command: .\\scripts\\run-hosted-scaffold.ps1 -Port 8000",
+            "Complaint retrieval demo command: "
+            ".\\scripts\\run-hosted-complaint-retrieval-demo.ps1 -Port 8000",
             "Smoke command: .\\scripts\\smoke-hosted-scaffold.ps1",
             "Focused tests: pytest tests/unit/test_hosted_app_scaffold.py "
             "tests/unit/test_hosted_seeded_corpus_import.py "
