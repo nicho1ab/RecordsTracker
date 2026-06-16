@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Implemented the final product-ready hosted CCLD visual design: ordinary page
+	sections are no longer framed as stacked scaffold cards, the shared shell uses
+	the specified restrained legal-review palette, the workflow rail is compact and
+	non-card-like, Home is a launch screen, Facility is a search/select intake page,
+	Retrieve success and recovery states prioritize primary actions over diagnostics,
+	Retrieval Jobs render card-based status lists with table details collapsed,
+	Reviewer queue cards show human-readable date labels and review-flag summaries,
+	Reviewer detail uses a summary-first top grid with reviewer-created state beside
+	the complaint summary, and Feedback uses a support-intake layout with safety and
+	examples collapsed. No backend behavior, schemas, migrations, sources, exports,
+	extraction behavior, or unsupported legal conclusions were added.
+
 - Redesigned the hosted CCLD UI as an attorney-focused public-record review
 	workspace: the product shell is now `CCLD RecordsTracker`, the workflow strip is
 	compact and legal-review oriented, home starts with facility complaint review,

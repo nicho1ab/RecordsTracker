@@ -260,6 +260,18 @@ cautious-language, tester feedback, and reviewer-state boundaries.
   and `Source traceability available`. Do not use UI language that implies
   legal conclusions, official findings, source completeness, facility-wide
   conclusions, verified harm, abuse, neglect, liability, or rights-deprivation.
+- Product-ready hosted CCLD design should avoid a stacked-card scaffold look.
+  Ordinary page sections should be structural, not automatically boxed. Use
+  explicit framing only for intentional product components such as the launch
+  hero, facility selector, retrieval confirmation, recovery panel, metric cards,
+  worklist cards, and collapsed technical details. Technical counts, machine-
+  readable states, feedback checklists, local/operator actions, and full field
+  tables should be visually secondary or collapsed unless they are the current
+  primary user task.
+- Use the restrained legal-review visual system: page background `#F5F7FA`,
+  white surfaces, tinted support panels near `#EEF7F6`, primary text near
+  `#17212B`, muted slate text, deep teal primary actions, accessible blue focus,
+  soft borders, and sparing amber/red/green status colors with text labels.
 - Make the first useful screen obvious after a script completes.
 - Preserve the public portal as the source of record.
 - Keep every derived record connected to source URL, raw hash, connector details,
