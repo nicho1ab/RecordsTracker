@@ -109,33 +109,23 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "Skip to main CCLD review content" in html
     assert '<main id="main-content" tabindex="-1">' in html
     assert "Local/test scaffold only: not a production reviewer workflow." in html
-    assert "Request CCLD facility records" in html
-    assert "Start here: CCLD facility request" in html
-    assert "Start a CCLD review session here" in html
-    assert "Start first CCLD review" in html
-    assert "Open the suggested queue record in reviewer detail" in normalized_html
-    assert "check source traceability, source-confidence cues, and field-note guidance" in (
-        normalized_html
-    )
-    assert "return to the same queue/request context" in normalized_html
-    assert "single manual feedback checklist" in normalized_html
-    assert "does not save a review session or persist feedback" in normalized_html
-    assert "Find a CCLD facility" in html
-    assert "facility/license number manually" in normalized_html
-    assert "Workflow overview" in html
-    assert "Request loaded local/test CCLD records" in normalized_html
-    assert "Use reviewer detail to check source traceability" in normalized_html
-    assert "No saved review session, persisted queue state, duplicate checklist" in (
-        normalized_html
-    )
-    assert "What the main words mean" in html
-    assert "Feedback guidance" in html
-    assert "Local/test boundaries" in html
-    assert "Browser pages do not run live CCLD retrieval" in html
-    assert "Production sign-in, sessions, cookies, exports, deployment" in normalized_html
-    assert "Request CCLD records" in html
-    assert "How this works" in html
-    assert "Review loaded local/test records" in html
+    assert "CCLD RecordsTracker Pilot" in html
+    assert "Retrieval not configured" in html
+    assert "Retrieve, review, and annotate public CCLD complaint records" in html
+    assert "Retrieve complaint records" in html
+    assert "Find a facility" in html
+    assert "Review imported records" in html
+    assert "View retrieval jobs" in html
+    assert "Send feedback" in html
+    assert "Pilot workflow" in html
+    assert "Pick a facility" in html
+    assert "Local commands" in html
+    assert "Live public CCLD retrieval" in html
+    assert "Fixture/mock demo" in html
+    assert "Ordinary scaffold" in html
+    assert "Boundary note" in html
+    assert "No non-CCLD sources" in normalized_html
+    assert "Source-derived records stay separate from reviewer-created notes/status" in html
     assert "/reviewer" in html
 
 
@@ -171,13 +161,16 @@ def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None
         assert '<nav class="site-nav"' in html
         assert '<main id="main-content" tabindex="-1">' in html
         assert 'class="shell page-main"' in html
-        assert "Facility Lookup" in html
-        assert "CCLD record request" in html
-        assert "Retrieval job history" in html
+        assert "CCLD RecordsTracker Pilot" in html
+        assert "Pilot workflow steps" in html
+        assert "Facility" in html
+        assert "Retrieve" in html
+        assert "Review" in html
+        assert "Jobs" in html
         assert "Feedback" in html
-        assert "How this works" in html
-        assert "CCLD public portal material remains the source of record" in normalized_html
-        assert "does not prove source completeness" in normalized_html
+        assert "Help" in html
+        assert "CCLD public portal remains the source of record" in normalized_html
+        assert "does not prove source coverage" in normalized_html
         assert "legal findings" in normalized_html
         assert "button:focus-visible" in html
         assert "@media (max-width: 760px)" in html
@@ -271,7 +264,7 @@ def test_explicit_local_dev_auth_mode_allows_default_workflow_actor() -> None:
     assert "provider_subject" not in reviewer_html
     assert "provider_issuer" not in reviewer_html
     assert ccld_status == 200
-    assert "CCLD record request" in ccld_html
+    assert "Retrieve complaint records" in ccld_html
 
 
 def test_source_record_list_route_labels_sample_read_only_scope() -> None:
@@ -746,7 +739,8 @@ def test_complaint_retrieval_demo_script_sets_safe_local_config() -> None:
     assert "Open: $baseUrl/ccld/records/request" in script
     assert "Open: $baseUrl/ccld/retrieval/jobs" in script
     assert "Open: $baseUrl/reviewer" in script
-    assert "not production CCLD completeness proof" in script
+    assert "Mode: Fixture/mock demo" in script
+    assert "does not make live CCLD calls" in script
     assert "GITHUB" not in script
     assert "TOKEN" not in script
     assert "COOKIE" not in script
@@ -765,8 +759,8 @@ def test_complaint_retrieval_live_script_sets_live_public_config() -> None:
     assert "CCLD_RETRIEVAL_RAW_DIR = $resolvedRawStorageDir" in script
     assert 'CCLD_RETRIEVAL_DEMO_MODE = ""' in script
     assert 'CCLD_RETRIEVAL_DEMO_MODE = "mock-success"' not in script
-    assert "Live public CCLD mode" in script
-    assert "makes live public CCLD web" in script
+    assert "Mode: Live public CCLD retrieval" in script
+    assert "Public CCLD HTTP requests will be made only after" in script
     assert "CCLD public portal remains the source of record" in script
     assert "Absence of imported records is not proof" in script
     assert "Open: $baseUrl/" in script

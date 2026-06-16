@@ -41,12 +41,16 @@ $env:CCLD_RETRIEVAL_DEMO_MODE = "mock-success"
 if (-not $env:CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS) { $env:CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS = "30" }
 
 $baseUrl = "http://${HostName}:$Port"
-Write-Host "Starting local hosted complaint retrieval demo at $baseUrl/"
-Write-Host "Local/demo mode only: fixture-backed mock-success retrieval, not production CCLD completeness proof."
-Write-Host "Server-side demo raw source storage is configured under an ignored local data/raw path."
+Write-Host "Mode: Fixture/mock demo"
+Write-Host "Local pilot runtime: $baseUrl/"
 Write-Host "Open: $baseUrl/"
 Write-Host "Open: $baseUrl/ccld/records/request"
 Write-Host "Open: $baseUrl/ccld/retrieval/jobs"
 Write-Host "Open: $baseUrl/reviewer"
+Write-Host "Open: $baseUrl/ccld/help"
+Write-Host "Open: $baseUrl/feedback"
+Write-Host "Fixture/mock demo mode uses committed fixtures and does not make live CCLD calls."
+Write-Host "CCLD public portal remains the source of record for real public records."
+Write-Host "Server-side demo raw source storage is configured under an ignored local data/raw path."
 
 & $python -m ccld_complaints.hosted_app --host $HostName --port $Port

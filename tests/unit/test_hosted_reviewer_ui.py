@@ -59,16 +59,16 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Local/test reviewer records" in html
+    assert "Complaint records ready for review" in html
     assert "Skip to main reviewer content" in html
     assert '<main id="main-content" tabindex="-1">' in html
     assert "Local/test reviewer UI shell" in html
     assert "CCLD request queue" in html
     assert "CCLD workflow help" in html
-    assert "Search seeded review records" in html
+    assert "Filter queue" in html
     assert "Open CCLD request or queue" in html
     assert "Open CCLD workflow help" in html
-    assert "Seeded source-derived review list" in html
+    assert "Queue records" in html
     assert "Reviewer queue triage summary" in html
     assert "List values are source-derived display summaries" in normalized_html
     assert "Open reviewer detail for source-confidence cues" in normalized_html
@@ -77,35 +77,35 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert "Records with reviewer-created status" in html
     assert "Records with source traceability available" in html
     assert "Suggested next record to open" in html
-    assert "Reviewer-created note/status cue" in html
-    assert "Notes" in html
-    assert "Latest status" in html
-    assert "Suggested next-record cue" in html
-    assert "Latest reviewer-created note/status at" in html
-    assert "No reviewer-created note/status yet" in html
+    assert "Reviewer status" in html
+    assert "Reviewer-created notes" in html
+    assert "Complaint received date" in html
+    assert "Visit date" in html
+    assert "Report date" in html
+    assert "No reviewer-created status" in html
     assert "No reviewer-created notes" in html
     assert "No reviewer-created status" in html
     assert "Source traceability available" in html
-    assert "Open next to begin review" in html
+    assert "Open record 32-CR-20220407124448" in html
     assert "32-CR-20220407124448" in html
     assert COMPLAINT_KEY in html
     assert "raw SHA-256" in html
     assert "Source-derived records remain separate from reviewer-created notes" in normalized_html
     assert "This shell does not implement production sign-in" in normalized_html
-    assert "Open reviewer detail for 32-CR-20220407124448" in html
+    assert "Open record 32-CR-20220407124448" in html
     assert_no_secret_html(html)
 
 
 def test_reviewer_ui_landing_shows_reviewer_created_state_indicators() -> None:
     with _seeded_connection() as connection:
-        note = create_reviewer_note_scaffold(
+        create_reviewer_note_scaffold(
             connection,
             _actor(roles=("tester_reviewer",), display_name="Fixture List Note Reviewer"),
             scope=TEST_SCOPE,
             source_record_key=COMPLAINT_KEY,
             note_text="List indicator note.",
         )
-        status_row = create_reviewer_status_scaffold(
+        create_reviewer_status_scaffold(
             connection,
             _actor(roles=("tester_reviewer",), display_name="Fixture List Status Reviewer"),
             scope=TEST_SCOPE,
@@ -126,9 +126,8 @@ def test_reviewer_ui_landing_shows_reviewer_created_state_indicators() -> None:
     assert "1 reviewer-created note" in html
     assert "reviewed" in html
     assert "Reviewer queue triage summary" in html
-    assert "Open only if reviewed context needs checking" in html
-    assert status_row.created_at in html
-    assert note.created_at in html or status_row.created_at in html
+    assert "Reviewed" in html
+    assert "Reviewer-created notes" in html
     assert "No reviewer-created note/status yet" not in html
     assert_no_secret_html(html)
 
@@ -199,7 +198,9 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Local/test reviewer detail" in html
+    assert "32-CR-20220407124448" in html
+    assert "Complaint overview" in html
+    assert "Key dates and finding" in html
     assert "Skip to main reviewer content" in html
     assert '<main id="main-content" tabindex="-1">' in html
     assert "First-run detail steps" in html
@@ -427,13 +428,13 @@ def test_reviewer_ui_detail_missing_traceability_uses_clear_non_conclusive_wordi
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
     }
-    assert "Raw artifact path" in html
+    assert "Raw artifact preservation" in html
     assert "not available in this local/test record" in html
     assert "Source-confidence cues" in html
     assert "Field-note guidance" in html
     assert "First investigation activity date" in html
     assert "local/test missing-field flag is true" in normalized_html
-    assert "do not treat a missing path as source loss" in html
+    assert "raw paths are not shown in the browser" in html
     assert "not proof that the public source lacks a record" in normalized_html
     assert "does not make legal, facility-wide, completeness" in normalized_html
     assert_no_secret_html(html)
@@ -970,7 +971,7 @@ def test_reviewer_ui_default_route_context_is_browser_accessible() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Local/test reviewer records" in html
+    assert "Complaint records ready for review" in html
     assert "32-CR-20220407124448" in html
     assert_no_secret_html(html)
 

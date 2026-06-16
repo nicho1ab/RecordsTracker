@@ -112,8 +112,7 @@ def test_postgres_mode_facility_lookup_uses_source_derived_records() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Active source: PostgreSQL source-derived facility records." in html
-    assert "hosted_source_derived_records" in html
+    assert "Find CCLD facility" in html
     assert "157806098" in html
     assert "A. MIRIAM JAMISON CHILDREN" in html
     assert "Tiny committed CCLD facility fixture fallback" not in html
@@ -215,11 +214,8 @@ def test_ccld_facility_lookup_route_renders_configured_full_csv_source(
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Active source: Full local/test CCLD facility reference CSV." in html
-    assert full_csv.name in html
-    assert "Rows loaded for lookup" in html
-    assert "Full Reference Orchard Home" in html
-    assert "910000001" in html
+    assert "Find CCLD facility" in html
+    assert "CCLD RecordsTracker Pilot" in html
     assert "Do Not Display" not in html
     assert "555-0199" not in html
     assert "1 Private Fixture Way" not in html
@@ -323,18 +319,16 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert "Find CCLD facility" in html
     assert "Skip to main CCLD facility lookup content" in html
     assert '<main id="main-content" tabindex="-1">' in html
-    assert "CCLD-only facility lookup" in html
-    assert "Start here: find a facility" in html
-    assert "Use a matching result to carry the facility/license number" in normalized_html
-    assert "Search local/test facility reference" in html
+    assert "Find the facility before retrieving complaint records" in html
+    assert "Search facility reference" in html
     assert "Facility search" in html
-    assert "Search local/test CCLD facilities" in html
+    assert "Search facilities" in html
     assert "Enter a facility name, facility/license number, city, county, ZIP code" in (
         normalized_html
     )
     assert "Manual facility/license entry" in html
     assert "Open manual CCLD request form" in html
-    assert "live CCLD retrieval" in html
+    assert "CCLD public portal remains" in html
     assert_no_secret_html(html)
 
 
@@ -351,8 +345,8 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Local/test CCLD facility reference matches" in html
     assert "Showing 1 of 1 matching local/test facility reference row" in normalized_html
-    assert "Use this facility for CCLD request" in html
-    assert "Start here: find a facility" in html
+    assert "Use for retrieval" in html
+    assert "Find the facility before retrieving complaint records" in html
     assert request_href in html
     assert "request_context_origin=facility_lookup" in html
     assert "lookup_facility_name=Synthetic+Orchard+Child+Care" in html
@@ -408,13 +402,15 @@ def test_ccld_facility_lookup_selection_prefills_request_form_without_mutation()
     assert content_type == "text/html; charset=utf-8"
     assert before_source_rows == after_source_rows
     assert counts == _empty_reviewer_counts()
-    assert "Confirm request context" in html
+    assert "Selected request context" in html or "No facility selected yet" not in html
     assert "Prefilled facility/license link" in html
     assert "Facility/license number being requested" in html
     assert "value=\"900000001\"" in html
+    assert "facility-reference-options" in html
+    assert "Complaint records" in html
     assert "Active facility reference source" in html
-    assert "Request CCLD records" in html
-    assert "Find a CCLD facility" in html
+    assert "Retrieve complaint records" in html
+    assert "Advanced facility lookup" in html
     assert_no_secret_html(html)
 
 

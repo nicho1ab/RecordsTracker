@@ -71,11 +71,15 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Tester feedback" in html
-    assert "What feedback is for" in html
-    assert "pilot UI problems" in html
+    assert "Send feedback" in html
+    assert "Tell the pilot team what happened" in html
+    assert "Choose the best feedback type" in html
+    assert "Bug report" in html
+    assert "Feature request" in html
+    assert "New data source request" in html
+    assert "Something failed, looked wrong, or blocked" in html
     assert "Do not include credentials" in html
-    assert "GitHub Projects are not required" in html
+    assert "Feedback is classified with labels" in html
     assert '<label for="feedback_type">Feedback type</label>' in html
     assert '<label for="description">Description</label>' in html
     assert "Submit feedback" in html

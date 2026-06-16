@@ -1,3 +1,5 @@
+# ruff: noqa: E501
+
 from __future__ import annotations
 
 import html
@@ -657,25 +659,30 @@ def _render_record_list(
         returned_count = _int_value(_mapping(queue, "pagination"), "returned_count")
     no_results_notice = _render_no_results_notice(search_query, records)
     return _page(
-        title="Local/test reviewer records",
-        heading="Local/test reviewer records",
+                title="Complaint records ready for review",
+                heading="Complaint records ready for review",
         actor_label=actor_label,
         main=f"""
-    {_render_scope_notice(workflow)}
-    <section aria-labelledby="reviewer-search-heading">
-      <h2 id="reviewer-search-heading">Find seeded review records</h2>
-            <p>Use this list when you need the broader local/test reviewer queue outside a
-            specific CCLD request result. For the first MVP path, start from the CCLD
-            facility lookup or request page when possible.</p>
+        <section class="hero-card" aria-labelledby="reviewer-queue-heading">
+            <h2 id="reviewer-queue-heading">{len(records)} complaint record(s) visible</h2>
+            <p>Review imported source-derived complaint records, then add reviewer-created
+            notes/status where supported. Source-derived data and reviewer-created state remain
+            separate.</p>
+            <p>{_next_review_item_markup(_next_review_item(records, state_summaries), state_summaries)}</p>
+        </section>
+        {_render_scope_notice(workflow)}
+        <section aria-labelledby="reviewer-search-heading">
+            <h2 id="reviewer-search-heading">Filter queue</h2>
+                        <p>Use this queue for imported CCLD complaint records. For the primary pilot path,
+                        start from facility lookup or the retrieval request page when possible.</p>
             {_render_reviewer_queue_navigation()}
       <form action="{REVIEWER_UI_RECORDS_PATH}" method="get">
         <p>
           <label for="q">Search seeded review records</label>
                     <input id="q" name="q" type="search" value="{_escape(search_query)}"
                         aria-describedby="reviewer-search-help">
-                    <span id="reviewer-search-help">Search by source record key,
-                    complaint control number, finding, source document ID, or facility ID
-                    already loaded locally.</span>
+                    <span id="reviewer-search-help">Search by complaint control number,
+                    finding, facility/license number, source document ID, or loaded record key.</span>
         </p>
         <p>
           <button type="submit">Search</button>
@@ -685,25 +692,25 @@ def _render_record_list(
     </section>
         {no_results_notice}
     <section aria-labelledby="reviewer-list-heading">
-      <h2 id="reviewer-list-heading">Seeded source-derived review list</h2>
-            <p>Showing {len(records)} of {returned_count} seeded complaint records.</p>
+            <h2 id="reviewer-list-heading">Queue records</h2>
+                        <p>Showing {len(records)} of {returned_count} complaint records.</p>
                         {_render_reviewer_queue_summary(records, state_summaries)}
       <table>
-                <caption>Seeded local/test CCLD complaint records available for reviewer
-                actions</caption>
+                                <caption>Complaint records ready for review with source-derived fields and
+                                reviewer-created status cues</caption>
         <thead>
           <tr>
                         <th scope="col">Review action</th>
-                        <th scope="col">Source record key</th>
             <th scope="col">Complaint control number</th>
-            <th scope="col">Facility ID</th>
-            <th scope="col">Finding</th>
-                        <th scope="col">Source traceability cue</th>
-                        <th scope="col">Reviewer-created note/status cue</th>
-                        <th scope="col">Notes</th>
-                        <th scope="col">Latest status</th>
-                                                <th scope="col">Suggested next-record cue</th>
-                        <th scope="col">Latest reviewer-created note/status at</th>
+                        <th scope="col">Finding</th>
+                        <th scope="col">Facility/license</th>
+                        <th scope="col">Complaint received date</th>
+                        <th scope="col">Visit date</th>
+                        <th scope="col">Report date</th>
+                        <th scope="col">Reviewer status</th>
+                        <th scope="col">Reviewer-created notes</th>
+                                                <th scope="col">Source traceability</th>
+                                                <th scope="col">Loaded record key</th>
           </tr>
         </thead>
         <tbody>
@@ -819,25 +826,25 @@ def _render_review_item_row(
     state_summary = state_summaries.get(source_record_key, _empty_state_summary())
     action_label = _review_action_label(original_values)
     return f"""        <tr>
-            <td><a href="{_escape(detail_href)}">{_escape(action_label)}</a></td>
-          <td>{_escape(source_record_key)}</td>
+                        <td><a class="button" href="{_escape(detail_href)}">{_escape(action_label)}</a></td>
           <td>{_escape(_optional_string(original_values, 'complaint_control_number'))}</td>
-          <td>{_escape(_optional_string(identity, 'facility_id'))}</td>
           <td>{_escape(_optional_string(original_values, 'finding'))}</td>
-          <td>{_escape(_source_traceability_cue(source_document))}</td>
-          <td>{_escape(_state_summary_text(state_summary))}</td>
-          <td>{_escape(_notes_indicator_text(state_summary))}</td>
+                    <td>{_escape(_optional_string(identity, 'facility_id'))}</td>
+                    <td>{_escape(_optional_string(original_values, 'complaint_received_date'))}</td>
+                    <td>{_escape(_optional_string(original_values, 'visit_date'))}</td>
+                    <td>{_escape(_optional_string(original_values, 'report_date'))}</td>
           <td>{_escape(_latest_status_text(state_summary))}</td>
-          <td>{_escape(_queue_cue_text(state_summary))}</td>
-          <td>{_escape(_latest_created_at_text(state_summary))}</td>
+                    <td>{_escape(_notes_indicator_text(state_summary))}</td>
+                    <td>{_escape(_source_traceability_cue(source_document))}</td>
+                    <td>{_escape(source_record_key)}</td>
         </tr>"""
 
 
 def _review_action_label(original_values: Mapping[str, Any]) -> str:
     complaint_control_number = original_values.get("complaint_control_number")
     if _has_display_value(complaint_control_number):
-        return f"Open reviewer detail for {_display_value(complaint_control_number)}"
-    return "Open reviewer detail for this complaint record"
+        return f"Open record {_display_value(complaint_control_number)}"
+    return "Open record"
 
 
 def _source_traceability_cue(source_document: Mapping[str, Any]) -> str:
@@ -1055,18 +1062,29 @@ def _render_detail(
     original_values = _mapping(source_record, "original_values")
     import_batch = _mapping(source_record, "import_batch")
     source_record_key = _string(identity, "source_record_key")
+    complaint_heading = _detail_heading(original_values)
     return _page(
-        title="Local/test reviewer detail",
-        heading="Local/test reviewer detail",
+                title=complaint_heading,
+                heading=complaint_heading,
         actor_label=actor_label,
         main=f"""
     {_render_notice(notice, source_record_key, related_records, return_context)}
-    {_render_scope_notice(_mapping(payload, 'workflow_shell'))}
-        {_render_detail_first_run_steps(source_record_key, related_records, return_context)}
-        {_render_detail_navigation(source_record_key, related_records, return_context)}
+                <section class="hero-card" aria-labelledby="detail-hero-heading">
+                    <h2 id="detail-hero-heading">Complaint overview</h2>
+                    <p>{_escape(_detail_summary_sentence(source_record, related_records))}</p>
+                    <p><span class="badge badge-muted">Finding: {_escape(_optional_string(original_values, 'finding'))}</span></p>
+                </section>
         {_render_record_summary_section(source_record, related_records, detail)}
+                {_render_key_date_cards(original_values)}
+                                {_render_source_traceability_section(
+                                                identity,
+                                                source_document,
+                                                source_traceability,
+                                                import_batch,
+                                )}
+        {_render_reviewer_state_section(detail)}
     <section aria-labelledby="source-derived-heading">
-      <h2 id="source-derived-heading">Source-derived record</h2>
+            <h2 id="source-derived-heading">Source-derived field details</h2>
             <p>These are safe scalar fields from the selected source-derived row. Narrative
             source text is hidden in this local/test browser UI.</p>
       <dl>
@@ -1094,17 +1112,55 @@ def _render_detail(
     </section>
         {_render_source_confidence_cues_section(source_record, related_records)}
         {_render_field_note_guidance_section()}
-                {_render_source_traceability_section(
-                        identity,
-                        source_document,
-                        source_traceability,
-                        import_batch,
-                )}
         {_render_source_context_section(related_records, source_record_key)}
-    {_render_reviewer_state_section(detail)}
         {_render_review_actions(source_record_key, return_context)}
+        {_render_detail_navigation(source_record_key, related_records, return_context)}
+    {_render_scope_notice(_mapping(payload, 'workflow_shell'))}
+        {_render_detail_first_run_steps(source_record_key, related_records, return_context)}
         {_render_detail_feedback_guidance(source_record, related_records, return_context)}""",
     )
+
+
+def _detail_heading(original_values: Mapping[str, Any]) -> str:
+    complaint_control_number = _optional_string(original_values, "complaint_control_number")
+    if complaint_control_number != "unknown":
+        return complaint_control_number
+    return "Complaint record detail"
+
+
+def _detail_summary_sentence(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> str:
+    original_values = _mapping(source_record, "original_values")
+    facility = _facility_context(related_records)
+    facility_name = _facility_context_value(facility, "facility_name")
+    facility_number = _facility_context_value(facility, "external_facility_number")
+    finding = _optional_string(original_values, "finding")
+    control_number = _optional_string(original_values, "complaint_control_number")
+    return (
+        f"Complaint {control_number} for {facility_name} / {facility_number} has "
+        f"source-derived finding {finding}. Review source traceability before adding "
+        "reviewer-created notes/status."
+    )
+
+
+def _render_key_date_cards(original_values: Mapping[str, Any]) -> str:
+    cards = "\n".join(
+        f"        <div class=\"stat-card\"><strong>{_escape(value)}</strong><span>{_escape(label)}</span></div>"
+        for label, value in (
+            ("Complaint received", _optional_string(original_values, "complaint_received_date")),
+            ("Visit", _optional_string(original_values, "visit_date")),
+            ("Report", _optional_string(original_values, "report_date")),
+            ("Signed", _optional_string(original_values, "date_signed")),
+        )
+    )
+    return f"""<section aria-labelledby="key-dates-heading">
+      <h2 id="key-dates-heading">Key dates and finding</h2>
+      <div class="stat-grid">
+{cards}
+      </div>
+    </section>"""
 
 
 def _render_detail_first_run_steps(
@@ -1449,9 +1505,9 @@ def _render_traceability_field_rows(
             "Use this to identify the preserved raw source bytes in local/test evidence.",
         ),
         (
-            "Raw artifact path",
-            source_document.get("raw_path"),
-            "Use this local/test path when available; do not treat a missing path as source loss.",
+            "Raw artifact preservation",
+            _raw_artifact_display(source_document.get("raw_path")),
+            "Use this cue to know whether raw artifact preservation is represented; raw paths are not shown in the browser.",
         ),
         (
             "Source artifact identity",
@@ -1517,6 +1573,12 @@ def _connector_label(source_document: Mapping[str, Any]) -> str:
     return ""
 
 
+def _raw_artifact_display(value: object) -> str:
+    if _has_display_value(value):
+        return "available server-side; raw path not shown"
+    return "not available in this local/test record"
+
+
 def _traceability_value(value: object) -> str:
     if not _has_display_value(value):
         return "not available in this local/test record"
@@ -1533,7 +1595,7 @@ def _render_traceability_summary(
                 for label, value in (
                         ("Source URL", source_document.get("source_url")),
                         ("Raw SHA-256", source_document.get("raw_sha256")),
-                        ("Raw artifact path", source_document.get("raw_path")),
+                        ("Raw artifact preservation", _raw_artifact_display(source_document.get("raw_path"))),
                         ("Connector", source_document.get("connector_name")),
                         ("Retrieved at", source_document.get("retrieved_at")),
                         ("Report index", source_traceability.get("report_index")),
@@ -2223,6 +2285,7 @@ def _page(*, title: str, heading: str, main: str, actor_label: str | None = None
                     ("Reviewer records", REVIEWER_UI_RECORDS_PATH),
                     ("Health check", "/health"),
                 ),
+                active_path=REVIEWER_UI_PREFIX,
         )
 
 

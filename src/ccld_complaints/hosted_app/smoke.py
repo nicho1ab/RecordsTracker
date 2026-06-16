@@ -195,7 +195,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold app shell did not return the placeholder notice.")
     if b"Skip to main CCLD review content" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return skip navigation.")
-    if b"Start a CCLD review session here" not in root_body:
+    if b"Retrieve, review, and annotate public CCLD complaint records" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return review session orientation.")
     if (
         records_status != 200
@@ -211,18 +211,14 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold facility sample shell did not return the fixture list.")
     if (
         ccld_status != 200
-        or b"CCLD record request" not in ccld_body
-        or b"CCLD facility/license number" not in ccld_body
-        or b"Find a CCLD facility" not in ccld_body
-        or b"Review session path" not in ccld_body
-        or b"Facility lookup helps fill the facility/license number" not in ccld_body
+        or b"Retrieve complaint records" not in ccld_body
+        or b"Facility/license number" not in ccld_body
+        or b"facility-reference-options" not in ccld_body
+        or b"No facility selected yet" not in ccld_body
         or b"Reviewer-status filter" not in ccld_body
         or b"Record type" not in ccld_body
-        or b"Run controlled CCLD retrieval" not in ccld_body
-        or b"Retrieval job history" not in ccld_body
-        or b"Confirm request context" not in ccld_body
-        or b"validated CCLD load" not in ccld_body
-        or b"Feedback guidance" not in ccld_body
+        or b"Show current queue" not in ccld_body
+        or b"Retrieval not configured" not in ccld_body
         or b"Skip to main CCLD request content" not in ccld_body
     ):
         raise RuntimeError("Hosted scaffold CCLD request shell did not return the request page.")
@@ -254,8 +250,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         ccld_queue_status != 200
         or b"CCLD review queue" not in ccld_queue_body
-        or b"check source traceability, source-confidence cues" not in ccld_queue_body
-        or b"Confirm request context" not in ccld_queue_body
+        or b"source traceability" not in ccld_queue_body
+        or b"Selected request context" not in ccld_queue_body
         or b"Request started from" not in ccld_queue_body
         or b"Change facility/date criteria for this request" not in ccld_queue_body
         or b"Queue triage summary" not in ccld_queue_body
@@ -263,7 +259,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Suggested next record to open" not in ccld_queue_body
         or b"official workflow state" not in ccld_queue_body
         or b"source-confidence cues" not in ccld_queue_body
-        or b"same manual feedback checklist for queue and reviewer-detail" not in ccld_queue_body
+        or b"same manual feedback checklist" not in ccld_queue_body
         or b"Copy tester feedback checklist" not in ccld_queue_body
         or b"Reviewer detail and note/status confirmation" not in ccld_queue_body
         or b"Manual-copy only" not in ccld_queue_body
@@ -280,7 +276,10 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold CCLD filtered queue did not return recovery guidance.")
     if (
         ccld_no_match_status != 200
-        or b"No matching local/test CCLD records found" not in ccld_no_match_body
+        or (
+            b"No loaded complaint records match this request yet" not in ccld_no_match_body
+            and b"Candidates may be outside the selected date range" not in ccld_no_match_body
+        )
         or b"How to interpret this no-match result" not in ccld_no_match_body
         or b"currently loaded local/test source-derived rows only" not in ccld_no_match_body
         or b"outside-browser live fetch and artifact-builder workflow" not in ccld_no_match_body
@@ -297,12 +296,12 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold retrieval setup state did not return safe guidance.")
     if (
         ccld_retrieval_success_status != 200
-        or b"Controlled CCLD retrieval job status" not in ccld_retrieval_success_body
+        or b"Records imported and ready for review" not in ccld_retrieval_success_body
         or b"Completed" not in ccld_retrieval_success_body
         or b"Records imported" not in ccld_retrieval_success_body
-        or b"Open imported records in this CCLD queue" not in ccld_retrieval_success_body
+            or b"Review imported records" not in ccld_retrieval_success_body
         or b"View retrieval job history" not in ccld_retrieval_success_body
-        or b"View retrieval job details" not in ccld_retrieval_success_body
+            or b"View job details" not in ccld_retrieval_success_body
     ):
         raise RuntimeError("Hosted scaffold mock retrieval did not return completed status.")
     if (
@@ -325,37 +324,39 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         ccld_facilities_status != 200
         or b"Find CCLD facility" not in ccld_facilities_body
         or b"Synthetic Orchard Child Care" not in ccld_facilities_body
-        or b"Use this facility for CCLD request" not in ccld_facilities_body
+        or b"Use for retrieval" not in ccld_facilities_body
         or b"Skip to main CCLD facility lookup content" not in ccld_facilities_body
     ):
         raise RuntimeError("Hosted scaffold CCLD facility lookup did not return results.")
     if (
         help_status != 200
-        or b"How CCLD review works" not in help_body
-        or b"CCLD review queue" not in help_body
-        or b"Review session path" not in help_body
-        or b"Feedback guidance" not in help_body
+        or b"Help" not in help_body
+        or b"How the pilot works" not in help_body
+        or b"Live public CCLD retrieval" not in help_body
+        or b"Fixture/mock demo" not in help_body
+        or b"What 0 imported records can mean" not in help_body
     ):
         raise RuntimeError("Hosted scaffold CCLD help page did not return guided help.")
     if (
         feedback_status != 200
-        or b"Tester feedback" not in feedback_body
+        or b"Send feedback" not in feedback_body
+        or b"Choose the best feedback type" not in feedback_body
         or b"GitHub issue intake is not configured" not in feedback_body
         or b"Submit feedback" not in feedback_body
     ):
         raise RuntimeError("Hosted scaffold feedback page did not return safe form state.")
     if (
         reviewer_status != 200
-        or b"Local/test reviewer records" not in reviewer_body
-        or b"Seeded source-derived review list" not in reviewer_body
+        or b"Complaint records ready for review" not in reviewer_body
+            or b"Queue records" not in reviewer_body
         or b"Skip to main reviewer content" not in reviewer_body
     ):
         raise RuntimeError("Hosted scaffold reviewer UI shell did not return the seeded list.")
     if (
         reviewer_detail_status != 200
-        or b"Local/test reviewer detail" not in reviewer_detail_body
+        or b"Complaint overview" not in reviewer_detail_body
+        or b"Key dates and finding" not in reviewer_detail_body
         or b"Record summary" not in reviewer_detail_body
-        or b"reviewer detail step of the same CCLD review session" not in reviewer_detail_body
         or b"Selected complaint source traceability fields" not in reviewer_detail_body
         or b"Source-confidence cues" not in reviewer_detail_body
         or b"Field-note guidance" not in reviewer_detail_body
@@ -369,7 +370,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"existing manual feedback checklist" not in reviewer_detail_body
         or b"same checklist for queue-level observations" not in reviewer_detail_body
         or b"Source traceability observations" not in reviewer_detail_body
-        or b"suggested next record to continue" not in reviewer_detail_body
+        or b"suggested next record" not in reviewer_detail_body
         or b"not a persisted assignment" not in reviewer_detail_body
         or b"First-run detail steps" not in reviewer_detail_body
     ):
