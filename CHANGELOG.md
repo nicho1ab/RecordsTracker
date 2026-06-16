@@ -2,14 +2,14 @@
 
 ## Unreleased
 
-- Upgraded the hosted CCLD pilot UI into a product-grade `CCLD RecordsTracker
-	Pilot` experience with a central guided stepper/wizard, mode badges,
-	type-ahead facility selection, a fixed complaint-record request flow,
-	clearer retrieval result cards, a retrieval status center, a stronger reviewer
-	worklist/detail layout, scannable help, tester-friendly feedback cards, and
-	safer live/demo startup output without adding frontend dependencies, non-CCLD sources,
-	auth/session/account work, exports, public deployment, or unrelated workflow
-	features.
+- Replaced the hosted CCLD pilot page stack with a guided `CCLD RecordsTracker
+	Pilot` workflow assistant: launch-screen home, compact functional stepper,
+	progressive facility/date/retrieve request flow, focused imported-record and
+	recovery result screens, product-grade facility selector, status-center job
+	pages, worklist-style reviewer queue, summary-first complaint review workspace,
+	card-prefilled feedback, and collapsible help without adding frontend
+	dependencies, non-CCLD sources, auth/session/account work, exports, public
+	deployment, or unrelated workflow features.
 - Added `scripts/run-hosted-complaint-retrieval-live.ps1`, an explicit local
 	live-public-CCLD startup command that enables browser-triggered complaint
 	retrieval with ignored raw storage, real public CCLD HTTP retrieval, safe live

@@ -148,17 +148,18 @@ ignored local raw source storage under `data/raw/ccld/retrieval-demo`. Normal
 required state when retrieval configuration is incomplete.
 The demo startup output labels Fixture/mock demo mode, prints exact local URLs,
 and states that it does not make live CCLD calls.
-The home page is a product launchpad for `CCLD RecordsTracker Pilot`: it shows
-the retrieval mode badge, primary action card for retrieving complaint records,
-secondary action cards for facility lookup, reviewer queue, retrieval jobs, and
-feedback, local live/demo/scaffold commands, and concise source-of-record
-boundary language. The local/test hosted pages share a product shell with active
-navigation, central guided stepper/wizard, skip-to-main link, strong focus styling,
-card/count-grid utilities, readable tables and forms, mode badges for Live public
-CCLD, Fixture/mock demo, and Retrieval not configured, and concise footer
-limitation wording. This presentation work does not add routes, workflows,
-frontend dependencies, auth, exports, deployment, non-CCLD scope, or new state
-behavior.
+The home page is now a guided launch screen for `CCLD RecordsTracker Pilot`: it
+shows the active retrieval mode, one dominant `Start review` action, secondary
+facility/queue/jobs/feedback actions lower on the page, collapsed developer/local
+commands, and concise source-of-record boundary language. The local/test hosted
+pages share a compact functional stepper, progressive request workflow, native
+facility type-ahead with manual fallback, focused retrieval result/recovery
+states, status-center job pages, worklist-style reviewer queue, summary-first
+reviewer detail workspace, card-prefilled feedback, collapsible help, skip-to-
+main links, strong focus styling, readable tables/forms, and mode badges for
+Live public CCLD, Fixture/mock demo, and Retrieval not configured. This
+presentation work does not add routes, workflows, frontend dependencies, auth,
+exports, deployment, non-CCLD scope, or new state behavior.
 
 When selecting the next hosted scaffold task, apply the product-benefit gate in
 `GOVERNANCE_INVENTORY.md`. Backend readiness, hardening, planning, or checklist

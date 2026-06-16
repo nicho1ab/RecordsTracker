@@ -207,18 +207,20 @@ guidance, active reference-source messages, selected facility carry-forward into
 direct browser crawling, no connector execution, no persistence, no source-derived/reviewer-created/audit/
 import/operational metadata mutation, accessible headings/labels/captions/link
 text, and no-secret HTML output.
-Hosted UI polish tests should prove the shared product shell renders on the
-home, facility lookup, CCLD request/help, retrieval job history/detail, reviewer,
-and feedback pages with the `CCLD RecordsTracker Pilot` product name, mode badge
-for Live public CCLD, Fixture/mock demo, or Retrieval not configured, central
-guided stepper/wizard with current/completed/not-ready states and next-action
-guidance, active navigation, skip link, source-of-record limitation footer,
-visible focus styles, responsive CSS, readable table/form styling, and no new
-routes, workflows, auth, exports, public deployment, non-CCLD scope, or frontend
-dependencies. Request-page tests should also prove native facility type-ahead or
-datalist options, fixed complaint-record type, distinct retrieve/show-queue/clear
-actions, compact pre-input context, selected post-input context, high-impact
-retrieval result cards, and specific actionable zero-import messaging.
+Hosted guided workflow assistant tests should prove the shared product shell
+renders on the home, facility lookup, CCLD request/help, retrieval job history/
+detail, reviewer, and feedback pages with the `CCLD RecordsTracker Pilot` product
+name, mode badge for Live public CCLD, Fixture/mock demo, or Retrieval not
+configured, compact functional stepper with current/completed/future states and
+next-action guidance, active navigation, skip link, source-of-record limitation
+footer, visible focus styles, responsive CSS, readable table/form styling, and no
+new routes, workflows, auth, exports, public deployment, non-CCLD scope, or
+frontend dependencies. Request-page tests should also prove progressive states
+for no facility, selected facility, date-range-ready request, and retrieval
+result/recovery; native facility type-ahead or datalist options; fixed complaint-
+record type; distinct retrieve/show-queue actions; selected facility confirmation;
+focused imported-record result cards; and specific actionable zero-import
+recovery messaging.
 Hosted CCLD artifact builder tests should build fixture-backed validated SQLite
 output, convert it into hosted seeded-corpus JSON, validate the JSON through the
 existing hosted seeded parser, import it through the existing hosted seeded
