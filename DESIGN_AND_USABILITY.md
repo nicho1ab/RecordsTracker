@@ -284,6 +284,14 @@ cautious-language, tester feedback, and reviewer-state boundaries.
   one suggested first record with explainable source-derived reasons. They must
   not present an automated legal score, legal conclusion, facility-wide
   conclusion, source-completeness claim, or proof that no complaint exists.
+- Reviewer detail action panels should turn the opened priority record into a
+  guided review loop: understand the complaint and review flags, check source
+  traceability, save existing reviewer-created status and/or note state, confirm
+  that source-derived fields remain unchanged, then return to the facility queue
+  or open the next priority record. The panel must remain presentation-only over
+  existing note/status actions and audit paths; it must not create assignments,
+  legal decisions, workflow-engine state, new reviewer-created state kinds,
+  source edits, exports, annotations, corrections, auth, or schema changes.
 - Use the restrained legal-review visual system: page background `#F5F7FA`,
   white surfaces, tinted support panels near `#EEF7F6`, primary text near
   `#17212B`, muted slate text, deep teal primary actions, accessible blue focus,

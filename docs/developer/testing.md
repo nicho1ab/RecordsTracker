@@ -258,6 +258,16 @@ near-top "why this record is flagged" section while full source-derived details
 remain lower or collapsed. Tests must reject legal, facility-wide, harm, abuse,
 neglect, liability, rights-deprivation, source-completeness, and no-complaint
 proof claims.
+Guided reviewer action tests should prove reviewer detail renders `Record review
+action` near the top after the flag rationale and before full source-derived
+details; labels current reviewer-created status and note presence; uses labeled
+status/note controls and descriptive save buttons; summarizes source
+traceability without competing with the action panel; confirms saved reviewer-
+created state with `What changed`, `What did not change`, `Return to facility
+queue`, and `Open next priority record`; preserves source-derived/reviewer-
+created separation; creates audit rows only through the existing note/status
+service path; and keeps queue cards aligned with reviewer-created status and
+note cues without adding assignments, schema changes, or workflow-engine state.
 Hosted UI evidence packet tests should verify that
 `scripts/capture-hosted-ui-evidence.ps1` exists, accepts `-BaseUrl`, `-Mode`,
 `-OutputDir`, viewport, timeout, and `-AllowUnavailable` parameters, captures
