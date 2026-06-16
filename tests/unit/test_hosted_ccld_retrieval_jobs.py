@@ -26,6 +26,7 @@ from ccld_complaints.hosted_app.ccld_record_request_ui import (
     CcldRecordRequestUiContext,
     _render_retrieval_job_summary,
     ccld_record_request_context_for_reviewer_context,
+    reset_default_ccld_record_request_ui_context,
 )
 from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
     CCLD_RETRIEVAL_DEMO_MODE_ENV,
@@ -45,6 +46,7 @@ from ccld_complaints.hosted_app.feedback import FeedbackContext, GitHubFeedbackC
 from ccld_complaints.hosted_app.reviewer_created_state import hosted_reviewer_created_state
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
+    reset_default_local_test_reviewer_ui_context,
     reviewer_ui_context_for_connection,
 )
 from ccld_complaints.hosted_app.seeded_import import (
@@ -385,6 +387,54 @@ def test_local_dev_mock_success_retrieval_flow_imports_and_links_without_live_ca
     assert "Review imported records in the CCLD queue" in detail_html
     assert "Return to retrieval job history" in detail_html
     assert_no_secret_html(detail_html)
+
+
+def test_demo_startup_env_creates_retrieval_job_from_default_request_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_live_call(*args: object, **kwargs: object) -> str:
+        raise AssertionError("live CCLD client should not be used in demo startup mode")
+
+    reset_default_ccld_record_request_ui_context()
+    reset_default_local_test_reviewer_ui_context()
+    monkeypatch.setenv("CCLD_HOSTED_TESTER_AUTH_MODE", "local-dev")
+    monkeypatch.setenv("CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH", "enabled")
+    monkeypatch.setenv("CCLD_HOSTED_PAGE_DATA_MODE", "fixture-demo")
+    monkeypatch.setenv(CCLD_RETRIEVAL_ENABLED_ENV, CCLD_RETRIEVAL_ENABLED_VALUE)
+    monkeypatch.setenv(CCLD_RETRIEVAL_RAW_DIR_ENV, str(tmp_path / "raw"))
+    monkeypatch.setenv(CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS_ENV, "30")
+    monkeypatch.setenv(CCLD_RETRIEVAL_DEMO_MODE_ENV, CCLD_RETRIEVAL_DEMO_MODE_MOCK_SUCCESS)
+    monkeypatch.setattr(CcldHttpRetrievalClient, "fetch_facility_detail", fail_live_call)
+    try:
+        status, _content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_retrieval_form_bytes(),
+        )
+        history_status, _content_type, history_body = route_response(CCLD_RETRIEVAL_JOBS_PATH)
+    finally:
+        reset_default_ccld_record_request_ui_context()
+        reset_default_local_test_reviewer_ui_context()
+
+    html = body.decode("utf-8")
+    history_html = history_body.decode("utf-8")
+    job_id = _retrieval_job_id_from_html(html)
+
+    assert status == 200
+    assert "Controlled CCLD retrieval setup required" not in html
+    assert "Controlled CCLD retrieval job status" in html
+    assert "Completed" in html
+    assert "Records imported" in html
+    assert sorted((tmp_path / "raw").glob("*.html"))
+    assert history_status == 200
+    assert job_id in history_html
+    assert "Controlled CCLD retrieval job history" in history_html
+    assert "Completed" in history_html
+    assert "local-test-managed-identity" not in html
+    assert "local-test-managed-identity" not in history_html
+    assert_no_secret_html(html)
+    assert_no_secret_html(history_html)
 
 
 def test_retrieval_all_supported_resolves_to_complaints(tmp_path: Path) -> None:

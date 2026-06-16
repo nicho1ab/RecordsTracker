@@ -42,6 +42,7 @@ def test_text_report_includes_commands_and_non_install_boundary() -> None:
     assert "This check does not install software" in text
     assert "does not require admin rights" in text
     assert ".\\scripts\\run-hosted-scaffold.ps1 -Port 8000" in text
+    assert ".\\scripts\\run-hosted-complaint-retrieval-demo.ps1 -Port 8000" in text
     assert ".\\scripts\\smoke-hosted-scaffold.ps1" in text
     assert "pytest tests/unit/test_hosted_app_scaffold.py" in text
     assert "tests/unit/test_hosted_auth_provider_integration_plan.py" in text
