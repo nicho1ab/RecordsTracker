@@ -218,8 +218,9 @@ record limitation footer, visible focus styles, responsive CSS, readable table/
 form styling, and no new routes, workflows, auth, exports, public deployment,
 non-CCLD scope, or frontend dependencies. Request-page tests should also prove progressive states
 for no facility, selected facility, date-range-ready request, and retrieval
-result/recovery; native facility type-ahead or datalist options; fixed complaint-
-record type; distinct retrieve/show-queue actions; selected facility confirmation;
+result/recovery; polished facility type-ahead combobox (accessible label, JSON
+embedded reference data, keyboard-navigable suggestion list, selected-facility
+confirmation card); fixed complaint-record type; distinct retrieve/show-queue actions; selected facility confirmation;
 focused imported-record result cards; and specific actionable zero-import
 recovery messaging.
 Hosted CCLD artifact builder tests should build fixture-backed validated SQLite

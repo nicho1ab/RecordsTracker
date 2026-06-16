@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import html
+import json
 import os
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
@@ -47,6 +48,152 @@ _SECRET_HTML_MARKERS = (
     "secret",
     "token",
 )
+
+_FACILITY_COMBOBOX_JS = r"""(function(){
+  'use strict';
+  var wrap=document.getElementById('facility-selector-wrap');
+  if(!wrap)return;
+  var mode=wrap.getAttribute('data-facility-mode')||'request';
+  var si=document.getElementById('facility-search-input');
+  var nf=document.getElementById('facility-number-field');
+  var of_=document.getElementById('facility-origin-field');
+  var lf=document.getElementById('facility-name-field');
+  var sl=document.getElementById('facility-suggestion-list');
+  var sc=document.getElementById('facility-selected-card');
+  var de=document.getElementById('facility-reference-json');
+  if(!si||!sl||!de)return;
+  var facs=[];
+  try{facs=JSON.parse(de.textContent||'[]');}catch(e){return;}
+  // Show JS combobox, hide no-JS fallback
+  var co=document.getElementById('facility-combobox-outer');
+  if(co)co.style.display='';
+  if(nf)nf.style.display='none';
+  // Enhance input placeholder for text search
+  si.placeholder='Name, license number, city, or ZIP';
+  si.removeAttribute('inputmode');
+  // ARIA
+  si.setAttribute('aria-expanded','false');
+  si.setAttribute('aria-autocomplete','list');
+  si.setAttribute('aria-controls','facility-suggestion-list');
+  sl.setAttribute('role','listbox');
+  function norm(s){return(s||'').toLowerCase().replace(/\s+/g,' ').trim();}
+  function match(f,toks){
+    var h=norm([f.num,f.n,f.city,f.co,f.zip,f.t,f.s].join(' '));
+    return toks.every(function(t){return h.indexOf(t)!==-1;});
+  }
+  function esc(s){
+    return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function buildHtml(matches){
+    var h='';
+    for(var i=0;i<matches.length;i++){
+      var f=matches[i];
+      var geo=[f.city,f.zip].filter(Boolean).join(' \u00b7 ');
+      var meta=[f.t,f.s].filter(Boolean).join(' \u2022 ');
+      var det=[geo,meta].filter(Boolean).join(' | ');
+      h+='<li role="option"><button type="button" class="suggestion-btn"'
+        +' data-num="'+esc(f.num)+'" data-name="'+esc(f.n)+'"'
+        +' data-city="'+esc(f.city||'')+'" data-zip="'+esc(f.zip||'')+'"'
+        +' data-type="'+esc(f.t||'')+'" data-status="'+esc(f.s||'')+'">'
+        +'<span class="suggestion-name">'+esc(f.n)+'</span>'
+        +' <span class="suggestion-badge">'+esc(f.num)+'</span>'
+        +(det?'<span class="suggestion-details">'+esc(det)+'</span>':'')
+        +'</button></li>';
+    }
+    return h;
+  }
+  function showSugs(q){
+    var toks=norm(q).split(' ').filter(Boolean);
+    if(!toks.length){hideSugs();return;}
+    var ms=[];
+    for(var i=0;i<facs.length&&ms.length<25;i++){if(match(facs[i],toks))ms.push(facs[i]);}
+    if(!ms.length){sl.innerHTML='<li><span class="suggestion-empty">No matches found.</span></li>';}
+    else{sl.innerHTML=buildHtml(ms);}
+    sl.removeAttribute('hidden');
+    si.setAttribute('aria-expanded','true');
+  }
+  function hideSugs(){
+    sl.setAttribute('hidden','');
+    si.setAttribute('aria-expanded','false');
+  }
+  function setCard(f){
+    if(!sc)return;
+    var ne=sc.querySelector('.selected-name');
+    var nue=sc.querySelector('.selected-number');
+    var ge=sc.querySelector('.selected-geo');
+    var me=sc.querySelector('.selected-meta');
+    var ul=sc.querySelector('.selected-use-link');
+    if(ne)ne.textContent=f.n;
+    if(nue)nue.textContent=f.num;
+    if(ge)ge.textContent=[f.city,f.zip].filter(Boolean).join(', ');
+    if(me)me.textContent=[f.t,f.s].filter(Boolean).join(' \u2022 ');
+    if(ul){
+      ul.href='/ccld/records/request?facility_number='+encodeURIComponent(f.num)
+        +'&request_context_origin=facility_lookup'
+        +'&lookup_facility_name='+encodeURIComponent(f.n);
+      ul.setAttribute('aria-label','Use '+f.n+' for retrieval');
+    }
+    sc.removeAttribute('hidden');
+  }
+  function clearSel(){
+    if(sc)sc.setAttribute('hidden','');
+    si.value='';
+    if(of_)of_.value='manual_entry';
+    if(lf)lf.value='';
+    si.focus();
+  }
+  function selFac(btn){
+    var f={
+      num:btn.getAttribute('data-num'),n:btn.getAttribute('data-name'),
+      city:btn.getAttribute('data-city'),zip:btn.getAttribute('data-zip'),
+      t:btn.getAttribute('data-type'),s:btn.getAttribute('data-status')
+    };
+    hideSugs();
+    if(mode==='request'){
+      si.value=f.num;
+      if(of_)of_.value='facility_lookup';
+      if(lf)lf.value=f.n;
+    }else{
+      si.value=f.n;
+    }
+    setCard(f);
+    si.focus();
+  }
+  si.addEventListener('input',function(){
+    if(mode==='request'){
+      if(of_)of_.value='manual_entry';
+      if(lf)lf.value='';
+      if(sc)sc.setAttribute('hidden','');
+    }
+    showSugs(this.value);
+  });
+  si.addEventListener('keydown',function(e){
+    var open=!sl.hasAttribute('hidden');
+    if(e.key==='Escape'){hideSugs();return;}
+    if(e.key==='ArrowDown'&&open){
+      e.preventDefault();
+      var fb=sl.querySelector('.suggestion-btn');
+      if(fb)fb.focus();
+    }
+  });
+  sl.addEventListener('click',function(e){
+    var t=e.target;
+    var btn=(typeof t.closest==='function')?t.closest('.suggestion-btn'):null;
+    if(!btn&&t.classList&&t.classList.contains('suggestion-btn'))btn=t;
+    if(btn)selFac(btn);
+  });
+  sl.addEventListener('keydown',function(e){
+    var bs=Array.prototype.slice.call(sl.querySelectorAll('.suggestion-btn'));
+    var idx=bs.indexOf(document.activeElement);
+    if(e.key==='ArrowDown'){e.preventDefault();var nx=bs[idx+1]||bs[0];if(nx)nx.focus();}
+    else if(e.key==='ArrowUp'){e.preventDefault();if(idx<=0)si.focus();else bs[idx-1].focus();}
+    else if(e.key==='Escape'){hideSugs();si.focus();}
+    else if(e.key==='Enter'){e.preventDefault();if(bs[idx])selFac(bs[idx]);}
+  });
+  var cb=document.getElementById('facility-change-btn');
+  if(cb)cb.addEventListener('click',clearSel);
+  document.addEventListener('click',function(e){if(!wrap.contains(e.target))hideSugs();});
+}());"""
 
 
 @dataclass(frozen=True)
@@ -233,25 +380,24 @@ def render_ccld_facility_lookup_page(
         reference_source.records,
         reference_source=reference_source,
     )
+    limited_note = _limited_reference_note(reference_source)
     return _page(
         title="Find CCLD facility",
         heading="Find CCLD facility",
-                main=f"""    <section class="hero-card" aria-labelledby="facility-lookup-scope-heading">
-            <h2 id="facility-lookup-scope-heading">Find the facility before retrieving complaint records</h2>
-            <p>Search the local CCLD facility reference by facility/license number, facility name,
-            city, county, ZIP, type, or status, then use a result to prefill the retrieval request.</p>
-            <p class="sr-note">The lookup is reference assistance only. CCLD public portal remains
-            the source of record.</p>
+        main=f"""    <section class="hero-card" aria-labelledby="facility-lookup-scope-heading">
+            <h2 id="facility-lookup-scope-heading">Find a facility</h2>
+            <p>Search by facility name, license number, city, ZIP, type, or status, then use
+            the selected facility for retrieval.</p>
+            <p class="sr-note">CCLD public portal remains the source of record.</p>
         </section>
-    {_render_lookup_form(result.query)}
-    {_render_reference_source_section(reference_source)}
+    {_render_facility_combobox_section(reference_source, query, limited_note)}
     {_render_lookup_results(result)}
-        <section class="summary-card" aria-labelledby="manual-entry-heading">
-      <h2 id="manual-entry-heading">Manual facility/license entry</h2>
-      <p>If you already know the CCLD facility/license number, you can still type it directly
-      on the request form.</p>
-            <p><a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Open manual CCLD request form</a></p>
-    </section>""",
+    {_render_reference_details_section(reference_source)}
+        <section class="quiet-section" aria-labelledby="manual-entry-heading">
+            <h2 id="manual-entry-heading">Enter a facility/license number directly</h2>
+            <p>If you already know the CCLD facility/license number, type it on the request form.</p>
+            <p><a class="button-quiet" href="{CCLD_RECORD_REQUEST_PATH}">Open request form</a></p>
+        </section>""",
     )
 
 
@@ -366,23 +512,82 @@ def _record_matches_query(
 
 
 def _render_lookup_form(query: str) -> str:
-        return f"""    <section aria-labelledby="facility-search-heading">
+    """Legacy search form – preserved for no-JS fallback submission only."""
+    return f"""    <section aria-labelledby="facility-search-heading">
             <h2 id="facility-search-heading">Search facility reference</h2>
       <p id="facility-search-help">Search by facility/license number, facility name, city,
-      county, ZIP code, facility type, or status when those fields are present in the local
-      reference CSV.</p>
+      county, ZIP code, facility type, or status when those fields are present in the
+      reference list.</p>
       <form action="{CCLD_FACILITY_LOOKUP_PATH}" method="get">
         <p>
           <label for="facility_lookup_query">Facility search</label>
           <input id="facility_lookup_query" name="q" type="search"
             value="{_escape(query)}" aria-describedby="facility-search-help">
         </p>
-                                <p><button type="submit">Search facilities</button></p>
+        <p><button type="submit" class="button-secondary">Search</button></p>
       </form>
     </section>"""
 
 
+def _render_facility_combobox_section(
+    reference_source: CcldFacilityReferenceSource,
+    current_query: str,
+    limited_note: str,
+) -> str:
+    json_data = _build_facility_json_data(reference_source)
+    limited_note_markup = (
+        f'<p class="helper-text limited-note">{_escape(limited_note)}</p>'
+        if limited_note
+        else ""
+    )
+    selected_card = _render_facility_selected_card_html(mode="facility")
+    return f"""    <section class="workflow-panel" aria-labelledby="facility-combobox-heading" id="facility-selector-wrap" data-facility-mode="facility">
+            <label for="facility-search-input">Facility</label>
+            <p id="facility-search-hint" class="helper-text">Search by name, license number, city, ZIP, type, or status.</p>
+            <form action="{CCLD_FACILITY_LOOKUP_PATH}" method="get" class="facility-search-form">
+                <div class="facility-combobox-outer" id="facility-combobox-outer">
+                    <input id="facility-search-input" name="q" type="search" autocomplete="off"
+                        placeholder="Name, license number, city, or ZIP"
+                        aria-describedby="facility-search-hint"
+                        value="{_escape(current_query)}">
+                    <ul id="facility-suggestion-list" class="facility-suggestions" aria-label="Facility suggestions" hidden></ul>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="button-secondary">Search</button>
+                </div>
+            </form>
+{limited_note_markup}
+{selected_card}
+            <script type="application/json" id="facility-reference-json">{json_data}</script>
+            <script>{_FACILITY_COMBOBOX_JS}</script>
+    </section>"""
+
+
+def _render_facility_selected_card_html(*, mode: str = "facility") -> str:
+    """Render the hidden selected-facility confirmation card filled by JS."""
+    if mode == "request":
+        actions = """<div class="form-actions">
+                    <button type="submit" class="button">Continue to dates</button>
+                    <button type="button" id="facility-change-btn" class="button-secondary">Change facility</button>
+                </div>"""
+    else:
+        actions = """<div class="form-actions">
+                    <a id="facility-use-link" class="button selected-use-link" href="#">Use facility for retrieval</a>
+                    <button type="button" id="facility-change-btn" class="button-secondary">Change</button>
+                </div>"""
+    return f"""    <div id="facility-selected-card" class="facility-selected-card" hidden>
+                <div class="selected-facility-info">
+                    <h3 class="selected-name"></h3>
+                    <p><span class="badge badge-muted selected-number"></span></p>
+                    <p class="selected-geo sr-note"></p>
+                    <p class="selected-meta sr-note"></p>
+                </div>
+{actions}
+    </div>"""
+
+
 def _render_reference_source_section(source: CcldFacilityReferenceSource) -> str:
+    """Legacy - renders the reference source section (now only used as a visible panel when there is a problem)."""
     warning_markup = ""
     if source.warnings:
         warning_items = "\n".join(
@@ -411,34 +616,54 @@ def _render_reference_source_section(source: CcldFacilityReferenceSource) -> str
     </section>"""
 
 
+def _render_reference_details_section(source: CcldFacilityReferenceSource) -> str:
+    """Collapsed reference data details section for developer/operator reference."""
+    warning_markup = ""
+    if source.warnings:
+        warning_items = "\n".join(
+            f"            <li>{_escape(warning)}</li>" for warning in source.warnings
+        )
+        warning_markup = f"""          <ul>
+{warning_items}
+          </ul>"""
+    user_label = _user_facing_source_label(source)
+    return f"""    <details class="reference-details-section">
+            <summary>Reference data details</summary>
+            <p>{_escape(user_label)} &mdash; {len(source.records)} record(s) loaded.</p>
+            <p>Reference data is lookup assistance only. It is not imported, persisted, or
+            source-completeness proof. CCLD public portal remains the source of record.</p>
+{warning_markup}
+            <p>To use a full facility reference CSV, set
+            <code>{CCLD_FACILITY_REFERENCE_CSV_ENV}</code> or place the file at the documented
+            local reference location. Local paths are not shown here.</p>
+    </details>"""
+
+
 def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
     if result.empty_search:
         return """    <section class="empty-state-card" aria-labelledby="facility-results-heading">
-      <h2 id="facility-results-heading">Facility lookup results</h2>
-      <p>Enter a facility name, facility/license number, city, county, ZIP code, facility type,
-      or status to search the local/test CCLD facility reference.</p>
+      <h2 id="facility-results-heading">Facility results</h2>
+      <p>Search the facility reference by name, license number, city, ZIP, type, or status.</p>
     </section>"""
     if not result.returned_records:
         return f"""    <section class="empty-state-card" aria-labelledby="facility-results-heading">
-      <h2 id="facility-results-heading">Facility lookup results</h2>
-      <p>No local/test CCLD facility reference rows matched {_escape(result.query)}.</p>
-      <p>Try a shorter name, facility/license number, city, county, ZIP code, or facility type.
-      You can also continue with manual facility/license number entry.</p>
-    <p><a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Open manual CCLD request form</a></p>
+      <h2 id="facility-results-heading">Facility results</h2>
+      <p>No facilities matched <strong>{_escape(result.query)}</strong>.</p>
+      <p>Try a shorter name, license number, city, ZIP, or facility type. You can also enter
+      a facility/license number directly on the request form.</p>
+    <p><a class="button-quiet" href="{CCLD_RECORD_REQUEST_PATH}">Open request form</a></p>
     </section>"""
     cards = "\n".join(_render_result_card(record) for record in result.returned_records)
-    more_guidance = ""
     if result.has_more_matches:
-        more_guidance = f"""      <p>Showing the first {len(result.returned_records)} of
-      {result.total_match_count} matching local/test facility reference rows. Add more search
-      detail to narrow the list.</p>"""
+        more_guidance = f"""      <p class="helper-text">Showing {len(result.returned_records)} of
+      {result.total_match_count} matches. Refine your search to narrow the list.</p>"""
     else:
-        more_guidance = f"""      <p>Showing {len(result.returned_records)} of
-      {result.total_match_count} matching local/test facility reference row(s).</p>"""
+        more_guidance = f"""      <p class="helper-text">Showing {len(result.returned_records)} of
+      {result.total_match_count} matching facilit{"y" if result.total_match_count == 1 else "ies"}.</p>"""
     return f"""    <section aria-labelledby="facility-results-heading">
-      <h2 id="facility-results-heading">Facility lookup results</h2>
+      <h2 id="facility-results-heading">Facility results</h2>
 {more_guidance}
-            <div class="result-list" aria-label="Local/test CCLD facility reference matches">
+            <div class="result-list" aria-label="Facility matches">
 {cards}
             </div>
     </section>"""
@@ -451,14 +676,18 @@ def _render_result_card(record: CcldFacilityLookupRecord) -> str:
         "lookup_facility_name": record.facility_name,
     }
     href = f"{CCLD_RECORD_REQUEST_PATH}?{urlencode(query_values)}"
+    geo_parts = [record.city, record.county, record.zip_code]
+    geo = ", ".join(p for p in geo_parts if p)
+    type_status_parts = [record.facility_type, record.status]
+    type_status = " \u2022 ".join(p for p in type_status_parts if p)
     return f"""        <article class="result-card" aria-labelledby="facility-{_escape(record.facility_number)}-heading">
           <div>
             <h3 id="facility-{_escape(record.facility_number)}-heading">{_escape(record.facility_name)}</h3>
-            <p><strong>{_escape(record.facility_number)}</strong></p>
-            <p>{_escape(_display_value(record.city))}, {_escape(_display_value(record.county))} {_escape(_display_value(record.zip_code))}</p>
-            <p>{_escape(_display_value(record.facility_type))} - {_escape(_display_value(record.status))}</p>
+            <p><span class="badge badge-muted">{_escape(record.facility_number)}</span></p>
+            {f'<p class="sr-note">{_escape(geo)}</p>' if geo else ''}
+            {f'<p class="sr-note">{_escape(type_status)}</p>' if type_status else ''}
           </div>
-          <p><a class="button" href="{_escape(href)}">Use for retrieval</a></p>
+          <p><a class="button" href="{_escape(href)}" aria-label="Use {_escape(record.facility_name)} for retrieval">Use for retrieval</a></p>
         </article>"""
 
 
@@ -512,6 +741,43 @@ def _normalized_text(value: str) -> str:
 
 def _display_value(value: str) -> str:
     return value if value else "not listed"
+
+
+def _user_facing_source_label(source: CcldFacilityReferenceSource) -> str:
+    """Return a clean, user-facing label for the reference source (no internal paths/jargon)."""
+    if source.source_kind == "tiny_fixture_fallback":
+        return "Limited reference list"
+    return "Facility reference list"
+
+
+def _limited_reference_note(source: CcldFacilityReferenceSource) -> str:
+    """Return a concise limited-reference note when only the tiny fallback is loaded."""
+    if source.source_kind == "tiny_fixture_fallback" or len(source.records) <= 2:
+        return "Limited reference list: suggestions may not include every CCLD facility."
+    return ""
+
+
+def _build_facility_json_data(
+    source: CcldFacilityReferenceSource,
+    *,
+    limit: int = 100,
+) -> str:
+    """Return a safe JSON array of facility objects for the combobox JS enhancement."""
+    records = [
+        {
+            "num": record.facility_number,
+            "n": record.facility_name,
+            "city": record.city,
+            "co": record.county,
+            "zip": record.zip_code,
+            "t": record.facility_type,
+            "s": record.status,
+        }
+        for record in source.records[:limit]
+    ]
+    raw = json.dumps(records, ensure_ascii=True)
+    # Prevent </script> injection in the embedded JSON block
+    return raw.replace("</", "<\\/")
 
 
 def _escape(value: str) -> str:

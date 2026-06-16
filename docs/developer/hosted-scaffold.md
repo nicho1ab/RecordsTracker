@@ -393,14 +393,16 @@ reference source and any fallback guidance are visible on the page. The `Use for
 retrieval` action carries the selected facility/license number into
 `/ccld/records/request`. Manual facility/license entry on the request page remains
 available.
-The request page also includes native datalist type-ahead suggestions from the
-active facility reference rows so a tester does not have to leave the request
-page for ordinary facility selection. It shows a compact no-facility-selected
-context card before input, then selected request-context cards for lookup-
-selected, prefilled, and submitted requests.
+The request page includes a polished inline type-ahead combobox (accessible
+label/input pair, JSON-embedded reference data, keyboard-navigable suggestion
+list, selected-facility confirmation card with a "Change" affordance) so a tester
+does not have to leave the request page for ordinary facility selection. It shows
+a compact no-facility-selected context card before input, then selected
+request-context cards for lookup-selected, prefilled, and submitted requests.
+When only the tiny committed fixture is active, a "Limited reference list" note
+appears and internal scaffold labels are confined to a collapsed `<details>` block.
 The page includes a skip-to-main link, start-here instructions, a labeled search
-field with help text, and a specific search button for local/test CCLD facility
-reference rows.
+field with help text, and a no-JS submit button fallback.
 
 The lookup does not run live CCLD retrieval, execute connectors, persist lookup
 data, mutate source-derived records, mutate reviewer-created state, create audit

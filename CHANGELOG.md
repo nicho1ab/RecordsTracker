@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Replaced the facility selector on `/ccld/facilities` and `/ccld/records/request`
+	with a polished inline type-ahead combobox: accessible label/input pair,
+	concise placeholder, JSON-embedded reference data, keyboard-navigable
+	suggestion list, selected-facility confirmation card, and a "Change" affordance
+	— all in plain vanilla JS with no external dependencies. Internal scaffold
+	labels (e.g., "Tiny committed CCLD facility fixture fallback") no longer appear
+	in the primary UI; they are confined to a collapsed `<details>` block. A
+	"Limited reference list" note appears when only the tiny fallback is active.
+	The `/ccld/facilities` result cards now carry descriptive `aria-label` values
+	on their "Use for retrieval" links.
 - Productized the hosted `CCLD RecordsTracker Pilot` guided UI so it no longer
 	foregrounds scaffold-style navigation or runtime language: the stepper is more
 	compact, Home is a simpler launch screen, developer/operator commands are
