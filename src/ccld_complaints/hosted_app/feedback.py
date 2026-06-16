@@ -205,40 +205,18 @@ def render_feedback_page(context: FeedbackContext, *, selected_type: str = "") -
     {_configuration_notice(context.github_config)}
         <section class="hero-card" aria-labelledby="feedback-purpose-heading">
             <p class="launch-kicker">Tester support</p>
-            <h2 id="feedback-purpose-heading">Tell us what blocked legal review</h2>
-            <p>Send concise feedback about retrieval, facility lookup, job results, reviewer queue,
-            reviewer detail, review flags, source traceability, wording, or keyboard flow.</p>
-            <p class="sr-note">Feedback is classified with labels, not GitHub Projects or issue types.</p>
+            <h2 id="feedback-purpose-heading">What issue should be reported?</h2>
+            <p>Choose the feedback type and describe what blocked retrieval, review, source traceability, wording, or keyboard flow.</p>
         </section>
         <div class="support-layout">
-            <section aria-labelledby="feedback-options-heading">
-                <h2 id="feedback-options-heading">Choose the best feedback type</h2>
-                <div class="action-grid">
-                    <section class="action-card feedback-choice" aria-labelledby="bug-card-heading">
-                        <h3 id="bug-card-heading">Bug report</h3>
-                        <p>Something failed, looked wrong, or blocked the facility complaint review workflow.</p>
-                        <p><a class="button button-secondary" href="{_feedback_type_href('Bug report')}">Choose bug report</a></p>
-                    </section>
-                    <section class="action-card feedback-choice" aria-labelledby="feature-card-heading">
-                        <h3 id="feature-card-heading">Feature request</h3>
-                        <p>A workflow improvement would help legal users decide what to review next.</p>
-                        <p><a class="button button-secondary" href="{_feedback_type_href('Feature request')}">Choose feature request</a></p>
-                    </section>
-                    <section class="action-card feedback-choice" aria-labelledby="source-card-heading">
-                        <h3 id="source-card-heading">New data source request</h3>
-                        <p>A future public source should be considered after governance review.</p>
-                        <p><a class="button button-secondary" href="{_feedback_type_href('New data source')}">Choose new data source request</a></p>
-                    </section>
-                </div>
-            </section>
             {_feedback_form({'feedback_type': [selected_type]} if selected_type in FEEDBACK_TYPE_OPTIONS else {})}
         </div>
-        <details class="technical-details">
-            <summary>What not to include</summary>
+        <section class="quiet-section" aria-labelledby="feedback-safety-heading">
+            <h2 id="feedback-safety-heading">Do not include private material</h2>
             <p>Do not include private facts, credentials, legal strategy, privileged work product,
             private URLs, secrets, tokens, provider claims, raw source narrative, raw artifact material,
             server paths, connection details, or unrelated sensitive details.</p>
-        </details>
+        </section>
         <details class="technical-details">
             <summary>Useful examples</summary>
             <ul>

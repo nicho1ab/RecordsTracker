@@ -237,9 +237,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Review source-derived context" in html
     assert "Prepare tester feedback" in html
     assert "Record summary" in html
-    assert "This summary orients the selected CCLD complaint record" in (
-        normalized_html
-    )
+    assert "This summary orients the selected CCLD complaint record" not in normalized_html
     assert "Complaint review workspace" in html
     assert "Legal-review flags and source checks" in html
     assert "detail-top-grid" in html

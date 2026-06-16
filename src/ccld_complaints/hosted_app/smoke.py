@@ -254,18 +254,12 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"CCLD review queue" not in ccld_queue_body
         or b"source traceability" not in ccld_queue_body
         or b"Selected request context" not in ccld_queue_body
-        or b"Request started from" not in ccld_queue_body
         or b"Change facility/date criteria for this request" not in ccld_queue_body
         or b"Queue triage summary" not in ccld_queue_body
-        or b"Continue review guidance" not in ccld_queue_body
+        or b"Table view and queue guidance" not in ccld_queue_body
         or b"Suggested next record to open" not in ccld_queue_body
-        or b"official workflow state" not in ccld_queue_body
-        or b"source-confidence cues" not in ccld_queue_body
-        or b"same manual feedback checklist" not in ccld_queue_body
-        or b"Copy tester feedback checklist" not in ccld_queue_body
-        or b"Reviewer detail and note/status confirmation" not in ccld_queue_body
-        or b"Manual-copy only" not in ccld_queue_body
-        or b"First-run queue steps" not in ccld_queue_body
+        or b"Copy details for feedback" not in ccld_queue_body
+        or b"Advanced retrieval and local load actions" not in ccld_queue_body
     ):
         raise RuntimeError("Hosted scaffold CCLD request queue did not return triage guidance.")
     if (
@@ -342,7 +336,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         feedback_status != 200
         or b"Send feedback" not in feedback_body
-        or b"Choose the best feedback type" not in feedback_body
+        or b"What issue should be reported?" not in feedback_body
+        or b"Do not include private material" not in feedback_body
         or b"GitHub issue intake is not configured" not in feedback_body
         or b"Submit feedback" not in feedback_body
     ):

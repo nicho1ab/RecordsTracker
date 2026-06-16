@@ -72,19 +72,19 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Send feedback" in html
-    assert "Tell us what blocked legal review" in html
+    assert "What issue should be reported?" in html
     assert "A complaint record looked missing or unexpected." in html
     assert "The source traceability summary was hard to use." in html
     assert "support-layout" in html
-    assert "What not to include" in html
+    assert "Do not include private material" in html
     assert "Useful examples" in html
-    assert "Choose the best feedback type" in html
+    assert "Choose the best feedback type" not in html
     assert "Bug report" in html
     assert "Feature request" in html
-    assert "New data source request" in html
-    assert "Something failed, looked wrong, or blocked" in html
+    assert "New data source request" not in html
+    assert "Something failed, looked wrong, or blocked" not in html
     assert "Do not include private facts, credentials" in html
-    assert "Feedback is classified with labels" in html
+    assert "Feedback is classified with labels" not in html
     assert '<label for="feedback_type">Feedback type</label>' in html
     assert '<label for="description">Description</label>' in html
     assert "Submit feedback" in html
