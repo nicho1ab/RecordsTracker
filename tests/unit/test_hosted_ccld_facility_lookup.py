@@ -215,7 +215,7 @@ def test_ccld_facility_lookup_route_renders_configured_full_csv_source(
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Find CCLD facility" in html
-    assert "CCLD RecordsTracker Pilot" in html
+    assert "CCLD RecordsTracker" in html
     assert "Do Not Display" not in html
     assert "555-0199" not in html
     assert "1 Private Fixture Way" not in html
@@ -345,7 +345,7 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Facility matches" in html
     assert "Showing 1 of 1 matching facility." in normalized_html
-    assert "Use for retrieval" in html
+    assert "Review this facility" in html
     assert "Find a facility" in html
     assert request_href in html
     assert "request_context_origin=facility_lookup" in html
@@ -406,7 +406,7 @@ def test_ccld_facility_lookup_selection_prefills_request_form_without_mutation()
     assert "Prefilled facility/license link" in html
     assert "Facility/license number being requested" in html
     assert "value=\"900000001\"" in html
-    assert "Set the complaint date range" in html
+    assert "Choose complaint date range" in html
     assert "Complaint records" in html
     assert "Active facility reference source" in html
     assert "Retrieve complaint records" in html
@@ -532,8 +532,8 @@ def test_ccld_facility_lookup_page_no_internal_paths_in_primary_ui() -> None:
     assert_no_secret_html(html)
 
 
-def test_ccld_facility_lookup_result_card_use_for_retrieval_has_descriptive_label() -> None:
-    """Each result card's 'Use for retrieval' button must have a descriptive accessible label."""
+def test_ccld_facility_lookup_result_card_review_action_has_descriptive_label() -> None:
+    """Each result card's 'Review this facility' button has a descriptive accessible label."""
     status, content_type, body = route_response(
         f"{CCLD_FACILITY_LOOKUP_PATH}?q=orchard",
         page_data_mode="fixture-demo",
@@ -541,7 +541,7 @@ def test_ccld_facility_lookup_result_card_use_for_retrieval_has_descriptive_labe
     html = body.decode("utf-8")
 
     assert status == 200
-    assert 'aria-label="Use Synthetic Orchard Child Care for retrieval"' in html
+    assert 'aria-label="Review Synthetic Orchard Child Care facility complaint records"' in html
     assert_no_secret_html(html)
 
 

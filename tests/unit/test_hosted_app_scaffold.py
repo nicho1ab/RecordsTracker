@@ -108,18 +108,20 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
 
     assert "Skip to main CCLD review content" in html
     assert '<main id="main-content" tabindex="-1">' in html
-    assert "Guided CCLD-only complaint retrieval and review." in html
-    assert "CCLD RecordsTracker Pilot" in html
+    assert "Attorney public-record review workspace." in html
+    assert "CCLD RecordsTracker" in html
     assert "Retrieval not configured" in html
-    assert "Start a CCLD complaint review" in html
-    assert "Start review" in html
+    assert "Start a facility complaint review" in html
+    assert "Start facility review" in html
+    assert "Records are source-derived review aids" in html
+    assert "does not make legal findings or prove source completeness" in html
     assert "Find facility" in html
-    assert "Review queue" in html
-    assert "View jobs" in html
-    assert "Send feedback" in html
+    assert "Open review queue" in html
+    assert "Review flags and source traceability" in html
+    assert "Feedback" in html
     assert "Review boundary" in html
     assert "Developer/operator commands" in html
-    assert '<section class="action-card"' not in html
+    assert '<section class="action-card"' in html
     assert "Commands</a>" not in html
     assert "Health check</a>" not in html
     assert "Local pilot runtime" in html
@@ -164,15 +166,14 @@ def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None
         assert '<nav class="site-nav"' in html
         assert '<main id="main-content" tabindex="-1">' in html
         assert 'class="shell page-main"' in html
-        assert "CCLD RecordsTracker Pilot" in html
-        assert "Guided workflow" in html
+        assert "CCLD RecordsTracker" in html
+        assert "Attorney workflow" in html
         assert "Current step" in html
         if path != "/feedback":
             assert "Future step" in html
-        assert "Next best action" in html
+        assert "Next:" in html
         assert "Dates" in html
-        assert "Result" in html
-        assert "Queue" in html
+        assert "Results" in html
         assert "Facility" in html
         assert "Retrieve" in html
         assert "Review" in html
@@ -198,7 +199,7 @@ def test_routes_return_shell_health_and_not_found() -> None:
 
     assert root_status == 200
     assert root_content_type == "text/html; charset=utf-8"
-    assert b"Guided CCLD-only complaint retrieval and review" in root_body
+    assert b"Attorney public-record review workspace" in root_body
     assert health_status == 200
     assert health_content_type == "application/json; charset=utf-8"
     assert json.loads(health_body)["status"] == "ok"
@@ -248,7 +249,7 @@ def test_production_mode_blocks_anonymous_workflow_routes() -> None:
     assert "CCLD workflow access requires sign-in" in ccld_body.decode("utf-8")
     assert help_status == 200
     assert help_content_type == "text/html; charset=utf-8"
-    assert "How CCLD review works" in help_body.decode("utf-8")
+    assert "How CCLD RecordsTracker works" in help_body.decode("utf-8")
 
 
 def test_explicit_local_dev_auth_mode_allows_default_workflow_actor() -> None:

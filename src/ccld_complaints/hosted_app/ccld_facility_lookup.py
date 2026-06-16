@@ -383,12 +383,14 @@ def render_ccld_facility_lookup_page(
     limited_note = _limited_reference_note(reference_source)
     return _page(
         title="Find CCLD facility",
-        heading="Find CCLD facility",
-        main=f"""    <section class="hero-card" aria-labelledby="facility-lookup-scope-heading">
+                heading="Find a facility",
+                main=f"""    <section class="hero-card attorney-hero" aria-labelledby="facility-lookup-scope-heading">
+                    <div>
+                        <p class="launch-kicker">Facility intake</p>
             <h2 id="facility-lookup-scope-heading">Find a facility</h2>
-            <p>Search by facility name, license number, city, ZIP, type, or status, then use
-            the selected facility for retrieval.</p>
-            <p class="sr-note">CCLD public portal remains the source of record.</p>
+                        <p class="launch-value">Search by facility name, license number, city, ZIP, type, or status.</p>
+                        <p class="boundary-note">Use the selected facility to retrieve CCLD public complaint records for attorney review. CCLD public portal remains the source of record.</p>
+                    </div>
         </section>
     {_render_facility_combobox_section(reference_source, query, limited_note)}
     {_render_lookup_results(result)}
@@ -572,7 +574,7 @@ def _render_facility_selected_card_html(*, mode: str = "facility") -> str:
                 </div>"""
     else:
         actions = """<div class="form-actions">
-                    <a id="facility-use-link" class="button selected-use-link" href="#">Use facility for retrieval</a>
+                    <a id="facility-use-link" class="button selected-use-link" href="#">Review this facility</a>
                     <button type="button" id="facility-change-btn" class="button-secondary">Change</button>
                 </div>"""
     return f"""    <div id="facility-selected-card" class="facility-selected-card" hidden>
@@ -643,7 +645,7 @@ def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
     if result.empty_search:
         return """    <section class="empty-state-card" aria-labelledby="facility-results-heading">
       <h2 id="facility-results-heading">Facility results</h2>
-      <p>Search the facility reference by name, license number, city, ZIP, type, or status.</p>
+    <p>Search the facility reference by name, license number, city, ZIP, type, or status.</p>
     </section>"""
     if not result.returned_records:
         return f"""    <section class="empty-state-card" aria-labelledby="facility-results-heading">
@@ -687,7 +689,7 @@ def _render_result_card(record: CcldFacilityLookupRecord) -> str:
             {f'<p class="sr-note">{_escape(geo)}</p>' if geo else ''}
             {f'<p class="sr-note">{_escape(type_status)}</p>' if type_status else ''}
           </div>
-          <p><a class="button" href="{_escape(href)}" aria-label="Use {_escape(record.facility_name)} for retrieval">Use for retrieval</a></p>
+          <p><a class="button" href="{_escape(href)}" aria-label="Review {_escape(record.facility_name)} facility complaint records">Review this facility</a></p>
         </article>"""
 
 
@@ -712,7 +714,7 @@ def _page(*, title: str, heading: str, main: str) -> str:
                 nav_label="Hosted scaffold navigation",
                 active_path=CCLD_FACILITY_LOOKUP_PATH,
                 step_id="facility",
-                next_action="Use a facility for retrieval",
+                next_action="Review this facility",
         )
 
 

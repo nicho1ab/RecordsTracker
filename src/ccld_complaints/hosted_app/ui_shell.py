@@ -7,10 +7,10 @@ import os
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-APP_TITLE = "CCLD RecordsTracker Pilot"
-APP_SUBTITLE = "Guided public CCLD complaint retrieval and source-traceable review."
+APP_TITLE = "CCLD RecordsTracker"
+APP_SUBTITLE = "Attorney-focused public complaint record review with source traceability."
 BOUNDARY_TEXT = (
-  "Local pilot runtime for CCLD-only public complaint review."
+  "CCLD-only public-record review workspace."
 )
 FOOTER_NOTE = (
   "CCLD public portal remains the source of record. Source-derived records stay "
@@ -42,37 +42,37 @@ GUIDED_STEPS: tuple[GuidedStep, ...] = (
     "start",
     "Start",
     "/",
-    "Begin the guided CCLD complaint review workflow.",
+    "Start facility complaint review.",
   ),
   GuidedStep(
     "facility",
     "Facility",
     "/ccld/facilities",
-    "Find or enter the CCLD facility/license number.",
+    "Select the facility/license number.",
   ),
   GuidedStep(
     "date_range",
     "Dates",
     "/ccld/records/request",
-    "Set the complaint date window.",
+    "Choose the complaint date range.",
   ),
   GuidedStep(
     "retrieve",
     "Retrieve",
     "/ccld/records/request",
-    "Retrieve complaint records or show loaded records.",
+    "Retrieve complaint records.",
   ),
   GuidedStep(
     "review_results",
-    "Result",
+    "Results",
     "/ccld/retrieval/jobs",
-    "Confirm imported counts, warnings, and recovery steps.",
+    "Review retrieval outcome.",
   ),
   GuidedStep(
     "review_records",
-    "Queue",
+    "Review",
     "/reviewer",
-    "Open complaint records for source-traceable review.",
+    "Open records for legal review.",
   ),
   GuidedStep(
     "feedback",
@@ -205,10 +205,9 @@ def _guided_stepper(current_step_id: str, next_action: str | None) -> str:
   )
   return f"""      <section class="guided-stepper" aria-labelledby="guided-stepper-heading">
     <div class="stepper-summary" role="group" aria-label="Current workflow step">
-      <p class="stepper-eyebrow">Guided workflow</p>
-      <h2 id="guided-stepper-heading">{html.escape(current_step.label)}</h2>
-      <p>{html.escape(current_step.help_text)}</p>
-      <p class="next-action"><strong>Next best action:</strong> {html.escape(next_action_text)}</p>
+      <p class="stepper-eyebrow">Attorney workflow</p>
+      <h2 id="guided-stepper-heading">Current step: {html.escape(current_step.label)}</h2>
+      <p class="next-action"><strong>Next:</strong> {html.escape(next_action_text)}</p>
     </div>
     <ol class="stepper-list">
 {items}
@@ -296,17 +295,17 @@ def _runtime_mode_label() -> str:
 SHARED_CSS = r"""
     :root {
       color-scheme: light;
-      --bg: #f5f7f8;
+      --bg: #f4f7f8;
       --surface: #ffffff;
       --surface-alt: #f0f5f6;
-      --surface-strong: #13202b;
-      --ink: #1d2730;
-      --muted: #55636f;
+      --surface-strong: #17212b;
+      --ink: #17212b;
+      --muted: #536171;
       --line: #cbd6dc;
-      --accent: #12675f;
-      --accent-strong: #0c4c46;
+      --accent: #006b5f;
+      --accent-strong: #084d46;
       --accent-soft: #dcefed;
-      --blue: #244c86;
+      --blue: #2457a6;
       --blue-soft: #e6eef9;
       --amber: #8a5a00;
       --amber-soft: #fff5db;
@@ -316,7 +315,7 @@ SHARED_CSS = r"""
       --warning-line: #d8aa3d;
       --danger-bg: #fff1f0;
       --danger-line: #d66b61;
-      --focus: #5b38d6;
+      --focus: #2457a6;
       --shadow: 0 1px 2px rgb(31 41 51 / 8%), 0 8px 24px rgb(31 41 51 / 8%);
       --shadow-strong: 0 16px 40px rgb(19 32 43 / 14%);
     }
@@ -324,7 +323,7 @@ SHARED_CSS = r"""
       box-sizing: border-box;
     }
     body {
-      background: linear-gradient(180deg, #edf3f5 0, var(--bg) 20rem);
+      background: var(--bg);
       color: var(--ink);
       font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       font-size: 16px;
@@ -333,11 +332,11 @@ SHARED_CSS = r"""
     }
     .shell {
       margin: 0 auto;
-      max-width: 82rem;
+      max-width: 84rem;
       padding: 0 1rem;
     }
     .site-header {
-      background: rgba(255, 255, 255, 0.96);
+      background: rgba(255, 255, 255, 0.98);
       border-bottom: 1px solid var(--line);
       box-shadow: 0 1px 10px rgb(31 41 51 / 7%);
     }
@@ -416,7 +415,7 @@ SHARED_CSS = r"""
       padding: 0 0 1rem;
     }
     .site-nav a {
-      border: 1px solid var(--line);
+      border: 1px solid transparent;
       border-radius: 6px;
       display: inline-block;
       padding: 0.45rem 0.65rem;
@@ -434,28 +433,28 @@ SHARED_CSS = r"""
       background: #ffffff;
       border: 1px solid #d9e3e7;
       border-radius: 8px;
-      box-shadow: 0 1px 8px rgb(31 41 51 / 6%);
+      box-shadow: 0 1px 8px rgb(31 41 51 / 5%);
       display: grid;
-      gap: 0.75rem;
-      grid-template-columns: minmax(13rem, 0.26fr) minmax(0, 1fr);
+      gap: 0.65rem;
+      grid-template-columns: minmax(12rem, 0.24fr) minmax(0, 1fr);
       margin: 0 0 0.85rem;
-      padding: 0.65rem 0.75rem;
+      padding: 0.55rem 0.7rem;
     }
     .stepper-summary {
       background: #f8fbfb;
       border: 1px solid #d7e5e4;
       border-radius: 6px;
-      padding: 0.65rem;
+      padding: 0.55rem 0.65rem;
     }
     .stepper-eyebrow {
       color: var(--accent-strong);
-      font-size: 0.86rem;
+      font-size: 0.74rem;
       font-weight: 800;
       margin-bottom: 0.25rem;
       text-transform: uppercase;
     }
     .stepper-summary h2 {
-      font-size: 1.05rem;
+      font-size: 0.98rem;
       margin-bottom: 0.25rem;
     }
     .stepper-summary p {
@@ -477,11 +476,11 @@ SHARED_CSS = r"""
       align-items: center;
       background: transparent;
       border: 1px solid #d5dfe4;
-      border-radius: 6px;
+      border-radius: 999px;
       display: inline-flex;
       gap: 0.35rem;
       min-height: 0;
-      padding: 0.32rem 0.45rem;
+      padding: 0.28rem 0.45rem;
       position: relative;
     }
     .stepper-item.is-complete {
@@ -501,14 +500,14 @@ SHARED_CSS = r"""
       align-items: center;
       background: #ffffff;
       border: 1px solid var(--line);
-      border-radius: 4px;
+      border-radius: 999px;
       display: inline-flex;
       font-size: 0.82rem;
       font-weight: 800;
-      height: 1.35rem;
+      height: 1.25rem;
       justify-content: center;
-      min-width: 1.35rem;
-      width: 1.35rem;
+      min-width: 1.25rem;
+      width: 1.25rem;
     }
     .step-main {
       align-self: center;
@@ -708,10 +707,14 @@ SHARED_CSS = r"""
       color: var(--rose);
     }
     .hero-card {
-      background: linear-gradient(135deg, #ffffff 0%, #eef7f7 100%);
+      background: #ffffff;
       border: 1px solid #b9d5d4;
       box-shadow: var(--shadow-strong);
       padding: 1.25rem;
+    }
+    .hero-card h2 {
+      font-size: 1.55rem;
+      max-width: 54rem;
     }
     .launch-kicker {
       color: var(--accent-strong);
@@ -723,6 +726,81 @@ SHARED_CSS = r"""
     .launch-value {
       font-size: 1.08rem;
       max-width: 54rem;
+    }
+    .attorney-hero {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .attorney-hero-actions {
+      align-content: start;
+      display: grid;
+      gap: 0.55rem;
+      min-width: 12rem;
+    }
+    .boundary-note {
+      background: #f8fbfb;
+      border-left: 4px solid var(--accent);
+      color: var(--muted);
+      margin-bottom: 0;
+      max-width: 62rem;
+      padding: 0.65rem 0.85rem;
+    }
+    .metric-strip {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+      margin: 0.75rem 0;
+    }
+    .metric-card {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.8rem;
+    }
+    .metric-card strong {
+      display: block;
+      font-size: 1.55rem;
+      line-height: 1.1;
+    }
+    .metric-card span {
+      color: var(--muted);
+      display: block;
+      font-size: 0.88rem;
+      margin-top: 0.15rem;
+    }
+    .flag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin: 0.45rem 0 0;
+      padding: 0;
+    }
+    .flag-list li {
+      list-style: none;
+    }
+    .review-chip {
+      background: var(--amber-soft);
+      border: 1px solid var(--warning-line);
+      border-radius: 999px;
+      color: var(--amber);
+      display: inline-flex;
+      font-size: 0.82rem;
+      font-weight: 800;
+      padding: 0.22rem 0.55rem;
+    }
+    .source-chip {
+      background: var(--blue-soft);
+      border-color: #83a2d3;
+      color: var(--blue);
+    }
+    .workflow-cards {
+      display: grid;
+      gap: 0.85rem;
+      grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    }
+    .workflow-cards .action-card p:last-child {
+      margin-bottom: 0;
     }
     .action-card, .summary-card, .detail-card, .empty-state-card, .warning-card {
       border-radius: 8px;
@@ -802,6 +880,43 @@ SHARED_CSS = r"""
       gap: 1rem;
       grid-template-columns: minmax(0, 1fr) auto;
       padding: 0.9rem;
+    }
+    .result-card.work-item {
+      align-items: start;
+      grid-template-columns: minmax(0, 1fr) minmax(8rem, auto);
+    }
+    .legal-summary-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
+    }
+    .summary-list {
+      display: grid;
+      gap: 0.45rem 1rem;
+      grid-template-columns: minmax(9rem, 14rem) 1fr;
+    }
+    .summary-list dt {
+      color: var(--muted);
+    }
+    .technical-details {
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      padding: 0;
+    }
+    .technical-details > summary {
+      color: var(--accent-strong);
+      font-size: 0.92rem;
+    }
+    .recovery-panel {
+      border-left: 5px solid var(--warning-line);
+    }
+    .source-separation-note {
+      background: #f8fbfb;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      padding: 0.75rem;
     }
     .result-card h3, .result-card p {
       margin-bottom: 0.25rem;
@@ -981,6 +1096,12 @@ SHARED_CSS = r"""
       }
       .site-title-row, .two-column, .request-layout {
         display: block;
+      }
+      .attorney-hero, .legal-summary-grid {
+        display: block;
+      }
+      .attorney-hero-actions {
+        margin-top: 1rem;
       }
       .mode-panel {
         justify-content: flex-start;
