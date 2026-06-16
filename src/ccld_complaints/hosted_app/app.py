@@ -45,7 +45,6 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     CCLD_HELP_PATH,
     CCLD_RECORD_REQUEST_PATH,
-    CCLD_RETRIEVAL_JOBS_PATH,
     CCLD_UI_PREFIX,
     CcldRecordRequestUiContext,
     ccld_record_request_context_for_reviewer_context,
@@ -738,33 +737,49 @@ def render_related_facility_context(record: SampleSourceRecord) -> str:
 def render_app_shell() -> str:
         return render_page_shell(
                 title=APP_NAME,
-                                heading="CCLD RecordsTracker Pilot",
+                                heading="CCLD RecordsTracker",
                 skip_label="Skip to main CCLD review content",
                 nav_label="CCLD records review navigation",
-                eyebrow="Guided CCLD-only complaint retrieval and review.",
+                eyebrow="Attorney public-record review workspace.",
                                 active_path="/",
                 step_id="start",
-                next_action="Start review",
+                next_action="Start facility review",
                 extra_nav_links=(),
-                                main=f"""    <section id="start" class="hero-card" aria-labelledby="start-heading">
-            <p class="launch-kicker">Start review</p>
-            <h2 id="start-heading">Start a CCLD complaint review</h2>
-            <p class="launch-value">Select a facility, set a date range, retrieve complaint records, and move directly into a source-traceable review queue.</p>
-            <p><a class="button button-large" href="{CCLD_RECORD_REQUEST_PATH}">Start review</a></p>
-            <p class="sr-note">Current mode is shown in the header. CCLD public portal remains the source of record.</p>
+                                main=f"""    <section id="start" class="hero-card attorney-hero" aria-labelledby="start-heading">
+            <div>
+                <p class="launch-kicker">Attorney review workspace</p>
+                <h2 id="start-heading">Start a facility complaint review</h2>
+                <p class="launch-value">Retrieve CCLD public complaint records, review key dates and findings, and flag records that need source-traceable legal review.</p>
+                <p class="boundary-note">Records are source-derived review aids. The app highlights review flags and source-traceable issues; it does not make legal findings or prove source completeness.</p>
+            </div>
+            <div class="attorney-hero-actions" aria-label="Primary actions">
+                <a class="button button-large" href="{CCLD_RECORD_REQUEST_PATH}">Start facility review</a>
+                <a class="button button-secondary" href="/reviewer">Open review queue</a>
+            </div>
         </section>
-        <section id="support-actions" class="quiet-section" aria-labelledby="support-actions-heading">
-            <h2 id="support-actions-heading">Other ways to continue</h2>
-            <div class="compact-actions">
-                <p><a class="button button-secondary" href="{CCLD_FACILITY_LOOKUP_PATH}">Find facility</a></p>
-                <p><a class="button button-secondary" href="/reviewer">Review queue</a></p>
-                <p><a class="button button-secondary" href="{CCLD_RETRIEVAL_JOBS_PATH}">View jobs</a></p>
-                <p><a class="button button-secondary" href="{FEEDBACK_PATH}">Send feedback</a></p>
+        <section id="workflow-cards" aria-labelledby="workflow-cards-heading">
+            <h2 id="workflow-cards-heading">Facility complaint review path</h2>
+            <div class="workflow-cards">
+                <section class="action-card" aria-labelledby="select-facility-card-heading">
+                    <h3 id="select-facility-card-heading">Select a facility</h3>
+                    <p>Search by facility name or license number.</p>
+                    <p><a class="button button-secondary" href="{CCLD_FACILITY_LOOKUP_PATH}">Find facility</a></p>
+                </section>
+                <section class="action-card" aria-labelledby="retrieve-records-card-heading">
+                    <h3 id="retrieve-records-card-heading">Retrieve complaint records</h3>
+                    <p>Pull complaint records for a bounded date range.</p>
+                    <p><a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Retrieve records</a></p>
+                </section>
+                <section class="action-card" aria-labelledby="review-flags-card-heading">
+                    <h3 id="review-flags-card-heading">Review flags and source traceability</h3>
+                    <p>See delays, missing fields, findings, and source links before adding reviewer notes.</p>
+                    <p><a class="button button-secondary" href="/reviewer">Open queue</a></p>
+                </section>
             </div>
         </section>
         <section id="boundaries" class="quiet-section" aria-labelledby="boundaries-heading">
             <h2 id="boundaries-heading">Review boundary</h2>
-            <p>Source-derived records stay separate from reviewer-created notes/status. Imported rows support review; they do not prove source completeness or legal conclusions.</p>
+            <p>Source-derived records stay separate from reviewer-created notes/status. Imported rows support review; they do not prove source completeness, facility-wide conclusions, or legal conclusions.</p>
         </section>
         <section id="commands" class="quiet-section" aria-labelledby="commands-heading">
             <details>

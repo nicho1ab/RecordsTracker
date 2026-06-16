@@ -191,12 +191,12 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     payload = json.loads(health_body.decode("utf-8"))
     if health_status != 200 or payload.get("status") != "ok":
         raise RuntimeError("Hosted scaffold health check did not return ok.")
-    if root_status != 200 or b"Guided CCLD-only complaint retrieval and review" not in root_body:
+    if root_status != 200 or b"Attorney public-record review workspace" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return the guided launch notice.")
     if b"Skip to main CCLD review content" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return skip navigation.")
     if (
-        b"Start a CCLD complaint review"
+        b"Start a facility complaint review"
         not in root_body
     ):
         raise RuntimeError("Hosted scaffold app shell did not return review session orientation.")
@@ -226,10 +226,10 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold CCLD request shell did not return the request page.")
     if (
         ccld_retrieval_history_status != 200
-        or b"Controlled CCLD retrieval job history" not in ccld_retrieval_history_body
+        or b"Retrieval status center" not in ccld_retrieval_history_body
         or b"No retrieval jobs have been submitted" not in ccld_retrieval_history_body
         or b"Controlled retrieval setup is missing" not in ccld_retrieval_history_body
-        or b"Submit or change a CCLD record request" not in ccld_retrieval_history_body
+        or b"Submit or change retrieval request" not in ccld_retrieval_history_body
         or b"Send tester feedback" not in ccld_retrieval_history_body
     ):
         raise RuntimeError("Hosted scaffold retrieval job history did not return safe guidance.")
@@ -298,24 +298,24 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold retrieval setup state did not return safe guidance.")
     if (
         ccld_retrieval_success_status != 200
-        or b"Records imported and ready for review" not in ccld_retrieval_success_body
+        or b"Complaint records ready for attorney review" not in ccld_retrieval_success_body
         or b"Completed" not in ccld_retrieval_success_body
         or b"Records imported" not in ccld_retrieval_success_body
-            or b"Review imported records" not in ccld_retrieval_success_body
+            or b"Open review queue" not in ccld_retrieval_success_body
         or b"View retrieval job history" not in ccld_retrieval_success_body
             or b"View job details" not in ccld_retrieval_success_body
     ):
         raise RuntimeError("Hosted scaffold mock retrieval did not return completed status.")
     if (
         ccld_retrieval_history_after_status != 200
-        or b"Controlled CCLD retrieval job history" not in ccld_retrieval_history_after_body
+        or b"Retrieval status center" not in ccld_retrieval_history_after_body
         or b"View retrieval job details" not in ccld_retrieval_history_after_body
         or b"Review imported records in the CCLD queue" not in ccld_retrieval_history_after_body
     ):
         raise RuntimeError("Hosted scaffold mock retrieval did not appear in history.")
     if (
         ccld_retrieval_success_detail_status != 200
-        or b"Controlled CCLD retrieval job detail" not in ccld_retrieval_success_detail_body
+        or b"Retrieval job detail" not in ccld_retrieval_success_detail_body
         or b"Completed" not in ccld_retrieval_success_detail_body
         or b"Records imported" not in ccld_retrieval_success_detail_body
         or b"Review imported records in the CCLD queue"
@@ -324,19 +324,19 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold mock retrieval detail did not return safe status.")
     if (
         ccld_facilities_status != 200
-        or b"Find CCLD facility" not in ccld_facilities_body
+        or b"Find a facility" not in ccld_facilities_body
         or b"Synthetic Orchard Child Care" not in ccld_facilities_body
-        or b"Use for retrieval" not in ccld_facilities_body
+        or b"Review this facility" not in ccld_facilities_body
         or b"Skip to main CCLD facility lookup content" not in ccld_facilities_body
     ):
         raise RuntimeError("Hosted scaffold CCLD facility lookup did not return results.")
     if (
         help_status != 200
         or b"Help" not in help_body
-            or b"How the guided workflow works" not in help_body
-        or b"Live public CCLD retrieval" not in help_body
-        or b"Fixture/mock demo" not in help_body
-            or b"What 0 imported can mean" not in help_body
+            or b"How to review a facility" not in help_body
+        or b"What review flags mean" not in help_body
+        or b"How source traceability works" not in help_body
+            or b"What the app does not prove" not in help_body
     ):
         raise RuntimeError("Hosted scaffold CCLD help page did not return guided help.")
     if (

@@ -673,7 +673,9 @@ def _render_record_list(
         actor_label=actor_label,
         main=f"""
         <section class="hero-card" aria-labelledby="reviewer-queue-heading">
-                        <h2 id="reviewer-queue-heading">{len(records)} complaint {'record is' if len(records) == 1 else 'records are'} ready for review</h2>
+                        <p class="launch-kicker">Legal review work queue</p>
+                        <h2 id="reviewer-queue-heading">Complaint records ready for review</h2>
+                        <p>Review key dates, findings, source traceability, and reviewer-created notes/status.</p>
             <p><a class="button" href="{_next_review_item_href(_next_review_item(records, state_summaries))}">Open next record</a></p>
                         <p class="sr-note">Source-derived records stay separate from reviewer-created notes/status.</p>
         </section>
@@ -860,6 +862,7 @@ def _render_review_item_card(
                         <p class="stage-kicker">{_escape(_queue_cue_text(state_summary))}</p>
                         <h3 id="record-{_escape(source_record_key)}-heading">{_escape(control_number)}</h3>
                         <p><span class="badge badge-muted">Finding: {_escape(finding)}</span> <span class="badge badge-muted">Reviewer status: {_escape(_latest_status_text(state_summary))}</span></p>
+                        {_render_review_flag_chips(original_values, source_document)}
                         <dl>
                             <dt>Facility/license</dt>
                             <dd>{_escape(facility_number)}</dd>
@@ -904,6 +907,57 @@ def _source_traceability_cue(source_document: Mapping[str, Any]) -> str:
     if present:
         return "Partial source traceability available: " + ", ".join(present) + "."
     return "Source traceability not visible in this local/test row."
+
+
+def _render_review_flag_chips(
+    original_values: Mapping[str, Any],
+    source_document: Mapping[str, Any],
+) -> str:
+    flags = _review_flag_labels(original_values, source_document)
+    if not flags:
+        return '<p class="sr-note">No review flags are visible from loaded source-derived fields.</p>'
+    items = "\n".join(
+        f'                            <li><span class="review-chip">{_escape(label)}</span></li>'
+        for label in flags
+    )
+    return f"""                        <ul class="flag-list" aria-label="Review flags">
+{items}
+                        </ul>"""
+
+
+def _review_flag_labels(
+    original_values: Mapping[str, Any],
+    source_document: Mapping[str, Any],
+) -> tuple[str, ...]:
+    flags: list[str] = []
+    for field_name, label in (
+        ("review_delay_over_120_days", "Possible delay indicator: over 120 days"),
+        ("review_delay_over_90_days", "Possible delay indicator: over 90 days"),
+        ("review_delay_over_60_days", "Possible delay indicator: over 60 days"),
+        ("review_delay_over_30_days", "Possible delay indicator: over 30 days"),
+    ):
+        if original_values.get(field_name) is True:
+            flags.append(label)
+            break
+    for field_name, label in (
+        ("missing_first_activity_date", "Needs source check: first activity date missing locally"),
+        ("missing_visit_date", "Needs source check: visit date missing locally"),
+        ("missing_report_date", "Needs source check: report date missing locally"),
+    ):
+        if original_values.get(field_name) is True:
+            flags.append(label)
+    if original_values.get("report_date_used_as_proxy") is True:
+        flags.append("Review flag: report date used as proxy")
+    if _has_visible_traceability_document(source_document):
+        flags.append("Source traceability available")
+    return tuple(flags)
+
+
+def _has_visible_traceability_document(source_document: Mapping[str, Any]) -> bool:
+    return any(
+        _has_display_value(source_document.get(field_name))
+        for field_name in ("source_url", "raw_sha256", "connector_name", "retrieved_at")
+    )
 
 
 def _queue_cue_text(summary: Mapping[str, Any]) -> str:
@@ -1114,9 +1168,11 @@ def _render_detail(
         main=f"""
     {_render_notice(notice, source_record_key, related_records, return_context)}
                 <section class="hero-card" aria-labelledby="detail-hero-heading">
+                    <p class="launch-kicker">Complaint review workspace</p>
                     <h2 id="detail-hero-heading">Complaint overview</h2>
                     <p>{_escape(_detail_summary_sentence(source_record, related_records))}</p>
                     <p><span class="badge badge-muted">Finding: {_escape(_optional_string(original_values, 'finding'))}</span></p>
+                    {_render_review_flag_chips(original_values, source_document)}
                 </section>
         {_render_record_summary_section(source_record, related_records, detail)}
                 {_render_key_date_cards(original_values)}
@@ -1286,9 +1342,8 @@ def _render_record_summary_section(
         reviewer_statuses = "None recorded"
     return f"""<section aria-labelledby="record-summary-heading">
       <h2 id="record-summary-heading">Record summary</h2>
-      <p>This summary orients the selected local/test CCLD complaint record before a tester
-      reviews source traceability, related context, and reviewer-created notes or status.</p>
-      <dl>
+            <p>This summary orients the selected CCLD complaint record before attorney review of source traceability, related context, and reviewer-created notes or status.</p>
+            <dl class="summary-list">
         <dt>Complaint control number</dt>
         <dd>{_escape(_optional_string(original_values, 'complaint_control_number'))}</dd>
         <dt>Finding</dt>
@@ -1338,7 +1393,7 @@ def _render_source_confidence_cues_section(
         )
     )
     return f"""<section id="source-confidence-heading" aria-labelledby="source-confidence-title">
-            <h2 id="source-confidence-title">Source-confidence cues</h2>
+            <h2 id="source-confidence-title">Legal-review flags and source checks</h2>
             <p>These cues summarize visible source-derived complaint fields already loaded in
             this local/test record. They help testers see which values are present, which
             expected values are not available locally, and which fields need source traceability
@@ -1971,15 +2026,15 @@ def _optional_form_value(values: Mapping[str, list[str]], key: str) -> str | Non
 
 def _date_summary(values: Mapping[str, Any]) -> str:
     parts = []
-    for field_name in (
-        "complaint_received_date",
-        "visit_date",
-        "report_date",
-        "date_signed",
+    for label, field_name in (
+        ("Complaint received", "complaint_received_date"),
+        ("Visit", "visit_date"),
+        ("Report", "report_date"),
+        ("Date signed", "date_signed"),
     ):
         value = values.get(field_name)
         if _has_display_value(value):
-            parts.append(f"{field_name}: {_display_value(value)}")
+            parts.append(f"{label}: {_display_value(value)}")
     if not parts:
         return "No complaint or report dates listed"
     return "; ".join(parts)

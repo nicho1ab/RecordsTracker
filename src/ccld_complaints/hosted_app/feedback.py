@@ -204,22 +204,23 @@ def render_feedback_page(context: FeedbackContext, *, selected_type: str = "") -
         main=f"""
     {_configuration_notice(context.github_config)}
         <section class="hero-card" aria-labelledby="feedback-purpose-heading">
-            <h2 id="feedback-purpose-heading">Tell the pilot team what happened</h2>
+            <p class="launch-kicker">Tester support</p>
+            <h2 id="feedback-purpose-heading">Tell us what blocked legal review</h2>
             <p>Send concise feedback about retrieval, facility lookup, job results, reviewer queue,
-            reviewer detail, wording, or keyboard flow. Feedback is classified with labels, not
-            GitHub Projects or issue types.</p>
+            reviewer detail, review flags, source traceability, wording, or keyboard flow.</p>
+            <p class="sr-note">Feedback is classified with labels, not GitHub Projects or issue types.</p>
         </section>
         <section aria-labelledby="feedback-options-heading">
             <h2 id="feedback-options-heading">Choose the best feedback type</h2>
             <div class="action-grid">
                 <section class="action-card feedback-choice" aria-labelledby="bug-card-heading">
                     <h3 id="bug-card-heading">Bug report</h3>
-                    <p>Something failed, looked wrong, or blocked the review workflow.</p>
+                    <p>Something failed, looked wrong, or blocked the facility complaint review workflow.</p>
                     <p><a class="button button-secondary" href="{_feedback_type_href('Bug report')}">Choose bug report</a></p>
                 </section>
                 <section class="action-card feedback-choice" aria-labelledby="feature-card-heading">
                     <h3 id="feature-card-heading">Feature request</h3>
-                    <p>A workflow improvement would help reviewers move faster or understand results.</p>
+                    <p>A workflow improvement would help legal users decide what to review next.</p>
                     <p><a class="button button-secondary" href="{_feedback_type_href('Feature request')}">Choose feature request</a></p>
                 </section>
                 <section class="action-card feedback-choice" aria-labelledby="source-card-heading">
@@ -231,15 +232,17 @@ def render_feedback_page(context: FeedbackContext, *, selected_type: str = "") -
         </section>
         <section class="warning-card" aria-labelledby="feedback-safety-heading">
             <h2 id="feedback-safety-heading">Do not include</h2>
-            <p>Do not include credentials, private URLs, secrets, tokens, provider claims, raw source
-            narrative, raw artifact material, server paths, connection details, or unrelated
-            sensitive details.</p>
+            <p>Do not include private facts, credentials, legal strategy, privileged work product,
+            private URLs, secrets, tokens, provider claims, raw source narrative, raw artifact material,
+            server paths, connection details, or unrelated sensitive details.</p>
             <details>
                 <summary>Useful examples</summary>
                 <ul>
-                    <li>Facility/license number, date range, and visible job state.</li>
-                    <li>What page felt confusing and what action you expected next.</li>
-                    <li>Which complaint control number or queue row looked unexpected.</li>
+                    <li>A complaint record looked missing or unexpected.</li>
+                    <li>A date or finding looked confusing.</li>
+                    <li>A review flag was unclear.</li>
+                    <li>The source traceability summary was hard to use.</li>
+                    <li>The workflow did not help me decide what to review next.</li>
                 </ul>
             </details>
     </section>

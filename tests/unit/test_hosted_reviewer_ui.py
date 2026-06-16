@@ -60,6 +60,7 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Complaint records ready for review" in html
+    assert "Legal review work queue" in html
     assert "Skip to main reviewer content" in html
     assert '<main id="main-content" tabindex="-1">' in html
     assert "Technical runtime details" in html
@@ -67,6 +68,8 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert "fixture actor context" not in normalized_html
     assert "seeded corpus scope" not in normalized_html
     assert "Open next record" in html
+    assert "review-chip" in html
+    assert "Source traceability available" in html
     assert "Worklist" in html
     assert "Filter or search queue" in html
     assert "Show table view" in html
@@ -234,9 +237,11 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Review source-derived context" in html
     assert "Prepare tester feedback" in html
     assert "Record summary" in html
-    assert "This summary orients the selected local/test CCLD complaint record" in (
+    assert "This summary orients the selected CCLD complaint record" in (
         normalized_html
     )
+    assert "Complaint review workspace" in html
+    assert "Legal-review flags and source checks" in html
     assert "Complaint and report dates" in html
     assert "Facility/license number" in html
     assert "157806098" in html

@@ -209,10 +209,11 @@ import/operational metadata mutation, accessible headings/labels/captions/link
 text, and no-secret HTML output.
 Hosted guided workflow assistant tests should prove the shared product shell
 renders on the home, facility lookup, CCLD request/help, retrieval job history/
-detail, reviewer, and feedback pages with the `CCLD RecordsTracker Pilot` product
-name, mode badge for Live public CCLD, Fixture/mock demo, or Retrieval not
-configured, compact functional stepper with current/completed/future states and
-next-action guidance, readable non-wrapping labels, active workflow navigation
+detail, reviewer, and feedback pages with the `CCLD RecordsTracker` product
+name, attorney-focused home/intake/result/queue/detail/feedback language, mode
+badge for Live public CCLD, Fixture/mock demo, or Retrieval not configured,
+compact functional stepper with current/completed/future states and next-action
+guidance, readable non-wrapping labels, active workflow navigation
 without developer/diagnostic links in the primary nav, skip link, source-of-
 record limitation footer, visible focus styles, responsive CSS, readable table/
 form styling, and no new routes, workflows, auth, exports, public deployment,
@@ -223,6 +224,12 @@ embedded reference data, keyboard-navigable suggestion list, selected-facility
 confirmation card); fixed complaint-record type; distinct retrieve/show-queue actions; selected facility confirmation;
 focused imported-record result cards; and specific actionable zero-import
 recovery messaging.
+Reviewer UI tests should prove attorney-review hierarchy: queue pages lead with
+`Open next record`, source-derived work items, cautiously labeled review chips,
+source traceability cues, and secondary/collapsed table views; detail pages lead
+with complaint overview, finding, key dates, review flags/source checks, source
+traceability, and visibly separate reviewer-created notes/status before full
+technical source-derived details.
 Hosted CCLD artifact builder tests should build fixture-backed validated SQLite
 output, convert it into hosted seeded-corpus JSON, validate the JSON through the
 existing hosted seeded parser, import it through the existing hosted seeded

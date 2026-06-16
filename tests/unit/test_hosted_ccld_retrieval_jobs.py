@@ -225,7 +225,7 @@ def test_controlled_retrieval_imports_records_and_links_queue(tmp_path: Path) ->
     assert raw_files[0].read_bytes() == RAW_FIXTURE.read_bytes()
     assert jobs[0]["job_state"] == "completed"
     assert jobs[0]["authorization_permission"] == "retrieval_job_trigger"
-    assert "Records imported and ready for review" in html
+    assert "Complaint records ready for attorney review" in html
     assert "Job state" in html
     assert "Completed" in html
     assert "Retrieval job created" in html
@@ -238,7 +238,7 @@ def test_controlled_retrieval_imports_records_and_links_queue(tmp_path: Path) ->
     assert "View retrieval job history" in html
     assert "View job details" in html
     assert "Send tester feedback" in html
-    assert "Records imported and ready for review" in html
+    assert "Complaint records ready for attorney review" in html
     assert "Open reviewer detail" in html
     assert_no_secret_html(html)
 
@@ -349,7 +349,7 @@ def test_local_dev_mock_success_retrieval_flow_imports_and_links_without_live_ca
     job_id = _retrieval_job_id_from_html(html)
 
     assert status == 200
-    assert "Records imported and ready for review" in html
+    assert "Complaint records ready for attorney review" in html
     assert "Fixture/mock demo" in html
     assert "Completed" in html
     assert "Records imported" in html
@@ -357,7 +357,7 @@ def test_local_dev_mock_success_retrieval_flow_imports_and_links_without_live_ca
     assert "Review imported records" in html
     assert "View retrieval job history" in html
     assert "View job details" in html
-    assert "Records imported and ready for review" in html
+    assert "Complaint records ready for attorney review" in html
     assert "Open reviewer detail" in html
     assert sorted((tmp_path / "raw").glob("*.html"))
     assert_no_secret_html(html)
@@ -385,7 +385,7 @@ def test_local_dev_mock_success_retrieval_flow_imports_and_links_without_live_ca
     detail_html = detail_body.decode("utf-8")
 
     assert detail_status == 200
-    assert "Controlled CCLD retrieval job detail" in detail_html
+    assert "Retrieval job detail" in detail_html
     assert job_id in detail_html
     assert "Fixture/mock demo" in detail_html
     assert "Completed" in detail_html
@@ -430,14 +430,14 @@ def test_demo_startup_env_creates_retrieval_job_from_default_request_context(
 
     assert status == 200
     assert "Controlled CCLD retrieval setup required" not in html
-    assert "Records imported and ready for review" in html
+    assert "Complaint records ready for attorney review" in html
     assert "Fixture/mock demo" in html
     assert "Completed" in html
     assert "Records imported" in html
     assert sorted((tmp_path / "raw").glob("*.html"))
     assert history_status == 200
     assert job_id in history_html
-    assert "Controlled CCLD retrieval job history" in history_html
+    assert "Retrieval status center" in history_html
     assert "Fixture/mock demo" in history_html
     assert "Completed" in history_html
     assert "local-test-managed-identity" not in html
@@ -775,11 +775,12 @@ def test_retrieval_job_history_empty_state_renders_for_allowed_local_dev_actor()
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Controlled CCLD retrieval job history" in html
+    assert "Retrieval status center" in html
     assert "No retrieval jobs have been submitted" in html
     assert "Controlled retrieval setup is missing" in html
-    assert "status/history visibility only, not an audit export" in html
-    assert "Submit or change a CCLD record request" in html
+    assert "facility/date context" in html
+    assert "imported-record counts" in html
+    assert "Submit or change retrieval request" in html
     assert "Send tester feedback" in html
     assert_no_secret_html(html)
 
@@ -916,7 +917,7 @@ def test_retrieval_job_detail_renders_completed_job_without_mutation(tmp_path: P
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert before_counts == after_counts
-    assert "Controlled CCLD retrieval job detail" in html
+    assert "Retrieval job detail" in html
     assert "completed-job" in html
     assert "Completed" in html
     assert "Not recorded" in html
