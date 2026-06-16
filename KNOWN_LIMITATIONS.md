@@ -149,13 +149,16 @@
     checklist copy guidance, but these are presentation aids only and do not
     create saved review sessions, persisted queue state, persisted workflow state,
     duplicate checklists, or feedback persistence.
-    It does not run live retrieval, execute connectors, mutate reviewer-
-    created state from the request page, create audit rows from the request
-    page, persist feedback, create duplicate checklists, persist operational metadata, prove public-source
-    completeness, or support non-CCLD sources. When records are missing
-    from the local validated output or outside the requested date range, it
-    explains the explicit outside-browser CCLD live-fetch and local/test
-    artifact-builder handoff. The artifact builder converts validated CCLD
+    It can trigger controlled server-side CCLD complaint retrieval only when the
+    runtime is explicitly configured for retrieval and server-side raw storage.
+    The browser still does not scrape CCLD, receive connector credentials, or
+    receive raw artifact paths. The request page does not mutate reviewer-created
+    state, create audit rows from the request page, persist feedback, create
+    duplicate checklists, prove public-source completeness, or support non-CCLD
+    sources. When records are missing from the local validated output or outside
+    the requested date range, it explains the configured retrieval action or the
+    explicit outside-browser CCLD live-fetch and local/test artifact-builder
+    handoff. The artifact builder converts validated CCLD
     SQLite pipeline output into hosted seeded-corpus JSON outside browser
     requests, but it is still a local/test step and does not prove public-source
     completeness or automate production imports.
@@ -174,8 +177,7 @@
     public deployment, production monitoring, database-backed lookup, non-CCLD
     sources, and persisted tester feedback remain deferred
     unless they directly unlock tester value or resolve a concrete MVP-blocking
-    risk. Controlled browser-triggered CCLD retrieval is approved by ADR-0016 but
-    not implemented yet.
+    risk.
 - The QNAP-first Docker Compose runtime is a production-like container envelope
     for the hosted scaffold and PostgreSQL. It is not production authentication,
     public URL approval, fully production-ready hosted CCLD retrieval, production import
@@ -189,7 +191,10 @@
     slice for CCLD complaint records. It remains CCLD-only, facility/date/type
     bounded, authenticated, permissioned, server-side, rate-limited,
     timeout-limited, retry-limited, raw-source-preserving, PostgreSQL-imported,
-    safe-status, private-value-safe, and tested with mocked CCLD network retrieval. Direct
+    safe-status, private-value-safe, and tested with mocked CCLD network retrieval.
+    A local live startup command can use the public CCLD HTTP connector for
+    explicitly submitted browser retrieval jobs, while a separate fixture/mock
+    startup command remains available for offline validation. Direct
     browser crawling, statewide crawling, automatic source expansion, non-CCLD
     sources, private/authenticated source scraping, legal/facility-wide/public-
     source completeness conclusions, harm/abuse/neglect/liability conclusions,

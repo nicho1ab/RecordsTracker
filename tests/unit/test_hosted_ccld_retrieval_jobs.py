@@ -11,6 +11,7 @@ import pytest
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.engine import Connection
 
+from ccld_complaints.connectors.ccld import facility_reports as ccld_facility_reports
 from ccld_complaints.hosted_app.app import route_response
 from ccld_complaints.hosted_app.audit_events import hosted_audit_events
 from ccld_complaints.hosted_app.auth import (
@@ -314,7 +315,7 @@ def test_controlled_retrieval_no_matching_complaint_dates_fetches_nothing(
     assert jobs[0]["result_counts"]["discovered_report_candidates"] == 3
     assert jobs[0]["result_counts"]["selected_report_candidates"] == 0
     assert jobs[0]["result_counts"]["retrieved_record_bundles"] == 0
-    assert "No CCLD complaint report links were found" in html
+    assert "none had a discovered report date inside the requested date range" in html
     assert "No records were imported" in html
     assert "not a public-source absence" in html
     assert_no_secret_html(html)
@@ -346,6 +347,7 @@ def test_local_dev_mock_success_retrieval_flow_imports_and_links_without_live_ca
 
     assert status == 200
     assert "Controlled CCLD retrieval job status" in html
+    assert "Fixture/mock demo" in html
     assert "Completed" in html
     assert "Records imported" in html
     assert "Imported source derived records" in normalized
@@ -366,6 +368,7 @@ def test_local_dev_mock_success_retrieval_flow_imports_and_links_without_live_ca
 
     assert history_status == 200
     assert job_id in history_html
+    assert "Fixture/mock demo" in history_html
     assert "Completed" in history_html
     assert "Review imported records in the CCLD queue" in history_html
     assert "View retrieval job details" in history_html
@@ -381,6 +384,7 @@ def test_local_dev_mock_success_retrieval_flow_imports_and_links_without_live_ca
     assert detail_status == 200
     assert "Controlled CCLD retrieval job detail" in detail_html
     assert job_id in detail_html
+    assert "Fixture/mock demo" in detail_html
     assert "Completed" in detail_html
     assert "Records imported" in detail_html
     assert "raw artifact preserved" in detail_html
@@ -424,17 +428,208 @@ def test_demo_startup_env_creates_retrieval_job_from_default_request_context(
     assert status == 200
     assert "Controlled CCLD retrieval setup required" not in html
     assert "Controlled CCLD retrieval job status" in html
+    assert "Fixture/mock demo" in html
     assert "Completed" in html
     assert "Records imported" in html
     assert sorted((tmp_path / "raw").glob("*.html"))
     assert history_status == 200
     assert job_id in history_html
     assert "Controlled CCLD retrieval job history" in history_html
+    assert "Fixture/mock demo" in history_html
     assert "Completed" in history_html
     assert "local-test-managed-identity" not in html
     assert "local-test-managed-identity" not in history_html
     assert_no_secret_html(html)
     assert_no_secret_html(history_html)
+
+
+def test_live_startup_env_uses_public_ccld_client_and_imports_into_reviewer_queue(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    live_facility_calls: list[tuple[str, int]] = []
+    live_report_calls: list[tuple[str, int]] = []
+
+    def fetch_live_facility_detail(
+        self: CcldHttpRetrievalClient,
+        facility_number: str,
+        *,
+        timeout_seconds: int,
+    ) -> str:
+        live_facility_calls.append((facility_number, timeout_seconds))
+        return DETAIL_FIXTURE.read_text(encoding="utf-8")
+
+    def fetch_live_report(
+        self: CcldHttpRetrievalClient,
+        source_url: str,
+        *,
+        timeout_seconds: int,
+    ) -> bytes:
+        live_report_calls.append((source_url, timeout_seconds))
+        return RAW_FIXTURE.read_bytes()
+
+    reset_default_ccld_record_request_ui_context()
+    reset_default_local_test_reviewer_ui_context()
+    monkeypatch.setenv("CCLD_HOSTED_TESTER_AUTH_MODE", "local-dev")
+    monkeypatch.setenv("CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH", "enabled")
+    monkeypatch.setenv("CCLD_HOSTED_PAGE_DATA_MODE", "fixture-demo")
+    monkeypatch.setenv(CCLD_RETRIEVAL_ENABLED_ENV, CCLD_RETRIEVAL_ENABLED_VALUE)
+    monkeypatch.setenv(CCLD_RETRIEVAL_RAW_DIR_ENV, str(tmp_path / "raw"))
+    monkeypatch.setenv(CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS_ENV, "30")
+    monkeypatch.delenv(CCLD_RETRIEVAL_DEMO_MODE_ENV, raising=False)
+    monkeypatch.setattr(
+        CcldHttpRetrievalClient,
+        "fetch_facility_detail",
+        fetch_live_facility_detail,
+    )
+    monkeypatch.setattr(CcldHttpRetrievalClient, "fetch_report", fetch_live_report)
+    try:
+        status, _content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_retrieval_form_bytes(),
+        )
+        history_status, _content_type, history_body = route_response(CCLD_RETRIEVAL_JOBS_PATH)
+        reviewer_status, _content_type, reviewer_body = route_response("/reviewer")
+    finally:
+        reset_default_ccld_record_request_ui_context()
+        reset_default_local_test_reviewer_ui_context()
+
+    html = body.decode("utf-8")
+    history_html = history_body.decode("utf-8")
+    reviewer_html = reviewer_body.decode("utf-8")
+    job_id = _retrieval_job_id_from_html(html)
+
+    assert status == 200
+    assert live_facility_calls == [("157806098", 30)]
+    assert len(live_report_calls) == 1
+    assert _report_index_from_url(live_report_calls[0][0]) == 3
+    assert "mock-success" not in html
+    assert "Live public CCLD" in html
+    assert "Fixture/mock demo" not in html
+    assert "Records imported" in html
+    assert sorted((tmp_path / "raw").glob("*.html"))
+    assert history_status == 200
+    assert job_id in history_html
+    assert "Live public CCLD" in history_html
+    assert reviewer_status == 200
+    assert "32-CR-20220407124448" in reviewer_html
+    assert_no_secret_html(html)
+    assert_no_secret_html(history_html)
+    assert_no_secret_html(reviewer_html)
+
+
+def test_live_retrieval_falls_back_to_complaint_report_list_when_detail_has_no_links(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    report_list_json = b"""{
+        "REPORTARRAY": [
+            {"FACILITYNUMBER": "157806098", "REPORTDATE": "07/27/2021", "REPORTTYPE": "Complaint"},
+            {"FACILITYNUMBER": "157806098", "REPORTDATE": "08/24/2022", "REPORTTYPE": "Complaint"},
+            {"FACILITYNUMBER": "157806098", "REPORTDATE": "08/24/2022", "REPORTTYPE": "Other"},
+            {"FACILITYNUMBER": "123456789", "REPORTDATE": "08/24/2022", "REPORTTYPE": "Complaint"}
+        ]
+    }"""
+
+    def fetch_report_list(source_url: str) -> bytes:
+        assert source_url == "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports/157806098"
+        return report_list_json
+
+    client = MockCcldRetrievalClient(
+        facility_detail_html="<html><body><h1>Facility Detail</h1></body></html>",
+        report_content_by_index={1: RAW_FIXTURE.read_bytes()},
+    )
+    monkeypatch.setattr(ccld_facility_reports, "_fetch_url", fetch_report_list)
+    with _empty_connection() as connection:
+        context = _request_context(connection, tmp_path, client=client)
+        status, _content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_retrieval_form_bytes(),
+            ccld_record_request_ui_context=context,
+        )
+        counts = _table_counts(connection)
+        jobs = connection.execute(select(hosted_ccld_retrieval_jobs)).mappings().all()
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert [_report_index_from_url(url) for url, _timeout in client.report_calls] == [1]
+    assert counts["source_records"] == 26
+    assert jobs[0]["result_counts"]["discovered_report_candidates"] == 2
+    assert jobs[0]["result_counts"]["selected_report_candidates"] == 1
+    assert "Live public CCLD" in html
+    assert "Records imported" in html
+    assert_no_secret_html(html)
+
+
+def test_live_retrieval_no_complaint_candidates_reports_specific_warning(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fetch_report_list(source_url: str) -> bytes:
+        return (
+            b'{"REPORTARRAY":[{"FACILITYNUMBER":"157806098",'
+            b'"REPORTDATE":"08/24/2022","REPORTTYPE":"Other"}]}'
+        )
+
+    client = MockCcldRetrievalClient(
+        facility_detail_html="""
+        <html><body>
+        <h2>All Visits</h2>
+        <a href="/transparencyapi/api/FacilityReports?facNum=157806098&inx=3">08/24/2022</a>
+        </body></html>
+        """,
+        report_content_by_index={3: RAW_FIXTURE.read_bytes()},
+    )
+    monkeypatch.setattr(ccld_facility_reports, "_fetch_url", fetch_report_list)
+    with _empty_connection() as connection:
+        context = _request_context(connection, tmp_path, client=client)
+        status, _content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_retrieval_form_bytes(),
+            ccld_record_request_ui_context=context,
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert len(client.facility_detail_calls) == 1
+    assert client.report_calls == []
+    assert "No CCLD complaint report links were discovered for the requested facility" in html
+    assert "none had a discovered report date" not in html
+    assert_no_secret_html(html)
+
+
+def test_live_retrieval_import_mismatch_reports_specific_warning(tmp_path: Path) -> None:
+    mismatched_report = RAW_FIXTURE.read_bytes().replace(b"157806098", b"123456789")
+    client = MockCcldRetrievalClient(
+        facility_detail_html=_facility_detail_with_mixed_complaint_links(),
+        report_content_by_index={3: mismatched_report},
+    )
+    with _empty_connection() as connection:
+        context = _request_context(connection, tmp_path, client=client)
+        status, _content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_retrieval_form_bytes(
+                start_date="2022-08-20",
+                end_date="2022-08-31",
+            ),
+            ccld_record_request_ui_context=context,
+        )
+        counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert len(client.report_calls) == 1
+    assert counts["source_records"] == 0
+    assert "fetched and extracted" in html
+    assert "no normalized complaint records matched the requested facility/date range" in html
+    assert_no_secret_html(html)
 
 
 def test_retrieval_all_supported_resolves_to_complaints(tmp_path: Path) -> None:
@@ -477,8 +672,12 @@ def test_retrieval_failure_is_safe_and_does_not_import(tmp_path: Path) -> None:
     assert jobs[0]["job_state"] == "completed_with_warnings"
     assert "Completed with warnings" in html
     assert "No records were imported" in html
-    assert "Controlled CCLD retrieval completed with no matching imported records" in html
-    assert "Report 3 failed during fetch" in html
+    assert (
+        "Controlled CCLD retrieval (live public CCLD mode): Controlled CCLD "
+        "retrieval completed with no matching imported records"
+    ) in html
+    assert "Report 3 failed during fetch; the public source may be unavailable" in html
+    assert "Live public CCLD" in html
     assert "Safe warnings" in html
     assert "Safe errors" in html
     assert "traceback" not in html.casefold()
@@ -655,6 +854,7 @@ def test_retrieval_job_history_renders_recent_jobs_safely_without_mutation(
     assert content_type == "text/html; charset=utf-8"
     assert before_counts == after_counts
     assert "Controlled retrieval is configured for this runtime" in html
+    assert "Not recorded" in html
     assert "completed-job" in html
     assert "warning-job" in html
     assert "failed-job" in html
@@ -716,6 +916,7 @@ def test_retrieval_job_detail_renders_completed_job_without_mutation(tmp_path: P
     assert "Controlled CCLD retrieval job detail" in html
     assert "completed-job" in html
     assert "Completed" in html
+    assert "Not recorded" in html
     assert "completed" in html
     assert "Facility/license number" in html
     assert "157806098" in html
