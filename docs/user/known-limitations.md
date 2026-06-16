@@ -184,7 +184,10 @@
   slice for CCLD complaint records. It is server-executed, CCLD-only,
   facility/date/type bounded, authenticated, permissioned, rate-limited,
   timeout-limited, retry-limited, raw-source-preserving, PostgreSQL-imported,
-  safe-status, private-value-safe, and tested without live CCLD calls in CI. The
+  safe-status, private-value-safe, and tested without live CCLD calls in CI. It
+  discovers complaint-section report links for the requested facility and
+  prefilters discovered links to the requested date range before fetching
+  reports. The
   browser must not scrape or receive connector credentials,
   GitHub tokens, provider tokens, cookies, private headers, or server-side
   secrets. Statewide crawling, automatic source expansion, non-CCLD sources,

@@ -248,7 +248,9 @@ The first ADR-0016 retrieval slice is server-side and CCLD-only. The browser
 submits only facility/license number, record type, start date, and end date.
 Supported record types are `complaints` and `all_supported`; all supported
 currently resolves to complaint records only. The server validates inputs,
-requires retrieval trigger permission, enforces CCLD source URL allowlists,
+requires retrieval trigger permission, discovers CCLD complaint-section report
+links for the requested facility, prefilters discovered links to the requested
+date range before fetching reports, enforces CCLD source URL allowlists,
 preserves raw source artifacts under configured server-side storage, computes raw
 SHA-256 hashes, deterministically extracts/normalizes/validates, imports
 source-derived rows into PostgreSQL, and renders safe job state/result counts.

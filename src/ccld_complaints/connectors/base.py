@@ -13,6 +13,7 @@ class SourceDocumentCandidate:
     source_url: str
     discovered_report_date: str | None = None
     discovered_at: str | None = None
+    report_section: str | None = None
 
 
 @dataclass(frozen=True)

@@ -252,6 +252,13 @@ def default_local_test_reviewer_ui_context() -> ReviewerUiContext:
     return _DEFAULT_REVIEWER_UI_CONTEXT
 
 
+def reset_default_local_test_reviewer_ui_context() -> None:
+    global _DEFAULT_REVIEWER_UI_CONTEXT
+    if _DEFAULT_REVIEWER_UI_CONTEXT is not None and _DEFAULT_REVIEWER_UI_CONTEXT.engine:
+        _DEFAULT_REVIEWER_UI_CONTEXT.engine.dispose()
+    _DEFAULT_REVIEWER_UI_CONTEXT = None
+
+
 def local_test_reviewer_actor(
     *,
     roles: tuple[str, ...] = ("tester_reviewer",),

@@ -296,7 +296,10 @@ unauthenticated actors, role-denied actors, out-of-scope actors, rate limits, an
 request limits block before network calls; server-side CCLD source allowlists
 block caller-supplied URLs, unsupported schemes, redirects to unapproved hosts,
 private/authenticated sources, and non-CCLD sources; network retrieval is mocked
-so CI makes no live CCLD calls; raw artifacts are preserved before extraction;
+so CI makes no live CCLD calls; complaint retrieval discovers only complaint-
+section report links for the requested facility and prefilters those links to
+the requested date range before fetching; no-match date ranges fetch nothing and
+produce safe warnings; raw artifacts are preserved before extraction;
 raw SHA-256 hashes and source traceability are preserved; deterministic
 extraction, validation, and PostgreSQL import happen before successful status;
 job states and safe result counts are deterministic; re-runs are duplicate-safe;
