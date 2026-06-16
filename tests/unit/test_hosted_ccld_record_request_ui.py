@@ -560,6 +560,9 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert "Selected request context" in html
     assert "Change facility/date criteria for this request" in html
     assert "Copyable tester feedback checklist" in html
+    assert "Technical retrieval details" in html
+    assert "Copy details for feedback" in html
+    assert "Advanced local/operator actions" in html
     assert "- Matching source-derived rows shown: 0" in html
     assert "- Matching complaint records in queue: 0" in html
     assert "- Local facility rows before date filtering: 6" in html

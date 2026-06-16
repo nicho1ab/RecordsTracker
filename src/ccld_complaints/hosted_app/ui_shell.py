@@ -295,29 +295,33 @@ def _runtime_mode_label() -> str:
 SHARED_CSS = r"""
     :root {
       color-scheme: light;
-      --bg: #f4f7f8;
+      --bg: #F5F7FA;
       --surface: #ffffff;
-      --surface-alt: #f0f5f6;
+      --surface-alt: #EEF7F6;
       --surface-strong: #17212b;
       --ink: #17212b;
-      --muted: #536171;
-      --line: #cbd6dc;
+      --muted: #5B6775;
+      --muted-2: #6B7785;
+      --line: #D8E0E7;
+      --line-soft: #E6EBF0;
       --accent: #006b5f;
-      --accent-strong: #084d46;
-      --accent-soft: #dcefed;
+      --accent-strong: #00564D;
+      --accent-soft: #EEF7F6;
       --blue: #2457a6;
       --blue-soft: #e6eef9;
       --amber: #8a5a00;
       --amber-soft: #fff5db;
       --rose: #9b2c3a;
       --rose-soft: #fff0f2;
-      --warning-bg: #fff7df;
-      --warning-line: #d8aa3d;
-      --danger-bg: #fff1f0;
-      --danger-line: #d66b61;
+      --warning-bg: #FFF7E0;
+      --warning-line: #D89B00;
+      --danger-bg: #FFF0F0;
+      --danger-line: #B42318;
+      --success-bg: #EAF7EF;
+      --success-line: #2E7D4F;
       --focus: #2457a6;
-      --shadow: 0 1px 2px rgb(31 41 51 / 8%), 0 8px 24px rgb(31 41 51 / 8%);
-      --shadow-strong: 0 16px 40px rgb(19 32 43 / 14%);
+      --shadow: 0 1px 2px rgb(23 33 43 / 6%), 0 10px 24px rgb(23 33 43 / 7%);
+      --shadow-strong: 0 18px 42px rgb(23 33 43 / 12%);
     }
     * {
       box-sizing: border-box;
@@ -332,27 +336,27 @@ SHARED_CSS = r"""
     }
     .shell {
       margin: 0 auto;
-      max-width: 84rem;
-      padding: 0 1rem;
+      max-width: 80rem;
+      padding: 0 1.25rem;
     }
     .site-header {
       background: rgba(255, 255, 255, 0.98);
-      border-bottom: 1px solid var(--line);
-      box-shadow: 0 1px 10px rgb(31 41 51 / 7%);
+      border-bottom: 1px solid var(--line-soft);
+      box-shadow: 0 1px 8px rgb(23 33 43 / 5%);
     }
     .site-title-row {
       align-items: flex-start;
       display: flex;
       gap: 1rem;
       justify-content: space-between;
-      padding: 1.25rem 0 0.75rem;
+      padding: 1rem 0 0.7rem;
     }
     .product-name {
       color: var(--accent-strong);
       font-size: 0.9rem;
       font-weight: 800;
       letter-spacing: 0;
-      margin: 0 0 0.3rem;
+      margin: 0 0 0.2rem;
       text-transform: uppercase;
     }
     .pilot-eyebrow, .pilot-actor, .site-footer p, .product-subtitle, .helper-text {
@@ -360,10 +364,12 @@ SHARED_CSS = r"""
       margin: 0 0 0.4rem;
     }
     .product-subtitle {
-      max-width: 48rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+      max-width: 46rem;
     }
     h1 {
-      font-size: 2.15rem;
+      font-size: 2.05rem;
       line-height: 1.15;
       margin: 0 0 0.25rem;
     }
@@ -418,7 +424,7 @@ SHARED_CSS = r"""
       border: 1px solid transparent;
       border-radius: 6px;
       display: inline-block;
-      padding: 0.45rem 0.65rem;
+      padding: 0.38rem 0.55rem;
       text-decoration: none;
       white-space: nowrap;
     }
@@ -430,21 +436,20 @@ SHARED_CSS = r"""
       box-shadow: inset 0 -3px 0 var(--accent);
     }
     .guided-stepper {
-      background: #ffffff;
-      border: 1px solid #d9e3e7;
-      border-radius: 8px;
-      box-shadow: 0 1px 8px rgb(31 41 51 / 5%);
+      align-items: center;
+      background: transparent;
+      border-bottom: 1px solid var(--line-soft);
       display: grid;
-      gap: 0.65rem;
-      grid-template-columns: minmax(12rem, 0.24fr) minmax(0, 1fr);
-      margin: 0 0 0.85rem;
-      padding: 0.55rem 0.7rem;
+      gap: 0.75rem;
+      grid-template-columns: minmax(13rem, 0.26fr) minmax(0, 1fr);
+      margin: 0 0 1.1rem;
+      padding: 0 0 0.85rem;
     }
     .stepper-summary {
-      background: #f8fbfb;
-      border: 1px solid #d7e5e4;
-      border-radius: 6px;
-      padding: 0.55rem 0.65rem;
+      background: transparent;
+      border: 0;
+      border-left: 3px solid var(--accent);
+      padding: 0 0 0 0.75rem;
     }
     .stepper-eyebrow {
       color: var(--accent-strong);
@@ -475,39 +480,27 @@ SHARED_CSS = r"""
     .stepper-item {
       align-items: center;
       background: transparent;
-      border: 1px solid #d5dfe4;
-      border-radius: 999px;
+      border: 0;
+      border-radius: 0;
       display: inline-flex;
       gap: 0.35rem;
       min-height: 0;
-      padding: 0.28rem 0.45rem;
+      padding: 0.15rem 0.2rem;
       position: relative;
     }
     .stepper-item.is-complete {
-      background: #edf7f1;
-      border-color: #8ac7a5;
+      color: var(--accent-strong);
     }
     .stepper-item.is-current {
-      background: var(--blue-soft);
-      border-color: var(--blue);
-      box-shadow: inset 0 -3px 0 var(--blue);
+      border-bottom: 3px solid var(--blue);
+      color: var(--blue);
     }
     .stepper-item.is-upcoming {
-      background: #f5f7f8;
-      color: #66737c;
+      color: var(--muted-2);
     }
     .step-index {
       align-items: center;
-      background: #ffffff;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      display: inline-flex;
-      font-size: 0.82rem;
-      font-weight: 800;
-      height: 1.25rem;
-      justify-content: center;
-      min-width: 1.25rem;
-      width: 1.25rem;
+      display: none;
     }
     .step-main {
       align-self: center;
@@ -522,30 +515,22 @@ SHARED_CSS = r"""
       word-break: keep-all;
     }
     .step-state {
-      align-self: center;
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      font-size: 0.72rem;
-      font-weight: 800;
-      padding: 0;
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      height: 1px;
+      overflow: hidden;
+      position: absolute;
       white-space: nowrap;
+      width: 1px;
     }
     .page-main {
-      padding-bottom: 2rem;
-      padding-top: 1rem;
+      padding-bottom: 2.5rem;
+      padding-top: 1.15rem;
     }
     section {
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      box-shadow: var(--shadow);
-      margin: 0 0 1rem;
-      padding: 1rem;
+      margin: 0 0 1.35rem;
     }
     section section, .nested-card {
-      background: var(--surface-alt);
-      box-shadow: none;
       margin-top: 1rem;
     }
     form {
@@ -708,9 +693,11 @@ SHARED_CSS = r"""
     }
     .hero-card {
       background: #ffffff;
-      border: 1px solid #b9d5d4;
+      border: 1px solid var(--line-soft);
+      border-left: 5px solid var(--accent);
+      border-radius: 10px;
       box-shadow: var(--shadow-strong);
-      padding: 1.25rem;
+      padding: 1.4rem;
     }
     .hero-card h2 {
       font-size: 1.55rem;
@@ -739,7 +726,7 @@ SHARED_CSS = r"""
       min-width: 12rem;
     }
     .boundary-note {
-      background: #f8fbfb;
+      background: var(--surface-alt);
       border-left: 4px solid var(--accent);
       color: var(--muted);
       margin-bottom: 0;
@@ -754,8 +741,9 @@ SHARED_CSS = r"""
     }
     .metric-card {
       background: #ffffff;
-      border: 1px solid var(--line);
+      border: 1px solid var(--line-soft);
       border-radius: 8px;
+      box-shadow: 0 1px 2px rgb(23 33 43 / 5%);
       padding: 0.8rem;
     }
     .metric-card strong {
@@ -803,7 +791,11 @@ SHARED_CSS = r"""
       margin-bottom: 0;
     }
     .action-card, .summary-card, .detail-card, .empty-state-card, .warning-card {
+      background: var(--surface);
+      border: 1px solid var(--line-soft);
       border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 1rem;
     }
     .action-card {
       min-height: 100%;
@@ -863,8 +855,9 @@ SHARED_CSS = r"""
     }
     .stat-card {
       background: var(--surface);
-      border: 1px solid var(--line);
+      border: 1px solid var(--line-soft);
       border-radius: 8px;
+      box-shadow: 0 1px 2px rgb(23 33 43 / 5%);
       padding: 0.85rem;
     }
     .result-list {
@@ -874,8 +867,9 @@ SHARED_CSS = r"""
     .result-card {
       align-items: center;
       background: #ffffff;
-      border: 1px solid var(--line);
+      border: 1px solid var(--line-soft);
       border-radius: 8px;
+      box-shadow: var(--shadow);
       display: grid;
       gap: 1rem;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -907,6 +901,40 @@ SHARED_CSS = r"""
     .technical-details > summary {
       color: var(--accent-strong);
       font-size: 0.92rem;
+    }
+    .detail-shell {
+      display: grid;
+      gap: 1rem;
+    }
+    .detail-top-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.75fr);
+    }
+    .fact-grid {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    }
+    .fact-card {
+      background: var(--surface);
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      padding: 0.75rem;
+    }
+    .fact-card strong {
+      display: block;
+      font-size: 1.05rem;
+    }
+    .fact-card span {
+      color: var(--muted);
+      display: block;
+      font-size: 0.86rem;
+    }
+    .support-layout {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: minmax(0, 0.9fr) minmax(20rem, 1.1fr);
     }
     .recovery-panel {
       border-left: 5px solid var(--warning-line);
@@ -940,7 +968,7 @@ SHARED_CSS = r"""
     }
     .fixed-field {
       background: #f7fafb;
-      border: 1px solid var(--line);
+      border: 1px solid var(--line-soft);
       border-radius: 6px;
       padding: 0.65rem;
     }
@@ -961,10 +989,10 @@ SHARED_CSS = r"""
     }
     .workflow-panel {
       background: #ffffff;
-      border: 1px solid #b8cbd4;
-      border-radius: 8px;
+      border: 1px solid var(--line-soft);
+      border-radius: 10px;
       box-shadow: var(--shadow-strong);
-      padding: 1.1rem;
+      padding: 1.25rem;
     }
     .workflow-panel-primary {
       border-color: var(--accent);
@@ -986,7 +1014,7 @@ SHARED_CSS = r"""
       font-size: 0.92rem;
     }
     details {
-      border-top: 1px solid var(--line);
+      border-top: 1px solid var(--line-soft);
       margin-top: 0.75rem;
       padding-top: 0.75rem;
     }
@@ -1097,7 +1125,7 @@ SHARED_CSS = r"""
       .site-title-row, .two-column, .request-layout {
         display: block;
       }
-      .attorney-hero, .legal-summary-grid {
+      .attorney-hero, .legal-summary-grid, .detail-top-grid, .support-layout {
         display: block;
       }
       .attorney-hero-actions {

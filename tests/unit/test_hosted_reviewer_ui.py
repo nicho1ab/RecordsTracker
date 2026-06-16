@@ -76,12 +76,12 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert "Source-derived records stay separate" in normalized_html
     assert "Worklist" in html
     assert "Queue status summary" in html
-    assert "source traceability available" in normalized_html
+    assert "Source traceability available" in html
     assert "Open record" in html
     assert "Not started" in html
     assert "with notes" in html
     assert "with reviewer status" in html
-    assert "source traceability available" in normalized_html
+    assert "Source traceability available" in html
     assert "Open next record" in html
     assert "Reviewer status" in html
     assert "Reviewer-created notes" in html
@@ -242,6 +242,9 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     )
     assert "Complaint review workspace" in html
     assert "Legal-review flags and source checks" in html
+    assert "detail-top-grid" in html
+    assert "Source-confidence cues" in html
+    assert "Field-note and technical context" in html
     assert "Complaint and report dates" in html
     assert "Facility/license number" in html
     assert "157806098" in html

@@ -3,10 +3,11 @@
 This repository supports governed ingestion, preservation, extraction,
 validation, local review, and production-discovery for public complaint and
 facility report records from the California Community Care Licensing Division
-public portal. The hosted CCLD workflow is now shaped as an attorney-focused
-public-record review workspace for selecting a facility, retrieving complaint
-records, reviewing key dates/findings/source traceability, and flagging records
-that need cautious legal review without making legal conclusions.
+public portal. The hosted CCLD workflow is now shaped as a product-ready,
+attorney-focused public-record review workspace for selecting a facility,
+retrieving complaint records, reviewing key dates/findings/source traceability,
+and flagging records that need cautious legal review without making legal
+conclusions.
 
 The hosted product direction is a public-interest project for early ylc.org
 testers. It is not a DSCC project.

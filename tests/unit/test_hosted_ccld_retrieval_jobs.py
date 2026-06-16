@@ -776,6 +776,8 @@ def test_retrieval_job_history_empty_state_renders_for_allowed_local_dev_actor()
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Retrieval status center" in html
+    assert "Job list" in html
+    assert "Table view" in html
     assert "No retrieval jobs have been submitted" in html
     assert "Controlled retrieval setup is missing" in html
     assert "facility/date context" in html
@@ -918,6 +920,8 @@ def test_retrieval_job_detail_renders_completed_job_without_mutation(tmp_path: P
     assert content_type == "text/html; charset=utf-8"
     assert before_counts == after_counts
     assert "Retrieval job detail" in html
+    assert "Job summary and next step" in html
+    assert "Technical counts, warnings, and errors" in html
     assert "completed-job" in html
     assert "Completed" in html
     assert "Not recorded" in html

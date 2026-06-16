@@ -230,6 +230,12 @@ source traceability cues, and secondary/collapsed table views; detail pages lead
 with complaint overview, finding, key dates, review flags/source checks, source
 traceability, and visibly separate reviewer-created notes/status before full
 technical source-derived details.
+Final hosted product-design tests should also prove ordinary sections are not
+globally rendered as stacked cards, the workflow rail is compact and non-card-
+like, technical recovery/job details and full table views are collapsed or
+secondary, feedback safety/examples are in details, and worklist/detail pages use
+human-readable labels such as `Complaint received`, `Visit date`, `Report date`,
+and `Signed` instead of raw source-derived field names as primary labels.
 Hosted CCLD artifact builder tests should build fixture-backed validated SQLite
 output, convert it into hosted seeded-corpus JSON, validate the JSON through the
 existing hosted seeded parser, import it through the existing hosted seeded
