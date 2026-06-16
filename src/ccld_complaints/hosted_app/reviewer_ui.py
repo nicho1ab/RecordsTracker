@@ -673,20 +673,20 @@ def _render_record_list(
         actor_label=actor_label,
         main=f"""
         <section class="hero-card" aria-labelledby="reviewer-queue-heading">
-            <h2 id="reviewer-queue-heading">{len(records)} complaint record(s) visible</h2>
-            <p>Review imported source-derived complaint records, then add reviewer-created
-            notes/status where supported. Source-derived data and reviewer-created state remain
-            separate.</p>
+                        <h2 id="reviewer-queue-heading">{len(records)} complaint {'record is' if len(records) == 1 else 'records are'} ready for review</h2>
             <p><a class="button" href="{_next_review_item_href(_next_review_item(records, state_summaries))}">Open next record</a></p>
-            <p>{_next_review_item_markup(_next_review_item(records, state_summaries), state_summaries)}</p>
+                        <p class="sr-note">Source-derived records stay separate from reviewer-created notes/status.</p>
         </section>
-        {_render_scope_notice(workflow)}
-        <section aria-labelledby="reviewer-search-heading">
-            <h2 id="reviewer-search-heading">Filter queue</h2>
-                        <p>Use this queue for imported CCLD complaint records. For the primary pilot path,
-                        start from facility lookup or the retrieval request page when possible.</p>
-            {_render_reviewer_queue_navigation()}
-      <form action="{REVIEWER_UI_RECORDS_PATH}" method="get">
+                {no_results_notice}
+        <section aria-labelledby="reviewer-list-heading">
+                        <h2 id="reviewer-list-heading">Worklist</h2>
+                                                {_render_reviewer_queue_summary(records, state_summaries)}
+                <div class="result-list" aria-label="Complaint records ready for review">
+        {cards}
+                </div>
+                <details>
+                    <summary>Filter or search queue</summary>
+            <form action="{REVIEWER_UI_RECORDS_PATH}" method="get">
         <p>
           <label for="q">Search seeded review records</label>
                     <input id="q" name="q" type="search" value="{_escape(search_query)}"
@@ -699,15 +699,8 @@ def _render_record_list(
           <a href="{REVIEWER_UI_RECORDS_PATH}">Clear search</a>
         </p>
       </form>
-    </section>
-        {no_results_notice}
-    <section aria-labelledby="reviewer-list-heading">
-            <h2 id="reviewer-list-heading">Worklist</h2>
-                        <p>Showing {len(records)} of {returned_count} complaint records.</p>
-                        {_render_reviewer_queue_summary(records, state_summaries)}
-        <div class="result-list" aria-label="Complaint records ready for review">
-    {cards}
-        </div>
+            <p class="helper-text">Showing {len(records)} of {returned_count} complaint records.</p>
+                </details>
         <details>
           <summary>Show table view</summary>
       <table>
@@ -733,6 +726,7 @@ def _render_record_list(
         </tbody>
       </table>
             </details>
+        {_render_scope_notice(workflow)}
     </section>""",
     )
 
@@ -804,28 +798,12 @@ def _render_reviewer_queue_summary(
             ("Blocked", counts["blocked"]),
         )
     )
-    return f"""<section aria-labelledby="reviewer-queue-summary-heading">
+    return f"""<section class="quiet-section" aria-labelledby="reviewer-queue-summary-heading">
         <h3 id="reviewer-queue-summary-heading">Queue status summary</h3>
-        <p>This summary uses only loaded source-derived records and existing reviewer-created
-        note/status rows. It does not save queue state or change source-derived records.</p>
-        <p>List values are source-derived display summaries. Open reviewer detail for
-        source-confidence cues before relying on missing, confusing, or proxy-related fields
-        in reviewer-created notes/status or manual feedback.</p>
         <div class="stat-grid" aria-label="Reviewer status counts">
 {status_cards}
         </div>
-        <dl>
-            <dt>Total visible records</dt>
-            <dd>{len(records)}</dd>
-            <dt>Records with reviewer-created notes</dt>
-            <dd>{note_count}</dd>
-            <dt>Records with reviewer-created status</dt>
-            <dd>{status_count}</dd>
-            <dt>Records with source traceability available</dt>
-            <dd>{traceability_count}</dd>
-            <dt>Suggested next record to open</dt>
-            <dd>{_next_review_item_markup(next_record, state_summaries)}</dd>
-        </dl>
+        <p class="helper-text">{note_count} with notes; {status_count} with reviewer status; {traceability_count} with source traceability available. {_next_review_item_markup(next_record, state_summaries)}</p>
     </section>"""
 
 
@@ -2273,16 +2251,13 @@ def _render_scope_notice(workflow: Mapping[str, Any]) -> str:
     scope = _mapping(workflow, "scope")
     scope_type = _escape(_string(scope, "scope_type"))
     scope_id = _escape(_string(scope, "scope_id"))
-    return f"""<section aria-labelledby="reviewer-scope-heading">
-      <h2 id="reviewer-scope-heading">Local/test reviewer UI shell</h2>
-      <p>This browser page is local/test only and uses a fixture actor context
-      supplied by the scaffold process.</p>
-      <p>The seeded corpus scope is {scope_type} / {scope_id}.</p>
-      <p>Source-derived records remain separate from reviewer-created notes,
-      statuses, and audit rows.</p>
-      <p>This shell does not implement production sign-in, deployment, exports,
-      reset/reload execution, live crawling, or connector execution.</p>
-    </section>"""
+    return f"""<details class="technical-details">
+            <summary>Technical runtime details</summary>
+            <p>This pilot environment uses an authorized local runtime context for reviewer actions.</p>
+            <p>Current review scope: {scope_type} / {scope_id}.</p>
+            <p>Reviewer-created notes/status remain separate from source-derived records and audit rows.</p>
+            <p>This runtime does not add production sign-in, deployment, exports, reset/reload execution, live crawling, or connector execution.</p>
+        </details>"""
 
 
 def _render_notice(
@@ -2346,16 +2321,10 @@ def _page(*, title: str, heading: str, main: str, actor_label: str | None = None
                 heading=heading,
                 main=main,
                 skip_label="Skip to main reviewer content",
-                nav_label="Local/test reviewer navigation",
-                eyebrow=(
-                    "Local/test only: source-derived review viewing with reviewer note/status "
-                    "actions."
-                ),
+                nav_label="Reviewer navigation",
+                eyebrow="Source-traceable complaint review.",
                 actor_label=actor_label,
-                extra_nav_links=(
-                    ("Reviewer records", REVIEWER_UI_RECORDS_PATH),
-                    ("Health check", "/health"),
-                ),
+                extra_nav_links=(),
                 active_path=REVIEWER_UI_PREFIX,
                 step_id="review_records",
                 next_action="Open next record or add reviewer-created notes/status",

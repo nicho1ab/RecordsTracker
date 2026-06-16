@@ -52,7 +52,7 @@ GUIDED_STEPS: tuple[GuidedStep, ...] = (
   ),
   GuidedStep(
     "date_range",
-    "Date range",
+    "Dates",
     "/ccld/records/request",
     "Set the complaint date window.",
   ),
@@ -415,6 +415,7 @@ SHARED_CSS = r"""
       display: inline-block;
       padding: 0.45rem 0.65rem;
       text-decoration: none;
+      white-space: nowrap;
     }
     .site-nav a:hover, .site-nav a.is-active {
       background: var(--accent-soft);
@@ -424,21 +425,21 @@ SHARED_CSS = r"""
       box-shadow: inset 0 -3px 0 var(--accent);
     }
     .guided-stepper {
-      background: linear-gradient(135deg, #ffffff 0%, #f4faf9 100%);
-      border: 1px solid #b8cbd4;
+      background: #ffffff;
+      border: 1px solid #d9e3e7;
       border-radius: 8px;
-      box-shadow: var(--shadow);
+      box-shadow: 0 1px 8px rgb(31 41 51 / 6%);
       display: grid;
       gap: 0.75rem;
-      grid-template-columns: minmax(12rem, 0.28fr) minmax(0, 1fr);
-      margin: 0 0 1rem;
-      padding: 0.75rem;
+      grid-template-columns: minmax(13rem, 0.26fr) minmax(0, 1fr);
+      margin: 0 0 0.85rem;
+      padding: 0.65rem 0.75rem;
     }
     .stepper-summary {
-      background: #ffffff;
-      border: 1px solid #c9dfdd;
+      background: #f8fbfb;
+      border: 1px solid #d7e5e4;
       border-radius: 6px;
-      padding: 0.75rem;
+      padding: 0.65rem;
     }
     .stepper-eyebrow {
       color: var(--accent-strong);
@@ -458,22 +459,24 @@ SHARED_CSS = r"""
       color: var(--ink);
     }
     .stepper-list {
-      display: grid;
-      gap: 0.35rem;
-      grid-template-columns: repeat(7, minmax(0, 1fr));
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem 0.5rem;
       list-style: none;
       margin: 0;
       padding: 0;
     }
     .stepper-item {
-      background: var(--surface-alt);
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      display: grid;
+      align-items: center;
+      background: transparent;
+      border: 1px solid #d5dfe4;
+      border-radius: 6px;
+      display: inline-flex;
       gap: 0.35rem;
-      grid-template-columns: auto minmax(0, 1fr);
       min-height: 0;
-      padding: 0.45rem 0.5rem;
+      padding: 0.32rem 0.45rem;
+      position: relative;
     }
     .stepper-item.is-complete {
       background: #edf7f1;
@@ -482,7 +485,7 @@ SHARED_CSS = r"""
     .stepper-item.is-current {
       background: var(--blue-soft);
       border-color: var(--blue);
-      box-shadow: inset 0 0 0 2px var(--blue);
+      box-shadow: inset 0 -3px 0 var(--blue);
     }
     .stepper-item.is-upcoming {
       background: #f5f7f8;
@@ -492,14 +495,14 @@ SHARED_CSS = r"""
       align-items: center;
       background: #ffffff;
       border: 1px solid var(--line);
-      border-radius: 999px;
+      border-radius: 4px;
       display: inline-flex;
       font-size: 0.82rem;
       font-weight: 800;
-      height: 1.45rem;
+      height: 1.35rem;
       justify-content: center;
-      min-width: 1.45rem;
-      width: 1.45rem;
+      min-width: 1.35rem;
+      width: 1.35rem;
     }
     .step-main {
       align-self: center;
@@ -508,19 +511,20 @@ SHARED_CSS = r"""
     .step-main a {
       font-weight: 800;
       line-height: 1.2;
-      overflow-wrap: anywhere;
+      overflow-wrap: normal;
       text-decoration: none;
+      white-space: nowrap;
+      word-break: keep-all;
     }
     .step-state {
       align-self: center;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: #ffffff;
-      font-size: 0.76rem;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.72rem;
       font-weight: 800;
-      grid-column: 1 / -1;
-      padding: 0.2rem 0.4rem;
-      width: fit-content;
+      padding: 0;
+      white-space: nowrap;
     }
     .page-main {
       padding-bottom: 2rem;
@@ -580,6 +584,7 @@ SHARED_CSS = r"""
       padding: 0.6rem 0.85rem;
       text-align: center;
       text-decoration: none;
+      white-space: nowrap;
     }
     button:hover, input[type="submit"]:hover, .button:hover {
       background: var(--accent-strong);
@@ -736,6 +741,8 @@ SHARED_CSS = r"""
     }
     .compact-actions {
       align-items: stretch;
+      display: grid;
+      gap: 0.75rem;
       grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
     }
     .compact-actions p {
@@ -743,6 +750,18 @@ SHARED_CSS = r"""
     }
     .compact-actions .button {
       width: 100%;
+    }
+    .quiet-section {
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      padding: 0.25rem 0;
+    }
+    .quiet-section > h2 {
+      font-size: 1rem;
+    }
+    .technical-grid {
+      margin-top: 0.8rem;
     }
     .stat-grid {
       grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
@@ -872,10 +891,13 @@ SHARED_CSS = r"""
         display: block;
       }
       .stepper-list {
-        grid-template-columns: 1fr;
+        align-items: stretch;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(8.25rem, 1fr));
         margin-top: 0.75rem;
       }
       .stepper-item {
+        justify-content: flex-start;
         min-height: auto;
       }
       dl {

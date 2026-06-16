@@ -745,64 +745,30 @@ def render_app_shell() -> str:
                                 active_path="/",
                 step_id="start",
                 next_action="Start review",
-                extra_nav_links=(
-                                                ("Start", "#start"),
-                                                ("Support actions", "#support-actions"),
-                                                ("Commands", "#commands"),
-                                                ("Boundaries", "#boundaries"),
-                        ("Health check", "/health"),
-                ),
+                extra_nav_links=(),
                                 main=f"""    <section id="start" class="hero-card" aria-labelledby="start-heading">
             <p class="launch-kicker">Start review</p>
-            <h2 id="start-heading">Retrieve complaint records and move straight into source-traceable review.</h2>
-            <p class="launch-value">Pick one CCLD facility, set a date range, retrieve complaint records, confirm the result, work the queue, review a complaint, and send feedback from the same guided path.</p>
-            <p class="sr-note">CCLD public portal remains the source of record.</p>
+            <h2 id="start-heading">Start a CCLD complaint review</h2>
+            <p class="launch-value">Select a facility, set a date range, retrieve complaint records, and move directly into a source-traceable review queue.</p>
             <p><a class="button button-large" href="{CCLD_RECORD_REQUEST_PATH}">Start review</a></p>
-            <div class="action-grid">
-                <section class="action-card" aria-labelledby="home-retrieve-heading">
-                    <h3 id="home-retrieve-heading">Retrieve complaint records</h3>
-                    <p>Choose a facility and date range, then retrieve public CCLD complaint records
-                    for review.</p>
-                    <p><a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Retrieve complaint records</a></p>
-                </section>
-                <section class="action-card" aria-labelledby="home-facility-heading">
-                    <h3 id="home-facility-heading">Find a facility</h3>
-                    <p>Search facility/license number, name, city, county, ZIP, type, or status from
-                    the local CCLD reference list.</p>
-                    <p><a class="button button-secondary" href="{CCLD_FACILITY_LOOKUP_PATH}">Find a facility</a></p>
-                </section>
-                <section class="action-card" aria-labelledby="home-review-heading">
-                    <h3 id="home-review-heading">Review imported records</h3>
-                    <p>Open the reviewer queue for source-derived complaint records and add
-                    reviewer-created notes/status where supported.</p>
-                    <p><a class="button button-secondary" href="/reviewer">Review imported records</a></p>
-                </section>
-                <section class="action-card" aria-labelledby="home-jobs-heading">
-                    <h3 id="home-jobs-heading">View retrieval jobs</h3>
-                    <p>Check safe job status, counts, warnings, and next actions from recent
-                    controlled CCLD retrieval jobs.</p>
-                    <p><a class="button button-secondary" href="{CCLD_RETRIEVAL_JOBS_PATH}">View retrieval jobs</a></p>
-                </section>
-                <section class="action-card" aria-labelledby="home-feedback-heading">
-                    <h3 id="home-feedback-heading">Send feedback</h3>
-                    <p>Report confusing UI, unexpected results, or a future data-source request without
-                    including credentials or private values.</p>
-                    <p><a class="button button-secondary" href="{FEEDBACK_PATH}">Send feedback</a></p>
-                </section>
+            <p class="sr-note">Current mode is shown in the header. CCLD public portal remains the source of record.</p>
+        </section>
+        <section id="support-actions" class="quiet-section" aria-labelledby="support-actions-heading">
+            <h2 id="support-actions-heading">Other ways to continue</h2>
+            <div class="compact-actions">
+                <p><a class="button button-secondary" href="{CCLD_FACILITY_LOOKUP_PATH}">Find facility</a></p>
+                <p><a class="button button-secondary" href="/reviewer">Review queue</a></p>
+                <p><a class="button button-secondary" href="{CCLD_RETRIEVAL_JOBS_PATH}">View jobs</a></p>
+                <p><a class="button button-secondary" href="{FEEDBACK_PATH}">Send feedback</a></p>
             </div>
         </section>
-        <section id="workflow" aria-labelledby="workflow-heading">
-            <h2 id="workflow-heading">Pilot workflow</h2>
-            <ol>
-                <li>Pick a facility.</li>
-                <li>Retrieve complaint records.</li>
-                <li>Review source-derived records.</li>
-                <li>Add reviewer notes/status.</li>
-                <li>Send feedback.</li>
-            </ol>
+        <section id="boundaries" class="quiet-section" aria-labelledby="boundaries-heading">
+            <h2 id="boundaries-heading">Review boundary</h2>
+            <p>Source-derived records stay separate from reviewer-created notes/status. Imported rows support review; they do not prove source completeness or legal conclusions.</p>
         </section>
-        <section id="commands" aria-labelledby="commands-heading">
-            <h2 id="commands-heading">Local commands</h2>
+        <section id="commands" class="quiet-section" aria-labelledby="commands-heading">
+            <details>
+            <summary id="commands-heading">Developer/operator commands</summary>
             <div class="action-grid">
                 <section class="detail-card" aria-labelledby="live-command-heading">
                     <h3 id="live-command-heading">Live public CCLD retrieval</h3>
@@ -815,19 +781,14 @@ def render_app_shell() -> str:
                     <p>Uses committed fixtures and does not make live CCLD calls.</p>
                 </section>
                 <section class="detail-card" aria-labelledby="scaffold-command-heading">
-                    <h3 id="scaffold-command-heading">Ordinary scaffold</h3>
+                    <h3 id="scaffold-command-heading">Local pilot runtime</h3>
                     <p><code>.\\scripts\\run-hosted-scaffold.ps1 -Port 8000</code></p>
-                    <p>Shows the local pilot runtime and setup-required retrieval state.</p>
+                    <p>Starts the local pilot runtime with retrieval setup guidance.</p>
                 </section>
             </div>
-        </section>
-        <section id="boundaries" class="warning-card" aria-labelledby="boundaries-heading">
-            <h2 id="boundaries-heading">Boundary note</h2>
-            <p>CCLD public portal remains the source of record. Absence of imported records is not
-            proof that no complaints exist. This pilot preserves CCLD-only scope, fixture/mock
-            separation, source traceability, and reviewer-created notes/status separation.</p>
+            </details>
             <details>
-                <summary>What this pilot does not add</summary>
+                <summary>Technical boundaries</summary>
                 <ul>
                     <li>No non-CCLD sources, authentication/session/account work, exports, public
                     deployment behavior, or unrelated workflow features.</li>
