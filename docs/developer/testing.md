@@ -247,6 +247,15 @@ focused on their own primary questions. These tests should preserve existing
 retrieval behavior, fixture/mock separation, live-call mocks in CI, source-
 derived versus reviewer-created separation, no-secret HTML checks, and cautious
 non-conclusion wording.
+Hosted UI evidence packet tests should verify that
+`scripts/capture-hosted-ui-evidence.ps1` exists, accepts `-BaseUrl`, `-Mode`,
+`-OutputDir`, viewport, timeout, and `-AllowUnavailable` parameters, captures
+the canonical route list, writes `manifest.json` and `route-status.csv`, refuses
+non-localhost/public URLs, avoids POST/form submission/retrieval/import/reload/
+reviewer-state mutation behavior, and documents screenshot fallback. Behavior
+tests may use an unavailable localhost URL with `-AllowUnavailable` to prove a
+manifest is written without requiring live CCLD calls or browser screenshot
+tooling. Do not add brittle visual comparison tests to CI.
 Hosted CCLD artifact builder tests should build fixture-backed validated SQLite
 output, convert it into hosted seeded-corpus JSON, validate the JSON through the
 existing hosted seeded parser, import it through the existing hosted seeded
