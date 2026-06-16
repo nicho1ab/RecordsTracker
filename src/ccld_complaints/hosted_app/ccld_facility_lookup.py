@@ -1,3 +1,5 @@
+# ruff: noqa: E501
+
 from __future__ import annotations
 
 import csv
@@ -234,33 +236,21 @@ def render_ccld_facility_lookup_page(
     return _page(
         title="Find CCLD facility",
         heading="Find CCLD facility",
-        main=f"""    <section aria-labelledby="facility-lookup-scope-heading">
-      <h2 id="facility-lookup-scope-heading">CCLD-only facility lookup</h2>
-            <p>This lookup reads PostgreSQL-backed source-derived facility rows when
-            configured for production data, or local fixture/reference CSV rows only when
-            explicit local demo mode is enabled.</p>
-      <p>The lookup does not run live CCLD retrieval, query the public portal, mutate records,
-      or prove public-source completeness.</p>
-    </section>
-        <section aria-labelledby="facility-first-run-heading">
-            <h2 id="facility-first-run-heading">Start here: find a facility</h2>
-            <ol>
-                <li>Search by facility/license number, facility name, city, county, ZIP code,
-                facility type, or status.</li>
-                <li>Use a matching result to carry the facility/license number into the CCLD
-                request form.</li>
-                <li>On the request page, submit the facility and optional date range to open the
-                CCLD review queue.</li>
-            </ol>
+                main=f"""    <section class="hero-card" aria-labelledby="facility-lookup-scope-heading">
+            <h2 id="facility-lookup-scope-heading">Find the facility before retrieving complaint records</h2>
+            <p>Search the local CCLD facility reference by facility/license number, facility name,
+            city, county, ZIP, type, or status, then use a result to prefill the retrieval request.</p>
+            <p class="sr-note">The lookup is reference assistance only. CCLD public portal remains
+            the source of record.</p>
         </section>
     {_render_lookup_form(result.query)}
     {_render_reference_source_section(reference_source)}
     {_render_lookup_results(result)}
-    <section aria-labelledby="manual-entry-heading">
+        <section class="summary-card" aria-labelledby="manual-entry-heading">
       <h2 id="manual-entry-heading">Manual facility/license entry</h2>
       <p>If you already know the CCLD facility/license number, you can still type it directly
       on the request form.</p>
-      <p><a href="{CCLD_RECORD_REQUEST_PATH}">Open manual CCLD request form</a></p>
+            <p><a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Open manual CCLD request form</a></p>
     </section>""",
     )
 
@@ -376,8 +366,8 @@ def _record_matches_query(
 
 
 def _render_lookup_form(query: str) -> str:
-    return f"""    <section aria-labelledby="facility-search-heading">
-      <h2 id="facility-search-heading">Search local/test facility reference</h2>
+        return f"""    <section aria-labelledby="facility-search-heading">
+            <h2 id="facility-search-heading">Search facility reference</h2>
       <p id="facility-search-help">Search by facility/license number, facility name, city,
       county, ZIP code, facility type, or status when those fields are present in the local
       reference CSV.</p>
@@ -387,7 +377,7 @@ def _render_lookup_form(query: str) -> str:
           <input id="facility_lookup_query" name="q" type="search"
             value="{_escape(query)}" aria-describedby="facility-search-help">
         </p>
-                <p><button type="submit">Search local/test CCLD facilities</button></p>
+                                <p><button type="submit">Search facilities</button></p>
       </form>
     </section>"""
 
@@ -402,7 +392,8 @@ def _render_reference_source_section(source: CcldFacilityReferenceSource) -> str
         warning_markup = f"""      <ul>
 {warning_items}
       </ul>"""
-    return f"""    <section aria-labelledby="reference-source-heading">
+    card_class = "warning-card" if source.source_kind == "tiny_fixture_fallback" else "summary-card"
+    return f"""    <section class="{card_class}" aria-labelledby="reference-source-heading">
       <h2 id="reference-source-heading">Facility reference source</h2>
       <p id="reference-source-help">Active source: {_escape(source.label)}.</p>
       <dl aria-describedby="reference-source-help">
@@ -412,8 +403,8 @@ def _render_reference_source_section(source: CcldFacilityReferenceSource) -> str
         <dd>{len(source.records)}</dd>
       </dl>
 {warning_markup}
-      <p>Full local/test CSV support is read-only. Raw/full facility CSV files must stay
-      outside the repository and are not imported or persisted by this app.</p>
+    <p>Full local/test CSV support is read-only. Full facility CSV files must stay outside
+    the repository and are not imported or persisted by this app.</p>
             <p>To use a full local/test CSV, set <code>{CCLD_FACILITY_REFERENCE_CSV_ENV}</code>
             or place the file at <code>{default_full_path}</code>.</p>
     </section>"""
@@ -421,18 +412,18 @@ def _render_reference_source_section(source: CcldFacilityReferenceSource) -> str
 
 def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
     if result.empty_search:
-        return """    <section aria-labelledby="facility-results-heading">
+        return """    <section class="empty-state-card" aria-labelledby="facility-results-heading">
       <h2 id="facility-results-heading">Facility lookup results</h2>
       <p>Enter a facility name, facility/license number, city, county, ZIP code, facility type,
       or status to search the local/test CCLD facility reference.</p>
     </section>"""
     if not result.returned_records:
-        return f"""    <section aria-labelledby="facility-results-heading">
+        return f"""    <section class="empty-state-card" aria-labelledby="facility-results-heading">
       <h2 id="facility-results-heading">Facility lookup results</h2>
       <p>No local/test CCLD facility reference rows matched {_escape(result.query)}.</p>
       <p>Try a shorter name, facility/license number, city, county, ZIP code, or facility type.
       You can also continue with manual facility/license number entry.</p>
-      <p><a href="{CCLD_RECORD_REQUEST_PATH}">Open manual CCLD request form</a></p>
+    <p><a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Open manual CCLD request form</a></p>
     </section>"""
     rows = "\n".join(_render_result_row(record) for record in result.returned_records)
     more_guidance = ""
@@ -450,7 +441,7 @@ def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
         <caption>Local/test CCLD facility reference matches</caption>
         <thead>
           <tr>
-            <th scope="col">Request action</th>
+            <th scope="col">Action</th>
             <th scope="col">Facility/license number</th>
             <th scope="col">Facility name</th>
             <th scope="col">City</th>
@@ -476,7 +467,7 @@ def _render_result_row(record: CcldFacilityLookupRecord) -> str:
     }
     href = f"{CCLD_RECORD_REQUEST_PATH}?{urlencode(query_values)}"
     return f"""          <tr>
-            <td><a href="{_escape(href)}">Use this facility for CCLD request</a></td>
+            <td><a class="button" href="{_escape(href)}">Use for retrieval</a></td>
             <td>{_escape(record.facility_number)}</td>
             <td>{_escape(record.facility_name)}</td>
             <td>{_escape(_display_value(record.city))}</td>
@@ -507,6 +498,7 @@ def _page(*, title: str, heading: str, main: str) -> str:
                 main=main,
                 skip_label="Skip to main CCLD facility lookup content",
                 nav_label="Hosted scaffold navigation",
+                active_path=CCLD_FACILITY_LOOKUP_PATH,
         )
 
 

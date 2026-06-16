@@ -1,3 +1,5 @@
+# ruff: noqa: E501
+
 from __future__ import annotations
 
 import argparse
@@ -736,101 +738,100 @@ def render_related_facility_context(record: SampleSourceRecord) -> str:
 def render_app_shell() -> str:
         return render_page_shell(
                 title=APP_NAME,
-                heading=APP_NAME,
+                                heading="CCLD RecordsTracker Pilot",
                 skip_label="Skip to main CCLD review content",
                 nav_label="CCLD records review navigation",
                 eyebrow=SCAFFOLD_NOTICE,
+                                active_path="/",
                 extra_nav_links=(
-                        ("Start first CCLD review", "#start"),
-                        ("Feedback guidance", "#feedback"),
-                        ("Local/test boundaries", "#boundaries"),
+                                                ("Start", "#start"),
+                                                ("Commands", "#commands"),
+                                                ("Boundaries", "#boundaries"),
                         ("Health check", "/health"),
                 ),
-                main=f"""    <section id="start" aria-labelledby="start-heading">
-      <h2 id="start-heading">Start here: CCLD facility request</h2>
-            <p>Request CCLD facility records, load validated local/test records, and review
-            source-derived complaint records with notes and status.</p>
-      <p>Start a CCLD review session here. Find a CCLD facility in the local/test
-      reference CSV or enter a facility/license number manually, then add an optional
-      date range and review matching loaded local/test CCLD records in a guided queue.</p>
-            <section aria-labelledby="primary-actions-heading">
-                <h3 id="primary-actions-heading">Primary pilot actions</h3>
+                                main=f"""    <section id="start" class="hero-card" aria-labelledby="start-heading">
+            <h2 id="start-heading">Retrieve, review, and annotate public CCLD complaint records</h2>
+            <p>Start with a facility, choose a complaint date range, run live public CCLD retrieval
+            when configured, then review imported source-derived records with separate
+            reviewer-created notes/status.</p>
+            <p class="sr-note">CCLD public portal remains the source of record.</p>
+            <div class="action-grid">
+                <section class="action-card" aria-labelledby="home-retrieve-heading">
+                    <h3 id="home-retrieve-heading">Retrieve complaint records</h3>
+                    <p>Choose a facility and date range, then retrieve public CCLD complaint records
+                    for review.</p>
+                    <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Retrieve complaint records</a></p>
+                </section>
+                <section class="action-card" aria-labelledby="home-facility-heading">
+                    <h3 id="home-facility-heading">Find a facility</h3>
+                    <p>Search facility/license number, name, city, county, ZIP, type, or status from
+                    the local CCLD reference list.</p>
+                    <p><a class="button button-secondary" href="{CCLD_FACILITY_LOOKUP_PATH}">Find a facility</a></p>
+                </section>
+                <section class="action-card" aria-labelledby="home-review-heading">
+                    <h3 id="home-review-heading">Review imported records</h3>
+                    <p>Open the reviewer queue for source-derived complaint records and add
+                    reviewer-created notes/status where supported.</p>
+                    <p><a class="button button-secondary" href="/reviewer">Review imported records</a></p>
+                </section>
+                <section class="action-card" aria-labelledby="home-jobs-heading">
+                    <h3 id="home-jobs-heading">View retrieval jobs</h3>
+                    <p>Check safe job status, counts, warnings, and next actions from recent
+                    controlled CCLD retrieval jobs.</p>
+                    <p><a class="button button-secondary" href="{CCLD_RETRIEVAL_JOBS_PATH}">View retrieval jobs</a></p>
+                </section>
+                <section class="action-card" aria-labelledby="home-feedback-heading">
+                    <h3 id="home-feedback-heading">Send feedback</h3>
+                    <p>Report confusing UI, unexpected results, or a future data-source request without
+                    including credentials or private values.</p>
+                    <p><a class="button button-secondary" href="{FEEDBACK_PATH}">Send feedback</a></p>
+                </section>
+            </div>
+        </section>
+        <section id="workflow" aria-labelledby="workflow-heading">
+            <h2 id="workflow-heading">Pilot workflow</h2>
+            <ol>
+                <li>Pick a facility.</li>
+                <li>Retrieve complaint records.</li>
+                <li>Review source-derived records.</li>
+                <li>Add reviewer notes/status.</li>
+                <li>Send feedback.</li>
+            </ol>
+        </section>
+        <section id="commands" aria-labelledby="commands-heading">
+            <h2 id="commands-heading">Local commands</h2>
+            <div class="action-grid">
+                <section class="detail-card" aria-labelledby="live-command-heading">
+                    <h3 id="live-command-heading">Live public CCLD retrieval</h3>
+                    <p><code>.\\scripts\\run-hosted-complaint-retrieval-live.ps1 -Port 8000</code></p>
+                    <p>Public CCLD HTTP requests are made only after browser submit.</p>
+                </section>
+                <section class="detail-card" aria-labelledby="demo-command-heading">
+                    <h3 id="demo-command-heading">Fixture/mock demo</h3>
+                    <p><code>.\\scripts\\run-hosted-complaint-retrieval-demo.ps1 -Port 8010</code></p>
+                    <p>Uses committed fixtures and does not make live CCLD calls.</p>
+                </section>
+                <section class="detail-card" aria-labelledby="scaffold-command-heading">
+                    <h3 id="scaffold-command-heading">Ordinary scaffold</h3>
+                    <p><code>.\\scripts\\run-hosted-scaffold.ps1 -Port 8000</code></p>
+                    <p>Shows the local pilot runtime and setup-required retrieval state.</p>
+                </section>
+            </div>
+        </section>
+        <section id="boundaries" class="warning-card" aria-labelledby="boundaries-heading">
+            <h2 id="boundaries-heading">Boundary note</h2>
+            <p>CCLD public portal remains the source of record. Absence of imported records is not
+            proof that no complaints exist. This pilot preserves CCLD-only scope, fixture/mock
+            separation, source traceability, and reviewer-created notes/status separation.</p>
+            <details>
+                <summary>What this pilot does not add</summary>
                 <ul>
-                    <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find a facility</a></li>
-                    <li><a href="{CCLD_RECORD_REQUEST_PATH}">Request or review loaded
-                    CCLD records</a></li>
-                      <li><a href="/reviewer">Review loaded local/test records</a></li>
-                    <li><a href="{FEEDBACK_PATH}">Submit or copy tester feedback</a></li>
+                    <li>No non-CCLD sources, authentication/session/account work, exports, public
+                    deployment behavior, or unrelated workflow features.</li>
+                    <li>No legal, facility-wide, completeness, harm, abuse, neglect, liability, or
+                    rights-deprivation conclusions.</li>
                 </ul>
-            </section>
-      <ol>
-        <li>Open facility lookup if you do not know the facility/license number.</li>
-        <li>Confirm whether the request context came from facility lookup or manual entry,
-        then submit the CCLD request form for one facility and optional date range.</li>
-        <li>Open the suggested queue record in reviewer detail to check source traceability,
-        source-confidence cues, and field-note guidance.</li>
-        <li>Add reviewer notes/status as tester-created observations when useful, then
-        return to the same queue/request context and resubmit when needed to refresh progress.</li>
-        <li>Finish by copying the single manual feedback checklist into the agreed external
-        channel. The app does not save a review session or persist feedback.</li>
-      </ol>
-      <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find CCLD facility</a></p>
-      <p><a href="{CCLD_RECORD_REQUEST_PATH}">Request CCLD records</a></p>
-            <p><a href="{CCLD_RETRIEVAL_JOBS_PATH}">View retrieval job history</a></p>
-    </section>
-    <section id="workflow" aria-labelledby="workflow-heading">
-      <h2 id="workflow-heading">Workflow overview</h2>
-      <ol>
-        <li>Start with facility lookup when the facility/license number is unknown, or use
-        manual entry when it is known.</li>
-        <li>Confirm the facility/license number, date range, request origin, and active
-        local/test facility reference source before reviewing queue results.</li>
-        <li>Request loaded local/test CCLD records for that facility/date context.</li>
-        <li>Use the CCLD review queue for matching complaint records, no-match/load
-        guidance, reviewer-status filtering, and suggested next-record navigation.</li>
-        <li>Use reviewer detail to check source traceability, source-confidence cues, and
-        field-note guidance before adding reviewer-created notes/status.</li>
-        <li>Return to the same queue/request context, resubmit when needed to refresh
-        note/status cues, continue to the next record, then copy the single manual feedback
-        checklist.</li>
-      </ol>
-    </section>
-    <section id="terms" aria-labelledby="terms-heading">
-      <h2 id="terms-heading">What the main words mean</h2>
-      <dl>
-        <dt>Loaded local/test CCLD records</dt>
-        <dd>Validated local/test CCLD source-derived records staged from hosted
-        seeded-corpus JSON.</dd>
-        <dt>CCLD review queue</dt>
-        <dd>A facility/date-scoped list of matching complaint records ready for review.</dd>
-        <dt>Reviewer-created notes/status</dt>
-        <dd>Reviewer-created local/test state stored separately from source-derived records.</dd>
-      </dl>
-      <p><a href="{CCLD_HELP_PATH}">Read the full CCLD workflow help</a></p>
-    </section>
-    <section id="feedback" aria-labelledby="feedback-heading">
-      <h2 id="feedback-heading">Feedback guidance</h2>
-      <p>This local/test slice does not store feedback. After submitting a CCLD
-      request, the result page shows a structured copyable checklist with the
-      facility/license number, date range, matching record counts, queue status
-      counts, reviewer note/status context, source-traceability cues, reviewer
-      detail confirmation prompts, return-to-queue prompts, and blank prompts for
-      missing or unexpected records, confusing wording, queue surprises, workflow
-      friction, and suggested enhancements. Copy it into the agreed external
-      feedback channel manually.</p>
-    </section>
-    <section id="boundaries" aria-labelledby="boundaries-heading">
-      <h2 id="boundaries-heading">Local/test boundaries</h2>
-      <ul>
-        <li>CCLD public portal material remains the source of record.</li>
-        <li>Browser pages do not run live CCLD retrieval, connector execution, or
-        SQLite conversion.</li>
-        <li>Reviewer notes and reviewer status do not change source-derived records.</li>
-        <li>No saved review session, persisted queue state, duplicate checklist, or feedback
-        persistence is added by these pages.</li>
-        <li>Production sign-in, sessions, cookies, exports, deployment, and public
-        launch behavior remain deferred.</li>
-      </ul>
+            </details>
         </section>""",
         )
 

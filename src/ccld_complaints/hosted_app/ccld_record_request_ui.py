@@ -1,7 +1,10 @@
+# ruff: noqa: E501
+
 from __future__ import annotations
 
 import html
 import json
+import os
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -507,69 +510,49 @@ def _render_request_form(
     reference_source: CcldFacilityReferenceSource | None = None,
 ) -> str:
     active_reference_source = reference_source or load_active_ccld_facility_reference()
+    mode_label = _runtime_mode_label()
+    mode_class = _mode_badge_class(mode_label)
     return _page(
-                title="Request CCLD records",
-                heading="Request CCLD records",
-        main=f"""    <section aria-labelledby="request-scope-heading">
-      <h2 id="request-scope-heading">CCLD-only local/test request</h2>
-                    <p>This local/test app helps a tester request CCLD public complaint records
-                    for one facility/license number, load validated local CCLD output when it is
-                    available, and continue into a reviewer queue for notes and status.</p>
-                    <p>The public CCLD portal remains the source of record. This page reads or
-                    loads local/test source-derived records, and when retrieval is configured
-                    it can trigger a controlled server-side retrieval job. The browser does not
-                    crawl CCLD directly, receive connector credentials, or receive raw artifact
-                    paths.</p>
-                    <p>Start this review session by confirming the CCLD request context.
-                    Facility lookup helps fill the facility/license number; the request queue
-                    then uses loaded local/test CCLD records for that facility/date context.</p>
-                    <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find a CCLD facility by name,
-                    city, county, ZIP code, type, status, or facility/license number</a></p>
-                    <p><a href="{CCLD_HELP_PATH}">Read how this CCLD review workflow
-                    works</a></p>
-                    <p><a href="{CCLD_RETRIEVAL_JOBS_PATH}">View controlled retrieval job
-                    history</a></p>
-                </section>
-                {_render_workflow_overview()}
-    <section aria-labelledby="request-form-heading">
-      <h2 id="request-form-heading">Request CCLD records</h2>
-            <p>Use the facility/license number printed by CCLD for the facility you want to
-            review. Use dates only when you want to narrow the request to complaint,
-            visit, report, signed, or retrieval dates already represented in local/test
-            source-derived records.</p>
-            {_render_request_context_confirmation(
-                facility_number=selected_facility_number,
-                start_date=selected_start_date or None,
-                end_date=selected_end_date or None,
-                request_context_origin=request_context_origin,
-                lookup_facility_name=lookup_facility_name,
-                reference_source=active_reference_source,
-                include_change_links=False,
-            )}
+                                title="Retrieve complaint records",
+                                heading="Retrieve complaint records",
+                main=f"""    <section class="hero-card" aria-labelledby="request-hero-heading">
+            <h2 id="request-hero-heading">Choose a facility and date range, then retrieve public CCLD complaint records for review.</h2>
+            <p>Use this page to start the main pilot workflow: select a CCLD facility, choose a
+            complaint date range, retrieve live public CCLD complaint records when configured, or
+            view already loaded matching records.</p>
+            <p><span class="{mode_class}">{mode_label}</span> <span class="sr-note">CCLD public portal remains the source of record.</span></p>
+        </section>
+        <div class="request-layout">
+            <div>
+        <section aria-labelledby="request-form-heading">
+            <h2 id="request-form-heading">Retrieval request</h2>
       <form action="{CCLD_RECORD_REQUEST_PATH}" method="post">
         <input type="hidden" name="{_REQUEST_CONTEXT_ORIGIN_FIELD}"
                     value="{_escape(request_context_origin)}">
         <input type="hidden" name="{_LOOKUP_FACILITY_NAME_FIELD}"
                     value="{_escape(lookup_facility_name or '')}">
+                <input type="hidden" name="record_type" value="complaints">
         <p>
-          <label for="facility_number">CCLD facility/license number</label>
+                    <label for="facility_number">Facility/license number</label>
                     <input id="facility_number" name="facility_number" inputmode="numeric"
+                                                                                                list="facility-reference-options"
                                                 value="{_escape(selected_facility_number)}"
                                                 aria-describedby="facility-number-help" required>
-                    <span id="facility-number-help">Enter digits only, for example 157806098.
-                    This identifies the CCLD facility or license scope to review.</span>
+                                        <datalist id="facility-reference-options">
+{_render_facility_datalist_options(active_reference_source)}
+                                        </datalist>
+                                        <span id="facility-number-help" class="helper-text">Type a facility/license
+                                        number, facility name, city, county, ZIP, type, or status. Choose a
+                                        suggestion to submit the CCLD facility/license number. Manual digit entry
+                                        still works.</span>
         </p>
+                <div class="fixed-field" aria-labelledby="record-type-heading">
+                    <h3 id="record-type-heading">Record type</h3>
+                    <p><strong>Complaint records</strong></p>
+                    <p class="helper-text">This pilot currently supports CCLD complaint records only.</p>
+                </div>
+                <div class="form-row">
                 <p>
-                    <label for="record_type">Record type</label>
-                                        <select id="record_type" name="record_type"
-                                                aria-describedby="record-type-help">
-{_render_record_type_options(selected_record_type)}
-                                        </select>
-                                        <span id="record-type-help">Only CCLD complaint records
-                                        are currently supported. All supported record types
-                                        currently resolves to complaint records only.</span>
-                </p>
-        <p>
           <label for="start_date">Start date (optional)</label>
                     <input id="start_date" name="start_date" type="date"
                         value="{_escape(selected_start_date)}"
@@ -580,9 +563,10 @@ def _render_request_form(
                     <input id="end_date" name="end_date" type="date"
                         value="{_escape(selected_end_date)}"
                         aria-describedby="date-range-help">
-                    <span id="date-range-help">Dates narrow the local/test result set. Missing
-                    records are not proof that CCLD has no records for that period.</span>
         </p>
+                </div>
+                <p id="date-range-help" class="helper-text">The date range filters complaint report,
+                visit, signed, and retrieval dates represented in public CCLD source data.</p>
                 <p>
                     <label for="reviewer_status_filter">Reviewer-status filter</label>
                     <select id="reviewer_status_filter" name="reviewer_status_filter"
@@ -598,49 +582,143 @@ def _render_request_form(
                     from existing local/test reviewer-created note/status rows. Records with no
                     saved reviewer status are counted as not started.</span>
                 </p>
-                <p><button type="submit">Show CCLD request queue</button></p>
-                <p><button type="submit" name="{_RETRIEVAL_ACTION_FIELD}"
-                    value="{_RETRIEVAL_ACTION_VALUE}">Run controlled CCLD retrieval</button></p>
+                                <div class="form-actions">
+                                        <button type="submit" name="{_RETRIEVAL_ACTION_FIELD}"
+                                        value="{_RETRIEVAL_ACTION_VALUE}">Retrieve complaint records</button>
+                                        <button class="secondary" type="submit">Show current queue</button>
+                                        <a class="button button-quiet" href="{CCLD_RECORD_REQUEST_PATH}">Clear</a>
+                                </div>
       </form>
     </section>
-    {_render_key_terms_section()}
-    {_render_feedback_guidance_section()}
-    <section aria-labelledby="request-boundary-heading">
-      <h2 id="request-boundary-heading">What happens next</h2>
-            <p>If matching CCLD source-derived records are already loaded, this page shows a
-            CCLD review queue with one row per matching complaint record. If not, it can
-            offer a bounded local validated CCLD load, then explain the outside-browser
-            live-fetch and artifact-builder handoff.</p>
-    </section>""",
+            </div>
+            <aside class="sidebar-stack" aria-label="Request context and help">
+                {_render_request_context_confirmation(
+                        facility_number=selected_facility_number,
+                        start_date=selected_start_date or None,
+                        end_date=selected_end_date or None,
+                        request_context_origin=request_context_origin,
+                        lookup_facility_name=lookup_facility_name,
+                        reference_source=active_reference_source,
+                        include_change_links=False,
+                )}
+                <section class="summary-card" aria-labelledby="request-action-help-heading">
+                    <h2 id="request-action-help-heading">Actions</h2>
+                    <dl>
+                        <dt>Retrieve</dt>
+                        <dd>Creates a controlled server-side retrieval job when configured.</dd>
+                        <dt>Show queue</dt>
+                        <dd>Displays already loaded matching source-derived records without running retrieval.</dd>
+                    </dl>
+                </section>
+                <section class="warning-card" aria-labelledby="request-boundary-heading">
+                    <h2 id="request-boundary-heading">Boundary</h2>
+                    <p>Absence of imported records is not proof that no complaints exist. The browser
+                    does not scrape CCLD or receive connector credentials.</p>
+                    <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Advanced facility lookup</a></p>
+                    <p><a href="{CCLD_HELP_PATH}">Help</a></p>
+                </section>
+            </aside>
+        </div>""",
     )
+
+
+def _render_facility_datalist_options(source: CcldFacilityReferenceSource) -> str:
+        return "\n".join(
+                f'                      <option value="{_escape(record.facility_number)}" '
+                f'label="{_escape(_facility_suggestion_label(record))}"></option>'
+                for record in source.records[:100]
+        )
+
+
+def _facility_suggestion_label(record: Any) -> str:
+        geography = ", ".join(
+                part for part in (record.city, record.county) if part
+        )
+        type_status = " / ".join(
+                part for part in (record.facility_type, record.status) if part
+        )
+        pieces = [record.facility_name, record.facility_number]
+        if geography:
+                pieces.append(geography)
+        if type_status:
+                pieces.append(type_status)
+        return " - ".join(pieces)
+
+
+def _runtime_mode_label() -> str:
+    demo_mode = os.environ.get("CCLD_RETRIEVAL_DEMO_MODE", "").strip().casefold()
+    retrieval_enabled = os.environ.get("CCLD_RETRIEVAL_ENABLED", "").strip().casefold()
+    raw_dir = os.environ.get("CCLD_RETRIEVAL_RAW_DIR", "").strip()
+    if demo_mode == "mock-success":
+        return "Fixture/mock demo"
+    if retrieval_enabled == "enabled" and raw_dir:
+        return "Live public CCLD"
+    return "Retrieval not configured"
+
+def _mode_badge_class(label: str) -> str:
+    if label == "Live public CCLD":
+        return "badge badge-live"
+    if label == "Fixture/mock demo":
+        return "badge badge-demo"
+    return "badge badge-muted"
 
 
 def _render_help_page() -> str:
         return _page(
                 title="How CCLD review works",
-                heading="How CCLD review works",
-                main=f"""    <section aria-labelledby="help-purpose-heading">
-            <h2 id="help-purpose-heading">What this local/test app does</h2>
-            <p>The app helps a tester find CCLD source-derived complaint records for one
-            facility/license number and optional date range, then continue into the reviewer
-            UI to inspect source traceability, add reviewer notes, and set a reviewer
-            status.</p>
-            <p>It is CCLD-only and local/test only. It does not prove public-source
-            completeness, make legal or facility-wide conclusions, or run live CCLD fetching
-            from browser pages.</p>
-        </section>
-        {_render_workflow_overview()}
-        {_render_key_terms_section()}
-        {_render_feedback_guidance_section()}
-        <section aria-labelledby="help-next-action-heading">
-            <h2 id="help-next-action-heading">Next action</h2>
-            <p>Start by looking up a facility or entering a facility/license number manually.
-            After records are loaded, use the CCLD review queue links to open each complaint record
-            in the reviewer UI.</p>
-            <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find a CCLD facility</a></p>
-            <p><a href="{CCLD_RECORD_REQUEST_PATH}">Open the CCLD record request form</a></p>
-            <p><a href="{CCLD_RETRIEVAL_JOBS_PATH}">Open controlled retrieval job history</a></p>
-        </section>""",
+                                heading="Help",
+                                main=f"""    <section class="hero-card" aria-labelledby="help-purpose-heading">
+                        <h2 id="help-purpose-heading">Use the pilot without reading a manual</h2>
+                        <p>Pick a facility, retrieve complaint records, review source-derived rows, add
+                        reviewer-created notes/status where supported, then send feedback.</p>
+                </section>
+                <div class="action-grid">
+                    <section class="detail-card" aria-labelledby="help-how-heading">
+                        <h2 id="help-how-heading">How the pilot works</h2>
+                        <p>Facility lookup or manual entry fills a CCLD facility/license number. The
+                        request page uses that context and a date range to retrieve or show matching
+                        complaint records.</p>
+                    </section>
+                    <section class="detail-card" aria-labelledby="help-live-heading">
+                        <h2 id="help-live-heading">Live public CCLD retrieval</h2>
+                        <p>Live mode makes controlled server-side public CCLD HTTP requests only after
+                        browser submit. Raw preservation, validation, and import stay server-side.</p>
+                    </section>
+                    <section class="detail-card" aria-labelledby="help-demo-heading">
+                        <h2 id="help-demo-heading">Fixture/mock demo</h2>
+                        <p>Fixture/mock demo mode uses committed fixtures and does not make live CCLD
+                        calls. It demonstrates job/result/queue behavior offline.</p>
+                    </section>
+                    <section class="detail-card" aria-labelledby="help-separation-heading">
+                        <h2 id="help-separation-heading">Source-derived vs reviewer-created</h2>
+                        <p>Imported public-source-derived values remain source-derived records. Notes and
+                        status are reviewer-created notes/status and do not edit source-derived fields.</p>
+                    </section>
+                    <section class="detail-card" aria-labelledby="help-zero-heading">
+                        <h2 id="help-zero-heading">What 0 imported records can mean</h2>
+                        <p>It can mean no complaint candidates were discovered, candidates were outside the
+                        date range, fetched records did not produce matching rows, a source/network/layout
+                        issue occurred, or retrieval is not configured.</p>
+                    </section>
+                    <section class="warning-card" aria-labelledby="help-not-prove-heading">
+                        <h2 id="help-not-prove-heading">What this app does not prove</h2>
+                        <p>It does not prove no complaints exist, CCLD source coverage is complete, legal
+                        conclusions, facility-wide conclusions, harm, abuse, neglect, liability, or
+                        rights-deprivation.</p>
+                    </section>
+                    <section class="detail-card" aria-labelledby="help-feedback-heading">
+                        <h2 id="help-feedback-heading">How to send useful feedback</h2>
+                        <p>Include the facility/license number, date range, visible job state, complaint
+                        control number when relevant, and what action or wording felt confusing. Do not
+                        include credentials, private URLs, private values, or unrelated sensitive details.</p>
+                    </section>
+                </div>
+                <section aria-labelledby="help-next-action-heading">
+                        <h2 id="help-next-action-heading">Next action</h2>
+                        <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Retrieve complaint records</a></p>
+                        <p><a class="button button-secondary" href="{CCLD_FACILITY_LOOKUP_PATH}">Find a facility</a></p>
+                        <p><a href="{CCLD_RETRIEVAL_JOBS_PATH}">View retrieval jobs</a></p>
+                </section>""",
         )
 
 
@@ -957,11 +1035,13 @@ def _render_no_match_result(
     reference_source: CcldFacilityReferenceSource,
 ) -> str:
     local_count = len(result.all_facility_records)
+    headline = _no_match_headline(retrieval_result, local_count)
+    primary_action = _no_match_primary_action(retrieval_result)
     return _page(
-        title="No local CCLD records found",
-        heading="No local CCLD records found",
-        main=f"""    <section aria-labelledby="no-local-records-heading">
-      <h2 id="no-local-records-heading">No matching local/test CCLD records found</h2>
+                title=headline,
+                heading=headline,
+                main=f"""    <section class="hero-card" aria-labelledby="no-local-records-heading">
+            <h2 id="no-local-records-heading">{_escape(headline)}</h2>
             <p>No staged local/test CCLD records matched facility/license number
             {_escape(request.facility_number)} and the requested date range.</p>
       {_render_date_scope(request)}
@@ -969,7 +1049,7 @@ def _render_no_match_result(
         <p>Before loading or running outside-browser pipeline steps, confirm the request
         context below. If the facility/license number, date range, or lookup/manual-entry
         context is wrong, change the facility/date criteria before reviewing results.</p>
-      <p><a href="{CCLD_RECORD_REQUEST_PATH}">Return to CCLD request</a></p>
+            <p>{primary_action}</p>
     </section>
         {_render_request_context_confirmation(
                 facility_number=request.facility_number,
@@ -995,6 +1075,30 @@ def _render_no_match_result(
         {_render_retrieval_action(request, retrieval_available)}
     {_render_pipeline_plan(request)}""",
     )
+
+
+def _no_match_headline(
+    retrieval_result: CcldRetrievalJobResult | None,
+    local_count: int,
+) -> str:
+    if retrieval_result is None:
+        if local_count > 0:
+            return "Candidates may be outside the selected date range"
+        return "No loaded complaint records match this request yet"
+    imported_count = retrieval_result.result_counts.get("imported_source_derived_records", 0)
+    if imported_count > 0:
+        return "Imported records need a queue refresh"
+    return _retrieval_result_headline(retrieval_result, imported_count)
+
+
+def _no_match_primary_action(result: CcldRetrievalJobResult | None) -> str:
+    if result is None:
+        return f'<a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Adjust date range</a>'
+    if result.job_state in {"failed", "completed_with_warnings"}:
+        return f'<a class="button" href="{_escape(_retrieval_job_detail_href(result.retrieval_job_id))}">View job details</a>'
+    if result.job_state == "blocked_by_validation":
+        return f'<a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Adjust request</a>'
+    return f'<a class="button" href="{_FEEDBACK_PATH}">Send feedback</a>'
 
 
 def _render_pipeline_plan(request: CcldRecordRequest) -> str:
@@ -1189,19 +1293,27 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
     error_items = _safe_list_items(result.errors) or "        <li>none</li>"
     queue_link = ""
     imported_count = result.result_counts.get("imported_source_derived_records", 0)
+    mode_label = _retrieval_mode_label_from_message(result.safe_message)
+    headline = _retrieval_result_headline(result, imported_count)
+    status_class = _status_badge_class(result.job_state)
+    mode_class = _mode_badge_class(mode_label)
+    stat_grid = _render_retrieval_count_grid(result.result_counts, imported_count)
     if result.job_state in {"completed", "completed_with_warnings"} and imported_count > 0:
         queue_link = (
-            f'            <p><a href="{CCLD_RECORD_REQUEST_PATH}?'
+            f'            <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}?'
             f'facility_number={_escape(result.facility_number)}&amp;'
             f'start_date={_escape(result.start_date)}&amp;'
             f'end_date={_escape(result.end_date)}&amp;'
             f'record_type={_escape(result.record_type)}">'
-            "Open imported records in this CCLD queue</a></p>"
+            "Review imported records</a></p>"
         )
     detail_href = _retrieval_job_detail_href(result.retrieval_job_id)
-    return f"""    <section aria-labelledby="retrieval-job-summary-heading">
-            <h2 id="retrieval-job-summary-heading">Controlled CCLD retrieval job status</h2>
+    return f"""    <section class="hero-card" aria-labelledby="retrieval-job-summary-heading">
+            <h2 id="retrieval-job-summary-heading">{_escape(headline)}</h2>
+            <p><span class="{status_class}">{_escape(_retrieval_state_label(result.job_state))}</span>
+            <span class="{mode_class}">{_escape(mode_label)}</span></p>
             <p>{_escape(_retrieval_state_intro(result))}</p>
+            {stat_grid}
             <dl>
                 <dt>Job state</dt>
                 <dd>{_escape(_retrieval_state_label(result.job_state))}</dd>
@@ -1210,7 +1322,7 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
                 <dt>Status message</dt>
                 <dd>{_escape(result.safe_message)}</dd>
                 <dt>Retrieval mode</dt>
-                <dd>{_escape(_retrieval_mode_label_from_message(result.safe_message))}</dd>
+                <dd>{_escape(mode_label)}</dd>
                 <dt>Retrieval job ID</dt>
                 <dd>{_escape(result.retrieval_job_id)}</dd>
                 <dt>Facility/license number</dt>
@@ -1238,10 +1350,62 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
             when the job completed. No connector credentials or server-side private values
             are shown.</p>
             {_render_retrieval_next_steps(result, imported_count)}
+                <p><a class="button button-secondary" href="{_escape(detail_href)}">View job details</a></p>
                 <p><a href="{CCLD_RETRIEVAL_JOBS_PATH}">View retrieval job history</a></p>
-                <p><a href="{_escape(detail_href)}">View retrieval job details</a></p>
 {queue_link}
         </section>"""
+
+
+def _retrieval_result_headline(result: CcldRetrievalJobResult, imported_count: int) -> str:
+    if result.job_state in {"completed", "completed_with_warnings"} and imported_count > 0:
+        return "Records imported and ready for review"
+    if result.job_state == "completed_with_warnings":
+        warning_text = " ".join(result.warnings).casefold()
+        if "inside the requested date range" in warning_text:
+            return "Complaint candidates were outside the date range"
+        if "no complaint" in warning_text or "no report" in warning_text:
+            return "No complaint candidates found for this request"
+        if result.result_counts.get("retrieved_record_bundles", 0) > 0:
+            return "Fetched records did not produce matching imported rows"
+        return "No records imported; review warnings for the next step"
+    if result.job_state == "failed":
+        return "Source or network issue stopped retrieval safely"
+    if result.job_state == "blocked_by_validation":
+        return "Request needs changes before retrieval"
+    if result.job_state == "rate_limited":
+        return "Retrieval is temporarily rate limited"
+    if result.job_state in {"queued", "running"}:
+        return "Retrieval job is in progress"
+    return "Retrieval result needs review"
+
+
+def _render_retrieval_count_grid(counts: Mapping[str, int], imported_count: int) -> str:
+    values = (
+        ("Records imported", imported_count),
+        ("Discovered candidates", counts.get("discovered_report_candidates", 0)),
+        ("Selected candidates", counts.get("selected_report_candidates", 0)),
+        ("Retrieved bundles", counts.get("retrieved_record_bundles", 0)),
+        ("Matched bundles", counts.get("matched_record_bundles", 0)),
+        ("Imported rows", counts.get("imported_source_derived_records", 0)),
+        ("Failures", counts.get("failed_record_bundles", 0)),
+    )
+    cards = "\n".join(
+        f"        <div class=\"stat-card\"><strong>{count}</strong><span>{_escape(label)}</span></div>"
+        for label, count in values
+    )
+    return f"""      <div class="stat-grid" aria-label="Retrieval result counts">
+{cards}
+      </div>"""
+
+
+def _status_badge_class(state: str) -> str:
+    if state == "completed":
+        return "badge badge-live"
+    if state == "completed_with_warnings":
+        return "badge badge-warning"
+    if state in {"failed", "blocked_by_validation", "rate_limited"}:
+        return "badge badge-danger"
+    return "badge badge-muted"
 
 
 def _retrieval_state_intro(result: CcldRetrievalJobResult) -> str:
@@ -1369,14 +1533,15 @@ def _render_retrieval_job_history_page(
     return _page(
         title="Controlled CCLD retrieval job history",
         heading="Controlled CCLD retrieval job history",
-        main=f"""    <section aria-labelledby="retrieval-history-purpose-heading">
+        active_path=CCLD_RETRIEVAL_JOBS_PATH,
+                main=f"""    <section class="hero-card" aria-labelledby="retrieval-history-purpose-heading">
       <h2 id="retrieval-history-purpose-heading">Recent controlled retrieval jobs</h2>
       <p>This page shows recent controlled CCLD retrieval jobs for the current authorized
       local/test scope. It is status/history visibility only, not an audit export.</p>
       <p>{_escape(setup_text)}</p>
       <p>Job states are workflow states. They do not prove public-source completeness,
       legal conclusions, facility-wide conclusions, or harm conclusions.</p>
-      <p><a href="{CCLD_RECORD_REQUEST_PATH}">Submit or change a CCLD record request</a></p>
+            <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Submit or change a CCLD record request</a></p>
     </section>
     <section aria-labelledby="retrieval-history-table-heading">
       <h2 id="retrieval-history-table-heading">Job history</h2>
@@ -1522,13 +1687,18 @@ def _render_retrieval_job_detail_not_found_page() -> str:
 def _render_retrieval_job_detail_page(job: CcldRetrievalJobHistoryEntry) -> str:
     imported_count = job.result_counts.get("imported_source_derived_records", 0)
     count_items = _render_detail_count_items(job.result_counts)
+    count_cards = _render_retrieval_count_grid(job.result_counts, imported_count)
     warning_items = _safe_list_items(job.warnings) or "        <li>none</li>"
     error_items = _safe_list_items(job.errors) or "        <li>none</li>"
+    mode_label = _retrieval_mode_label_from_message(job.safe_message)
     return _page(
         title="Controlled CCLD retrieval job detail",
         heading="Controlled CCLD retrieval job detail",
-        main=f"""    <section aria-labelledby="retrieval-detail-summary-heading">
+        active_path=CCLD_RETRIEVAL_JOBS_PATH,
+                main=f"""    <section class="hero-card" aria-labelledby="retrieval-detail-summary-heading">
       <h2 id="retrieval-detail-summary-heading">Job summary</h2>
+            <p><span class="{_status_badge_class(job.job_state)}">{_escape(_retrieval_state_label(job.job_state))}</span>
+            <span class="{_mode_badge_class(mode_label)}">{_escape(mode_label)}</span></p>
       <p>This read-only page shows one controlled CCLD retrieval job from existing
       operational metadata. It is not an audit export, raw artifact viewer, scheduler,
       or source-completeness report.</p>
@@ -1566,6 +1736,7 @@ def _render_retrieval_job_detail_page(job: CcldRetrievalJobHistoryEntry) -> str:
     </section>
     <section aria-labelledby="retrieval-detail-counts-heading">
       <h2 id="retrieval-detail-counts-heading">Result counts</h2>
+            {count_cards}
       <dl>
 {count_items}
       </dl>
@@ -2581,6 +2752,24 @@ def _render_request_context_confirmation(
     reference_source: CcldFacilityReferenceSource,
     include_change_links: bool,
 ) -> str:
+    if not facility_number.strip() and not include_change_links:
+        limitation = _reference_limitation_text(reference_source)
+        limitation_markup = (
+            f"<p class=\"helper-text\">{_escape(limitation)}</p>" if limitation else ""
+        )
+        return f"""    <section class="summary-card" aria-labelledby="request-context-confirmation-heading">
+      <h2 id="request-context-confirmation-heading">No facility selected yet</h2>
+      <p>Start by typing a facility/license number or choosing a facility suggestion.</p>
+      <dl>
+        <dt>Retrieval mode</dt>
+        <dd>{_escape(_runtime_mode_label())}</dd>
+        <dt>Reference source</dt>
+        <dd>{_escape(reference_source.label)}</dd>
+        <dt>Reference rows loaded</dt>
+        <dd>{len(reference_source.records)}</dd>
+      </dl>
+{limitation_markup}
+    </section>"""
     facility_display = facility_number if facility_number.strip() else "not entered yet"
     lookup_name_markup = ""
     if lookup_facility_name:
@@ -2610,11 +2799,13 @@ def _render_request_context_confirmation(
         <li><a href="{_escape(change_href)}">Change facility/date criteria for this request</a></li>
         <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Start over with a different CCLD facility</a></li>
       </ul>"""
-    return f"""    <section aria-labelledby="request-context-confirmation-heading">
-      <h2 id="request-context-confirmation-heading">Confirm request context</h2>
-      <p>Use this context before reviewing the queue. Facility reference rows are
-      local/test lookup assistance only; CCLD public portal material remains the source of
-      record.</p>
+    limitation = _reference_limitation_text(reference_source)
+    limitation_markup = (
+        f"      <p class=\"helper-text\">{_escape(limitation)}</p>" if limitation else ""
+    )
+    return f"""    <section class="summary-card" aria-labelledby="request-context-confirmation-heading">
+            <h2 id="request-context-confirmation-heading">Selected request context</h2>
+            <p>Confirm this facility/date context before retrieving or reviewing records.</p>
       <dl>
         <dt>Request started from</dt>
         <dd>{_escape(_request_origin_label(request_context_origin))}</dd>
@@ -2624,12 +2815,21 @@ def _render_request_context_confirmation(
         <dd>{_escape(_date_scope_from_values(start_date, end_date))}</dd>
         <dt>Active facility reference source</dt>
         <dd>{_escape(reference_source.label)}</dd>
+        <dt>Retrieval mode</dt>
+        <dd>{_escape(_runtime_mode_label())}</dd>
         <dt>Reference rows loaded for lookup</dt>
         <dd>{len(reference_source.records)}</dd>
       </dl>
 {warning_markup}
+{limitation_markup}
 {change_links}
     </section>"""
+
+
+def _reference_limitation_text(source: CcldFacilityReferenceSource) -> str:
+    if source.source_kind == "tiny_fixture_fallback" or len(source.records) <= 2:
+        return "Reference list is limited; suggestions still work but may not include every CCLD facility."
+    return ""
 
 
 def _request_change_href(
@@ -2881,11 +3081,18 @@ def _render_message_page(
     )
 
 
-def _page(*, title: str, heading: str, main: str) -> str:
+def _page(
+    *,
+    title: str,
+    heading: str,
+    main: str,
+    active_path: str = CCLD_RECORD_REQUEST_PATH,
+) -> str:
     return render_page_shell(
         title=title,
         heading=heading,
         main=main,
         skip_label="Skip to main CCLD request content",
         nav_label="Hosted scaffold navigation",
+        active_path=active_path,
     )

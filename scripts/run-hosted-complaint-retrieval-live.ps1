@@ -42,13 +42,17 @@ $env:CCLD_RETRIEVAL_DEMO_MODE = ""
 if (-not $env:CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS) { $env:CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS = "30" }
 
 $baseUrl = "http://${HostName}:$Port"
-Write-Host "Starting local hosted live public CCLD complaint retrieval at $baseUrl/"
-Write-Host "Live public CCLD mode: browser-triggered jobs make controlled server-side requests to the public CCLD portal."
-Write-Host "The CCLD public portal remains the source of record. Absence of imported records is not proof that no complaints exist."
-Write-Host "Server-side live raw source storage is configured under an ignored local data/raw path."
+Write-Host "Mode: Live public CCLD retrieval"
+Write-Host "Local pilot runtime: $baseUrl/"
 Write-Host "Open: $baseUrl/"
 Write-Host "Open: $baseUrl/ccld/records/request"
 Write-Host "Open: $baseUrl/ccld/retrieval/jobs"
 Write-Host "Open: $baseUrl/reviewer"
+Write-Host "Open: $baseUrl/ccld/help"
+Write-Host "Open: $baseUrl/feedback"
+Write-Host "Public CCLD HTTP requests will be made only after a browser submits a controlled retrieval job."
+Write-Host "CCLD public portal remains the source of record."
+Write-Host "Absence of imported records is not proof that no complaints exist."
+Write-Host "Server-side live raw source storage is configured under an ignored local data/raw path."
 
 & $python -m ccld_complaints.hosted_app --host $HostName --port $Port

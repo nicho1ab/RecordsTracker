@@ -77,39 +77,22 @@ experience.
    raw storage, and real public CCLD HTTP retrieval. For offline validation, run
    `.\scripts\run-hosted-complaint-retrieval-demo.ps1 -Port 8000` to use
    fixture-backed `mock-success` retrieval. Tests use mocked CCLD retrieval only.
-- Includes a local/test hosted CCLD record request page where a tester can enter
-   a CCLD facility/license number and optional date range, read matching seeded
-   source-derived records, load or refresh matching CCLD records from validated
-   local/test hosted seeded-corpus output, confirm lookup-selected or manually
-   entered request context with active facility reference source, review a guided
-   facility/date-scoped complaint queue with triage summaries, progress counts,
-   reviewer note/status cues, source-traceability availability cues, reviewer-status filtering,
-   filtered-empty recovery guidance, suggested next-record links, skip-to-main
-   links, visible first-run review session orientation from home/request/help
-   through queue, detail, note/status confirmation, same-queue refresh, next-record
-   continuation, and manual checklist copy behavior, clearer form/action text, open
-   records in the hosted reviewer UI,
-   see consistent plain-language terms across request, queue, reviewer detail,
-   and help pages,
-   use clearer no-match and local validated load guidance when currently loaded
-   local/test data has no matching records,
-   review clearer selected-record source traceability and source-confidence cues
-   before adding notes or status, use field-note guidance to phrase reviewer-
-   created observations cautiously, describe missing local/test values without
-   implying public-source absence or data loss, use record-specific feedback
-   handoff and queue-to-detail checklist continuity cues to carry queue and
-   reviewer-detail observations into the existing manual feedback checklist, see clearer note/status
-   save confirmations, return to the same CCLD
-   request context to resubmit when needed, see updated queue cues, continue to
-   the next suggested queue record after notes/statuses without persisted queue
-   assignment, record claiming, saved review sessions, duplicate checklists, or
-   feedback persistence, and read first-time workflow help
-   and, when retrieval is configured, trigger a server-executed CCLD retrieval
-   job without running browser scraping.
-- Presents the existing hosted tester pages with a shared local/test pilot shell,
-   consistent navigation, readable cards, clearer first-run actions, visible
-   limitations, and accessible focus/table/form styling without adding new
-   routes, workflows, frontend dependencies, exports, auth, or deployment behavior.
+- Includes a product-grade local/test hosted `CCLD RecordsTracker Pilot` UI where
+   a tester can start from a polished launchpad, see the active retrieval mode,
+   select a facility through native type-ahead suggestions or manual digit entry,
+   choose a complaint date range, retrieve complaint records when configured,
+   show the current queue without running retrieval, review imported
+   source-derived complaint records, and add reviewer-created notes/status where
+   supported. The request page keeps complaint records as the fixed record type,
+   shows compact request-context cards, provides high-impact retrieval result
+   cards with safe counts/warnings/errors, preserves source traceability, and
+   keeps source-derived records separate from reviewer-created notes/status.
+- Presents hosted tester pages with a shared product shell, workflow step
+   indicator, active navigation, readable cards, count/stat grids, accessible
+   focus/table/form styling, scannable help cards, tester-friendly feedback
+   cards, and concise source-of-record boundary language without adding new
+   routes, workflows, frontend dependencies, exports, auth, public deployment, or
+   non-CCLD scope.
 
 ## Core Principles
 
@@ -210,11 +193,15 @@ http://127.0.0.1:8000/
 http://127.0.0.1:8000/ccld/records/request
 http://127.0.0.1:8000/ccld/retrieval/jobs
 http://127.0.0.1:8000/reviewer
+http://127.0.0.1:8000/ccld/help
+http://127.0.0.1:8000/feedback
 ```
 
 Both commands use ignored raw storage under `data/raw/`. The live command uses
 the public CCLD HTTP connector; the demo command uses fixture-backed
-`mock-success` retrieval. Neither mode proves CCLD public-source completeness.
+`mock-success` retrieval. Their startup output labels Live public CCLD retrieval
+or Fixture/mock demo mode, prints exact local URLs, and states whether live CCLD
+calls will be made. Neither mode proves CCLD public-source completeness.
 This path was manually verified with facility/license number `157806098` and
 date range `2022-08-01` to `2022-08-31`, which imported one live public CCLD
 complaint bundle as source-derived rows into the local reviewer queue.
