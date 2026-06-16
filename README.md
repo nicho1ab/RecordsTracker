@@ -62,7 +62,10 @@ experience.
    database context, the hosted request flow can trigger CCLD-only,
    facility/date/type-bounded complaint retrieval, preserve raw artifacts and
    SHA-256 hashes, import validated source-derived rows into PostgreSQL, and show
-   safe job status/counts with clearer next-step and `/feedback` guidance. A
+   safe job status/counts with clearer next-step and `/feedback` guidance. The
+   controlled retrieval job discovers CCLD complaint-section report links for the
+   requested facility and prefilters discovered links to the requested date range
+   before fetching reports. A
    small `/ccld/retrieval/jobs` page shows recent retrieval job history/status
    from existing operational metadata, including request context, state,
    timestamps, import counts, warning/error summaries, and review links when

@@ -513,6 +513,11 @@ def _execute_job(
             retrieval_request.facility_number,
             source_url,
         ),
+        report_section="complaints",
+        candidate_filter=lambda candidate: _candidate_matches_request_date(
+            candidate,
+            retrieval_request,
+        ),
     )
     matching_records = tuple(
         record
@@ -527,6 +532,10 @@ def _execute_job(
         if len(result.records) != len(matching_records)
         else []
     )
+    if not result.candidates:
+        warnings.append(
+            "No CCLD complaint report links were found for the requested facility/date range."
+        )
     warnings.extend(_failure_warnings(result.failures))
     if not matching_records:
         return _update_job_state(
@@ -591,6 +600,18 @@ def _fetch_report_with_controls(
         except Exception as error:
             last_error = error
     raise RuntimeError("Controlled CCLD report fetch failed after retries.") from last_error
+
+
+def _candidate_matches_request_date(
+    candidate: Any,
+    retrieval_request: CcldRetrievalRequest,
+) -> bool:
+    candidate_date = _parse_iso_date(candidate.discovered_report_date)
+    if candidate_date is None:
+        return False
+    start_date = cast(date, _parse_iso_date(retrieval_request.start_date))
+    end_date = cast(date, _parse_iso_date(retrieval_request.end_date))
+    return start_date <= candidate_date <= end_date
 
 
 def _retrieval_artifact(

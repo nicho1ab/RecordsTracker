@@ -468,6 +468,24 @@ def test_ccld_facility_detail_discovers_report_candidates_from_fixture() -> None
     assert report_three[0].discovered_report_date == "2022-08-24"
 
 
+def test_ccld_facility_detail_discovers_complaint_report_candidates_only() -> None:
+    connector = CcldFacilityReportsConnector()
+
+    candidates = connector.discover(
+        facility_detail_html=RAW_DETAIL_FIXTURE.read_text(encoding="utf-8"),
+        discovered_at=RETRIEVED_AT,
+        report_section="complaints",
+    )
+
+    assert [candidate.report_index for candidate in candidates] == [37, 38, 3]
+    assert [candidate.discovered_report_date for candidate in candidates] == [
+        "2026-01-07",
+        "2025-10-21",
+        "2022-08-24",
+    ]
+    assert {candidate.report_section for candidate in candidates} == {"complaints"}
+
+
 def test_ccld_facility_report_extracts_required_fields() -> None:
     extracted = _extract_fixture()
 

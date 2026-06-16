@@ -12,6 +12,10 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from ccld_complaints.hosted_app.app import create_server, format_host
+from ccld_complaints.hosted_app.ccld_record_request_ui import (
+    reset_default_ccld_record_request_ui_context,
+)
+from ccld_complaints.hosted_app.reviewer_ui import reset_default_local_test_reviewer_ui_context
 
 
 def _read_url(url: str) -> tuple[int, bytes]:
@@ -48,6 +52,11 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     os.environ["CCLD_HOSTED_TESTER_AUTH_MODE"] = "local-dev"
     os.environ["CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH"] = "enabled"
     os.environ["CCLD_HOSTED_PAGE_DATA_MODE"] = "fixture-demo"
+    os.environ["CCLD_RETRIEVAL_ENABLED"] = "disabled"
+    os.environ["CCLD_RETRIEVAL_RAW_DIR"] = ""
+    os.environ["CCLD_RETRIEVAL_DEMO_MODE"] = ""
+    reset_default_ccld_record_request_ui_context()
+    reset_default_local_test_reviewer_ui_context()
     try:
         with (
             tempfile.TemporaryDirectory() as retrieval_raw_dir,

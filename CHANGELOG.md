@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Tightened controlled CCLD retrieval so hosted complaint retrieval jobs discover
+	complaint-section report links for the requested facility, prefilter those links
+	to the requested date range before fetching, preserve raw/source traceability,
+	and report safe no-match warnings without broadening beyond complaint records.
 - Polished the existing local/test hosted tester UI shell with a shared visual
 	layout, consistent navigation, stronger focus/table/form styling, clearer home
 	start actions, and feedback guidance without adding routes, workflows, frontend
