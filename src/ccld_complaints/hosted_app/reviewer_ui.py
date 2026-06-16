@@ -778,26 +778,29 @@ def _render_reviewer_queue_summary(
     )
     traceability_count = sum(1 for record in records if _has_visible_traceability(record))
     next_record = _next_review_item(records, state_summaries)
+    status_cards = "\n".join(
+        f"        <div class=\"stat-card\"><strong>{count}</strong><span>{_escape(label)}</span></div>"
+        for label, count in (
+            ("Not started", counts["not_started"]),
+            ("In review", counts["in_review"]),
+            ("Needs follow-up", counts["needs_follow_up"]),
+            ("Reviewed", counts["reviewed"]),
+            ("Blocked", counts["blocked"]),
+        )
+    )
     return f"""<section aria-labelledby="reviewer-queue-summary-heading">
-        <h3 id="reviewer-queue-summary-heading">Reviewer queue triage summary</h3>
+        <h3 id="reviewer-queue-summary-heading">Queue status summary</h3>
         <p>This summary uses only loaded source-derived records and existing reviewer-created
         note/status rows. It does not save queue state or change source-derived records.</p>
         <p>List values are source-derived display summaries. Open reviewer detail for
         source-confidence cues before relying on missing, confusing, or proxy-related fields
         in reviewer-created notes/status or manual feedback.</p>
+        <div class="stat-grid" aria-label="Reviewer status counts">
+{status_cards}
+        </div>
         <dl>
             <dt>Total visible records</dt>
             <dd>{len(records)}</dd>
-            <dt>Not started</dt>
-            <dd>{counts['not_started']}</dd>
-            <dt>In review</dt>
-            <dd>{counts['in_review']}</dd>
-            <dt>Needs follow-up</dt>
-            <dd>{counts['needs_follow_up']}</dd>
-            <dt>Reviewed</dt>
-            <dd>{counts['reviewed']}</dd>
-            <dt>Blocked</dt>
-            <dd>{counts['blocked']}</dd>
             <dt>Records with reviewer-created notes</dt>
             <dd>{note_count}</dd>
             <dt>Records with reviewer-created status</dt>
@@ -2286,6 +2289,8 @@ def _page(*, title: str, heading: str, main: str, actor_label: str | None = None
                     ("Health check", "/health"),
                 ),
                 active_path=REVIEWER_UI_PREFIX,
+                step_id="review_records",
+                next_action="Open next record or add reviewer-created notes/status",
         )
 
 

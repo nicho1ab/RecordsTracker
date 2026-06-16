@@ -499,6 +499,8 @@ def _page(*, title: str, heading: str, main: str) -> str:
                 skip_label="Skip to main CCLD facility lookup content",
                 nav_label="Hosted scaffold navigation",
                 active_path=CCLD_FACILITY_LOOKUP_PATH,
+                step_id="facility",
+                next_action="Use a facility for retrieval",
         )
 
 

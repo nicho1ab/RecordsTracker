@@ -743,6 +743,8 @@ def render_app_shell() -> str:
                 nav_label="CCLD records review navigation",
                 eyebrow=SCAFFOLD_NOTICE,
                                 active_path="/",
+                step_id="start",
+                next_action="Start retrieval by selecting a facility",
                 extra_nav_links=(
                                                 ("Start", "#start"),
                                                 ("Commands", "#commands"),
