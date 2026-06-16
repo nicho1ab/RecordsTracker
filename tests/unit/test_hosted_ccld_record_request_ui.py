@@ -68,7 +68,6 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
         page_data_mode="fixture-demo",
     )
     html = body.decode("utf-8")
-    normalized_html = " ".join(html.split())
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
@@ -76,7 +75,7 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "Skip to main CCLD request content" in html
     assert '<main id="main-content" tabindex="-1">' in html
     assert "Retrieve complaint records for a facility" in html
-    assert "Attorney intake wizard" in html
+    assert "Retrieval intake" in html
     assert "Choose complaint date range" in html or "Which facility should be reviewed?" in html
     assert 'for="facility-search-input"' in html
     assert "facility-suggestion-list" in html
@@ -86,8 +85,7 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "Search by name, license number, city, ZIP, type, or status." in html
     assert "Retrieval not configured" in html
     assert "Find facility" in html
-    assert "Absence of imported records is not proof" in normalized_html
-    assert "Retrieval stays CCLD-only" in normalized_html
+    assert "Review boundary" not in html
     assert "provider" not in html.casefold()
     assert_no_secret_html(html)
 
@@ -105,7 +103,7 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "What review flags mean" in html
     assert "How source traceability works" in html
     assert "How reviewer-created notes/status work" in html
-    assert "Live public CCLD retrieval and fixture/mock mode" in html
+    assert "Retrieval modes" in html
     assert "What the app does not prove" in html
     assert "How to send useful feedback" in html
     assert "Source-derived records" in html
@@ -289,22 +287,9 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Active facility reference source" in html
     assert "Change facility/date criteria for this request" in html
     assert "Start over with a different CCLD facility" in html
-    assert "This queue is tied to the request context confirmed above" in normalized_html
     assert "CCLD review queue" in html
-    assert "Queue rows show source-derived display summaries only" in normalized_html
-    assert "read the source-confidence cues before relying" in normalized_html
-    assert "proxy-related fields in reviewer-created notes/status or manual feedback" in (
-        normalized_html
-    )
-    assert "return here with the same facility/date request context" in normalized_html
-    assert "note/status cues derived from reviewer-created state" in normalized_html
-    assert "Use the same manual feedback checklist for queue and reviewer-detail" in (
-        normalized_html
-    )
-    assert "Queue filter confusion, source-confidence questions" in normalized_html
-    assert "suggested-next-record observations all belong in that single checklist" in (
-        normalized_html
-    )
+    assert "Open the suggested complaint first" in normalized_html
+    assert "Table view and queue guidance" in html
     assert "First-run queue steps" in html
     assert "Read the queue progress and triage summaries" in html
     assert "check source traceability, source-confidence cues" in normalized_html
@@ -357,6 +342,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "6 loaded source-derived records in bundle" in html
     assert "Open detail for source-confidence cues before relying" in html
     assert "Copyable tester feedback checklist" in html
+    assert "Copy details for feedback" in html
     assert "Structured CCLD feedback checklist" in html
     assert "id=\"feedback-checklist-section\"" in html
     assert "Select the checklist text, copy it, paste it" in normalized_html
@@ -612,9 +598,7 @@ def test_ccld_record_request_queue_preserves_lookup_selected_context() -> None:
     assert "A. MIRIAM JAMISON" in html
     assert "Date range being requested" in html
     assert "2022-08-01 to 2022-08-31" in html
-    assert "This queue is tied to the request context confirmed above" in " ".join(
-        html.split()
-    )
+    assert "Open the suggested complaint first" in " ".join(html.split())
     assert "request_context_origin" in html
     assert "lookup_facility_name" in html
     assert "- Facility lookup used or skipped: Facility lookup result" in checklist

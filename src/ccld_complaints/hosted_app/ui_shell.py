@@ -8,7 +8,6 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 APP_TITLE = "CCLD RecordsTracker"
-APP_SUBTITLE = "Attorney-focused public complaint record review with source traceability."
 BOUNDARY_TEXT = (
   "CCLD-only public-record review workspace."
 )
@@ -113,11 +112,12 @@ def render_page_shell(
     mode_label: str | None = None,
     step_id: str | None = None,
     next_action: str | None = None,
+    show_workflow_indicator: bool = True,
 ) -> str:
     runtime_mode = mode_label or _runtime_mode_label()
     links = _nav_links(extra_nav_links, active_path=active_path)
     current_step = step_id or _step_id_for_path(active_path)
-    stepper = _guided_stepper(current_step, next_action)
+    stepper = _guided_stepper(current_step, next_action) if show_workflow_indicator else ""
     actor_markup = (
       f'<p class="pilot-actor">Signed in as {html.escape(actor_label)}.</p>'
       if actor_label
@@ -144,7 +144,6 @@ def render_page_shell(
           <p class="product-name">{APP_TITLE}</p>
           {eyebrow_markup}
           <h1>{html.escape(heading)}</h1>
-          <p class="product-subtitle">{APP_SUBTITLE}</p>
           {actor_markup}
         </div>
         <div class="mode-panel" aria-label="Retrieval mode">
@@ -359,14 +358,9 @@ SHARED_CSS = r"""
       margin: 0 0 0.2rem;
       text-transform: uppercase;
     }
-    .pilot-eyebrow, .pilot-actor, .site-footer p, .product-subtitle, .helper-text {
+    .pilot-eyebrow, .pilot-actor, .site-footer p, .helper-text {
       color: var(--muted);
       margin: 0 0 0.4rem;
-    }
-    .product-subtitle {
-      color: var(--muted);
-      font-size: 0.95rem;
-      max-width: 46rem;
     }
     h1 {
       font-size: 2.05rem;

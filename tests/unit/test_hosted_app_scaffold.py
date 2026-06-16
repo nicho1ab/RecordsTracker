@@ -113,23 +113,19 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "Retrieval not configured" in html
     assert "Start a facility complaint review" in html
     assert "Start facility review" in html
-    assert "Records are source-derived review aids" in html
-    assert "does not make legal findings or prove source completeness" in html
-    assert "Find facility" in html
+    assert "Find the facility, choose the complaint date range" in html
     assert "Open review queue" in html
-    assert "Review flags and source traceability" in html
     assert "Feedback" in html
-    assert "Review boundary" in html
     assert "Developer/operator commands" in html
-    assert '<section class="action-card"' in html
+    assert '<section class="action-card"' not in html
     assert "Commands</a>" not in html
     assert "Health check</a>" not in html
     assert "Local pilot runtime" in html
     assert "Live public CCLD retrieval" in html
     assert "Fixture/mock demo" in html
     assert "Starts the local pilot runtime" in html
-    assert "Review boundary" in html
-    assert "No non-CCLD sources" in normalized_html
+    assert "Review boundary" not in html
+    assert "No non-CCLD sources" not in normalized_html
     assert "Source-derived records stay separate from reviewer-created notes/status" in html
     assert "/reviewer" in html
 
@@ -167,13 +163,17 @@ def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None
         assert '<main id="main-content" tabindex="-1">' in html
         assert 'class="shell page-main"' in html
         assert "CCLD RecordsTracker" in html
-        assert "Attorney workflow" in html
-        assert "Current step" in html
-        if path != "/feedback":
+        if path != "/ccld/help":
+            assert "Attorney workflow" in html
+            assert "Current step" in html
+            assert "Next:" in html
+            assert "Dates" in html
+            assert "Results" in html
+        else:
+            assert "Attorney workflow" not in html
+            assert "Current step" not in html
+        if path not in {"/feedback", "/ccld/help"}:
             assert "Future step" in html
-        assert "Next:" in html
-        assert "Dates" in html
-        assert "Results" in html
         assert "Facility" in html
         assert "Retrieve" in html
         assert "Review" in html

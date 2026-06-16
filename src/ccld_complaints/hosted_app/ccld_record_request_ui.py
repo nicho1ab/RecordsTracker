@@ -541,10 +541,10 @@ def _render_request_form(
                         else "Select a facility"
                 ),
                 main=f"""    <section class="hero-card" aria-labelledby="request-hero-heading">
-                    <p class="launch-kicker">Attorney intake wizard</p>
+                    <p class="launch-kicker">Retrieval intake</p>
                     <h2 id="request-hero-heading">Retrieve complaint records for a facility</h2>
-                    <p class="launch-value">Choose a facility, narrow the complaint date range, then retrieve source-derived complaint records for legal review.</p>
-            <p><span class="{mode_class}">{mode_label}</span> <span class="sr-note">CCLD public portal remains the source of record.</span></p>
+                    <p class="launch-value">Confirm the facility and date range before starting controlled CCLD complaint retrieval.</p>
+            <p><span class="{mode_class}">{mode_label}</span></p>
         </section>
                 {workflow_state}""",
     )
@@ -593,7 +593,7 @@ def _render_facility_selection_state(reference_source: CcldFacilityReferenceSour
         json_data = _build_facility_json_data(reference_source)
         selected_card = _render_facility_selected_card_html(mode="request")
         return f"""<section class="workflow-panel" aria-labelledby="facility-selector-heading" id="facility-selector-wrap" data-facility-mode="request">
-            <p class="stage-kicker">Selected facility panel</p>
+            <p class="stage-kicker">Facility</p>
             <h2 id="facility-selector-heading">Which facility should be reviewed?</h2>
             <form action="{CCLD_RECORD_REQUEST_PATH}" method="get" id="facility-select-form">
                 <label for="facility-search-input">Facility</label>
@@ -616,11 +616,6 @@ def _render_facility_selection_state(reference_source: CcldFacilityReferenceSour
             </form>
             <script type="application/json" id="facility-reference-json">{json_data}</script>
             <script>{_FACILITY_COMBOBOX_JS}</script>
-        </section>
-        <section class="quiet-section" aria-labelledby="request-boundary-heading">
-            <h2 id="request-boundary-heading">Review boundary</h2>
-            <p>Retrieval stays CCLD-only. Absence of imported records is not proof that no complaints exist.</p>
-            <p><a href="{CCLD_HELP_PATH}">Help</a></p>
         </section>"""
 
 
@@ -746,6 +741,7 @@ def _render_help_page() -> str:
             active_path=CCLD_HELP_PATH,
             step_id="start",
             next_action="Start facility review or open the section you need",
+            show_workflow_indicator=False,
                                 main=f"""    <section class="hero-card" aria-labelledby="help-purpose-heading">
                         <p class="launch-kicker">Product help</p>
                             <h2 id="help-purpose-heading">Use RecordsTracker for facility complaint review</h2>
@@ -789,10 +785,10 @@ def _render_help_page() -> str:
                         status are reviewer-created state and do not edit source-derived fields.</p>
                     </details>
                     <details>
-                        <summary id="help-live-heading">Live public CCLD retrieval and fixture/mock mode</summary>
-                        <p>Live mode makes controlled server-side public CCLD HTTP requests only after
-                        browser submit. Fixture/mock demo mode uses committed fixtures and does not make
-                        live CCLD calls.</p>
+                        <summary id="help-live-heading">Retrieval modes</summary>
+                        <p>When the mode badge says live public retrieval, controlled server-side
+                        public CCLD HTTP requests occur only after browser submit. When the mode badge
+                        says fixture/mock demo, committed fixtures are used and no live CCLD calls are made.</p>
                     </details>
                     <details>
                         <summary id="help-feedback-heading">How to send useful feedback</summary>
@@ -918,8 +914,8 @@ def _render_retrieval_setup_required_page() -> str:
                 <dd>none</dd>
             </dl>
         </section>
-        <section aria-labelledby="retrieval-setup-operator-heading">
-            <h2 id="retrieval-setup-operator-heading">Operator setup checklist</h2>
+        <details class="technical-details">
+            <summary id="retrieval-setup-operator-heading">Operator setup checklist</summary>
             <ul>
                 <li>Run PostgreSQL migrations, including the retrieval job metadata migration.</li>
                 <li>Use PostgreSQL-backed page data for the hosted runtime.</li>
@@ -928,7 +924,7 @@ def _render_retrieval_setup_required_page() -> str:
                 <li>Keep retrieval CCLD-only, complaint-only for now, and server-executed.</li>
             </ul>
             <p>No connector credentials or server-side private values are shown to the browser.</p>
-        </section>
+        </details>
         <section aria-labelledby="retrieval-setup-next-heading">
             <h2 id="retrieval-setup-next-heading">What to do next</h2>
             <p>Return to the request page to review records that are already loaded, or ask an
@@ -1049,32 +1045,18 @@ def _render_matched_result(
     {_render_retrieval_job_summary(retrieval_result)}
         <section aria-labelledby="review-queue-heading">
             <h2 id="review-queue-heading">CCLD review queue</h2>
-            <p>This queue is tied to the request context confirmed above: the displayed
-            facility/license number, date range, request origin, and local/test facility
-            reference source. Open each complaint record only after confirming the context is
-            the intended one.</p>
-            <p>This queue is scoped to the requested facility/license number and date range.
-            Open each complaint record to inspect source traceability, add a reviewer note,
-            or set a reviewer status.</p>
-            <p>Queue rows show source-derived display summaries only. Open reviewer detail and
-            read the source-confidence cues before relying on missing, confusing, or
-            proxy-related fields in reviewer-created notes/status or manual feedback.</p>
-            <p>After saving a note or status on reviewer detail, return here with the same
-            facility/date request context and submit the same local/test request again to see
-            queue progress and note/status cues derived from reviewer-created state.</p>
-            <p>Use the same manual feedback checklist for queue and reviewer-detail
-            observations. Queue filter confusion, source-confidence questions, detail wording,
-            note/status confirmation, return-to-queue refresh, and suggested-next-record
-            observations all belong in that single checklist.</p>
-            {_render_queue_first_run_steps()}
-            {_render_queue_navigation()}
+            <p>Open the suggested complaint first, then check source traceability on detail before adding reviewer-created notes/status.</p>
             {_render_queue_progress_summary(queue_items)}
             {_render_queue_triage_summary(request, queue_items)}
-            {_render_queue_continue_guidance(request, queue_items)}
             {_render_queue_filter_form(request)}
             {_render_filtered_empty_recovery(request, queue_items, filtered_queue_items)}
             <p>Showing {len(filtered_queue_items)} of {len(queue_items)} matching complaint
             record(s) for queue filter {_escape(_status_label(request.reviewer_status_filter))}.</p>
+            <details class="technical-details">
+            <summary>Table view and queue guidance</summary>
+            {_render_queue_first_run_steps()}
+            {_render_queue_navigation()}
+            {_render_queue_continue_guidance(request, queue_items)}
       <table>
                 <caption>Facility/date-scoped CCLD complaint records ready for review</caption>
         <thead>
@@ -1094,7 +1076,10 @@ def _render_matched_result(
         </tbody>
       </table>
       <p><a href="{REVIEWER_UI_RECORDS_PATH}">Open reviewer records</a></p>
+            </details>
     </section>
+                <details class="technical-details">
+                    <summary>Copy details for feedback</summary>
                 {_render_feedback_checklist_section(
                         request,
                         queue_items,
@@ -1104,9 +1089,13 @@ def _render_matched_result(
                     reference_source=reference_source,
                 )}
         {_render_feedback_guidance_section()}
+                </details>
+                <details class="technical-details">
+                    <summary>Advanced retrieval and local load actions</summary>
         {_render_retrieval_action(request, retrieval_available)}
         {_render_import_reload_action(request, import_reload_available, refresh=True)}
-    {_render_pipeline_plan(request)}""",
+    {_render_pipeline_plan(request)}
+                </details>""",
     )
 
 
@@ -1153,9 +1142,12 @@ def _render_result_focus_panel(
             </dl>
       <div class="form-actions">
                 <a class="button" href="{REVIEWER_UI_RECORDS_PATH}">Open review queue</a>
+                <details class="technical-details secondary-actions">
+                    <summary>Other actions</summary>
         {detail_link}
         <a class="button button-quiet" href="{CCLD_RECORD_REQUEST_PATH}">Run another retrieval</a>
                 <a class="button button-quiet" href="{_FEEDBACK_PATH}">Send feedback</a>
+                </details>
       </div>
     </section>"""
 
@@ -1713,11 +1705,12 @@ def _render_retrieval_job_history_page(
         rows = """        <tr>
           <td colspan="9">No retrieval jobs have been submitted for this authorized scope.</td>
         </tr>"""
-        job_cards = """        <article class="empty-state-card result-card">
+        job_cards = f"""        <article class="empty-state-card result-card">
                     <div>
                         <h3>No retrieval jobs yet</h3>
                         <p>No retrieval jobs have been submitted for this authorized scope.</p>
                     </div>
+                    <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Submit retrieval request</a></p>
                 </article>"""
     setup_text = (
         "Controlled retrieval is configured for this runtime."
@@ -1739,10 +1732,13 @@ def _render_retrieval_job_history_page(
       <h2 id="retrieval-history-purpose-heading">Track complaint retrieval jobs</h2>
       <p>This page shows recent controlled CCLD retrieval jobs with facility/date context,
       imported-record counts, warnings/errors, and the next action for review.</p>
-      <p>{_escape(setup_text)}</p>
-      <p>Job states are workflow states. They do not prove public-source completeness,
-      legal conclusions, facility-wide conclusions, or harm conclusions.</p>
             <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Submit or change retrieval request</a></p>
+            <details class="technical-details">
+                <summary>Runtime and boundary details</summary>
+                <p>{_escape(setup_text)}</p>
+                <p>Job states are workflow states. They do not prove public-source completeness,
+                legal conclusions, facility-wide conclusions, or harm conclusions.</p>
+            </details>
     </section>
         {_render_retrieval_history_summary(jobs)}
     <section aria-labelledby="retrieval-history-table-heading">
@@ -1773,15 +1769,15 @@ def _render_retrieval_job_history_page(
       </table>
             </details>
     </section>
-    <section aria-labelledby="retrieval-history-help-heading">
-      <h2 id="retrieval-history-help-heading">What to do if a job looks wrong</h2>
+        <details class="technical-details">
+            <summary id="retrieval-history-help-heading">What to do if a job looks wrong</summary>
       <p>For failed, blocked, warning, or confusing jobs, use the safe state, count, and
       message shown here first. Operators can check server logs without sharing private
       values. Testers can send feedback with the facility/date/type request and the visible
       job state.</p>
       <p><a href="{_FEEDBACK_PATH}">Send tester feedback</a></p>
       <p><a href="{CCLD_HELP_PATH}">Read CCLD workflow help</a></p>
-    </section>""",
+        </details>""",
     )
 
 
@@ -3073,12 +3069,16 @@ def _render_request_context_confirmation(
             <h2 id="request-context-confirmation-heading">Selected request context</h2>
             <p>Confirm this facility/date context before retrieving or reviewing records.</p>
       <dl>
-        <dt>Request started from</dt>
-        <dd>{_escape(_request_origin_label(request_context_origin))}</dd>
         <dt>Facility/license number being requested</dt>
         <dd>{_escape(facility_display)}</dd>{lookup_name_markup}
         <dt>Date range being requested</dt>
         <dd>{_escape(_date_scope_from_values(start_date, end_date))}</dd>
+            </dl>
+            <details class="technical-details">
+                <summary>Request and lookup details</summary>
+                <dl>
+                <dt>Request started from</dt>
+                <dd>{_escape(_request_origin_label(request_context_origin))}</dd>
         <dt>Active facility reference source</dt>
         <dd>{_escape(_user_facing_source_label(reference_source))}</dd>
         <dt>Retrieval mode</dt>
@@ -3087,6 +3087,7 @@ def _render_request_context_confirmation(
         <dd>{len(reference_source.records)}</dd>
       </dl>
 {warning_markup}
+            </details>
 {limitation_markup}
 {change_links}
     </section>"""
@@ -3357,6 +3358,7 @@ def _page(
     active_path: str = CCLD_RECORD_REQUEST_PATH,
     step_id: str = "retrieve",
     next_action: str | None = None,
+    show_workflow_indicator: bool = True,
 ) -> str:
     return render_page_shell(
         title=title,
@@ -3367,4 +3369,5 @@ def _page(
         active_path=active_path,
         step_id=step_id,
         next_action=next_action,
+        show_workflow_indicator=show_workflow_indicator,
     )

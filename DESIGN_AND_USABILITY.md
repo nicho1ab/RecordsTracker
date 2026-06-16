@@ -268,6 +268,14 @@ cautious-language, tester feedback, and reviewer-state boundaries.
   readable states, feedback checklists, local/operator actions, and full field
   tables should be visually secondary or collapsed unless they are the current
   primary user task.
+- Hosted CCLD pages should follow the So What rule: every visible object should
+  directly help the legal user answer the page's primary question, make a review
+  decision, or take the next action. If an item is secondary, technical,
+  repetitive, or mainly diagnostic, remove it from the primary view, collapse it
+  in a clearly labeled details block, or move it to Help. Do not let boundary
+  reminders, machine-readable state, feedback checklists, local/operator
+  commands, or explanatory panels compete with the page's main legal-review
+  decision.
 - Use the restrained legal-review visual system: page background `#F5F7FA`,
   white surfaces, tinted support panels near `#EEF7F6`, primary text near
   `#17212B`, muted slate text, deep teal primary actions, accessible blue focus,

@@ -236,6 +236,17 @@ like, technical recovery/job details and full table views are collapsed or
 secondary, feedback safety/examples are in details, and worklist/detail pages use
 human-readable labels such as `Complaint received`, `Visit date`, `Report date`,
 and `Signed` instead of raw source-derived field names as primary labels.
+So What hierarchy tests should verify both presence and absence: the primary
+question and primary action render first, developer/operator content is absent
+or collapsed from Home, generic empty-state panels do not appear before they are
+actionable, repeated boundary/help text does not compete with forms or results,
+technical retrieval details, machine-readable state, copyable checklists,
+advanced local/operator actions, table views, and full source-derived field
+details are collapsed or lower than the summary, and Feedback/Help remain
+focused on their own primary questions. These tests should preserve existing
+retrieval behavior, fixture/mock separation, live-call mocks in CI, source-
+derived versus reviewer-created separation, no-secret HTML checks, and cautious
+non-conclusion wording.
 Hosted CCLD artifact builder tests should build fixture-backed validated SQLite
 output, convert it into hosted seeded-corpus JSON, validate the JSON through the
 existing hosted seeded parser, import it through the existing hosted seeded
