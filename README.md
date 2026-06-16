@@ -71,10 +71,12 @@ experience.
    timestamps, import counts, warning/error summaries, and review links when
    records were imported. Each history row can open a read-only detail page for
    one job with safe timestamps, counts, raw-artifact-preserved status, and next
-   steps. Explicit local-dev scaffold mode can opt into
-   `CCLD_RETRIEVAL_DEMO_MODE=mock-success` to prove the successful retrieval,
-   import, history, detail, and queue path from the browser using committed
-   fixtures only. Tests use mocked CCLD retrieval only.
+   steps. For local browser validation, run
+   `.\scripts\run-hosted-complaint-retrieval-demo.ps1 -Port 8000` from
+   PowerShell to start the scaffold with explicit local-dev auth, ignored local
+   raw storage, and fixture-backed `mock-success` retrieval so the existing
+   request form can create a safe local job without manual environment setup.
+   Tests use mocked CCLD retrieval only.
 - Includes a local/test hosted CCLD record request page where a tester can enter
    a CCLD facility/license number and optional date range, read matching seeded
    source-derived records, load or refresh matching CCLD records from validated
@@ -183,6 +185,26 @@ default. When the local hosted scaffold is running, `/ccld/records/request` can
 then load or refresh matching CCLD rows from that validated JSON through the
 existing local/test import/reload path. The builder does not run live public web
 requests or browser-triggered connector execution.
+
+To try the controlled complaint retrieval path locally with committed fixtures
+and no live CCLD calls, run:
+
+```powershell
+.\scripts\run-hosted-complaint-retrieval-demo.ps1 -Port 8000
+```
+
+Open these URLs on the same workstation:
+
+```text
+http://127.0.0.1:8000/
+http://127.0.0.1:8000/ccld/records/request
+http://127.0.0.1:8000/ccld/retrieval/jobs
+http://127.0.0.1:8000/reviewer
+```
+
+This local/demo command uses fixture-backed `mock-success` retrieval and ignored
+raw storage under `data/raw/`. It is not production retrieval and does not prove
+CCLD public-source completeness.
 
 To profile ignored local public-source CSV examples before any source expansion
 implementation is proposed, run:

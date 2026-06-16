@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added `scripts/run-hosted-complaint-retrieval-demo.ps1`, a one-command local
+	fixture-backed complaint retrieval demo that starts the hosted scaffold with
+	explicit local-dev auth, retrieval enablement, ignored raw storage, and
+	mock-success retrieval so `/ccld/records/request` can create a safe local job
+	without manual environment setup.
 - Tightened controlled CCLD retrieval so hosted complaint retrieval jobs discover
 	complaint-section report links for the requested facility, prefilter those links
 	to the requested date range before fetching, preserve raw/source traceability,

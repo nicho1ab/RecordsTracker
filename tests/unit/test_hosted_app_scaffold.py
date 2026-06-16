@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from html.parser import HTMLParser
+from pathlib import Path
 
 from ccld_complaints.hosted_app.app import (
     SourceRecordFilters,
@@ -17,6 +18,8 @@ from ccld_complaints.hosted_app.app import (
 )
 from ccld_complaints.hosted_app.auth import load_hosted_auth_runtime_config
 from ccld_complaints.hosted_app.smoke import run_scaffold_smoke_check
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 class HtmlStructureParser(HTMLParser):
@@ -714,3 +717,46 @@ def test_smoke_check_hits_health_route_and_app_shell() -> None:
 
     assert payload["status"] == "ok"
     assert payload["scaffold_only"] is True
+
+
+def test_normal_scaffold_script_does_not_enable_retrieval_demo() -> None:
+    script = (ROOT / "scripts" / "run-hosted-scaffold.ps1").read_text(encoding="utf-8")
+
+    assert "CCLD_RETRIEVAL_ENABLED" not in script
+    assert "CCLD_RETRIEVAL_RAW_DIR" not in script
+    assert "CCLD_RETRIEVAL_DEMO_MODE" not in script
+    assert "mock-success" not in script
+
+
+def test_complaint_retrieval_demo_script_sets_safe_local_config() -> None:
+    script_path = ROOT / "scripts" / "run-hosted-complaint-retrieval-demo.ps1"
+    script = script_path.read_text(encoding="utf-8")
+
+    assert script_path.exists()
+    assert "data\\raw\\ccld\\retrieval-demo" in script
+    assert 'CCLD_HOSTED_TESTER_AUTH_MODE = "local-dev"' in script
+    assert 'CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH = "enabled"' in script
+    assert 'CCLD_HOSTED_PAGE_DATA_MODE = "fixture-demo"' in script
+    assert 'CCLD_RETRIEVAL_ENABLED = "enabled"' in script
+    assert "CCLD_RETRIEVAL_RAW_DIR = $resolvedRawStorageDir" in script
+    assert 'CCLD_RETRIEVAL_DEMO_MODE = "mock-success"' in script
+    assert 'CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS = "30"' in script
+    assert "New-Item -ItemType Directory -Force -Path $resolvedRawStorageDir" in script
+    assert "Open: $baseUrl/" in script
+    assert "Open: $baseUrl/ccld/records/request" in script
+    assert "Open: $baseUrl/ccld/retrieval/jobs" in script
+    assert "Open: $baseUrl/reviewer" in script
+    assert "not production CCLD completeness proof" in script
+    assert "GITHUB" not in script
+    assert "TOKEN" not in script
+    assert "COOKIE" not in script
+
+
+def test_complaint_retrieval_demo_raw_storage_path_is_gitignored() -> None:
+    gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
+    script = (ROOT / "scripts" / "run-hosted-complaint-retrieval-demo.ps1").read_text(
+        encoding="utf-8"
+    )
+
+    assert "data/raw/*" in gitignore
+    assert 'data\\raw\\ccld\\retrieval-demo' in script

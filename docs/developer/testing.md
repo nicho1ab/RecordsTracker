@@ -333,6 +333,13 @@ when it is not configured, production/anonymous blocking when it is configured
 outside local-dev mode, successful fixture-backed job creation/import/status,
 history/detail/queue links, no live CCLD client use, no GitHub calls, no private
 HTML values, and preserved reviewer-created state separation.
+The one-command local complaint retrieval demo tests should also prove
+`scripts/run-hosted-complaint-retrieval-demo.ps1` exists, normal
+`run-hosted-scaffold.ps1` startup remains unchanged, the wrapper sets explicit
+local-dev auth, fixture/demo page data, retrieval enablement, `mock-success`, and
+ignored raw storage under `data/raw/`, prints the local URLs for `/`,
+`/ccld/records/request`, `/ccld/retrieval/jobs`, and `/reviewer`, and lets the
+existing request form create a retrieval job without live CCLD calls.
 
 Docker runtime tests should statically validate `Dockerfile`,
 `docker-compose.qnap.yml`, and `.env.example` for the QNAP-first PostgreSQL
