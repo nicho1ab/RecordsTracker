@@ -406,11 +406,11 @@ def test_ccld_facility_lookup_selection_prefills_request_form_without_mutation()
     assert "Prefilled facility/license link" in html
     assert "Facility/license number being requested" in html
     assert "value=\"900000001\"" in html
-    assert "facility-reference-options" in html
+    assert "Set the complaint date range" in html
     assert "Complaint records" in html
     assert "Active facility reference source" in html
     assert "Retrieve complaint records" in html
-    assert "Advanced facility lookup" in html
+    assert "Change facility" in html
     assert_no_secret_html(html)
 
 

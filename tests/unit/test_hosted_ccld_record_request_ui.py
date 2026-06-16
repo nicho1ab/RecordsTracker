@@ -71,20 +71,17 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "Retrieve complaint records" in html
     assert "Skip to main CCLD request content" in html
     assert '<main id="main-content" tabindex="-1">' in html
-    assert "Choose a facility and date range" in html
-    assert "Facility/license number" in html
+    assert "Start with one facility, one date range" in html
+    assert "Facility search" in html
     assert "facility-reference-options" in html
-    assert "No facility selected yet" in html
+    assert "Which facility should be reviewed?" in html
     assert CCLD_FACILITY_LOOKUP_PATH in html
-    assert "Reviewer-status filter" in html
-    assert "Records with no saved reviewer status are counted" in normalized_html
-    assert "Retrieve complaint records" in html
-    assert "Show current queue" in html
-    assert "Complaint records" in html
+    assert "Confirm facility" in html
+    assert "Search facility name, license number, city, ZIP, type, or status" in html
     assert "Retrieval not configured" in html
-    assert "Advanced facility lookup" in html
+    assert "Find facility" in html
     assert "Absence of imported records is not proof" in normalized_html
-    assert "does not scrape CCLD" in normalized_html
+    assert "Retrieval stays CCLD-only" in normalized_html
     assert "provider" not in html.casefold()
     assert_no_secret_html(html)
 
@@ -98,11 +95,11 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Help" in html
     assert "Use the pilot without reading a manual" in html
-    assert "How the pilot works" in html
+    assert "How the guided workflow works" in html
     assert "Live public CCLD retrieval" in html
     assert "Fixture/mock demo" in html
     assert "Source-derived vs reviewer-created" in html
-    assert "What 0 imported records can mean" in html
+    assert "What 0 imported can mean" in html
     assert "What this app does not prove" in html
     assert "How to send useful feedback" in html
     assert "Source-derived records" in html
@@ -133,7 +130,7 @@ def test_ccld_record_request_prefills_selected_facility_from_lookup() -> None:
     assert "name=\"request_context_origin\"" in html
     assert "value=\"facility_lookup\"" in html
     assert "name=\"lookup_facility_name\"" in html
-    assert "Advanced facility lookup" in html
+    assert "Set the complaint date range" in html
     assert_no_secret_html(html)
 
 
@@ -148,11 +145,9 @@ def test_ccld_record_request_manual_entry_shows_context_confirmation() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "No facility selected yet" in html
+    assert "Which facility should be reviewed?" in html
     assert "Retrieval not configured" in html
-    assert "Start by typing a facility/license number" in normalized_html
-    assert "Reference source" in html
-    assert "Reference rows loaded" in html
+    assert "Choose a suggestion to fill the CCLD facility/license number" in normalized_html
     assert "name=\"request_context_origin\"" in html
     assert "value=\"manual_entry\"" in html
     assert_no_secret_html(html)
@@ -271,10 +266,10 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert content_type == "text/html; charset=utf-8"
     assert before_source_rows == after_source_rows
     assert counts == _empty_reviewer_counts()
-    assert "CCLD request accepted" in html
-    assert "Found 6 local/test CCLD source-derived row(s)" in normalized_html
+    assert "Complaint records ready for review" in html
+    assert "Matching source-derived rows shown" in html
     assert "facility/license number 157806098" in html
-    assert "Date range: 2022-08-01 to 2022-08-31." in html
+    assert "2022-08-01 to 2022-08-31" in html
     assert "Selected request context" in html
     assert "Request started from" in html
     assert "Manual facility/license entry" in html
@@ -534,10 +529,10 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert before_source_rows == after_source_rows
     assert counts == _empty_reviewer_counts()
     assert "Candidates may be outside the selected date range" in html
-    assert "Rows for this facility currently available before date filtering: 6" in html
+    assert "Rows available before date filtering" in html
+    assert "<dd>6</dd>" in html
     normalized_html = " ".join(html.split())
-    assert "confirm the request context below" in normalized_html
-    assert "change the facility/date criteria before reviewing results" in normalized_html
+    assert "Confirm the facility/date context" in normalized_html
     assert "How to interpret this no-match result" in html
     assert "currently loaded local/test source-derived rows only" in normalized_html
     assert "did not submit a controlled retrieval job for this request" in normalized_html
@@ -670,7 +665,6 @@ def test_ccld_record_request_loads_local_validated_output_then_shows_matches() -
         counts = _table_counts(connection)
 
     html = body.decode("utf-8")
-    normalized_html = " ".join(html.split())
     detail_href = f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}"
 
     assert status == 200
@@ -682,8 +676,8 @@ def test_ccld_record_request_loads_local_validated_output_then_shows_matches() -
     assert "Load executed: yes." in html
     assert "New source-derived rows staged" in html
     assert "validated_seeded_corpus.json" in html
-    assert "CCLD request accepted" in html
-    assert "Found 6 local/test CCLD source-derived row(s)" in normalized_html
+    assert "Complaint records ready for review" in html
+    assert "Matching source-derived rows shown" in html
     assert "- Load action submitted on this request: yes" in html
     assert "- Local validated records loaded or refreshed: yes" in html
     assert "- New source-derived rows staged: 6" in html

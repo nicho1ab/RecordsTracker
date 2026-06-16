@@ -42,37 +42,37 @@ GUIDED_STEPS: tuple[GuidedStep, ...] = (
     "start",
     "Start",
     "/",
-    "Confirm the pilot mode and begin a CCLD complaint retrieval.",
+    "Begin the guided CCLD complaint review workflow.",
   ),
   GuidedStep(
     "facility",
     "Facility",
     "/ccld/facilities",
-    "Select a CCLD facility/license number or use manual entry.",
+    "Find or enter the CCLD facility/license number.",
   ),
   GuidedStep(
     "date_range",
     "Date range",
     "/ccld/records/request",
-    "Choose the complaint date window for the retrieval request.",
+    "Set the complaint date window.",
   ),
   GuidedStep(
     "retrieve",
     "Retrieve",
     "/ccld/records/request",
-    "Run live public CCLD retrieval or show the current queue.",
+    "Retrieve complaint records or show loaded records.",
   ),
   GuidedStep(
     "review_results",
-    "Review results",
+    "Result",
     "/ccld/retrieval/jobs",
-    "Check imported counts, warnings, failures, and next action.",
+    "Confirm imported counts, warnings, and recovery steps.",
   ),
   GuidedStep(
     "review_records",
-    "Review records",
+    "Queue",
     "/reviewer",
-    "Review imported source-derived records and add reviewer-created notes/status.",
+    "Open complaint records for source-traceable review.",
   ),
   GuidedStep(
     "feedback",
@@ -204,11 +204,11 @@ def _guided_stepper(current_step_id: str, next_action: str | None) -> str:
     for index, step in enumerate(GUIDED_STEPS)
   )
   return f"""      <section class="guided-stepper" aria-labelledby="guided-stepper-heading">
-    <div class="stepper-summary">
+    <div class="stepper-summary" role="group" aria-label="Current workflow step">
       <p class="stepper-eyebrow">Guided workflow</p>
-      <h2 id="guided-stepper-heading">Step {current_index + 1}: {html.escape(current_step.label)}</h2>
+      <h2 id="guided-stepper-heading">{html.escape(current_step.label)}</h2>
       <p>{html.escape(current_step.help_text)}</p>
-      <p><strong>Next best action:</strong> {html.escape(next_action_text)}</p>
+      <p class="next-action"><strong>Next best action:</strong> {html.escape(next_action_text)}</p>
     </div>
     <ol class="stepper-list">
 {items}
@@ -232,12 +232,15 @@ def _guided_step_markup(step: GuidedStep, index: int, current_index: int) -> str
       f"{html.escape(step.label)}</a>"
     )
   else:
-    state = "Not ready yet"
+    state = "Future step"
     state_class = "is-upcoming"
-    content = f"<span>{html.escape(step.label)}</span>"
+    content = (
+      f'<a href="{html.escape(step.href, quote=True)}">'
+      f"{html.escape(step.label)}</a>"
+    )
   return f"""          <li class="stepper-item {state_class}">
       <span class="step-index" aria-hidden="true">{index + 1}</span>
-      <span class="step-main">{content}<span class="step-help">{html.escape(step.help_text)}</span></span>
+      <span class="step-main">{content}</span>
       <span class="step-state">{state}</span>
       </li>"""
 
@@ -421,21 +424,21 @@ SHARED_CSS = r"""
       box-shadow: inset 0 -3px 0 var(--accent);
     }
     .guided-stepper {
-      background: #ffffff;
+      background: linear-gradient(135deg, #ffffff 0%, #f4faf9 100%);
       border: 1px solid #b8cbd4;
-      border-radius: 10px;
-      box-shadow: var(--shadow-strong);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
       display: grid;
-      gap: 1rem;
-      grid-template-columns: minmax(14rem, 0.34fr) minmax(0, 1fr);
-      margin: 0 0 1.25rem;
-      padding: 1rem;
+      gap: 0.75rem;
+      grid-template-columns: minmax(12rem, 0.28fr) minmax(0, 1fr);
+      margin: 0 0 1rem;
+      padding: 0.75rem;
     }
     .stepper-summary {
-      background: linear-gradient(180deg, #f3faf9 0%, #ffffff 100%);
+      background: #ffffff;
       border: 1px solid #c9dfdd;
-      border-radius: 8px;
-      padding: 1rem;
+      border-radius: 6px;
+      padding: 0.75rem;
     }
     .stepper-eyebrow {
       color: var(--accent-strong);
@@ -444,9 +447,19 @@ SHARED_CSS = r"""
       margin-bottom: 0.25rem;
       text-transform: uppercase;
     }
+    .stepper-summary h2 {
+      font-size: 1.05rem;
+      margin-bottom: 0.25rem;
+    }
+    .stepper-summary p {
+      margin-bottom: 0.35rem;
+    }
+    .next-action {
+      color: var(--ink);
+    }
     .stepper-list {
       display: grid;
-      gap: 0.55rem;
+      gap: 0.35rem;
       grid-template-columns: repeat(7, minmax(0, 1fr));
       list-style: none;
       margin: 0;
@@ -455,12 +468,12 @@ SHARED_CSS = r"""
     .stepper-item {
       background: var(--surface-alt);
       border: 1px solid var(--line);
-      border-radius: 8px;
+      border-radius: 999px;
       display: grid;
-      gap: 0.45rem;
-      grid-template-rows: auto 1fr auto;
-      min-height: 10.5rem;
-      padding: 0.65rem;
+      gap: 0.35rem;
+      grid-template-columns: auto minmax(0, 1fr);
+      min-height: 0;
+      padding: 0.45rem 0.5rem;
     }
     .stepper-item.is-complete {
       background: #edf7f1;
@@ -481,32 +494,31 @@ SHARED_CSS = r"""
       border: 1px solid var(--line);
       border-radius: 999px;
       display: inline-flex;
+      font-size: 0.82rem;
       font-weight: 800;
-      height: 1.7rem;
+      height: 1.45rem;
       justify-content: center;
-      min-width: 1.7rem;
-      width: 1.7rem;
+      min-width: 1.45rem;
+      width: 1.45rem;
     }
     .step-main {
-      display: grid;
-      gap: 0.25rem;
+      align-self: center;
+      min-width: 0;
     }
-    .step-main a, .step-main span:first-child {
+    .step-main a {
       font-weight: 800;
       line-height: 1.2;
-    }
-    .step-help {
-      color: var(--muted);
-      display: block;
-      font-size: 0.82rem;
-      line-height: 1.25;
+      overflow-wrap: anywhere;
+      text-decoration: none;
     }
     .step-state {
+      align-self: center;
       border-radius: 999px;
       border: 1px solid var(--line);
       background: #ffffff;
       font-size: 0.76rem;
       font-weight: 800;
+      grid-column: 1 / -1;
       padding: 0.2rem 0.4rem;
       width: fit-content;
     }
@@ -572,6 +584,10 @@ SHARED_CSS = r"""
     button:hover, input[type="submit"]:hover, .button:hover {
       background: var(--accent-strong);
       color: #fff;
+    }
+    .button-large {
+      font-size: 1.08rem;
+      padding: 0.85rem 1.1rem;
     }
     .button-secondary, button.secondary {
       background: #fff;
@@ -686,6 +702,17 @@ SHARED_CSS = r"""
       box-shadow: var(--shadow-strong);
       padding: 1.25rem;
     }
+    .launch-kicker {
+      color: var(--accent-strong);
+      font-size: 0.88rem;
+      font-weight: 800;
+      margin-bottom: 0.35rem;
+      text-transform: uppercase;
+    }
+    .launch-value {
+      font-size: 1.08rem;
+      max-width: 54rem;
+    }
     .action-card, .summary-card, .detail-card, .empty-state-card, .warning-card {
       border-radius: 8px;
     }
@@ -707,6 +734,16 @@ SHARED_CSS = r"""
     .action-grid {
       grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
     }
+    .compact-actions {
+      align-items: stretch;
+      grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    }
+    .compact-actions p {
+      margin: 0;
+    }
+    .compact-actions .button {
+      width: 100%;
+    }
     .stat-grid {
       grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
     }
@@ -726,6 +763,23 @@ SHARED_CSS = r"""
       border: 1px solid var(--line);
       border-radius: 8px;
       padding: 0.85rem;
+    }
+    .result-list {
+      display: grid;
+      gap: 0.75rem;
+    }
+    .result-card {
+      align-items: center;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: minmax(0, 1fr) auto;
+      padding: 0.9rem;
+    }
+    .result-card h3, .result-card p {
+      margin-bottom: 0.25rem;
     }
     .stat-card strong {
       display: block;
@@ -764,6 +818,17 @@ SHARED_CSS = r"""
     .wizard-stage-primary {
       border-color: #8ab9b4;
       box-shadow: var(--shadow);
+    }
+    .workflow-panel {
+      background: #ffffff;
+      border: 1px solid #b8cbd4;
+      border-radius: 8px;
+      box-shadow: var(--shadow-strong);
+      padding: 1.1rem;
+    }
+    .workflow-panel-primary {
+      border-color: var(--accent);
+      box-shadow: 0 14px 34px rgb(18 103 95 / 16%);
     }
     .stage-kicker {
       color: var(--accent-strong);

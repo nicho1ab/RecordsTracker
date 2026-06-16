@@ -9,7 +9,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Protocol
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import Request, urlopen
 
 from ccld_complaints.hosted_app.auth import (
@@ -177,7 +177,14 @@ def route_feedback_response(
             ),
         )
     if method == "GET":
-        return _html_response(200, render_feedback_page(active_context))
+        query_values = parse_qs(parsed_url.query, keep_blank_values=True)
+        return _html_response(
+            200,
+            render_feedback_page(
+                active_context,
+                selected_type=_first_form_value(query_values, "feedback_type"),
+            ),
+        )
     if method == "POST":
         return _post_feedback_response(request_body, active_context)
     return _html_response(
@@ -190,7 +197,7 @@ def route_feedback_response(
     )
 
 
-def render_feedback_page(context: FeedbackContext) -> str:
+def render_feedback_page(context: FeedbackContext, *, selected_type: str = "") -> str:
     return _page(
                 title="Send feedback",
                 heading="Send feedback",
@@ -205,17 +212,20 @@ def render_feedback_page(context: FeedbackContext) -> str:
         <section aria-labelledby="feedback-options-heading">
             <h2 id="feedback-options-heading">Choose the best feedback type</h2>
             <div class="action-grid">
-                <section class="action-card" aria-labelledby="bug-card-heading">
+                <section class="action-card feedback-choice" aria-labelledby="bug-card-heading">
                     <h3 id="bug-card-heading">Bug report</h3>
                     <p>Something failed, looked wrong, or blocked the review workflow.</p>
+                    <p><a class="button button-secondary" href="{_feedback_type_href('Bug report')}">Choose bug report</a></p>
                 </section>
-                <section class="action-card" aria-labelledby="feature-card-heading">
+                <section class="action-card feedback-choice" aria-labelledby="feature-card-heading">
                     <h3 id="feature-card-heading">Feature request</h3>
                     <p>A workflow improvement would help reviewers move faster or understand results.</p>
+                    <p><a class="button button-secondary" href="{_feedback_type_href('Feature request')}">Choose feature request</a></p>
                 </section>
-                <section class="action-card" aria-labelledby="source-card-heading">
+                <section class="action-card feedback-choice" aria-labelledby="source-card-heading">
                     <h3 id="source-card-heading">New data source request</h3>
                     <p>A future public source should be considered after governance review.</p>
+                    <p><a class="button button-secondary" href="{_feedback_type_href('New data source')}">Choose new data source request</a></p>
                 </section>
             </div>
         </section>
@@ -233,9 +243,13 @@ def render_feedback_page(context: FeedbackContext) -> str:
                 </ul>
             </details>
     </section>
-    {_feedback_form({})}
+    {_feedback_form({'feedback_type': [selected_type]} if selected_type in FEEDBACK_TYPE_OPTIONS else {})}
 """,
     )
+
+
+def _feedback_type_href(feedback_type: str) -> str:
+    return f"{FEEDBACK_PATH}?{urlencode({'feedback_type': feedback_type})}"
 
 
 def validate_feedback_submission(

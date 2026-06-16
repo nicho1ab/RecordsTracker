@@ -108,10 +108,10 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
 
     assert "Skip to main CCLD review content" in html
     assert '<main id="main-content" tabindex="-1">' in html
-    assert "Local/test scaffold only: not a production reviewer workflow." in html
+    assert "Guided CCLD-only complaint retrieval and review." in html
     assert "CCLD RecordsTracker Pilot" in html
     assert "Retrieval not configured" in html
-    assert "Retrieve, review, and annotate public CCLD complaint records" in html
+    assert "Retrieve complaint records and move straight into source-traceable review" in html
     assert "Retrieve complaint records" in html
     assert "Find a facility" in html
     assert "Review imported records" in html
@@ -165,11 +165,11 @@ def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None
         assert "Guided workflow" in html
         assert "Current step" in html
         if path != "/feedback":
-            assert "Not ready yet" in html
+            assert "Future step" in html
         assert "Next best action" in html
         assert "Date range" in html
-        assert "Review results" in html
-        assert "Review records" in html
+        assert "Result" in html
+        assert "Queue" in html
         assert "Facility" in html
         assert "Retrieve" in html
         assert "Review" in html
@@ -191,7 +191,7 @@ def test_routes_return_shell_health_and_not_found() -> None:
 
     assert root_status == 200
     assert root_content_type == "text/html; charset=utf-8"
-    assert b"not a production reviewer workflow" in root_body
+    assert b"Guided CCLD-only complaint retrieval and review" in root_body
     assert health_status == 200
     assert health_content_type == "application/json; charset=utf-8"
     assert json.loads(health_body)["status"] == "ok"
