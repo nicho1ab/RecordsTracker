@@ -87,8 +87,8 @@ experience.
    shows compact request-context cards, provides high-impact retrieval result
    cards with safe counts/warnings/errors, preserves source traceability, and
    keeps source-derived records separate from reviewer-created notes/status.
-- Presents hosted tester pages with a shared product shell, workflow step
-   indicator, active navigation, readable cards, count/stat grids, accessible
+- Presents hosted tester pages with a shared product shell, central guided
+   stepper/wizard, active navigation, readable cards, count/stat grids, accessible
    focus/table/form styling, scannable help cards, tester-friendly feedback
    cards, and concise source-of-record boundary language without adding new
    routes, workflows, frontend dependencies, exports, auth, public deployment, or

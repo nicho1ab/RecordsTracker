@@ -69,7 +69,7 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert "Open CCLD request or queue" in html
     assert "Open CCLD workflow help" in html
     assert "Queue records" in html
-    assert "Reviewer queue triage summary" in html
+    assert "Queue status summary" in html
     assert "List values are source-derived display summaries" in normalized_html
     assert "Open reviewer detail for source-confidence cues" in normalized_html
     assert "Total visible records" in html
@@ -125,7 +125,7 @@ def test_reviewer_ui_landing_shows_reviewer_created_state_indicators() -> None:
     assert "Reviewed" in html
     assert "1 reviewer-created note" in html
     assert "reviewed" in html
-    assert "Reviewer queue triage summary" in html
+    assert "Queue status summary" in html
     assert "Reviewed" in html
     assert "Reviewer-created notes" in html
     assert "No reviewer-created note/status yet" not in html

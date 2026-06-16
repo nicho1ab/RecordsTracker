@@ -210,8 +210,9 @@ text, and no-secret HTML output.
 Hosted UI polish tests should prove the shared product shell renders on the
 home, facility lookup, CCLD request/help, retrieval job history/detail, reviewer,
 and feedback pages with the `CCLD RecordsTracker Pilot` product name, mode badge
-for Live public CCLD, Fixture/mock demo, or Retrieval not configured, workflow
-step indicator, active navigation, skip link, source-of-record limitation footer,
+for Live public CCLD, Fixture/mock demo, or Retrieval not configured, central
+guided stepper/wizard with current/completed/not-ready states and next-action
+guidance, active navigation, skip link, source-of-record limitation footer,
 visible focus styles, responsive CSS, readable table/form styling, and no new
 routes, workflows, auth, exports, public deployment, non-CCLD scope, or frontend
 dependencies. Request-page tests should also prove native facility type-ahead or
