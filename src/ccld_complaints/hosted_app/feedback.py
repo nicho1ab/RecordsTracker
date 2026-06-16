@@ -1,3 +1,5 @@
+# ruff: noqa: E501
+
 from __future__ import annotations
 
 import html
@@ -190,18 +192,46 @@ def route_feedback_response(
 
 def render_feedback_page(context: FeedbackContext) -> str:
     return _page(
-        title="Tester feedback",
-        heading="Tester feedback",
+                title="Send feedback",
+                heading="Send feedback",
         main=f"""
     {_configuration_notice(context.github_config)}
-    <section aria-labelledby="feedback-purpose-heading">
-      <h2 id="feedback-purpose-heading">What feedback is for</h2>
-      <p>Use this page for pilot UI problems, confusing wording, missing local/test
-      guidance, unexpected queue or reviewer-detail behavior, and requests for future
-      CCLD workflow improvements.</p>
-      <p>Do not include credentials, provider claims, raw source narrative, raw artifact
-      material, server paths, tokens, connection details, or personal contact details in
-      feedback. GitHub Projects are not required; feedback is classified with labels.</p>
+        <section class="hero-card" aria-labelledby="feedback-purpose-heading">
+            <h2 id="feedback-purpose-heading">Tell the pilot team what happened</h2>
+            <p>Send concise feedback about retrieval, facility lookup, job results, reviewer queue,
+            reviewer detail, wording, or keyboard flow. Feedback is classified with labels, not
+            GitHub Projects or issue types.</p>
+        </section>
+        <section aria-labelledby="feedback-options-heading">
+            <h2 id="feedback-options-heading">Choose the best feedback type</h2>
+            <div class="action-grid">
+                <section class="action-card" aria-labelledby="bug-card-heading">
+                    <h3 id="bug-card-heading">Bug report</h3>
+                    <p>Something failed, looked wrong, or blocked the review workflow.</p>
+                </section>
+                <section class="action-card" aria-labelledby="feature-card-heading">
+                    <h3 id="feature-card-heading">Feature request</h3>
+                    <p>A workflow improvement would help reviewers move faster or understand results.</p>
+                </section>
+                <section class="action-card" aria-labelledby="source-card-heading">
+                    <h3 id="source-card-heading">New data source request</h3>
+                    <p>A future public source should be considered after governance review.</p>
+                </section>
+            </div>
+        </section>
+        <section class="warning-card" aria-labelledby="feedback-safety-heading">
+            <h2 id="feedback-safety-heading">Do not include</h2>
+            <p>Do not include credentials, private URLs, secrets, tokens, provider claims, raw source
+            narrative, raw artifact material, server paths, connection details, or unrelated
+            sensitive details.</p>
+            <details>
+                <summary>Useful examples</summary>
+                <ul>
+                    <li>Facility/license number, date range, and visible job state.</li>
+                    <li>What page felt confusing and what action you expected next.</li>
+                    <li>Which complaint control number or queue row looked unexpected.</li>
+                </ul>
+            </details>
     </section>
     {_feedback_form({})}
 """,
@@ -452,6 +482,7 @@ def _page(*, title: str, heading: str, main: str) -> str:
                 nav_label="Feedback navigation",
                 eyebrow="Server-side GitHub Issues feedback intake.",
                 extra_nav_links=(("Auth status", "/auth/status"),),
+                active_path=FEEDBACK_PATH,
         )
 
 

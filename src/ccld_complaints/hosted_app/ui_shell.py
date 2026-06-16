@@ -1,29 +1,43 @@
 from __future__ import annotations
 
 import html
+import os
 from collections.abc import Sequence
 
-APP_TITLE = "CCLD Records Review"
+APP_TITLE = "CCLD RecordsTracker Pilot"
+APP_SUBTITLE = "Guided public CCLD complaint retrieval and source-traceable review."
 BOUNDARY_TEXT = (
-  "Local/test pilot scaffold: source-derived public records with separate "
-  "reviewer-created notes/status."
+  "Local pilot runtime for CCLD-only public complaint review."
 )
 FOOTER_NOTE = (
-  "CCLD public portal material remains the source of record. This local/test "
-  "pilot UI is a review aid only and does not prove source completeness, legal "
-  "findings, facility-wide conclusions, harm, abuse, neglect, liability, or "
-  "rights-deprivation."
+  "CCLD public portal remains the source of record. Source-derived records stay "
+  "separate from reviewer-created notes/status. This pilot does not prove source "
+  "coverage, legal findings, facility-wide conclusions, harm, abuse, neglect, "
+  "liability, or rights-deprivation."
 )
 
 PRIMARY_NAV_LINKS: tuple[tuple[str, str], ...] = (
     ("Home", "/"),
-    ("Facility Lookup", "/ccld/facilities"),
-  ("CCLD record request", "/ccld/records/request"),
-    ("Reviewer", "/reviewer"),
-    ("Retrieval job history", "/ccld/retrieval/jobs"),
+  ("Facility", "/ccld/facilities"),
+  ("Retrieve", "/ccld/records/request"),
+  ("Review", "/reviewer"),
+  ("Jobs", "/ccld/retrieval/jobs"),
     ("Feedback", "/feedback"),
-    ("How this works", "/ccld/help"),
+  ("Help", "/ccld/help"),
 )
+
+WORKFLOW_STEPS: tuple[tuple[str, str], ...] = (
+  ("Facility", "/ccld/facilities"),
+  ("Retrieve", "/ccld/records/request"),
+  ("Review", "/reviewer"),
+  ("Feedback", "/feedback"),
+)
+
+MODE_BADGE_CLASSES = {
+  "Live public CCLD": "badge badge-live",
+  "Fixture/mock demo": "badge badge-demo",
+  "Retrieval not configured": "badge badge-muted",
+}
 
 
 def render_page_shell(
@@ -36,14 +50,19 @@ def render_page_shell(
     eyebrow: str | None = BOUNDARY_TEXT,
     actor_label: str | None = None,
     extra_nav_links: Sequence[tuple[str, str]] = (),
+    active_path: str | None = None,
+    mode_label: str | None = None,
 ) -> str:
-    links = _nav_links(extra_nav_links)
+    runtime_mode = mode_label or _runtime_mode_label()
+    links = _nav_links(extra_nav_links, active_path=active_path)
+    workflow_steps = _workflow_steps(active_path)
     actor_markup = (
       f'<p class="pilot-actor">Signed in as {html.escape(actor_label)}.</p>'
       if actor_label
       else ""
     )
     eyebrow_markup = f'<p class="pilot-eyebrow">{html.escape(eyebrow)}</p>' if eyebrow else ""
+    badge_class = MODE_BADGE_CLASSES.get(runtime_mode, "badge badge-muted")
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -59,16 +78,26 @@ def render_page_shell(
   <header class="site-header">
     <div class="shell">
       <div class="site-title-row">
-        <div>
+        <div class="brand-block">
+          <p class="product-name">{APP_TITLE}</p>
           {eyebrow_markup}
           <h1>{html.escape(heading)}</h1>
+          <p class="product-subtitle">{APP_SUBTITLE}</p>
           {actor_markup}
+        </div>
+        <div class="mode-panel" aria-label="Retrieval mode">
+          <span class="{badge_class}">{html.escape(runtime_mode)}</span>
         </div>
       </div>
       <nav class="site-nav" aria-label="{html.escape(nav_label)}">
         <ul>
 {links}
         </ul>
+      </nav>
+      <nav class="workflow-steps" aria-label="Pilot workflow steps">
+        <ol>
+{workflow_steps}
+        </ol>
       </nav>
     </div>
   </header>
@@ -87,43 +116,92 @@ def render_page_shell(
 """
 
 
-def _nav_links(extra_nav_links: Sequence[tuple[str, str]]) -> str:
+def _nav_links(
+    extra_nav_links: Sequence[tuple[str, str]],
+    *,
+    active_path: str | None,
+) -> str:
     seen: set[str] = set()
     items: list[str] = []
     for label, href in (*PRIMARY_NAV_LINKS, *tuple(extra_nav_links)):
         if href in seen:
             continue
         seen.add(href)
+        active = _is_active_nav(href, active_path)
+        active_class = ' class="is-active"' if active else ""
+        current = ' aria-current="page"' if active else ""
         items.append(
-            f'          <li><a href="{html.escape(href, quote=True)}">{html.escape(label)}</a></li>'
+          f'          <li><a{active_class}{current} href="{html.escape(href, quote=True)}">'
+          f"{html.escape(label)}</a></li>"
         )
     return "\n".join(items)
+
+
+def _workflow_steps(active_path: str | None) -> str:
+  items: list[str] = []
+  for index, (label, href) in enumerate(WORKFLOW_STEPS, start=1):
+    active = _is_active_nav(href, active_path)
+    active_class = " is-active" if active else ""
+    current = ' aria-current="step"' if active else ""
+    items.append(
+      f'          <li class="workflow-step{active_class}"{current}>'
+      f'<span class="step-number">{index}</span>'
+      f'<a href="{html.escape(href, quote=True)}">{html.escape(label)}</a></li>'
+    )
+  return "\n".join(items)
+
+
+def _is_active_nav(href: str, active_path: str | None) -> bool:
+  if not active_path:
+    return False
+  if href == "/":
+    return active_path == "/"
+  return active_path == href or active_path.startswith(f"{href}/")
+
+
+def _runtime_mode_label() -> str:
+  demo_mode = os.environ.get("CCLD_RETRIEVAL_DEMO_MODE", "").strip().casefold()
+  retrieval_enabled = os.environ.get("CCLD_RETRIEVAL_ENABLED", "").strip().casefold()
+  raw_dir = os.environ.get("CCLD_RETRIEVAL_RAW_DIR", "").strip()
+  if demo_mode == "mock-success":
+    return "Fixture/mock demo"
+  if retrieval_enabled == "enabled" and raw_dir:
+    return "Live public CCLD"
+  return "Retrieval not configured"
 
 
 SHARED_CSS = r"""
     :root {
       color-scheme: light;
-      --bg: #f7f7f4;
+      --bg: #f5f7f8;
       --surface: #ffffff;
-      --surface-alt: #eef5f3;
-      --ink: #1f2933;
-      --muted: #52606d;
-      --line: #c9d2d0;
-      --accent: #176b63;
-      --accent-strong: #0f4f49;
+      --surface-alt: #f0f5f6;
+      --surface-strong: #13202b;
+      --ink: #1d2730;
+      --muted: #55636f;
+      --line: #cbd6dc;
+      --accent: #12675f;
+      --accent-strong: #0c4c46;
       --accent-soft: #dcefed;
+      --blue: #244c86;
+      --blue-soft: #e6eef9;
+      --amber: #8a5a00;
+      --amber-soft: #fff5db;
+      --rose: #9b2c3a;
+      --rose-soft: #fff0f2;
       --warning-bg: #fff7df;
       --warning-line: #d8aa3d;
       --danger-bg: #fff1f0;
       --danger-line: #d66b61;
-      --focus: #7c3aed;
+      --focus: #5b38d6;
       --shadow: 0 1px 2px rgb(31 41 51 / 8%), 0 8px 24px rgb(31 41 51 / 8%);
+      --shadow-strong: 0 16px 40px rgb(19 32 43 / 14%);
     }
     * {
       box-sizing: border-box;
     }
     body {
-      background: var(--bg);
+      background: linear-gradient(180deg, #edf3f5 0, var(--bg) 20rem);
       color: var(--ink);
       font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       font-size: 16px;
@@ -132,25 +210,40 @@ SHARED_CSS = r"""
     }
     .shell {
       margin: 0 auto;
-      max-width: 76rem;
+      max-width: 82rem;
       padding: 0 1rem;
     }
     .site-header {
-      background: var(--surface);
+      background: rgba(255, 255, 255, 0.96);
       border-bottom: 1px solid var(--line);
-      box-shadow: 0 1px 8px rgb(31 41 51 / 6%);
+      box-shadow: 0 1px 10px rgb(31 41 51 / 7%);
     }
     .site-title-row {
+      align-items: flex-start;
+      display: flex;
+      gap: 1rem;
+      justify-content: space-between;
       padding: 1.25rem 0 0.75rem;
     }
-    .pilot-eyebrow, .pilot-actor, .site-footer p {
+    .product-name {
+      color: var(--accent-strong);
+      font-size: 0.9rem;
+      font-weight: 800;
+      letter-spacing: 0;
+      margin: 0 0 0.3rem;
+      text-transform: uppercase;
+    }
+    .pilot-eyebrow, .pilot-actor, .site-footer p, .product-subtitle, .helper-text {
       color: var(--muted);
       margin: 0 0 0.4rem;
     }
+    .product-subtitle {
+      max-width: 48rem;
+    }
     h1 {
-      font-size: 2rem;
+      font-size: 2.15rem;
       line-height: 1.15;
-      margin: 0;
+      margin: 0 0 0.25rem;
     }
     h2 {
       font-size: 1.35rem;
@@ -174,7 +267,7 @@ SHARED_CSS = r"""
       color: #083b36;
     }
     a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
-    textarea:focus-visible, main:focus-visible {
+    textarea:focus-visible, main:focus-visible, summary:focus-visible {
       outline: 3px solid var(--focus);
       outline-offset: 3px;
     }
@@ -206,9 +299,45 @@ SHARED_CSS = r"""
       padding: 0.45rem 0.65rem;
       text-decoration: none;
     }
-    .site-nav a:hover {
+    .site-nav a:hover, .site-nav a.is-active {
       background: var(--accent-soft);
       border-color: var(--accent);
+    }
+    .site-nav a.is-active {
+      box-shadow: inset 0 -3px 0 var(--accent);
+    }
+    .workflow-steps ol {
+      display: grid;
+      gap: 0.5rem;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      list-style: none;
+      margin: 0;
+      padding: 0 0 1rem;
+    }
+    .workflow-step {
+      align-items: center;
+      background: var(--surface-alt);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      display: flex;
+      gap: 0.55rem;
+      min-height: 3rem;
+      padding: 0.55rem;
+    }
+    .workflow-step.is-active {
+      background: var(--blue-soft);
+      border-color: var(--blue);
+    }
+    .step-number {
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      display: inline-flex;
+      font-weight: 800;
+      height: 1.6rem;
+      justify-content: center;
+      min-width: 1.6rem;
     }
     .page-main {
       padding-bottom: 2rem;
@@ -222,7 +351,7 @@ SHARED_CSS = r"""
       margin: 0 0 1rem;
       padding: 1rem;
     }
-    section section {
+    section section, .nested-card {
       background: var(--surface-alt);
       box-shadow: none;
       margin-top: 1rem;
@@ -256,18 +385,42 @@ SHARED_CSS = r"""
       min-height: 12rem;
       width: 100%;
     }
-    button, input[type="submit"] {
+    button, input[type="submit"], .button {
       background: var(--accent);
       border: 1px solid var(--accent-strong);
       border-radius: 6px;
       color: #fff;
       cursor: pointer;
+      display: inline-block;
       font: inherit;
       font-weight: 700;
       padding: 0.6rem 0.85rem;
+      text-align: center;
+      text-decoration: none;
     }
-    button:hover, input[type="submit"]:hover {
+    button:hover, input[type="submit"]:hover, .button:hover {
       background: var(--accent-strong);
+      color: #fff;
+    }
+    .button-secondary, button.secondary {
+      background: #fff;
+      border-color: var(--accent);
+      color: var(--accent-strong);
+    }
+    .button-secondary:hover, button.secondary:hover {
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+    }
+    .button-quiet {
+      background: transparent;
+      border-color: transparent;
+      color: var(--accent-strong);
+      padding-left: 0;
+      padding-right: 0;
+    }
+    .button-quiet:hover {
+      background: transparent;
+      color: #083b36;
     }
     table {
       border-collapse: collapse;
@@ -289,6 +442,9 @@ SHARED_CSS = r"""
     }
     tbody tr:nth-child(even) {
       background: #fbfcfb;
+    }
+    tbody tr:hover {
+      background: #f4faf9;
     }
     dl {
       display: grid;
@@ -312,12 +468,150 @@ SHARED_CSS = r"""
       border-top: 1px solid var(--line);
       padding: 1.25rem 0;
     }
+    .mode-panel {
+      align-items: flex-start;
+      display: flex;
+      justify-content: flex-end;
+      min-width: 12rem;
+    }
+    .badge {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      display: inline-flex;
+      font-size: 0.88rem;
+      font-weight: 800;
+      gap: 0.35rem;
+      line-height: 1.2;
+      padding: 0.35rem 0.65rem;
+      white-space: nowrap;
+    }
+    .badge-live {
+      background: #e6f6ef;
+      border-color: #4aa37f;
+      color: #0d5138;
+    }
+    .badge-demo {
+      background: var(--blue-soft);
+      border-color: #83a2d3;
+      color: var(--blue);
+    }
+    .badge-muted {
+      background: #eef1f3;
+      color: #495661;
+    }
+    .badge-warning {
+      background: var(--amber-soft);
+      border-color: #d7a529;
+      color: var(--amber);
+    }
+    .badge-danger {
+      background: var(--rose-soft);
+      border-color: #d88992;
+      color: var(--rose);
+    }
+    .hero-card {
+      background: linear-gradient(135deg, #ffffff 0%, #eef7f7 100%);
+      border: 1px solid #b9d5d4;
+      box-shadow: var(--shadow-strong);
+      padding: 1.25rem;
+    }
+    .action-card, .summary-card, .detail-card, .empty-state-card, .warning-card {
+      border-radius: 8px;
+    }
+    .action-card {
+      min-height: 100%;
+    }
+    .warning-card {
+      background: var(--warning-bg);
+      border-color: var(--warning-line);
+    }
+    .empty-state-card {
+      background: #f8fafb;
+      border-style: dashed;
+    }
+    .grid, .action-grid, .stat-grid, .two-column, .request-layout {
+      display: grid;
+      gap: 1rem;
+    }
+    .action-grid {
+      grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    }
+    .stat-grid {
+      grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+    }
+    .two-column {
+      grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.42fr);
+    }
+    .request-layout {
+      align-items: start;
+      grid-template-columns: minmax(0, 1fr) minmax(17rem, 22rem);
+    }
+    .sidebar-stack {
+      display: grid;
+      gap: 1rem;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.85rem;
+    }
+    .stat-card strong {
+      display: block;
+      font-size: 1.7rem;
+      line-height: 1.1;
+    }
+    .form-row {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    }
+    .form-actions {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+      margin-top: 0.25rem;
+    }
+    .fixed-field {
+      background: #f7fafb;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0.65rem;
+    }
+    .compact-list {
+      margin-bottom: 0;
+      padding-left: 1.2rem;
+    }
+    .sr-note {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    details {
+      border-top: 1px solid var(--line);
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 800;
+    }
     @media (max-width: 760px) {
       h1 {
         font-size: 1.55rem;
       }
+      .site-title-row, .two-column, .request-layout {
+        display: block;
+      }
+      .mode-panel {
+        justify-content: flex-start;
+        margin-top: 0.75rem;
+      }
       .site-nav ul {
         display: grid;
+      }
+      .workflow-steps ol {
+        grid-template-columns: 1fr;
       }
       dl {
         display: block;

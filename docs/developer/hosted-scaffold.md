@@ -118,9 +118,11 @@ live public CCLD mode, use the explicit live wrapper instead:
 This wrapper sets explicit local-dev auth, fixture/demo page data, controlled
 retrieval enablement, a blank `CCLD_RETRIEVAL_DEMO_MODE`, and ignored local raw
 source storage under `data/raw/ccld/retrieval-live`. Browser-triggered jobs use
-the real public CCLD HTTP connector from the server. The CCLD public portal
-remains the source of record, and zero imported records is not proof that no
-complaints exist.
+the real public CCLD HTTP connector from the server. Startup output labels Live
+public CCLD retrieval mode, prints exact local URLs, and states that public CCLD
+HTTP requests happen only after browser submit. The CCLD public portal remains
+the source of record, and zero imported records is not proof that no complaints
+exist.
 
 For the offline fixture-backed demo, use:
 
@@ -135,6 +137,8 @@ http://127.0.0.1:8000/
 http://127.0.0.1:8000/ccld/records/request
 http://127.0.0.1:8000/ccld/retrieval/jobs
 http://127.0.0.1:8000/reviewer
+http://127.0.0.1:8000/ccld/help
+http://127.0.0.1:8000/feedback
 ```
 
 The demo wrapper sets explicit local-dev auth, fixture/demo page data,
@@ -142,19 +146,18 @@ controlled retrieval enablement, `CCLD_RETRIEVAL_DEMO_MODE=mock-success`, and
 ignored local raw source storage under `data/raw/ccld/retrieval-demo`. Normal
 `run-hosted-scaffold.ps1` startup remains unchanged and still shows the setup-
 required state when retrieval configuration is incomplete.
-The home page includes a skip-to-main link and visible start-here guidance for
-the first CCLD review session path: facility lookup or manual entry, CCLD
-request-context confirmation, loaded local/test queue, reviewer detail source
-traceability/source-confidence/field-note review, reviewer-created notes/status,
-same-queue refresh, next-record continuation, and manual checklist copy. This is
-orientation only; it does not add saved sessions, persisted queue state, duplicate
-checklists, feedback persistence, auth, workflow-engine behavior, browser live
-fetch, connector execution, or artifact building from browser requests.
-The local/test hosted pages share a pilot-presentable shell with consistent
-navigation, readable cards and tables, visible focus styling, responsive
-wrapping, local/test boundary text, and source-of-record limitation wording.
-This is presentation polish only; it does not add routes, workflows, frontend
-dependencies, auth, exports, retrieval capability, deployment, or new state
+The demo startup output labels Fixture/mock demo mode, prints exact local URLs,
+and states that it does not make live CCLD calls.
+The home page is a product launchpad for `CCLD RecordsTracker Pilot`: it shows
+the retrieval mode badge, primary action card for retrieving complaint records,
+secondary action cards for facility lookup, reviewer queue, retrieval jobs, and
+feedback, local live/demo/scaffold commands, and concise source-of-record
+boundary language. The local/test hosted pages share a product shell with active
+navigation, workflow step indicator, skip-to-main link, strong focus styling,
+card/count-grid utilities, readable tables and forms, mode badges for Live public
+CCLD, Fixture/mock demo, and Retrieval not configured, and concise footer
+limitation wording. This presentation work does not add routes, workflows,
+frontend dependencies, auth, exports, deployment, non-CCLD scope, or new state
 behavior.
 
 When selecting the next hosted scaffold task, apply the product-benefit gate in
@@ -383,14 +386,15 @@ that full CSV is not configured, unavailable, or malformed, the lookup falls bac
 to the committed tiny fixture CSV. Testers can search by facility/license number,
 facility name, city, county, ZIP code, facility type, or status when those fields
 are present. Results are bounded and display safe scalar fields only. The active
-reference source and any fallback guidance are visible on the page. The “Use this
-facility” link carries the selected facility/license number into
+reference source and any fallback guidance are visible on the page. The `Use for
+retrieval` action carries the selected facility/license number into
 `/ccld/records/request`. Manual facility/license entry on the request page remains
 available.
-The request page shows a request-context confirmation for lookup-selected and
-manually entered requests, including the request origin, facility/license number,
-optional date range, active facility reference source, and change-facility/date
-links on result pages.
+The request page also includes native datalist type-ahead suggestions from the
+active facility reference rows so a tester does not have to leave the request
+page for ordinary facility selection. It shows a compact no-facility-selected
+context card before input, then selected request-context cards for lookup-
+selected, prefilled, and submitted requests.
 The page includes a skip-to-main link, start-here instructions, a labeled search
 field with help text, and a specific search button for local/test CCLD facility
 reference rows.
@@ -408,11 +412,15 @@ http://127.0.0.1:8000/ccld/records/request
 ```
 
 The page is CCLD-only. It accepts a digit-only CCLD facility/license number and
-an optional start and end date. It reads the existing seeded source-derived
-records through the local/test hosted route seams, shows matching seeded CCLD
-complaint records as a facility/date-scoped review queue, includes first-time
-workflow and key-term help at `/ccld/help`, and links matching complaint records
-into the hosted reviewer UI detail or list pages.
+an optional start and end date. Complaint records are the fixed record type for
+this pilot. The main form distinguishes `Retrieve complaint records`, which
+creates a controlled server-side retrieval job when configured, from `Show
+current queue`, which displays already loaded matching records without running
+retrieval. It reads the existing seeded source-derived records through the
+local/test hosted route seams, shows matching seeded CCLD complaint records as a
+facility/date-scoped review queue, includes scannable workflow help at
+`/ccld/help`, and links matching complaint records into the hosted reviewer UI
+detail or list pages.
 The CCLD pages use consistent plain-language terms for request context,
 facility/date request, loaded local/test CCLD records, source-derived records,
 reviewer-created notes/status, reviewer-status filters, suggested next records,
@@ -423,6 +431,11 @@ path without creating saved review sessions or persisted workflow state.
 Request and result pages visibly confirm whether the context came from facility
 lookup or manual entry, the facility/license number, the date range, and the
 active local/test facility reference source before a tester reviews queue rows.
+When retrieval jobs complete, result cards show status and mode badges, imported
+record counts, discovered/selected/retrieved/matched/imported/failure counts,
+safe warnings/errors, direct `Review imported records` and `View job details`
+actions, and specific zero-import reasons such as candidates outside the selected
+date range or retrieval not configured.
 The queue includes a triage summary, progress counts, reviewer note/status cues,
 source-traceability availability cues, suggested next-record links, and a
 reviewer-status filter derived from existing reviewer-created note/status rows.
