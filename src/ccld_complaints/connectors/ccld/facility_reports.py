@@ -205,6 +205,7 @@ class CcldFacilityReportsConnector:
         facility_detail_html: str | None = None,
         discovered_at: str | None = None,
         report_section: str | None = None,
+        allow_report_list_fallback: bool = False,
     ) -> list[SourceDocumentCandidate]:
         is_live_discovery = facility_detail_html is None
         if facility_detail_html is None:
@@ -219,7 +220,7 @@ class CcldFacilityReportsConnector:
             discovered_at=discovered_at,
             report_section=report_section,
         )
-        if candidates or not is_live_discovery:
+        if candidates or not (is_live_discovery or allow_report_list_fallback):
             return candidates
 
         report_list_url = f"{BASE_URL}/{self.facility_number}"
@@ -227,6 +228,7 @@ class CcldFacilityReportsConnector:
             _fetch_url(report_list_url),
             self.facility_number,
             discovered_at=discovered_at,
+            report_section=report_section,
         )
 
     def fetch(self, source_url: str) -> bytes:
@@ -431,6 +433,7 @@ def ingest_facility_reports_for_facility(
     fetch_report: ReportFetcher | None = None,
     report_section: str | None = None,
     candidate_filter: CandidateFilter | None = None,
+    allow_report_list_fallback: bool = False,
 ) -> FacilityIngestionResult:
     if limit is not None and limit < 0:
         raise ValueError("limit must be greater than or equal to 0.")
@@ -442,6 +445,7 @@ def ingest_facility_reports_for_facility(
         facility_detail_html=facility_detail_html,
         discovered_at=discovered_at,
         report_section=report_section,
+        allow_report_list_fallback=allow_report_list_fallback,
     )
     candidates = discovered_candidates
     if candidate_filter is not None:
@@ -820,22 +824,39 @@ def _candidates_from_report_list_json(
     report_list_content: bytes,
     facility_number: str,
     discovered_at: str | None = None,
+    report_section: str | None = None,
 ) -> list[SourceDocumentCandidate]:
     report_list = cast(dict[str, object], json.loads(report_list_content.decode("utf-8")))
     report_array = cast(list[dict[str, object]], report_list.get("REPORTARRAY", []))
-    return [
-        SourceDocumentCandidate(
-            source_name=SOURCE_ID,
-            facility_number=facility_number,
-            report_index=report_index,
-            source_url=_report_source_url(facility_number, report_index),
-            discovered_report_date=_iso_date(cast(str | None, report.get("REPORTDATE"))),
-            discovered_at=discovered_at,
-            report_section=None,
+    selected_report_section = _normalized_report_section(report_section)
+    candidates = []
+    for report_index, report in enumerate(report_array):
+        if report.get("FACILITYNUMBER") != facility_number:
+            continue
+        section = _report_section_from_report_type(cast(str | None, report.get("REPORTTYPE")))
+        if selected_report_section is not None and section != selected_report_section:
+            continue
+        candidates.append(
+            SourceDocumentCandidate(
+                source_name=SOURCE_ID,
+                facility_number=facility_number,
+                report_index=report_index,
+                source_url=_report_source_url(facility_number, report_index),
+                discovered_report_date=_iso_date(cast(str | None, report.get("REPORTDATE"))),
+                discovered_at=discovered_at,
+                report_section=section,
+            )
         )
-        for report_index, report in enumerate(report_array)
-        if report.get("FACILITYNUMBER") == facility_number
-    ]
+    return candidates
+
+
+def _report_section_from_report_type(value: str | None) -> str | None:
+    normalized = _normalized_report_section(value)
+    if normalized in {"complaint", "complaints"}:
+        return "complaints"
+    if normalized in {"visit", "visits", "all_visit", "all_visits"}:
+        return "all_visits"
+    return normalized
 
 
 def _value_after_label(lines: list[str], label: str) -> str | None:

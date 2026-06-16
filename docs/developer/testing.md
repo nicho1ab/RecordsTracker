@@ -340,6 +340,16 @@ local-dev auth, fixture/demo page data, retrieval enablement, `mock-success`, an
 ignored raw storage under `data/raw/`, prints the local URLs for `/`,
 `/ccld/records/request`, `/ccld/retrieval/jobs`, and `/reviewer`, and lets the
 existing request form create a retrieval job without live CCLD calls.
+Live public CCLD startup tests should prove
+`scripts/run-hosted-complaint-retrieval-live.ps1` exists, leaves
+`CCLD_RETRIEVAL_DEMO_MODE` blank, sets explicit local-dev auth, fixture/demo page
+data, retrieval enablement, and ignored raw storage under `data/raw/`, prints the
+same local URLs, labels the startup as live public CCLD mode, and lets the
+existing request form use the public CCLD HTTP client path when tests patch that
+client with fixture responses. Retrieval status tests should prove live public
+mode and fixture/mock mode are visible, no live CCLD calls are made in CI, and
+zero-import warnings distinguish no candidates, outside date range, fetched but
+non-matching normalized records, and source/network/layout failures.
 
 Docker runtime tests should statically validate `Dockerfile`,
 `docker-compose.qnap.yml`, and `.env.example` for the QNAP-first PostgreSQL

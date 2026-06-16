@@ -71,12 +71,12 @@ experience.
    timestamps, import counts, warning/error summaries, and review links when
    records were imported. Each history row can open a read-only detail page for
    one job with safe timestamps, counts, raw-artifact-preserved status, and next
-   steps. For local browser validation, run
-   `.\scripts\run-hosted-complaint-retrieval-demo.ps1 -Port 8000` from
+   steps. For local live public retrieval, run
+   `.\scripts\run-hosted-complaint-retrieval-live.ps1 -Port 8000` from
    PowerShell to start the scaffold with explicit local-dev auth, ignored local
-   raw storage, and fixture-backed `mock-success` retrieval so the existing
-   request form can create a safe local job without manual environment setup.
-   Tests use mocked CCLD retrieval only.
+   raw storage, and real public CCLD HTTP retrieval. For offline validation, run
+   `.\scripts\run-hosted-complaint-retrieval-demo.ps1 -Port 8000` to use
+   fixture-backed `mock-success` retrieval. Tests use mocked CCLD retrieval only.
 - Includes a local/test hosted CCLD record request page where a tester can enter
    a CCLD facility/license number and optional date range, read matching seeded
    source-derived records, load or refresh matching CCLD records from validated
@@ -186,8 +186,18 @@ then load or refresh matching CCLD rows from that validated JSON through the
 existing local/test import/reload path. The builder does not run live public web
 requests or browser-triggered connector execution.
 
-To try the controlled complaint retrieval path locally with committed fixtures
-and no live CCLD calls, run:
+To try the controlled complaint retrieval path locally against live public CCLD,
+run:
+
+```powershell
+.\scripts\run-hosted-complaint-retrieval-live.ps1 -Port 8000
+```
+
+This command makes controlled server-side public CCLD requests when the browser
+submits a retrieval job. The CCLD public portal remains the source of record;
+absence of imported records is not proof that no complaints exist.
+
+For the offline fixture/mock demo with no live CCLD calls, run:
 
 ```powershell
 .\scripts\run-hosted-complaint-retrieval-demo.ps1 -Port 8000
@@ -202,9 +212,12 @@ http://127.0.0.1:8000/ccld/retrieval/jobs
 http://127.0.0.1:8000/reviewer
 ```
 
-This local/demo command uses fixture-backed `mock-success` retrieval and ignored
-raw storage under `data/raw/`. It is not production retrieval and does not prove
-CCLD public-source completeness.
+Both commands use ignored raw storage under `data/raw/`. The live command uses
+the public CCLD HTTP connector; the demo command uses fixture-backed
+`mock-success` retrieval. Neither mode proves CCLD public-source completeness.
+This path was manually verified with facility/license number `157806098` and
+date range `2022-08-01` to `2022-08-31`, which imported one live public CCLD
+complaint bundle as source-derived rows into the local reviewer queue.
 
 To profile ignored local public-source CSV examples before any source expansion
 implementation is proposed, run:

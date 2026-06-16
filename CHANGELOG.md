@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added `scripts/run-hosted-complaint-retrieval-live.ps1`, an explicit local
+	live-public-CCLD startup command that enables browser-triggered complaint
+	retrieval with ignored raw storage, real public CCLD HTTP retrieval, safe live
+	mode status labels, and more specific no-import warnings while preserving the
+	fixture/mock demo path.
 - Added `scripts/run-hosted-complaint-retrieval-demo.ps1`, a one-command local
 	fixture-backed complaint retrieval demo that starts the hosted scaffold with
 	explicit local-dev auth, retrieval enablement, ignored raw storage, and

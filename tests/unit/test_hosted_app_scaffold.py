@@ -752,6 +752,32 @@ def test_complaint_retrieval_demo_script_sets_safe_local_config() -> None:
     assert "COOKIE" not in script
 
 
+def test_complaint_retrieval_live_script_sets_live_public_config() -> None:
+    script_path = ROOT / "scripts" / "run-hosted-complaint-retrieval-live.ps1"
+    script = script_path.read_text(encoding="utf-8")
+
+    assert script_path.exists()
+    assert "data\\raw\\ccld\\retrieval-live" in script
+    assert 'CCLD_HOSTED_TESTER_AUTH_MODE = "local-dev"' in script
+    assert 'CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH = "enabled"' in script
+    assert 'CCLD_HOSTED_PAGE_DATA_MODE = "fixture-demo"' in script
+    assert 'CCLD_RETRIEVAL_ENABLED = "enabled"' in script
+    assert "CCLD_RETRIEVAL_RAW_DIR = $resolvedRawStorageDir" in script
+    assert 'CCLD_RETRIEVAL_DEMO_MODE = ""' in script
+    assert 'CCLD_RETRIEVAL_DEMO_MODE = "mock-success"' not in script
+    assert "Live public CCLD mode" in script
+    assert "makes live public CCLD web" in script
+    assert "CCLD public portal remains the source of record" in script
+    assert "Absence of imported records is not proof" in script
+    assert "Open: $baseUrl/" in script
+    assert "Open: $baseUrl/ccld/records/request" in script
+    assert "Open: $baseUrl/ccld/retrieval/jobs" in script
+    assert "Open: $baseUrl/reviewer" in script
+    assert "GITHUB" not in script
+    assert "TOKEN" not in script
+    assert "COOKIE" not in script
+
+
 def test_complaint_retrieval_demo_raw_storage_path_is_gitignored() -> None:
     gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
     script = (ROOT / "scripts" / "run-hosted-complaint-retrieval-demo.ps1").read_text(
@@ -760,3 +786,6 @@ def test_complaint_retrieval_demo_raw_storage_path_is_gitignored() -> None:
 
     assert "data/raw/*" in gitignore
     assert 'data\\raw\\ccld\\retrieval-demo' in script
+    assert 'data\\raw\\ccld\\retrieval-live' in (
+        ROOT / "scripts" / "run-hosted-complaint-retrieval-live.ps1"
+    ).read_text(encoding="utf-8")

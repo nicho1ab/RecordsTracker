@@ -93,7 +93,8 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "Key terms" in html
     assert "Feedback guidance" in html
     assert "structured checklist" in html
-    assert "browser-triggered connector execution" in normalized_html
+    assert "trigger a controlled server-side retrieval job" in normalized_html
+    assert "The browser does not crawl CCLD directly" in normalized_html
     assert "Read how this CCLD review workflow works" in normalized_html
     assert "provider" not in html.casefold()
     assert_no_secret_html(html)
@@ -399,7 +400,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "- Records that seemed unexpected:" in html
     assert "- Manual-copy only: copy this checklist" in html
     assert "Open reviewer records" in html
-    assert "did not run live retrieval" in html
+    assert "did not submit a controlled retrieval job for this request" in html
     assert "run-ccld-live-fetch.ps1 -FacilityNumber 157806098" in html
     assert_no_secret_html(html)
 
@@ -566,7 +567,7 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert "change the facility/date criteria before reviewing results" in normalized_html
     assert "How to interpret this no-match result" in html
     assert "currently loaded local/test source-derived rows only" in normalized_html
-    assert "did not run live CCLD retrieval, connector execution" in normalized_html
+    assert "did not submit a controlled retrieval job for this request" in normalized_html
     assert "Facility/license number searched" in html
     assert "Date range searched" in html
     assert "Loaded local/test rows for this facility before date filtering" in html
@@ -585,9 +586,12 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert "- Local facility rows before date filtering: 6" in html
     assert "- None shown for this request." in html
     assert "CCLD pipeline step still required" in html
-    assert "does not run live CCLD retrieval or import" in html
+    assert "When controlled retrieval is configured" in html
+    assert "use the browser retrieval action" in html
+    assert "Server-side retrieval, raw preservation" in html
     assert "build-hosted-ccld-artifact.ps1" in html
-    assert "Browser requests still do not run live CCLD retrieval" in html
+    assert "The browser remains a trigger only" in html
+    assert "SQLite conversion remains outside the browser path" in html
     assert_no_secret_html(html)
 
 
@@ -803,9 +807,7 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
         first_checklist
     )
     assert "Rendering this checklist does not change source-derived records" in first_checklist
-    assert "- Browser pages did not run live CCLD retrieval or connector execution." in (
-        first_checklist
-    )
+    assert "Browser pages only trigger controlled server-side retrieval" in first_checklist
     assert "Missing local/test rows are not proof" in first_checklist
     assert "Select the checklist text, copy it, paste it" in " ".join(first_html.split())
     assert "CCLD public portal remains the source of record" in first_checklist

@@ -109,7 +109,20 @@ the variable is already set, so workstation demos can still use fixture data.
 Production/QNAP runtime should use `CCLD_HOSTED_PAGE_DATA_MODE=postgres`.
 
 To start the same local scaffold with controlled complaint retrieval enabled in
-fixture-backed demo mode, use the explicit one-command wrapper instead:
+live public CCLD mode, use the explicit live wrapper instead:
+
+```powershell
+.\scripts\run-hosted-complaint-retrieval-live.ps1 -Port 8000
+```
+
+This wrapper sets explicit local-dev auth, fixture/demo page data, controlled
+retrieval enablement, a blank `CCLD_RETRIEVAL_DEMO_MODE`, and ignored local raw
+source storage under `data/raw/ccld/retrieval-live`. Browser-triggered jobs use
+the real public CCLD HTTP connector from the server. The CCLD public portal
+remains the source of record, and zero imported records is not proof that no
+complaints exist.
+
+For the offline fixture-backed demo, use:
 
 ```powershell
 .\scripts\run-hosted-complaint-retrieval-demo.ps1 -Port 8000
@@ -124,9 +137,9 @@ http://127.0.0.1:8000/ccld/retrieval/jobs
 http://127.0.0.1:8000/reviewer
 ```
 
-The wrapper sets explicit local-dev auth, fixture/demo page data, controlled
-retrieval enablement, `CCLD_RETRIEVAL_DEMO_MODE=mock-success`, and ignored local
-raw source storage under `data/raw/ccld/retrieval-demo`. Normal
+The demo wrapper sets explicit local-dev auth, fixture/demo page data,
+controlled retrieval enablement, `CCLD_RETRIEVAL_DEMO_MODE=mock-success`, and
+ignored local raw source storage under `data/raw/ccld/retrieval-demo`. Normal
 `run-hosted-scaffold.ps1` startup remains unchanged and still shows the setup-
 required state when retrieval configuration is incomplete.
 The home page includes a skip-to-main link and visible start-here guidance for
@@ -285,7 +298,13 @@ CCLD_RETRIEVAL_ENABLED=enabled
 CCLD_RETRIEVAL_RAW_DIR=/app/data/raw/ccld/retrieval
 ```
 
-For local scaffold validation only, use the one-command wrapper to enable a
+For local live public CCLD retrieval, use:
+
+```powershell
+.\scripts\run-hosted-complaint-retrieval-live.ps1 -Port 8000
+```
+
+For local scaffold validation only, use the fixture/mock wrapper to enable a
 fixture-backed successful retrieval demo while running explicit local-dev auth
 and fixture/demo page data:
 
@@ -293,22 +312,34 @@ and fixture/demo page data:
 .\scripts\run-hosted-complaint-retrieval-demo.ps1 -Port 8000
 ```
 
-This mode uses committed CCLD fixtures through a local fixture client. It does
-not make live CCLD calls, does not call GitHub, does not prove public-source
-completeness, and is unavailable unless explicit local-dev auth/scaffold mode is
-allowed. Do not use `CCLD_RETRIEVAL_DEMO_MODE=mock-success` for QNAP, pilot-like,
-or production runtime.
+The live wrapper leaves `CCLD_RETRIEVAL_DEMO_MODE` blank, so configured jobs use
+the real public CCLD HTTP connector. The fixture/mock wrapper uses committed
+CCLD fixtures through a local fixture client. It does not make live CCLD calls,
+does not call GitHub, does not prove public-source completeness, and is
+unavailable unless explicit local-dev auth/scaffold mode is allowed. Do not use
+`CCLD_RETRIEVAL_DEMO_MODE=mock-success` for QNAP, pilot-like, or production
+runtime.
+
+The live browser-triggered path was manually verified with facility/license
+number `157806098` and date range `2022-08-01` to `2022-08-31`. The job ran in
+live public CCLD mode, discovered complaint candidates from public CCLD metadata,
+selected and fetched one matching report bundle, imported source-derived rows,
+and made the complaint visible in the reviewer queue.
 
 Tests use mocked CCLD retrieval only. CI must not make live CCLD calls. Direct
 browser scraping, non-CCLD sources, statewide crawling, private/authenticated
 source scraping, production OIDC, deployment changes, and legal/completeness
 conclusions remain out of scope.
 
-Retrieval status pages now distinguish setup-required, validation, queued,
-running, completed, completed-with-warnings, failed, and rate-limited states with
-plain next steps. Safe summaries show what was requested, whether a job was
-created, whether records were imported, where to review imported records, and
-when to send `/feedback` for confusing status or wording.
+Retrieval status pages now distinguish live public CCLD mode from fixture/mock
+demo mode. They also distinguish setup-required, validation, queued, running,
+completed, completed-with-warnings, failed, and rate-limited states with plain
+next steps. Safe summaries show what was requested, whether a job was created,
+whether records were imported, discovered/selected/fetched/imported counts,
+where to review imported records, and when to send `/feedback` for confusing
+status or wording. Zero-import warnings distinguish no complaint candidates,
+candidates outside the date range, fetched/extracted records that did not match
+after validation, and source/network/layout failures.
 
 The scaffold also exposes a small read-only retrieval job history/status page at:
 
