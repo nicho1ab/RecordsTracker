@@ -43,6 +43,7 @@ SOURCE_DATE_TOKEN_RE = re.compile(r"\b\d{1,2}/\d{1,2}/\d{2,4}\b")
 ReportDocumentLoader = Callable[[SourceDocumentCandidate], SourceDocument | None]
 ReportFetcher = Callable[[str], bytes]
 ConnectorFactory = Callable[[str], "CcldFacilityReportsConnector"]
+CandidateFilter = Callable[[SourceDocumentCandidate], bool]
 
 
 @dataclass(frozen=True)
@@ -130,11 +131,18 @@ class _FacilityDetailReportLinkParser(HTMLParser):
     def __init__(self, facility_number: str) -> None:
         super().__init__(convert_charrefs=True)
         self.facility_number = facility_number
-        self.report_links: list[tuple[int, str, str]] = []
-        self._active_report: tuple[int, str] | None = None
+        self.report_links: list[tuple[int, str, str, str | None]] = []
+        self._active_report: tuple[int, str, str | None] | None = None
         self._active_text: list[str] = []
+        self._active_heading_tag: str | None = None
+        self._active_heading_text: list[str] = []
+        self._current_section: str | None = None
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag.casefold() in {"h1", "h2", "h3", "h4", "h5", "h6"}:
+            self._active_heading_tag = tag.casefold()
+            self._active_heading_text = []
+            return
         if tag.casefold() != "a":
             return
         href = dict(attrs).get("href")
@@ -146,19 +154,29 @@ class _FacilityDetailReportLinkParser(HTMLParser):
         self._active_report = (
             report_index,
             _report_source_url(self.facility_number, report_index),
+            self._current_section,
         )
         self._active_text = []
 
     def handle_data(self, data: str) -> None:
+        if self._active_heading_tag is not None:
+            self._active_heading_text.append(data)
         if self._active_report is not None:
             self._active_text.append(data)
 
     def handle_endtag(self, tag: str) -> None:
+        if tag.casefold() == self._active_heading_tag:
+            self._current_section = _report_section_from_heading(
+                "".join(self._active_heading_text)
+            )
+            self._active_heading_tag = None
+            self._active_heading_text = []
+            return
         if tag.casefold() != "a" or self._active_report is None:
             return
-        report_index, source_url = self._active_report
+        report_index, source_url, section = self._active_report
         self.report_links.append(
-            (report_index, source_url, _clean_text("".join(self._active_text)))
+            (report_index, source_url, _clean_text("".join(self._active_text)), section)
         )
         self._active_report = None
         self._active_text = []
@@ -186,6 +204,7 @@ class CcldFacilityReportsConnector:
         self,
         facility_detail_html: str | None = None,
         discovered_at: str | None = None,
+        report_section: str | None = None,
     ) -> list[SourceDocumentCandidate]:
         is_live_discovery = facility_detail_html is None
         if facility_detail_html is None:
@@ -198,6 +217,7 @@ class CcldFacilityReportsConnector:
             facility_detail_html,
             self.facility_number,
             discovered_at=discovered_at,
+            report_section=report_section,
         )
         if candidates or not is_live_discovery:
             return candidates
@@ -409,6 +429,8 @@ def ingest_facility_reports_for_facility(
     max_requests: int | None = None,
     load_document: ReportDocumentLoader | None = None,
     fetch_report: ReportFetcher | None = None,
+    report_section: str | None = None,
+    candidate_filter: CandidateFilter | None = None,
 ) -> FacilityIngestionResult:
     if limit is not None and limit < 0:
         raise ValueError("limit must be greater than or equal to 0.")
@@ -419,8 +441,11 @@ def ingest_facility_reports_for_facility(
     discovered_candidates = active_connector.discover(
         facility_detail_html=facility_detail_html,
         discovered_at=discovered_at,
+        report_section=report_section,
     )
     candidates = discovered_candidates
+    if candidate_filter is not None:
+        candidates = [candidate for candidate in candidates if candidate_filter(candidate)]
     if limit is not None:
         candidates = candidates[:limit]
     if max_requests is not None and len(candidates) > max_requests:
@@ -699,6 +724,7 @@ def discover_facility_report_candidates(
     facility_detail_html: str,
     facility_number: str,
     discovered_at: str | None = None,
+    report_section: str | None = None,
 ) -> list[SourceDocumentCandidate]:
     parser = _FacilityDetailReportLinkParser(facility_number)
     parser.feed(facility_detail_html)
@@ -706,7 +732,10 @@ def discover_facility_report_candidates(
     candidates: list[SourceDocumentCandidate] = []
     seen_indexes: set[int] = set()
     seen_urls: set[str] = set()
-    for report_index, source_url, link_text in parser.report_links:
+    selected_report_section = _normalized_report_section(report_section)
+    for report_index, source_url, link_text, section in parser.report_links:
+        if selected_report_section is not None and section != selected_report_section:
+            continue
         if report_index in seen_indexes or source_url in seen_urls:
             continue
         seen_indexes.add(report_index)
@@ -719,9 +748,28 @@ def discover_facility_report_candidates(
                 source_url=source_url,
                 discovered_report_date=_iso_date(link_text),
                 discovered_at=discovered_at,
+                report_section=section,
             )
         )
     return candidates
+
+
+def _report_section_from_heading(value: str) -> str | None:
+    normalized = _normalized_report_section(value)
+    if normalized in {"all_visits", "complaints"}:
+        return normalized
+    return None
+
+
+def _normalized_report_section(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = re.sub(r"[^a-z0-9]+", "_", value.strip().casefold()).strip("_")
+    if normalized in {"all_visit", "all_visits"}:
+        return "all_visits"
+    if normalized in {"complaint", "complaints"}:
+        return "complaints"
+    return normalized or None
 
 
 def _fetch_url(source_url: str) -> bytes:
@@ -783,6 +831,7 @@ def _candidates_from_report_list_json(
             source_url=_report_source_url(facility_number, report_index),
             discovered_report_date=_iso_date(cast(str | None, report.get("REPORTDATE"))),
             discovered_at=discovered_at,
+            report_section=None,
         )
         for report_index, report in enumerate(report_array)
         if report.get("FACILITYNUMBER") == facility_number

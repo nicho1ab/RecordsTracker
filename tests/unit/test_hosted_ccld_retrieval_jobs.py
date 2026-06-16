@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
@@ -60,19 +60,34 @@ PLACEHOLDER_AUTH_VALUE = "test-auth-value-not-rendered"
 
 
 class MockCcldRetrievalClient:
-    def __init__(self, *, fail_reports: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        fail_reports: bool = False,
+        facility_detail_html: str | None = None,
+        report_content_by_index: Mapping[int, bytes] | None = None,
+    ) -> None:
         self.fail_reports = fail_reports
+        self.facility_detail_html = facility_detail_html
+        self.report_content_by_index = report_content_by_index
         self.facility_detail_calls: list[tuple[str, int]] = []
         self.report_calls: list[tuple[str, int]] = []
 
     def fetch_facility_detail(self, facility_number: str, *, timeout_seconds: int) -> str:
         self.facility_detail_calls.append((facility_number, timeout_seconds))
+        if self.facility_detail_html is not None:
+            return self.facility_detail_html
         return DETAIL_FIXTURE.read_text(encoding="utf-8")
 
     def fetch_report(self, source_url: str, *, timeout_seconds: int) -> bytes:
         self.report_calls.append((source_url, timeout_seconds))
         if self.fail_reports:
             raise RuntimeError("mock report timeout")
+        if self.report_content_by_index is not None:
+            report_index = _report_index_from_url(source_url)
+            if report_index not in self.report_content_by_index:
+                raise AssertionError(f"Unexpected report fetch for index {report_index}")
+            return self.report_content_by_index[report_index]
         return RAW_FIXTURE.read_bytes()
 
 
@@ -222,6 +237,87 @@ def test_controlled_retrieval_imports_records_and_links_queue(tmp_path: Path) ->
     assert_no_secret_html(html)
 
 
+def test_controlled_retrieval_fetches_only_complaint_links_in_requested_date_range(
+    tmp_path: Path,
+) -> None:
+    client = MockCcldRetrievalClient(
+        facility_detail_html=_facility_detail_with_mixed_complaint_links(),
+        report_content_by_index={3: RAW_FIXTURE.read_bytes()},
+    )
+    with _empty_connection() as connection:
+        context = _request_context(connection, tmp_path, client=client)
+        status, _content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_retrieval_form_bytes(
+                start_date="2022-08-20",
+                end_date="2022-08-31",
+            ),
+            ccld_record_request_ui_context=context,
+        )
+        counts = _table_counts(connection)
+        jobs = connection.execute(select(hosted_ccld_retrieval_jobs)).mappings().all()
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert len(client.facility_detail_calls) == 1
+    assert [_report_index_from_url(url) for url, _timeout in client.report_calls] == [3]
+    assert counts["source_records"] == 26
+    assert counts["retrieval_jobs"] == 1
+    assert jobs[0]["job_state"] == "completed"
+    assert jobs[0]["facility_number"] == "157806098"
+    assert jobs[0]["record_type"] == "complaints"
+    assert jobs[0]["start_date"] == "2022-08-20"
+    assert jobs[0]["end_date"] == "2022-08-31"
+    assert jobs[0]["result_counts"]["discovered_report_candidates"] == 3
+    assert jobs[0]["result_counts"]["selected_report_candidates"] == 1
+    assert jobs[0]["result_counts"]["retrieved_record_bundles"] == 1
+    assert "Controlled CCLD retrieval imported source-derived records" in html
+    assert "Open imported records in this CCLD queue" in html
+    assert "32-CR-20220407124448" in html
+    assert "public-source completeness" not in html.casefold()
+    assert_no_secret_html(html)
+
+
+def test_controlled_retrieval_no_matching_complaint_dates_fetches_nothing(
+    tmp_path: Path,
+) -> None:
+    client = MockCcldRetrievalClient(
+        facility_detail_html=_facility_detail_with_mixed_complaint_links(),
+        report_content_by_index={3: RAW_FIXTURE.read_bytes()},
+    )
+    with _empty_connection() as connection:
+        context = _request_context(connection, tmp_path, client=client)
+        status, _content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_retrieval_form_bytes(
+                start_date="2020-01-01",
+                end_date="2020-01-31",
+            ),
+            ccld_record_request_ui_context=context,
+        )
+        counts = _table_counts(connection)
+        jobs = connection.execute(select(hosted_ccld_retrieval_jobs)).mappings().all()
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert len(client.facility_detail_calls) == 1
+    assert client.report_calls == []
+    assert counts["source_records"] == 0
+    assert counts["retrieval_jobs"] == 1
+    assert jobs[0]["job_state"] == "completed_with_warnings"
+    assert jobs[0]["result_counts"]["discovered_report_candidates"] == 3
+    assert jobs[0]["result_counts"]["selected_report_candidates"] == 0
+    assert jobs[0]["result_counts"]["retrieved_record_bundles"] == 0
+    assert "No CCLD complaint report links were found" in html
+    assert "No records were imported" in html
+    assert "not a public-source absence" in html
+    assert_no_secret_html(html)
+
+
 def test_local_dev_mock_success_retrieval_flow_imports_and_links_without_live_calls(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -332,7 +428,7 @@ def test_retrieval_failure_is_safe_and_does_not_import(tmp_path: Path) -> None:
     assert "Completed with warnings" in html
     assert "No records were imported" in html
     assert "Controlled CCLD retrieval completed with no matching imported records" in html
-    assert "Report 39 failed during fetch" in html
+    assert "Report 3 failed during fetch" in html
     assert "Safe warnings" in html
     assert "Safe errors" in html
     assert "traceback" not in html.casefold()
@@ -881,6 +977,34 @@ def _retrieval_job_id_from_html(markup: str) -> str:
     if match is None:
         raise AssertionError("Retrieval job ID not found in response HTML.")
     return match.group(0)
+
+
+def _report_index_from_url(source_url: str) -> int:
+        match = re.search(r"[?&]inx=(\d+)", source_url)
+        if match is None:
+                raise AssertionError(f"Report index not found in {source_url}")
+        return int(match.group(1))
+
+
+def _facility_detail_with_mixed_complaint_links() -> str:
+        return """<!doctype html>
+<html lang="en">
+<body>
+    <h1>Facility Detail</h1>
+    <h2>All Visits</h2>
+    <p>
+        <a href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&amp;inx=39">05/04/2026</a>
+        <a href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&amp;inx=3">08/24/2022</a>
+    </p>
+    <h2>Complaints</h2>
+    <p>
+        <a href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&amp;inx=37">01/07/2026</a>
+        <a href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&amp;inx=33">08/09/2022</a>
+        <a href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&amp;inx=3">08/24/2022</a>
+        <a href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=123456789&amp;inx=4">08/24/2022</a>
+    </p>
+</body>
+</html>"""
 
 
 def _local_dev_auth_config() -> Any:

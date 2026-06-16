@@ -181,6 +181,11 @@ def default_ccld_record_request_ui_context() -> CcldRecordRequestUiContext:
     return _DEFAULT_CCLD_RECORD_REQUEST_CONTEXT
 
 
+def reset_default_ccld_record_request_ui_context() -> None:
+    global _DEFAULT_CCLD_RECORD_REQUEST_CONTEXT
+    _DEFAULT_CCLD_RECORD_REQUEST_CONTEXT = None
+
+
 def ccld_record_request_context_for_reviewer_context(
     reviewer_ui_context: ReviewerUiContext,
     *,

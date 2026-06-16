@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -37,6 +38,12 @@ def run_verifier(*args: str) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         check=False,
     )
+
+
+def plain_process_output(result: subprocess.CompletedProcess[str]) -> str:
+    output = result.stdout + result.stderr
+    without_ansi = re.sub(r"\x1b\[[0-9;?]*[ -/]*[@-~]", "", output)
+    return " ".join(without_ansi.replace(" | ", " ").split())
 
 
 def run_evidence_summary(*args: str) -> subprocess.CompletedProcess[str]:
@@ -737,8 +744,9 @@ def test_qnap_evidence_packet_script_refuses_private_operator_values() -> None:
     )
 
     assert result.returncode != 0
-    output = result.stdout + result.stderr
-    assert "secret-like or private marker" in output
+    output = plain_process_output(result)
+    assert "FeedbackDecision" in output
+    assert "Replace it with a short non-secret decision summary" in output
 
 
 def test_qnap_evidence_packet_script_is_linked_from_guides() -> None:
