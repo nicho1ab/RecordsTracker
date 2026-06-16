@@ -237,7 +237,7 @@ def test_configured_missing_full_csv_falls_back_with_guidance(
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Active source: Tiny committed CCLD facility fixture fallback." in html
+    assert "Limited reference list" in html
     assert "Configured full local/test CCLD facility reference CSV was not found" in html
     assert "Using tiny fixture fallback." in html
     assert "Synthetic Orchard Child Care" in html
@@ -260,7 +260,7 @@ def test_configured_malformed_full_csv_falls_back_with_guidance(
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Active source: Tiny committed CCLD facility fixture fallback." in html
+    assert "Limited reference list" in html
     assert "could not be loaded" in html
     assert "Facility Number" in html
     assert "Using tiny fixture fallback." in html
@@ -319,15 +319,15 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert "Find CCLD facility" in html
     assert "Skip to main CCLD facility lookup content" in html
     assert '<main id="main-content" tabindex="-1">' in html
-    assert "Find the facility before retrieving complaint records" in html
-    assert "Search facility reference" in html
-    assert "Facility search" in html
-    assert "Search facilities" in html
-    assert "Enter a facility name, facility/license number, city, county, ZIP code" in (
+    assert "Find a facility" in html
+    assert 'for="facility-search-input"' in html
+    assert "facility-suggestion-list" in html
+    assert "Search" in html
+    assert "Search by name, license number, city, ZIP, type, or status." in (
         normalized_html
     )
-    assert "Manual facility/license entry" in html
-    assert "Open manual CCLD request form" in html
+    assert "Enter a facility/license number directly" in html
+    assert "Open request form" in html
     assert "CCLD public portal remains" in html
     assert_no_secret_html(html)
 
@@ -343,10 +343,10 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Local/test CCLD facility reference matches" in html
-    assert "Showing 1 of 1 matching local/test facility reference row" in normalized_html
+    assert "Facility matches" in html
+    assert "Showing 1 of 1 matching facility." in normalized_html
     assert "Use for retrieval" in html
-    assert "Find the facility before retrieving complaint records" in html
+    assert "Find a facility" in html
     assert request_href in html
     assert "request_context_origin=facility_lookup" in html
     assert "lookup_facility_name=Synthetic+Orchard+Child+Care" in html
@@ -373,11 +373,11 @@ def test_ccld_facility_lookup_page_shows_no_match_guidance() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "No local/test CCLD facility reference rows matched no-match." in html
-    assert "Try a shorter name, facility/license number, city, county, ZIP code" in (
+    assert "No facilities matched" in html
+    assert "Try a shorter name, license number, city, ZIP, or facility type." in (
         normalized_html
     )
-    assert "Open manual CCLD request form" in html
+    assert "Open request form" in html
     assert_no_secret_html(html)
 
 
@@ -433,6 +433,115 @@ def test_ccld_facility_lookup_does_not_mutate_hosted_tables() -> None:
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == _empty_reviewer_counts()
     assert "Synthetic Valley Family Agency" in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_facility_lookup_page_has_accessible_combobox_label() -> None:
+    """Facility selector input must have an accessible name (label with matching for= attribute)."""
+    status, content_type, body = route_response(
+        CCLD_FACILITY_LOOKUP_PATH,
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert 'for="facility-search-input"' in html
+    assert 'id="facility-search-input"' in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_facility_lookup_page_has_concise_placeholder_not_full_helper_sentence() -> None:
+    """Placeholder must be short; helper text in a separate element, not the placeholder."""
+    status, content_type, body = route_response(
+        CCLD_FACILITY_LOOKUP_PATH,
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    # Concise placeholder (not the full helper sentence)
+    assert 'placeholder="Name, license number, city, or ZIP"' in html
+    # Full helper text must appear separately (not inside the placeholder)
+    assert "Search by name, license number, city, ZIP, type, or status." in normalized_html
+    assert_no_secret_html(html)
+
+
+def test_ccld_facility_lookup_page_combobox_embeds_reference_json() -> None:
+    """Facility selector must embed facility reference data as JSON for JS combobox."""
+    status, content_type, body = route_response(
+        CCLD_FACILITY_LOOKUP_PATH,
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert 'id="facility-reference-json"' in html
+    assert '"900000001"' in html  # facility number in JSON
+    assert '"Synthetic Orchard Child Care"' in html  # facility name in JSON
+    assert_no_secret_html(html)
+
+
+def test_ccld_facility_lookup_page_reference_details_are_collapsed() -> None:
+    """Reference source technical details must appear in a collapsed <details> element."""
+    status, content_type, body = route_response(
+        CCLD_FACILITY_LOOKUP_PATH,
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert "Reference data details" in html
+    assert "<details" in html
+    # Internal labels must NOT appear prominently (may appear inside collapsed details)
+    assert "Facility reference source</h2>" not in html  # old prominent section heading gone
+    assert_no_secret_html(html)
+
+
+def test_ccld_facility_lookup_page_limited_reference_note_shows_for_tiny_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When only the tiny fallback is active, a concise limited-reference note must appear."""
+    monkeypatch.delenv(CCLD_FACILITY_REFERENCE_CSV_ENV, raising=False)
+
+    status, content_type, body = route_response(
+        CCLD_FACILITY_LOOKUP_PATH,
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert "Limited reference list" in html
+    assert "suggestions may not include every CCLD facility" in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_facility_lookup_page_no_internal_paths_in_primary_ui() -> None:
+    """Internal file paths must not appear in the primary UI (only inside collapsed details)."""
+    status, content_type, body = route_response(
+        CCLD_FACILITY_LOOKUP_PATH,
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    # Internal paths must not be in primary headings/paragraphs outside <details>
+    # The reference details section is collapsed; internal path label only appears there
+    assert "Tiny committed CCLD facility fixture fallback" not in html
+    assert "Full local/test CCLD facility reference CSV" not in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_facility_lookup_result_card_use_for_retrieval_has_descriptive_label() -> None:
+    """Each result card's 'Use for retrieval' button must have a descriptive accessible label."""
+    status, content_type, body = route_response(
+        f"{CCLD_FACILITY_LOOKUP_PATH}?q=orchard",
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert 'aria-label="Use Synthetic Orchard Child Care for retrieval"' in html
     assert_no_secret_html(html)
 
 
