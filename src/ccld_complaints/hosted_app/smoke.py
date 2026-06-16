@@ -215,11 +215,11 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         ccld_status != 200
         or b"Retrieve complaint records" not in ccld_body
-        or b"Facility search" not in ccld_body
-        or b"facility-reference-options" not in ccld_body
+        or b'for="facility-search-input"' not in ccld_body
+        or b"facility-suggestion-list" not in ccld_body
         or b"Which facility should be reviewed?" not in ccld_body
         or b"Confirm facility" not in ccld_body
-        or b"Search facility name, license number, city, ZIP, type, or status" not in ccld_body
+        or b"Search by name, license number, city, ZIP, type, or status." not in ccld_body
         or b"Retrieval not configured" not in ccld_body
         or b"Skip to main CCLD request content" not in ccld_body
     ):

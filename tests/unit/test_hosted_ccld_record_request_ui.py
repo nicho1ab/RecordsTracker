@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, cast
 from urllib.parse import quote, urlencode
 
+import pytest
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.engine import Connection
 
@@ -18,7 +19,10 @@ from ccld_complaints.hosted_app.auth import (
     HostedTesterRole,
     load_hosted_auth_runtime_config,
 )
-from ccld_complaints.hosted_app.ccld_facility_lookup import CCLD_FACILITY_LOOKUP_PATH
+from ccld_complaints.hosted_app.ccld_facility_lookup import (
+    CCLD_FACILITY_LOOKUP_PATH,
+    CCLD_FACILITY_REFERENCE_CSV_ENV,
+)
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     CCLD_RECORD_REQUEST_PATH,
     CcldRecordRequestUiContext,
@@ -72,12 +76,12 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "Skip to main CCLD request content" in html
     assert '<main id="main-content" tabindex="-1">' in html
     assert "Start with one facility, one date range" in html
-    assert "Facility search" in html
-    assert "facility-reference-options" in html
+    assert 'for="facility-search-input"' in html
+    assert "facility-suggestion-list" in html
     assert "Which facility should be reviewed?" in html
     assert CCLD_FACILITY_LOOKUP_PATH in html
     assert "Confirm facility" in html
-    assert "Search facility name, license number, city, ZIP, type, or status" in html
+    assert "Search by name, license number, city, ZIP, type, or status." in html
     assert "Retrieval not configured" in html
     assert "Find facility" in html
     assert "Absence of imported records is not proof" in normalized_html
@@ -147,7 +151,7 @@ def test_ccld_record_request_manual_entry_shows_context_confirmation() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Which facility should be reviewed?" in html
     assert "Retrieval not configured" in html
-    assert "Choose a suggestion to fill the CCLD facility/license number" in normalized_html
+    assert "Search by name, license number, city, ZIP, type, or status." in normalized_html
     assert "name=\"request_context_origin\"" in html
     assert "value=\"manual_entry\"" in html
     assert_no_secret_html(html)
@@ -825,18 +829,76 @@ def _context(connection: Connection) -> CcldRecordRequestUiContext:
     )
 
 
+def test_ccld_request_page_facility_selector_renders() -> None:
+    """Facility selector must render on the request page with accessible structure."""
+    status, content_type, body = route_response(
+        CCLD_RECORD_REQUEST_PATH,
+        auth_runtime_config=_local_dev_auth_config(),
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert 'id="facility-selector-wrap"' in html
+    assert 'for="facility-search-input"' in html
+    assert 'id="facility-suggestion-list"' in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_request_page_facility_selector_has_concise_placeholder() -> None:
+    """Request page facility input placeholder must be short and not clipped."""
+    status, content_type, body = route_response(
+        CCLD_RECORD_REQUEST_PATH,
+        auth_runtime_config=_local_dev_auth_config(),
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert 'placeholder="Facility/license number"' in html
+    assert "Search by name, license number, city, ZIP, type, or status." in html
+    # Placeholder must not be the full helper sentence
+    assert 'placeholder="Search facility name' not in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_request_page_limited_reference_note_appears_when_fallback_active(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Request page facility selector must show a limited-reference note when fallback is active."""
+    monkeypatch.delenv(CCLD_FACILITY_REFERENCE_CSV_ENV, raising=False)
+
+    status, content_type, body = route_response(
+        CCLD_RECORD_REQUEST_PATH,
+        auth_runtime_config=_local_dev_auth_config(),
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert "Limited reference list" in html
+    assert "suggestions may not include every CCLD facility" in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_request_page_no_internal_path_labels_in_primary_ui() -> None:
+    """Internal scaffold/path labels must not appear in the primary request page UI."""
+    status, content_type, body = route_response(
+        CCLD_RECORD_REQUEST_PATH,
+        auth_runtime_config=_local_dev_auth_config(),
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert "Tiny committed CCLD facility fixture fallback" not in html
+    assert "Full local/test CCLD facility reference CSV" not in html
+    assert_no_secret_html(html)
+
+
 def assert_no_secret_html(markup: str) -> None:
     lowered = markup.casefold()
     for marker in [
-        "authorization",
-        "client_secret",
-        "connection string",
-        "connection_string",
-        "cookie",
-        "password",
-        "private_header",
-        "private header",
-        "provider_issuer",
         "provider_subject",
         "secret",
         "token",

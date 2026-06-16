@@ -873,6 +873,102 @@ SHARED_CSS = r"""
       cursor: pointer;
       font-weight: 800;
     }
+    .reference-details-section {
+      border-top: 1px solid var(--line);
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+    }
+    .reference-details-section > summary {
+      font-size: 0.88rem;
+      font-weight: 800;
+    }
+    .facility-combobox-outer {
+      max-width: 28rem;
+      position: relative;
+    }
+    .facility-suggestions {
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgb(19 32 43 / 14%);
+      left: 0;
+      list-style: none;
+      margin: 0;
+      max-height: 18rem;
+      overflow-y: auto;
+      padding: 0.3rem;
+      position: absolute;
+      top: calc(100% + 4px);
+      width: 100%;
+      z-index: 200;
+    }
+    .suggestion-btn {
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: var(--ink);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+      padding: 0.5rem 0.6rem;
+      text-align: left;
+      width: 100%;
+    }
+    .suggestion-btn:hover, .suggestion-btn:focus {
+      background: var(--accent-soft);
+      color: var(--ink);
+    }
+    .suggestion-name {
+      font-size: 0.96rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .suggestion-badge {
+      background: var(--surface-alt);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      display: inline-block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 0.05rem 0.3rem;
+    }
+    .suggestion-details {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.3;
+    }
+    .suggestion-empty {
+      color: var(--muted);
+      display: block;
+      font-size: 0.88rem;
+      padding: 0.5rem 0.6rem;
+    }
+    .facility-selected-card {
+      background: var(--accent-soft);
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      margin-top: 0.75rem;
+      padding: 0.85rem;
+    }
+    .facility-selected-card .selected-name {
+      font-size: 1rem;
+      font-weight: 700;
+      margin: 0 0 0.25rem;
+    }
+    .facility-selected-card .selected-number {
+      font-size: 0.85rem;
+    }
+    .facility-selected-card .selected-geo,
+    .facility-selected-card .selected-meta {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin: 0.1rem 0 0;
+    }
+    .limited-note {
+      font-size: 0.88rem;
+      margin-top: 0.5rem;
+    }
     @media (max-width: 760px) {
       h1 {
         font-size: 1.55rem;

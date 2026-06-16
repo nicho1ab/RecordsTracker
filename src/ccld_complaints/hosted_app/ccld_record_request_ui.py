@@ -19,8 +19,13 @@ from ccld_complaints.hosted_app.auth import (
     HostedScopeDeniedError,
 )
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
+    _FACILITY_COMBOBOX_JS,
     CCLD_FACILITY_LOOKUP_PATH,
     CcldFacilityReferenceSource,
+    _build_facility_json_data,
+    _limited_reference_note,
+    _render_facility_selected_card_html,
+    _user_facing_source_label,
     load_active_ccld_facility_reference,
 )
 from ccld_complaints.hosted_app.ccld_import_reload import (
@@ -578,33 +583,38 @@ def _render_request_workflow_state(
 
 
 def _render_facility_selection_state(reference_source: CcldFacilityReferenceSource) -> str:
-        limitation = _reference_limitation_text(reference_source)
-        warning_markup = (
-                f"<p class=\"helper-text\">{_escape(limitation)}</p>" if limitation else ""
+        limited_note = _limited_reference_note(reference_source)
+        limited_note_markup = (
+                f'<p class="helper-text limited-note">{_escape(limited_note)}</p>'
+                if limited_note
+                else ""
         )
-        return f"""<section class="workflow-panel" aria-labelledby="facility-selector-heading">
+        json_data = _build_facility_json_data(reference_source)
+        selected_card = _render_facility_selected_card_html(mode="request")
+        return f"""<section class="workflow-panel" aria-labelledby="facility-selector-heading" id="facility-selector-wrap" data-facility-mode="request">
             <p class="stage-kicker">Select facility</p>
             <h2 id="facility-selector-heading">Which facility should be reviewed?</h2>
-            <p class="helper-text">Search suggestions use facility reference fields. Manual digit entry remains available.</p>
-            <form action="{CCLD_RECORD_REQUEST_PATH}" method="get">
-                <p>
-                    <label for="facility_number">Facility search</label>
-                    <input id="facility_number" name="facility_number" inputmode="numeric"
-                        list="facility-reference-options"
-                        placeholder="Search facility name, license number, city, ZIP, type, or status"
-                        aria-describedby="facility-number-help" required>
-                    <datalist id="facility-reference-options">
-{_render_facility_datalist_options(reference_source)}
-                    </datalist>
-                    <span id="facility-number-help" class="helper-text">Choose a suggestion to fill the CCLD facility/license number, or type the digit number manually.</span>
-                </p>
-                <input type="hidden" name="{_REQUEST_CONTEXT_ORIGIN_FIELD}" value="manual_entry">
+            <form action="{CCLD_RECORD_REQUEST_PATH}" method="get" id="facility-select-form">
+                <label for="facility-search-input">Facility</label>
+                <p id="facility-search-hint" class="helper-text">Search by name, license number, city, ZIP, type, or status.</p>
+                <div class="facility-combobox-outer" id="facility-combobox-outer">
+                    <input id="facility-search-input" name="facility_number" type="text"
+                        inputmode="numeric"
+                        placeholder="Facility/license number"
+                        aria-describedby="facility-search-hint" required>
+                    <ul id="facility-suggestion-list" class="facility-suggestions" aria-label="Facility suggestions" hidden></ul>
+                </div>
+                <input id="facility-origin-field" name="{_REQUEST_CONTEXT_ORIGIN_FIELD}" type="hidden" value="manual_entry">
+                <input id="facility-name-field" name="{_LOOKUP_FACILITY_NAME_FIELD}" type="hidden" value="">
+{limited_note_markup}
+{selected_card}
                 <div class="form-actions">
-                    <button type="submit">Confirm facility</button>
+                    <button type="submit" id="facility-submit-btn">Confirm facility</button>
                     <a class="button button-secondary" href="{CCLD_FACILITY_LOOKUP_PATH}">Find facility</a>
                 </div>
             </form>
-            {warning_markup}
+            <script type="application/json" id="facility-reference-json">{json_data}</script>
+            <script>{_FACILITY_COMBOBOX_JS}</script>
         </section>
         <section class="quiet-section" aria-labelledby="request-boundary-heading">
             <h2 id="request-boundary-heading">Review boundary</h2>
@@ -2400,7 +2410,7 @@ def _feedback_checklist_text(
         "- Facility lookup used or skipped: "
         f"{_request_origin_label(request.request_context_origin)}",
         f"- Selected lookup facility name: {_display_value(request.lookup_facility_name)}",
-        f"- Active facility reference source: {reference_source.label}",
+        f"- Active facility reference source: {_user_facing_source_label(reference_source)}",
         f"- Facility/license number: {request.facility_number}",
         f"- Date range requested: {_date_scope_text(request)}",
         "- Request criteria that felt unclear:",
@@ -2948,12 +2958,12 @@ def _render_request_context_confirmation(
         )
         return f"""    <section class="summary-card" aria-labelledby="request-context-confirmation-heading">
       <h2 id="request-context-confirmation-heading">No facility selected yet</h2>
-      <p>Start by typing a facility/license number or choosing a facility suggestion.</p>
+      <p>Start by typing a facility/license number or searching by name.</p>
       <dl>
         <dt>Retrieval mode</dt>
         <dd>{_escape(_runtime_mode_label())}</dd>
-        <dt>Reference source</dt>
-        <dd>{_escape(reference_source.label)}</dd>
+        <dt>Active facility reference source</dt>
+        <dd>{_escape(_user_facing_source_label(reference_source))}</dd>
         <dt>Reference rows loaded</dt>
         <dd>{len(reference_source.records)}</dd>
       </dl>
@@ -3003,7 +3013,7 @@ def _render_request_context_confirmation(
         <dt>Date range being requested</dt>
         <dd>{_escape(_date_scope_from_values(start_date, end_date))}</dd>
         <dt>Active facility reference source</dt>
-        <dd>{_escape(reference_source.label)}</dd>
+        <dd>{_escape(_user_facing_source_label(reference_source))}</dd>
         <dt>Retrieval mode</dt>
         <dd>{_escape(_runtime_mode_label())}</dd>
         <dt>Reference rows loaded for lookup</dt>
@@ -3017,7 +3027,7 @@ def _render_request_context_confirmation(
 
 def _reference_limitation_text(source: CcldFacilityReferenceSource) -> str:
     if source.source_kind == "tiny_fixture_fallback" or len(source.records) <= 2:
-        return "Reference list is limited; suggestions still work but may not include every CCLD facility."
+        return "Limited reference list: suggestions may not include every CCLD facility."
     return ""
 
 
