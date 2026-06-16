@@ -92,8 +92,10 @@ def test_capture_script_boundaries_are_get_only_and_non_mutating() -> None:
         "github" + "_pat_",
         "gh" + "p_",
         "set-" + "cookie",
+        "traceback (most recent call last)",
     ):
         assert guarded_marker in lowered
+    assert '"stack trace"' not in lowered
 
 
 def test_wrapper_script_uses_existing_modes_and_prints_process_guidance() -> None:

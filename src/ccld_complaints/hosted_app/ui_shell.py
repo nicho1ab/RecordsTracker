@@ -719,6 +719,12 @@ SHARED_CSS = r"""
       gap: 0.55rem;
       min-width: 12rem;
     }
+    .case-brief-header {
+      align-items: flex-start;
+      display: flex;
+      gap: 1rem;
+      justify-content: space-between;
+    }
     .boundary-note {
       background: var(--surface-alt);
       border-left: 4px solid var(--accent);
