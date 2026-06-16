@@ -41,7 +41,7 @@ $env:CCLD_RETRIEVAL_DEMO_MODE = "mock-success"
 if (-not $env:CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS) { $env:CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS = "30" }
 
 $baseUrl = "http://${HostName}:$Port"
-Write-Host "Mode: Fixture/mock demo"
+Write-Host "Fixture/mock demo mode"
 Write-Host "Local pilot runtime: $baseUrl/"
 Write-Host "Open: $baseUrl/"
 Write-Host "Open: $baseUrl/ccld/records/request"

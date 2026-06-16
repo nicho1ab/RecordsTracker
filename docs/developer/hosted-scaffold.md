@@ -153,7 +153,7 @@ the retrieval mode badge, primary action card for retrieving complaint records,
 secondary action cards for facility lookup, reviewer queue, retrieval jobs, and
 feedback, local live/demo/scaffold commands, and concise source-of-record
 boundary language. The local/test hosted pages share a product shell with active
-navigation, workflow step indicator, skip-to-main link, strong focus styling,
+navigation, central guided stepper/wizard, skip-to-main link, strong focus styling,
 card/count-grid utilities, readable tables and forms, mode badges for Live public
 CCLD, Fixture/mock demo, and Retrieval not configured, and concise footer
 limitation wording. This presentation work does not add routes, workflows,

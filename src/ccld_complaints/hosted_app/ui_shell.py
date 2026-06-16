@@ -1,8 +1,11 @@
+# ruff: noqa: E501
+
 from __future__ import annotations
 
 import html
 import os
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 
 APP_TITLE = "CCLD RecordsTracker Pilot"
 APP_SUBTITLE = "Guided public CCLD complaint retrieval and source-traceable review."
@@ -26,12 +29,68 @@ PRIMARY_NAV_LINKS: tuple[tuple[str, str], ...] = (
   ("Help", "/ccld/help"),
 )
 
-WORKFLOW_STEPS: tuple[tuple[str, str], ...] = (
-  ("Facility", "/ccld/facilities"),
-  ("Retrieve", "/ccld/records/request"),
-  ("Review", "/reviewer"),
-  ("Feedback", "/feedback"),
+@dataclass(frozen=True)
+class GuidedStep:
+  step_id: str
+  label: str
+  href: str
+  help_text: str
+
+
+GUIDED_STEPS: tuple[GuidedStep, ...] = (
+  GuidedStep(
+    "start",
+    "Start",
+    "/",
+    "Confirm the pilot mode and begin a CCLD complaint retrieval.",
+  ),
+  GuidedStep(
+    "facility",
+    "Facility",
+    "/ccld/facilities",
+    "Select a CCLD facility/license number or use manual entry.",
+  ),
+  GuidedStep(
+    "date_range",
+    "Date range",
+    "/ccld/records/request",
+    "Choose the complaint date window for the retrieval request.",
+  ),
+  GuidedStep(
+    "retrieve",
+    "Retrieve",
+    "/ccld/records/request",
+    "Run live public CCLD retrieval or show the current queue.",
+  ),
+  GuidedStep(
+    "review_results",
+    "Review results",
+    "/ccld/retrieval/jobs",
+    "Check imported counts, warnings, failures, and next action.",
+  ),
+  GuidedStep(
+    "review_records",
+    "Review records",
+    "/reviewer",
+    "Review imported source-derived records and add reviewer-created notes/status.",
+  ),
+  GuidedStep(
+    "feedback",
+    "Feedback",
+    "/feedback",
+    "Send concise tester feedback without private values.",
+  ),
 )
+
+DEFAULT_NEXT_ACTIONS: Mapping[str, str] = {
+  "start": "Start retrieval",
+  "facility": "Confirm a facility, then choose a date range",
+  "date_range": "Choose dates, then retrieve complaint records",
+  "retrieve": "Retrieve complaint records",
+  "review_results": "Review imported records",
+  "review_records": "Open next record or send feedback",
+  "feedback": "Submit feedback when useful",
+}
 
 MODE_BADGE_CLASSES = {
   "Live public CCLD": "badge badge-live",
@@ -52,10 +111,13 @@ def render_page_shell(
     extra_nav_links: Sequence[tuple[str, str]] = (),
     active_path: str | None = None,
     mode_label: str | None = None,
+    step_id: str | None = None,
+    next_action: str | None = None,
 ) -> str:
     runtime_mode = mode_label or _runtime_mode_label()
     links = _nav_links(extra_nav_links, active_path=active_path)
-    workflow_steps = _workflow_steps(active_path)
+    current_step = step_id or _step_id_for_path(active_path)
+    stepper = _guided_stepper(current_step, next_action)
     actor_markup = (
       f'<p class="pilot-actor">Signed in as {html.escape(actor_label)}.</p>'
       if actor_label
@@ -94,15 +156,11 @@ def render_page_shell(
 {links}
         </ul>
       </nav>
-      <nav class="workflow-steps" aria-label="Pilot workflow steps">
-        <ol>
-{workflow_steps}
-        </ol>
-      </nav>
     </div>
   </header>
   <main id="main-content" tabindex="-1">
     <div class="shell page-main">
+{stepper}
 {main}
     </div>
   </main>
@@ -137,18 +195,74 @@ def _nav_links(
     return "\n".join(items)
 
 
-def _workflow_steps(active_path: str | None) -> str:
-  items: list[str] = []
-  for index, (label, href) in enumerate(WORKFLOW_STEPS, start=1):
-    active = _is_active_nav(href, active_path)
-    active_class = " is-active" if active else ""
-    current = ' aria-current="step"' if active else ""
-    items.append(
-      f'          <li class="workflow-step{active_class}"{current}>'
-      f'<span class="step-number">{index}</span>'
-      f'<a href="{html.escape(href, quote=True)}">{html.escape(label)}</a></li>'
+def _guided_stepper(current_step_id: str, next_action: str | None) -> str:
+  current_index = _step_index(current_step_id)
+  current_step = GUIDED_STEPS[current_index]
+  next_action_text = next_action or DEFAULT_NEXT_ACTIONS[current_step.step_id]
+  items = "\n".join(
+    _guided_step_markup(step, index, current_index)
+    for index, step in enumerate(GUIDED_STEPS)
+  )
+  return f"""      <section class="guided-stepper" aria-labelledby="guided-stepper-heading">
+    <div class="stepper-summary">
+      <p class="stepper-eyebrow">Guided workflow</p>
+      <h2 id="guided-stepper-heading">Step {current_index + 1}: {html.escape(current_step.label)}</h2>
+      <p>{html.escape(current_step.help_text)}</p>
+      <p><strong>Next best action:</strong> {html.escape(next_action_text)}</p>
+    </div>
+    <ol class="stepper-list">
+{items}
+    </ol>
+    </section>"""
+
+
+def _guided_step_markup(step: GuidedStep, index: int, current_index: int) -> str:
+  if index < current_index:
+    state = "Completed"
+    state_class = "is-complete"
+    content = (
+      f'<a href="{html.escape(step.href, quote=True)}">'
+      f"{html.escape(step.label)}</a>"
     )
-  return "\n".join(items)
+  elif index == current_index:
+    state = "Current step"
+    state_class = "is-current"
+    content = (
+      f'<a aria-current="step" href="{html.escape(step.href, quote=True)}">'
+      f"{html.escape(step.label)}</a>"
+    )
+  else:
+    state = "Not ready yet"
+    state_class = "is-upcoming"
+    content = f"<span>{html.escape(step.label)}</span>"
+  return f"""          <li class="stepper-item {state_class}">
+      <span class="step-index" aria-hidden="true">{index + 1}</span>
+      <span class="step-main">{content}<span class="step-help">{html.escape(step.help_text)}</span></span>
+      <span class="step-state">{state}</span>
+      </li>"""
+
+
+def _step_id_for_path(active_path: str | None) -> str:
+  if active_path == "/":
+    return "start"
+  if active_path == "/ccld/facilities":
+    return "facility"
+  if active_path == "/ccld/records/request":
+    return "retrieve"
+  if active_path == "/ccld/retrieval/jobs":
+    return "review_results"
+  if active_path == "/reviewer":
+    return "review_records"
+  if active_path == "/feedback":
+    return "feedback"
+  return "start"
+
+
+def _step_index(step_id: str) -> int:
+  for index, step in enumerate(GUIDED_STEPS):
+    if step.step_id == step_id:
+      return index
+  return 0
 
 
 def _is_active_nav(href: str, active_path: str | None) -> bool:
@@ -306,38 +420,95 @@ SHARED_CSS = r"""
     .site-nav a.is-active {
       box-shadow: inset 0 -3px 0 var(--accent);
     }
-    .workflow-steps ol {
+    .guided-stepper {
+      background: #ffffff;
+      border: 1px solid #b8cbd4;
+      border-radius: 10px;
+      box-shadow: var(--shadow-strong);
       display: grid;
-      gap: 0.5rem;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1rem;
+      grid-template-columns: minmax(14rem, 0.34fr) minmax(0, 1fr);
+      margin: 0 0 1.25rem;
+      padding: 1rem;
+    }
+    .stepper-summary {
+      background: linear-gradient(180deg, #f3faf9 0%, #ffffff 100%);
+      border: 1px solid #c9dfdd;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .stepper-eyebrow {
+      color: var(--accent-strong);
+      font-size: 0.86rem;
+      font-weight: 800;
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+    }
+    .stepper-list {
+      display: grid;
+      gap: 0.55rem;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
       list-style: none;
       margin: 0;
-      padding: 0 0 1rem;
+      padding: 0;
     }
-    .workflow-step {
-      align-items: center;
+    .stepper-item {
       background: var(--surface-alt);
       border: 1px solid var(--line);
       border-radius: 8px;
-      display: flex;
-      gap: 0.55rem;
-      min-height: 3rem;
-      padding: 0.55rem;
+      display: grid;
+      gap: 0.45rem;
+      grid-template-rows: auto 1fr auto;
+      min-height: 10.5rem;
+      padding: 0.65rem;
     }
-    .workflow-step.is-active {
+    .stepper-item.is-complete {
+      background: #edf7f1;
+      border-color: #8ac7a5;
+    }
+    .stepper-item.is-current {
       background: var(--blue-soft);
       border-color: var(--blue);
+      box-shadow: inset 0 0 0 2px var(--blue);
     }
-    .step-number {
+    .stepper-item.is-upcoming {
+      background: #f5f7f8;
+      color: #66737c;
+    }
+    .step-index {
       align-items: center;
-      background: var(--surface);
+      background: #ffffff;
       border: 1px solid var(--line);
       border-radius: 999px;
       display: inline-flex;
       font-weight: 800;
-      height: 1.6rem;
+      height: 1.7rem;
       justify-content: center;
-      min-width: 1.6rem;
+      min-width: 1.7rem;
+      width: 1.7rem;
+    }
+    .step-main {
+      display: grid;
+      gap: 0.25rem;
+    }
+    .step-main a, .step-main span:first-child {
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    .step-help {
+      color: var(--muted);
+      display: block;
+      font-size: 0.82rem;
+      line-height: 1.25;
+    }
+    .step-state {
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #ffffff;
+      font-size: 0.76rem;
+      font-weight: 800;
+      padding: 0.2rem 0.4rem;
+      width: fit-content;
     }
     .page-main {
       padding-bottom: 2rem;
@@ -579,6 +750,28 @@ SHARED_CSS = r"""
       border-radius: 6px;
       padding: 0.65rem;
     }
+    .wizard-sequence {
+      display: grid;
+      gap: 0.85rem;
+    }
+    .wizard-stage {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: 0 1px 2px rgb(31 41 51 / 6%);
+      padding: 1rem;
+    }
+    .wizard-stage-primary {
+      border-color: #8ab9b4;
+      box-shadow: var(--shadow);
+    }
+    .stage-kicker {
+      color: var(--accent-strong);
+      font-size: 0.82rem;
+      font-weight: 800;
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+    }
     .compact-list {
       margin-bottom: 0;
       padding-left: 1.2rem;
@@ -610,8 +803,15 @@ SHARED_CSS = r"""
       .site-nav ul {
         display: grid;
       }
-      .workflow-steps ol {
+      .guided-stepper {
+        display: block;
+      }
+      .stepper-list {
         grid-template-columns: 1fr;
+        margin-top: 0.75rem;
+      }
+      .stepper-item {
+        min-height: auto;
       }
       dl {
         display: block;

@@ -42,7 +42,7 @@ $env:CCLD_RETRIEVAL_DEMO_MODE = ""
 if (-not $env:CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS) { $env:CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS = "30" }
 
 $baseUrl = "http://${HostName}:$Port"
-Write-Host "Mode: Live public CCLD retrieval"
+Write-Host "Live public CCLD retrieval mode"
 Write-Host "Local pilot runtime: $baseUrl/"
 Write-Host "Open: $baseUrl/"
 Write-Host "Open: $baseUrl/ccld/records/request"

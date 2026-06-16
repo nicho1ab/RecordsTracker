@@ -515,6 +515,8 @@ def _render_request_form(
     return _page(
                                 title="Retrieve complaint records",
                                 heading="Retrieve complaint records",
+        step_id="facility",
+        next_action="Select a facility, choose dates, then retrieve complaint records",
                 main=f"""    <section class="hero-card" aria-labelledby="request-hero-heading">
             <h2 id="request-hero-heading">Choose a facility and date range, then retrieve public CCLD complaint records for review.</h2>
             <p>Use this page to start the main pilot workflow: select a CCLD facility, choose a
@@ -532,6 +534,10 @@ def _render_request_form(
         <input type="hidden" name="{_LOOKUP_FACILITY_NAME_FIELD}"
                     value="{_escape(lookup_facility_name or '')}">
                 <input type="hidden" name="record_type" value="complaints">
+                <div class="wizard-sequence" aria-label="Retrieval request steps">
+                    <section class="wizard-stage" aria-labelledby="wizard-facility-heading">
+                        <p class="stage-kicker">Step 2</p>
+                        <h3 id="wizard-facility-heading">Select facility</h3>
         <p>
                     <label for="facility_number">Facility/license number</label>
                     <input id="facility_number" name="facility_number" inputmode="numeric"
@@ -546,6 +552,10 @@ def _render_request_form(
                                         suggestion to submit the CCLD facility/license number. Manual digit entry
                                         still works.</span>
         </p>
+                    </section>
+                    <section class="wizard-stage" aria-labelledby="wizard-date-heading">
+                        <p class="stage-kicker">Step 3</p>
+                        <h3 id="wizard-date-heading">Choose complaint date range</h3>
                 <div class="fixed-field" aria-labelledby="record-type-heading">
                     <h3 id="record-type-heading">Record type</h3>
                     <p><strong>Complaint records</strong></p>
@@ -567,6 +577,10 @@ def _render_request_form(
                 </div>
                 <p id="date-range-help" class="helper-text">The date range filters complaint report,
                 visit, signed, and retrieval dates represented in public CCLD source data.</p>
+                    </section>
+                    <section class="wizard-stage wizard-stage-primary" aria-labelledby="wizard-retrieve-heading">
+                        <p class="stage-kicker">Step 4</p>
+                        <h3 id="wizard-retrieve-heading">Retrieve or review current queue</h3>
                 <p>
                     <label for="reviewer_status_filter">Reviewer-status filter</label>
                     <select id="reviewer_status_filter" name="reviewer_status_filter"
@@ -588,6 +602,8 @@ def _render_request_form(
                                         <button class="secondary" type="submit">Show current queue</button>
                                         <a class="button button-quiet" href="{CCLD_RECORD_REQUEST_PATH}">Clear</a>
                                 </div>
+                    </section>
+                </div>
       </form>
     </section>
             </div>
@@ -667,6 +683,8 @@ def _render_help_page() -> str:
         return _page(
                 title="How CCLD review works",
                                 heading="Help",
+            step_id="start",
+            next_action="Start retrieval or use the relevant workflow step",
                                 main=f"""    <section class="hero-card" aria-labelledby="help-purpose-heading">
                         <h2 id="help-purpose-heading">Use the pilot without reading a manual</h2>
                         <p>Pick a facility, retrieve complaint records, review source-derived rows, add
@@ -812,6 +830,8 @@ def _render_retrieval_setup_required_page() -> str:
         return _page(
                 title="Controlled CCLD retrieval setup required",
                 heading="Controlled CCLD retrieval setup required",
+            step_id="retrieve",
+            next_action="Configure retrieval or show the current queue",
                 main=f"""    <section aria-labelledby="retrieval-setup-heading">
             <h2 id="retrieval-setup-heading">No retrieval job was created</h2>
             <p>Controlled CCLD retrieval needs a database-backed request context, retrieval
@@ -942,6 +962,8 @@ def _render_matched_result(
     return _page(
         title="CCLD request results",
         heading="CCLD request results",
+        step_id="review_results",
+        next_action="Review imported records",
         main=f"""    <section aria-labelledby="request-accepted-heading">
       <h2 id="request-accepted-heading">CCLD request accepted</h2>
             <p>Found {len(result.matched_records)} local/test CCLD source-derived
@@ -1040,6 +1062,8 @@ def _render_no_match_result(
     return _page(
                 title=headline,
                 heading=headline,
+                step_id="review_results",
+                next_action="Adjust the request or view job details",
                 main=f"""    <section class="hero-card" aria-labelledby="no-local-records-heading">
             <h2 id="no-local-records-heading">{_escape(headline)}</h2>
             <p>No staged local/test CCLD records matched facility/license number
@@ -1532,8 +1556,10 @@ def _render_retrieval_job_history_page(
     )
     return _page(
         title="Controlled CCLD retrieval job history",
-        heading="Controlled CCLD retrieval job history",
+        heading="Retrieval status center",
         active_path=CCLD_RETRIEVAL_JOBS_PATH,
+        step_id="review_results",
+        next_action="Open a job, review records, or adjust the request",
                 main=f"""    <section class="hero-card" aria-labelledby="retrieval-history-purpose-heading">
       <h2 id="retrieval-history-purpose-heading">Recent controlled retrieval jobs</h2>
       <p>This page shows recent controlled CCLD retrieval jobs for the current authorized
@@ -1543,6 +1569,7 @@ def _render_retrieval_job_history_page(
       legal conclusions, facility-wide conclusions, or harm conclusions.</p>
             <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Submit or change a CCLD record request</a></p>
     </section>
+        {_render_retrieval_history_summary(jobs)}
     <section aria-labelledby="retrieval-history-table-heading">
       <h2 id="retrieval-history-table-heading">Job history</h2>
       <table>
@@ -1575,6 +1602,31 @@ def _render_retrieval_job_history_page(
       <p><a href="{CCLD_HELP_PATH}">Read CCLD workflow help</a></p>
     </section>""",
     )
+
+
+def _render_retrieval_history_summary(
+    jobs: tuple[CcldRetrievalJobHistoryEntry, ...],
+) -> str:
+    imported_total = sum(
+        job.result_counts.get("imported_source_derived_records", 0) for job in jobs
+    )
+    warning_total = sum(len(job.warnings) for job in jobs)
+    failure_total = sum(1 for job in jobs if job.job_state in {"failed", "rate_limited"})
+    cards = "\n".join(
+        f"        <div class=\"stat-card\"><strong>{count}</strong><span>{_escape(label)}</span></div>"
+        for label, count in (
+            ("Recent jobs", len(jobs)),
+            ("Records imported", imported_total),
+            ("Warnings", warning_total),
+            ("Failures", failure_total),
+        )
+    )
+    return f"""    <section aria-labelledby="retrieval-status-summary-heading">
+      <h2 id="retrieval-status-summary-heading">Status summary</h2>
+      <div class="stat-grid">
+{cards}
+      </div>
+    </section>"""
 
 
 def _render_retrieval_history_row(job: CcldRetrievalJobHistoryEntry) -> str:
@@ -1695,6 +1747,8 @@ def _render_retrieval_job_detail_page(job: CcldRetrievalJobHistoryEntry) -> str:
         title="Controlled CCLD retrieval job detail",
         heading="Controlled CCLD retrieval job detail",
         active_path=CCLD_RETRIEVAL_JOBS_PATH,
+        step_id="review_results",
+        next_action="Review imported records or adjust the request",
                 main=f"""    <section class="hero-card" aria-labelledby="retrieval-detail-summary-heading">
       <h2 id="retrieval-detail-summary-heading">Job summary</h2>
             <p><span class="{_status_badge_class(job.job_state)}">{_escape(_retrieval_state_label(job.job_state))}</span>
@@ -3087,6 +3141,8 @@ def _page(
     heading: str,
     main: str,
     active_path: str = CCLD_RECORD_REQUEST_PATH,
+    step_id: str = "retrieve",
+    next_action: str | None = None,
 ) -> str:
     return render_page_shell(
         title=title,
@@ -3095,4 +3151,6 @@ def _page(
         skip_label="Skip to main CCLD request content",
         nav_label="Hosted scaffold navigation",
         active_path=active_path,
+        step_id=step_id,
+        next_action=next_action,
     )

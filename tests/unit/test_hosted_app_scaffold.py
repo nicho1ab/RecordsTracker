@@ -162,7 +162,14 @@ def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None
         assert '<main id="main-content" tabindex="-1">' in html
         assert 'class="shell page-main"' in html
         assert "CCLD RecordsTracker Pilot" in html
-        assert "Pilot workflow steps" in html
+        assert "Guided workflow" in html
+        assert "Current step" in html
+        if path != "/feedback":
+            assert "Not ready yet" in html
+        assert "Next best action" in html
+        assert "Date range" in html
+        assert "Review results" in html
+        assert "Review records" in html
         assert "Facility" in html
         assert "Retrieve" in html
         assert "Review" in html
@@ -739,7 +746,7 @@ def test_complaint_retrieval_demo_script_sets_safe_local_config() -> None:
     assert "Open: $baseUrl/ccld/records/request" in script
     assert "Open: $baseUrl/ccld/retrieval/jobs" in script
     assert "Open: $baseUrl/reviewer" in script
-    assert "Mode: Fixture/mock demo" in script
+    assert "Fixture/mock demo mode" in script
     assert "does not make live CCLD calls" in script
     assert "GITHUB" not in script
     assert "TOKEN" not in script
@@ -759,7 +766,7 @@ def test_complaint_retrieval_live_script_sets_live_public_config() -> None:
     assert "CCLD_RETRIEVAL_RAW_DIR = $resolvedRawStorageDir" in script
     assert 'CCLD_RETRIEVAL_DEMO_MODE = ""' in script
     assert 'CCLD_RETRIEVAL_DEMO_MODE = "mock-success"' not in script
-    assert "Mode: Live public CCLD retrieval" in script
+    assert "Live public CCLD retrieval mode" in script
     assert "Public CCLD HTTP requests will be made only after" in script
     assert "CCLD public portal remains the source of record" in script
     assert "Absence of imported records is not proof" in script
