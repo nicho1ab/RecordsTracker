@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Improved the hosted review-session start handoff. Home, facility lookup,
+	request intake, and help now make the first steps clearer: start with facility
+	lookup or direct facility/license entry, choose a complaint date range, load or
+	retrieve local/test complaint records, continue through queue, reviewer detail,
+	packet preparation, and feedback, while preserving source-of-record,
+	local/test, no-legal-conclusion, no-final-export, and no-source-completeness
+	boundaries without changing retrieval behavior or adding persistence.
+
 - Improved the hosted feedback handoff review loop. Queue/worklist, filtered
 	queue recovery, reviewer detail, reviewer-created save confirmation, packet
 	preview, and packet draft now link to `/feedback` with bounded safe local/test

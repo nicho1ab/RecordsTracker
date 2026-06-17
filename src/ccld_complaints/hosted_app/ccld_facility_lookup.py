@@ -388,8 +388,13 @@ def render_ccld_facility_lookup_page(
                     <div>
                         <p class="launch-kicker">Facility intake</p>
             <h2 id="facility-lookup-scope-heading">Find a facility</h2>
-                        <p class="launch-value">Search by facility name, license number, city, ZIP, type, or status.</p>
+                        <p class="launch-value">Start review by finding the CCLD facility/license number, then carry that selected facility into the request page to choose a complaint date range.</p>
                     </div>
+        </section>
+        <section class="quiet-section" aria-labelledby="facility-start-guidance-heading">
+            <h2 id="facility-start-guidance-heading">Lookup or manual entry?</h2>
+            <p>Use facility lookup when you know a facility name, city, ZIP, type, or status but not the exact facility/license number. Use manual entry when you already know the digit facility/license number.</p>
+            <p>Lookup rows are local/test reference assistance, not complaint source truth, not statewide completeness proof, and not legal or facility-wide conclusions.</p>
         </section>
     {_render_facility_combobox_section(reference_source, query, limited_note)}
     {_render_lookup_results(result)}

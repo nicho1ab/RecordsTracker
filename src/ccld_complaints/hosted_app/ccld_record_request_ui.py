@@ -552,11 +552,21 @@ def _render_request_form(
                 main=f"""    <section class="hero-card" aria-labelledby="request-hero-heading">
                     <p class="launch-kicker">Retrieval intake</p>
                     <h2 id="request-hero-heading">Retrieve complaint records for a facility</h2>
-                    <p class="launch-value">Confirm the facility and date range before starting controlled CCLD complaint retrieval.</p>
+                    <p class="launch-value">Create the review request context: confirm a CCLD facility/license number, choose a complaint date range, then retrieve or show loaded local/test complaint records.</p>
             <p><span class="{mode_class}">{mode_label}</span></p>
         </section>
+                {_render_request_start_orientation()}
                 {workflow_state}""",
     )
+
+
+def _render_request_start_orientation() -> str:
+        return """<section class="quiet-section" aria-labelledby="request-start-orientation-heading">
+            <h2 id="request-start-orientation-heading">Start review request context</h2>
+            <p>Facility/license number identifies the CCLD facility. Date range narrows complaint, visit, report, signed, or retrieval dates already represented in local/test source-derived records.</p>
+            <p>Retrieve records uses the configured controlled server-side retrieval path only when available. Show existing queue searches loaded local/test source-derived records without proving public-source completeness.</p>
+            <p>When records are found, continue to the review queue, open the recommended record, review source traceability on detail, then use packet preparation and feedback when needed.</p>
+        </section>"""
 
 
 def _render_request_workflow_state(
@@ -604,6 +614,7 @@ def _render_facility_selection_state(reference_source: CcldFacilityReferenceSour
         return f"""<section class="workflow-panel" aria-labelledby="facility-selector-heading" id="facility-selector-wrap" data-facility-mode="request">
             <p class="stage-kicker">Facility</p>
             <h2 id="facility-selector-heading">Which facility should be reviewed?</h2>
+            <p>Search for a facility when you do not know the exact facility/license number, or type the digit facility/license number directly if you already have it.</p>
             <form action="{CCLD_RECORD_REQUEST_PATH}" method="get" id="facility-select-form">
                 <label for="facility-search-input">Facility</label>
                 <p id="facility-search-hint" class="helper-text">Search by name, license number, city, ZIP, type, or status.</p>
@@ -638,6 +649,7 @@ def _render_date_range_state(
         return f"""<section class="workflow-panel" aria-labelledby="date-range-heading">
             <p class="stage-kicker">Date range</p>
             <h2 id="date-range-heading">Choose complaint date range</h2>
+            <p>Use a bounded date range that matches the complaint review period you want to inspect.</p>
             <form action="{CCLD_RECORD_REQUEST_PATH}" method="get">
                 <input type="hidden" name="facility_number" value="{_escape(facility_number)}">
                 <input type="hidden" name="{_REQUEST_CONTEXT_ORIGIN_FIELD}" value="{_escape(request_context_origin)}">
@@ -676,7 +688,7 @@ def _render_date_ready_state(
         return f"""<section class="workflow-panel workflow-panel-primary" aria-labelledby="retrieve-ready-heading">
             <p class="stage-kicker">Retrieve records</p>
             <h2 id="retrieve-ready-heading">Ready to retrieve complaint records</h2>
-            <p>Review this facility/date context before starting controlled CCLD retrieval.</p>
+            <p>Review this facility/date context before retrieving or showing loaded local/test complaint records. After records are found, open the review queue and start with the recommended record.</p>
             <dl>
                 <dt>Facility/license number</dt>
                 <dd>{_escape(facility_number)}</dd>
@@ -768,7 +780,10 @@ def _render_help_page() -> str:
                         <summary id="help-how-heading">How to review a facility</summary>
                         <p>Facility lookup or manual entry fills a CCLD facility/license number. The
                         request page uses that context and a date range to retrieve or show matching
-                        complaint records. The review queue then helps you open records for source-traceable review.</p>
+                        complaint records. The review queue helps you open the recommended record,
+                        reviewer detail is the complaint review workspace, reviewer-created status/note
+                        cues update queue progress, packet preview/draft are local/test preparation
+                        checkpoints, and feedback carries safe context when something is confusing.</p>
                     </details>
                     <details>
                         <summary id="help-flags-heading">What review flags mean</summary>
@@ -805,6 +820,12 @@ def _render_help_page() -> str:
                         control number when relevant, and what action or wording felt confusing. Do not
                         include private facts, credentials, legal strategy, privileged work product,
                         private URLs, private values, or unrelated sensitive details.</p>
+                    </details>
+                    <details>
+                        <summary id="help-packet-heading">How packet preparation fits in</summary>
+                        <p>Packet preview and packet draft summarize loaded local/test complaint records,
+                        source traceability cues, reviewer-created status/note cues, and review-readiness
+                        concerns. They are not legal reports, final exports, or source-completeness proof.</p>
                     </details>
                 </section>
                 <section aria-labelledby="help-next-action-heading">
