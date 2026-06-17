@@ -309,8 +309,10 @@ $coreRoutes = @(
     @{ Name = "jobs"; Path = "/ccld/retrieval/jobs"; Label = "04-jobs"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Results" },
     @{ Name = "reviewer"; Path = "/reviewer"; Label = "05-reviewer"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
     @{ Name = "packet-preview"; Path = "/reviewer/packet/preview"; Label = "06-packet-preview"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
-    @{ Name = "feedback"; Path = "/feedback"; Label = "07-feedback"; ActiveHref = "/feedback"; WorkflowStep = "Feedback" },
-    @{ Name = "help"; Path = "/ccld/help"; Label = "08-help"; ActiveHref = "/ccld/help" }
+    @{ Name = "packet-draft-empty"; Path = "/reviewer/packet/draft"; Label = "07-packet-draft-empty"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
+    @{ Name = "packet-draft-context"; Path = "/reviewer/packet/draft?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry"; Label = "08-packet-draft-context"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
+    @{ Name = "feedback"; Path = "/feedback"; Label = "09-feedback"; ActiveHref = "/feedback"; WorkflowStep = "Feedback" },
+    @{ Name = "help"; Path = "/ccld/help"; Label = "10-help"; ActiveHref = "/ccld/help" }
 )
 
 $routeResults = [System.Collections.ArrayList]::new()

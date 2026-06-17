@@ -7,6 +7,7 @@ import json
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -60,6 +61,7 @@ REVIEWER_UI_DETAIL_PATH = f"{REVIEWER_UI_RECORDS_PATH}/detail"
 REVIEWER_UI_NOTE_PATH = f"{REVIEWER_UI_RECORDS_PATH}/note"
 REVIEWER_UI_STATUS_PATH = f"{REVIEWER_UI_RECORDS_PATH}/status"
 REVIEWER_UI_PACKET_PREVIEW_PATH = f"{REVIEWER_UI_PREFIX}/packet/preview"
+REVIEWER_UI_PACKET_DRAFT_PATH = f"{REVIEWER_UI_PREFIX}/packet/draft"
 CCLD_HELP_PATH = "/ccld/help"
 LOCAL_REVIEWER_UI_SCOPE = HostedAccessScope(
     "seeded_corpus",
@@ -350,6 +352,8 @@ def route_reviewer_ui_response(
         return _record_list_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_PACKET_PREVIEW_PATH:
         return _packet_preview_response(parsed_url.query, context)
+    if parsed_url.path == REVIEWER_UI_PACKET_DRAFT_PATH:
+        return _packet_draft_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_DETAIL_PATH:
         return _detail_response(parsed_url.query, context)
     return _html_response(
@@ -454,6 +458,201 @@ def _packet_preview_response(
             actor_label=_signed_in_actor_label(context),
         ),
     )
+
+
+def _packet_draft_response(
+        query: str,
+        context: ReviewerUiContext,
+) -> tuple[int, str, bytes]:
+        query_values = parse_qs(query, keep_blank_values=True)
+        return_context = _packet_preview_context_from_values(query_values)
+        if return_context.facility_number is None:
+                return _html_response(
+                        200,
+                        _render_packet_draft_context_needed(actor_label=_signed_in_actor_label(context)),
+                )
+        status, _content_type, body = route_reviewer_workflow_shell_response(
+                f"{REVIEWER_WORKFLOW_API_PREFIX}/queue?limit=100",
+                context.workflow_shell_context,
+        )
+        if status != 200:
+                return _workflow_error_page(status, body)
+        payload = _json_object(body)
+        queue = _mapping(payload, "queue")
+        records = _filter_packet_preview_items(_record_list(queue, "records"), return_context)
+        state_status, state_body = _reviewer_created_state_records(context)
+        if state_status != 200:
+                if not isinstance(state_body, bytes):
+                        raise ValueError("Expected reviewer-created state error body to be bytes.")
+                return _workflow_error_page(state_status, state_body)
+        if isinstance(state_body, bytes):
+                raise ValueError("Expected reviewer-created state records.")
+        state_summaries = _state_summaries_by_source_record(state_body)
+        return _html_response(
+                status,
+                _render_packet_draft(
+                        records,
+                        state_summaries,
+                        return_context,
+                        workflow=_mapping(payload, "workflow_shell"),
+                        actor_label=_signed_in_actor_label(context),
+                ),
+        )
+
+
+def _render_packet_draft_context_needed(*, actor_label: str | None) -> str:
+        return _page(
+                title="Attorney Review Packet Draft",
+                heading="Attorney Review Packet Draft",
+                actor_label=actor_label,
+                show_workflow_indicator=False,
+                main=f"""
+                <section class="packet-draft" aria-labelledby="packet-context-needed-heading">
+                    <div class="packet-draft-header">
+                        <p class="launch-kicker">Print-ready packet draft</p>
+                        <h2 id="packet-context-needed-heading">No facility/date packet context was supplied.</h2>
+                    </div>
+                    <p>Open this draft from a CCLD retrieval result, the review packet preview, or a reviewer detail confirmation so the facility/date context can be carried into the draft.</p>
+                    <p>This page is not a complete packet without a facility/date context.</p>
+                    <div class="form-actions packet-draft-actions">
+                        <a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Open Retrieve</a>
+                        <a class="button button-secondary" href="{REVIEWER_UI_RECORDS_PATH}">Open Review queue</a>
+                    </div>
+                </section>
+                """,
+        )
+
+
+def _render_packet_draft(
+        records: list[Mapping[str, Any]],
+        state_summaries: Mapping[str, Mapping[str, Any]],
+        return_context: CcldQueueReturnContext,
+        *,
+        workflow: Mapping[str, Any],
+        actor_label: str | None,
+) -> str:
+        traceability_counts = _packet_traceability_counts(records)
+        state_counts = _packet_reviewer_state_counts(records, state_summaries)
+        findings = _packet_finding_counts(records)
+        generated_at = datetime.now(UTC).isoformat(timespec="seconds")
+        record_sections = "\n".join(
+                _render_packet_draft_record(record, state_summaries, return_context)
+                for record in records
+        )
+        if not record_sections:
+                record_sections = """        <section class="packet-draft-record" aria-labelledby="draft-no-records-heading">
+                    <h3 id="draft-no-records-heading">No included complaint records</h3>
+                    <p>No loaded local/test complaint records match this packet draft context.</p>
+                </section>"""
+        copy_summary = _packet_copy_summary(
+                records,
+                state_summaries,
+                return_context,
+                traceability_counts,
+                state_counts,
+                findings,
+                generated_at,
+        )
+        return _page(
+                title="Attorney Review Packet Draft",
+                heading="Attorney Review Packet Draft",
+                actor_label=actor_label,
+                show_workflow_indicator=False,
+                main=f"""
+                <article class="packet-draft" aria-labelledby="packet-draft-title">
+                    <header class="packet-draft-header">
+                        <p class="launch-kicker">Local/test print-ready draft</p>
+                        <h2 id="packet-draft-title">Attorney Review Packet Draft</h2>
+                        <p><strong>Print / Save as PDF using browser print.</strong> This page does not generate a server-side PDF, Word file, ZIP, CSV, or downloadable final export.</p>
+                    </header>
+                    <section aria-labelledby="draft-scope-heading">
+                        <h3 id="draft-scope-heading">Packet scope</h3>
+                        <dl class="summary-list">
+                            <dt>Facility / license</dt>
+                            <dd>{_escape(_packet_facility_label(records, return_context))}</dd>
+                            <dt>Date range</dt>
+                            <dd>{_escape(_packet_draft_date_scope(return_context))}</dd>
+                            <dt>Mode</dt>
+                            <dd>{_escape(_runtime_mode_label_for_reviewer())}</dd>
+                            <dt>Prepared from</dt>
+                            <dd>{_escape(_packet_prepared_from(return_context))}</dd>
+                            <dt>Generated</dt>
+                            <dd>{_escape(generated_at)}</dd>
+                            <dt>Records included</dt>
+                            <dd>{len(records)}</dd>
+                        </dl>
+                        <p><strong>Important limitation:</strong> This is a local/test preparation draft. It is not a legal report, final export, production packet, source-completeness proof, or facility-wide conclusion.</p>
+                    </section>
+                    <section aria-labelledby="draft-summary-heading">
+                        <h3 id="draft-summary-heading">Summary of included records</h3>
+                        <dl class="summary-list">
+                            <dt>Total records</dt>
+                            <dd>{len(records)}</dd>
+                            <dt>Records with reviewer-created status</dt>
+                            <dd>{state_counts['with_status']}</dd>
+                            <dt>Records with reviewer-created notes</dt>
+                            <dd>{state_counts['with_notes']}</dd>
+                            <dt>Records with review flags</dt>
+                            <dd>{_packet_review_flag_count(records)}</dd>
+                            <dt>Records with source traceability available</dt>
+                            <dd>{traceability_counts['complete']}</dd>
+                            <dt>Findings represented</dt>
+                            <dd>{_escape(_packet_findings_text(findings))}</dd>
+                        </dl>
+                    </section>
+                    <section aria-labelledby="draft-traceability-heading">
+                        <h3 id="draft-traceability-heading">Source traceability readiness</h3>
+                        <dl class="summary-list">
+                            <dt>Source URL available</dt>
+                            <dd>{traceability_counts['source_url']}</dd>
+                            <dt>Raw SHA-256 available</dt>
+                            <dd>{traceability_counts['raw_sha256']}</dd>
+                            <dt>Connector/retrieval metadata available</dt>
+                            <dd>{traceability_counts['connector_retrieval']}</dd>
+                            <dt>Missing visible traceability cues</dt>
+                            <dd>{traceability_counts['missing_any']}</dd>
+                        </dl>
+                    </section>
+                    <section aria-labelledby="draft-records-heading">
+                        <h3 id="draft-records-heading">Included complaint records</h3>
+{record_sections}
+                    </section>
+                    <section aria-labelledby="draft-reviewer-created-heading">
+                        <h3 id="draft-reviewer-created-heading">Reviewer-created state included in this draft</h3>
+                        <ul>
+                            <li>Status and note presence are reviewer-created state.</li>
+                            <li>They do not change source-derived complaint records.</li>
+                            <li>Reviewer-created note text is not printed here; use reviewer detail when note content needs review.</li>
+                        </ul>
+                    </section>
+                    <section aria-labelledby="draft-does-not-prove-heading">
+                        <h3 id="draft-does-not-prove-heading">What this draft does not prove</h3>
+                        <ul>
+                            <li>It does not prove source completeness.</li>
+                            <li>It does not prove no other complaints exist.</li>
+                            <li>It does not make legal, facility-wide, harm, abuse, neglect, liability, or rights-deprivation conclusions.</li>
+                            <li>It does not create official findings beyond source-derived finding labels.</li>
+                        </ul>
+                    </section>
+                    <section aria-labelledby="copyable-packet-summary-heading">
+                        <h3 id="copyable-packet-summary-heading">Copyable packet summary</h3>
+                        <p>Copy this plain text into a local note or review handoff draft when useful. The app does not save or send this text.</p>
+                        <pre class="copyable-packet-summary">{_escape(copy_summary)}</pre>
+                    </section>
+                    <nav class="packet-draft-actions" aria-label="Packet draft navigation">
+                        <ul>
+                            <li><a href="{_escape(_packet_preview_href(return_context))}">Back to packet preview</a></li>
+                            <li><a href="{_escape(_ccld_request_href([], return_context))}">Back to review queue</a></li>
+                        </ul>
+                    </nav>
+                    <details class="technical-details">
+                        <summary>Technical runtime details</summary>
+                        {_render_scope_notice(workflow)}
+                        <p>No export file is generated by this draft. Opening, printing, or copying this page does not mutate source-derived records, reviewer-created state, audit rows, import batches, or operational metadata.</p>
+                    </details>
+                </article>
+                """,
+        )
 def _reviewer_created_state_records(
     context: ReviewerUiContext,
 ) -> tuple[int, list[Mapping[str, Any]] | bytes]:
@@ -872,6 +1071,7 @@ def _render_reviewer_case_brief(
             record_count_label="Complaint records visible",
             full_queue_href=REVIEWER_UI_RECORDS_PATH,
             packet_preview_href=REVIEWER_UI_PACKET_PREVIEW_PATH,
+            packet_draft_href=_packet_draft_href_for_queue(case_records),
         )
     )
 
@@ -918,6 +1118,9 @@ def _render_packet_preview(
             <dt>Source traceability available</dt>
             <dd>{traceability_counts['complete']} complete; {traceability_counts['missing_any']} missing one or more visible traceability cues</dd>
           </dl>
+                    <div class="form-actions">
+                        <a class="button" href="{_escape(_packet_draft_href(return_context))}">Open print-ready packet draft</a>
+                    </div>
         </section>
         <section aria-labelledby="packet-traceability-heading">
           <h2 id="packet-traceability-heading">Traceability readiness</h2>
@@ -1032,6 +1235,165 @@ def _render_packet_preview_record(
           </div>
           <p><a class="button" href="{_escape(detail_href)}">Open record { _escape(label) }</a></p>
         </article>"""
+
+
+def _render_packet_draft_record(
+    item: Mapping[str, Any],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> str:
+    source_record = _mapping(item, "source_record")
+    identity = _mapping(source_record, "identity")
+    source_document = _mapping(source_record, "source_document")
+    original_values = _mapping(source_record, "original_values")
+    source_record_key = _string(identity, "source_record_key")
+    state_summary = state_summaries.get(source_record_key, _empty_state_summary())
+    detail_href = _reviewer_detail_href(source_record_key, return_context)
+    label = _display_value(original_values.get("complaint_control_number") or source_record_key)
+    flags = _packet_review_flags_text(original_values, source_document)
+    why = "; ".join(_packet_inclusion_reasons(item, state_summary))
+    return f"""            <section class="packet-draft-record" aria-labelledby="draft-record-{_escape(source_record_key)}-heading">
+              <h4 id="draft-record-{_escape(source_record_key)}-heading">{_escape(label)}</h4>
+              <dl class="summary-list">
+                <dt>Complaint control number</dt>
+                <dd>{_escape(label)}</dd>
+                <dt>Finding</dt>
+                <dd>{_escape(_optional_string(original_values, 'finding'))}</dd>
+                <dt>Key dates</dt>
+                <dd>{_escape(_date_summary(original_values))}</dd>
+                <dt>Review flags</dt>
+                <dd>{_escape(flags)}</dd>
+                <dt>Reviewer-created status</dt>
+                <dd>{_escape(_latest_status_label_text(state_summary))}</dd>
+                <dt>Reviewer-created note presence</dt>
+                <dd>{_escape(_card_note_presence_text(state_summary))}</dd>
+                <dt>Why included</dt>
+                <dd>{_escape(why)}</dd>
+                <dt>Source traceability summary</dt>
+                <dd>{_escape(_source_traceability_cue(source_document))}</dd>
+              </dl>
+              <p class="packet-draft-actions"><a href="{_escape(detail_href)}">Open record { _escape(label) }</a></p>
+            </section>"""
+
+
+def _packet_copy_summary(
+    records: list[Mapping[str, Any]],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+    traceability_counts: Mapping[str, int],
+    state_counts: Mapping[str, int],
+    findings: Mapping[str, int],
+    generated_at: str,
+) -> str:
+    lines = [
+        "Attorney Review Packet Draft",
+        f"Facility/license: {_packet_facility_label(records, return_context)}",
+        f"Date range: {_packet_draft_date_scope(return_context)}",
+        f"Generated: {generated_at}",
+        f"Records included: {len(records)}",
+        f"Findings represented: {_packet_findings_text(findings)}",
+        "",
+        "Reviewer-created state summary",
+        f"- Records with reviewer-created status: {state_counts['with_status']}",
+        f"- Records with reviewer-created notes: {state_counts['with_notes']}",
+        f"- Records without reviewer-created state: {state_counts['without_state']}",
+        "",
+        "Source traceability readiness",
+        f"- Source URL available: {traceability_counts['source_url']}",
+        f"- Raw SHA-256 available: {traceability_counts['raw_sha256']}",
+        f"- Connector/retrieval metadata available: {traceability_counts['connector_retrieval']}",
+        f"- Missing visible traceability cues: {traceability_counts['missing_any']}",
+        "",
+        "Included complaint records",
+    ]
+    if not records:
+        lines.append("- None shown for this packet context.")
+    for item in records:
+        source_record = _mapping(item, "source_record")
+        source_document = _mapping(source_record, "source_document")
+        original_values = _mapping(source_record, "original_values")
+        identity = _mapping(source_record, "identity")
+        source_record_key = _string(identity, "source_record_key")
+        state_summary = state_summaries.get(source_record_key, _empty_state_summary())
+        label = _display_value(original_values.get("complaint_control_number") or source_record_key)
+        lines.append(
+            "- "
+            + label
+            + f"; finding: {_optional_string(original_values, 'finding')}"
+            + f"; key dates: {_date_summary(original_values)}"
+            + f"; review flags: {_packet_review_flags_text(original_values, source_document)}"
+            + f"; reviewer status: {_latest_status_label_text(state_summary)}"
+            + f"; reviewer note: {_card_note_presence_text(state_summary)}"
+            + f"; source traceability: {_source_traceability_cue(source_document)}"
+        )
+    lines.extend(
+        [
+            "",
+            "Limitations",
+            "- This is a local/test preparation draft, not a legal report, final export, production packet, source-completeness proof, or facility-wide conclusion.",
+            "- Source-derived fields remain separate from reviewer-created notes/status.",
+            "- Review flags are screening aids, not legal conclusions.",
+            "- The CCLD public portal remains the source of record.",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _packet_finding_counts(records: list[Mapping[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for item in records:
+        original_values = _mapping(_mapping(item, "source_record"), "original_values")
+        finding = _optional_string(original_values, "finding") or "unknown"
+        counts[finding] = counts.get(finding, 0) + 1
+    return dict(sorted(counts.items(), key=lambda item: (item[0] == "unknown", item[0])))
+
+
+def _packet_findings_text(findings: Mapping[str, int]) -> str:
+    if not findings:
+        return "none represented"
+    return "; ".join(f"{label}: {count}" for label, count in findings.items())
+
+
+def _packet_review_flag_count(records: list[Mapping[str, Any]]) -> int:
+    return sum(
+        1
+        for item in records
+        if _review_flag_labels(
+            _mapping(_mapping(item, "source_record"), "original_values"),
+            _mapping(_mapping(item, "source_record"), "source_document"),
+        )
+    )
+
+
+def _packet_review_flags_text(
+    original_values: Mapping[str, Any],
+    source_document: Mapping[str, Any],
+) -> str:
+    flags = _review_flag_labels(original_values, source_document)
+    if not flags:
+        return "No review flags are visible from loaded source-derived fields."
+    return "; ".join(flags)
+
+
+def _latest_status_label_text(summary: Mapping[str, Any]) -> str:
+    latest_status = _summary_optional_string(summary, "latest_status")
+    if latest_status is None:
+        return "No reviewer-created status"
+    return _REVIEWER_STATUS_LABELS.get(latest_status, latest_status)
+
+
+def _packet_draft_date_scope(return_context: CcldQueueReturnContext) -> str:
+    if return_context.start_date or return_context.end_date:
+        return _return_context_date_range(return_context)
+    return "All loaded local/test records for this facility"
+
+
+def _packet_prepared_from(return_context: CcldQueueReturnContext) -> str:
+    if return_context.context_origin == "facility_lookup":
+        return "Facility lookup CCLD request context"
+    if return_context.context_origin == "prefilled_link":
+        return "Prefilled CCLD request context"
+    return "Manual CCLD request or reviewer queue context"
 
 
 def _packet_inclusion_reasons(
@@ -1227,10 +1589,41 @@ def _packet_preview_href(return_context: CcldQueueReturnContext) -> str:
     return f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?{urlencode(query_values)}"
 
 
+def _packet_draft_href(return_context: CcldQueueReturnContext) -> str:
+    if return_context.facility_number is None:
+        return REVIEWER_UI_PACKET_DRAFT_PATH
+    query_values = {
+        "facility_number": return_context.facility_number,
+        "start_date": return_context.start_date or "",
+        "end_date": return_context.end_date or "",
+        "request_context_origin": return_context.context_origin or "manual_entry",
+        "lookup_facility_name": return_context.lookup_facility_name or "",
+    }
+    return f"{REVIEWER_UI_PACKET_DRAFT_PATH}?{urlencode(query_values)}"
+
+
+def _packet_draft_href_for_queue(records: tuple[FacilityCaseBriefRecord, ...]) -> str:
+    if not records:
+        return REVIEWER_UI_PACKET_DRAFT_PATH
+    first_record = records[0]
+    query_values = {
+        "facility_number": first_record.facility_number,
+        "request_context_origin": "prefilled_link",
+        "packet_scope": "all_loaded",
+    }
+    return f"{REVIEWER_UI_PACKET_DRAFT_PATH}?{urlencode(query_values)}"
+
+
 def _packet_preview_confirmation_link(return_context: CcldQueueReturnContext) -> str:
     if return_context.facility_number is None:
         return ""
     return f'<a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Preview review packet</a>'
+
+
+def _packet_draft_confirmation_link(return_context: CcldQueueReturnContext) -> str:
+    if return_context.facility_number is None:
+        return ""
+    return f'<a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open packet draft</a>'
 
 
 def _case_brief_record_from_review_item(
@@ -3058,6 +3451,7 @@ def _render_notice(
             <div class="form-actions">
                 <a class="button" href="{_escape(ccld_request_href)}">Return to facility queue</a>
                 {_packet_preview_confirmation_link(return_context)}
+                {_packet_draft_confirmation_link(return_context)}
                 <a class="button button-secondary" href="{_escape(next_record_href)}">Open next priority record</a>
                 <a class="button button-secondary" href="{_escape(detail_href)}">Refresh this reviewer detail</a>
             </div>
@@ -3121,7 +3515,14 @@ def _reviewer_detail_href(
     return f"{REVIEWER_UI_DETAIL_PATH}?{urlencode(query_values)}"
 
 
-def _page(*, title: str, heading: str, main: str, actor_label: str | None = None) -> str:
+def _page(
+    *,
+    title: str,
+    heading: str,
+    main: str,
+    actor_label: str | None = None,
+    show_workflow_indicator: bool = True,
+) -> str:
         return render_page_shell(
                 title=title,
                 heading=heading,
@@ -3134,6 +3535,7 @@ def _page(*, title: str, heading: str, main: str, actor_label: str | None = None
                 active_path=REVIEWER_UI_PREFIX,
                 step_id="review_records",
                 next_action="Open next record or add reviewer-created notes/status",
+                show_workflow_indicator=show_workflow_indicator,
         )
 
 

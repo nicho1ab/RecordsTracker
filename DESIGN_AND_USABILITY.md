@@ -299,6 +299,13 @@ cautious-language, tester feedback, and reviewer-state boundaries.
   read-only preparation views and must not generate final exports, downloadable
   legal packets, packet persistence, delivery, legal conclusions, source-
   completeness claims, schema changes, or new workflow/persistence domains.
+- Print-ready packet drafts may provide a cleaner browser-print and copy-ready
+  presentation of the same local/test packet context. They should hide app
+  navigation and technical chrome in print, keep packet title, scope,
+  limitations, summaries, included records, and copyable text visible, and make
+  the no-context state explicit. They must not create server-side export files,
+  packet lifecycle state, finalization, delivery, persistence, legal reports, or
+  production export behavior.
 - Use the restrained legal-review visual system: page background `#F5F7FA`,
   white surfaces, tinted support panels near `#EEF7F6`, primary text near
   `#17212B`, muted slate text, deep teal primary actions, accessible blue focus,
