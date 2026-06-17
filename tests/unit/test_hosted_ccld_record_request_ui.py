@@ -321,9 +321,9 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Source traceability available" in html
     assert "Open priority record" in html
     assert "Open full queue" in html
-    assert "Preview review packet" in html
+    assert "Open local/test packet preview" in html
     assert "/reviewer/packet/preview?facility_number=157806098" in html
-    assert "Open packet draft" in html
+    assert "Open local/test preparation draft for browser copy or print" in html
     assert "/reviewer/packet/draft?facility_number=157806098" in html
     assert "Matching source-derived rows shown" in html
     assert "facility/license number 157806098" in html
@@ -389,9 +389,9 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Reviewer-created status/note cue" in html
     assert "Source traceability availability cue" in html
     assert "Open review workspace for 32-CR-20220407124448" in html
-    assert "Preview local/test preparation packet" in html
-    assert "Open print/copy local/test preparation draft" in html
-    assert "not a legal report, final export, or source-completeness proof" in normalized_html
+    assert "Review packet readiness before copying or printing" in html
+    assert "Open local/test preparation draft for browser copy or print" in html
+    assert "not a legal report, not a final export, not a certified report" in normalized_html
     assert "do not assign, claim, or mutate records" in normalized_html
     assert "Queue decision actions" in html
     assert "tester feedback for this queue context" in normalized_html
