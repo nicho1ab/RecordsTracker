@@ -31,10 +31,10 @@ When present, run `capture-hosted-ui-evidence.ps1` and verify draft workflow ass
 .\scripts\verify-hosted-reviewer-acceptance.ps1 -BaseUrl http://127.0.0.1:8003 -Mode live
 #>
 param(
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     [string]$BaseUrl,
 
-    [ValidateSet("live","fixture","scaffold")]
+    [ValidateSet("live", "fixture", "scaffold")]
     [string]$Mode = "scaffold",
 
     [string]$ContextFacilityNumber = "157806098",
@@ -52,9 +52,9 @@ function Test-AllowedBaseUrl {
     param([string]$Value)
     try { $uri = [System.Uri]::new($Value) }
     catch { throw "BaseUrl must be an absolute http:// or https:// URL." }
-    if ($uri.Scheme -notin @("http","https")) { throw "BaseUrl must use http or https." }
-    $hostValue = $uri.Host.Trim("[","]").ToLowerInvariant()
-    if ($hostValue -in @("localhost","127.0.0.1","::1")) { return }
+    if ($uri.Scheme -notin @("http", "https")) { throw "BaseUrl must use http or https." }
+    $hostValue = $uri.Host.Trim("[", "]").ToLowerInvariant()
+    if ($hostValue -in @("localhost", "127.0.0.1", "::1")) { return }
     $ip = $null
     if ([System.Net.IPAddress]::TryParse($hostValue, [ref]$ip)) {
         $bytes = $ip.GetAddressBytes()
@@ -93,10 +93,10 @@ Test-AllowedBaseUrl -Value $BaseUrl
 
 $checks = @(
     @{ Name = "Home"; Path = "/"; Required = @("CCLD Records Review") },
-    @{ Name = "Retrieve"; Path = "/ccld/records/request"; Required = @("Which facility should be reviewed?","Confirm facility") },
-    @{ Name = "Reviewer"; Path = "/reviewer"; Required = @("Worklist","Preview review packet","Open packet draft") },
+    @{ Name = "Retrieve"; Path = "/ccld/records/request"; Required = @("Which facility should be reviewed?", "Confirm facility") },
+    @{ Name = "Reviewer"; Path = "/reviewer"; Required = @("Worklist", "Preview review packet", "Open packet draft") },
     @{ Name = "ReviewerRecords"; Path = "/reviewer/records"; Required = @("Worklist") },
-    @{ Name = "ReviewerDetail"; Path = "/reviewer/records/detail?source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448"; Required = @("Complaint overview","Record review action") },
+    @{ Name = "ReviewerDetail"; Path = "/reviewer/records/detail?source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448"; Required = @("Complaint overview", "Record review action") },
     @{ Name = "PacketPreviewEmpty"; Path = "/reviewer/packet/preview"; Required = @("No facility/date packet context was supplied."); Forbidden = @("Date range: not provided") },
     @{ Name = "PacketPreviewContext"; Path = ("/reviewer/packet/preview?facility_number={0}&start_date={1}&end_date={2}&request_context_origin=manual_entry" -f $ContextFacilityNumber, $ContextStartDate, $ContextEndDate); Required = @($ContextFacilityNumber) ; Forbidden = @("Date range: not provided") },
     @{ Name = "PacketDraftEmpty"; Path = "/reviewer/packet/draft"; Required = @("No facility/date packet context was supplied."); Forbidden = @("Date range: not provided") },
@@ -104,10 +104,10 @@ $checks = @(
 )
 
 $forbiddenMarkers = @(
-    "provider_subject","provider-subject","provider_issuer","provider-issuer",
-    "client_secret","client-secret","connection string","connection_string",
-    "set-cookie","authorization:","bearer ","github_pat_","ghp_",
-    "private_header","private-header"
+    "provider_subject", "provider-subject", "provider_issuer", "provider-issuer",
+    "client_secret", "client-secret", "connection string", "connection_string",
+    "set-cookie", "authorization:", "bearer ", "github_pat_", "ghp_",
+    "private_header", "private-header"
 )
 
 $results = [System.Collections.ArrayList]::new()
@@ -164,13 +164,13 @@ if ($IncludeCapture) {
         Write-Host $captureOutput
         $evidenceLine = ($captureOutput -split "`n" | Where-Object { $_ -match "EVIDENCE_PACKET_PATH=" }) | Select-Object -First 1
         if ($evidenceLine) {
-            $evidencePath = $evidenceLine -replace '.*EVIDENCE_PACKET_PATH=',''
+            $evidencePath = $evidenceLine -replace '.*EVIDENCE_PACKET_PATH=', ''
             $evidencePath = $evidencePath.Trim()
             Write-Host "Evidence packet: $evidencePath"
             $assertionsCsv = Join-Path $evidencePath 'route-assertions.csv'
             if (Test-Path -LiteralPath $assertionsCsv) {
                 $assertions = Import-Csv -Path $assertionsCsv
-                foreach ($routeName in @('packet-draft-empty','packet-draft-context')) {
+                foreach ($routeName in @('packet-draft-empty', 'packet-draft-context')) {
                     $rows = $assertions | Where-Object { $_.route -eq $routeName -and $_.check -eq 'workflow step' }
                     if (-not $rows) {
                         Write-Warning "No workflow-step assertion found for $routeName in $assertionsCsv"

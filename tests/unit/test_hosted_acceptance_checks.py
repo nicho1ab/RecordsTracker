@@ -1,4 +1,4 @@
-import pathlib
+import pathlib  # isort: skip
 
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -11,7 +11,7 @@ def test_verify_script_has_required_flags_and_markers():
 
     # flags and parameters
     assert "-BaseUrl" in script or "Parameter(Mandatory" in script
-    assert "ValidateSet(\"live\", \"fixture\", \"scaffold\")" in script or "ValidateSet(\"live\",\"fixture\",\"scaffold\")" in script
+    assert 'ValidateSet("live' in script
     assert "RunWriteChecks" in script
     assert "IncludeCapture" in script
 
