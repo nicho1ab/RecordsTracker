@@ -134,6 +134,10 @@ Accessibility requirements apply to:
 	concepts so screen reader users and first-time testers do not have to infer
 	that different phrases refer to the same request, queue, reviewer-created
 	note/status, source traceability, or manual feedback checklist behavior.
+- Shared workflow indicators should expose each visible step's purpose as
+	screen-reader-readable text, not only as visual position, color, or compact
+	labels. Visually hidden helper text is acceptable when the same information
+	would otherwise crowd the compact workflow rail.
 
 ### Color and contrast
 
