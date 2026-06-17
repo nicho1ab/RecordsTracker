@@ -365,6 +365,14 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "not a legal report, final export, or source-completeness proof" in normalized_html
     assert "do not assign, claim, or mutate records" in normalized_html
     assert "Queue decision actions" in html
+    assert "tester feedback for this queue context" in normalized_html
+    assert "/feedback?feedback_type=Bug+report" in html
+    assert "workflow_area=queue" in html
+    assert "facility_number=157806098" in html
+    assert "start_date=2022-08-01" in html
+    assert "end_date=2022-08-31" in html
+    assert "reviewer_status_filter=all" in html
+    assert "Describe+what+was+confusing+about+this+queue+or+filter" in html
     assert "Find another CCLD facility" in html
     assert "Start a new CCLD request" in html
     assert "Open CCLD workflow help" in html
@@ -542,6 +550,8 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
     assert "manual feedback checklist" in blocked_html
     assert "what you expected to see" in blocked_normalized
     assert "choose All queue records" in blocked_normalized
+    assert "tester feedback for this filtered queue" in blocked_normalized
+    assert "reviewer_status_filter=blocked" in blocked_html
     assert counts == {
         "import_batches": 1,
         "source_records": 6,

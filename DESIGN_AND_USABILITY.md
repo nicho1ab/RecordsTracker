@@ -140,6 +140,15 @@ validation, safe unconfigured state, and safe success/failure messages. GitHub
 Issues feedback classification should use labels rather than GitHub Projects or
 issue types. Existing checklist cues should point testers toward what to include
 in feedback without duplicating the feedback form.
+Queue, reviewer detail, save confirmation, packet preview, and packet draft
+pages should link to `/feedback` with only bounded safe context when testers need
+to report confusing queue order, unexpected local/test records, source
+traceability questions, note/status action confusion, packet readiness concerns,
+copy/print preparation concerns, wording, keyboard flow, or accessibility issues.
+Feedback context is a triage aid only; it must not include raw source narrative,
+provider claims, tokens, cookies, private URLs, stack traces, server-local paths,
+environment values, legal conclusions, source-completeness claims, or new
+feedback persistence.
 First-run review session orientation should make the end-to-end local/test CCLD
 path visible from home, request/help, queue, and reviewer detail: facility lookup
 or manual entry, request-context confirmation, loaded local/test queue, reviewer

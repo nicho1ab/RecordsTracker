@@ -2463,9 +2463,10 @@ def _render_worklist_decision_flow(
         note/status reads only. They do not assign, claim, or mutate records.</p>
 {cards}
       </section>
-      <p>If the queue order, a missing record, wording, keyboard flow, or next step is
-      confusing, use the feedback checklist below or open <a href="{_FEEDBACK_PATH}">tester
-      feedback</a>.</p>
+    <p>If the queue order, a missing local/test record, an unexpected record,
+    source-traceability cue, reviewer-created status/note cue, wording, keyboard flow,
+    or next step is confusing, open <a href="{_escape(_feedback_href_for_queue(request))}">tester
+    feedback for this queue context</a>.</p>
     </section>"""
 
 
@@ -2632,8 +2633,24 @@ def _render_filtered_empty_recovery(
             </form>
             <p>If the filter behavior is confusing, copy the manual feedback checklist and describe
             the selected filter, the same facility/date request context, and what you
-            expected to see.</p>
+            expected to see, or open <a href="{_escape(_feedback_href_for_queue(request))}">tester
+            feedback for this filtered queue</a>.</p>
         </section>"""
+
+
+def _feedback_href_for_queue(request: CcldRecordRequest) -> str:
+    query_values = {
+        "feedback_type": "Bug report",
+        "workflow_area": "queue",
+        "page_path": CCLD_RECORD_REQUEST_PATH,
+        "facility_number": request.facility_number,
+        "start_date": request.start_date or "",
+        "end_date": request.end_date or "",
+        "request_context_origin": request.request_context_origin,
+        "reviewer_status_filter": request.reviewer_status_filter,
+        "prompt": "Describe what was confusing about this queue or filter.",
+    }
+    return f"{_FEEDBACK_PATH}?{urlencode(query_values)}"
 
 
 def _facility_scope_for_summary(request: CcldRecordRequest) -> str:

@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased
+- Improved the hosted feedback handoff review loop. Queue/worklist, filtered
+	queue recovery, reviewer detail, reviewer-created save confirmation, packet
+	preview, and packet draft now link to `/feedback` with bounded safe local/test
+	context so testers can report confusing queue order, missing or unexpected
+	records, source-traceability questions, note/status action confusion, packet
+	readiness concerns, copy/print preparation concerns, wording, keyboard flow, or
+	accessibility issues without adding feedback persistence, GitHub Projects
+	behavior, automatic submission, schema changes, retrieval changes, source-
+	derived mutation, reviewer-created writes from GET rendering, or legal
+	conclusions.
+
 - Improved packet preview and packet draft as local/test review-readiness
 	checkpoints. The packet surfaces now show included-record readiness counts,
 	source-traceability cues, reviewer-created status/note cues, records needing
