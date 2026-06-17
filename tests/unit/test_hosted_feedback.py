@@ -75,8 +75,12 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "What issue should be reported?" in html
     assert "packet/export-readiness" in html
     assert "browser copy or print" in html
+    assert "source-confidence next steps" in html
+    assert "missing local/test source values" in html
+    assert "proxy-related cues" in html
     assert "A complaint record looked missing or unexpected." in html
     assert "The source traceability summary was hard to use." in html
+    assert "A source-confidence cue did not make the next safe action clear." in html
     assert "active status-filter counts" in html
     assert "filtered-empty recovery" in html
     assert "The active reviewer-created status filter, shown count" in html
@@ -89,6 +93,7 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
         "A source-derived value looked wrong or incomplete after checking source traceability."
         in html
     )
+    assert "whether to add cautious reviewer-created state or use feedback" in html
     assert "whether to use a reviewer-created note or feedback" in html
     assert "raw SHA-256 hash" in html
     assert "source document/report marker looked missing or confusing" in html
@@ -167,6 +172,10 @@ def test_feedback_page_renders_safe_optional_handoff_context() -> None:
         "possible correction concerns where a source-derived value looked wrong"
         in normalized_html
     )
+    assert "source-confidence next-step confusion for missing local/test source values" in (
+        normalized_html
+    )
+    assert "proxy-related cues, or cautious note/status wording" in normalized_html
     assert "uncertainty about whether to use a reviewer-created note or feedback" in normalized_html
     assert "raw source narrative" in html
     assert 'action="/feedback"' in html

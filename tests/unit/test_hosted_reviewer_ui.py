@@ -699,6 +699,12 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "record-completeness claim" in html
     assert "Missing local/test values should be described" in normalized_html
     assert "not as source absence, record incompleteness, or data loss" in normalized_html
+    assert "Next safe action: check source traceability" in normalized_html
+    assert "use cautious reviewer-created note/status wording only when it helps" in (
+        normalized_html
+    )
+    assert "use feedback when the cue or wording remains confusing" in normalized_html
+    assert "then return to the same queue for the suggested next record" in normalized_html
     assert "Complaint field" in html
     assert "Source-confidence cue" in html
     assert "Present in this local/test source-derived record" in html
@@ -718,6 +724,9 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
         in html
     )
     assert "The local/test workflow does not submit correction decisions" in normalized_html
+    assert "For missing, confusing, or proxy-related source-derived values" in normalized_html
+    assert "avoid source absence or verification claims" in normalized_html
+    assert "continue review from the same queue context" in normalized_html
     assert "Field is present" in html
     assert "local/test record shows complaint received date" in html
     assert "Do not say the value is legally verified or an official finding" in normalized_html
@@ -728,6 +737,9 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Report-date proxy flag is shown" in html
     assert "local/test cue marks report date as a proxy" in normalized_html
     assert "Do not use the proxy flag alone" in normalized_html
+    assert "use feedback if proxy wording or next action remains confusing" in (
+        normalized_html
+    )
     assert "Field remains confusing after source traceability" in html
     assert "field remained unclear after checking source traceability" in normalized_html
     assert "Value looks like a UI or data issue" in html
@@ -886,10 +898,15 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
         normalized_html
     )
     assert "Source traceability observations" in html
+    assert "Source-confidence next-step confusion" in html
+    assert "whether to add a cautious reviewer-created note/status or use feedback" in (
+        normalized_html
+    )
     assert "Source traceability: note fields that were easy to confirm" in html
     assert "Source-confidence cues: note present values" in html
     assert "values not available in the local/test record" in normalized_html
     assert "proxy-flag context that affected review" in html
+    assert "whether the next safe action was clear" in normalized_html
     assert "Field-note uncertainty" in html
     assert "Possible correction concern: note which source-derived value looked wrong" in html
     assert "future correction workflow path was unclear" in html
@@ -1031,6 +1048,9 @@ def test_reviewer_ui_detail_source_confidence_proxy_cues_are_non_mutating() -> N
     assert "local/test cue marks report date as a proxy" in normalized_html
     assert "Do not use the proxy flag alone" in normalized_html
     assert "Use fallback/proxy wording only when this cue says" in normalized_html
+    assert "use feedback if proxy wording or next action remains confusing" in (
+        normalized_html
+    )
     assert "not a source-confidence score" in normalized_html
     assert "public-source absence finding" in html
     assert_no_secret_html(html)
