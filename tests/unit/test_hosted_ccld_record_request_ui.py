@@ -76,6 +76,13 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert '<main id="main-content" tabindex="-1">' in html
     assert "Retrieve complaint records for a facility" in html
     assert "Retrieval intake" in html
+    assert "Create the review request context" in html
+    assert "Start review request context" in html
+    assert "Facility/license number identifies the CCLD facility" in html
+    assert "Date range narrows complaint, visit, report, signed, or retrieval dates" in html
+    assert "Show existing queue searches loaded local/test source-derived records" in html
+    assert "without proving public-source completeness" in html
+    assert "continue to the review queue" in html
     assert "Choose complaint date range" in html or "Which facility should be reviewed?" in html
     assert 'for="facility-search-input"' in html
     assert "facility-suggestion-list" in html
@@ -106,6 +113,10 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "Retrieval modes" in html
     assert "What the app does not prove" in html
     assert "How to send useful feedback" in html
+    assert "How packet preparation fits in" in html
+    assert "packet preview/draft are local/test preparation" in normalized_html
+    assert "feedback carries safe context" in normalized_html
+    assert "not legal reports, final exports, or source-completeness proof" in html
     assert "Source-derived records" in html
     assert "reviewer-created notes/status" in normalized_html
     assert "no complaints exist" in normalized_html
@@ -135,6 +146,7 @@ def test_ccld_record_request_prefills_selected_facility_from_lookup() -> None:
     assert "value=\"facility_lookup\"" in html
     assert "name=\"lookup_facility_name\"" in html
     assert "Choose complaint date range" in html
+    assert "Use a bounded date range" in html
     assert (
         "Use the date range to narrow complaint, visit, report, signed, or retrieval dates"
         in html
@@ -154,6 +166,7 @@ def test_ccld_record_request_manual_entry_shows_context_confirmation() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Which facility should be reviewed?" in html
+    assert "type the digit facility/license number directly" in html
     assert "Retrieval not configured" in html
     assert "Search by name, license number, city, ZIP, type, or status." in normalized_html
     assert "name=\"request_context_origin\"" in html

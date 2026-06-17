@@ -158,6 +158,13 @@ continuation, and manual feedback checklist copy. Orientation must not imply a
 saved session, persisted queue state, duplicate checklist, feedback persistence,
 auth, workflow engine, browser live fetch, connector execution, or artifact
 building from browser requests.
+Home and CCLD intake pages should make the start choice explicit: use facility
+lookup when the tester knows a name/location/reference detail, use manual
+facility/license number entry when they already have the digit identifier, then
+set a complaint date range before loading or retrieving records. This start
+handoff should point forward to queue, reviewer detail, packet preparation, and
+feedback without implying saved sessions, source completeness, legal conclusions,
+or new workflow state.
 Reviewer detail and request-queue navigation should make next-record movement
 clear without implying persisted assignment, record claiming, or production
 workflow state. Suggested-next cues should remain derived from the current
