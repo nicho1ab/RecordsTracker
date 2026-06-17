@@ -504,13 +504,32 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "32-CR-20220407124448" in html
     assert "Complaint overview" in html
+    assert "Complaint review workspace decision flow" in html
+    assert "Queue-to-detail continuity" in html
+    assert "Active CCLD request context" in html
+    assert "Selected record identity" in html
+    assert "Why this record is prioritized from the worklist" in html
+    assert "What to check first" in html
+    assert "After this detail" in html
+    assert "Return to same facility/date queue" in html
+    assert "Open next recommended record from this context" in html
+    assert (
+        "Review source traceability before relying on missing, confusing, or proxy-related values"
+        in html
+    )
+    assert "GET rendering does not write reviewer-created state" in normalized_html
+    assert "does not mutate source-derived records" in normalized_html
+    assert "not a legal report, final export, or source-completeness proof" in normalized_html
     assert "Why this record is flagged" in html
     assert "Record review action" in html
     assert "Source traceability summary" in html
-    assert html.index("Complaint overview") < html.index("Why this record is flagged")
-    assert html.index("Why this record is flagged") < html.index("Record review action")
-    assert html.index("Record review action") < html.index("Source traceability summary")
+    assert html.index("Complaint overview") < html.index("Complaint review workspace decision flow")
+    assert html.index("Complaint review workspace decision flow") < html.index(
+        "Why this record is flagged"
+    )
+    assert html.index("Why this record is flagged") < html.index("Source traceability summary")
     assert html.index("Source traceability summary") < html.index("Record summary")
+    assert html.index("Reviewer-created state") < html.index("Record review action")
     assert "screening aids, not legal conclusions" in normalized_html
     assert "Needs source check: first activity date missing locally" in html
     assert "Source traceability available" in html
@@ -531,7 +550,8 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "automatic record claim" in normalized_html
     assert "official workflow state" in html
     assert "Detail navigation" in html
-    assert "Return to CCLD request or queue" in html
+    assert "Return to same facility/date queue" in html
+    assert "Open next recommended record from this context" in html
     assert "Find another CCLD facility" in html
     assert "Open CCLD workflow help" in html
     assert "Back to reviewer records" in html
@@ -668,6 +688,10 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Use this panel after reading the complaint overview and review flags" in (
         normalized_html
     )
+    assert "Cautious note/status guidance" in html
+    assert "Use note text to record what you checked" in html
+    assert "review flag, possible delay indicator" in normalized_html
+    assert "Do not write that abuse, neglect, harm" in html
     assert "Add a review status or note." in html
     assert "Status is reviewer-created local/test state for queue progress" in (
         normalized_html
@@ -763,6 +787,45 @@ def test_reviewer_ui_detail_missing_traceability_uses_clear_non_conclusive_wordi
     assert "raw paths are not shown in the browser" in html
     assert "not proof that the public source lacks a record" in normalized_html
     assert "does not make legal, facility-wide, completeness" in normalized_html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_detail_preserves_direct_queue_request_context() -> None:
+    with _seeded_connection() as connection:
+        before_counts = _table_counts(connection)
+
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}"
+            "&facility_number=157806098&start_date=2026-01-01&end_date=2026-01-31"
+            "&request_context_origin=manual_entry",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_counts == after_counts
+    assert "Complaint review workspace decision flow" in html
+    assert "Facility/license number" in html
+    assert "157806098" in html
+    assert "Date range" in html
+    assert "2026-01-01 to 2026-01-31" in html
+    assert "Manual facility/license entry" in html
+    assert "return_facility_number" in html
+    assert "return_start_date" in html
+    assert "return_end_date" in html
+    assert "Preview local/test preparation packet" in html
+    assert "Open local/test preparation draft" in html
+    assert "not a legal report, final export, or source-completeness proof" in (
+        normalized_html
+    )
+    assert "legally sufficient" not in normalized_html.casefold()
+    assert "verified abuse" not in normalized_html.casefold()
+    assert "complete source record" not in normalized_html.casefold()
     assert_no_secret_html(html)
 
 
@@ -906,9 +969,9 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert "Next" in html
     assert "Return to facility queue" in html
     assert "Open next priority record" in html
-    assert "Preview review packet" in html
+    assert "Preview local/test preparation packet" in html
     assert f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?facility_number=157806098" in html
-    assert "Open packet draft" in html
+    assert "Open local/test preparation draft" in html
     assert f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098" in html
     assert "Queue progress and note/status cues are derived from reviewer-created state" in html
     assert "same facility/license number and date range" in normalized_html
@@ -918,6 +981,7 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert "automatic record claim" in normalized_html
     assert "official workflow state" in html
     assert "manual feedback checklist" in html
+    assert "not a legal report, final export, or source-completeness proof" in normalized_html
     assert "record-specific observation" in html
     assert "existing manual feedback checklist" in html
     assert "source traceability, source-confidence, or field-note wording" in (
@@ -1047,9 +1111,9 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "Next" in html
     assert "Return to facility queue" in html
     assert "Open next priority record" in html
-    assert "Preview review packet" in html
+    assert "Preview local/test preparation packet" in html
     assert f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?facility_number=157806098" in html
-    assert "Open packet draft" in html
+    assert "Open local/test preparation draft" in html
     assert f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098" in html
     assert "Queue progress and note/status cues are derived from reviewer-created state" in html
     assert "submit the request again" in html
@@ -1058,6 +1122,9 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "automatic record claim" in " ".join(html.split())
     assert "official workflow state" in html
     assert "manual feedback checklist" in html
+    assert "not a legal report, final export, or source-completeness proof" in " ".join(
+        html.split()
+    )
     assert "record-specific observation" in html
     assert "existing manual feedback checklist" in html
     assert "source traceability, source-confidence, or field-note wording" in (

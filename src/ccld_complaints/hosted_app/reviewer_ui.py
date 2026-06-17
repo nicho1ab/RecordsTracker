@@ -29,6 +29,7 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
 from ccld_complaints.hosted_app.facility_case_brief import (
     FacilityCaseBrief,
     FacilityCaseBriefRecord,
+    priority_reason_labels,
     render_facility_case_brief,
     render_record_flag_reason_section,
 )
@@ -1644,13 +1645,13 @@ def _packet_draft_href_for_queue(records: tuple[FacilityCaseBriefRecord, ...]) -
 def _packet_preview_confirmation_link(return_context: CcldQueueReturnContext) -> str:
     if return_context.facility_number is None:
         return ""
-    return f'<a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Preview review packet</a>'
+    return f'<a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Preview local/test preparation packet</a>'
 
 
 def _packet_draft_confirmation_link(return_context: CcldQueueReturnContext) -> str:
     if return_context.facility_number is None:
         return ""
-    return f'<a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open packet draft</a>'
+    return f'<a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft</a>'
 
 
 def _case_brief_record_from_review_item(
@@ -2182,8 +2183,8 @@ def _render_detail(
                     <p><span class="badge badge-muted">Finding: {_escape(_optional_string(original_values, 'finding'))}</span></p>
                     {_render_review_flag_chips(original_values, source_document)}
                 </section>
+            {_render_detail_decision_continuity(source_record, detail, related_records, return_context)}
             {_render_detail_flag_reason_section(source_record, detail, related_records, return_context)}
-        {_render_review_actions(source_record_key, detail, return_context)}
                                                                 {_render_source_traceability_section(
                                                                                                 identity,
                                                                                                 source_document,
@@ -2199,6 +2200,7 @@ def _render_detail(
         {_render_reviewer_state_section(detail)}
                         </aside>
                     </div>
+        {_render_review_actions(source_record_key, detail, return_context)}
         <section aria-labelledby="source-derived-heading">
                         <h2 id="source-derived-heading">Source-derived full field details</h2>
             <p>These are safe scalar fields from the selected source-derived row. Narrative
@@ -2279,6 +2281,136 @@ def _detail_summary_sentence(
     )
 
 
+def _render_detail_decision_continuity(
+    source_record: Mapping[str, Any],
+    detail: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> str:
+    identity = _mapping(source_record, "identity")
+    original_values = _mapping(source_record, "original_values")
+    source_record_key = _string(identity, "source_record_key")
+    control_number = _optional_string(original_values, "complaint_control_number")
+    finding = _optional_string(original_values, "finding")
+    record = _case_brief_record_from_detail(source_record, detail, related_records, return_context)
+    reasons = priority_reason_labels(record)
+    reason_items = "\n".join(f"              <li>{_escape(reason)}</li>" for reason in reasons)
+    check_items = "\n".join(
+        f"              <li>{_escape(item)}</li>"
+        for item in _detail_check_first_items(original_values)
+    )
+    ccld_request_href = _ccld_request_href(related_records, return_context)
+    next_record_href = _next_priority_record_href(source_record_key, related_records, return_context)
+    next_record_text = (
+        "Open next recommended record from this same facility/date context"
+        if next_record_href != ccld_request_href
+        else "Return to the same facility/date queue to choose the next record"
+    )
+    packet_links = _detail_packet_links(return_context)
+    return f"""<section class="summary-card" aria-labelledby="detail-decision-continuity-heading">
+          <p class="launch-kicker">Queue-to-detail continuity</p>
+          <h2 id="detail-decision-continuity-heading">Complaint review workspace decision flow</h2>
+          <p>This detail page continues the review-priority queue decision flow. Use it to confirm
+          why the record was opened, check source-derived values, record a cautious
+          reviewer-created status/note when appropriate, and return to the same CCLD request
+          context.</p>
+          <section aria-labelledby="detail-active-context-heading">
+            <h3 id="detail-active-context-heading">Active CCLD request context</h3>
+            <dl>
+              <dt>Facility/license number</dt>
+              <dd>{_escape(_display_value(return_context.facility_number))}</dd>
+              <dt>Date range</dt>
+              <dd>{_escape(_return_context_date_range(return_context))}</dd>
+              <dt>Request origin</dt>
+              <dd>{_escape(_request_origin_label(return_context.context_origin))}</dd>
+            </dl>
+          </section>
+          <section aria-labelledby="selected-record-identity-heading">
+            <h3 id="selected-record-identity-heading">Selected record identity</h3>
+            <dl>
+              <dt>Complaint/control identifier</dt>
+              <dd>{_escape(control_number)}</dd>
+              <dt>Source record key</dt>
+              <dd>{_escape(source_record_key)}</dd>
+              <dt>Source-derived finding value</dt>
+              <dd>{_escape(finding)}</dd>
+              <dt>Source-derived date/flag summary</dt>
+              <dd>{_escape(_detail_date_flag_summary(original_values))}</dd>
+            </dl>
+          </section>
+          <section aria-labelledby="detail-priority-rationale-heading">
+            <h3 id="detail-priority-rationale-heading">Why this record is prioritized from the worklist</h3>
+            <p>These are existing source-derived and reviewer-created cues. They are review flags,
+            not legal conclusions or source-completeness proof.</p>
+            <ul>
+{reason_items}
+            </ul>
+          </section>
+          <section aria-labelledby="check-first-heading">
+            <h3 id="check-first-heading">What to check first</h3>
+            <p>Check these source-derived values before saving a reviewer-created observation.</p>
+            <ul>
+{check_items}
+            </ul>
+          </section>
+          <section aria-labelledby="detail-next-steps-heading">
+            <h3 id="detail-next-steps-heading">After this detail</h3>
+            <p>Save only cautious reviewer-created status/note observations. GET rendering does not
+            write reviewer-created state and does not mutate source-derived records.</p>
+            <div class="form-actions">
+              <a class="button" href="{_escape(ccld_request_href)}">Return to same facility/date queue</a>
+              <a class="button button-secondary" href="{_escape(next_record_href)}">{_escape(next_record_text)}</a>
+{packet_links}
+            </div>
+            <p class="helper-text">Packet links are local/test preparation aids, not a legal report,
+            final export, or source-completeness proof.</p>
+          </section>
+        </section>"""
+
+
+def _request_origin_label(value: str | None) -> str:
+    if value == "facility_lookup":
+        return "Facility lookup result"
+    if value == "prefilled_link":
+        return "Prefilled facility/license link"
+    return "Manual facility/license entry"
+
+
+def _detail_packet_links(return_context: CcldQueueReturnContext) -> str:
+    if return_context.facility_number is None:
+        return ""
+    return f"""              <a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Preview local/test preparation packet</a>
+              <a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft</a>"""
+
+
+def _detail_check_first_items(original_values: Mapping[str, Any]) -> tuple[str, ...]:
+    items = [
+        f"Complaint received date: {_optional_string(original_values, 'complaint_received_date')}",
+        f"Visit date: {_optional_string(original_values, 'visit_date')}",
+        f"Report date: {_optional_string(original_values, 'report_date')}",
+        f"Date signed: {_optional_string(original_values, 'date_signed')}",
+        f"Finding value: {_optional_string(original_values, 'finding')}",
+    ]
+    if original_values.get("missing_first_activity_date") is True:
+        items.append("Needs source check: first activity date missing locally.")
+    if original_values.get("report_date_used_as_proxy") is True:
+        items.append("Review flag: report date used as proxy; use cautious proxy wording only after source traceability review.")
+    items.append("Review source traceability before relying on missing, confusing, or proxy-related values.")
+    return tuple(items)
+
+
+def _detail_date_flag_summary(original_values: Mapping[str, Any]) -> str:
+    parts = [_date_summary(original_values)]
+    thresholds = _delay_thresholds(original_values)
+    if thresholds:
+        parts.append(f"possible delay indicator over {max(thresholds)} days")
+    if original_values.get("missing_first_activity_date") is True:
+        parts.append("needs source check: first activity date missing locally")
+    if original_values.get("report_date_used_as_proxy") is True:
+        parts.append("review flag: report date used as proxy")
+    return "; ".join(parts)
+
+
 def _render_key_date_cards(original_values: Mapping[str, Any]) -> str:
     cards = "\n".join(
         f"        <div class=\"stat-card\"><strong>{_escape(value)}</strong><span>{_escape(label)}</span></div>"
@@ -2334,10 +2466,14 @@ def _render_detail_navigation(
 ) -> str:
     detail_href = _reviewer_detail_href(source_record_key, return_context)
     ccld_request_href = _ccld_request_href(related_records, return_context)
+    next_record_href = _next_priority_record_href(source_record_key, related_records, return_context)
+    packet_links = _detail_navigation_packet_items(return_context)
     return f"""<section aria-labelledby="detail-navigation-heading">
       <h2 id="detail-navigation-heading">Detail navigation</h2>
             <ul>
-                <li><a href="{_escape(ccld_request_href)}">Return to CCLD request or queue</a></li>
+                <li><a href="{_escape(ccld_request_href)}">Return to same facility/date queue</a></li>
+                <li><a href="{_escape(next_record_href)}">Open next recommended record from this context</a></li>
+{packet_links}
                 <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find another CCLD facility</a></li>
                 <li><a href="{CCLD_HELP_PATH}">Open CCLD workflow help</a></li>
                 <li><a href="{REVIEWER_UI_RECORDS_PATH}">Back to reviewer records</a></li>
@@ -2354,6 +2490,13 @@ def _render_detail_navigation(
                 <li><a href="#detail-feedback-heading">Prepare tester feedback</a></li>
             </ul>
         </section>"""
+
+
+def _detail_navigation_packet_items(return_context: CcldQueueReturnContext) -> str:
+    if return_context.facility_number is None:
+        return ""
+    return f"""                <li><a href="{_escape(_packet_preview_href(return_context))}">Preview local/test preparation packet</a></li>
+                <li><a href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft</a></li>"""
 
 
 def _render_record_summary_section(
@@ -3003,11 +3146,16 @@ def _return_context_from_values(
     related_records: list[Mapping[str, Any]] | None,
 ) -> CcldQueueReturnContext:
     context = CcldQueueReturnContext(
-        facility_number=_optional_form_value(values, "return_facility_number"),
-        start_date=_optional_form_value(values, "return_start_date"),
-        end_date=_optional_form_value(values, "return_end_date"),
-        context_origin=_optional_form_value(values, "return_context_origin"),
-        lookup_facility_name=_optional_form_value(values, "return_lookup_facility_name"),
+        facility_number=_optional_form_value(values, "return_facility_number")
+        or _optional_form_value(values, "facility_number"),
+        start_date=_optional_form_value(values, "return_start_date")
+        or _optional_form_value(values, "start_date"),
+        end_date=_optional_form_value(values, "return_end_date")
+        or _optional_form_value(values, "end_date"),
+        context_origin=_optional_form_value(values, "return_context_origin")
+        or _optional_form_value(values, "request_context_origin"),
+        lookup_facility_name=_optional_form_value(values, "return_lookup_facility_name")
+        or _optional_form_value(values, "lookup_facility_name"),
     )
     if related_records is None:
         return context
@@ -3191,6 +3339,14 @@ def _render_review_actions(
             <p>After saving, the confirmation shows what changed, states that it is reviewer-created
             state, confirms source-derived fields remain unchanged, and offers Return to facility
             queue plus Open next priority record guidance.</p>
+            <section aria-labelledby="cautious-action-guidance-heading">
+                <h3 id="cautious-action-guidance-heading">Cautious note/status guidance</h3>
+                <p>Use note text to record what you checked, not to create legal conclusions.
+                Helpful local/test wording can mention a review flag, possible delay indicator,
+                missing local/test value, source traceability available, or needs source check cue.</p>
+                <p>Do not write that abuse, neglect, harm, liability, rights deprivation, or source
+                completeness has been verified by this page.</p>
+            </section>
             {_return_context_hidden_summary(return_context)}
             {_render_note_form(source_record_key, return_context)}
             {_render_status_form(source_record_key, return_context)}
@@ -3468,6 +3624,8 @@ def _render_notice(
                 did not behave as expected, include that record-specific observation in the
                 existing manual feedback checklist. Also carry forward any source traceability,
                 source-confidence, or field-note wording that was confusing for this record.</p>
+                <p>Use packet preview or draft only when you are ready for local/test preparation;
+                they are not a legal report, final export, or source-completeness proof.</p>
                 <dl>
                     <dt>Same facility/license number</dt>
                     <dd>{_escape(_display_value(return_context.facility_number))}</dd>
