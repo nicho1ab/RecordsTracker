@@ -238,7 +238,7 @@ def render_feedback_page(
         <section class="hero-card" aria-labelledby="feedback-purpose-heading">
             <p class="launch-kicker">Tester support</p>
             <h2 id="feedback-purpose-heading">What issue should be reported?</h2>
-            <p>Choose the feedback type and describe what blocked retrieval, review, source traceability, correction-readiness guidance, missing local/test traceability values, wording, or keyboard flow.</p>
+            <p>Choose the feedback type and describe what blocked retrieval, review, active status-filter counts, filtered-empty recovery, source traceability, correction-readiness guidance, missing local/test traceability values, wording, or keyboard flow.</p>
             <p class="helper-text">Keyboard flow: choose a feedback type, Tab to Description, submit only safe details, and use the visible validation message if a required field is missing.</p>
         </section>
         {_feedback_context_panel(handoff_context)}
@@ -262,6 +262,7 @@ def render_feedback_page(
                 <li>The correction-readiness guidance did not make clear whether to use a reviewer-created note or feedback.</li>
                 <li>A source URL, raw SHA-256 hash, connector metadata, retrieval timestamp, or source document/report marker looked missing or confusing.</li>
                 <li>The workflow did not help me decide what to review next.</li>
+                <li>The active reviewer-created status filter, shown count, total queue count, or filtered-empty recovery action was confusing.</li>
             </ul>
         </details>
 """,
@@ -307,8 +308,9 @@ def _feedback_context_panel(context: FeedbackHandoffContext | None) -> str:
             <dl>
 {row_markup}
             </dl>
-            <p>Describe what was confusing, missing, unexpected, or hard to use, including source
-            traceability concerns such as source URL, raw SHA-256 hash, connector metadata,
+            <p>Describe what was confusing, missing, unexpected, or hard to use, including active
+            reviewer-created status filter confusion, shown-count or total-count confusion,
+            filtered-empty recovery problems, source traceability concerns such as source URL, raw SHA-256 hash, connector metadata,
             retrieval timestamp, source document/report marker, or local/test traceability value
             missing; possible correction concerns where a source-derived value looked wrong or
             incomplete after checking traceability; or uncertainty about whether to use a

@@ -821,6 +821,17 @@ def _render_help_page() -> str:
                         status are reviewer-created state and do not edit source-derived fields.</p>
                     </details>
                     <details>
+                        <summary id="help-status-filter-heading">How reviewer-created status filters work</summary>
+                        <p>The CCLD review queue can show an active reviewer-created status filter,
+                        records shown under that filter, total records in the same facility/date
+                        queue, and the available status filters.</p>
+                        <p>Reviewer-created status filters are local/test queue views. They are not
+                        source-derived facts, assignments, record claims, persisted queue state, or
+                        source-completeness proof. A filtered-empty result can mean the filter is
+                        hiding records; use the show-all recovery action before treating the queue as
+                        complete.</p>
+                    </details>
+                    <details>
                         <summary id="help-correction-readiness-heading">How correction-readiness works</summary>
                         <p>Correction-readiness means a tester has noticed that a source-derived value
                         may need correction review later. Check source traceability first, then capture
@@ -875,8 +886,9 @@ def _render_workflow_overview() -> str:
                 <li>Submit the facility/date request to search loaded local/test CCLD records.
                 If no local match appears, use the no-match/load guidance without treating it as
                 public-source absence.</li>
-                <li>Use the CCLD review queue to choose a suggested next record, filter by
-                reviewer-created status, or spot queue wording that belongs in feedback.</li>
+                <li>Use the CCLD review queue to choose a suggested next record, read the
+                active reviewer-created status filter and counts, or spot queue wording that
+                belongs in feedback.</li>
                 <li>Use reviewer detail to check source traceability, source-confidence cues,
                 possible correction concerns, and field-note guidance before saving reviewer notes/status as tester-created
                 observations.</li>
@@ -924,7 +936,10 @@ def _render_key_terms_section() -> str:
                 and not an official public-source fact.</dd>
                 <dt>Reviewer-status filter</dt>
                 <dd>A queue filter based on existing reviewer-created status rows. Records with
-                no saved reviewer status are counted as not started.</dd>
+                no saved reviewer status are counted as not started. The active filter and
+                counts describe this local/test queue view only; they are not source-derived
+                facts, assignments, record claims, persisted queue state, or public-source
+                completeness proof.</dd>
                 <dt>Suggested next record</dt>
                 <dd>Local/test navigation help derived from the current request context and
                 reviewer-created note/status cues, not an assignment or record claim.</dd>
@@ -944,7 +959,8 @@ def _render_feedback_guidance_section() -> str:
             <p>This local/test app does not store, send, email, export, or otherwise persist
             feedback. Useful tester feedback includes the facility/license number, requested
             date range, lookup or request criteria that felt unclear, records that seemed
-            missing or unexpected, source traceability cues, note/status confirmation behavior,
+            missing or unexpected, active reviewer-created status filter or count confusion,
+            filtered-empty recovery, source traceability cues, note/status confirmation behavior,
             possible correction concern wording, uncertainty about note versus feedback,
             return-to-queue behavior, confusing wording, workflow friction, and suggested
             improvements.</p>
@@ -1114,10 +1130,9 @@ def _render_matched_result(
             {_render_queue_progress_summary(decision_queue_items)}
             {_render_queue_triage_summary(request, decision_queue_items)}
             {_render_queue_filter_form(request)}
+            {_render_queue_filter_summary(request, decision_queue_items, filtered_queue_items)}
             {_render_filtered_empty_recovery(request, decision_queue_items, filtered_queue_items)}
             {_render_worklist_decision_flow(request, decision_queue_items, filtered_queue_items, reference_source)}
-            <p>Showing {len(filtered_queue_items)} of {len(decision_queue_items)} matching complaint
-            record(s) for queue filter {_escape(_status_label(request.reviewer_status_filter))}.</p>
             <details class="technical-details">
             <summary>Table view and queue guidance</summary>
             {_render_queue_first_run_steps()}
@@ -2660,21 +2675,24 @@ def _render_filtered_empty_recovery(
                 return ""
         return f"""<section aria-labelledby="filtered-empty-recovery-heading">
             <h3 id="filtered-empty-recovery-heading">Filtered queue recovery</h3>
-            <p>The selected reviewer-status filter hides all queue rows for this same
-            facility/date request context. This does not mean records are missing, deleted,
-            or absent from local/test data or public source material.</p>
+            <p>No records match this active reviewer-created status filter for the same
+            facility/date request. This filtered-empty result does not mean records are missing,
+            deleted, absent from local/test data, absent from public source material, or complete
+            in the public CCLD portal.</p>
             <dl>
                 <dt>Active request context</dt>
                 <dd>{_escape(_facility_scope_for_summary(request))}; date range
                 {_escape(_date_scope_text(request))}</dd>
-                <dt>Selected reviewer-status filter</dt>
+                <dt>Active reviewer-created status filter</dt>
                 <dd>{_escape(_status_label(request.reviewer_status_filter))}</dd>
-                <dt>Queue records before this filter</dt>
+                <dt>Records shown under active filter</dt>
+                <dd>{len(filtered_queue_items)}</dd>
+                <dt>Total records in this same facility/date queue</dt>
                 <dd>{len(queue_items)}</dd>
             </dl>
             <p>Reviewer-status filters use existing reviewer-created state. Records without a saved
-            status are counted as not started. Clear the filter or choose another status to continue
-            reviewing this same request queue.</p>
+            status are counted as not started. Show all reviewer statuses or choose another status
+            to continue reviewing this same facility/date request queue.</p>
             <form action="{CCLD_RECORD_REQUEST_PATH}" method="post">
                 <input type="hidden" name="{_REQUEST_CONTEXT_ORIGIN_FIELD}"
                     value="{_escape(request.request_context_origin)}">
@@ -2685,10 +2703,10 @@ def _render_filtered_empty_recovery(
                 <input type="hidden" name="start_date" value="{_escape(request.start_date or '')}">
                 <input type="hidden" name="end_date" value="{_escape(request.end_date or '')}">
                 <input type="hidden" name="reviewer_status_filter" value="all">
-                <p><button type="submit">Show all queue records for this request</button></p>
+                <p><button type="submit">Show all reviewer statuses for this facility/date request</button></p>
             </form>
             <p>If the filter behavior is confusing, copy the manual feedback checklist and describe
-            the selected filter, the same facility/date request context, and what you
+            the active filter, counts, same facility/date request context, and what you
             expected to see, or open <a href="{_escape(_feedback_href_for_queue(request))}">tester
             feedback for this filtered queue</a>.</p>
         </section>"""
@@ -2998,11 +3016,51 @@ def _render_queue_filter_form(request: CcldRecordRequest) -> str:
 {options}
         </select>
                 <span id="queue-status-filter-result-help">Filtering uses existing
-                reviewer-created note/status rows. It does not change source-derived records
-                or save queue state.</span>
+                reviewer-created note/status rows. It does not change source-derived records,
+                save queue state, assign a reviewer, claim a record, or prove public-source
+                completeness. Choose All queue records to show every reviewer-created status
+                for this same facility/date request.</span>
       </p>
             <p><button type="submit">Apply reviewer-status filter</button></p>
     </form>"""
+
+
+def _render_queue_filter_summary(
+    request: CcldRecordRequest,
+    queue_items: tuple[CcldRequestQueueItem, ...],
+    filtered_queue_items: tuple[CcldRequestQueueItem, ...],
+) -> str:
+    counts = _queue_status_counts(queue_items)
+    return f"""<section aria-labelledby="queue-filter-summary-heading">
+            <h3 id="queue-filter-summary-heading">Active reviewer-created status filter</h3>
+            <p>Active reviewer-created status filter: {_escape(_status_label(request.reviewer_status_filter))}.</p>
+            <p>Showing {len(filtered_queue_items)} of {len(queue_items)} records for this same facility/date request.</p>
+            <dl>
+                <dt>Records shown under active filter</dt>
+                <dd>{len(filtered_queue_items)}</dd>
+                <dt>Total records in this same facility/date queue</dt>
+                <dd>{len(queue_items)}</dd>
+                <dt>Available reviewer-created status filters</dt>
+                <dd>{_escape(_status_filter_values_text())}</dd>
+                <dt>Not started</dt>
+                <dd>{counts['not_started']}</dd>
+                <dt>In review</dt>
+                <dd>{counts['in_review']}</dd>
+                <dt>Needs follow-up</dt>
+                <dd>{counts['needs_follow_up']}</dd>
+                <dt>Reviewed</dt>
+                <dd>{counts['reviewed']}</dd>
+                <dt>Blocked</dt>
+                <dd>{counts['blocked']}</dd>
+            </dl>
+            <p>These counts come from the loaded local/test queue plus existing reviewer-created
+            note/status reads. They are not source-derived facts, not record assignment, not
+            record claiming, not persisted queue state, and not a source-completeness proof.</p>
+        </section>"""
+
+
+def _status_filter_values_text() -> str:
+    return ", ".join(_status_label(value) for value in _STATUS_FILTER_VALUES)
 
 
 def _render_empty_filtered_queue_row(request: CcldRecordRequest) -> str:
@@ -3010,8 +3068,8 @@ def _render_empty_filtered_queue_row(request: CcldRecordRequest) -> str:
                         <td colspan="8">No complaint records match the selected
                         reviewer-status filter:
                         {_escape(_status_label(request.reviewer_status_filter))}. The filter is
-                        hiding rows for the same request context; choose All queue records to
-                        return to the full CCLD request queue.</td>
+                        hiding rows for the same request context; choose All queue records or
+                        the show-all recovery action to return to the full CCLD request queue.</td>
                     </tr>"""
 
 
