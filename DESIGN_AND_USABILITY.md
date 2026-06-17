@@ -322,6 +322,14 @@ cautious-language, tester feedback, and reviewer-state boundaries.
   the no-context state explicit. They must not create server-side export files,
   packet lifecycle state, finalization, delivery, persistence, legal reports, or
   production export behavior.
+- Packet preview and packet draft copy/print preparation guidance should be a
+  visible tester convention, not an icon-only or hidden convention. Before a
+  tester uses browser copy or print, the UI should identify included local/test
+  records, records needing source check, records needing reviewer-created
+  status/note attention, what source traceability available means for checking
+  important source-derived values, how to send feedback for confusing or risky
+  copy/print preparation content, and that the page is not a legal report, final
+  export, certified report, or source-completeness proof.
 - Use the restrained legal-review visual system: page background `#F5F7FA`,
   white surfaces, tinted support panels near `#EEF7F6`, primary text near
   `#17212B`, muted slate text, deep teal primary actions, accessible blue focus,

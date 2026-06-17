@@ -269,7 +269,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Queue triage summary" not in ccld_queue_body
         or b"Table view and queue guidance" not in ccld_queue_body
         or b"Suggested next record to open" not in ccld_queue_body
-        or b"Preview review packet" not in ccld_queue_body
+        or b"Open local/test packet preview" not in ccld_queue_body
         or b"Copy details for feedback" not in ccld_queue_body
         or b"Advanced retrieval and local load actions" not in ccld_queue_body
     ):
@@ -387,7 +387,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold reviewer detail did not return usable guidance.")
     if (
         packet_preview_status != 200
-        or b"Review packet preview" not in packet_preview_body
+        or b"Local/test packet preparation preview" not in packet_preview_body
         or b"Traceability readiness" not in packet_preview_body
         or b"Reviewer-created state summary" not in packet_preview_body
         or b"Included complaint records" not in packet_preview_body
@@ -399,7 +399,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         packet_draft_status != 200
         or b"Attorney Review Packet Draft" not in packet_draft_body
-        or b"Print / Save as PDF using browser print" not in packet_draft_body
+        or b"Use browser copy or print only after review" not in packet_draft_body
         or b"Copyable packet summary" not in packet_draft_body
         or b"What this draft does not prove" not in packet_draft_body
         or b"No export file is generated" not in packet_draft_body

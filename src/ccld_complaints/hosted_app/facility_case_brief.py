@@ -90,12 +90,12 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
     )
     priority_label = display_record_label(priority)
     packet_preview_action = (
-        f'          <a class="button button-secondary" href="{_escape(brief.packet_preview_href)}">Preview review packet</a>'
+        f'          <a class="button button-secondary" href="{_escape(brief.packet_preview_href)}">Open local/test packet preview</a>'
         if brief.packet_preview_href
         else ""
     )
     packet_draft_action = (
-        f'          <a class="button button-secondary" href="{_escape(brief.packet_draft_href)}">Open packet draft</a>'
+        f'          <a class="button button-secondary" href="{_escape(brief.packet_draft_href)}">Open local/test preparation draft for browser copy or print</a>'
         if brief.packet_draft_href
         else ""
     )

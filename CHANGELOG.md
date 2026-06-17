@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased
+- Improved hosted packet copy/print preparation guidance. Packet preview now
+	identifies the local/test preparation scope, adds a visible before-copying-or-
+	printing checklist, clarifies browser copy/print use, source-traceability
+	meaning, reviewer-created status/note attention, and feedback handoff for
+	copy/print concerns; packet draft now opens with compact browser copy/print
+	preparation guidance and explicit not-legal-report, not-final-export,
+	not-certified-report, and not-source-completeness-proof boundaries without
+	adding export generation, packet lifecycle, persistence, schema changes,
+	retrieval changes, source-derived mutation, reviewer-created writes from GET
+	rendering, or evidence files.
+
 - Improved hosted review-session accessibility. The shared workflow rail now
 	exposes screen-reader-readable step purpose text, and facility lookup controls
 	use more descriptive search, selected-facility change, and facility-use action

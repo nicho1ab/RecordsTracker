@@ -94,13 +94,13 @@ Test-AllowedBaseUrl -Value $BaseUrl
 $checks = @(
     @{ Name = "Home"; Path = "/"; Required = @("CCLD Records Review") },
     @{ Name = "Retrieve"; Path = "/ccld/records/request"; Required = @("Which facility should be reviewed?", "Confirm facility") },
-    @{ Name = "Reviewer"; Path = "/reviewer"; Required = @("Worklist", "Preview review packet", "Open packet draft") },
+    @{ Name = "Reviewer"; Path = "/reviewer"; Required = @("Worklist", "Open local/test packet preview", "Open local/test preparation draft for browser copy or print") },
     @{ Name = "ReviewerRecords"; Path = "/reviewer/records"; Required = @("Worklist") },
     @{ Name = "ReviewerDetail"; Path = "/reviewer/records/detail?source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448"; Required = @("Complaint overview", "Record review action") },
     @{ Name = "PacketPreviewEmpty"; Path = "/reviewer/packet/preview"; Required = @("No facility/date packet context was supplied."); Forbidden = @("Date range: not provided") },
-    @{ Name = "PacketPreviewContext"; Path = ("/reviewer/packet/preview?facility_number={0}&start_date={1}&end_date={2}&request_context_origin=manual_entry" -f $ContextFacilityNumber, $ContextStartDate, $ContextEndDate); Required = @($ContextFacilityNumber) ; Forbidden = @("Date range: not provided") },
+    @{ Name = "PacketPreviewContext"; Path = ("/reviewer/packet/preview?facility_number={0}&start_date={1}&end_date={2}&request_context_origin=manual_entry" -f $ContextFacilityNumber, $ContextStartDate, $ContextEndDate); Required = @($ContextFacilityNumber, "Before copying or printing", "browser copy or print", "not a certified report", "Report copy/print preparation concern") ; Forbidden = @("Date range: not provided") },
     @{ Name = "PacketDraftEmpty"; Path = "/reviewer/packet/draft"; Required = @("No facility/date packet context was supplied."); Forbidden = @("Date range: not provided") },
-    @{ Name = "PacketDraftContext"; Path = ("/reviewer/packet/draft?facility_number={0}&start_date={1}&end_date={2}&request_context_origin=manual_entry" -f $ContextFacilityNumber, $ContextStartDate, $ContextEndDate); Required = @("Attorney Review Packet Draft", $ContextFacilityNumber); Forbidden = @("Date range: not provided") }
+    @{ Name = "PacketDraftContext"; Path = ("/reviewer/packet/draft?facility_number={0}&start_date={1}&end_date={2}&request_context_origin=manual_entry" -f $ContextFacilityNumber, $ContextStartDate, $ContextEndDate); Required = @("Attorney Review Packet Draft", "Local/test preparation draft for browser copy or print", "Review before copying or printing", "not a certified report", "Report copy/print preparation concern", $ContextFacilityNumber); Forbidden = @("Date range: not provided") }
 )
 
 $forbiddenMarkers = @(
