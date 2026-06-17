@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased
+- Improved hosted tester-readiness acceptance closure. The non-mutating hosted
+	reviewer acceptance verifier now checks the primary local/test workflow route
+	set across home, facility lookup, request/context, review queue, reviewer
+	detail, packet preview/draft, feedback, and help; reports route-level
+	acceptance status; preserves packet empty/context assertions and draft
+	workflow-indicator skip/pass behavior; and packages captured evidence folders
+	as ignored local review ZIP artifacts without adding retrieval behavior,
+	persistence, schema changes, migrations, product packet generation, export
+	lifecycle, source-derived mutation, reviewer-created writes from GET rendering,
+	legal conclusions, or committed evidence files.
+
 - Improved hosted packet copy/print preparation guidance. Packet preview now
 	identifies the local/test preparation scope, adds a visible before-copying-or-
 	printing checklist, clarifies browser copy/print use, source-traceability
