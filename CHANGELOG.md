@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Added a local/test attorney review packet preview at `/reviewer/packet/preview`.
+	The preview summarizes the current facility/date context, included complaint
+	records, reviewer-created status/note cues, cautious inclusion reasons, review
+	flags, findings, and source traceability readiness without generating export
+	files or mutating source-derived, reviewer-created, audit, import, or
+	operational metadata. It is a preparation view only, not a legal report, final
+	export, production packet, or source-completeness proof.
+
 - Made hosted reviewer detail an intentional guided review action screen. The
 	page now leads from complaint overview to why the record is flagged, a
 	near-top `Record review action` panel for existing reviewer-created status and

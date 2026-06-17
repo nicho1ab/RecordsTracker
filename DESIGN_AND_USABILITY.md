@@ -292,6 +292,13 @@ cautious-language, tester feedback, and reviewer-state boundaries.
   existing note/status actions and audit paths; it must not create assignments,
   legal decisions, workflow-engine state, new reviewer-created state kinds,
   source edits, exports, annotations, corrections, auth, or schema changes.
+- Local/test review packet previews may summarize what would be prepared for
+  attorney handoff from the current facility/date context: included complaint
+  records, why each record is included, reviewer-created status/note cues,
+  review flags, findings, and source traceability readiness. They must remain
+  read-only preparation views and must not generate final exports, downloadable
+  legal packets, packet persistence, delivery, legal conclusions, source-
+  completeness claims, schema changes, or new workflow/persistence domains.
 - Use the restrained legal-review visual system: page background `#F5F7FA`,
   white surfaces, tinted support panels near `#EEF7F6`, primary text near
   `#17212B`, muted slate text, deep teal primary actions, accessible blue focus,

@@ -59,6 +59,7 @@ REVIEWER_UI_RECORDS_PATH = f"{REVIEWER_UI_PREFIX}/records"
 REVIEWER_UI_DETAIL_PATH = f"{REVIEWER_UI_RECORDS_PATH}/detail"
 REVIEWER_UI_NOTE_PATH = f"{REVIEWER_UI_RECORDS_PATH}/note"
 REVIEWER_UI_STATUS_PATH = f"{REVIEWER_UI_RECORDS_PATH}/status"
+REVIEWER_UI_PACKET_PREVIEW_PATH = f"{REVIEWER_UI_PREFIX}/packet/preview"
 CCLD_HELP_PATH = "/ccld/help"
 LOCAL_REVIEWER_UI_SCOPE = HostedAccessScope(
     "seeded_corpus",
@@ -347,6 +348,8 @@ def route_reviewer_ui_response(
         )
     if parsed_url.path in {REVIEWER_UI_PREFIX, REVIEWER_UI_RECORDS_PATH}:
         return _record_list_response(parsed_url.query, context)
+    if parsed_url.path == REVIEWER_UI_PACKET_PREVIEW_PATH:
+        return _packet_preview_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_DETAIL_PATH:
         return _detail_response(parsed_url.query, context)
     return _html_response(
@@ -417,6 +420,40 @@ def _record_list_response(
     )
 
 
+def _packet_preview_response(
+    query: str,
+    context: ReviewerUiContext,
+) -> tuple[int, str, bytes]:
+    query_values = parse_qs(query, keep_blank_values=True)
+    return_context = _packet_preview_context_from_values(query_values)
+    status, _content_type, body = route_reviewer_workflow_shell_response(
+        f"{REVIEWER_WORKFLOW_API_PREFIX}/queue?limit=100",
+        context.workflow_shell_context,
+    )
+    if status != 200:
+        return _workflow_error_page(status, body)
+    payload = _json_object(body)
+    queue = _mapping(payload, "queue")
+    records = _record_list(queue, "records")
+    filtered_records = _filter_packet_preview_items(records, return_context)
+    state_status, state_body = _reviewer_created_state_records(context)
+    if state_status != 200:
+        if not isinstance(state_body, bytes):
+            raise ValueError("Expected reviewer-created state error body to be bytes.")
+        return _workflow_error_page(state_status, state_body)
+    if isinstance(state_body, bytes):
+        raise ValueError("Expected reviewer-created state records.")
+    state_summaries = _state_summaries_by_source_record(state_body)
+    return _html_response(
+        status,
+        _render_packet_preview(
+            filtered_records,
+            state_summaries,
+            return_context,
+            workflow=_mapping(payload, "workflow_shell"),
+            actor_label=_signed_in_actor_label(context),
+        ),
+    )
 def _reviewer_created_state_records(
     context: ReviewerUiContext,
 ) -> tuple[int, list[Mapping[str, Any]] | bytes]:
@@ -834,8 +871,366 @@ def _render_reviewer_case_brief(
             records=case_records,
             record_count_label="Complaint records visible",
             full_queue_href=REVIEWER_UI_RECORDS_PATH,
+            packet_preview_href=REVIEWER_UI_PACKET_PREVIEW_PATH,
         )
     )
+
+
+def _render_packet_preview(
+    records: list[Mapping[str, Any]],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+    *,
+    workflow: Mapping[str, Any],
+    actor_label: str | None,
+) -> str:
+    traceability_counts = _packet_traceability_counts(records)
+    state_counts = _packet_reviewer_state_counts(records, state_summaries)
+    record_cards = "\n".join(
+        _render_packet_preview_record(record, state_summaries, return_context)
+        for record in records
+    )
+    if not record_cards:
+        record_cards = """        <article class="empty-state-card result-card">
+          <h3>No complaint records included</h3>
+          <p>No loaded local/test complaint records match this packet preview context.</p>
+        </article>"""
+    return _page(
+        title="Review packet preview",
+        heading="Review packet preview",
+        actor_label=actor_label,
+        main=f"""
+        <section class="hero-card" aria-labelledby="packet-preview-heading">
+          <p class="launch-kicker">Local/test preparation preview</p>
+          <h2 id="packet-preview-heading">Review packet preview</h2>
+          <p>This preview helps identify what source-traceable complaint records would be reviewed or handed off for the current facility/date context. It is not a legal report, final export, production packet, or source-completeness proof.</p>
+          <dl class="summary-list">
+            <dt>Facility / license</dt>
+            <dd>{_escape(_packet_facility_label(records, return_context))}</dd>
+            <dt>Date range</dt>
+            <dd>{_escape(_return_context_date_range(return_context))}</dd>
+            <dt>Mode</dt>
+            <dd>{_escape(_runtime_mode_label_for_reviewer())}</dd>
+            <dt>Records included</dt>
+            <dd>{len(records)}</dd>
+            <dt>Reviewer-created statuses/notes represented</dt>
+            <dd>{state_counts['with_status']} with status; {state_counts['with_notes']} with notes</dd>
+            <dt>Source traceability available</dt>
+            <dd>{traceability_counts['complete']} complete; {traceability_counts['missing_any']} missing one or more visible traceability cues</dd>
+          </dl>
+        </section>
+        <section aria-labelledby="packet-traceability-heading">
+          <h2 id="packet-traceability-heading">Traceability readiness</h2>
+          <dl class="summary-list">
+            <dt>Records with source URL available</dt>
+            <dd>{traceability_counts['source_url']}</dd>
+            <dt>Records with raw SHA-256 available</dt>
+            <dd>{traceability_counts['raw_sha256']}</dd>
+            <dt>Records with connector/retrieval metadata available</dt>
+            <dd>{traceability_counts['connector_retrieval']}</dd>
+            <dt>Records missing visible traceability cues</dt>
+            <dd>{traceability_counts['missing_any']}</dd>
+          </dl>
+          <p>These are availability counts only. They do not prove public-source completeness.</p>
+        </section>
+        <section aria-labelledby="packet-reviewer-state-heading">
+          <h2 id="packet-reviewer-state-heading">Reviewer-created state summary</h2>
+          <p>These counts come from existing reviewer-created status/note rows. They are reviewer-created state, not source facts.</p>
+          <dl class="summary-list">
+            <dt>Records with reviewer-created status</dt>
+            <dd>{state_counts['with_status']}</dd>
+            <dt>Records with reviewer-created notes</dt>
+            <dd>{state_counts['with_notes']}</dd>
+            <dt>Records without reviewer-created state</dt>
+            <dd>{state_counts['without_state']}</dd>
+            <dt>Not started</dt>
+            <dd>{state_counts['not_started']}</dd>
+            <dt>In review</dt>
+            <dd>{state_counts['in_review']}</dd>
+            <dt>Needs follow-up</dt>
+            <dd>{state_counts['needs_follow_up']}</dd>
+            <dt>Reviewed</dt>
+            <dd>{state_counts['reviewed']}</dd>
+            <dt>Blocked</dt>
+            <dd>{state_counts['blocked']}</dd>
+          </dl>
+        </section>
+        <section aria-labelledby="packet-records-heading">
+          <h2 id="packet-records-heading">Included complaint records</h2>
+          <div class="result-list" aria-label="Included complaint records">
+{record_cards}
+          </div>
+        </section>
+        <section aria-labelledby="packet-notes-heading">
+          <h2 id="packet-notes-heading">Review packet notes</h2>
+          <ul>
+            <li>This preview is a local/test preparation aid.</li>
+            <li>Source-derived fields remain separate from reviewer-created notes/status.</li>
+            <li>Review flags are screening aids, not legal conclusions.</li>
+            <li>The CCLD public portal remains the source of record.</li>
+            <li>This preview is not a legal report, final export, production packet, or source-completeness proof.</li>
+          </ul>
+        </section>
+        <details class="technical-details">
+          <summary>Technical runtime details</summary>
+          {_render_scope_notice(workflow)}
+          <p>No export file is generated by this preview. Opening this page does not mutate source-derived records, reviewer-created state, audit rows, import batches, or operational metadata.</p>
+        </details>
+        """,
+    )
+
+
+def _render_packet_preview_record(
+    item: Mapping[str, Any],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> str:
+    source_record = _mapping(item, "source_record")
+    identity = _mapping(source_record, "identity")
+    source_document = _mapping(source_record, "source_document")
+    original_values = _mapping(source_record, "original_values")
+    source_record_key = _string(identity, "source_record_key")
+    state_summary = state_summaries.get(source_record_key, _empty_state_summary())
+    detail_href = _reviewer_detail_href(source_record_key, return_context)
+    label = _display_value(original_values.get("complaint_control_number") or source_record_key)
+    flags = _review_flag_labels(original_values, source_document)
+    flag_items = "\n".join(f"              <li>{_escape(flag)}</li>" for flag in flags)
+    if not flag_items:
+        flag_items = "              <li>No review flags are visible from loaded source-derived fields.</li>"
+    why_items = "\n".join(
+        f"              <li>{_escape(reason)}</li>"
+        for reason in _packet_inclusion_reasons(item, state_summary)
+    )
+    return f"""        <article class="result-card work-item" aria-labelledby="packet-record-{_escape(source_record_key)}-heading">
+          <div>
+            <p class="stage-kicker">Included complaint record</p>
+            <h3 id="packet-record-{_escape(source_record_key)}-heading">{_escape(label)}</h3>
+            <dl>
+              <dt>Finding</dt>
+              <dd>{_escape(_optional_string(original_values, 'finding'))}</dd>
+              <dt>Key dates</dt>
+              <dd>{_escape(_date_summary(original_values))}</dd>
+              <dt>Reviewer-created status</dt>
+              <dd>{_escape(_latest_status_text(state_summary))}</dd>
+              <dt>Reviewer note</dt>
+              <dd>{_escape(_card_note_presence_text(state_summary))}</dd>
+              <dt>Source traceability</dt>
+              <dd>{_escape(_source_traceability_cue(source_document))}</dd>
+            </dl>
+            <section aria-labelledby="packet-why-{_escape(source_record_key)}-heading">
+              <h4 id="packet-why-{_escape(source_record_key)}-heading">Why included</h4>
+              <ul>
+{why_items}
+              </ul>
+            </section>
+            <section aria-labelledby="packet-flags-{_escape(source_record_key)}-heading">
+              <h4 id="packet-flags-{_escape(source_record_key)}-heading">Review flags</h4>
+              <ul>
+{flag_items}
+              </ul>
+            </section>
+          </div>
+          <p><a class="button" href="{_escape(detail_href)}">Open record { _escape(label) }</a></p>
+        </article>"""
+
+
+def _packet_inclusion_reasons(
+    item: Mapping[str, Any],
+    state_summary: Mapping[str, Any],
+) -> tuple[str, ...]:
+    source_record = _mapping(item, "source_record")
+    source_document = _mapping(source_record, "source_document")
+    original_values = _mapping(source_record, "original_values")
+    reasons = ["Part of the current loaded facility/date review queue."]
+    if _summary_optional_string(state_summary, "latest_status"):
+        reasons.append("Reviewer status added.")
+    else:
+        reasons.append("No reviewer-created status yet.")
+    if _summary_int(state_summary, "note_count") > 0:
+        reasons.append("Reviewer note added.")
+    if _review_flag_labels(original_values, source_document):
+        if _has_delay_flag(original_values):
+            reasons.append("Possible delay indicator.")
+        if _has_missing_date_flag(original_values):
+            reasons.append("Needs source check.")
+        if original_values.get("report_date_used_as_proxy") is True:
+            reasons.append("Report date proxy cue.")
+    if _has_visible_traceability_document(source_document):
+        reasons.append("Source traceability available.")
+    finding = _optional_string(original_values, "finding")
+    if finding and finding != "unknown":
+        reasons.append(f"Finding value shown: {finding}.")
+    return tuple(dict.fromkeys(reasons))
+
+
+def _packet_traceability_counts(records: list[Mapping[str, Any]]) -> dict[str, int]:
+    counts = {
+        "source_url": 0,
+        "raw_sha256": 0,
+        "connector_retrieval": 0,
+        "complete": 0,
+        "missing_any": 0,
+    }
+    for item in records:
+        source_document = _mapping(_mapping(item, "source_record"), "source_document")
+        has_source_url = _has_display_value(source_document.get("source_url"))
+        has_raw_sha = _has_display_value(source_document.get("raw_sha256"))
+        has_connector_retrieval = _has_display_value(source_document.get("connector_name")) and _has_display_value(source_document.get("retrieved_at"))
+        if has_source_url:
+            counts["source_url"] += 1
+        if has_raw_sha:
+            counts["raw_sha256"] += 1
+        if has_connector_retrieval:
+            counts["connector_retrieval"] += 1
+        if has_source_url and has_raw_sha and has_connector_retrieval:
+            counts["complete"] += 1
+        else:
+            counts["missing_any"] += 1
+    return counts
+
+
+def _packet_reviewer_state_counts(
+    records: list[Mapping[str, Any]],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+) -> dict[str, int]:
+    counts = {
+        "with_status": 0,
+        "with_notes": 0,
+        "without_state": 0,
+        "not_started": 0,
+        "in_review": 0,
+        "needs_follow_up": 0,
+        "reviewed": 0,
+        "blocked": 0,
+    }
+    for item in records:
+        summary = _state_summary_for_item(item, state_summaries)
+        status = _reviewer_queue_status(summary)
+        counts[status] += 1
+        if _summary_optional_string(summary, "latest_status"):
+            counts["with_status"] += 1
+        if _summary_int(summary, "note_count") > 0:
+            counts["with_notes"] += 1
+        if _summary_int(summary, "total_rows") == 0:
+            counts["without_state"] += 1
+    return counts
+
+
+def _packet_facility_label(
+    records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> str:
+    if return_context.facility_number:
+        if return_context.lookup_facility_name:
+            return f"{return_context.facility_number}; {return_context.lookup_facility_name}"
+        return return_context.facility_number
+    for item in records:
+        identity = _mapping(_mapping(item, "source_record"), "identity")
+        facility_number = _optional_string(identity, "facility_id")
+        if facility_number != "unknown":
+            return facility_number
+    return "unknown"
+
+
+def _filter_packet_preview_items(
+    records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> list[Mapping[str, Any]]:
+    return [
+        record
+        for record in records
+        if _packet_item_matches_context(record, return_context)
+    ]
+
+
+def _packet_item_matches_context(
+    item: Mapping[str, Any],
+    return_context: CcldQueueReturnContext,
+) -> bool:
+    source_record = _mapping(item, "source_record")
+    if return_context.facility_number and not _packet_record_matches_facility(source_record, return_context.facility_number):
+        return False
+    if return_context.start_date or return_context.end_date:
+        return _packet_record_matches_date_range(source_record, return_context)
+    return True
+
+
+def _packet_record_matches_facility(
+    source_record: Mapping[str, Any],
+    facility_number: str,
+) -> bool:
+    identity = _mapping(source_record, "identity")
+    original_values = _mapping(source_record, "original_values")
+    source_document = _mapping(source_record, "source_document")
+    facility_id = _optional_string(identity, "facility_id")
+    source_url = _optional_string(source_document, "source_url")
+    return (
+        original_values.get("external_facility_number") == facility_number
+        or original_values.get("facility_number") == facility_number
+        or facility_id.endswith(facility_number)
+        or f"facNum={facility_number}" in source_url
+    )
+
+
+def _packet_record_matches_date_range(
+    source_record: Mapping[str, Any],
+    return_context: CcldQueueReturnContext,
+) -> bool:
+    original_values = _mapping(source_record, "original_values")
+    record_dates = [
+        str(value)[:10]
+        for key in (
+            "complaint_received_date",
+            "visit_date",
+            "report_date",
+            "date_signed",
+            "retrieved_at",
+        )
+        if _has_display_value(value := original_values.get(key))
+    ]
+    if not record_dates:
+        return return_context.start_date is None and return_context.end_date is None
+    for record_date in record_dates:
+        if return_context.start_date and record_date < return_context.start_date:
+            continue
+        if return_context.end_date and record_date > return_context.end_date:
+            continue
+        return True
+    return False
+
+
+def _packet_preview_context_from_values(values: Mapping[str, list[str]]) -> CcldQueueReturnContext:
+    return CcldQueueReturnContext(
+        facility_number=_optional_form_value(values, "facility_number")
+        or _optional_form_value(values, "return_facility_number"),
+        start_date=_optional_form_value(values, "start_date")
+        or _optional_form_value(values, "return_start_date"),
+        end_date=_optional_form_value(values, "end_date")
+        or _optional_form_value(values, "return_end_date"),
+        context_origin=_optional_form_value(values, "request_context_origin")
+        or _optional_form_value(values, "return_context_origin"),
+        lookup_facility_name=_optional_form_value(values, "lookup_facility_name")
+        or _optional_form_value(values, "return_lookup_facility_name"),
+    )
+
+
+def _packet_preview_href(return_context: CcldQueueReturnContext) -> str:
+    if return_context.facility_number is None:
+        return REVIEWER_UI_PACKET_PREVIEW_PATH
+    query_values = {
+        "facility_number": return_context.facility_number,
+        "start_date": return_context.start_date or "",
+        "end_date": return_context.end_date or "",
+        "request_context_origin": return_context.context_origin or "manual_entry",
+        "lookup_facility_name": return_context.lookup_facility_name or "",
+    }
+    return f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?{urlencode(query_values)}"
+
+
+def _packet_preview_confirmation_link(return_context: CcldQueueReturnContext) -> str:
+    if return_context.facility_number is None:
+        return ""
+    return f'<a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Preview review packet</a>'
 
 
 def _case_brief_record_from_review_item(
@@ -2662,6 +3057,7 @@ def _render_notice(
             </section>
             <div class="form-actions">
                 <a class="button" href="{_escape(ccld_request_href)}">Return to facility queue</a>
+                {_packet_preview_confirmation_link(return_context)}
                 <a class="button button-secondary" href="{_escape(next_record_href)}">Open next priority record</a>
                 <a class="button button-secondary" href="{_escape(detail_href)}">Refresh this reviewer detail</a>
             </div>

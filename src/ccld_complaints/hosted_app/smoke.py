@@ -156,6 +156,10 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
                     f"{base_url}/reviewer/records/detail?"
                     "source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448"
                 )
+                packet_preview_status, packet_preview_body = _read_url(
+                    f"{base_url}/reviewer/packet/preview?"
+                    "facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31"
+                )
                 reviewer_note_status, reviewer_note_body = _post_form_url(
                     f"{base_url}/reviewer/records/note",
                     {
@@ -258,6 +262,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Queue triage summary" not in ccld_queue_body
         or b"Table view and queue guidance" not in ccld_queue_body
         or b"Suggested next record to open" not in ccld_queue_body
+        or b"Preview review packet" not in ccld_queue_body
         or b"Copy details for feedback" not in ccld_queue_body
         or b"Advanced retrieval and local load actions" not in ccld_queue_body
     ):
@@ -373,6 +378,17 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"First-run detail steps" not in reviewer_detail_body
     ):
         raise RuntimeError("Hosted scaffold reviewer detail did not return usable guidance.")
+    if (
+        packet_preview_status != 200
+        or b"Review packet preview" not in packet_preview_body
+        or b"Traceability readiness" not in packet_preview_body
+        or b"Reviewer-created state summary" not in packet_preview_body
+        or b"Included complaint records" not in packet_preview_body
+        or b"Why included" not in packet_preview_body
+        or b"not a legal report" not in packet_preview_body
+        or b"No export file is generated" not in packet_preview_body
+    ):
+        raise RuntimeError("Hosted scaffold review packet preview did not return safe guidance.")
     if (
         reviewer_note_status != 200
         or b"Reviewer-created state saved" not in reviewer_note_body
