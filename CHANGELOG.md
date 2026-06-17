@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- Refreshed the root README as a product-oriented public repository landing page.
+	The README now leads with the hosted CCLD RecordsTracker review workflow,
+	target users, current milestone status, safe fixture/mock screenshots,
+	public-source and packet-readiness boundaries, and lower-priority local setup
+	commands. This is documentation and presentation only; it does not add routes,
+	schemas, migrations, extraction behavior, retrieval behavior, export behavior,
+	packet lifecycle state, source-derived mutation, reviewer-created writes,
+	feedback persistence, legal conclusions, source-completeness claims, or
+	committed ignored evidence folders/ZIPs.
+
 - Improved hosted reviewer export-readiness clarity. Packet preview and packet
 	draft now define packet readiness as local/test review readiness for manual
 	review, browser copy, or browser print after checking active facility/date
