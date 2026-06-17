@@ -584,6 +584,7 @@ def _render_packet_draft(
                     <section aria-labelledby="draft-copy-print-guidance-heading">
                         <h3 id="draft-copy-print-guidance-heading">Copy/print preparation guidance</h3>
                         <p>This local/test preparation draft gathers the included complaint-record summaries, review-readiness counts, source-traceability cues, reviewer-created status/note cues, limitations, and a static copyable packet summary for manual browser copy or print.</p>
+                        <p><strong>Packet readiness means local/test review readiness only.</strong> The draft can be ready for manual review, browser copy, or browser print after the tester confirms the active facility/date context, included record count, important source-derived values, visible source traceability, reviewer-created status/note cues, and possible correction-readiness concerns.</p>
                         <p><strong>Review before copying or printing:</strong> check records flagged for source check, records missing reviewer-created status/note cues, important source-derived values, missing local/test traceability values, and any wording that seems wrong, incomplete, confusing, or risky.</p>
                         <p>Source traceability available means visible source URL, raw SHA-256 hash, raw artifact reference, connector metadata, retrieval timestamp, or source document/report marker cues are available to help check important source-derived values. It is not a source-completeness proof.</p>
                         <p><strong>Correction-readiness before copying or printing:</strong> if a source-derived value looks wrong or incomplete, check source traceability first and capture the possible correction concern in a reviewer-created note or feedback for now. This draft does not change source-derived records, alter source-derived values, or submit correction decisions.</p>
@@ -635,6 +636,7 @@ def _render_packet_draft(
                         <p>Review before copying or printing: this local/test packet draft is a preparation draft.
                         Check source traceability, review flags, and reviewer-created status/note cues
                         before relying on any source-derived value in a handoff.</p>
+                        <p>Review before relying on this packet also means confirming the facility/date context and the included complaint records match the queue you intended to prepare. If the packet content looks incomplete, risky, or not ready, return to the queue, open reviewer detail, or use feedback before copying or printing.</p>
                         <p>Possible correction concerns should remain reviewer-created observations or
                         feedback for now. The future correction workflow is not implemented here, and this
                         draft does not submit correction decisions.</p>
@@ -1163,6 +1165,7 @@ def _render_packet_preview(
           <p class="launch-kicker">Local/test preparation preview</p>
                     <h2 id="packet-preview-heading">Local/test packet preparation preview</h2>
                     <p>This preview helps identify which loaded local/test complaint records, readiness cues, source traceability cues, and reviewer-created status/note cues are included for the current facility/date context before browser copy or print preparation. It is not a legal report, not a final export, not a certified report, not a production packet, and not a source-completeness proof.</p>
+                    <p><strong>Packet readiness means local/test review readiness only.</strong> A packet may be ready for manual review, browser copy, or browser print after the tester confirms the active facility/date context, included record count, important source-derived values, visible source traceability, reviewer-created status/note cues, and possible correction-readiness concerns.</p>
           <dl class="summary-list">
             <dt>Facility / license</dt>
             <dd>{_escape(_packet_facility_label(records, return_context))}</dd>
@@ -1191,6 +1194,7 @@ def _render_packet_preview(
                     <h2 id="before-copying-printing-heading">Before copying or printing</h2>
                     <p>Use this checklist before using browser copy or print from the local/test preparation draft.</p>
                     <ul>
+                        <li>Confirm the active facility/date context and included complaint-record count match the queue you intended to prepare.</li>
                         <li>Review records flagged for source check before relying on important source-derived values.</li>
                         <li>Review records missing reviewer-created status/note cues when the readiness counts show attention is needed.</li>
                         <li>Confirm source traceability for important source-derived values; source traceability available means visible source URL, raw SHA-256 hash, raw artifact reference, connector metadata, retrieval timestamp, or source document/report marker cues are available for checking, not that the packet is a source-completeness proof.</li>
@@ -1201,6 +1205,7 @@ def _render_packet_preview(
                 <section aria-labelledby="packet-readiness-heading">
                     <h2 id="packet-readiness-heading">Review-readiness summary</h2>
                     <p>This local/test packet preview is a preparation checkpoint. Use it to decide what still needs source check or reviewer-created status/note attention before browser copy or print.</p>
+                    <p>Review before relying on this packet means using reviewer detail and source traceability to resolve confusing, incomplete, risky, or not-ready records before copying, printing, or sharing a local handoff draft.</p>
                     <dl class="summary-list">
                         <dt>Records ready for preparation review</dt>
                         <dd>{readiness_counts['ready']}</dd>
@@ -1402,6 +1407,7 @@ def _packet_copy_summary(
         f"- Records without reviewer-created state: {state_counts['without_state']}",
         "",
         "Review-readiness before copy/print",
+        "- Packet readiness means local/test review readiness for manual browser copy or print after checking facility/date context, included records, source traceability, reviewer-created status/note cues, and possible correction-readiness concerns.",
         f"- Records ready for preparation review: {readiness_counts['ready']}",
         f"- Records needing source check: {readiness_counts['needs_source_check']}",
         "- Records needing reviewer-created status/note attention: "
@@ -2587,7 +2593,7 @@ def _render_detail_decision_continuity(
               <a class="button button-secondary" href="{_escape(feedback_href)}">Report confusion about this reviewer detail</a>
             </div>
             <p class="helper-text">Packet links are local/test copy/print preparation aids, not a legal report,
-            not a final export, not a certified report, or source-completeness proof.</p>
+            not a final export, not a certified report, and not a source-completeness proof.</p>
           </section>
         </section>"""
 
@@ -3952,7 +3958,7 @@ def _render_notice(
                 source-confidence, field-note, or possible correction concern wording that was
                 confusing for this record.</p>
                 <p>Use packet preview or draft only when you are ready for local/test preparation;
-                they are not a legal report, not a final export, not a certified report, or source-completeness proof.</p>
+                they are not a legal report, not a final export, not a certified report, and not a source-completeness proof.</p>
                 <dl>
                     <dt>Same facility/license number</dt>
                     <dd>{_escape(_display_value(return_context.facility_number))}</dd>

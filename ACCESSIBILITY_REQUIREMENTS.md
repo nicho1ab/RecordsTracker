@@ -115,6 +115,14 @@ Accessibility requirements apply to:
 	icons, or implicit context, and must state that status filters are reviewer-
 	created queue views rather than source-derived facts, assignment, record
 	claiming, persisted queue state, or source-completeness proof.
+	Hosted local/test packet preview and packet draft pages must expose packet
+	readiness as visible text, including active facility/date context, included
+	record counts, source-traceability checks, reviewer-created note/status cues,
+	possible correction-readiness concerns, feedback recovery for confusing or
+	risky packet/export-readiness content, and boundaries that the pages are not
+	legal reports, final exports, certified reports, product-generated exports,
+	packet lifecycle state, or source-completeness proof. These cues must not rely
+	on icons, color, layout, print styling, or implicit context alone.
 	Request-context confirmation must expose lookup versus manual-entry origin,
 	facility/license number, date range, active facility reference source, and
 	change-facility/date navigation as visible text with descriptive links.
