@@ -42,6 +42,7 @@ class FacilityCaseBrief:
     records: tuple[FacilityCaseBriefRecord, ...]
     record_count_label: str = "Complaint records visible/imported"
     full_queue_href: str = "/reviewer"
+    packet_preview_href: str | None = None
 
 
 def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
@@ -87,6 +88,11 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
         f"                <li>{_escape(reason)}</li>" for reason in priority_reason_labels(priority)
     )
     priority_label = display_record_label(priority)
+    packet_preview_action = (
+        f'          <a class="button button-secondary" href="{_escape(brief.packet_preview_href)}">Preview review packet</a>'
+        if brief.packet_preview_href
+        else ""
+    )
     return f"""<section class="hero-card facility-case-brief" aria-labelledby="facility-case-brief-heading">
       <div class="case-brief-header">
         <div>
@@ -122,6 +128,7 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
         <div class="form-actions">
           <a class="button" href="{_escape(priority.detail_href)}">Open priority record</a>
           <a class="button button-secondary" href="{_escape(brief.full_queue_href)}">Open full queue</a>
+{packet_preview_action}
         </div>
       </section>
       <p class="helper-text">Use this summary to prioritize source-traceable review. Review flags are screening aids, not legal conclusions.</p>

@@ -292,6 +292,8 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Source traceability available" in html
     assert "Open priority record" in html
     assert "Open full queue" in html
+    assert "Preview review packet" in html
+    assert "/reviewer/packet/preview?facility_number=157806098" in html
     assert "Matching source-derived rows shown" in html
     assert "facility/license number 157806098" in html
     assert "2022-08-01 to 2022-08-31" in html
