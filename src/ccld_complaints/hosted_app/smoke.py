@@ -277,8 +277,10 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         ccld_filtered_status != 200
         or b"Filtered queue recovery" not in ccld_filtered_body
-        or b"selected reviewer-status filter hides all queue rows" not in ccld_filtered_body
-        or b"Show all queue records for this request" not in ccld_filtered_body
+        or b"No records match this active reviewer-created status filter"
+        not in ccld_filtered_body
+        or b"Show all reviewer statuses for this facility/date request"
+        not in ccld_filtered_body
         or b"same facility/date request context" not in ccld_filtered_body
     ):
         raise RuntimeError("Hosted scaffold CCLD filtered queue did not return recovery guidance.")
