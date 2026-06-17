@@ -586,6 +586,7 @@ def _render_packet_draft(
                         <p>This local/test preparation draft gathers the included complaint-record summaries, review-readiness counts, source-traceability cues, reviewer-created status/note cues, limitations, and a static copyable packet summary for manual browser copy or print.</p>
                         <p><strong>Review before copying or printing:</strong> check records flagged for source check, records missing reviewer-created status/note cues, important source-derived values, missing local/test traceability values, and any wording that seems wrong, incomplete, confusing, or risky.</p>
                         <p>Source traceability available means visible source URL, raw SHA-256 hash, raw artifact reference, connector metadata, retrieval timestamp, or source document/report marker cues are available to help check important source-derived values. It is not a source-completeness proof.</p>
+                        <p><strong>Correction-readiness before copying or printing:</strong> if a source-derived value looks wrong or incomplete, check source traceability first and capture the possible correction concern in a reviewer-created note or feedback for now. This draft does not change source-derived records, alter source-derived values, or submit correction decisions.</p>
                         <p>If copy/print preparation content seems wrong, incomplete, confusing, or risky, use the feedback link before using this draft.</p>
                     </section>
                     <section aria-labelledby="draft-scope-heading">
@@ -634,6 +635,9 @@ def _render_packet_draft(
                         <p>Review before copying or printing: this local/test packet draft is a preparation draft.
                         Check source traceability, review flags, and reviewer-created status/note cues
                         before relying on any source-derived value in a handoff.</p>
+                        <p>Possible correction concerns should remain reviewer-created observations or
+                        feedback for now. The future correction workflow is not implemented here, and this
+                        draft does not submit correction decisions.</p>
                         <ul>
                             <li>{readiness_counts['needs_source_check']} record(s) may still need source check based on visible review flags, missing local/test dates, proxy cues, or missing traceability.</li>
                             <li>{readiness_counts['needs_reviewer_attention']} record(s) may still need reviewer-created status/note attention before packet preparation.</li>
@@ -663,6 +667,7 @@ def _render_packet_draft(
                         <ul>
                             <li>Status and note presence are reviewer-created state.</li>
                             <li>They do not change source-derived complaint records.</li>
+                            <li>They may point to possible correction concerns, but this draft does not alter source-derived values.</li>
                             <li>Reviewer-created note text is not printed here; use reviewer detail when note content needs review.</li>
                         </ul>
                     </section>
@@ -673,6 +678,7 @@ def _render_packet_draft(
                             <li>It does not prove no other complaints exist.</li>
                             <li>It does not make legal, facility-wide, harm, abuse, neglect, liability, or rights-deprivation conclusions.</li>
                             <li>It does not create official findings beyond source-derived finding labels.</li>
+                            <li>It does not submit correction decisions or replace source-derived records.</li>
                         </ul>
                     </section>
                     <section aria-labelledby="copyable-packet-summary-heading">
@@ -1186,6 +1192,7 @@ def _render_packet_preview(
                         <li>Review records flagged for source check before relying on important source-derived values.</li>
                         <li>Review records missing reviewer-created status/note cues when the readiness counts show attention is needed.</li>
                         <li>Confirm source traceability for important source-derived values; source traceability available means visible source URL, raw SHA-256 hash, raw artifact reference, connector metadata, retrieval timestamp, or source document/report marker cues are available for checking, not that the packet is a source-completeness proof.</li>
+                        <li>If a source-derived value looks wrong or incomplete, check source traceability first and capture the possible correction concern in a reviewer-created note or feedback for now.</li>
                         <li>Use feedback if records, wording, readiness cues, or copy/print preparation content seems wrong, incomplete, confusing, or risky.</li>
                     </ul>
                 </section>
@@ -1201,6 +1208,7 @@ def _render_packet_preview(
                         <dd>{readiness_counts['needs_reviewer_attention']}</dd>
                     </dl>
                     <p>Source-derived values should be checked against traceability when important. This preview is not a legal report, not a final export, not a certified report, and not a source-completeness proof.</p>
+                    <p>Packet preview includes source-derived values and reviewer-created cues, but it does not change source-derived records or submit correction decisions. Possible correction concerns should stay in reviewer-created notes or feedback for now.</p>
                 </section>
         <section aria-labelledby="packet-traceability-heading">
           <h2 id="packet-traceability-heading">Traceability readiness</h2>
@@ -1249,6 +1257,7 @@ def _render_packet_preview(
           <ul>
             <li>This preview is a local/test preparation aid.</li>
             <li>Source-derived fields remain separate from reviewer-created notes/status.</li>
+            <li>Possible correction concerns are reviewer-created observations for notes or feedback in this local/test workflow.</li>
             <li>Review flags are screening aids, not legal conclusions.</li>
             <li>The CCLD public portal remains the source of record.</li>
             <li>This preview is not a legal report, not a final export, not a certified report, not a production packet, and not a source-completeness proof.</li>
@@ -2551,6 +2560,17 @@ def _render_detail_decision_continuity(
 {check_items}
             </ul>
           </section>
+                    <section aria-labelledby="detail-correction-readiness-heading">
+                        <h3 id="detail-correction-readiness-heading">Correction-readiness cue</h3>
+                        <p>If a source-derived value looks wrong or incomplete, check source traceability first.
+                        Use a reviewer-created note to describe the possible correction concern for now, including
+                        the field label, the local/test value shown, and what still needs source review.</p>
+                        <p>Use feedback if the correction path itself is confusing, if the record appears
+                        unexpected for this facility/date request, or if you are unsure whether to use a note
+                        or feedback. This local/test workflow does not change source-derived records or submit
+                        correction decisions. A future correction workflow would be reviewer-created state, not
+                        a source-derived public-source fact.</p>
+                    </section>
           <section aria-labelledby="detail-next-steps-heading">
             <h3 id="detail-next-steps-heading">After this detail</h3>
             <p>Save only cautious reviewer-created status/note observations. GET rendering does not
@@ -2595,6 +2615,7 @@ def _detail_check_first_items(original_values: Mapping[str, Any]) -> tuple[str, 
     if original_values.get("report_date_used_as_proxy") is True:
         items.append("Review flag: report date used as proxy; use cautious proxy wording only after source traceability review.")
     items.append("Review source traceability before relying on missing, confusing, or proxy-related values.")
+    items.append("If a source-derived value looks wrong or incomplete, treat it as a possible correction concern for reviewer-created notes or feedback, not as a changed source record.")
     return tuple(items)
 
 
@@ -2900,12 +2921,16 @@ def _render_source_traceability_section(
     <p>Check source traceability before relying on source-derived values in notes, status,
     packet preview, or packet draft. If traceability looks confusing or incomplete, use
     feedback with the selected record identifiers below.</p>
+        <p><strong>Correction-readiness cue:</strong> if a source-derived value looks wrong or
+        incomplete, check source traceability first, then document the possible correction concern
+        in a reviewer-created note for now. Use feedback when the correction-readiness path is
+        confusing or the record appears unexpected.</p>
       <p>Missing values are shown as <q>not available in this local/test record</q>. A missing
       local/test value is not proof that the public source lacks a record or that any event did
       or did not happen.</p>
       <p>This page is a local/test review aid. It does not make legal, facility-wide,
       completeness, harm, abuse, neglect, liability, or automated complaint-finding
-      conclusions.</p>
+            conclusions. It does not change source-derived records or submit correction decisions.</p>
             <dl class="summary-list">
                 <dt>Record-level source traceability status</dt>
                 <dd>{_escape(_source_traceability_cue(source_document))}</dd>
@@ -2967,6 +2992,10 @@ def _render_field_note_guidance_section() -> str:
             <p>Use this guidance after checking source traceability and the source-confidence
             cues. Reviewer notes/status are reviewer-created observations for this local/test
             queue; they do not edit source-derived fields.</p>
+            <p>If a source-derived value looks wrong or incomplete, check source traceability first.
+            For now, use a reviewer-created note to describe the possible correction concern or use
+            feedback if the correction path is confusing. The local/test workflow does not submit
+            correction decisions.</p>
             <p>Keep notes short and cautious. When a value is unclear, describe what the
             local/test page showed and what still needs checking rather than making a source,
             legal, facility-wide, or official finding.</p>
@@ -3013,6 +3042,13 @@ def _render_field_note_guidance_section() -> str:
                         edit.</td>
                         <td>Do not imply the app corrected, edited, or replaced the source-derived
                         record.</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Possible correction concern</th>
+                        <td>Say which source-derived value looked wrong or incomplete after checking
+                        source traceability, and what should receive correction review later.</td>
+                        <td>Do not say this note submitted, decided, or changed correction review or
+                        packet output.</td>
                     </tr>
                 </tbody>
             </table>
@@ -3584,6 +3620,11 @@ def _render_review_actions(
                 Helpful local/test wording can mention a review flag, possible delay indicator,
                 missing local/test value, source traceability available, or needs source check cue.
                 Check source traceability before relying on this value in a note or status.</p>
+                <p>When a source-derived value may need correction review, describe the possible
+                correction concern in a reviewer-created note for now. Status values can help the
+                queue reflect review progress, but status does not correct, verify, or replace
+                source-derived data, and correction decisions are not implemented in this local/test
+                workflow.</p>
                 <p>Do not write that abuse, neglect, harm, liability, rights deprivation, or source
                 completeness has been verified by this page.</p>
             </section>
@@ -3669,7 +3710,9 @@ def _render_note_form(
                         aria-describedby="note-text-help"></textarea>
                                             <span id="note-text-help">
                                         Use safe plain text. Notes appear below after saving.
-                                        They do not change the source-derived record.</span>
+                                        They can document a possible correction concern after source
+                                        traceability review, but they do not change the source-derived
+                                        record or submit a correction decision.</span>
         </p>
                                 <p><button type="submit">Save reviewer-created note for this record</button></p>
       </form>
@@ -3697,7 +3740,7 @@ def _render_status_form(
           </select>
                     <span id="reviewer-status-help">Status is reviewer-created local/test state for
                     queue progress, appears below after saving, and is not a public-source
-                    finding.</span>
+                    finding. It does not correct or verify source-derived data.</span>
         </p>
                                 <p><button type="submit">Save reviewer-created status for this record</button></p>
       </form>
@@ -3733,6 +3776,10 @@ def _render_detail_feedback_guidance(
             metadata, retrieval timestamp, source document/report marker, or local/test
             traceability value missing. Do not treat missing local/test traceability display as
             proof of public-source completeness or absence.</p>
+            <p>If a source-derived value appears wrong or incomplete after checking traceability,
+            include it as a possible correction concern in a reviewer-created note. Use feedback
+            instead when the correction-readiness guidance is confusing, the record appears
+            unexpected, or you are unsure whether the issue belongs in a note or feedback.</p>
             <p>Feedback remains manual-copy only. Return to the same CCLD request queue,
             resubmit the request when needed, and use the existing manual feedback checklist;
             this detail page does not create a second checklist or save feedback.</p>
@@ -3783,6 +3830,9 @@ def _render_detail_feedback_guidance(
                     local/test record, or proxy-flag context that affected review.</li>
                     <li>Field-note uncertainty: note wording you were unsure how to phrase after
                     checking source traceability.</li>
+                    <li>Possible correction concern: note which source-derived value looked wrong
+                    or incomplete, what traceability you checked first, and whether feedback was
+                    needed because the future correction workflow path was unclear.</li>
                     <li>Note/status confirmation: note whether the saved reviewer-created state
                     appeared and stayed separate from source-derived fields.</li>
                     <li>Return-to-queue flow: note whether returning to the same request context,
@@ -3853,7 +3903,7 @@ def _render_notice(
             <p class="launch-kicker">Reviewer-created state saved</p>
             <h2 id="form-result-heading">Reviewer-created state saved</h2>
             <p>{_escape(_saved_action_sentence(saved_action))}</p>
-            <p>This confirmation is reviewer-created local/test state. Source-derived fields remain unchanged.</p>
+            <p>This confirmation is reviewer-created local/test state. Source-derived fields remain unchanged, and no correction decision was submitted.</p>
             <section aria-labelledby="saved-changed-heading">
                 <h3 id="saved-changed-heading">What changed</h3>
                 <ul>
@@ -3866,6 +3916,7 @@ def _render_notice(
                     <li>Source-derived complaint fields</li>
                     <li>Source traceability</li>
                     <li>Public-source records</li>
+                    <li>Correction workflow state</li>
                 </ul>
             </section>
             <section aria-labelledby="queue-return-progress-heading">
@@ -3882,7 +3933,8 @@ def _render_notice(
                 <p>If the saved confirmation, same-context return link, or refreshed queue cue
                 did not behave as expected, include that record-specific observation in the
                 existing manual feedback checklist. Also carry forward any source traceability,
-                source-confidence, or field-note wording that was confusing for this record.</p>
+                source-confidence, field-note, or possible correction concern wording that was
+                confusing for this record.</p>
                 <p>Use packet preview or draft only when you are ready for local/test preparation;
                 they are not a legal report, not a final export, not a certified report, or source-completeness proof.</p>
                 <dl>

@@ -75,6 +75,12 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "What issue should be reported?" in html
     assert "A complaint record looked missing or unexpected." in html
     assert "The source traceability summary was hard to use." in html
+    assert "correction-readiness guidance" in html
+    assert (
+        "A source-derived value looked wrong or incomplete after checking source traceability."
+        in html
+    )
+    assert "whether to use a reviewer-created note or feedback" in html
     assert "raw SHA-256 hash" in html
     assert "source document/report marker looked missing or confusing" in html
     assert "support-layout" in html
@@ -132,7 +138,18 @@ def test_feedback_page_renders_safe_optional_handoff_context() -> None:
     assert "32-CR-20220407124448" in html
     assert "Describe packet readiness confusion." in html
     assert "not a source-completeness proof" in normalized_html
+    assert (
+        "possible correction concerns where a source-derived value looked wrong"
+        in normalized_html
+    )
+    assert "uncertainty about whether to use a reviewer-created note or feedback" in normalized_html
     assert "raw source narrative" in html
+    assert 'action="/feedback"' in html
+    assert 'action="/ccld/correction' not in normalized_html
+    assert 'name="correction_status"' not in normalized_html
+    assert "correction approved" not in normalized_html
+    assert "correction applied" not in normalized_html
+    assert "corrected source record" not in normalized_html
     assert "private.example" not in html
     assert TEST_AUTH_VALUE not in html
     assert '<option value="Bug report" selected="selected">Bug report</option>' in html
