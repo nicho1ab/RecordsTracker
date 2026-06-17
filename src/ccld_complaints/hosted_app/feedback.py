@@ -31,6 +31,14 @@ GITHUB_FEEDBACK_TOKEN_ENV = "GITHUB_FEEDBACK_TOKEN"
 GITHUB_FEEDBACK_DEFAULT_LABELS_ENV = "GITHUB_FEEDBACK_DEFAULT_LABELS"
 MAX_FEEDBACK_DESCRIPTION_LENGTH = 4000
 FEEDBACK_TYPE_OPTIONS = ("Bug report", "Feature request", "New data source")
+SAFE_WORKFLOW_AREAS = (
+    "queue",
+    "reviewer-detail",
+    "save-confirmation",
+    "packet-preview",
+    "packet-draft",
+    "help",
+)
 BASE_FEEDBACK_LABELS = ("feedback", "from-app", "needs-triage")
 TYPE_LABELS = {
     "Bug report": "bug",
@@ -97,6 +105,20 @@ class FeedbackSubmission:
 class FeedbackValidationResult:
     submission: FeedbackSubmission | None
     errors: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class FeedbackHandoffContext:
+    page_path: str | None = None
+    workflow_area: str | None = None
+    facility_number: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+    request_context_origin: str | None = None
+    reviewer_status_filter: str | None = None
+    source_record_key: str | None = None
+    complaint_control_number: str | None = None
+    prompt: str | None = None
 
 
 @dataclass(frozen=True)
@@ -178,11 +200,13 @@ def route_feedback_response(
         )
     if method == "GET":
         query_values = parse_qs(parsed_url.query, keep_blank_values=True)
+        handoff_context = _feedback_handoff_context_from_values(query_values)
         return _html_response(
             200,
             render_feedback_page(
                 active_context,
                 selected_type=_first_form_value(query_values, "feedback_type"),
+                handoff_context=handoff_context,
             ),
         )
     if method == "POST":
@@ -197,7 +221,15 @@ def route_feedback_response(
     )
 
 
-def render_feedback_page(context: FeedbackContext, *, selected_type: str = "") -> str:
+def render_feedback_page(
+    context: FeedbackContext,
+    *,
+    selected_type: str = "",
+    handoff_context: FeedbackHandoffContext | None = None,
+) -> str:
+    form_values = {"feedback_type": [selected_type]} if selected_type in FEEDBACK_TYPE_OPTIONS else {}
+    if handoff_context and handoff_context.page_path:
+        form_values["page_path"] = [handoff_context.page_path]
     return _page(
                 title="Send feedback",
                 heading="Send feedback",
@@ -208,8 +240,9 @@ def render_feedback_page(context: FeedbackContext, *, selected_type: str = "") -
             <h2 id="feedback-purpose-heading">What issue should be reported?</h2>
             <p>Choose the feedback type and describe what blocked retrieval, review, source traceability, wording, or keyboard flow.</p>
         </section>
+        {_feedback_context_panel(handoff_context)}
         <div class="support-layout">
-            {_feedback_form({'feedback_type': [selected_type]} if selected_type in FEEDBACK_TYPE_OPTIONS else {})}
+            {_feedback_form(form_values)}
         </div>
         <section class="quiet-section" aria-labelledby="feedback-safety-heading">
             <h2 id="feedback-safety-heading">Do not include private material</h2>
@@ -233,6 +266,94 @@ def render_feedback_page(context: FeedbackContext, *, selected_type: str = "") -
 
 def _feedback_type_href(feedback_type: str) -> str:
     return f"{FEEDBACK_PATH}?{urlencode({'feedback_type': feedback_type})}"
+
+
+def _feedback_handoff_context_from_values(
+    values: Mapping[str, list[str]],
+) -> FeedbackHandoffContext:
+    return FeedbackHandoffContext(
+        page_path=_safe_page_path(_first_form_value(values, "page_path")),
+        workflow_area=_safe_choice(_first_form_value(values, "workflow_area"), SAFE_WORKFLOW_AREAS),
+        facility_number=_safe_short_value(_first_form_value(values, "facility_number"), digits_only=True),
+        start_date=_safe_date_value(_first_form_value(values, "start_date")),
+        end_date=_safe_date_value(_first_form_value(values, "end_date")),
+        request_context_origin=_safe_short_value(_first_form_value(values, "request_context_origin")),
+        reviewer_status_filter=_safe_short_value(_first_form_value(values, "reviewer_status_filter")),
+        source_record_key=_safe_short_value(_first_form_value(values, "source_record_key"), max_length=180),
+        complaint_control_number=_safe_short_value(_first_form_value(values, "complaint_control_number"), max_length=80),
+        prompt=_safe_short_value(_first_form_value(values, "prompt"), max_length=220),
+    )
+
+
+def _feedback_context_panel(context: FeedbackHandoffContext | None) -> str:
+    if context is None:
+        return ""
+    rows = tuple(_feedback_context_rows(context))
+    if not rows:
+        return ""
+    row_markup = "\n".join(
+        f"        <dt>{html.escape(label)}</dt>\n        <dd>{html.escape(value)}</dd>"
+        for label, value in rows
+    )
+    return f"""        <section class="summary-card" aria-labelledby="feedback-context-heading">
+            <h2 id="feedback-context-heading">Feedback context from review workflow</h2>
+            <p>This context was carried from a local/test review page. It is a bounded helper for
+            triage, not a source fact, not a legal conclusion, not a final export, and
+            not a source-completeness proof.</p>
+            <dl>
+{row_markup}
+            </dl>
+            <p>Describe what was confusing, missing, unexpected, or hard to use. Do not include
+            raw source narrative, secrets, provider claims, private URLs, stack traces, server
+            paths, environment values, or legal conclusions.</p>
+        </section>"""
+
+
+def _feedback_context_rows(context: FeedbackHandoffContext) -> list[tuple[str, str]]:
+    fields = (
+        ("Workflow area", context.workflow_area),
+        ("Page path", context.page_path),
+        ("Facility/license number", context.facility_number),
+        ("Start date", context.start_date),
+        ("End date", context.end_date),
+        ("Request origin", context.request_context_origin),
+        ("Reviewer-status filter", context.reviewer_status_filter),
+        ("Source record key", context.source_record_key),
+        ("Complaint/control identifier", context.complaint_control_number),
+        ("Suggested prompt", context.prompt),
+    )
+    return [(label, value) for label, value in fields if value]
+
+
+def _safe_choice(value: str, allowed: Sequence[str]) -> str | None:
+    if value in allowed:
+        return value
+    return None
+
+
+def _safe_date_value(value: str) -> str | None:
+    if len(value) == 10 and value[4] == "-" and value[7] == "-" and value.replace("-", "").isdigit():
+        return value
+    return None
+
+
+def _safe_short_value(
+    value: str,
+    *,
+    max_length: int = 80,
+    digits_only: bool = False,
+) -> str | None:
+    if not value:
+        return None
+    if len(value) > max_length:
+        value = value[:max_length]
+    if _contains_secret_marker(value) or "http" in value.casefold() or "\\" in value:
+        return None
+    if digits_only and not value.isdigit():
+        return None
+    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -_:/.,?()")
+    cleaned = "".join(ch for ch in value if ch in allowed).strip()
+    return cleaned or None
 
 
 def validate_feedback_submission(

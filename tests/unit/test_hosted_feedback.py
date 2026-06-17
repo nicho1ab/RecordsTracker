@@ -95,6 +95,71 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert_no_secret_html(html)
 
 
+def test_feedback_page_renders_safe_optional_handoff_context() -> None:
+    query = urlencode(
+        {
+            "feedback_type": "Bug report",
+            "workflow_area": "packet-preview",
+            "page_path": "/reviewer/packet/preview",
+            "facility_number": "157806098",
+            "start_date": "2026-01-01",
+            "end_date": "2026-01-31",
+            "request_context_origin": "manual_entry",
+            "source_record_key": "complaint:ccld:complaint:32-CR-20220407124448",
+            "complaint_control_number": "32-CR-20220407124448",
+            "prompt": "Describe packet readiness confusion.",
+            "private_url": "https://private.example.test/path",
+            "token": TEST_AUTH_VALUE,
+        }
+    )
+
+    status, content_type, body = route_response(f"{FEEDBACK_PATH}?{query}")
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Feedback context from review workflow" in html
+    assert "packet-preview" in html
+    assert "/reviewer/packet/preview" in html
+    assert "157806098" in html
+    assert "2026-01-01" in html
+    assert "2026-01-31" in html
+    assert "manual_entry" in html
+    assert "complaint:ccld:complaint:32-CR-20220407124448" in html
+    assert "32-CR-20220407124448" in html
+    assert "Describe packet readiness confusion." in html
+    assert "not a source-completeness proof" in normalized_html
+    assert "raw source narrative" in html
+    assert "private.example" not in html
+    assert TEST_AUTH_VALUE not in html
+    assert '<option value="Bug report" selected="selected">Bug report</option>' in html
+    assert 'name="page_path" value="/reviewer/packet/preview"' in html
+    assert_no_secret_html(html)
+
+
+def test_feedback_page_ignores_unsafe_context_parameters() -> None:
+    query = urlencode(
+        {
+            "workflow_area": "unexpected-area",
+            "page_path": "https://private.example.test/app",
+            "facility_number": "157806098-secret",
+            "source_record_key": "token=abc123",
+            "prompt": "authorization: bearer secret",
+        }
+    )
+
+    status, _content_type, body = route_response(f"{FEEDBACK_PATH}?{query}")
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert "Feedback context from review workflow" not in html
+    assert "private.example" not in html
+    assert "authorization" not in html.casefold()
+    assert "bearer" not in html.casefold()
+    assert_no_secret_html(html)
+
+
 def test_feedback_validation_errors_are_safe() -> None:
     context = _feedback_context(configured=False, actor=_actor())
 

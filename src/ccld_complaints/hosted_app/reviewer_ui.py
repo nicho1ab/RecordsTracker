@@ -64,6 +64,7 @@ REVIEWER_UI_STATUS_PATH = f"{REVIEWER_UI_RECORDS_PATH}/status"
 REVIEWER_UI_PACKET_PREVIEW_PATH = f"{REVIEWER_UI_PREFIX}/packet/preview"
 REVIEWER_UI_PACKET_DRAFT_PATH = f"{REVIEWER_UI_PREFIX}/packet/draft"
 CCLD_HELP_PATH = "/ccld/help"
+FEEDBACK_PATH = "/feedback"
 LOCAL_REVIEWER_UI_SCOPE = HostedAccessScope(
     "seeded_corpus",
     "seeded-ccld-fixture-2026-06-13",
@@ -544,6 +545,12 @@ def _render_packet_draft(
     readiness_counts = _packet_readiness_counts(records, state_summaries)
     findings = _packet_finding_counts(records)
     generated_at = datetime.now(UTC).isoformat(timespec="seconds")
+    feedback_href = _feedback_href(
+        workflow_area="packet-draft",
+        page_path=REVIEWER_UI_PACKET_DRAFT_PATH,
+        return_context=return_context,
+        prompt="Describe copy/print preparation or packet readiness confusion.",
+    )
     record_sections = "\n".join(
         _render_packet_draft_record(record, state_summaries, return_context)
         for record in records
@@ -670,6 +677,7 @@ def _render_packet_draft(
                         <ul>
                             <li><a href="{_escape(_packet_preview_href(return_context))}">Back to packet preview</a></li>
                             <li><a href="{_escape(_ccld_request_href([], return_context))}">Back to review queue</a></li>
+                            <li><a href="{_escape(feedback_href)}">Report copy/print preparation concern</a></li>
                         </ul>
                     </nav>
                     <details class="technical-details">
@@ -1116,6 +1124,12 @@ def _render_packet_preview(
     traceability_counts = _packet_traceability_counts(records)
     state_counts = _packet_reviewer_state_counts(records, state_summaries)
     readiness_counts = _packet_readiness_counts(records, state_summaries)
+    feedback_href = _feedback_href(
+        workflow_area="packet-preview",
+        page_path=REVIEWER_UI_PACKET_PREVIEW_PATH,
+        return_context=return_context,
+        prompt="Describe packet readiness, source-check, or reviewer-state confusion.",
+    )
     record_cards = "\n".join(
         _render_packet_preview_record(record, state_summaries, return_context)
         for record in records
@@ -1155,6 +1169,7 @@ def _render_packet_preview(
                     <div class="form-actions">
                                                 <a class="button" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft</a>
                                                 <a class="button button-secondary" href="{_escape(_ccld_request_href([], return_context))}">Return to same facility/date queue</a>
+                                                <a class="button button-secondary" href="{_escape(feedback_href)}">Report packet preview readiness concern</a>
                     </div>
         </section>
                 <section aria-labelledby="packet-readiness-heading">
@@ -1220,6 +1235,7 @@ def _render_packet_preview(
             <li>Review flags are screening aids, not legal conclusions.</li>
             <li>The CCLD public portal remains the source of record.</li>
             <li>This preview is not a legal report, final export, production packet, or source-completeness proof.</li>
+                        <li>If packet readiness, source-check-needed wording, missing reviewer-created state, or keyboard flow is confusing, use the feedback link with this packet context.</li>
           </ul>
         </section>
         <details class="technical-details">
@@ -2418,6 +2434,14 @@ def _render_detail_decision_continuity(
         else "Return to the same facility/date queue to choose the next record"
     )
     packet_links = _detail_packet_links(return_context)
+    feedback_href = _feedback_href(
+        workflow_area="reviewer-detail",
+        page_path=REVIEWER_UI_DETAIL_PATH,
+        return_context=return_context,
+        source_record_key=source_record_key,
+        complaint_control_number=control_number,
+        prompt="Describe what was confusing about this reviewer detail step.",
+    )
     return f"""<section class="summary-card" aria-labelledby="detail-decision-continuity-heading">
           <p class="launch-kicker">Queue-to-detail continuity</p>
           <h2 id="detail-decision-continuity-heading">Complaint review workspace decision flow</h2>
@@ -2472,6 +2496,7 @@ def _render_detail_decision_continuity(
               <a class="button" href="{_escape(ccld_request_href)}">Return to same facility/date queue</a>
               <a class="button button-secondary" href="{_escape(next_record_href)}">{_escape(next_record_text)}</a>
 {packet_links}
+              <a class="button button-secondary" href="{_escape(feedback_href)}">Report confusion about this reviewer detail</a>
             </div>
             <p class="helper-text">Packet links are local/test preparation aids, not a legal report,
             final export, or source-completeness proof.</p>
@@ -2579,6 +2604,13 @@ def _render_detail_navigation(
     ccld_request_href = _ccld_request_href(related_records, return_context)
     next_record_href = _next_priority_record_href(source_record_key, related_records, return_context)
     packet_links = _detail_navigation_packet_items(return_context)
+    feedback_href = _feedback_href(
+        workflow_area="reviewer-detail",
+        page_path=REVIEWER_UI_DETAIL_PATH,
+        return_context=return_context,
+        source_record_key=source_record_key,
+        prompt="Describe a reviewer detail, return-to-queue, or next-record concern.",
+    )
     return f"""<section aria-labelledby="detail-navigation-heading">
       <h2 id="detail-navigation-heading">Detail navigation</h2>
             <ul>
@@ -2589,7 +2621,7 @@ def _render_detail_navigation(
                 <li><a href="{CCLD_HELP_PATH}">Open CCLD workflow help</a></li>
                 <li><a href="{REVIEWER_UI_RECORDS_PATH}">Back to reviewer records</a></li>
                 <li><a href="/ccld/retrieval/jobs">Job history</a></li>
-                <li><a href="/feedback">Feedback</a></li>
+                <li><a href="{_escape(feedback_href)}">Report reviewer-detail feedback with safe context</a></li>
                 <li><a href="{_escape(detail_href)}">Refresh this seeded detail</a></li>
                 <li><a href="#record-summary-heading">Review record summary</a></li>
                 <li><a href="#source-confidence-heading">Review source-confidence cues</a></li>
@@ -2608,6 +2640,30 @@ def _detail_navigation_packet_items(return_context: CcldQueueReturnContext) -> s
         return ""
     return f"""                <li><a href="{_escape(_packet_preview_href(return_context))}">Preview local/test preparation packet</a></li>
                 <li><a href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft</a></li>"""
+
+
+def _feedback_href(
+    *,
+    workflow_area: str,
+    page_path: str,
+    return_context: CcldQueueReturnContext,
+    prompt: str,
+    source_record_key: str | None = None,
+    complaint_control_number: str | None = None,
+) -> str:
+    query_values = {
+        "feedback_type": "Bug report",
+        "workflow_area": workflow_area,
+        "page_path": page_path,
+        "facility_number": return_context.facility_number or "",
+        "start_date": return_context.start_date or "",
+        "end_date": return_context.end_date or "",
+        "request_context_origin": return_context.context_origin or "manual_entry",
+        "source_record_key": source_record_key or "",
+        "complaint_control_number": complaint_control_number or "",
+        "prompt": prompt,
+    }
+    return f"{FEEDBACK_PATH}?{urlencode(query_values)}"
 
 
 def _render_record_summary_section(
@@ -3585,6 +3641,15 @@ def _render_detail_feedback_guidance(
     source_document = _mapping(source_record, "source_document")
     facility = _facility_context(related_records)
     ccld_request_href = _ccld_request_href(related_records, return_context)
+    source_record_key = _string(identity, "source_record_key")
+    feedback_href = _feedback_href(
+        workflow_area="reviewer-detail",
+        page_path=REVIEWER_UI_DETAIL_PATH,
+        return_context=return_context,
+        source_record_key=source_record_key,
+        complaint_control_number=_optional_string(original_values, "complaint_control_number"),
+        prompt="Describe source traceability, wording, keyboard flow, or next-step confusion.",
+    )
     return f"""<section id="detail-feedback-heading" aria-labelledby="detail-feedback-title">
             <h2 id="detail-feedback-title">Feedback clues for this record</h2>
             <p>If this detail looks wrong or incomplete, return to the CCLD request page and copy
@@ -3653,6 +3718,7 @@ def _render_detail_feedback_guidance(
             <ul>
                 <li><a href="{_escape(ccld_request_href)}">Return to CCLD request or queue</a></li>
                 <li><a href="{CCLD_HELP_PATH}">Open CCLD workflow help</a></li>
+                <li><a href="{_escape(feedback_href)}">Open feedback with this record context</a></li>
             </ul>
         </section>"""
 
@@ -3700,6 +3766,13 @@ def _render_notice(
         "Open next priority record uses another visible complaint record from this facility context."
         if next_record_href != ccld_request_href
         else "No separate next priority record is visible; this opens the facility queue."
+    )
+    feedback_href = _feedback_href(
+        workflow_area="save-confirmation",
+        page_path=REVIEWER_UI_DETAIL_PATH,
+        return_context=return_context,
+        source_record_key=source_record_key,
+        prompt="Describe note/status save, return-to-queue, or next-record confusion.",
     )
     return f"""<section class="summary-card" aria-labelledby="form-result-heading">
             <p class="launch-kicker">Reviewer-created state saved</p>
@@ -3749,6 +3822,7 @@ def _render_notice(
                 {_packet_preview_confirmation_link(return_context)}
                 {_packet_draft_confirmation_link(return_context)}
                 <a class="button button-secondary" href="{_escape(next_record_href)}">Open next priority record</a>
+                <a class="button button-secondary" href="{_escape(feedback_href)}">Report save or return-to-queue confusion</a>
                 <a class="button button-secondary" href="{_escape(detail_href)}">Refresh this reviewer detail</a>
             </div>
             <p class="helper-text">{_escape(next_record_note)}</p>
