@@ -10,6 +10,7 @@
   - Run tests: `./scripts/test.ps1`
   - Capture evidence (fixture): `./scripts/capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture`
   - Verify acceptance checks (non-mutating): `./scripts/verify-hosted-reviewer-acceptance.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture -IncludeCapture`
+  - Stale port cleanup (PowerShell): `foreach ($p in 8000,8003,8010) { Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force } }`
 
 - **Context sample**:
   - Facility: `157806098`

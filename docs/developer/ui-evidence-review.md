@@ -112,3 +112,14 @@ The evidence packet is a lightweight UI review aid. It does not replace:
 - public-source completeness analysis.
 
 It should help reviewers answer whether the current UI route surfaces are coherent, accessible enough for local review, mode-labeled correctly, and free of obvious stale-port, navigation, disclosure, and private-value problems.
+
+## Packet preview / draft evidence route semantics
+
+Evidence captures include explicit route labels for packet preview and draft variants to avoid ambiguity when context (facility/date) is missing:
+
+- `packet-preview-empty`: A preview route capture made without facility/date query context. The UI must present explicit guidance (e.g., "No facility/date packet context was supplied.") and must not silently show "Date range: not provided" alongside included records.
+- `packet-preview-context`: A preview route capture made with facility/date query context (stable seeded context). This route should list included records and render the date range.
+- `packet-draft-empty`: A draft route capture made without facility/date query context. The UI must present explicit guidance and must not show "Date range: not provided".
+- `packet-draft-context`: A draft route capture made with facility/date query context. Drafts intentionally hide the workflow rail for print/copy; evidence assertions should mark the draft workflow-step check as `PASS` with a message describing the intentional skip.
+
+These route captures are route-level evidence only; they do not prove source completeness, successful background retrievals, or export persistence. When reviewing packets, treat context routes as indicators of UI behavior and not as evidence of backend retrieval success.
