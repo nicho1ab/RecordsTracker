@@ -147,37 +147,37 @@ _SOURCE_CONFIDENCE_COMPLAINT_FIELDS = (
     (
         "Complaint control number",
         "complaint_control_number",
-        "Use this as the complaint identifier only after checking the source document context.",
+        "Use this as the complaint identifier only after checking the source document context; use feedback if the identifier or next step is confusing.",
     ),
     (
         "Complaint received date",
         "complaint_received_date",
-        "Check the source traceability fields before relying on this date in notes/status.",
+        "Check the source traceability fields before relying on this date in notes/status; if unclear, describe the local/test cue cautiously or use feedback.",
     ),
     (
         "Visit date",
         "visit_date",
-        "If this is missing, describe it as not available locally, not as proof no visit occurred.",
+        "If this is missing, describe it as not available locally, not as proof no visit occurred; use feedback if the next step is unclear.",
     ),
     (
         "Report date",
         "report_date",
-        "Check whether the report date is acting as a proxy before using delay wording.",
+        "Check whether the report date is acting as a proxy before using delay wording; use cautious reviewer-created wording only after that check.",
     ),
     (
         "Date signed",
         "date_signed",
-        "Use this as a source-derived display value; verify source context before relying on it.",
+        "Use this as a source-derived display value; check source context before relying on it or report confusion through feedback.",
     ),
     (
         "Finding",
         "finding",
-        "Treat this as a source-derived local/test value, not as a new reviewer finding.",
+        "Treat this as a source-derived local/test value, not as a new reviewer finding; use feedback if the safe wording is unclear.",
     ),
     (
         "Extraction confidence",
         "extraction_confidence",
-        "Treat this as local/test extraction metadata, not as reviewer verification.",
+        "Treat this as local/test extraction metadata, not as reviewer verification; do not use it as a source-confidence score.",
     ),
 )
 _SOURCE_CONTEXT_ENTITY_ORDER = {
@@ -2839,6 +2839,10 @@ def _render_source_confidence_cues_section(
             <p>Missing local/test values should be described in reviewer-created notes/status or
             manual feedback as <q>not available in this local/test record</q>, not as source
             absence, record incompleteness, or data loss.</p>
+            <p>Next safe action: check source traceability, use cautious reviewer-created
+            note/status wording only when it helps the local/test queue, use feedback when
+            the cue or wording remains confusing, then return to the same queue for the
+            suggested next record.</p>
             <table>
                 <caption>Source-confidence cues for visible complaint fields</caption>
                 <thead>
@@ -2883,7 +2887,8 @@ def _render_first_activity_confidence_row(values: Mapping[str, Any]) -> str:
                         <td>{_escape(cue)}</td>
                         <td>{_escape(_source_confidence_value(value))}</td>
                         <td>When relevant, say this value is not available locally; do not say
-                        investigation activity did or did not happen.</td>
+                        investigation activity did or did not happen. Use feedback if the
+                        missing-value next step is unclear.</td>
                     </tr>"""
 
 
@@ -2900,7 +2905,8 @@ def _render_report_date_proxy_confidence_row(values: Mapping[str, Any]) -> str:
                         <td>{_escape(cue)}</td>
                         <td>{_escape(_source_confidence_value(value))}</td>
                         <td>Use fallback/proxy wording only when this cue says the current
-                        local/test field identifies a proxy-derived delay basis.</td>
+                        local/test field identifies a proxy-derived delay basis; use feedback
+                        if proxy wording or next action remains confusing.</td>
                     </tr>"""
 
 
@@ -3007,6 +3013,10 @@ def _render_field_note_guidance_section() -> str:
             For now, use a reviewer-created note to describe the possible correction concern or use
             feedback if the correction path is confusing. The local/test workflow does not submit
             correction decisions.</p>
+            <p>For missing, confusing, or proxy-related source-derived values, the safe next
+            action is to name the local/test cue, avoid source absence or verification claims,
+            use feedback when the note/status wording is unclear, and continue review from the
+            same queue context.</p>
             <p>Keep notes short and cautious. When a value is unclear, describe what the
             local/test page showed and what still needs checking rather than making a source,
             legal, facility-wide, or official finding.</p>
@@ -3821,6 +3831,9 @@ def _render_detail_feedback_guidance(
                 <ul>
                     <li>Source traceability observations: fields that were easy to confirm,
                     missing, or confusing.</li>
+                    <li>Source-confidence next-step confusion: missing local/test values,
+                    proxy-related cues, or wording that made it unclear whether to add a
+                    cautious reviewer-created note/status or use feedback.</li>
                     <li>Source context confusion: unclear related source rows, hidden narrative
                     expectations, or labels that made this complaint hard to identify.</li>
                     <li>Request-context fit: whether this complaint seemed unexpected for the
@@ -3846,7 +3859,8 @@ def _render_detail_feedback_guidance(
                     <li>Source traceability: note fields that were easy to confirm, missing, or
                     confusing.</li>
                     <li>Source-confidence cues: note present values, values not available in the
-                    local/test record, or proxy-flag context that affected review.</li>
+                    local/test record, proxy-flag context that affected review, and whether
+                    the next safe action was clear.</li>
                     <li>Field-note uncertainty: note wording you were unsure how to phrase after
                     checking source traceability.</li>
                     <li>Possible correction concern: note which source-derived value looked wrong

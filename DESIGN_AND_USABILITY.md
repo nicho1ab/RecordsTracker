@@ -113,6 +113,14 @@ present, which expected values are not available in the local/test record, and
 when an existing proxy flag applies, but they must not create confidence scores,
 automated source verification, source-completeness assertions, source absence
 claims, legal conclusions, or new source-derived fields.
+Source-confidence next-step cues should be explicit but bounded. When a queue,
+reviewer detail, help topic, or feedback prompt names a missing, confusing, or
+proxy-related source-derived value, it should direct testers to check reviewer
+detail source traceability, use only cautious reviewer-created note/status
+wording when helpful, use feedback when the cue or wording remains unclear, and
+continue review from the same queue context. It must not imply that the app has
+verified, completed, corrected, assigned, claimed, or legally sufficed a source
+record.
 Reviewer detail field-note guidance should help testers turn those cues into
 cautious reviewer-created observations. It should use short examples or action
 phrases only as visible writing guidance; it must not generate notes, store note
@@ -234,7 +242,11 @@ changing note/status behavior.
 Queue summaries should not overstate confidence in displayed source-derived
 values. When fields look missing, confusing, or proxy-related, the queue should
 direct testers to reviewer detail source-confidence cues before they rely on the
-values in reviewer-created notes/status or manual feedback.
+values in reviewer-created notes/status or manual feedback. Queue summaries and
+cards should also make the next safe action clear: check reviewer detail source
+traceability, write cautious reviewer-created observations only when helpful,
+use feedback if source-confidence wording remains confusing, and continue from
+the same queue context.
 Filtered-empty queue states should explain that records are hidden by the
 selected reviewer-status filter for the same facility/date request context, not
 necessarily missing from local/test data or public source material, and should

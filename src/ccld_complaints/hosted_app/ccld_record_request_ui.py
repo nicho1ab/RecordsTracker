@@ -816,6 +816,18 @@ def _render_help_page() -> str:
                         confusing.</p>
                     </details>
                     <details>
+                        <summary id="help-source-confidence-heading">What to do with source-confidence cues</summary>
+                        <p>Source-confidence cues are local/test review prompts for values that are
+                        present, not available locally, confusing, or proxy-related. They are not
+                        source verification, source absence, source completeness, legal sufficiency,
+                        or correction decisions.</p>
+                        <p>When a cue affects review, open reviewer detail, check source traceability,
+                        describe only what the local/test page showed in a cautious reviewer-created
+                        note/status, and use feedback when the safe next step or wording remains
+                        confusing. Then return to the same queue and continue with the suggested next
+                        record.</p>
+                    </details>
+                    <details>
                         <summary id="help-separation-heading">How reviewer-created notes/status work</summary>
                         <p>Imported public-source-derived values remain source-derived records. Notes and
                         status are reviewer-created state and do not edit source-derived fields.</p>
@@ -1131,7 +1143,7 @@ def _render_matched_result(
     {_render_retrieval_job_summary(retrieval_result)}
         <section aria-labelledby="review-queue-heading">
             <h2 id="review-queue-heading">CCLD review queue</h2>
-            <p>Open the suggested complaint first, then check source traceability on detail before adding reviewer-created notes/status.</p>
+            <p>Open the suggested complaint first, then check source traceability and source-confidence cues on detail before adding cautious reviewer-created notes/status or feedback.</p>
             {_render_queue_progress_summary(decision_queue_items)}
             {_render_queue_triage_summary(request, decision_queue_items)}
             {_render_queue_filter_form(request)}
@@ -2446,6 +2458,10 @@ def _render_queue_triage_summary(
     <p>Queue summaries do not prove record completeness. Open reviewer detail for
     source traceability and source-confidence cues before relying on a summary value that
     looks missing, confusing, proxy-related, or missing local/test traceability values.</p>
+    <p>Next safe action: check the detail traceability first, write only cautious
+    reviewer-created note/status wording when needed, use feedback if the source-confidence
+    cue or next step remains confusing, then return to this queue and continue with the
+    suggested next record.</p>
       <dl>
         <dt>Request scope</dt>
                 <dd>{_escape(request_scope)}; date range {_escape(date_scope)}</dd>
@@ -2508,6 +2524,9 @@ def _render_worklist_decision_flow(
     <p>Record cards name source traceability values that are available or missing in the
     loaded local/test row. Missing local/test traceability values are review cues, not
     proof of public-source absence or a source-completeness proof.</p>
+    <p>If a card shows a missing, confusing, or proxy-related value, the next step is
+    reviewer detail: check source traceability, use cautious reviewer-created note/status
+    wording only when helpful, and use feedback when the cue or safe wording is unclear.</p>
       <dl>
         <dt>Active CCLD request context</dt>
         <dd>{_escape(_facility_scope_for_summary(request))}; date range {_escape(_date_scope_text(request))}</dd>
@@ -2540,7 +2559,8 @@ def _render_worklist_decision_flow(
 {cards}
       </section>
     <p>If the queue order, a missing local/test record, an unexpected record,
-    source-traceability cue, reviewer-created status/note cue, wording, keyboard flow,
+    source-traceability cue, source-confidence cue, missing local/test value,
+    proxy-related value, reviewer-created status/note cue, wording, keyboard flow,
     or next step is confusing, open <a href="{_escape(_feedback_href_for_queue(request))}">tester
     feedback for this queue context</a>.</p>
     </section>"""
@@ -2623,10 +2643,10 @@ def _record_review_need_label(
 ) -> str:
     record = _case_brief_record_from_queue_item(index, request, item)
     if has_review_flag(record):
-        return "Review need: flagged for review from source-derived cues; check detail before relying on the summary."
+        return "Review need: flagged for review from source-derived cues; check detail before relying on the summary, then use cautious note/status wording or feedback if the cue remains confusing."
     if _summary_int(item.reviewer_state, "total_rows") == 0:
-        return "Review need: no reviewer-created status/note recorded yet."
-    return "Review need: reviewer-created status/note cue exists; continue from detail if follow-up is needed."
+        return "Review need: no reviewer-created status/note recorded yet; check detail before adding one."
+    return "Review need: reviewer-created status/note cue exists; continue from detail if follow-up or feedback is needed."
 
 
 def _record_source_summary(
@@ -2930,6 +2950,7 @@ def _feedback_checklist_text(
         "- Reviewer detail record opened:",
         "- Source traceability cues were easy to find:",
         "- Source-confidence cues or missing local/test fields to mention:",
+        "- Next safe action was clear for missing, confusing, or proxy-related values:",
         "- Reviewer note/status action used:",
         "- Saved confirmation appeared as expected:",
         "- Saved note/status was visible after save:",

@@ -127,6 +127,13 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "How to review a facility" in html
     assert "What review flags mean" in html
     assert "How source traceability works" in html
+    assert "What to do with source-confidence cues" in html
+    assert "Source-confidence cues are local/test review prompts" in normalized_html
+    assert "not source verification, source absence, source completeness" in normalized_html
+    assert "describe only what the local/test page showed" in normalized_html
+    assert "return to the same queue and continue with the suggested next record" in (
+        normalized_html
+    )
     assert "source URL, raw SHA-256 hash" in html
     assert "local/test traceability value missing" in normalized_html
     assert "not proof that the public CCLD portal lacks a value" in normalized_html
@@ -377,6 +384,8 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Start over with a different CCLD facility" in html
     assert "CCLD review queue" in html
     assert "Open the suggested complaint first" in normalized_html
+    assert "check source traceability and source-confidence cues on detail" in normalized_html
+    assert "cautious reviewer-created notes/status or feedback" in normalized_html
     assert "Table view and queue guidance" in html
     assert "First-run queue steps" in html
     assert "Read the queue progress and triage summaries" in html
@@ -392,6 +401,10 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Queue triage summary" in html
     assert "Queue summaries do not prove record completeness" in normalized_html
     assert "source-confidence cues before relying on a summary value" in normalized_html
+    assert "Next safe action: check the detail traceability first" in normalized_html
+    assert "use feedback if the source-confidence cue or next step remains confusing" in (
+        normalized_html
+    )
     assert "record-specific reviewer-detail observations" in normalized_html
     assert "Carry both queue-level observations and reviewer-detail observations" in (
         normalized_html
@@ -411,6 +424,10 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Open reviewer detail for 32-CR-20220407124448" in html
     assert "Review-priority decision flow" in html
     assert "Use this local/test worklist as a decision screen" in normalized_html
+    assert "If a card shows a missing, confusing, or proxy-related value" in normalized_html
+    assert "use cautious reviewer-created note/status wording only when helpful" in (
+        normalized_html
+    )
     assert "Active CCLD request context" in html
     assert "Request origin" in html
     assert "Active local/test reference source" in html
@@ -423,6 +440,9 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Prioritized worklist records" in html
     assert "Recommended next record: 32-CR-20220407124448" in html
     assert "Review need: flagged for review from source-derived cues" in html
+    assert "use cautious note/status wording or feedback if the cue remains confusing" in (
+        normalized_html
+    )
     assert "Complaint/control/source-record identifier" in html
     assert "Source-derived date/finding/flag summary" in html
     assert "Reviewer-created status/note cue" in html
@@ -434,6 +454,8 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "do not assign, claim, or mutate records" in normalized_html
     assert "Queue decision actions" in html
     assert "tester feedback for this queue context" in normalized_html
+    assert "source-confidence cue, missing local/test value" in normalized_html
+    assert "proxy-related value" in normalized_html
     assert "/feedback?feedback_type=Bug+report" in html
     assert "workflow_area=queue" in html
     assert "facility_number=157806098" in html
@@ -489,6 +511,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "- Active facility reference source:" in html
     assert "- Source traceability cues were easy to find:" in html
     assert "- Source-confidence cues or missing local/test fields to mention:" in html
+    assert "- Next safe action was clear for missing, confusing, or proxy-related values:" in html
     assert "- Saved confirmation appeared as expected:" in html
     assert "- Queue showed updated note/status after returning" in html
     assert "- Records that seemed missing:" in html
@@ -895,6 +918,9 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     assert "- Review session path was clear from home/request/help:" in first_checklist
     assert "- Source traceability cues were easy to find:" in first_checklist
     assert "- Source-confidence cues or missing local/test fields to mention:" in (
+        first_checklist
+    )
+    assert "- Next safe action was clear for missing, confusing, or proxy-related values:" in (
         first_checklist
     )
     assert "- Saved confirmation appeared as expected:" in first_checklist
