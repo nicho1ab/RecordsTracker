@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Clarified hosted reviewer source-confidence next steps across queue, reviewer
+	detail, help, and feedback copy so testers know to check source traceability,
+	use cautious reviewer-created notes/status, report confusing cues through
+	feedback, and continue from the same queue context without treating local/test
+	cues as verification, completeness, correction, assignment, or legal
+	sufficiency.
+
 - Refreshed the root README as a product-oriented public repository landing page.
 	The README now leads with the hosted CCLD RecordsTracker review workflow,
 	target users, current milestone status, safe fixture/mock screenshots,
