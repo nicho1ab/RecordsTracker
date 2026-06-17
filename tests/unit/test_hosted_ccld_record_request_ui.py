@@ -147,7 +147,15 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "How packet preparation fits in" in html
     assert "packet preview/draft are local/test preparation" in normalized_html
     assert "feedback carries safe context" in normalized_html
-    assert "not legal reports, final exports, or source-completeness proof" in html
+    assert "Packet readiness means local/test review readiness" in html
+    assert "manual review, browser copy, or browser print" in normalized_html
+    assert "source-derived values, source traceability" in normalized_html
+    assert "possible correction-readiness concerns" in normalized_html
+    assert (
+        "not legal reports, final exports, certified reports, product-generated exports, "
+        "packet lifecycle state, or source-completeness proof"
+        in normalized_html
+    )
     assert "Source-derived records" in html
     assert "reviewer-created notes/status" in normalized_html
     assert "How reviewer-created status filters work" in html

@@ -862,7 +862,12 @@ def _render_help_page() -> str:
                         <summary id="help-packet-heading">How packet preparation fits in</summary>
                         <p>Packet preview and packet draft summarize loaded local/test complaint records,
                         source traceability cues, reviewer-created status/note cues, and review-readiness
-                        concerns. They are not legal reports, final exports, or source-completeness proof.</p>
+                        concerns. Packet readiness means local/test review readiness for manual review,
+                        browser copy, or browser print after checking facility/date context, included records,
+                        source-derived values, source traceability, reviewer-created note/status cues, and
+                        possible correction-readiness concerns. They are not legal reports, final exports,
+                        certified reports, product-generated exports, packet lifecycle state, or
+                        source-completeness proof.</p>
                     </details>
                 </section>
                 <section aria-labelledby="help-next-action-heading">
@@ -2527,7 +2532,7 @@ def _render_worklist_decision_flow(
         <a class="button button-secondary" href="{CCLD_HELP_PATH}">Open CCLD workflow help</a>
       </div>
     <p class="helper-text">Packet preview and draft links are local/test copy/print preparation aids,
-    not a legal report, not a final export, not a certified report, or source-completeness proof.</p>
+    not a legal report, not a final export, not a certified report, and not a source-completeness proof.</p>
       <section aria-labelledby="priority-record-cards-heading">
         <h4 id="priority-record-cards-heading">Prioritized worklist records</h4>
         <p>These record cards use existing source-derived values and existing reviewer-created

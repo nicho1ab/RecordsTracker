@@ -238,7 +238,7 @@ def render_feedback_page(
         <section class="hero-card" aria-labelledby="feedback-purpose-heading">
             <p class="launch-kicker">Tester support</p>
             <h2 id="feedback-purpose-heading">What issue should be reported?</h2>
-            <p>Choose the feedback type and describe what blocked retrieval, review, active status-filter counts, filtered-empty recovery, source traceability, correction-readiness guidance, missing local/test traceability values, wording, or keyboard flow.</p>
+            <p>Choose the feedback type and describe what blocked retrieval, review, packet/export-readiness, browser copy or print, active status-filter counts, filtered-empty recovery, source traceability, correction-readiness guidance, missing local/test traceability values, wording, or keyboard flow.</p>
             <p class="helper-text">Keyboard flow: choose a feedback type, Tab to Description, submit only safe details, and use the visible validation message if a required field is missing.</p>
         </section>
         {_feedback_context_panel(handoff_context)}
@@ -258,6 +258,8 @@ def render_feedback_page(
                 <li>A date or finding looked confusing.</li>
                 <li>A review flag was unclear.</li>
                 <li>The source traceability summary was hard to use.</li>
+                <li>Packet readiness, browser copy or print preparation, or the boundary between local/test packet preparation and final export was unclear.</li>
+                <li>A packet seemed to include a missing or unexpected record, confusing source traceability cue, reviewer-created note/status concern, or correction-readiness concern.</li>
                 <li>A source-derived value looked wrong or incomplete after checking source traceability.</li>
                 <li>The correction-readiness guidance did not make clear whether to use a reviewer-created note or feedback.</li>
                 <li>A source URL, raw SHA-256 hash, connector metadata, retrieval timestamp, or source document/report marker looked missing or confusing.</li>
@@ -314,7 +316,9 @@ def _feedback_context_panel(context: FeedbackHandoffContext | None) -> str:
             retrieval timestamp, source document/report marker, or local/test traceability value
             missing; possible correction concerns where a source-derived value looked wrong or
             incomplete after checking traceability; or uncertainty about whether to use a
-            reviewer-created note or feedback. Do not include
+            reviewer-created note or feedback; packet/export-readiness confusion, browser copy or
+            print confusion, missing or unexpected records in packet content, or uncertainty about
+            the local/test packet boundary. Do not include
             raw source narrative, secrets, provider claims, private URLs, stack traces, server
             paths, environment values, or legal conclusions.</p>
         </section>"""
@@ -579,7 +583,7 @@ def _feedback_form(form_values: Mapping[str, list[str]]) -> str:
         <p>
           <label for="description">Description</label>
                     {textarea}
-                    <span id="description-help">Describe the route, control, keyboard flow, source traceability cue, or packet preparation issue without private material.</span>
+                    <span id="description-help">Describe the route, control, keyboard flow, source traceability cue, packet/export-readiness concern, browser copy or print issue, or local/test export boundary confusion without private material.</span>
         </p>
         <input type="hidden" name="page_path" value="{html.escape(page_path)}">
         <p><button type="submit">Submit feedback</button></p>
