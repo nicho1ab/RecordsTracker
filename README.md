@@ -36,15 +36,15 @@ lifecycle state, or source-completeness proof.
 
 ## Screenshots
 
-These screenshots are fixture/mock captures from committed test data. They do
-not make live CCLD calls and must not be treated as source-completeness,
-production, legal, or export evidence.
+These screenshots are reviewed live-mode captures from the hosted CCLD
+RecordsTracker workflow. They show public-data review surfaces, but they must
+not be treated as source-completeness, production, legal, or export evidence.
 
-![Hosted review start page in fixture/mock mode](docs/assets/readme/hosted-review-start-fixture.png)
+![Hosted review start page in live public CCLD mode](docs/assets/readme/hosted-review-start-live.png)
 
-![Hosted reviewer queue in fixture/mock mode](docs/assets/readme/hosted-review-queue-fixture.png)
+![Hosted live retrieval result and review queue with facility/date context, review flags, source traceability, and suggested next record](docs/assets/readme/hosted-review-queue-live.png)
 
-![Hosted packet readiness preview in fixture/mock mode](docs/assets/readme/hosted-packet-readiness-fixture.png)
+![Hosted reviewer detail in live mode showing complaint overview, queue continuity, source-derived flags, and review-next cues](docs/assets/readme/hosted-review-detail-live.png)
 
 ## Who This Is For
 
@@ -234,8 +234,8 @@ for fixture/mock mode unless a task handoff says otherwise:
 
 Generated evidence is local and ignored under `data/processed/ui-evidence/`.
 Do not commit generated evidence folders or ZIPs. Committed README screenshots
-must come only from reviewed safe fixture/mock captures and live under a stable
-repository path such as [docs/assets/readme](docs/assets/readme).
+must come only from reviewed safe captures and live under a stable repository
+path such as [docs/assets/readme](docs/assets/readme).
 
 ## Developer Documentation
 
