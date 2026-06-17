@@ -75,6 +75,9 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "What issue should be reported?" in html
     assert "A complaint record looked missing or unexpected." in html
     assert "The source traceability summary was hard to use." in html
+    assert "active status-filter counts" in html
+    assert "filtered-empty recovery" in html
+    assert "The active reviewer-created status filter, shown count" in html
     assert "correction-readiness guidance" in html
     assert (
         "A source-derived value looked wrong or incomplete after checking source traceability."
@@ -117,6 +120,7 @@ def test_feedback_page_renders_safe_optional_handoff_context() -> None:
             "start_date": "2026-01-01",
             "end_date": "2026-01-31",
             "request_context_origin": "manual_entry",
+            "reviewer_status_filter": "blocked",
             "source_record_key": "complaint:ccld:complaint:32-CR-20220407124448",
             "complaint_control_number": "32-CR-20220407124448",
             "prompt": "Describe packet readiness confusion.",
@@ -138,6 +142,11 @@ def test_feedback_page_renders_safe_optional_handoff_context() -> None:
     assert "2026-01-01" in html
     assert "2026-01-31" in html
     assert "manual_entry" in html
+    assert "Reviewer-status filter" in html
+    assert "blocked" in html
+    assert "active reviewer-created status filter confusion" in normalized_html
+    assert "shown-count or total-count confusion" in normalized_html
+    assert "filtered-empty recovery problems" in normalized_html
     assert "complaint:ccld:complaint:32-CR-20220407124448" in html
     assert "32-CR-20220407124448" in html
     assert "Describe packet readiness confusion." in html

@@ -108,6 +108,13 @@ Accessibility requirements apply to:
 	Filtered-empty queue recovery guidance must expose the active filter, same
 	facility/date request context, all-records recovery action, and reviewer-
 	created-state basis for status filters as visible text.
+	Hosted local/test reviewer status-filter summaries must expose the active
+	reviewer-created status filter, records shown under that filter, total records
+	in the same facility/date queue, available status values, and filtered-empty
+	recovery actions as visible text. These cues must not rely on color, layout,
+	icons, or implicit context, and must state that status filters are reviewer-
+	created queue views rather than source-derived facts, assignment, record
+	claiming, persisted queue state, or source-completeness proof.
 	Request-context confirmation must expose lookup versus manual-entry origin,
 	facility/license number, date range, active facility reference source, and
 	change-facility/date navigation as visible text with descriptive links.

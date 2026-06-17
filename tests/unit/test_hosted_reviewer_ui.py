@@ -598,6 +598,9 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "What to check first" in html
     assert "After this detail" in html
     assert "Return to same facility/date queue" in html
+    assert "Return links preserve the same facility/date request context" in html
+    assert "status filters are chosen on the queue view" in normalized_html
+    assert "do not assign, claim, or persist" in normalized_html
     assert "Open next recommended record from this context" in html
     assert "Report confusion about this reviewer detail" in html
     assert "workflow_area=reviewer-detail" in html
@@ -1114,6 +1117,10 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert "Open local/test preparation draft for browser copy or print" in html
     assert f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098" in html
     assert "Queue progress and note/status cues are derived from reviewer-created state" in html
+    assert "Status filters are reviewer-created queue views" in html
+    assert "filtered-empty queue state" in html
+    assert "not public-source absence" in html
+    assert "source-completeness proof" in html
     assert "same facility/license number and date range" in normalized_html
     assert "submit the request again" in html
     assert "continuing to the next record" in html
@@ -1264,6 +1271,9 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "Open local/test preparation draft for browser copy or print" in html
     assert f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098" in html
     assert "Queue progress and note/status cues are derived from reviewer-created state" in html
+    assert "Status filters are reviewer-created queue views" in html
+    assert "filtered-empty queue state" in html
+    assert "not public-source absence" in html
     assert "submit the request again" in html
     assert "continuing to the next record" in html
     assert "suggested next record is not a persisted assignment" in html

@@ -2577,6 +2577,9 @@ def _render_detail_decision_continuity(
             <h3 id="detail-next-steps-heading">After this detail</h3>
             <p>Save only cautious reviewer-created status/note observations. GET rendering does not
             write reviewer-created state and does not mutate source-derived records.</p>
+                        <p>Return links preserve the same facility/date request context. Reviewer-created
+                        status filters are chosen on the queue view and do not assign, claim, or persist a
+                        record-specific workflow state.</p>
             <div class="form-actions">
               <a class="button" href="{_escape(ccld_request_href)}">Return to same facility/date queue</a>
               <a class="button button-secondary" href="{_escape(next_record_href)}">{_escape(next_record_text)}</a>
@@ -3473,6 +3476,9 @@ def _return_context_hidden_summary(return_context: CcldQueueReturnContext) -> st
             <p>After saving a note or status, return to this same local/test CCLD request
             context and submit the request again to see queue progress and note/status cues
             derived from reviewer-created state.</p>
+            <p>Status filters are reviewer-created queue views selected on the request queue;
+            returning here preserves facility/date context, not assignment, record claiming, or
+            persisted workflow state.</p>
             <dl>
                 <dt>Facility/license number to reuse</dt>
                 <dd>{_escape(return_context.facility_number)}</dd>
@@ -3932,6 +3938,9 @@ def _render_notice(
                 Return to the same CCLD request context, use the same facility/license number
                 and date range, and submit the request again if the local/test queue page needs
                 to refresh its displayed cues.</p>
+                <p>Status filters are reviewer-created queue views. Showing no rows under a
+                status filter is a filtered-empty queue state, not public-source absence,
+                assignment state, record claiming, or source-completeness proof.</p>
                 <p>After the queue shows the updated cue, open the suggested next record or the
                 next not-started record before continuing to the next record.</p>
                 <p>The suggested next record is not a persisted assignment, automatic record

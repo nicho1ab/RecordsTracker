@@ -183,6 +183,13 @@ Reviewer detail and request-queue navigation should make next-record movement
 clear without implying persisted assignment, record claiming, or production
 workflow state. Suggested-next cues should remain derived from the current
 facility/date request context and existing reviewer-created note/status rows.
+Reviewer status filters should read as explicit queue views, not hidden state.
+Queue pages should state the active reviewer-created status filter, records
+shown under that filter, total records in the same facility/date queue, available
+status values, and filtered-empty recovery action in plain visible text. Empty
+filtered results should explain that the filter may be hiding records and that
+the result is not public-source absence, source completeness, assignment, record
+claiming, or persisted workflow state.
 
 The first browser-accessible CCLD record request page is a local/test, server-
 rendered HTML surface at `/ccld/records/request`. Its design purpose is to

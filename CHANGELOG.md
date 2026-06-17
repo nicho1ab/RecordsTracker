@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased
+- Improved hosted reviewer status-filter accessibility and readability. The
+	local/test CCLD request queue now states the active reviewer-created status
+	filter, records shown under that filter, total records in the same
+	facility/date queue, available status filters, filtered-empty recovery, and
+	safe feedback cues in visible text. This preserves existing reviewer-created
+	status behavior and does not add routes, schemas, migrations, persistence,
+	retrieval behavior, workflow-engine state, reviewer-created state kinds,
+	note/status behavior changes, packet export behavior, source-derived mutation,
+	correction behavior, feedback persistence, legal conclusions,
+	source-completeness claims, or committed evidence files.
+
 - Improved hosted reviewer keyboard-flow accessibility. Shared workflow pages now
 	state keyboard-flow guidance in text, facility/request/reviewer/feedback forms
 	expose clearer helper text for moving through existing controls, and local

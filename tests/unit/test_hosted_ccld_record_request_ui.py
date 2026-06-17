@@ -150,6 +150,12 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "not legal reports, final exports, or source-completeness proof" in html
     assert "Source-derived records" in html
     assert "reviewer-created notes/status" in normalized_html
+    assert "How reviewer-created status filters work" in html
+    assert "active reviewer-created status filter" in normalized_html
+    assert "records shown under that filter" in normalized_html
+    assert "total records in the same facility/date queue" in normalized_html
+    assert "not source-derived facts, assignments, record claims" in normalized_html
+    assert "filtered-empty result can mean the filter is hiding records" in normalized_html
     assert "Correction-readiness" in html
     assert (
         "does not make reviewer-created observations into official public-source facts"
@@ -433,7 +439,15 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Copy tester feedback checklist" in html
     assert "Reviewer-status filter for this queue" in html
     assert "Apply reviewer-status filter" in html
-    assert "Showing 1 of 1 matching complaint" in normalized_html
+    assert "Active reviewer-created status filter" in html
+    assert "Active reviewer-created status filter: All queue records." in html
+    assert "Showing 1 of 1 records for this same facility/date request." in html
+    assert "Records shown under active filter" in html
+    assert "Total records in this same facility/date queue" in html
+    assert "Available reviewer-created status filters" in html
+    assert "not record assignment" in html
+    assert "not record claiming" in normalized_html
+    assert "not persisted queue state" in html
     assert "A. MIRIAM JAMISON" in html
     assert "32-CR-20220407124448" in html
     assert detail_href in html
@@ -578,34 +592,35 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
     assert "- Reviewer-created notes present: yes" in reviewed_html
     assert "- Reviewer-created statuses present: yes" in reviewed_html
     assert "- Reviewed: 1" in reviewed_html
-    assert "Showing 1 of 1 matching complaint record(s) for queue filter Reviewed." in (
-        reviewed_normalized
-    )
+    assert "Active reviewer-created status filter: Reviewed." in reviewed_html
+    assert "Showing 1 of 1 records for this same facility/date request." in reviewed_html
+    assert "Available reviewer-created status filters" in reviewed_html
     assert "Open reviewer detail for 32-CR-20220407124448" in reviewed_html
     assert blocked_status == 200
-    assert "Showing 0 of 1 matching complaint record(s) for queue filter Blocked." in (
-        blocked_normalized
-    )
+    assert "Active reviewer-created status filter: Blocked." in blocked_html
+    assert "Showing 0 of 1 records for this same facility/date request." in blocked_html
     assert "No complaint records match the selected reviewer-status filter" in blocked_normalized
     assert "Filtered queue recovery" in blocked_html
-    assert "selected reviewer-status filter hides all queue rows" in blocked_normalized
+    assert "No records match this active reviewer-created status filter" in blocked_html
     assert "same facility/date request context" in blocked_normalized
-    assert "does not mean records are missing, deleted, or absent" in blocked_normalized
+    assert "does not mean records are missing, deleted, absent" in blocked_normalized
     assert "Active request context" in blocked_html
     assert "facility/license number 157806098; date range 2022-08-01 to 2022-08-31" in (
         blocked_normalized
     )
-    assert "Selected reviewer-status filter" in blocked_html
-    assert "Queue records before this filter" in blocked_html
+    assert "Active reviewer-created status filter" in blocked_html
+    assert "Records shown under active filter" in blocked_html
+    assert "Total records in this same facility/date queue" in blocked_html
     assert "<dd>1</dd>" in blocked_html
     assert "Reviewer-status filters use existing reviewer-created state" in blocked_html
     assert "Records without a saved status are counted as not started" in blocked_normalized
-    assert "Show all queue records for this request" in blocked_html
+    assert "Show all reviewer statuses for this facility/date request" in blocked_html
     assert "name=\"reviewer_status_filter\" value=\"all\"" in blocked_html
     assert "return to the full CCLD request queue" in blocked_normalized
     assert "manual feedback checklist" in blocked_html
     assert "what you expected to see" in blocked_normalized
     assert "choose All queue records" in blocked_normalized
+    assert "filtered-empty result" in blocked_normalized
     assert "tester feedback for this filtered queue" in blocked_normalized
     assert "reviewer_status_filter=blocked" in blocked_html
     assert counts == {
