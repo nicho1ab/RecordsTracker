@@ -240,6 +240,7 @@ def _guided_step_markup(step: GuidedStep, index: int, current_index: int) -> str
       <span class="step-index" aria-hidden="true">{index + 1}</span>
       <span class="step-main">{content}</span>
       <span class="step-state">{state}</span>
+      <span class="sr-only">{html.escape(step.help_text)}</span>
       </li>"""
 
 
@@ -1012,6 +1013,15 @@ SHARED_CSS = r"""
     .sr-note {
       color: var(--muted);
       font-size: 0.92rem;
+    }
+    .sr-only {
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      height: 1px;
+      overflow: hidden;
+      position: absolute;
+      white-space: nowrap;
+      width: 1px;
     }
     details {
       border-top: 1px solid var(--line-soft);

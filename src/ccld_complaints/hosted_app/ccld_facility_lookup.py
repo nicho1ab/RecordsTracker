@@ -131,7 +131,7 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
       ul.href='/ccld/records/request?facility_number='+encodeURIComponent(f.num)
         +'&request_context_origin=facility_lookup'
         +'&lookup_facility_name='+encodeURIComponent(f.n);
-      ul.setAttribute('aria-label','Use '+f.n+' for retrieval');
+    ul.setAttribute('aria-label','Use '+f.n+' / '+f.num+' for complaint record retrieval');
     }
     sc.removeAttribute('hidden');
   }
@@ -530,7 +530,7 @@ def _render_lookup_form(query: str) -> str:
           <input id="facility_lookup_query" name="q" type="search"
             value="{_escape(query)}" aria-describedby="facility-search-help">
         </p>
-        <p><button type="submit" class="button-secondary">Search</button></p>
+        <p><button type="submit" class="button-secondary">Search CCLD facilities</button></p>
       </form>
     </section>"""
 
@@ -559,7 +559,7 @@ def _render_facility_combobox_section(
                     <ul id="facility-suggestion-list" class="facility-suggestions" aria-label="Facility suggestions" hidden></ul>
                 </div>
                 <div class="form-actions">
-                    <button type="submit" class="button-secondary">Search</button>
+                    <button type="submit" class="button-secondary">Search CCLD facilities</button>
                 </div>
             </form>
 {limited_note_markup}
@@ -574,12 +574,12 @@ def _render_facility_selected_card_html(*, mode: str = "facility") -> str:
     if mode == "request":
         actions = """<div class="form-actions">
                     <button type="submit" class="button">Continue to dates</button>
-                    <button type="button" id="facility-change-btn" class="button-secondary">Change facility</button>
+                    <button type="button" id="facility-change-btn" class="button-secondary">Change selected facility</button>
                 </div>"""
     else:
         actions = """<div class="form-actions">
-                    <a id="facility-use-link" class="button selected-use-link" href="#">Review this facility</a>
-                    <button type="button" id="facility-change-btn" class="button-secondary">Change</button>
+                    <a id="facility-use-link" class="button selected-use-link" href="#">Use this facility for complaint record retrieval</a>
+                    <button type="button" id="facility-change-btn" class="button-secondary">Change selected facility</button>
                 </div>"""
     return f"""    <div id="facility-selected-card" class="facility-selected-card" hidden>
                 <div class="selected-facility-info">
@@ -693,7 +693,7 @@ def _render_result_card(record: CcldFacilityLookupRecord) -> str:
             {f'<p class="sr-note">{_escape(geo)}</p>' if geo else ''}
                         {f'<p>{type_status}</p>' if type_status else ''}
           </div>
-          <p><a class="button" href="{_escape(href)}" aria-label="Review {_escape(record.facility_name)} facility complaint records">Review this facility</a></p>
+          <p><a class="button" href="{_escape(href)}" aria-label="Use {_escape(record.facility_name)} / {_escape(record.facility_number)} for complaint record retrieval">Use this facility for complaint record retrieval</a></p>
         </article>"""
 
 
