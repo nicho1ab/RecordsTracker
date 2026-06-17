@@ -42,9 +42,9 @@ not be treated as source-completeness, production, legal, or export evidence.
 
 ![Hosted review start page in live public CCLD mode](docs/assets/readme/hosted-review-start-live.png)
 
-![Hosted live retrieval result and review queue with facility/date context, review flags, source traceability, and suggested next record](docs/assets/readme/hosted-review-queue-live.png)
+![Hosted live review queue decision flow with facility/date context, source traceability cues, recommended next record action, and prioritized worklist record](docs/assets/readme/hosted-review-queue-live.png)
 
-![Hosted reviewer detail in live mode showing complaint overview, queue continuity, source-derived flags, and review-next cues](docs/assets/readme/hosted-review-detail-live.png)
+![Hosted reviewer detail in live mode showing source traceability summary, reviewer-created state separation, safe review guidance, and note/status action context](docs/assets/readme/hosted-review-detail-live.png)
 
 ## Who This Is For
 
