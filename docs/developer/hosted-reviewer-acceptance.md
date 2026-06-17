@@ -118,6 +118,10 @@ submitted, no retrieval job is submitted, no import/reload is run, no feedback i
 submitted, and no reviewer-created state write is attempted unless a separate
 safe test/staging run explicitly chooses write checks.
 
+The route marker checks also look for visible keyboard-flow guidance on the
+main hosted workflow pages so keyboard-only testers can confirm where the
+current route sits and which existing control or link moves the review forward.
+
 ## What This Does Not Prove
 
 The acceptance path does not prove source completeness, public CCLD portal

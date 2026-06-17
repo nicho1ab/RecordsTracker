@@ -973,7 +973,9 @@ def _render_record_list(
                     <input id="q" name="q" type="search" value="{_escape(search_query)}"
                         aria-describedby="reviewer-search-help">
                     <span id="reviewer-search-help">Search by complaint control number,
-                    finding, facility/license number, source document ID, or loaded record key.</span>
+                    finding, facility/license number, source document ID, or loaded record key.
+                    Keyboard flow: search filters this queue, and each Open record link includes
+                    the complaint identifier before opening reviewer detail.</span>
         </p>
         <p>
           <button type="submit">Search</button>
@@ -3614,6 +3616,7 @@ def _render_review_actions(
             <p>After saving, the confirmation shows what changed, states that it is reviewer-created
             state, confirms source-derived fields remain unchanged, and offers Return to facility
             queue plus Open next priority record guidance.</p>
+            <p class="helper-text">Keyboard flow: Tab to the reviewer-created note field or status selector, save one action, then use the confirmation links to return to the same queue or open the next priority record.</p>
             <section aria-labelledby="cautious-action-guidance-heading">
                 <h3 id="cautious-action-guidance-heading">Cautious note/status guidance</h3>
                 <p>Use note text to record what you checked, not to create legal conclusions.
@@ -3712,7 +3715,9 @@ def _render_note_form(
                                         Use safe plain text. Notes appear below after saving.
                                         They can document a possible correction concern after source
                                         traceability review, but they do not change the source-derived
-                                        record or submit a correction decision.</span>
+                                        record or submit a correction decision. Keyboard flow after saving:
+                                        use the confirmation links to return to the same queue or open the
+                                        next priority record.</span>
         </p>
                                 <p><button type="submit">Save reviewer-created note for this record</button></p>
       </form>
@@ -3740,7 +3745,9 @@ def _render_status_form(
           </select>
                     <span id="reviewer-status-help">Status is reviewer-created local/test state for
                     queue progress, appears below after saving, and is not a public-source
-                    finding. It does not correct or verify source-derived data.</span>
+                    finding. It does not correct or verify source-derived data. Keyboard flow after
+                    saving: use the confirmation links to return to the same queue or open the next
+                    priority record.</span>
         </p>
                                 <p><button type="submit">Save reviewer-created status for this record</button></p>
       </form>

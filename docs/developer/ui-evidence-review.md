@@ -17,6 +17,8 @@ The capture command performs GET-only requests against an already-running local 
 - `html/` route HTML snapshots when routes respond.
 - `text/` plain-text route summaries derived from HTML.
 - `accessibility/` lightweight headings, links, forms, and landmark summaries.
+- keyboard-flow marker assertions showing whether a route exposes visible
+	keyboard-flow guidance for moving through the current hosted review step.
 - `diagnostics/` git state, recent log, capture command, and non-secret capture settings.
 - `screenshots/` route screenshots when local screenshot tooling is available.
 

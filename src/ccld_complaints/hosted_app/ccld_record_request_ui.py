@@ -553,6 +553,7 @@ def _render_request_form(
                     <p class="launch-kicker">Retrieval intake</p>
                     <h2 id="request-hero-heading">Retrieve complaint records for a facility</h2>
                     <p class="launch-value">Create the review request context: confirm a CCLD facility/license number, choose a complaint date range, then retrieve or show loaded local/test complaint records.</p>
+                    <p class="helper-text">Keyboard flow: move from facility selection to date range, then choose Retrieve complaint records or Show existing queue before opening the review queue.</p>
             <p><span class="{mode_class}">{mode_label}</span></p>
         </section>
                 {_render_request_start_orientation()}
@@ -617,7 +618,7 @@ def _render_facility_selection_state(reference_source: CcldFacilityReferenceSour
             <p>Search for a facility when you do not know the exact facility/license number, or type the digit facility/license number directly if you already have it.</p>
             <form action="{CCLD_RECORD_REQUEST_PATH}" method="get" id="facility-select-form">
                 <label for="facility-search-input">Facility</label>
-                <p id="facility-search-hint" class="helper-text">Search by name, license number, city, ZIP, type, or status.</p>
+                <p id="facility-search-hint" class="helper-text">Search by name, license number, city, ZIP, type, or status. Keyboard flow: type a search or digit number, use arrow keys or Tab to review suggestions and actions, then confirm facility to continue to date range.</p>
                 <div class="facility-combobox-outer" id="facility-combobox-outer">
                     <input id="facility-search-input" name="facility_number" type="text"
                         inputmode="numeric"
@@ -669,7 +670,7 @@ def _render_date_range_state(
                         <input id="end_date" name="end_date" type="date" value="{_escape(selected_end_date)}" aria-describedby="date-range-help" required>
                     </p>
                 </div>
-                <p id="date-range-help" class="helper-text">Use the date range to narrow complaint, visit, report, signed, or retrieval dates represented in the source-derived records.</p>
+                <p id="date-range-help" class="helper-text">Use the date range to narrow complaint, visit, report, signed, or retrieval dates represented in the source-derived records. Keyboard flow: Tab through Start date, End date, Confirm date range, or Change facility.</p>
                 <div class="form-actions">
                     <button type="submit">Confirm date range</button>
                     <a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Change facility</a>
@@ -697,7 +698,7 @@ def _render_date_ready_state(
                 <dt>Record type</dt>
                 <dd>Complaint records</dd>
             </dl>
-            <form action="{CCLD_RECORD_REQUEST_PATH}" method="post">
+            <form action="{CCLD_RECORD_REQUEST_PATH}" method="post" aria-describedby="retrieve-actions-help">
                 <input type="hidden" name="{_REQUEST_CONTEXT_ORIGIN_FIELD}" value="{_escape(request_context_origin)}">
                 <input type="hidden" name="{_LOOKUP_FACILITY_NAME_FIELD}" value="{_escape(lookup_facility_name or '')}">
                 <input type="hidden" name="facility_number" value="{_escape(facility_number)}">
@@ -710,6 +711,7 @@ def _render_date_ready_state(
                     <button class="secondary" type="submit">Show existing queue</button>
                     <a class="button button-quiet" href="{CCLD_RECORD_REQUEST_PATH}?{_escape(urlencode({'facility_number': facility_number, _REQUEST_CONTEXT_ORIGIN_FIELD: request_context_origin, _LOOKUP_FACILITY_NAME_FIELD: lookup_facility_name or ''}))}">Change date range</a>
                 </div>
+                <p id="retrieve-actions-help" class="helper-text">Keyboard flow: Retrieve complaint records creates a controlled retrieval job only when configured; Show existing queue reviews loaded local/test records; Change date range returns to the date step.</p>
             </form>
         </section>"""
 
