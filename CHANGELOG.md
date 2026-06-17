@@ -1,6 +1,20 @@
 # Changelog
 
 ## Unreleased
+- Improved hosted correction-readiness guidance. Reviewer detail, source
+	traceability, note/status guidance, save confirmations, packet preview/draft,
+	help, and feedback now explain how testers should check source traceability
+	first, capture possible correction concerns in reviewer-created notes or
+	feedback for now, and understand that the public CCLD portal remains the
+	source of record. This guidance does not add canonical fields, schemas,
+	migrations, correction tables, correction persistence, correction forms,
+	correction write routes, correction status values, correction decision
+	behavior, annotation workflow, connector behavior, retrieval behavior,
+	extraction behavior, exports, packet lifecycle changes, source-derived
+	mutation, reviewer-created writes from GET rendering, note/status behavior
+	changes, legal conclusions, source-completeness claims, or committed evidence
+	files.
+
 - Improved hosted source-traceability review readiness. Queue/worklist, reviewer
 	detail, packet preview/draft, help, and feedback cues now more clearly label
 	existing source traceability values, missing local/test traceability values,

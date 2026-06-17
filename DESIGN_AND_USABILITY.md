@@ -119,6 +119,15 @@ phrases only as visible writing guidance; it must not generate notes, store note
 templates, create new note fields, edit source-derived records, or imply public-
 source absence, record completeness, official findings, legal conclusions, or
 facility-wide conclusions.
+Hosted correction-readiness guidance should stay presentation-only. It should
+tell testers to check source traceability first when a source-derived value looks
+wrong or incomplete, describe the possible correction concern in a reviewer-
+created note for now, and use feedback when the correction path is confusing,
+the record appears unexpected, or the tester is unsure whether to use a note or
+feedback. It must state that the local/test workflow does not change source-
+derived records or submit correction decisions, and it must not imply that a
+correction workflow, correction status, correction persistence, correction
+decision, export change, or official public-source fact has been implemented.
 Reviewer note/status confirmations should make the return path clear: saved
 notes/statuses are reviewer-created state, queue progress and note/status cues
 are derived from that state, the tester may need to resubmit the same local/test

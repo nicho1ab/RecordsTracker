@@ -819,6 +819,20 @@ def _render_help_page() -> str:
                         status are reviewer-created state and do not edit source-derived fields.</p>
                     </details>
                     <details>
+                        <summary id="help-correction-readiness-heading">How correction-readiness works</summary>
+                        <p>Correction-readiness means a tester has noticed that a source-derived value
+                        may need correction review later. Check source traceability first, then capture
+                        the possible correction concern in a reviewer-created note or feedback for now.</p>
+                        <p>This local/test workflow does not change source-derived records, does not
+                        submit correction decisions, and does not make reviewer-created observations into
+                        official public-source facts. A future correction workflow would be reviewer-created
+                        state separate from source-derived records.</p>
+                        <p>Use feedback when the correction-readiness path is confusing, when a record
+                        appears unexpected for the facility/date request, or when you are unsure whether a
+                        concern belongs in a reviewer-created note or feedback. The public CCLD portal
+                        remains the source of record.</p>
+                    </details>
+                    <details>
                         <summary id="help-live-heading">Retrieval modes</summary>
                         <p>When the mode badge says live public retrieval, controlled server-side
                         public CCLD HTTP requests occur only after browser submit. When the mode badge
@@ -862,7 +876,7 @@ def _render_workflow_overview() -> str:
                 <li>Use the CCLD review queue to choose a suggested next record, filter by
                 reviewer-created status, or spot queue wording that belongs in feedback.</li>
                 <li>Use reviewer detail to check source traceability, source-confidence cues,
-                and field-note guidance before saving reviewer notes/status as tester-created
+                possible correction concerns, and field-note guidance before saving reviewer notes/status as tester-created
                 observations.</li>
                 <li>Return to the same queue/request context, resubmit when needed to refresh
                 progress, continue to the next record, and finish by copying the single manual
@@ -902,6 +916,10 @@ def _render_key_terms_section() -> str:
                 <dt>Reviewer-created notes/status</dt>
                 <dd>Reviewer-created local/test note/status rows stored separately from
                 source-derived records.</dd>
+                <dt>Correction-readiness</dt>
+                <dd>Guidance for describing a possible correction concern after checking source
+                traceability. It is not a submitted correction decision, not source-derived data,
+                and not an official public-source fact.</dd>
                 <dt>Reviewer-status filter</dt>
                 <dd>A queue filter based on existing reviewer-created status rows. Records with
                 no saved reviewer status are counted as not started.</dd>
@@ -925,6 +943,7 @@ def _render_feedback_guidance_section() -> str:
             feedback. Useful tester feedback includes the facility/license number, requested
             date range, lookup or request criteria that felt unclear, records that seemed
             missing or unexpected, source traceability cues, note/status confirmation behavior,
+            possible correction concern wording, uncertainty about note versus feedback,
             return-to-queue behavior, confusing wording, workflow friction, and suggested
             improvements.</p>
             <p>After submitting a CCLD request, copy the structured checklist into the agreed
