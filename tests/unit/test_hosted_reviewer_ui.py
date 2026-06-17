@@ -298,6 +298,9 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> 
     assert "manual browser copy or print" in normalized_html
     assert "Review before copying or printing" in html
     assert "Source traceability available means visible source URL" in html
+    assert "raw SHA-256 hash" in html
+    assert "source document/report marker cues" in html
+    assert "missing local/test traceability values" in normalized_html
     assert "If copy/print preparation content seems wrong" in html
     assert "Facility / license" in html
     assert "157806098" in html
@@ -328,11 +331,13 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> 
     assert "Why included" in html
     assert "Source traceability summary" in html
     assert "Review-readiness cue" in html
+    assert "Missing local/test traceability values" in html
+    assert "Check source traceability before relying on source-derived values" in html
     assert "Needs source check before copy/print" in html
     assert "Reviewer-created status/note cue present" in html
     assert "Open record 32-CR-20220407124448" in html
     assert "What this draft does not prove" in html
-    assert "It does not prove source completeness." in html
+    assert "It is not a source-completeness proof." in html
     assert "It does not prove no other complaints exist." in html
     assert "official findings beyond source-derived finding labels" in html
     assert "Copyable packet summary" in html
@@ -685,6 +690,11 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "instead of treating the note as a source-derived edit" in normalized_html
     assert "Source traceability" in html
     assert "Selected complaint source traceability fields" in html
+    assert "Record-level source traceability status" in html
+    assert "Traceability values available" in html
+    assert "Missing local/test traceability values" in html
+    assert "Check source traceability before relying on source-derived values" in html
+    assert "source URL, raw SHA-256 hash, raw artifact reference" in normalized_html
     assert "Use these fields to confirm which local/test source-derived complaint record" in (
         normalized_html
     )
@@ -778,6 +788,8 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Reviewer-created state is stored separately" in normalized_html
     assert "Feedback clues for this record" in html
     assert "If source traceability fields are confusing or missing" in html
+    assert "local/test traceability value missing" in normalized_html
+    assert "source document/report marker" in normalized_html
     assert "copy the tester feedback checklist" in normalized_html
     assert "Return request context" in html
     assert "facility/license number 157806098; date range not provided" in html
@@ -845,6 +857,7 @@ def test_reviewer_ui_detail_missing_traceability_uses_clear_non_conclusive_wordi
     }
     assert "Raw artifact preservation" in html
     assert "not available in this local/test record" in html
+    assert "Local/test traceability value missing: raw artifact reference" in html
     assert "Source-confidence cues" in html
     assert "Field-note guidance" in html
     assert "First investigation activity date" in html
