@@ -72,6 +72,7 @@ def test_verify_script_checks_complete_tester_readiness_route_set() -> None:
     for marker in (
         "Start a facility complaint review",
         "Lookup or manual entry?",
+        "Keyboard flow:",
         "Ready to retrieve complaint records",
         "Complaint overview",
         "Before copying or printing",
@@ -165,6 +166,7 @@ def test_acceptance_doc_covers_full_route_set_and_boundaries() -> None:
         "not a source-completeness proof",
         "public CCLD portal remains the source of record",
         "Reviewer-created status/note cues remain separate",
+        "visible keyboard-flow guidance",
         "Write checks require explicit",
         "safe local test or staging instance",
     ):

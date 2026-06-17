@@ -110,19 +110,19 @@ $encodedSourceRecordKey = [System.Uri]::EscapeDataString('complaint:ccld:complai
 $contextQuery = "facility_number=$ContextFacilityNumber&start_date=$ContextStartDate&end_date=$ContextEndDate&request_context_origin=manual_entry"
 
 $checks = @(
-    @{ Name = "home-start"; Path = "/"; Required = @("Start a facility complaint review", "How the local/test review loop works", "public CCLD portal remains the source of record") },
-    @{ Name = "ccld-start"; Path = "/ccld/"; Required = @("Retrieve complaint records", "Start review request context", "Which facility should be reviewed?") },
-    @{ Name = "facility-lookup"; Path = "/ccld/facilities"; Required = @("Find a facility", "Lookup or manual entry?", "Search by name, license number, city, ZIP, type, or status.") },
-    @{ Name = "record-request"; Path = "/ccld/records/request"; Required = @("Which facility should be reviewed?", "Confirm facility", "Start review request context") },
-    @{ Name = "record-request-context"; Path = "/ccld/records/request?$contextQuery"; Required = @($ContextFacilityNumber, "Ready to retrieve complaint records", "Show existing queue", "Date range") },
-    @{ Name = "reviewer"; Path = "/reviewer"; Required = @("Worklist", "Open local/test packet preview", "Open local/test preparation draft for browser copy or print") },
-    @{ Name = "reviewer-records"; Path = "/reviewer/records"; Required = @("Worklist", "Open record", "Source traceability available") },
-    @{ Name = "reviewer-detail"; Path = "/reviewer/records/detail?source_record_key=$encodedSourceRecordKey&$contextQuery"; Required = @("Complaint overview", "Record review action", "Source traceability", "Reviewer-created") },
+    @{ Name = "home-start"; Path = "/"; Required = @("Start a facility complaint review", "How the local/test review loop works", "Keyboard flow:", "public CCLD portal remains the source of record") },
+    @{ Name = "ccld-start"; Path = "/ccld/"; Required = @("Retrieve complaint records", "Start review request context", "Which facility should be reviewed?", "Keyboard flow:") },
+    @{ Name = "facility-lookup"; Path = "/ccld/facilities"; Required = @("Find a facility", "Lookup or manual entry?", "Search by name, license number, city, ZIP, type, or status.", "Keyboard flow:") },
+    @{ Name = "record-request"; Path = "/ccld/records/request"; Required = @("Which facility should be reviewed?", "Confirm facility", "Start review request context", "Keyboard flow:") },
+    @{ Name = "record-request-context"; Path = "/ccld/records/request?$contextQuery"; Required = @($ContextFacilityNumber, "Ready to retrieve complaint records", "Show existing queue", "Date range", "Keyboard flow:") },
+    @{ Name = "reviewer"; Path = "/reviewer"; Required = @("Worklist", "Open local/test packet preview", "Open local/test preparation draft for browser copy or print", "Keyboard flow:") },
+    @{ Name = "reviewer-records"; Path = "/reviewer/records"; Required = @("Worklist", "Open record", "Source traceability available", "Keyboard flow:") },
+    @{ Name = "reviewer-detail"; Path = "/reviewer/records/detail?source_record_key=$encodedSourceRecordKey&$contextQuery"; Required = @("Complaint overview", "Record review action", "Source traceability", "Reviewer-created", "Keyboard flow:") },
     @{ Name = "packet-preview-empty"; Path = "/reviewer/packet/preview"; Required = @("No facility/date packet context was supplied."); Forbidden = @("Date range: not provided") },
     @{ Name = "packet-preview-context"; Path = "/reviewer/packet/preview?$contextQuery"; Required = @($ContextFacilityNumber, "Before copying or printing", "browser copy or print", "not a certified report", "Report copy/print preparation concern") ; Forbidden = @("Date range: not provided") },
     @{ Name = "packet-draft-empty"; Path = "/reviewer/packet/draft"; Required = @("No facility/date packet context was supplied."); Forbidden = @("Date range: not provided") },
     @{ Name = "packet-draft-context"; Path = "/reviewer/packet/draft?$contextQuery"; Required = @("Attorney Review Packet Draft", "Local/test preparation draft for browser copy or print", "Review before copying or printing", "not a certified report", "Report copy/print preparation concern", $ContextFacilityNumber); Forbidden = @("Date range: not provided") },
-    @{ Name = "feedback"; Path = "/feedback"; Required = @("Send feedback", "Do not include private material", "Feedback type", "Description") },
+    @{ Name = "feedback"; Path = "/feedback"; Required = @("Send feedback", "Do not include private material", "Feedback type", "Description", "Keyboard flow:") },
     @{ Name = "help"; Path = "/ccld/help"; Required = @("How to review a facility", "How source traceability works", "What the app does not prove", "How packet preparation fits in") }
 )
 

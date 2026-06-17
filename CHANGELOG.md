@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- Improved hosted reviewer keyboard-flow accessibility. Shared workflow pages now
+	state keyboard-flow guidance in text, facility/request/reviewer/feedback forms
+	expose clearer helper text for moving through existing controls, and local
+	acceptance/evidence checks look for those cues across the hosted review path.
+	This does not add routes, schemas, migrations, persistence, retrieval behavior,
+	workflow-engine state, reviewer-created state kinds, note/status behavior
+	changes, packet export behavior, source-derived mutation, correction behavior,
+	feedback persistence, legal conclusions, source-completeness claims, or
+	committed evidence files.
+
 - Improved hosted correction-readiness guidance. Reviewer detail, source
 	traceability, note/status guidance, save confirmations, packet preview/draft,
 	help, and feedback now explain how testers should check source traceability

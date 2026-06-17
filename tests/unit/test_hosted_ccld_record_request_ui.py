@@ -77,6 +77,7 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "Retrieve complaint records for a facility" in html
     assert "Retrieval intake" in html
     assert "Create the review request context" in html
+    assert "Keyboard flow: move from facility selection to date range" in html
     assert "Start review request context" in html
     assert "Facility/license number identifies the CCLD facility" in html
     assert "Date range narrows complaint, visit, report, signed, or retrieval dates" in html
@@ -90,6 +91,7 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert CCLD_FACILITY_LOOKUP_PATH in html
     assert "Confirm facility" in html
     assert "Search by name, license number, city, ZIP, type, or status." in html
+    assert "Keyboard flow: type a search or digit number" in html
     assert "Retrieval not configured" in html
     assert "Find facility" in html
     assert "Review boundary" not in html

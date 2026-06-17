@@ -95,6 +95,10 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "Feedback is classified with labels" not in html
     assert '<label for="feedback_type">Feedback type</label>' in html
     assert '<label for="description">Description</label>' in html
+    assert 'aria-describedby="feedback-type-help"' in html
+    assert 'aria-describedby="description-help"' in html
+    assert "Keyboard flow: choose a feedback type, Tab to Description" in html
+    assert "Describe the route, control, keyboard flow" in html
     assert "Submit feedback" in html
     assert html.count('<option value="Bug report">Bug report</option>') == 1
     assert html.count('<option value="Feature request">Feature request</option>') == 1

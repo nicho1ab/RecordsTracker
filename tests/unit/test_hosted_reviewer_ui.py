@@ -90,6 +90,8 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert "Source traceability available" in html
     assert "Worklist" in html
     assert "Filter or search queue" in html
+    assert "Keyboard flow: search filters this queue" in html
+    assert "Open record link includes" in html
     assert "Show table view" in html
     assert "Source-derived records stay separate" in normalized_html
     assert "Worklist" in html
@@ -798,6 +800,8 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
         normalized_html
     )
     assert "Cautious note/status guidance" in html
+    assert "Keyboard flow: Tab to the reviewer-created note field or status selector" in html
+    assert "use the confirmation links to return to the same queue" in normalized_html
     assert "Use note text to record what you checked" in html
     assert "review flag, possible delay indicator" in normalized_html
     assert "When a source-derived value may need correction review" in html
@@ -814,6 +818,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Use safe plain text" in html
     assert "appear below after saving" in normalized_html
     assert "document a possible correction concern after source" in normalized_html
+    assert "Keyboard flow after saving" in html
     assert (
         "do not change the source-derived record or submit a correction decision"
         in normalized_html
@@ -827,6 +832,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Reviewer-created status for this record" in html
     assert "Status is reviewer-created local/test state for" in normalized_html
     assert "It does not correct or verify source-derived data" in html
+    assert "use the confirmation links to return to the same queue" in normalized_html
     assert "Save reviewer-created status for this record" in html
     assert ">Needs follow-up</option>" in html
     assert f"action=\"{REVIEWER_UI_STATUS_PATH}\"" in html
