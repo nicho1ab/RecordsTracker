@@ -2472,12 +2472,12 @@ def _render_worklist_decision_flow(
       {next_card}
       <div class="form-actions" aria-label="Queue decision actions">
         <a class="button button-secondary" href="{_escape(change_href)}">Return to change facility/date criteria</a>
-        <a class="button button-secondary" href="{_escape(_packet_preview_href_for_request(request))}">Preview local/test preparation packet</a>
-        <a class="button button-secondary" href="{_escape(_packet_draft_href_for_request(request))}">Open print/copy local/test preparation draft</a>
+        <a class="button button-secondary" href="{_escape(_packet_preview_href_for_request(request))}">Review packet readiness before copying or printing</a>
+        <a class="button button-secondary" href="{_escape(_packet_draft_href_for_request(request))}">Open local/test preparation draft for browser copy or print</a>
         <a class="button button-secondary" href="{CCLD_HELP_PATH}">Open CCLD workflow help</a>
       </div>
-      <p class="helper-text">Packet preview and draft links are local/test preparation aids,
-      not a legal report, final export, or source-completeness proof.</p>
+    <p class="helper-text">Packet preview and draft links are local/test copy/print preparation aids,
+    not a legal report, not a final export, not a certified report, or source-completeness proof.</p>
       <section aria-labelledby="priority-record-cards-heading">
         <h4 id="priority-record-cards-heading">Prioritized worklist records</h4>
         <p>These record cards use existing source-derived values and existing reviewer-created

@@ -93,10 +93,11 @@ experience.
    simplified workflow navigation, launch-screen home, collapsed developer/
    operator details, product-grade facility selector, status-center retrieval
    pages, worklist-style reviewer queue, summary-first reviewer detail workspace,
-   card-prefilled feedback, collapsible help, accessible focus/table/form
-   styling, and concise source-of-record boundary language without adding new
-   routes, workflows, frontend dependencies, exports, auth, public deployment, or
-   non-CCLD scope.
+   local/test packet preview and preparation-draft guidance for browser copy or
+   print after review, card-prefilled feedback, collapsible help, accessible
+   focus/table/form styling, and concise source-of-record boundary language
+   without adding new routes, workflows, frontend dependencies, exports, auth,
+   public deployment, or non-CCLD scope.
 
 ## Core Principles
 

@@ -20,14 +20,15 @@
 1. Start the scaffold server for the chosen mode (live or fixture). Confirm reachable at the port above.
 2. Open the reviewer UI: `/reviewer` and inspect the Worklist.
 3. Open Packet Preview with no context: `/reviewer/packet/preview` — the page MUST show explicit guidance such as "No facility/date packet context was supplied." and MUST NOT display a passive label "Date range: not provided" alongside included records.
-4. Open Packet Preview with context: `/reviewer/packet/preview?facility_number=157806098&start_date=2026-01-01&end_date=2026-01-31&request_context_origin=manual_entry` — the page SHOULD list included records and show the date range.
+4. Open Packet Preview with context: `/reviewer/packet/preview?facility_number=157806098&start_date=2026-01-01&end_date=2026-01-31&request_context_origin=manual_entry` — the page SHOULD list included records, show the date range, explain browser copy/print preparation, include a visible before-copying-or-printing checklist, and state that the preview is not a legal report, final export, certified report, or source-completeness proof.
 5. Open Packet Draft with no context: `/reviewer/packet/draft` — page MUST show explicit guidance and MUST NOT present "Date range: not provided".
-6. Open Packet Draft with context: `/reviewer/packet/draft?facility_number=157806098&start_date=2026-01-01&end_date=2026-01-31&request_context_origin=manual_entry` — page SHOULD show the draft UI (note: draft intentionally hides workflow rail for print/copy; this is expected).
+6. Open Packet Draft with context: `/reviewer/packet/draft?facility_number=157806098&start_date=2026-01-01&end_date=2026-01-31&request_context_origin=manual_entry` — page SHOULD show the draft UI with browser copy/print preparation guidance before the draft body and a review-before-copying-or-printing reminder (note: draft intentionally hides workflow rail for print/copy; this is expected).
 7. Run `./scripts/capture-hosted-ui-evidence.ps1 -BaseUrl <url> -Mode fixture` to produce the evidence packet and `route-assertions.csv`.
 8. Inspect `route-assertions.csv` inside the produced packet. There MUST be rows for `packet-preview-empty`, `packet-preview-context`, `packet-draft-empty`, and `packet-draft-context`. Workflow-step assertions for `packet-draft-*` routes must be `PASS` with a message that indicates the draft intentionally hides the workflow indicator and the assertion was skipped.
 
 - **What this proves**:
   - Preview routes explicitly indicate missing context and do not silently label results with a misleading passive date-range message.
+  - Preview and draft context routes expose local/test browser copy/print preparation guidance and safe packet boundary wording.
   - Draft routes intentionally hide the workflow rail; evidence capture reflects this choice and does not flag it as a warning.
 
 - **What this does not prove**:

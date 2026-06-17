@@ -518,11 +518,11 @@ def _render_packet_draft_context_needed(*, actor_label: str | None) -> str:
                 main=f"""
                 <section class="packet-draft" aria-labelledby="packet-context-needed-heading">
                     <div class="packet-draft-header">
-                        <p class="launch-kicker">Print-ready packet draft</p>
+                        <p class="launch-kicker">Local/test preparation draft for browser copy or print</p>
                         <h2 id="packet-context-needed-heading">No facility/date packet context was supplied.</h2>
                     </div>
-                    <p>Open this draft from a CCLD retrieval result, the review packet preview, or a reviewer detail confirmation so the facility/date context can be carried into the draft.</p>
-                    <p>This page is not a complete packet without a facility/date context.</p>
+                    <p>Open this draft from a CCLD retrieval result, the local/test packet preview, or a reviewer detail confirmation so the facility/date context can be carried into the draft for browser copy or print preparation.</p>
+                    <p>This page is not a complete local/test preparation draft without a facility/date context, and it is not a legal report, not a final export, not a certified report, and not a source-completeness proof.</p>
                     <div class="form-actions packet-draft-actions">
                         <a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Open Retrieve</a>
                         <a class="button button-secondary" href="{REVIEWER_UI_RECORDS_PATH}">Open Review queue</a>
@@ -549,7 +549,7 @@ def _render_packet_draft(
         workflow_area="packet-draft",
         page_path=REVIEWER_UI_PACKET_DRAFT_PATH,
         return_context=return_context,
-        prompt="Describe copy/print preparation or packet readiness confusion.",
+        prompt="Describe browser copy or print preparation or packet readiness confusion.",
     )
     record_sections = "\n".join(
         _render_packet_draft_record(record, state_summaries, return_context)
@@ -577,10 +577,17 @@ def _render_packet_draft(
         main=f"""
                 <article class="packet-draft" aria-labelledby="packet-draft-title">
                     <header class="packet-draft-header">
-                        <p class="launch-kicker">Local/test print-ready draft</p>
-                        <h2 id="packet-draft-title">Attorney Review Packet Draft</h2>
-                        <p><strong>Print / Save as PDF using browser print.</strong> This page does not generate a server-side PDF, Word file, ZIP, CSV, or downloadable final export.</p>
+                        <p class="launch-kicker">Attorney Review Packet Draft</p>
+                        <h2 id="packet-draft-title">Local/test preparation draft for browser copy or print</h2>
+                        <p><strong>Use browser copy or print only after review.</strong> This page keeps the intentional print/copy layout, but it does not generate a server-side PDF, Word file, ZIP, CSV, or downloadable final export.</p>
                     </header>
+                    <section aria-labelledby="draft-copy-print-guidance-heading">
+                        <h3 id="draft-copy-print-guidance-heading">Copy/print preparation guidance</h3>
+                        <p>This local/test preparation draft gathers the included complaint-record summaries, review-readiness counts, source-traceability cues, reviewer-created status/note cues, limitations, and a static copyable packet summary for manual browser copy or print.</p>
+                        <p><strong>Review before copying or printing:</strong> check records flagged for source check, records missing reviewer-created status/note cues, important source-derived values, and any wording that seems wrong, incomplete, confusing, or risky.</p>
+                        <p>Source traceability available means visible source URL, raw hash, connector, or retrieval cues are available to help check important source-derived values. It is not a source-completeness proof.</p>
+                        <p>If copy/print preparation content seems wrong, incomplete, confusing, or risky, use the feedback link before using this draft.</p>
+                    </section>
                     <section aria-labelledby="draft-scope-heading">
                         <h3 id="draft-scope-heading">Packet scope</h3>
                         <dl class="summary-list">
@@ -597,7 +604,7 @@ def _render_packet_draft(
                             <dt>Records included</dt>
                             <dd>{len(records)}</dd>
                         </dl>
-                        <p><strong>Important limitation:</strong> This is a local/test preparation draft. It is not a legal report, final export, production packet, source-completeness proof, or facility-wide conclusion.</p>
+                        <p><strong>Important limitation:</strong> This is a local/test preparation draft. It is not a legal report, not a final export, not a certified report, not a production packet, not a source-completeness proof, and not a facility-wide conclusion.</p>
                     </section>
                     <section aria-labelledby="draft-summary-heading">
                         <h3 id="draft-summary-heading">Summary of included records</h3>
@@ -623,8 +630,8 @@ def _render_packet_draft(
                         </dl>
                     </section>
                     <section aria-labelledby="draft-review-readiness-heading">
-                        <h3 id="draft-review-readiness-heading">Review-readiness before copy/print</h3>
-                        <p>Review before copy/print: this local/test packet draft is a preparation draft.
+                        <h3 id="draft-review-readiness-heading">Review-readiness before copying or printing</h3>
+                        <p>Review before copying or printing: this local/test packet draft is a preparation draft.
                         Check source traceability, review flags, and reviewer-created status/note cues
                         before relying on any source-derived value in a handoff.</p>
                         <ul>
@@ -632,7 +639,7 @@ def _render_packet_draft(
                             <li>{readiness_counts['needs_reviewer_attention']} record(s) may still need reviewer-created status/note attention before packet preparation.</li>
                             <li>{readiness_counts['ready']} record(s) have source traceability available and at least one reviewer-created status/note cue.</li>
                         </ul>
-                        <p>This is not a legal report, not a final export, and not a source-completeness proof.</p>
+                        <p>This is not a legal report, not a final export, not a certified report, and not a source-completeness proof.</p>
                     </section>
                     <section aria-labelledby="draft-traceability-heading">
                         <h3 id="draft-traceability-heading">Source traceability readiness</h3>
@@ -675,7 +682,7 @@ def _render_packet_draft(
                     </section>
                     <nav class="packet-draft-actions" aria-label="Packet draft navigation">
                         <ul>
-                            <li><a href="{_escape(_packet_preview_href(return_context))}">Back to packet preview</a></li>
+                            <li><a href="{_escape(_packet_preview_href(return_context))}">Back to local/test packet preview</a></li>
                             <li><a href="{_escape(_ccld_request_href([], return_context))}">Back to review queue</a></li>
                             <li><a href="{_escape(feedback_href)}">Report copy/print preparation concern</a></li>
                         </ul>
@@ -1128,7 +1135,7 @@ def _render_packet_preview(
         workflow_area="packet-preview",
         page_path=REVIEWER_UI_PACKET_PREVIEW_PATH,
         return_context=return_context,
-        prompt="Describe packet readiness, source-check, or reviewer-state confusion.",
+        prompt="Describe copy/print preparation, packet readiness, source-check, or reviewer-state confusion.",
     )
     record_cards = "\n".join(
         _render_packet_preview_record(record, state_summaries, return_context)
@@ -1140,14 +1147,14 @@ def _render_packet_preview(
           <p>No loaded local/test complaint records match this packet preview context.</p>
         </article>"""
     return _page(
-        title="Review packet preview",
-        heading="Review packet preview",
+                title="Review packet preview",
+                heading="Review packet preview",
         actor_label=actor_label,
         main=f"""
         <section class="hero-card" aria-labelledby="packet-preview-heading">
           <p class="launch-kicker">Local/test preparation preview</p>
-          <h2 id="packet-preview-heading">Review packet preview</h2>
-          <p>This preview helps identify what source-traceable complaint records would be reviewed or handed off for the current facility/date context. It is not a legal report, final export, production packet, or source-completeness proof.</p>
+                    <h2 id="packet-preview-heading">Local/test packet preparation preview</h2>
+                    <p>This preview helps identify which loaded local/test complaint records, readiness cues, source traceability cues, and reviewer-created status/note cues are included for the current facility/date context before browser copy or print preparation. It is not a legal report, not a final export, not a certified report, not a production packet, and not a source-completeness proof.</p>
           <dl class="summary-list">
             <dt>Facility / license</dt>
             <dd>{_escape(_packet_facility_label(records, return_context))}</dd>
@@ -1167,14 +1174,24 @@ def _render_packet_preview(
                         <dd>{readiness_counts['ready']} ready for preparation review; {readiness_counts['needs_source_check']} need source check; {readiness_counts['needs_reviewer_attention']} need reviewer-created status/note attention</dd>
           </dl>
                     <div class="form-actions">
-                                                <a class="button" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft</a>
+                                                <a class="button" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a>
                                                 <a class="button button-secondary" href="{_escape(_ccld_request_href([], return_context))}">Return to same facility/date queue</a>
-                                                <a class="button button-secondary" href="{_escape(feedback_href)}">Report packet preview readiness concern</a>
+                                                <a class="button button-secondary" href="{_escape(feedback_href)}">Report copy/print preparation concern</a>
                     </div>
         </section>
+                <section aria-labelledby="before-copying-printing-heading">
+                    <h2 id="before-copying-printing-heading">Before copying or printing</h2>
+                    <p>Use this checklist before using browser copy or print from the local/test preparation draft.</p>
+                    <ul>
+                        <li>Review records flagged for source check before relying on important source-derived values.</li>
+                        <li>Review records missing reviewer-created status/note cues when the readiness counts show attention is needed.</li>
+                        <li>Confirm source traceability for important source-derived values; source traceability available means visible source URL, raw hash, connector, or retrieval cues are available for checking, not that the packet proves source completeness.</li>
+                        <li>Use feedback if records, wording, readiness cues, or copy/print preparation content seems wrong, incomplete, confusing, or risky.</li>
+                    </ul>
+                </section>
                 <section aria-labelledby="packet-readiness-heading">
                     <h2 id="packet-readiness-heading">Review-readiness summary</h2>
-                    <p>This local/test packet preview is a preparation checkpoint. Use it to decide what still needs source check or reviewer-created status/note attention before copy/print.</p>
+                    <p>This local/test packet preview is a preparation checkpoint. Use it to decide what still needs source check or reviewer-created status/note attention before browser copy or print.</p>
                     <dl class="summary-list">
                         <dt>Records ready for preparation review</dt>
                         <dd>{readiness_counts['ready']}</dd>
@@ -1183,7 +1200,7 @@ def _render_packet_preview(
                         <dt>Records needing reviewer-created status/note attention</dt>
                         <dd>{readiness_counts['needs_reviewer_attention']}</dd>
                     </dl>
-                    <p>Source-derived values should be checked against traceability when important. This preview is not a legal report, not a final export, and not a source-completeness proof.</p>
+                    <p>Source-derived values should be checked against traceability when important. This preview is not a legal report, not a final export, not a certified report, and not a source-completeness proof.</p>
                 </section>
         <section aria-labelledby="packet-traceability-heading">
           <h2 id="packet-traceability-heading">Traceability readiness</h2>
@@ -1234,8 +1251,8 @@ def _render_packet_preview(
             <li>Source-derived fields remain separate from reviewer-created notes/status.</li>
             <li>Review flags are screening aids, not legal conclusions.</li>
             <li>The CCLD public portal remains the source of record.</li>
-            <li>This preview is not a legal report, final export, production packet, or source-completeness proof.</li>
-                        <li>If packet readiness, source-check-needed wording, missing reviewer-created state, or keyboard flow is confusing, use the feedback link with this packet context.</li>
+            <li>This preview is not a legal report, not a final export, not a certified report, not a production packet, and not a source-completeness proof.</li>
+                        <li>If packet readiness, source-check-needed wording, missing reviewer-created state, copy/print preparation, or keyboard flow is confusing, use the feedback link with this packet context.</li>
           </ul>
         </section>
         <details class="technical-details">
@@ -1408,7 +1425,7 @@ def _packet_copy_summary(
         [
             "",
             "Limitations",
-            "- This is a local/test preparation draft, not a legal report, not a final export, not a source-completeness proof, and not a facility-wide conclusion.",
+            "- This is a local/test preparation draft, not a legal report, not a final export, not a certified report, not a source-completeness proof, and not a facility-wide conclusion.",
             "- Source-derived fields remain separate from reviewer-created notes/status.",
             "- Review flags are screening aids, not legal conclusions.",
             "- The CCLD public portal remains the source of record.",
@@ -1537,7 +1554,7 @@ def _render_packet_preview_context_needed(*, actor_label: str | None) -> str:
                         <a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Open Retrieve</a>
                         <a class="button button-secondary" href="{REVIEWER_UI_RECORDS_PATH}">Open Review queue</a>
                     </div>
-                    <p>This preview is not a bounded facility/date packet and does not show included records until a facility/date context is supplied.</p>
+                    <p>This preview is not a bounded facility/date packet and does not show included records until a facility/date context is supplied. It is not a legal report, not a final export, not a certified report, and not a source-completeness proof.</p>
                 </section>
                 """,
         )
@@ -1772,13 +1789,13 @@ def _packet_draft_href_for_queue(records: tuple[FacilityCaseBriefRecord, ...]) -
 def _packet_preview_confirmation_link(return_context: CcldQueueReturnContext) -> str:
     if return_context.facility_number is None:
         return ""
-    return f'<a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Preview local/test preparation packet</a>'
+    return f'<a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Review packet readiness before copying or printing</a>'
 
 
 def _packet_draft_confirmation_link(return_context: CcldQueueReturnContext) -> str:
     if return_context.facility_number is None:
         return ""
-    return f'<a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft</a>'
+    return f'<a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a>'
 
 
 def _case_brief_record_from_review_item(
@@ -2498,8 +2515,8 @@ def _render_detail_decision_continuity(
 {packet_links}
               <a class="button button-secondary" href="{_escape(feedback_href)}">Report confusion about this reviewer detail</a>
             </div>
-            <p class="helper-text">Packet links are local/test preparation aids, not a legal report,
-            final export, or source-completeness proof.</p>
+            <p class="helper-text">Packet links are local/test copy/print preparation aids, not a legal report,
+            not a final export, not a certified report, or source-completeness proof.</p>
           </section>
         </section>"""
 
@@ -2515,8 +2532,8 @@ def _request_origin_label(value: str | None) -> str:
 def _detail_packet_links(return_context: CcldQueueReturnContext) -> str:
     if return_context.facility_number is None:
         return ""
-    return f"""              <a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Preview local/test preparation packet</a>
-              <a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft</a>"""
+    return f"""              <a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Review packet readiness before copying or printing</a>
+              <a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a>"""
 
 
 def _detail_check_first_items(original_values: Mapping[str, Any]) -> tuple[str, ...]:
@@ -2638,8 +2655,8 @@ def _render_detail_navigation(
 def _detail_navigation_packet_items(return_context: CcldQueueReturnContext) -> str:
     if return_context.facility_number is None:
         return ""
-    return f"""                <li><a href="{_escape(_packet_preview_href(return_context))}">Preview local/test preparation packet</a></li>
-                <li><a href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft</a></li>"""
+    return f"""                <li><a href="{_escape(_packet_preview_href(return_context))}">Review packet readiness before copying or printing</a></li>
+                <li><a href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a></li>"""
 
 
 def _feedback_href(
@@ -3809,7 +3826,7 @@ def _render_notice(
                 existing manual feedback checklist. Also carry forward any source traceability,
                 source-confidence, or field-note wording that was confusing for this record.</p>
                 <p>Use packet preview or draft only when you are ready for local/test preparation;
-                they are not a legal report, final export, or source-completeness proof.</p>
+                they are not a legal report, not a final export, not a certified report, or source-completeness proof.</p>
                 <dl>
                     <dt>Same facility/license number</dt>
                     <dd>{_escape(_display_value(return_context.facility_number))}</dd>
