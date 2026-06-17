@@ -262,6 +262,17 @@ repository path such as [docs/assets/readme](docs/assets/readme).
   [docs/developer/qnap-pilot-operator-checklist.md](docs/developer/qnap-pilot-operator-checklist.md),
   and [docs/developer/qnap-pilot-readiness-index.md](docs/developer/qnap-pilot-readiness-index.md)
   for the optional QNAP-first Docker runtime and pilot-readiness path.
+- Use [docs/developer/qnap-pilot-auth-readiness.md](docs/developer/qnap-pilot-auth-readiness.md),
+  [docs/developer/qnap-pilot-access-method-decision.md](docs/developer/qnap-pilot-access-method-decision.md),
+  [docs/developer/qnap-pilot-tester-invitation-decision.md](docs/developer/qnap-pilot-tester-invitation-decision.md),
+  and [docs/developer/qnap-pilot-seeded-import-evidence.md](docs/developer/qnap-pilot-seeded-import-evidence.md)
+  before inviting external testers or treating the QNAP pilot as ready.
+- Optional QNAP operator evidence helpers include
+  `scripts/build-qnap-pilot-evidence-packet.ps1` and
+  `scripts/summarize-qnap-pilot-route-evidence.ps1`. Generated QNAP evidence
+  packets are ignored local operator artifacts, not audit exports, legal
+  reports, product export packets, public reports, certifications, or source-
+  completeness proof.
 
 ## Validation
 
