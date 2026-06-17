@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Replaced the README fixture/mock screenshots with reviewed live-mode hosted
+	CCLD RecordsTracker screenshots for the start page, retrieval-result review
+	queue, and reviewer detail workflow. The README remains product-oriented and
+	no application behavior, retrieval behavior, schemas, migrations, packet
+	lifecycle, export behavior, reviewer-created writes, or ignored evidence
+	artifacts were added.
+
 - Clarified hosted reviewer source-confidence next steps across queue, reviewer
 	detail, help, and feedback copy so testers know to check source traceability,
 	use cautious reviewer-created notes/status, report confusing cues through
