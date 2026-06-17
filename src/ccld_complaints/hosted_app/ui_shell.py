@@ -1118,6 +1118,66 @@ SHARED_CSS = r"""
       font-size: 0.88rem;
       margin-top: 0.5rem;
     }
+    .packet-draft {
+      background: #fff;
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 1.4rem;
+    }
+    .packet-draft-header {
+      border-bottom: 2px solid var(--ink);
+      margin-bottom: 1rem;
+      padding-bottom: 0.8rem;
+    }
+    .packet-draft-record {
+      break-inside: avoid;
+      border-top: 1px solid var(--line);
+      padding-top: 0.9rem;
+    }
+    .copyable-packet-summary {
+      background: #f8fafb;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow-x: auto;
+      padding: 1rem;
+      white-space: pre-wrap;
+    }
+    @media print {
+      body {
+        background: #fff;
+        color: #000;
+        font-size: 11pt;
+      }
+      .site-header, .guided-stepper, .site-footer, .packet-draft-actions,
+      .technical-details, .skip-link, .mode-panel {
+        display: none !important;
+      }
+      .shell {
+        max-width: none;
+        padding: 0;
+      }
+      .page-main {
+        padding: 0;
+      }
+      .packet-draft {
+        border: 0;
+        box-shadow: none;
+        padding: 0;
+      }
+      .packet-draft-record {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      a {
+        color: #000;
+        text-decoration: none;
+      }
+      .badge, .review-chip {
+        border-color: #000;
+        color: #000;
+      }
+    }
     @media (max-width: 760px) {
       h1 {
         font-size: 1.55rem;

@@ -34,6 +34,7 @@ from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
     REVIEWER_UI_DETAIL_PATH,
     REVIEWER_UI_NOTE_PATH,
+    REVIEWER_UI_PACKET_DRAFT_PATH,
     REVIEWER_UI_PACKET_PREVIEW_PATH,
     REVIEWER_UI_STATUS_PATH,
     reviewer_ui_context_for_connection,
@@ -76,6 +77,8 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert "Open full queue" in html
     assert "Preview review packet" in html
     assert REVIEWER_UI_PACKET_PREVIEW_PATH in html
+    assert "Open packet draft" in html
+    assert REVIEWER_UI_PACKET_DRAFT_PATH in html
     assert "Skip to main reviewer content" in html
     assert '<main id="main-content" tabindex="-1">' in html
     assert "Technical runtime details" in html
@@ -162,6 +165,8 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
         "reset_reload_planning_metadata": 0,
     }
     assert "Review packet preview" in html
+    assert "Open print-ready packet draft" in html
+    assert f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098" in html
     assert "Facility / license" in html
     assert "157806098" in html
     assert "Date range" in html
@@ -207,6 +212,127 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
         in normalized_html
     )
     assert "legal priority" not in normalized_html.casefold()
+    assert_no_secret_html(html)
+
+
+def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> None:
+    with _seeded_connection() as connection:
+        create_reviewer_note_scaffold(
+            connection,
+            _actor(roles=("tester_reviewer",), display_name="Fixture Draft Note Reviewer"),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            note_text="Draft route note.",
+        )
+        create_reviewer_status_scaffold(
+            connection,
+            _actor(roles=("tester_reviewer",), display_name="Fixture Draft Status Reviewer"),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            reviewer_status="needs_follow_up",
+        )
+        before_source_rows = _source_rows(connection)
+        before_counts = _table_counts(connection)
+
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_PACKET_DRAFT_PATH}?"
+            "facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31"
+            "&request_context_origin=manual_entry",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        after_source_rows = _source_rows(connection)
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 2,
+        "audit_events": 2,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert "Attorney Review Packet Draft" in html
+    assert "Print / Save as PDF using browser print" in html
+    assert "Facility / license" in html
+    assert "157806098" in html
+    assert "Date range" in html
+    assert "2022-08-01 to 2022-08-31" in html
+    assert "Prepared from" in html
+    assert "Generated" in html
+    assert "Records included" in html
+    assert "Important limitation" in html
+    assert "Summary of included records" in html
+    assert "Findings represented" in html
+    assert "Source traceability readiness" in html
+    assert "Reviewer-created state included in this draft" in html
+    assert "Included complaint records" in html
+    assert "32-CR-20220407124448" in html
+    assert "Complaint control number" in html
+    assert "Finding" in html
+    assert "Key dates" in html
+    assert "Review flags" in html
+    assert "Reviewer-created status" in html
+    assert "Reviewer-created note presence" in html
+    assert "Why included" in html
+    assert "Source traceability summary" in html
+    assert "Open record 32-CR-20220407124448" in html
+    assert "What this draft does not prove" in html
+    assert "It does not prove source completeness." in html
+    assert "It does not prove no other complaints exist." in html
+    assert "official findings beyond source-derived finding labels" in html
+    assert "Copyable packet summary" in html
+    assert "Attorney Review Packet Draft" in html
+    assert "Facility/license: 157806098" in html
+    assert "Reviewer-created state summary" in html
+    assert "Source traceability readiness" in html
+    assert "Back to packet preview" in html
+    assert "Back to review queue" in html
+    assert "@media print" in html
+    assert "packet-draft" in html
+    assert "site-header" in html and "display: none" in html
+    assert "No export file is generated by this draft" in html
+    assert (
+        "does not mutate source-derived records, reviewer-created state, audit rows"
+        in normalized_html
+    )
+    assert "legal priority" not in normalized_html.casefold()
+    assert_no_secret_html(html)
+
+
+def test_reviewer_packet_draft_without_context_shows_context_needed_state() -> None:
+    with _seeded_connection() as connection:
+        before_counts = _table_counts(connection)
+
+        status, content_type, body = route_response(
+            REVIEWER_UI_PACKET_DRAFT_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 0,
+        "audit_events": 0,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert "Attorney Review Packet Draft" in html
+    assert "No facility/date packet context was supplied." in html
+    assert "not a complete packet without a facility/date context" in html
+    assert "Open Retrieve" in html
+    assert "Open Review queue" in html
+    assert "Date range: not provided" not in html
     assert_no_secret_html(html)
 
 
@@ -752,6 +878,8 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert "Open next priority record" in html
     assert "Preview review packet" in html
     assert f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?facility_number=157806098" in html
+    assert "Open packet draft" in html
+    assert f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098" in html
     assert "Queue progress and note/status cues are derived from reviewer-created state" in html
     assert "same facility/license number and date range" in normalized_html
     assert "submit the request again" in html
@@ -891,6 +1019,8 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "Open next priority record" in html
     assert "Preview review packet" in html
     assert f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?facility_number=157806098" in html
+    assert "Open packet draft" in html
+    assert f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098" in html
     assert "Queue progress and note/status cues are derived from reviewer-created state" in html
     assert "submit the request again" in html
     assert "continuing to the next record" in html

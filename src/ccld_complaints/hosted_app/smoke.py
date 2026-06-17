@@ -160,6 +160,13 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
                     f"{base_url}/reviewer/packet/preview?"
                     "facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31"
                 )
+                packet_draft_status, packet_draft_body = _read_url(
+                    f"{base_url}/reviewer/packet/draft?"
+                    "facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31"
+                )
+                packet_draft_empty_status, packet_draft_empty_body = _read_url(
+                    f"{base_url}/reviewer/packet/draft"
+                )
                 reviewer_note_status, reviewer_note_body = _post_form_url(
                     f"{base_url}/reviewer/records/note",
                     {
@@ -389,6 +396,24 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"No export file is generated" not in packet_preview_body
     ):
         raise RuntimeError("Hosted scaffold review packet preview did not return safe guidance.")
+    if (
+        packet_draft_status != 200
+        or b"Attorney Review Packet Draft" not in packet_draft_body
+        or b"Print / Save as PDF using browser print" not in packet_draft_body
+        or b"Copyable packet summary" not in packet_draft_body
+        or b"What this draft does not prove" not in packet_draft_body
+        or b"No export file is generated" not in packet_draft_body
+    ):
+        raise RuntimeError("Hosted scaffold review packet draft did not return safe guidance.")
+    if (
+        packet_draft_empty_status != 200
+        or b"No facility/date packet context was supplied" not in packet_draft_empty_body
+        or b"Open Retrieve" not in packet_draft_empty_body
+        or b"Open Review queue" not in packet_draft_empty_body
+    ):
+        raise RuntimeError(
+            "Hosted scaffold review packet draft did not return safe context-needed guidance."
+        )
     if (
         reviewer_note_status != 200
         or b"Reviewer-created state saved" not in reviewer_note_body

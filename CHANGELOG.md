@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Added a print-ready local/test attorney review packet draft at
+	`/reviewer/packet/draft`. The draft preserves facility/date context, provides
+	browser Print / Save as PDF guidance, summarizes included complaint records,
+	review flags, findings, reviewer-created status/note cues, source traceability
+	readiness, limitations, and a static copyable packet summary. It does not
+	create server-side PDFs, Word files, ZIPs, CSVs, downloadable legal packets,
+	export persistence, lifecycle state, delivery, archival, deletion, schemas, or
+	migrations.
+
 - Added a local/test attorney review packet preview at `/reviewer/packet/preview`.
 	The preview summarizes the current facility/date context, included complaint
 	records, reviewer-created status/note cues, cautious inclusion reasons, review
