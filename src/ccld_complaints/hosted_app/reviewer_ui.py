@@ -430,6 +430,13 @@ def _packet_preview_response(
 ) -> tuple[int, str, bytes]:
     query_values = parse_qs(query, keep_blank_values=True)
     return_context = _packet_preview_context_from_values(query_values)
+    # If no facility context was supplied, render a clear context-needed state
+    # instead of quietly showing all loaded records under "not provided".
+    if return_context.facility_number is None:
+        return _html_response(
+            200,
+            _render_packet_preview_context_needed(actor_label=_signed_in_actor_label(context)),
+        )
     status, _content_type, body = route_reviewer_workflow_shell_response(
         f"{REVIEWER_WORKFLOW_API_PREFIX}/queue?limit=100",
         context.workflow_shell_context,
@@ -1386,6 +1393,26 @@ def _packet_draft_date_scope(return_context: CcldQueueReturnContext) -> str:
     if return_context.start_date or return_context.end_date:
         return _return_context_date_range(return_context)
     return "All loaded local/test records for this facility"
+
+
+def _render_packet_preview_context_needed(*, actor_label: str | None) -> str:
+        return _page(
+                title="Review packet preview",
+                heading="Review packet preview",
+                actor_label=actor_label,
+                main=f"""
+                <section class="hero-card" aria-labelledby="packet-context-needed-heading">
+                    <p class="launch-kicker">Local/test preparation preview</p>
+                    <h2 id="packet-context-needed-heading">No facility/date packet context was supplied.</h2>
+                    <p>Start from Retrieve or the Review queue to build a packet for a specific facility/date range.</p>
+                    <div class="form-actions">
+                        <a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Open Retrieve</a>
+                        <a class="button button-secondary" href="{REVIEWER_UI_RECORDS_PATH}">Open Review queue</a>
+                    </div>
+                    <p>This preview is not a bounded facility/date packet and does not show included records until a facility/date context is supplied.</p>
+                </section>
+                """,
+        )
 
 
 def _packet_prepared_from(return_context: CcldQueueReturnContext) -> str:

@@ -197,6 +197,7 @@ else {
 
 if ($retrievalEnabled -eq "enabled") {
     if ([string]::IsNullOrWhiteSpace($retrievalRawDir)) {
+        Write-Host "CCLD_RETRIEVAL_ENABLED=enabled requires CCLD_RETRIEVAL_RAW_DIR to preserve raw artifacts."
         Stop-CheckFail "CCLD_RETRIEVAL_ENABLED=enabled requires CCLD_RETRIEVAL_RAW_DIR to preserve raw artifacts."
     }
     Test-NoHostSpecificPath -Label "CCLD_RETRIEVAL_RAW_DIR" -Value $retrievalRawDir
