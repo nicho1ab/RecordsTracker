@@ -336,6 +336,36 @@ def test_reviewer_packet_draft_without_context_shows_context_needed_state() -> N
     assert_no_secret_html(html)
 
 
+def test_reviewer_packet_preview_without_context_shows_context_needed() -> None:
+    with _seeded_connection() as connection:
+        before_counts = _table_counts(connection)
+
+        status, content_type, body = route_response(
+            REVIEWER_UI_PACKET_PREVIEW_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 0,
+        "audit_events": 0,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert "Review packet preview" in html
+    assert "No facility/date packet context was supplied." in html
+    assert "Start from Retrieve or the Review queue" in html
+    assert "build a packet for a specific facility/date range." in html
+    assert "Date range: not provided" not in html
+    assert_no_secret_html(html)
+
+
 def test_reviewer_ui_landing_shows_reviewer_created_state_indicators() -> None:
     with _seeded_connection() as connection:
         create_reviewer_note_scaffold(
