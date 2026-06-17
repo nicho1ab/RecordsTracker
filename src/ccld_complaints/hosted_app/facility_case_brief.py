@@ -223,7 +223,8 @@ def display_record_label(record: FacilityCaseBriefRecord) -> str:
     return record.complaint_control_number or record.source_record_key or "Complaint record"
 
 
-def _priority_sort_key(record: FacilityCaseBriefRecord) -> tuple[int, int, int, int, int, str, int]:
+def _priority_sort_key(record: FacilityCaseBriefRecord) -> tuple[int, int, int, int, int, int, str, int]:
+    no_state_rank = 0 if record.reviewer_status is None and record.reviewer_note_count == 0 else 1
     no_status_rank = 0 if record.reviewer_status is None else 1
     strongest_delay = max(record.delay_thresholds) if record.delay_thresholds else 0
     missing_rank = 1 if needs_source_check(record) else 0
@@ -231,6 +232,7 @@ def _priority_sort_key(record: FacilityCaseBriefRecord) -> tuple[int, int, int, 
     finding_rank = 1 if record.finding and record.finding != "unknown" else 0
     date_value = record.complaint_received_date or record.report_date or record.visit_date or record.date_signed or ""
     return (
+        no_state_rank,
         no_status_rank,
         -strongest_delay,
         -missing_rank,

@@ -18,6 +18,10 @@ from ccld_complaints.hosted_app.auth import (
     HostedTesterRole,
     load_hosted_auth_runtime_config,
 )
+from ccld_complaints.hosted_app.facility_case_brief import (
+    FacilityCaseBriefRecord,
+    select_priority_record,
+)
 from ccld_complaints.hosted_app.reset_reload_dry_run import (
     hosted_reset_reload_planning_metadata,
 )
@@ -90,6 +94,8 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert "Source traceability available" in html
     assert "Reviewer status" in html
     assert "Reviewer-created notes" in html
+    assert "Reviewer-created status: No reviewer-created status" in html
+    assert "No reviewer note" in html
     assert "Complaint received date" in html
     assert "Visit date" in html
     assert "Report date" in html
@@ -138,6 +144,8 @@ def test_reviewer_ui_landing_shows_reviewer_created_state_indicators() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Reviewed" in html
     assert "1 reviewer-created note" in html
+    assert "Reviewer-created status: reviewed" in html
+    assert "Reviewer note added" in html
     assert "reviewed" in html
     assert "Facility case brief" in html
     assert "Reviewer-created notes/statuses" in html
@@ -172,6 +180,36 @@ def test_reviewer_ui_landing_supports_simple_search() -> None:
     assert "No matching seeded reviewer records" in empty_html
     assert "Clear search" in empty_html
     assert "Return to reviewer home" in empty_html
+
+
+def test_reviewer_priority_prefers_records_without_reviewer_created_state_then_flags() -> None:
+    reviewed_stronger_flag = _case_brief_record_for_priority(
+        "reviewed-record",
+        reviewer_status="reviewed",
+        reviewer_note_count=1,
+        delay_thresholds=(120,),
+        order_index=0,
+    )
+    unreviewed_weaker_flag = _case_brief_record_for_priority(
+        "unreviewed-record",
+        reviewer_status=None,
+        reviewer_note_count=0,
+        delay_thresholds=(30,),
+        order_index=1,
+    )
+    unreviewed_stronger_flag = _case_brief_record_for_priority(
+        "unreviewed-stronger-record",
+        reviewer_status=None,
+        reviewer_note_count=0,
+        delay_thresholds=(90,),
+        order_index=2,
+    )
+
+    selected = select_priority_record(
+        (reviewed_stronger_flag, unreviewed_weaker_flag, unreviewed_stronger_flag)
+    )
+
+    assert selected.source_record_key == "unreviewed-stronger-record"
 
 
 def test_reviewer_ui_missing_detail_record_has_clear_next_step() -> None:
@@ -217,6 +255,12 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "32-CR-20220407124448" in html
     assert "Complaint overview" in html
     assert "Why this record is flagged" in html
+    assert "Record review action" in html
+    assert "Source traceability summary" in html
+    assert html.index("Complaint overview") < html.index("Why this record is flagged")
+    assert html.index("Why this record is flagged") < html.index("Record review action")
+    assert html.index("Record review action") < html.index("Source traceability summary")
+    assert html.index("Source traceability summary") < html.index("Record summary")
     assert "screening aids, not legal conclusions" in normalized_html
     assert "Needs source check: first activity date missing locally" in html
     assert "Source traceability available" in html
@@ -363,25 +407,34 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Reviewer-created payload kinds present" in html
     assert "Latest reviewer-created row" in html
     assert "No reviewer-created state has been recorded" in html
-    assert "Reviewer actions" in html
-    assert "Review the source traceability, source-confidence cues, and field-note guidance" in (
+    assert "Record review action" in html
+    assert "Current reviewer-created status" in html
+    assert "No reviewer-created status" in html
+    assert "Reviewer-created note" in html
+    assert "No reviewer note" in html
+    assert "Recommended next action" in html
+    assert "Add a review status or note." in html
+    assert "Source-derived fields remain unchanged" in html
+    assert "Use this panel after reading the complaint overview and review flags" in (
         normalized_html
     )
-    assert "missing local/test values, proxy flags" in normalized_html
-    assert "Set a status to keep queue progress understandable" in normalized_html
-    assert "Add reviewer note" in html
-    assert "Reviewer note for this record" in html
+    assert "Add a review status or note." in html
+    assert "Status is reviewer-created local/test state for queue progress" in (
+        normalized_html
+    )
+    assert "Reviewer-created note" in html
+    assert "Reviewer-created note for this record" in html
     assert "Use safe plain text" in html
     assert "appear below after saving" in normalized_html
-    assert "Save reviewer note for this record" in html
+    assert "Save reviewer-created note for this record" in html
     assert f"action=\"{REVIEWER_UI_NOTE_PATH}\"" in html
     assert "Return to the same CCLD queue" in html
     assert "submit the request again to see queue progress" in normalized_html
     assert "return_facility_number" in html
-    assert "Set reviewer status" in html
-    assert "Reviewer queue status for this record" in html
+    assert "Reviewer-created status" in html
+    assert "Reviewer-created status for this record" in html
     assert "Status is reviewer-created local/test state for" in normalized_html
-    assert "Save reviewer status for this record" in html
+    assert "Save reviewer-created status for this record" in html
     assert ">Needs follow-up</option>" in html
     assert f"action=\"{REVIEWER_UI_STATUS_PATH}\"" in html
     assert "Reviewer-created state is stored separately" in normalized_html
@@ -591,11 +644,18 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
         "audit_events": 1,
         "reset_reload_planning_metadata": 0,
     }
-    assert "Reviewer update saved" in html
+    assert "Reviewer-created state saved" in html
     assert "Reviewer note saved for this record" in html
     assert "The note now appears in reviewer-created state below" in html
-    assert "Return to CCLD request queue" in html
-    assert "Return and refresh queue progress" in html
+    assert "What changed" in html
+    assert "Note: added" in html
+    assert "What did not change" in html
+    assert "Source-derived complaint fields" in html
+    assert "Source traceability" in html
+    assert "Public-source records" in html
+    assert "Next" in html
+    assert "Return to facility queue" in html
+    assert "Open next priority record" in html
     assert "Queue progress and note/status cues are derived from reviewer-created state" in html
     assert "same facility/license number and date range" in normalized_html
     assert "submit the request again" in html
@@ -721,11 +781,18 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
         "audit_events": 1,
         "reset_reload_planning_metadata": 0,
     }
-    assert "Reviewer update saved" in html
+    assert "Reviewer-created state saved" in html
     assert "Reviewer status saved for this record" in html
     assert "The status now appears in reviewer-created state below" in html
-    assert "Return to CCLD request queue" in html
-    assert "Return and refresh queue progress" in html
+    assert "What changed" in html
+    assert "Status: Needs follow-up" in html
+    assert "What did not change" in html
+    assert "Source-derived complaint fields" in html
+    assert "Source traceability" in html
+    assert "Public-source records" in html
+    assert "Next" in html
+    assert "Return to facility queue" in html
+    assert "Open next priority record" in html
     assert "Queue progress and note/status cues are derived from reviewer-created state" in html
     assert "submit the request again" in html
     assert "continuing to the next record" in html
@@ -1097,3 +1164,36 @@ def _table_counts(connection: Connection) -> dict[str, int]:
         "audit_events": audit_events,
         "reset_reload_planning_metadata": reset_reload_planning_metadata,
     }
+
+
+def _case_brief_record_for_priority(
+    source_record_key: str,
+    *,
+    reviewer_status: str | None,
+    reviewer_note_count: int,
+    delay_thresholds: tuple[int, ...],
+    order_index: int,
+) -> FacilityCaseBriefRecord:
+    return FacilityCaseBriefRecord(
+        source_record_key=source_record_key,
+        detail_href=f"/reviewer/records/detail?source_record_key={source_record_key}",
+        complaint_control_number=source_record_key,
+        finding="Substantiated",
+        complaint_received_date="2022-08-01",
+        visit_date="2022-08-03",
+        report_date="2022-08-05",
+        date_signed="2022-08-06",
+        facility_number="157806098",
+        facility_name="A. MIRIAM JAMISON",
+        has_source_traceability=True,
+        reviewer_status=reviewer_status,
+        reviewer_status_label=reviewer_status,
+        reviewer_note_count=reviewer_note_count,
+        delay_thresholds=delay_thresholds,
+        missing_first_activity_date=False,
+        missing_visit_date=False,
+        missing_report_date=False,
+        missing_signed_date=False,
+        report_date_used_as_proxy=False,
+        order_index=order_index,
+    )

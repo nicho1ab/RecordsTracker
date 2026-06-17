@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Made hosted reviewer detail an intentional guided review action screen. The
+	page now leads from complaint overview to why the record is flagged, a
+	near-top `Record review action` panel for existing reviewer-created status and
+	note controls, source traceability summary, and record/key-date context. Save
+	confirmations now state what reviewer-created state changed, what source-
+	derived records did not change, and how to return to the facility queue or
+	open the next priority record. This uses the existing note/status and audit
+	paths only; no schema, migration, retrieval, export, auth, deployment, or new
+	persistence domain changed.
+
 - Added a facility-centered attorney case brief to successful hosted CCLD
 	retrieval results and the reviewer queue. The brief summarizes facility scope,
 	complaint record counts, review flags, findings represented, source
