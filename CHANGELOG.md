@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Improved the README live-mode queue and reviewer-detail screenshot
+	composition so the public landing page better shows the review-priority
+	decision flow, recommended next record action, source traceability summary,
+	reviewer-created state separation, and safe note/status action context. This
+	is documentation and asset composition only; it does not change application
+	behavior, retrieval behavior, schemas, migrations, packet lifecycle, export
+	behavior, reviewer-created writes, or committed ignored evidence artifacts.
+
 - Replaced the README fixture/mock screenshots with reviewed live-mode hosted
 	CCLD RecordsTracker screenshots for the start page, retrieval-result review
 	queue, and reviewer detail workflow. The README remains product-oriented and
