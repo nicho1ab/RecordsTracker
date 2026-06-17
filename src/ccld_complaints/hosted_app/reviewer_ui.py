@@ -532,41 +532,42 @@ def _render_packet_draft_context_needed(*, actor_label: str | None) -> str:
 
 
 def _render_packet_draft(
-        records: list[Mapping[str, Any]],
-        state_summaries: Mapping[str, Mapping[str, Any]],
-        return_context: CcldQueueReturnContext,
-        *,
-        workflow: Mapping[str, Any],
-        actor_label: str | None,
+    records: list[Mapping[str, Any]],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+    *,
+    workflow: Mapping[str, Any],
+    actor_label: str | None,
 ) -> str:
-        traceability_counts = _packet_traceability_counts(records)
-        state_counts = _packet_reviewer_state_counts(records, state_summaries)
-        findings = _packet_finding_counts(records)
-        generated_at = datetime.now(UTC).isoformat(timespec="seconds")
-        record_sections = "\n".join(
-                _render_packet_draft_record(record, state_summaries, return_context)
-                for record in records
-        )
-        if not record_sections:
-                record_sections = """        <section class="packet-draft-record" aria-labelledby="draft-no-records-heading">
+    traceability_counts = _packet_traceability_counts(records)
+    state_counts = _packet_reviewer_state_counts(records, state_summaries)
+    readiness_counts = _packet_readiness_counts(records, state_summaries)
+    findings = _packet_finding_counts(records)
+    generated_at = datetime.now(UTC).isoformat(timespec="seconds")
+    record_sections = "\n".join(
+        _render_packet_draft_record(record, state_summaries, return_context)
+        for record in records
+    )
+    if not record_sections:
+        record_sections = """        <section class="packet-draft-record" aria-labelledby="draft-no-records-heading">
                     <h3 id="draft-no-records-heading">No included complaint records</h3>
                     <p>No loaded local/test complaint records match this packet draft context.</p>
                 </section>"""
-        copy_summary = _packet_copy_summary(
-                records,
-                state_summaries,
-                return_context,
-                traceability_counts,
-                state_counts,
-                findings,
-                generated_at,
-        )
-        return _page(
-                title="Attorney Review Packet Draft",
-                heading="Attorney Review Packet Draft",
-                actor_label=actor_label,
-                show_workflow_indicator=False,
-                main=f"""
+    copy_summary = _packet_copy_summary(
+        records,
+        state_summaries,
+        return_context,
+        traceability_counts,
+        state_counts,
+        findings,
+        generated_at,
+    )
+    return _page(
+        title="Attorney Review Packet Draft",
+        heading="Attorney Review Packet Draft",
+        actor_label=actor_label,
+        show_workflow_indicator=False,
+        main=f"""
                 <article class="packet-draft" aria-labelledby="packet-draft-title">
                     <header class="packet-draft-header">
                         <p class="launch-kicker">Local/test print-ready draft</p>
@@ -604,9 +605,27 @@ def _render_packet_draft(
                             <dd>{_packet_review_flag_count(records)}</dd>
                             <dt>Records with source traceability available</dt>
                             <dd>{traceability_counts['complete']}</dd>
+                            <dt>Records ready for preparation review</dt>
+                            <dd>{readiness_counts['ready']}</dd>
+                            <dt>Records needing source check</dt>
+                            <dd>{readiness_counts['needs_source_check']}</dd>
+                            <dt>Records needing reviewer-created status/note attention</dt>
+                            <dd>{readiness_counts['needs_reviewer_attention']}</dd>
                             <dt>Findings represented</dt>
                             <dd>{_escape(_packet_findings_text(findings))}</dd>
                         </dl>
+                    </section>
+                    <section aria-labelledby="draft-review-readiness-heading">
+                        <h3 id="draft-review-readiness-heading">Review-readiness before copy/print</h3>
+                        <p>Review before copy/print: this local/test packet draft is a preparation draft.
+                        Check source traceability, review flags, and reviewer-created status/note cues
+                        before relying on any source-derived value in a handoff.</p>
+                        <ul>
+                            <li>{readiness_counts['needs_source_check']} record(s) may still need source check based on visible review flags, missing local/test dates, proxy cues, or missing traceability.</li>
+                            <li>{readiness_counts['needs_reviewer_attention']} record(s) may still need reviewer-created status/note attention before packet preparation.</li>
+                            <li>{readiness_counts['ready']} record(s) have source traceability available and at least one reviewer-created status/note cue.</li>
+                        </ul>
+                        <p>This is not a legal report, not a final export, and not a source-completeness proof.</p>
                     </section>
                     <section aria-labelledby="draft-traceability-heading">
                         <h3 id="draft-traceability-heading">Source traceability readiness</h3>
@@ -660,7 +679,9 @@ def _render_packet_draft(
                     </details>
                 </article>
                 """,
-        )
+            )
+
+
 def _reviewer_created_state_records(
     context: ReviewerUiContext,
 ) -> tuple[int, list[Mapping[str, Any]] | bytes]:
@@ -1094,6 +1115,7 @@ def _render_packet_preview(
 ) -> str:
     traceability_counts = _packet_traceability_counts(records)
     state_counts = _packet_reviewer_state_counts(records, state_summaries)
+    readiness_counts = _packet_readiness_counts(records, state_summaries)
     record_cards = "\n".join(
         _render_packet_preview_record(record, state_summaries, return_context)
         for record in records
@@ -1121,15 +1143,33 @@ def _render_packet_preview(
             <dd>{_escape(_runtime_mode_label_for_reviewer())}</dd>
             <dt>Records included</dt>
             <dd>{len(records)}</dd>
+                        <dt>Records with review flags or possible delay indicators</dt>
+                        <dd>{_packet_review_flag_count(records)}</dd>
             <dt>Reviewer-created statuses/notes represented</dt>
             <dd>{state_counts['with_status']} with status; {state_counts['with_notes']} with notes</dd>
             <dt>Source traceability available</dt>
             <dd>{traceability_counts['complete']} complete; {traceability_counts['missing_any']} missing one or more visible traceability cues</dd>
+                        <dt>Review-readiness checkpoint</dt>
+                        <dd>{readiness_counts['ready']} ready for preparation review; {readiness_counts['needs_source_check']} need source check; {readiness_counts['needs_reviewer_attention']} need reviewer-created status/note attention</dd>
           </dl>
                     <div class="form-actions">
-                        <a class="button" href="{_escape(_packet_draft_href(return_context))}">Open print-ready packet draft</a>
+                                                <a class="button" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft</a>
+                                                <a class="button button-secondary" href="{_escape(_ccld_request_href([], return_context))}">Return to same facility/date queue</a>
                     </div>
         </section>
+                <section aria-labelledby="packet-readiness-heading">
+                    <h2 id="packet-readiness-heading">Review-readiness summary</h2>
+                    <p>This local/test packet preview is a preparation checkpoint. Use it to decide what still needs source check or reviewer-created status/note attention before copy/print.</p>
+                    <dl class="summary-list">
+                        <dt>Records ready for preparation review</dt>
+                        <dd>{readiness_counts['ready']}</dd>
+                        <dt>Records needing source check</dt>
+                        <dd>{readiness_counts['needs_source_check']}</dd>
+                        <dt>Records needing reviewer-created status/note attention</dt>
+                        <dd>{readiness_counts['needs_reviewer_attention']}</dd>
+                    </dl>
+                    <p>Source-derived values should be checked against traceability when important. This preview is not a legal report, not a final export, and not a source-completeness proof.</p>
+                </section>
         <section aria-labelledby="packet-traceability-heading">
           <h2 id="packet-traceability-heading">Traceability readiness</h2>
           <dl class="summary-list">
@@ -1204,6 +1244,7 @@ def _render_packet_preview_record(
     state_summary = state_summaries.get(source_record_key, _empty_state_summary())
     detail_href = _reviewer_detail_href(source_record_key, return_context)
     label = _display_value(original_values.get("complaint_control_number") or source_record_key)
+    readiness_cue = _packet_readiness_cue(item, state_summary)
     flags = _review_flag_labels(original_values, source_document)
     flag_items = "\n".join(f"              <li>{_escape(flag)}</li>" for flag in flags)
     if not flag_items:
@@ -1227,6 +1268,8 @@ def _render_packet_preview_record(
               <dd>{_escape(_card_note_presence_text(state_summary))}</dd>
               <dt>Source traceability</dt>
               <dd>{_escape(_source_traceability_cue(source_document))}</dd>
+                            <dt>Review-readiness cue</dt>
+                            <dd>{_escape(readiness_cue)}</dd>
             </dl>
             <section aria-labelledby="packet-why-{_escape(source_record_key)}-heading">
               <h4 id="packet-why-{_escape(source_record_key)}-heading">Why included</h4>
@@ -1260,6 +1303,7 @@ def _render_packet_draft_record(
     label = _display_value(original_values.get("complaint_control_number") or source_record_key)
     flags = _packet_review_flags_text(original_values, source_document)
     why = "; ".join(_packet_inclusion_reasons(item, state_summary))
+    readiness_cue = _packet_readiness_cue(item, state_summary)
     return f"""            <section class="packet-draft-record" aria-labelledby="draft-record-{_escape(source_record_key)}-heading">
               <h4 id="draft-record-{_escape(source_record_key)}-heading">{_escape(label)}</h4>
               <dl class="summary-list">
@@ -1279,6 +1323,8 @@ def _render_packet_draft_record(
                 <dd>{_escape(why)}</dd>
                 <dt>Source traceability summary</dt>
                 <dd>{_escape(_source_traceability_cue(source_document))}</dd>
+                                <dt>Review-readiness cue</dt>
+                                <dd>{_escape(readiness_cue)}</dd>
               </dl>
               <p class="packet-draft-actions"><a href="{_escape(detail_href)}">Open record { _escape(label) }</a></p>
             </section>"""
@@ -1293,6 +1339,7 @@ def _packet_copy_summary(
     findings: Mapping[str, int],
     generated_at: str,
 ) -> str:
+    readiness_counts = _packet_readiness_counts(records, state_summaries)
     lines = [
         "Attorney Review Packet Draft",
         f"Facility/license: {_packet_facility_label(records, return_context)}",
@@ -1305,6 +1352,13 @@ def _packet_copy_summary(
         f"- Records with reviewer-created status: {state_counts['with_status']}",
         f"- Records with reviewer-created notes: {state_counts['with_notes']}",
         f"- Records without reviewer-created state: {state_counts['without_state']}",
+        "",
+        "Review-readiness before copy/print",
+        f"- Records ready for preparation review: {readiness_counts['ready']}",
+        f"- Records needing source check: {readiness_counts['needs_source_check']}",
+        "- Records needing reviewer-created status/note attention: "
+        f"{readiness_counts['needs_reviewer_attention']}",
+        "- Review before copy/print; this is local/test preparation only.",
         "",
         "Source traceability readiness",
         f"- Source URL available: {traceability_counts['source_url']}",
@@ -1338,7 +1392,7 @@ def _packet_copy_summary(
         [
             "",
             "Limitations",
-            "- This is a local/test preparation draft, not a legal report, final export, production packet, source-completeness proof, or facility-wide conclusion.",
+            "- This is a local/test preparation draft, not a legal report, not a final export, not a source-completeness proof, and not a facility-wide conclusion.",
             "- Source-derived fields remain separate from reviewer-created notes/status.",
             "- Review flags are screening aids, not legal conclusions.",
             "- The CCLD public portal remains the source of record.",
@@ -1371,6 +1425,63 @@ def _packet_review_flag_count(records: list[Mapping[str, Any]]) -> int:
             _mapping(_mapping(item, "source_record"), "source_document"),
         )
     )
+
+
+def _packet_readiness_counts(
+    records: list[Mapping[str, Any]],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+) -> dict[str, int]:
+    counts = {
+        "ready": 0,
+        "needs_source_check": 0,
+        "needs_reviewer_attention": 0,
+    }
+    for item in records:
+        source_record = _mapping(item, "source_record")
+        identity = _mapping(source_record, "identity")
+        source_record_key = _string(identity, "source_record_key")
+        summary = state_summaries.get(source_record_key, _empty_state_summary())
+        needs_source_check = _packet_needs_source_check(item)
+        needs_reviewer_attention = _packet_needs_reviewer_attention(summary)
+        if needs_source_check:
+            counts["needs_source_check"] += 1
+        if needs_reviewer_attention:
+            counts["needs_reviewer_attention"] += 1
+        if not needs_source_check and not needs_reviewer_attention:
+            counts["ready"] += 1
+    return counts
+
+
+def _packet_readiness_cue(
+    item: Mapping[str, Any],
+    state_summary: Mapping[str, Any],
+) -> str:
+    cues: list[str] = []
+    if _packet_needs_source_check(item):
+        cues.append("Needs source check before copy/print")
+    else:
+        cues.append("Source traceability available for preparation review")
+    if _packet_needs_reviewer_attention(state_summary):
+        cues.append("Reviewer-created status/note attention suggested")
+    else:
+        cues.append("Reviewer-created status/note cue present")
+    return "; ".join(cues) + "."
+
+
+def _packet_needs_source_check(item: Mapping[str, Any]) -> bool:
+    source_record = _mapping(item, "source_record")
+    source_document = _mapping(source_record, "source_document")
+    original_values = _mapping(source_record, "original_values")
+    return bool(
+        _has_missing_date_flag(original_values)
+        or original_values.get("report_date_used_as_proxy") is True
+        or _has_delay_flag(original_values)
+        or not _has_visible_traceability_document(source_document)
+    )
+
+
+def _packet_needs_reviewer_attention(summary: Mapping[str, Any]) -> bool:
+    return not _summary_optional_string(summary, "latest_status") or _summary_int(summary, "note_count") == 0
 
 
 def _packet_review_flags_text(
