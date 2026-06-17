@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Improved packet preview and packet draft as local/test review-readiness
+	checkpoints. The packet surfaces now show included-record readiness counts,
+	source-traceability cues, reviewer-created status/note cues, records needing
+	source check or reviewer attention, and review-before-copy/print guidance
+	while preserving the local/test preparation boundary with no packet lifecycle,
+	export persistence, server-side PDF/Word/ZIP generation, schemas, migrations,
+	retrieval changes, source-derived mutation, or legal conclusions.
+
 - Improved hosted reviewer detail as the continuation of the priority worklist.
 	Detail pages now show active facility/date request context, selected record
 	identity, cautious worklist-priority rationale, source-derived values to check
