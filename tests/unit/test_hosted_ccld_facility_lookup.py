@@ -320,6 +320,12 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert "Skip to main CCLD facility lookup content" in html
     assert '<main id="main-content" tabindex="-1">' in html
     assert "Find a facility" in html
+    assert "Start review by finding the CCLD facility/license number" in html
+    assert "Lookup or manual entry?" in html
+    assert "Use facility lookup when you know a facility name" in html
+    assert "Use manual entry when you already know the digit facility/license number" in html
+    assert "Lookup rows are local/test reference assistance" in html
+    assert "not complaint source truth" in html
     assert 'for="facility-search-input"' in html
     assert "facility-suggestion-list" in html
     assert "Search" in html

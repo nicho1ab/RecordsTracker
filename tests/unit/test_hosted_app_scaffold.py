@@ -112,8 +112,21 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "CCLD RecordsTracker" in html
     assert "Retrieval not configured" in html
     assert "Start a facility complaint review" in html
-    assert "Start facility review" in html
-    assert "Find the facility, choose the complaint date range" in html
+    assert "Start with facility lookup" in html
+    assert "Enter a facility/license number directly" in html
+    assert "Attorney-focused public CCLD complaint/facility record review" in html
+    assert "How the local/test review loop works" in html
+    assert "Select a facility by lookup" in html
+    assert "Choose a complaint date range" in html
+    assert "work the review queue" in html
+    assert "Use reviewer detail to check source traceability" in html
+    assert "Use packet preview/draft for local/test preparation" in html
+    assert (
+        "Use feedback when records, wording, keyboard flow, or packet readiness is confusing"
+        in html
+    )
+    assert "The public CCLD portal remains the source of record" in html
+    assert "not legal reports, not final exports, and not source-completeness proof" in html
     assert "Open review queue" in html
     assert "Feedback" in html
     assert "Developer/operator commands" in html

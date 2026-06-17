@@ -749,12 +749,26 @@ def render_app_shell() -> str:
             <div>
                 <p class="launch-kicker">Attorney review workspace</p>
                 <h2 id="start-heading">Start a facility complaint review</h2>
-                <p class="launch-value">Find the facility, choose the complaint date range, retrieve CCLD records, then open the queue for source-traceable review.</p>
+                <p class="launch-value">Attorney-focused public CCLD complaint/facility record review: select a facility, set a date range, load complaint records, work the review queue, open detail, prepare a local/test packet draft, and send feedback when something is confusing.</p>
             </div>
             <div class="attorney-hero-actions" aria-label="Primary actions">
-                <a class="button button-large" href="{CCLD_RECORD_REQUEST_PATH}">Start facility review</a>
+                <a class="button button-large" href="{CCLD_FACILITY_LOOKUP_PATH}">Start with facility lookup</a>
+                <a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Enter a facility/license number directly</a>
                 <a class="button button-secondary" href="/reviewer">Open review queue</a>
             </div>
+        </section>
+        <section class="quiet-section" aria-labelledby="session-start-overview-heading">
+            <h2 id="session-start-overview-heading">How the local/test review loop works</h2>
+            <ol>
+                <li>Select a facility by lookup, or enter a facility/license number directly.</li>
+                <li>Choose a complaint date range to create the CCLD request context.</li>
+                <li>Retrieve or show loaded local/test complaint records.</li>
+                <li>Use the review queue to open the recommended record first.</li>
+                <li>Use reviewer detail to check source traceability and save reviewer-created status/note observations.</li>
+                <li>Use packet preview/draft for local/test preparation after review.</li>
+                <li>Use feedback when records, wording, keyboard flow, or packet readiness is confusing.</li>
+            </ol>
+            <p>The public CCLD portal remains the source of record. Loaded local/test records are review aids. Packet preview and draft are not legal reports, not final exports, and not source-completeness proof.</p>
         </section>
         <section id="commands" class="quiet-section" aria-labelledby="commands-heading">
             <details>
