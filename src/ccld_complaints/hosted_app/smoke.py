@@ -352,6 +352,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         reviewer_detail_status != 200
         or b"Complaint overview" not in reviewer_detail_body
+        or b"Record review action" not in reviewer_detail_body
         or b"Key dates and finding" not in reviewer_detail_body
         or b"Record summary" not in reviewer_detail_body
         or b"Selected complaint source traceability fields" not in reviewer_detail_body
@@ -374,10 +375,12 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold reviewer detail did not return usable guidance.")
     if (
         reviewer_note_status != 200
-        or b"Reviewer update saved" not in reviewer_note_body
+        or b"Reviewer-created state saved" not in reviewer_note_body
         or b"Reviewer note saved for this record" not in reviewer_note_body
-        or b"Return to CCLD request queue" not in reviewer_note_body
-        or b"Return and refresh queue progress" not in reviewer_note_body
+        or b"What changed" not in reviewer_note_body
+        or b"What did not change" not in reviewer_note_body
+        or b"Return to facility queue" not in reviewer_note_body
+        or b"Open next priority record" not in reviewer_note_body
         or b"Queue progress and note/status cues are derived" not in reviewer_note_body
         or b"suggested next record is not a persisted assignment" not in reviewer_note_body
         or b"field-note wording" not in reviewer_note_body
@@ -386,10 +389,12 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold reviewer note did not return confirmation.")
     if (
         reviewer_saved_status != 200
-        or b"Reviewer update saved" not in reviewer_saved_status_body
+        or b"Reviewer-created state saved" not in reviewer_saved_status_body
         or b"Reviewer status saved for this record" not in reviewer_saved_status_body
-        or b"Return to CCLD request queue" not in reviewer_saved_status_body
-        or b"Return and refresh queue progress" not in reviewer_saved_status_body
+        or b"What changed" not in reviewer_saved_status_body
+        or b"What did not change" not in reviewer_saved_status_body
+        or b"Return to facility queue" not in reviewer_saved_status_body
+        or b"Open next priority record" not in reviewer_saved_status_body
         or b"Queue progress and note/status cues are derived" not in reviewer_saved_status_body
         or b"suggested next record is not a persisted assignment" not in reviewer_saved_status_body
         or b"field-note wording" not in reviewer_saved_status_body

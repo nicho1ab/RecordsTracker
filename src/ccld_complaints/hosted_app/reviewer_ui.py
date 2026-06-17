@@ -463,7 +463,8 @@ def _detail_response(
         status,
         payload,
         context,
-        notice=None,
+        saved_action=None,
+        saved_value=None,
         return_context=_return_context_from_values(query_values, related_records=None),
     )
 
@@ -507,13 +508,8 @@ def _note_form_response(
         200,
         payload,
         context,
-        notice=(
-            "Reviewer note saved for this record. The note now appears in "
-            "reviewer-created state below. Queue progress and note/status cues are "
-            "derived from reviewer-created state. Return to the same CCLD request "
-            "context and submit the same request to see updated note cues before "
-            "continuing to the next record."
-        ),
+        saved_action="note",
+        saved_value="added",
         return_context=return_context,
     )
 
@@ -564,13 +560,8 @@ def _status_form_response(
         200,
         payload,
         context,
-        notice=(
-            "Reviewer status saved for this record. The status now appears in "
-            "reviewer-created state below. Queue progress and note/status cues are "
-            "derived from reviewer-created state. Return to the same CCLD request "
-            "context and submit the same request to see updated status cues before "
-            "continuing to the next record."
-        ),
+        saved_action="status",
+        saved_value=_REVIEWER_STATUS_LABELS.get(reviewer_status, reviewer_status),
         return_context=return_context,
     )
 
@@ -580,7 +571,8 @@ def _detail_html_response(
     payload: Mapping[str, Any],
     context: ReviewerUiContext,
     *,
-    notice: str | None,
+    saved_action: str | None,
+    saved_value: str | None,
     return_context: CcldQueueReturnContext,
 ) -> tuple[int, str, bytes]:
     bundle_status, bundle_body = _related_source_derived_context(payload, context)
@@ -594,7 +586,8 @@ def _detail_html_response(
         status,
         _render_detail(
             payload,
-            notice=notice,
+            saved_action=saved_action,
+            saved_value=saved_value,
             related_records=bundle_body,
             return_context=_return_context_with_related_defaults(
                 return_context,
@@ -1016,11 +1009,13 @@ def _render_review_item_card(
         control_number = _display_value(original_values.get("complaint_control_number") or source_record_key)
         facility_number = _optional_string(identity, "facility_id")
         finding = _optional_string(original_values, "finding")
+        reviewer_status_text = _latest_status_text(state_summary)
+        note_presence_text = _card_note_presence_text(state_summary)
         return f"""        <article class="result-card work-item" aria-labelledby="record-{_escape(source_record_key)}-heading">
                     <div>
                         <p class="stage-kicker">{_escape(_queue_cue_text(state_summary))}</p>
                         <h3 id="record-{_escape(source_record_key)}-heading">{_escape(control_number)}</h3>
-                        <p><span class="badge badge-muted">Finding: {_escape(finding)}</span> <span class="badge badge-muted">Reviewer status: {_escape(_latest_status_text(state_summary))}</span></p>
+                        <p><span class="badge badge-muted">Finding: {_escape(finding)}</span> <span class="badge badge-demo">Reviewer-created status: {_escape(reviewer_status_text)}</span> <span class="badge badge-muted">{_escape(note_presence_text)}</span></p>
                         {_render_review_flag_chips(original_values, source_document)}
                         <dl>
                             <dt>Facility/license</dt>
@@ -1034,13 +1029,20 @@ def _render_review_item_card(
                             <dt>Signed</dt>
                             <dd>{_escape(_optional_string(original_values, 'date_signed'))}</dd>
                             <dt>Reviewer-created notes</dt>
-                            <dd>{_escape(_notes_indicator_text(state_summary))}</dd>
+                            <dd>{_escape(note_presence_text)}</dd>
                             <dt>Source traceability</dt>
                             <dd>{_escape(_source_traceability_cue(source_document))}</dd>
                         </dl>
                     </div>
                     <p><a class="button" href="{_escape(detail_href)}">Open record</a></p>
                 </article>"""
+
+
+def _card_note_presence_text(summary: Mapping[str, Any]) -> str:
+        note_count = _summary_int(summary, "note_count")
+        if note_count == 0:
+                return "No reviewer note"
+        return "Reviewer note added"
 
 
 def _next_review_item_href(item: Mapping[str, Any] | None) -> str:
@@ -1336,7 +1338,8 @@ def _summary_optional_string(summary: Mapping[str, Any], key: str) -> str | None
 def _render_detail(
     payload: Mapping[str, Any],
     *,
-    notice: str | None,
+    saved_action: str | None,
+    saved_value: str | None,
     related_records: list[Mapping[str, Any]],
     return_context: CcldQueueReturnContext,
     actor_label: str | None,
@@ -1355,10 +1358,8 @@ def _render_detail(
                 heading=complaint_heading,
         actor_label=actor_label,
         main=f"""
-    {_render_notice(notice, source_record_key, related_records, return_context)}
+    {_render_notice(saved_action, saved_value, source_record_key, related_records, return_context)}
                 <div class="detail-shell">
-                    <div class="detail-top-grid">
-                        <div>
                 <section class="hero-card" aria-labelledby="detail-hero-heading">
                     <p class="launch-kicker">Complaint review workspace</p>
                     <h2 id="detail-hero-heading">Complaint overview</h2>
@@ -1367,6 +1368,15 @@ def _render_detail(
                     {_render_review_flag_chips(original_values, source_document)}
                 </section>
             {_render_detail_flag_reason_section(source_record, detail, related_records, return_context)}
+        {_render_review_actions(source_record_key, detail, return_context)}
+                                                                {_render_source_traceability_section(
+                                                                                                identity,
+                                                                                                source_document,
+                                                                                                source_traceability,
+                                                                                                import_batch,
+                                                                )}
+                    <div class="detail-top-grid">
+                        <div>
         {_render_record_summary_section(source_record, related_records, detail)}
                 {_render_key_date_cards(original_values)}
                         </div>
@@ -1374,12 +1384,6 @@ def _render_detail(
         {_render_reviewer_state_section(detail)}
                         </aside>
                     </div>
-                                                                {_render_source_traceability_section(
-                                                                                                identity,
-                                                                                                source_document,
-                                                                                                source_traceability,
-                                                                                                import_batch,
-                                                                )}
         <section aria-labelledby="source-derived-heading">
                         <h2 id="source-derived-heading">Source-derived full field details</h2>
             <p>These are safe scalar fields from the selected source-derived row. Narrative
@@ -1419,7 +1423,6 @@ def _render_detail(
         {_render_field_note_guidance_section()}
         {_render_source_context_section(related_records, source_record_key)}
                 </details>
-        {_render_review_actions(source_record_key, return_context)}
         <details class="technical-details">
         <summary>Detail navigation</summary>
         {_render_detail_navigation(source_record_key, related_records, return_context)}
@@ -1701,8 +1704,8 @@ def _render_source_traceability_section(
     source_traceability: Mapping[str, Any],
     import_batch: Mapping[str, Any],
 ) -> str:
-    return f"""<section id="traceability-heading" aria-labelledby="traceability-title">
-      <h2 id="traceability-title">Source traceability</h2>
+        return f"""<section id="traceability-heading" aria-labelledby="traceability-title">
+            <h2 id="traceability-title">Source traceability summary</h2>
       <p>Use these fields to confirm which local/test source-derived complaint record is
       selected and how it remains tied to preserved public-source material before adding a
       reviewer-created note or status.</p>
@@ -1712,6 +1715,19 @@ def _render_source_traceability_section(
       <p>This page is a local/test review aid. It does not make legal, facility-wide,
       completeness, harm, abuse, neglect, liability, or automated complaint-finding
       conclusions.</p>
+            <dl class="summary-list">
+                <dt>Source URL</dt>
+                <dd>{_escape(_availability_label(source_document.get('source_url')))}</dd>
+                <dt>Raw SHA-256</dt>
+                <dd>{_escape(_availability_label(source_document.get('raw_sha256')))}</dd>
+                <dt>Connector and retrieval time</dt>
+                <dd>{_escape(_connector_retrieval_availability(source_document))}</dd>
+                <dt>Reviewer-created separation</dt>
+                <dd>Source-derived values remain separate from reviewer-created notes/status.</dd>
+            </dl>
+            {_render_traceability_summary(source_document, source_traceability, import_batch)}
+            <details class="technical-details">
+                <summary>Show selected source traceability fields</summary>
       <table>
         <caption>Selected complaint source traceability fields</caption>
         <thead>
@@ -1725,8 +1741,26 @@ def _render_source_traceability_section(
 {_render_traceability_field_rows(identity, source_document, source_traceability, import_batch)}
         </tbody>
       </table>
-      {_render_traceability_summary(source_document, source_traceability, import_batch)}
+      </details>
     </section>"""
+
+
+def _availability_label(value: object) -> str:
+    if _has_display_value(value):
+        return "available"
+    return "missing in this local/test record"
+
+
+def _connector_retrieval_availability(source_document: Mapping[str, Any]) -> str:
+    connector_available = _has_display_value(source_document.get("connector_name"))
+    retrieved_available = _has_display_value(source_document.get("retrieved_at"))
+    if connector_available and retrieved_available:
+        return "connector available; retrieval time available"
+    if connector_available:
+        return "connector available; retrieval time missing in this local/test record"
+    if retrieved_available:
+        return "connector missing in this local/test record; retrieval time available"
+    return "connector and retrieval time missing in this local/test record"
 
 
 def _render_field_note_guidance_section() -> str:
@@ -2318,21 +2352,62 @@ def _render_reviewer_state_section(detail: Mapping[str, Any]) -> str:
 
 def _render_review_actions(
     source_record_key: str,
+    detail: Mapping[str, Any],
     return_context: CcldQueueReturnContext,
 ) -> str:
-        return f"""<section id="review-actions-heading" aria-labelledby="review-actions-title">
-            <h2 id="review-actions-title">Reviewer actions</h2>
-            <p>These local/test actions write reviewer-created state through the
-            existing authenticated workflow actions. They do not edit source-derived
-            fields.</p>
-            <p>Review the source traceability, source-confidence cues, and field-note guidance
-            first. Then add a short note when source traceability, wording, missing local/test
-            values, proxy flags, or review context needs follow-up. Set a status to keep queue
-            progress understandable.</p>
+    summary = _mapping(detail, "associated_reviewer_created_state_summary")
+    current_status = _current_reviewer_status_text(summary)
+    note_presence = _detail_note_presence_text(summary)
+    next_action = _recommended_review_action(summary)
+    return f"""<section class="action-card reviewer-action-panel" id="review-actions-heading" aria-labelledby="review-actions-title">
+            <p class="launch-kicker">Guided reviewer-created action</p>
+            <h2 id="review-actions-title">Record review action</h2>
+            <p>Use this panel after reading the complaint overview and review flags. The controls
+            below save reviewer-created state through the existing note/status workflow actions;
+            Source-derived fields remain unchanged.</p>
+            <dl class="summary-list">
+                <dt>Current reviewer-created status</dt>
+                <dd>{_escape(current_status)}</dd>
+                <dt>Reviewer-created note</dt>
+                <dd>{_escape(note_presence)}</dd>
+                <dt>Recommended next action</dt>
+                <dd>{_escape(next_action)}</dd>
+            </dl>
+            <p>After saving, the confirmation shows what changed, states that it is reviewer-created
+            state, confirms source-derived fields remain unchanged, and offers Return to facility
+            queue plus Open next priority record guidance.</p>
             {_return_context_hidden_summary(return_context)}
             {_render_note_form(source_record_key, return_context)}
             {_render_status_form(source_record_key, return_context)}
         </section>"""
+
+
+def _current_reviewer_status_text(summary: Mapping[str, Any]) -> str:
+    statuses = tuple(_string_items(summary.get("reviewer_statuses_present", [])))
+    if not statuses:
+        return "No reviewer-created status"
+    return _REVIEWER_STATUS_LABELS.get(statuses[0], statuses[0])
+
+
+def _detail_note_presence_text(summary: Mapping[str, Any]) -> str:
+    payload_kinds = tuple(_string_items(summary.get("payload_kinds_present", [])))
+    if "reviewer_note_scaffold" in payload_kinds:
+        return "Reviewer note added"
+    return "No reviewer note"
+
+
+def _recommended_review_action(summary: Mapping[str, Any]) -> str:
+    has_status = bool(tuple(_string_items(summary.get("reviewer_statuses_present", []))))
+    has_note = "reviewer_note_scaffold" in tuple(
+        _string_items(summary.get("payload_kinds_present", []))
+    )
+    if not has_status and not has_note:
+        return "Add a review status or note."
+    if has_status and not has_note:
+        return "Add a note if source-traceability or missing-field context needs explanation."
+    if has_note and not has_status:
+        return "Set a review status so the queue can reflect progress."
+    return "Return to the queue or open the next record."
 
 
 def _render_reviewer_state_row(record: Mapping[str, Any]) -> str:
@@ -2369,23 +2444,23 @@ def _actor_label(created_by: Mapping[str, Any]) -> str:
 
 
 def _render_note_form(
-        source_record_key: str,
-        return_context: CcldQueueReturnContext,
+    source_record_key: str,
+    return_context: CcldQueueReturnContext,
 ) -> str:
     return f"""<section aria-labelledby="note-form-heading">
-    <h3 id="note-form-heading">Add reviewer note</h3>
+        <h3 id="note-form-heading">Reviewer-created note</h3>
       <form action="{REVIEWER_UI_NOTE_PATH}" method="post">
         <input type="hidden" name="source_record_key" value="{_escape(source_record_key)}">
                 {_return_context_hidden_inputs(return_context)}
         <p>
-                    <label for="note_text">Reviewer note for this record</label>
+                    <label for="note_text">Reviewer-created note for this record</label>
                     <textarea id="note_text" name="note_text" rows="4" required
                         aria-describedby="note-text-help"></textarea>
                                             <span id="note-text-help">
                                         Use safe plain text. Notes appear below after saving.
                                         They do not change the source-derived record.</span>
         </p>
-                <p><button type="submit">Save reviewer note for this record</button></p>
+                                <p><button type="submit">Save reviewer-created note for this record</button></p>
       </form>
     </section>"""
 
@@ -2399,12 +2474,12 @@ def _render_status_form(
         for status in REVIEWER_STATUS_VALUES
     )
     return f"""<section aria-labelledby="status-form-heading">
-            <h3 id="status-form-heading">Set reviewer status</h3>
+            <h3 id="status-form-heading">Reviewer-created status</h3>
       <form action="{REVIEWER_UI_STATUS_PATH}" method="post">
         <input type="hidden" name="source_record_key" value="{_escape(source_record_key)}">
                 {_return_context_hidden_inputs(return_context)}
         <p>
-          <label for="reviewer_status">Reviewer queue status for this record</label>
+          <label for="reviewer_status">Reviewer-created status for this record</label>
                     <select id="reviewer_status" name="reviewer_status" required
                         aria-describedby="reviewer-status-help">
 {options}
@@ -2413,7 +2488,7 @@ def _render_status_form(
                     queue progress, appears below after saving, and is not a public-source
                     finding.</span>
         </p>
-                <p><button type="submit">Save reviewer status for this record</button></p>
+                                <p><button type="submit">Save reviewer-created status for this record</button></p>
       </form>
     </section>"""
 
@@ -2528,28 +2603,49 @@ def _render_scope_notice(workflow: Mapping[str, Any]) -> str:
 
 
 def _render_notice(
-        notice: str | None,
-        source_record_key: str,
-        related_records: list[Mapping[str, Any]],
+    saved_action: str | None,
+    saved_value: str | None,
+    source_record_key: str,
+    related_records: list[Mapping[str, Any]],
     return_context: CcldQueueReturnContext,
 ) -> str:
-    if notice is None:
+    if saved_action is None:
         return ""
     detail_href = _reviewer_detail_href(source_record_key, return_context)
     ccld_request_href = _ccld_request_href(related_records, return_context)
-    return f"""<section aria-labelledby="form-result-heading">
-            <h2 id="form-result-heading">Reviewer update saved</h2>
-      <p>{_escape(notice)}</p>
-            <p>This confirmation is reviewer-created local/test state. It does not change
-            source-derived records or public-source findings.</p>
+    next_record_href = _next_priority_record_href(source_record_key, related_records, return_context)
+    next_record_note = (
+        "Open next priority record uses another visible complaint record from this facility context."
+        if next_record_href != ccld_request_href
+        else "No separate next priority record is visible; this opens the facility queue."
+    )
+    return f"""<section class="summary-card" aria-labelledby="form-result-heading">
+            <p class="launch-kicker">Reviewer-created state saved</p>
+            <h2 id="form-result-heading">Reviewer-created state saved</h2>
+            <p>{_escape(_saved_action_sentence(saved_action))}</p>
+            <p>This confirmation is reviewer-created local/test state. Source-derived fields remain unchanged.</p>
+            <section aria-labelledby="saved-changed-heading">
+                <h3 id="saved-changed-heading">What changed</h3>
+                <ul>
+                    {_saved_change_item(saved_action, saved_value)}
+                </ul>
+            </section>
+            <section aria-labelledby="saved-unchanged-heading">
+                <h3 id="saved-unchanged-heading">What did not change</h3>
+                <ul>
+                    <li>Source-derived complaint fields</li>
+                    <li>Source traceability</li>
+                    <li>Public-source records</li>
+                </ul>
+            </section>
             <section aria-labelledby="queue-return-progress-heading">
-                <h3 id="queue-return-progress-heading">Return and refresh queue progress</h3>
+                <h3 id="queue-return-progress-heading">Next</h3>
                 <p>Queue progress and note/status cues are derived from reviewer-created state.
                 Return to the same CCLD request context, use the same facility/license number
                 and date range, and submit the request again if the local/test queue page needs
                 to refresh its displayed cues.</p>
                 <p>After the queue shows the updated cue, open the suggested next record or the
-                next not-started record to continue review.</p>
+                next not-started record before continuing to the next record.</p>
                 <p>The suggested next record is not a persisted assignment, automatic record
                 claim, or official workflow state. It is local/test navigation guidance based
                 on the same request context and existing reviewer-created note/status cues.</p>
@@ -2564,13 +2660,60 @@ def _render_notice(
                     <dd>{_escape(_return_context_date_range(return_context))}</dd>
                 </dl>
             </section>
-            <ul>
-                <li><a href="#reviewer-state-heading">Review saved notes and statuses below</a></li>
-                <li><a href="{_escape(ccld_request_href)}">Return to CCLD request queue
-                with the same request context</a></li>
-                <li><a href="{_escape(detail_href)}">Refresh this reviewer detail</a></li>
-            </ul>
+            <div class="form-actions">
+                <a class="button" href="{_escape(ccld_request_href)}">Return to facility queue</a>
+                <a class="button button-secondary" href="{_escape(next_record_href)}">Open next priority record</a>
+                <a class="button button-secondary" href="{_escape(detail_href)}">Refresh this reviewer detail</a>
+            </div>
+            <p class="helper-text">{_escape(next_record_note)}</p>
+            <p><a href="#reviewer-state-heading">Review saved notes and statuses below</a></p>
     </section>"""
+
+
+def _saved_action_sentence(saved_action: str) -> str:
+    if saved_action == "note":
+        return "Reviewer note saved for this record. The note now appears in reviewer-created state below."
+    if saved_action == "status":
+        return "Reviewer status saved for this record. The status now appears in reviewer-created state below."
+    return "Reviewer-created state saved for this record."
+
+
+def _saved_change_item(saved_action: str, saved_value: str | None) -> str:
+    if saved_action == "note":
+        return "<li>Note: added</li>"
+    if saved_action == "status":
+        value = saved_value or "saved"
+        return f"<li>Status: {_escape(value)}</li>"
+    return "<li>Reviewer-created state: saved</li>"
+
+
+def _next_priority_record_href(
+    current_source_record_key: str,
+    related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> str:
+    candidates = [
+        record
+        for record in related_records
+        if _string(record, "entity_type") == "complaint"
+        and _string(record, "source_record_key") != current_source_record_key
+    ]
+    if not candidates:
+        return _ccld_request_href(related_records, return_context)
+    selected = sorted(candidates, key=_source_record_priority_sort_key)[0]
+    return _reviewer_detail_href(_string(selected, "source_record_key"), return_context)
+
+
+def _source_record_priority_sort_key(record: Mapping[str, Any]) -> tuple[int, int, str]:
+    original_values = _mapping(record, "original_values")
+    strongest_delay = 0
+    for days in (120, 90, 60, 30):
+        if original_values.get(f"review_delay_over_{days}_days") is True:
+            strongest_delay = days
+            break
+    missing_rank = 1 if _has_missing_date_flag(original_values) else 0
+    date_value = _optional_string(original_values, "complaint_received_date")
+    return (-strongest_delay, -missing_rank, date_value)
 
 
 def _reviewer_detail_href(

@@ -454,8 +454,12 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
     assert status_status == 200
     assert "Reviewer note saved for this record" in note_html
     assert "Reviewer status saved for this record" in status_html
-    assert "Return to CCLD request queue" in note_html
-    assert "Return to CCLD request queue" in status_html
+    assert "Reviewer-created state saved" in note_html
+    assert "Reviewer-created state saved" in status_html
+    assert "Return to facility queue" in note_html
+    assert "Return to facility queue" in status_html
+    assert "Open next priority record" in note_html
+    assert "Open next priority record" in status_html
     assert "Queue progress and note/status cues are derived from reviewer-created state" in (
         note_html
     )
