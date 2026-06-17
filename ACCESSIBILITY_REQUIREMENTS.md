@@ -138,6 +138,11 @@ Accessibility requirements apply to:
 	screen-reader-readable text, not only as visual position, color, or compact
 	labels. Visually hidden helper text is acceptable when the same information
 	would otherwise crowd the compact workflow rail.
+- Hosted local/test workflow pages with repeated navigation should include
+	visible keyboard-flow guidance near the workflow indicator or primary form
+	controls so testers can move from Home, Facility Lookup, Record Request,
+	Review Queue, Reviewer Detail, Note/Status actions, Packet Preview/Draft,
+	Feedback, and Help without relying on color, layout, or pointer-only cues.
 
 ### Color and contrast
 

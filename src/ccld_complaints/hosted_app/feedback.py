@@ -239,6 +239,7 @@ def render_feedback_page(
             <p class="launch-kicker">Tester support</p>
             <h2 id="feedback-purpose-heading">What issue should be reported?</h2>
             <p>Choose the feedback type and describe what blocked retrieval, review, source traceability, correction-readiness guidance, missing local/test traceability values, wording, or keyboard flow.</p>
+            <p class="helper-text">Keyboard flow: choose a feedback type, Tab to Description, submit only safe details, and use the visible validation message if a required field is missing.</p>
         </section>
         {_feedback_context_panel(handoff_context)}
         <div class="support-layout">
@@ -558,7 +559,8 @@ def _feedback_form(form_values: Mapping[str, list[str]]) -> str:
     )
     textarea = (
         '<textarea id="description" name="description" rows="8" '
-        f'maxlength="{MAX_FEEDBACK_DESCRIPTION_LENGTH}" required>'
+        f'maxlength="{MAX_FEEDBACK_DESCRIPTION_LENGTH}" required '
+        'aria-describedby="description-help">'
         f"{escaped_description}</textarea>"
     )
     return f"""    <section aria-labelledby="feedback-form-heading">
@@ -566,14 +568,16 @@ def _feedback_form(form_values: Mapping[str, list[str]]) -> str:
       <form action="{FEEDBACK_PATH}" method="post">
         <p>
           <label for="feedback_type">Feedback type</label>
-          <select id="feedback_type" name="feedback_type" required>
+                    <select id="feedback_type" name="feedback_type" required aria-describedby="feedback-type-help">
             <option value="">Choose feedback type</option>
 {options}
           </select>
+                    <span id="feedback-type-help">Choose the category that best fits the route or action that was confusing.</span>
         </p>
         <p>
           <label for="description">Description</label>
                     {textarea}
+                    <span id="description-help">Describe the route, control, keyboard flow, source traceability cue, or packet preparation issue without private material.</span>
         </p>
         <input type="hidden" name="page_path" value="{html.escape(page_path)}">
         <p><button type="submit">Submit feedback</button></p>

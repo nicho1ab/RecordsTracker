@@ -142,6 +142,8 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "Source-derived records stay separate from reviewer-created notes/status" in html
     assert "/reviewer" in html
     assert "sr-only" in html
+    assert "Keyboard flow: use the skip link, top navigation, and step links" in html
+    assert "current step and next action are stated in text" in html
     assert "Start facility complaint review." in html
     assert "Select the facility/license number." in html
     assert "Choose the complaint date range." in html
@@ -184,6 +186,7 @@ def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None
             assert "Attorney workflow" in html
             assert "Current step" in html
             assert "Next:" in html
+            assert "Keyboard flow:" in html
             assert "Dates" in html
             assert "Results" in html
         else:

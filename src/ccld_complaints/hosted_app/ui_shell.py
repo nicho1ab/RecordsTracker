@@ -207,6 +207,7 @@ def _guided_stepper(current_step_id: str, next_action: str | None) -> str:
       <p class="stepper-eyebrow">Attorney workflow</p>
       <h2 id="guided-stepper-heading">Current step: {html.escape(current_step.label)}</h2>
       <p class="next-action"><strong>Next:</strong> {html.escape(next_action_text)}</p>
+      <p class="helper-text stepper-keyboard-help">Keyboard flow: use the skip link, top navigation, and step links to move through the current review path; the current step and next action are stated in text.</p>
     </div>
     <ol class="stepper-list">
 {items}
