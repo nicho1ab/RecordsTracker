@@ -1,43 +1,145 @@
-**Purpose**: Acceptance checklist for validating the hosted local/test reviewer flow without performing persistent changes.
+# Hosted Reviewer Acceptance
 
-- **Environment**: An already-running hosted scaffold (non-auth) serving reviewer UI.
+## Purpose
 
-- **Ports/URLs**:
-  - **Live**: `http://127.0.0.1:8003`
-  - **Fixture/mock**: `http://127.0.0.1:8010`
+Use this checklist to validate the hosted local/test CCLD review loop as one
+tester-readiness acceptance path. The path is intended for early local operators
+and reviewers who need repeatable evidence that the current route set is
+reachable, exposes expected workflow markers, preserves packet preview/draft
+checks, and can produce a local review evidence packet without relying on ad hoc
+manual inspection.
 
-- **Commands**:
-  - Run tests: `./scripts/test.ps1`
-  - Capture evidence (fixture): `./scripts/capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture`
-  - Verify acceptance checks (non-mutating): `./scripts/verify-hosted-reviewer-acceptance.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture -IncludeCapture`
-  - Stale port cleanup (PowerShell): `foreach ($p in 8000,8003,8010) { Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force } }`
+The acceptance verifier is non-mutating by default. It performs GET checks and
+optionally runs GET-only evidence capture. Write checks require explicit
+`-RunWriteChecks` and should be used only against a safe local test or staging instance where transient reviewer-created state is acceptable.
 
-- **Context sample**:
-  - Facility: `157806098`
-  - Date range: `2026-01-01` to `2026-01-31`
+## Ports
 
-- **Acceptance flow (manual)**:
-1. Start the scaffold server for the chosen mode (live or fixture). Confirm reachable at the port above.
-2. Open the reviewer UI: `/reviewer` and inspect the Worklist.
-3. Open Packet Preview with no context: `/reviewer/packet/preview` — the page MUST show explicit guidance such as "No facility/date packet context was supplied." and MUST NOT display a passive label "Date range: not provided" alongside included records.
-4. Open Packet Preview with context: `/reviewer/packet/preview?facility_number=157806098&start_date=2026-01-01&end_date=2026-01-31&request_context_origin=manual_entry` — the page SHOULD list included records, show the date range, explain browser copy/print preparation, include a visible before-copying-or-printing checklist, and state that the preview is not a legal report, final export, certified report, or source-completeness proof.
-5. Open Packet Draft with no context: `/reviewer/packet/draft` — page MUST show explicit guidance and MUST NOT present "Date range: not provided".
-6. Open Packet Draft with context: `/reviewer/packet/draft?facility_number=157806098&start_date=2026-01-01&end_date=2026-01-31&request_context_origin=manual_entry` — page SHOULD show the draft UI with browser copy/print preparation guidance before the draft body and a review-before-copying-or-printing reminder (note: draft intentionally hides workflow rail for print/copy; this is expected).
-7. Run `./scripts/capture-hosted-ui-evidence.ps1 -BaseUrl <url> -Mode fixture` to produce the evidence packet and `route-assertions.csv`.
-8. Inspect `route-assertions.csv` inside the produced packet. There MUST be rows for `packet-preview-empty`, `packet-preview-context`, `packet-draft-empty`, and `packet-draft-context`. Workflow-step assertions for `packet-draft-*` routes must be `PASS` with a message that indicates the draft intentionally hides the workflow indicator and the assertion was skipped.
+Use these local ports unless a task handoff says otherwise:
 
-- **What this proves**:
-  - Preview routes explicitly indicate missing context and do not silently label results with a misleading passive date-range message.
-  - Preview and draft context routes expose local/test browser copy/print preparation guidance and safe packet boundary wording.
-  - Draft routes intentionally hide the workflow rail; evidence capture reflects this choice and does not flag it as a warning.
+- Fixture/mock: `http://127.0.0.1:8010`
+- Live: `http://127.0.0.1:8003`
 
-- **What this does not prove**:
-  - End-to-end persistence or remote retrieval writes (the acceptance script and checklist are non-mutating by default).
+Fixture/mock mode uses committed fixtures and does not make live CCLD calls.
+Live mode can make public CCLD HTTP requests only when a browser user submits a
+controlled retrieval form; the verifier and evidence capture commands are
+GET-only and do not submit retrieval jobs.
 
-- **Post-acceptance**:
-  - Upload the produced evidence packet(s) to the reviewer acceptance folder for audit.
-  - If additional exploratory write checks requested, run `./scripts/verify-hosted-reviewer-acceptance.ps1 -BaseUrl <url> -Mode fixture -RunWriteChecks` (ONLY when a dedicated test/staging instance is OK to receive transient reviewer-created state).
+## Sample Context
 
-- **Notes**:
-  - The acceptance script `scripts/verify-hosted-reviewer-acceptance.ps1` defaults to non-mutating route GET checks and will only run the capture script when `-IncludeCapture` is provided.
-  - If `gh` is available and you're preparing a PR/merge, run `gh pr status` to confirm checks before merging.
+The verifier uses this stable local/test context by default:
+
+- Facility/license number: `157806098`
+- Date range: `2026-01-01` to `2026-01-31`
+- Request context origin: `manual_entry`
+- Sample source record key: `complaint:ccld:complaint:32-CR-20220407124448`
+
+## Commands
+
+Before starting a local server, clear stale hosted processes when appropriate:
+
+```powershell
+foreach ($p in 8000,8003,8010) { Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force } }
+```
+
+Start fixture/mock mode in one terminal:
+
+```powershell
+.\scripts\run-hosted-complaint-retrieval-demo.ps1 -Port 8010
+```
+
+Run the non-mutating tester-readiness acceptance check from another terminal:
+
+```powershell
+.\scripts\verify-hosted-reviewer-acceptance.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture -IncludeCapture
+```
+
+For live GET-only validation, start live mode in one terminal:
+
+```powershell
+.\scripts\run-hosted-complaint-retrieval-live.ps1 -Port 8003
+```
+
+Then run:
+
+```powershell
+.\scripts\verify-hosted-reviewer-acceptance.ps1 -BaseUrl http://127.0.0.1:8003 -Mode live -IncludeCapture
+```
+
+## Route Set Checked
+
+The acceptance verifier checks the primary hosted workflow routes with GET
+requests and stable tester-readiness markers:
+
+- `home-start`: `/`
+- `ccld-start`: `/ccld/`
+- `facility-lookup`: `/ccld/facilities`
+- `record-request`: `/ccld/records/request`
+- `record-request-context`: `/ccld/records/request?facility_number=157806098&start_date=2026-01-01&end_date=2026-01-31&request_context_origin=manual_entry`
+- `reviewer`: `/reviewer`
+- `reviewer-records`: `/reviewer/records`
+- `reviewer-detail`: `/reviewer/records/detail` with the sample source record key and request context
+- `packet-preview-empty`: `/reviewer/packet/preview`
+- `packet-preview-context`: `/reviewer/packet/preview` with the sample request context
+- `packet-draft-empty`: `/reviewer/packet/draft`
+- `packet-draft-context`: `/reviewer/packet/draft` with the sample request context
+- `feedback`: `/feedback`
+- `help`: `/ccld/help`
+
+The packet empty/context checks remain part of acceptance. Empty packet routes
+must show explicit missing-context guidance and must not show the passive label
+`Date range: not provided`. Context packet routes must keep browser copy or
+print preparation guidance, review-readiness wording, feedback handoff, and the
+not-legal-report, not-final-export, not-certified-report, and not-source-
+completeness-proof boundaries.
+
+When `-IncludeCapture` is supplied, the verifier runs
+`capture-hosted-ui-evidence.ps1`, confirms packet preview/draft route assertion
+rows are present, confirms packet draft workflow-step assertions pass with the
+intentional print/copy layout skip, and prints both:
+
+- Evidence folder path
+- Evidence ZIP path
+
+The ZIP is a local review artifact only under ignored `data/processed/ui-evidence/`.
+It is not product packet generation, not a legal report, not a final export, not a certified report, not an audit export, not production monitoring, and not a source-completeness proof.
+
+## What This Proves
+
+A passing acceptance run proves that the hosted local/test workflow exposes a
+repeatable tester-readiness path across Home, Facility, Request, Queue, Detail,
+Packet Preview, Packet Draft, Feedback, Help, and evidence capture. It also
+proves that the checked pages expose key visible markers for route reachability,
+review queue continuity, complaint review workspace access, packet preparation,
+feedback, help, local/test boundaries, and source traceability availability.
+
+The run also proves that default checks avoid persistent writes: no forms are
+submitted, no retrieval job is submitted, no import/reload is run, no feedback is
+submitted, and no reviewer-created state write is attempted unless a separate
+safe test/staging run explicitly chooses write checks.
+
+## What This Does Not Prove
+
+The acceptance path does not prove source completeness, public CCLD portal
+coverage, legal sufficiency, legal findings, facility-wide conclusions, verified
+harm, abuse, neglect, liability, rights-deprivation, production monitoring,
+production authentication, export persistence, audit export behavior, or final
+packet lifecycle behavior.
+
+The public CCLD portal remains the source of record. Source-derived values are
+review aids. Reviewer-created status/note cues remain separate from
+source-derived records.
+
+## Optional Write Checks
+
+Default acceptance should not run write checks. If exploratory reviewer-created
+state checks are explicitly requested, run them only on a safe local test or staging instance:
+
+```powershell
+.\scripts\verify-hosted-reviewer-acceptance.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture -RunWriteChecks
+```
+
+The current verifier reports when `-RunWriteChecks` is requested but keeps the
+default route and capture checks GET-based. Do not use write checks against a
+shared, production-like, or reviewer-facing instance unless the operator has
+explicitly approved transient reviewer-created state.
