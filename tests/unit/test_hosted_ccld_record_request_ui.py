@@ -131,6 +131,14 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "Before relying on a source-derived value" in html
     assert "source document/report marker" in normalized_html
     assert "How reviewer-created notes/status work" in html
+    assert "How correction-readiness works" in html
+    assert "Correction-readiness means a tester has noticed" in html
+    assert "Check source traceability first" in html
+    assert "possible correction concern in a reviewer-created note or feedback" in html
+    assert "does not change source-derived records" in html
+    assert "does not submit correction decisions" in normalized_html
+    assert "A future correction workflow would be reviewer-created state" in normalized_html
+    assert "public CCLD portal remains the source of record" in normalized_html
     assert "Retrieval modes" in html
     assert "What the app does not prove" in html
     assert "How to send useful feedback" in html
@@ -140,7 +148,17 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "not legal reports, final exports, or source-completeness proof" in html
     assert "Source-derived records" in html
     assert "reviewer-created notes/status" in normalized_html
+    assert "Correction-readiness" in html
+    assert (
+        "does not make reviewer-created observations into official public-source facts"
+        in normalized_html
+    )
     assert "no complaints exist" in normalized_html
+    assert 'action="/ccld/correction' not in normalized_html
+    assert 'name="correction_status"' not in normalized_html
+    assert "correction approved" not in normalized_html
+    assert "correction applied" not in normalized_html
+    assert "corrected source record" not in normalized_html
     assert "Retrieve complaint records" in html
     assert_no_secret_html(html)
 

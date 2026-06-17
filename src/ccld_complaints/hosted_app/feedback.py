@@ -238,7 +238,7 @@ def render_feedback_page(
         <section class="hero-card" aria-labelledby="feedback-purpose-heading">
             <p class="launch-kicker">Tester support</p>
             <h2 id="feedback-purpose-heading">What issue should be reported?</h2>
-            <p>Choose the feedback type and describe what blocked retrieval, review, source traceability, missing local/test traceability values, wording, or keyboard flow.</p>
+            <p>Choose the feedback type and describe what blocked retrieval, review, source traceability, correction-readiness guidance, missing local/test traceability values, wording, or keyboard flow.</p>
         </section>
         {_feedback_context_panel(handoff_context)}
         <div class="support-layout">
@@ -257,6 +257,8 @@ def render_feedback_page(
                 <li>A date or finding looked confusing.</li>
                 <li>A review flag was unclear.</li>
                 <li>The source traceability summary was hard to use.</li>
+                <li>A source-derived value looked wrong or incomplete after checking source traceability.</li>
+                <li>The correction-readiness guidance did not make clear whether to use a reviewer-created note or feedback.</li>
                 <li>A source URL, raw SHA-256 hash, connector metadata, retrieval timestamp, or source document/report marker looked missing or confusing.</li>
                 <li>The workflow did not help me decide what to review next.</li>
             </ul>
@@ -307,7 +309,9 @@ def _feedback_context_panel(context: FeedbackHandoffContext | None) -> str:
             <p>Describe what was confusing, missing, unexpected, or hard to use, including source
             traceability concerns such as source URL, raw SHA-256 hash, connector metadata,
             retrieval timestamp, source document/report marker, or local/test traceability value
-            missing. Do not include
+            missing; possible correction concerns where a source-derived value looked wrong or
+            incomplete after checking traceability; or uncertainty about whether to use a
+            reviewer-created note or feedback. Do not include
             raw source narrative, secrets, provider claims, private URLs, stack traces, server
             paths, environment values, or legal conclusions.</p>
         </section>"""

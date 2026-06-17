@@ -26,6 +26,7 @@ from ccld_complaints.hosted_app.reset_reload_dry_run import (
     hosted_reset_reload_planning_metadata,
 )
 from ccld_complaints.hosted_app.reviewer_created_state import (
+    REVIEWER_STATUS_VALUES,
     create_reviewer_note_scaffold,
     create_reviewer_status_scaffold,
     hosted_reviewer_created_state,
@@ -178,6 +179,7 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Review records flagged for source check" in html
     assert "Review records missing reviewer-created status/note cues" in html
     assert "Confirm source traceability for important source-derived values" in html
+    assert "capture the possible correction concern in a reviewer-created note or feedback" in html
     assert (
         "Use feedback if records, wording, readiness cues, or copy/print preparation "
         "content seems wrong"
@@ -195,6 +197,12 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Records ready for preparation review" in html
     assert "Records needing source check" in html
     assert "Records needing reviewer-created status/note attention" in html
+    assert "Packet preview includes source-derived values and reviewer-created cues" in html
+    assert (
+        "does not change source-derived records or submit correction decisions"
+        in normalized_html
+    )
+    assert "Possible correction concerns should stay in reviewer-created notes or feedback" in html
     assert (
         "what still needs source check or reviewer-created status/note attention"
         in normalized_html
@@ -231,6 +239,7 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "This preview is a local/test preparation aid." in html
     assert "use the feedback link with this packet context" in html
     assert "Source-derived fields remain separate from reviewer-created notes/status." in html
+    assert "Possible correction concerns are reviewer-created observations" in html
     assert "Review flags are screening aids, not legal conclusions." in html
     assert "The CCLD public portal remains the source of record." in html
     assert (
@@ -246,6 +255,7 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
         in normalized_html
     )
     assert "legal priority" not in normalized_html.casefold()
+    assert_no_correction_workflow_html(html)
     assert_no_secret_html(html)
 
 
@@ -301,6 +311,9 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> 
     assert "raw SHA-256 hash" in html
     assert "source document/report marker cues" in html
     assert "missing local/test traceability values" in normalized_html
+    assert "Correction-readiness before copying or printing" in html
+    assert "capture the possible correction concern in a reviewer-created note or feedback" in html
+    assert "does not change source-derived records, alter source-derived values" in html
     assert "If copy/print preparation content seems wrong" in html
     assert "Facility / license" in html
     assert "157806098" in html
@@ -317,9 +330,14 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> 
     assert "Review-readiness before copying or printing" in html
     assert "Review before copying or printing" in html
     assert "preparation draft" in html
+    assert "Possible correction concerns should remain reviewer-created observations" in html
+    assert "future correction workflow is not implemented here" in html
+    assert "draft does not submit correction decisions" in html
     assert "Findings represented" in html
     assert "Source traceability readiness" in html
     assert "Reviewer-created state included in this draft" in html
+    assert "They may point to possible correction concerns" in html
+    assert "this draft does not alter source-derived values" in html
     assert "Included complaint records" in html
     assert "32-CR-20220407124448" in html
     assert "Complaint control number" in html
@@ -340,6 +358,7 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> 
     assert "It is not a source-completeness proof." in html
     assert "It does not prove no other complaints exist." in html
     assert "official findings beyond source-derived finding labels" in html
+    assert "It does not submit correction decisions or replace source-derived records" in html
     assert "Copyable packet summary" in html
     assert "Attorney Review Packet Draft" in html
     assert "Facility/license: 157806098" in html
@@ -364,6 +383,7 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> 
         in normalized_html
     )
     assert "legal priority" not in normalized_html.casefold()
+    assert_no_correction_workflow_html(html)
     assert_no_secret_html(html)
 
 
@@ -673,6 +693,11 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Cautious wording for reviewer-created notes/status" in html
     assert "Reviewer notes/status are reviewer-created observations" in normalized_html
     assert "they do not edit source-derived fields" in normalized_html
+    assert (
+        "For now, use a reviewer-created note to describe the possible correction concern"
+        in html
+    )
+    assert "The local/test workflow does not submit correction decisions" in normalized_html
     assert "Field is present" in html
     assert "local/test record shows complaint received date" in html
     assert "Do not say the value is legally verified or an official finding" in normalized_html
@@ -688,12 +713,22 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Value looks like a UI or data issue" in html
     assert "Use the manual feedback checklist" in html
     assert "instead of treating the note as a source-derived edit" in normalized_html
+    assert "Possible correction concern" in html
+    assert "what should receive correction review later" in html
     assert "Source traceability" in html
     assert "Selected complaint source traceability fields" in html
     assert "Record-level source traceability status" in html
     assert "Traceability values available" in html
     assert "Missing local/test traceability values" in html
     assert "Check source traceability before relying on source-derived values" in html
+    assert "Correction-readiness cue" in html
+    assert "If a source-derived value looks wrong or incomplete" in html
+    assert "check source traceability first" in normalized_html
+    assert "document the possible correction concern in a reviewer-created note" in normalized_html
+    assert (
+        "does not change source-derived records or submit correction decisions"
+        in normalized_html
+    )
     assert "source URL, raw SHA-256 hash, raw artifact reference" in normalized_html
     assert "Use these fields to confirm which local/test source-derived complaint record" in (
         normalized_html
@@ -765,6 +800,10 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Cautious note/status guidance" in html
     assert "Use note text to record what you checked" in html
     assert "review flag, possible delay indicator" in normalized_html
+    assert "When a source-derived value may need correction review" in html
+    assert "Status values can help the queue reflect review progress" in normalized_html
+    assert "status does not correct, verify, or replace source-derived data" in normalized_html
+    assert "correction decisions are not implemented in this local/test workflow" in normalized_html
     assert "Do not write that abuse, neglect, harm" in html
     assert "Add a review status or note." in html
     assert "Status is reviewer-created local/test state for queue progress" in (
@@ -774,6 +813,11 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Reviewer-created note for this record" in html
     assert "Use safe plain text" in html
     assert "appear below after saving" in normalized_html
+    assert "document a possible correction concern after source" in normalized_html
+    assert (
+        "do not change the source-derived record or submit a correction decision"
+        in normalized_html
+    )
     assert "Save reviewer-created note for this record" in html
     assert f"action=\"{REVIEWER_UI_NOTE_PATH}\"" in html
     assert "Return to the same CCLD queue" in html
@@ -782,14 +826,21 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Reviewer-created status" in html
     assert "Reviewer-created status for this record" in html
     assert "Status is reviewer-created local/test state for" in normalized_html
+    assert "It does not correct or verify source-derived data" in html
     assert "Save reviewer-created status for this record" in html
     assert ">Needs follow-up</option>" in html
     assert f"action=\"{REVIEWER_UI_STATUS_PATH}\"" in html
+    assert_no_correction_workflow_html(html)
     assert "Reviewer-created state is stored separately" in normalized_html
     assert "Feedback clues for this record" in html
     assert "If source traceability fields are confusing or missing" in html
     assert "local/test traceability value missing" in normalized_html
     assert "source document/report marker" in normalized_html
+    assert "appears wrong or incomplete after checking traceability" in html
+    assert (
+        "Use feedback instead when the correction-readiness guidance is confusing"
+        in normalized_html
+    )
     assert "copy the tester feedback checklist" in normalized_html
     assert "Return request context" in html
     assert "facility/license number 157806098; date range not provided" in html
@@ -816,6 +867,8 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "values not available in the local/test record" in normalized_html
     assert "proxy-flag context that affected review" in html
     assert "Field-note uncertainty" in html
+    assert "Possible correction concern: note which source-derived value looked wrong" in html
+    assert "future correction workflow path was unclear" in html
     assert "Note/status confirmation" in html
     assert "Return-to-queue flow" in html
     assert "Source context confusion" in html
@@ -1065,8 +1118,9 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert "not a legal report, not a final export, not a certified report" in normalized_html
     assert "record-specific observation" in html
     assert "existing manual feedback checklist" in html
-    assert "source traceability, source-confidence, or field-note wording" in (
-        normalized_html
+    assert (
+        "source traceability, source-confidence, field-note, or possible correction concern wording"
+        in normalized_html
     )
     assert "157806098" in html
     assert "2022-08-01 to 2022-08-31" in html
@@ -1183,12 +1237,17 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "Reviewer-created state saved" in html
     assert "Reviewer status saved for this record" in html
     assert "The status now appears in reviewer-created state below" in html
+    assert (
+        "Source-derived fields remain unchanged, and no correction decision was submitted"
+        in html
+    )
     assert "What changed" in html
     assert "Status: Needs follow-up" in html
     assert "What did not change" in html
     assert "Source-derived complaint fields" in html
     assert "Source traceability" in html
     assert "Public-source records" in html
+    assert "Correction workflow state" in html
     assert "Next" in html
     assert "Return to facility queue" in html
     assert "Open next priority record" in html
@@ -1210,8 +1269,9 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     )
     assert "record-specific observation" in html
     assert "existing manual feedback checklist" in html
-    assert "source traceability, source-confidence, or field-note wording" in (
-        " ".join(html.split())
+    assert (
+        "source traceability, source-confidence, field-note, or possible correction concern wording"
+        in " ".join(html.split())
     )
     assert "return_facility_number=157806098" in html
     assert "Review saved notes and statuses below" in html
@@ -1223,6 +1283,7 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "Related seeded source-derived context" in html
     assert "Field-note guidance" in html
     assert "Fixture UI Status Reviewer (tester)" in html
+    assert_no_correction_workflow_html(html)
     assert audit_event["source_record_key"] == COMPLAINT_KEY
     assert audit_event["context_metadata"]["state_payload_keys"] == [
         "local_test_only",
@@ -1278,6 +1339,17 @@ def test_reviewer_ui_invalid_status_submission_has_clear_error_without_mutation(
     assert counts["audit_events"] == 0
     assert_no_secret_html(missing_html)
     assert_no_secret_html(invalid_html)
+
+
+def test_reviewer_status_values_do_not_add_correction_workflow_status() -> None:
+    assert "correction" not in " ".join(REVIEWER_STATUS_VALUES).casefold()
+    assert set(REVIEWER_STATUS_VALUES) == {
+        "not_started",
+        "in_review",
+        "reviewed",
+        "blocked",
+        "needs_follow_up",
+    }
 
 
 def test_reviewer_ui_note_status_writes_are_visible_on_list_after_write() -> None:
@@ -1500,6 +1572,26 @@ def assert_no_secret_html(markup: str) -> None:
         "token",
         "tester@example.invalid",
         "https://example.com",
+    ]:
+        assert marker not in lowered
+
+
+def assert_no_correction_workflow_html(markup: str) -> None:
+    lowered = " ".join(markup.casefold().split())
+    for marker in [
+        'action="/reviewer/correction',
+        'action="/reviewer/corrections',
+        'action="/ccld/correction',
+        'action="/ccld/corrections',
+        'name="correction_status"',
+        'name="correction_decision"',
+        'value="correction_',
+        'href="/reviewer/correction',
+        'href="/ccld/correction',
+        "correction submitted",
+        "correction approved",
+        "correction applied",
+        "corrected source record",
     ]:
         assert marker not in lowered
 
