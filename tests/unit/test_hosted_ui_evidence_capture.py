@@ -190,6 +190,12 @@ def test_ui_evidence_documentation_links_commands_and_boundaries() -> None:
         "8003` = live public CCLD mode",
         "8010` = fixture/mock demo mode",
         "Upload or summarize the whole timestamped folder",
+        "tester-readiness verifier",
+        "sibling ZIP",
+        "local review artifact only",
+        "not a product packet",
+        "not a final export",
+        "not a certified report",
         "not an audit export, legal report, source-completeness report",
         "data/processed/ui-evidence",
     ):

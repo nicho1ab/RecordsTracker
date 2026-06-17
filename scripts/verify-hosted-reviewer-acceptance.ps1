@@ -5,7 +5,8 @@ Verifies the hosted local/test reviewer flow and optionally captures evidence.
 Performs non-mutating checks against an already-running hosted CCLD scaffold
 to validate the local/test reviewer acceptance flow. Optionally runs the
 existing `capture-hosted-ui-evidence.ps1` to produce an evidence packet and
-verifies draft workflow assertions do not warn about hidden workflow rail.
+verifies the captured route set plus draft workflow assertions. Captured
+evidence folders are zipped as local review artifacts only.
 
 This script defaults to non-mutating checks. When `-RunWriteChecks` is
 provided it may surface reviewer-created state behaviors but will not itself
@@ -89,18 +90,40 @@ function Join-RouteUrl {
     return "$trimmedBase/$Path"
 }
 
+function New-EvidenceZip {
+    param([string]$EvidencePath)
+    if (-not $EvidencePath -or -not (Test-Path -LiteralPath $EvidencePath -PathType Container)) {
+        throw "Evidence folder was not found for ZIP packaging."
+    }
+    $zipPath = "$EvidencePath.zip"
+    $archiveSource = Join-Path $EvidencePath '*'
+    Compress-Archive -Path $archiveSource -DestinationPath $zipPath -Force
+    if (-not (Test-Path -LiteralPath $zipPath -PathType Leaf)) {
+        throw "Evidence ZIP was not created."
+    }
+    return $zipPath
+}
+
 Test-AllowedBaseUrl -Value $BaseUrl
 
+$encodedSourceRecordKey = [System.Uri]::EscapeDataString('complaint:ccld:complaint:32-CR-20220407124448')
+$contextQuery = "facility_number=$ContextFacilityNumber&start_date=$ContextStartDate&end_date=$ContextEndDate&request_context_origin=manual_entry"
+
 $checks = @(
-    @{ Name = "Home"; Path = "/"; Required = @("CCLD Records Review") },
-    @{ Name = "Retrieve"; Path = "/ccld/records/request"; Required = @("Which facility should be reviewed?", "Confirm facility") },
-    @{ Name = "Reviewer"; Path = "/reviewer"; Required = @("Worklist", "Open local/test packet preview", "Open local/test preparation draft for browser copy or print") },
-    @{ Name = "ReviewerRecords"; Path = "/reviewer/records"; Required = @("Worklist") },
-    @{ Name = "ReviewerDetail"; Path = "/reviewer/records/detail?source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448"; Required = @("Complaint overview", "Record review action") },
-    @{ Name = "PacketPreviewEmpty"; Path = "/reviewer/packet/preview"; Required = @("No facility/date packet context was supplied."); Forbidden = @("Date range: not provided") },
-    @{ Name = "PacketPreviewContext"; Path = ("/reviewer/packet/preview?facility_number={0}&start_date={1}&end_date={2}&request_context_origin=manual_entry" -f $ContextFacilityNumber, $ContextStartDate, $ContextEndDate); Required = @($ContextFacilityNumber, "Before copying or printing", "browser copy or print", "not a certified report", "Report copy/print preparation concern") ; Forbidden = @("Date range: not provided") },
-    @{ Name = "PacketDraftEmpty"; Path = "/reviewer/packet/draft"; Required = @("No facility/date packet context was supplied."); Forbidden = @("Date range: not provided") },
-    @{ Name = "PacketDraftContext"; Path = ("/reviewer/packet/draft?facility_number={0}&start_date={1}&end_date={2}&request_context_origin=manual_entry" -f $ContextFacilityNumber, $ContextStartDate, $ContextEndDate); Required = @("Attorney Review Packet Draft", "Local/test preparation draft for browser copy or print", "Review before copying or printing", "not a certified report", "Report copy/print preparation concern", $ContextFacilityNumber); Forbidden = @("Date range: not provided") }
+    @{ Name = "home-start"; Path = "/"; Required = @("Start a facility complaint review", "How the local/test review loop works", "public CCLD portal remains the source of record") },
+    @{ Name = "ccld-start"; Path = "/ccld/"; Required = @("Retrieve complaint records", "Start review request context", "Which facility should be reviewed?") },
+    @{ Name = "facility-lookup"; Path = "/ccld/facilities"; Required = @("Find a facility", "Lookup or manual entry?", "Search by name, license number, city, ZIP, type, or status.") },
+    @{ Name = "record-request"; Path = "/ccld/records/request"; Required = @("Which facility should be reviewed?", "Confirm facility", "Start review request context") },
+    @{ Name = "record-request-context"; Path = "/ccld/records/request?$contextQuery"; Required = @($ContextFacilityNumber, "Ready to retrieve complaint records", "Show existing queue", "Date range") },
+    @{ Name = "reviewer"; Path = "/reviewer"; Required = @("Worklist", "Open local/test packet preview", "Open local/test preparation draft for browser copy or print") },
+    @{ Name = "reviewer-records"; Path = "/reviewer/records"; Required = @("Worklist", "Open record", "Source traceability available") },
+    @{ Name = "reviewer-detail"; Path = "/reviewer/records/detail?source_record_key=$encodedSourceRecordKey&$contextQuery"; Required = @("Complaint overview", "Record review action", "Source traceability", "Reviewer-created") },
+    @{ Name = "packet-preview-empty"; Path = "/reviewer/packet/preview"; Required = @("No facility/date packet context was supplied."); Forbidden = @("Date range: not provided") },
+    @{ Name = "packet-preview-context"; Path = "/reviewer/packet/preview?$contextQuery"; Required = @($ContextFacilityNumber, "Before copying or printing", "browser copy or print", "not a certified report", "Report copy/print preparation concern") ; Forbidden = @("Date range: not provided") },
+    @{ Name = "packet-draft-empty"; Path = "/reviewer/packet/draft"; Required = @("No facility/date packet context was supplied."); Forbidden = @("Date range: not provided") },
+    @{ Name = "packet-draft-context"; Path = "/reviewer/packet/draft?$contextQuery"; Required = @("Attorney Review Packet Draft", "Local/test preparation draft for browser copy or print", "Review before copying or printing", "not a certified report", "Report copy/print preparation concern", $ContextFacilityNumber); Forbidden = @("Date range: not provided") },
+    @{ Name = "feedback"; Path = "/feedback"; Required = @("Send feedback", "Do not include private material", "Feedback type", "Description") },
+    @{ Name = "help"; Path = "/ccld/help"; Required = @("How to review a facility", "How source traceability works", "What the app does not prove", "How packet preparation fits in") }
 )
 
 $forbiddenMarkers = @(
@@ -112,6 +135,15 @@ $forbiddenMarkers = @(
 
 $results = [System.Collections.ArrayList]::new()
 $failCount = 0
+
+Write-Host "Tester-readiness acceptance mode: $Mode"
+Write-Host "Default route checks are non-mutating GET checks."
+if ($RunWriteChecks) {
+    Write-Host "RunWriteChecks was explicitly requested; no additional write probe is run by this verifier. Use only on a safe test/staging instance."
+}
+else {
+    Write-Host "Write checks skipped. Supply -RunWriteChecks only for a safe test/staging instance."
+}
 
 foreach ($check in $checks) {
     $url = Join-RouteUrl -Base $BaseUrl -Path $check.Path
@@ -150,10 +182,13 @@ foreach ($check in $checks) {
         }
     }
 
-    if ($entry.Passed) { $entry.Messages += "PASS" }
+    if ($entry.Passed) { $entry.Messages += "PASS"; Write-Host "PASS $($check.Name) -> HTTP $($resp.StatusCode)" }
     else { $failCount++ }
     $results.Add($entry) | Out-Null
 }
+
+$evidencePath = $null
+$evidenceZipPath = $null
 
 if ($IncludeCapture) {
     Write-Host "Running capture-hosted-ui-evidence.ps1 to produce an evidence packet (non-mutating GET-only)."
@@ -164,7 +199,6 @@ if ($IncludeCapture) {
         $captureOutput = & .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl $BaseUrl -Mode $Mode -IncludeScreenshots $false -AllowUnavailable *>&1 | Out-String
         Write-Host $captureOutput
         $evidenceLine = ($captureOutput -split "`n" | Where-Object { $_ -match "EVIDENCE_PACKET_PATH=" }) | Select-Object -First 1
-        $evidencePath = $null
         if ($evidenceLine) {
             $evidencePath = ($evidenceLine -replace '.*EVIDENCE_PACKET_PATH=', '').Trim()
         }
@@ -176,10 +210,37 @@ if ($IncludeCapture) {
             if ($newest) { $evidencePath = $newest.FullName; Write-Host "Evidence packet (fallback lookup): $evidencePath" }
         }
         if ($evidencePath) {
-            Write-Host "Evidence packet: $evidencePath"
+            Write-Host "Evidence folder path: $evidencePath"
+            Write-Host "EVIDENCE_PACKET_PATH=$evidencePath"
+            try {
+                $evidenceZipPath = New-EvidenceZip -EvidencePath $evidencePath
+                Write-Host "Evidence ZIP path: $evidenceZipPath"
+                Write-Host "EVIDENCE_PACKET_ZIP_PATH=$evidenceZipPath"
+            }
+            catch {
+                Write-Warning "Evidence ZIP creation failed: $($_.Exception.Message)"
+                $failCount++
+            }
+            $routeStatusCsv = Join-Path $evidencePath 'route-status.csv'
+            if (Test-Path -LiteralPath $routeStatusCsv) {
+                $routeStatusRows = Import-Csv -Path $routeStatusCsv
+                foreach ($routeName in @('home', 'facility', 'retrieve', 'reviewer', 'packet-preview-empty', 'packet-preview-context', 'packet-draft-empty', 'packet-draft-context', 'feedback', 'help')) {
+                    if (-not ($routeStatusRows | Where-Object { $_.route -eq $routeName -or $_.name -eq $routeName })) {
+                        Write-Warning "Evidence route-status.csv is missing route: $routeName"
+                        $failCount++
+                    }
+                }
+            }
+            else { Write-Warning "Evidence route status CSV not found at $routeStatusCsv"; $failCount++ }
             $assertionsCsv = Join-Path $evidencePath 'route-assertions.csv'
             if (Test-Path -LiteralPath $assertionsCsv) {
                 $assertions = Import-Csv -Path $assertionsCsv
+                foreach ($routeName in @('packet-preview-empty', 'packet-preview-context', 'packet-draft-empty', 'packet-draft-context')) {
+                    if (-not ($assertions | Where-Object { $_.route -eq $routeName })) {
+                        Write-Warning "No assertion rows found for $routeName in $assertionsCsv"
+                        $failCount++
+                    }
+                }
                 foreach ($routeName in @('packet-draft-empty', 'packet-draft-context')) {
                     $rows = $assertions | Where-Object { $_.route -eq $routeName -and $_.check -eq 'workflow step' }
                     if (-not $rows) {
@@ -196,6 +257,10 @@ if ($IncludeCapture) {
                             else {
                                 $rMessage = $r.message
                                 Write-Host "Workflow-step assertion for ${routeName}: PASS - ${rMessage}"
+                                if ($rMessage -notmatch "(?i)packet draft intentionally hides workflow indicator") {
+                                    Write-Warning "Workflow-step assertion for ${routeName} did not describe the intentional packet draft workflow-indicator skip."
+                                    $failCount++
+                                }
                             }
                         }
                     }
@@ -211,7 +276,10 @@ if ($IncludeCapture) {
     }
 }
 
-Write-Host "\nAcceptance check summary:"
+Write-Host "`nTester-readiness acceptance summary:"
+Write-Host "Mode: $Mode"
+Write-Host "Base URL: $BaseUrl"
+Write-Host "Routes checked: $($checks.Count)"
 $passed = ($results | Where-Object { $_.Passed })
 Write-Host "Checks passed: $($passed.Count)"
 $failed = ($results | Where-Object { -not $_.Passed })
@@ -227,5 +295,7 @@ if ($failCount -gt 0) {
     exit 1
 }
 
+if ($evidencePath) { Write-Host "Evidence folder path: $evidencePath" }
+if ($evidenceZipPath) { Write-Host "Evidence ZIP path: $evidenceZipPath" }
 Write-Host "Acceptance checks passed."
 exit 0

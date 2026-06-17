@@ -98,6 +98,8 @@ Upload or summarize the whole timestamped folder under `data/processed/ui-eviden
 
 Generated evidence is ignored locally and should be reviewed before sharing. Do not share packets that contain unexpected private values, raw source narrative, cookies, provider claims, tokens, private URLs, stack traces, connection strings, or server-specific private paths.
 
+When the hosted tester-readiness verifier is run with `-IncludeCapture`, it packages the generated timestamped evidence folder into a sibling ZIP and prints both paths. The ZIP is a local review artifact only. It is not a product packet, not an audit export, not a legal report, not a final export, not a certified report, not production monitoring, and not a source-completeness proof. If the verifier printed a sibling evidence ZIP path, that ZIP can be shared as a convenience copy of the same local review artifact after the packet is reviewed for private values.
+
 ## What It Does Not Prove
 
 The evidence packet is a lightweight UI review aid. It does not replace:
