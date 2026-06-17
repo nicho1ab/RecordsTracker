@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Improved the hosted local/test CCLD review-priority queue as a decision screen.
+	The queue now shows active facility/date context, local/test reference source,
+	source-derived complaint counts, reviewer-created status/note cues, review-flag
+	and source-traceability counts, a recommended next-record action with cautious
+	reasons, record-level decision cards, filtered recovery, and local/test packet
+	preparation links without adding persistence, workflow-engine state, retrieval
+	behavior, exports, schemas, migrations, auth, or legal conclusions.
+
 - Added acceptance checklist and non-mutating verification script for the hosted reviewer local/test flow: `docs/developer/hosted-reviewer-acceptance.md` and `scripts/verify-hosted-reviewer-acceptance.ps1`. The verifier defaults to non-mutating GET checks, can optionally run evidence capture, and checks packet-preview/draft empty/context routes and draft workflow-step assertions.
 
 - Added a print-ready local/test attorney review packet draft at

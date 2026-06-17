@@ -49,6 +49,8 @@ from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
 from ccld_complaints.hosted_app.facility_case_brief import (
     FacilityCaseBrief,
     FacilityCaseBriefRecord,
+    has_review_flag,
+    priority_reason_labels,
     render_facility_case_brief,
 )
 from ccld_complaints.hosted_app.reviewer_created_state_routes import (
@@ -1028,7 +1030,10 @@ def _render_matched_result(
     reference_source: CcldFacilityReferenceSource,
 ) -> str:
     queue_items = _request_queue_items(result, state_summaries)
-    filtered_queue_items = _filtered_queue_items(queue_items, request.reviewer_status_filter)
+    decision_queue_items = _decision_sorted_queue_items(request, queue_items)
+    filtered_queue_items = _filtered_queue_items(
+        decision_queue_items, request.reviewer_status_filter
+    )
     rows = "\n".join(_render_queue_row(request, item) for item in filtered_queue_items)
     if not rows:
         rows = _render_empty_filtered_queue_row(request)
@@ -1039,7 +1044,7 @@ def _render_matched_result(
         step_id="review_results",
         next_action="Review imported records",
             main=f"""    {_render_result_focus_panel(request, result, retrieval_result, load_text)}
-        {_render_request_case_brief(request, queue_items, retrieval_result)}
+        {_render_request_case_brief(request, decision_queue_items, retrieval_result)}
     {_render_request_context_confirmation(
                         facility_number=request.facility_number,
                         start_date=request.start_date,
@@ -1054,17 +1059,18 @@ def _render_matched_result(
         <section aria-labelledby="review-queue-heading">
             <h2 id="review-queue-heading">CCLD review queue</h2>
             <p>Open the suggested complaint first, then check source traceability on detail before adding reviewer-created notes/status.</p>
-            {_render_queue_progress_summary(queue_items)}
-            {_render_queue_triage_summary(request, queue_items)}
+            {_render_queue_progress_summary(decision_queue_items)}
+            {_render_queue_triage_summary(request, decision_queue_items)}
             {_render_queue_filter_form(request)}
-            {_render_filtered_empty_recovery(request, queue_items, filtered_queue_items)}
-            <p>Showing {len(filtered_queue_items)} of {len(queue_items)} matching complaint
+            {_render_filtered_empty_recovery(request, decision_queue_items, filtered_queue_items)}
+            {_render_worklist_decision_flow(request, decision_queue_items, filtered_queue_items, reference_source)}
+            <p>Showing {len(filtered_queue_items)} of {len(decision_queue_items)} matching complaint
             record(s) for queue filter {_escape(_status_label(request.reviewer_status_filter))}.</p>
             <details class="technical-details">
             <summary>Table view and queue guidance</summary>
             {_render_queue_first_run_steps()}
             {_render_queue_navigation()}
-            {_render_queue_continue_guidance(request, queue_items)}
+            {_render_queue_continue_guidance(request, decision_queue_items)}
       <table>
                 <caption>Facility/date-scoped CCLD complaint records ready for review</caption>
         <thead>
@@ -1090,7 +1096,7 @@ def _render_matched_result(
                     <summary>Copy details for feedback</summary>
                 {_render_feedback_checklist_section(
                         request,
-                        queue_items,
+                        decision_queue_items,
                         import_reload_result=import_reload_result,
                         matching_source_record_count=len(result.matched_records),
                         local_facility_record_count=len(result.all_facility_records),
@@ -2389,6 +2395,183 @@ def _render_queue_triage_summary(
     </section>"""
 
 
+def _render_worklist_decision_flow(
+    request: CcldRecordRequest,
+    queue_items: tuple[CcldRequestQueueItem, ...],
+    filtered_queue_items: tuple[CcldRequestQueueItem, ...],
+    reference_source: CcldFacilityReferenceSource,
+) -> str:
+    note_or_status_count = sum(
+        1 for item in queue_items if _summary_int(item.reviewer_state, "total_rows") > 0
+    )
+    review_flag_count = sum(
+        1
+        for index, item in enumerate(queue_items)
+        if has_review_flag(_case_brief_record_from_queue_item(index, request, item))
+    )
+    traceability_count = sum(1 for item in queue_items if _has_source_traceability(item.complaint_record))
+    next_item = _next_queue_item(queue_items)
+    next_card = _render_recommended_next_record(request, next_item)
+    cards = "\n".join(
+        _render_worklist_decision_card(request, item, index, is_next=item is next_item)
+        for index, item in enumerate(filtered_queue_items)
+    )
+    if not cards:
+        cards = """      <p>No record cards are visible under the selected reviewer-status filter.
+      Use the filtered-empty recovery action above to show all queue records for this same
+      facility/date request context.</p>"""
+    change_href = _request_change_href(
+        facility_number=request.facility_number,
+        start_date=request.start_date,
+        end_date=request.end_date,
+        request_context_origin=request.request_context_origin,
+        lookup_facility_name=request.lookup_facility_name,
+    )
+    return f"""<section aria-labelledby="worklist-decision-flow-heading">
+      <h3 id="worklist-decision-flow-heading">Review-priority decision flow</h3>
+      <p>Use this local/test worklist as a decision screen: confirm the CCLD request
+      context, open the suggested next record, then continue to packet preparation only
+      after checking source traceability on reviewer detail.</p>
+      <dl>
+        <dt>Active CCLD request context</dt>
+        <dd>{_escape(_facility_scope_for_summary(request))}; date range {_escape(_date_scope_text(request))}</dd>
+        <dt>Request origin</dt>
+        <dd>{_escape(_request_origin_label(request.request_context_origin))}</dd>
+        <dt>Active local/test reference source</dt>
+        <dd>{_escape(_user_facing_source_label(reference_source))}</dd>
+        <dt>Loaded local/test source-derived complaint records</dt>
+        <dd>{len(queue_items)}</dd>
+        <dt>Records with reviewer-created status/note cues</dt>
+        <dd>{note_or_status_count}</dd>
+        <dt>Records with review flags or possible delay indicators</dt>
+        <dd>{review_flag_count}</dd>
+        <dt>Records with source traceability available</dt>
+        <dd>{traceability_count}</dd>
+      </dl>
+      {next_card}
+      <div class="form-actions" aria-label="Queue decision actions">
+        <a class="button button-secondary" href="{_escape(change_href)}">Return to change facility/date criteria</a>
+        <a class="button button-secondary" href="{_escape(_packet_preview_href_for_request(request))}">Preview local/test preparation packet</a>
+        <a class="button button-secondary" href="{_escape(_packet_draft_href_for_request(request))}">Open print/copy local/test preparation draft</a>
+        <a class="button button-secondary" href="{CCLD_HELP_PATH}">Open CCLD workflow help</a>
+      </div>
+      <p class="helper-text">Packet preview and draft links are local/test preparation aids,
+      not a legal report, final export, or source-completeness proof.</p>
+      <section aria-labelledby="priority-record-cards-heading">
+        <h4 id="priority-record-cards-heading">Prioritized worklist records</h4>
+        <p>These record cards use existing source-derived values and existing reviewer-created
+        note/status reads only. They do not assign, claim, or mutate records.</p>
+{cards}
+      </section>
+      <p>If the queue order, a missing record, wording, keyboard flow, or next step is
+      confusing, use the feedback checklist below or open <a href="{_FEEDBACK_PATH}">tester
+      feedback</a>.</p>
+    </section>"""
+
+
+def _render_recommended_next_record(
+    request: CcldRecordRequest,
+    item: CcldRequestQueueItem | None,
+) -> str:
+    if item is None:
+        return """      <section class="summary-card" aria-labelledby="recommended-next-record-heading">
+        <h4 id="recommended-next-record-heading">Recommended next record action</h4>
+        <p>No source-derived complaint record is visible for this filter.</p>
+      </section>"""
+    source_record_key = _string(item.complaint_record, "source_record_key")
+    detail_href = _reviewer_detail_href_for_request(source_record_key, request=request)
+    label = _queue_record_label(item)
+    reasons = _queue_priority_reason_items(request, item, 0)
+    return f"""      <section class="summary-card" aria-labelledby="recommended-next-record-heading">
+        <h4 id="recommended-next-record-heading">Recommended next record action</h4>
+        <p><a class="button" href="{_escape(detail_href)}">Open next priority record: {_escape(label)}</a></p>
+        <p>Why this record is prioritized:</p>
+        <ul>
+{reasons}
+        </ul>
+      </section>"""
+
+
+def _render_worklist_decision_card(
+    request: CcldRecordRequest,
+    item: CcldRequestQueueItem,
+    index: int,
+    *,
+    is_next: bool,
+) -> str:
+    source_record_key = _string(item.complaint_record, "source_record_key")
+    detail_href = _reviewer_detail_href_for_request(source_record_key, request=request)
+    label = _queue_record_label(item)
+    heading_prefix = "Recommended next record" if is_next else "Worklist record"
+    reasons = _queue_priority_reason_items(request, item, index)
+    return f"""        <article class="summary-card" aria-labelledby="worklist-record-{index + 1}-heading">
+          <h5 id="worklist-record-{index + 1}-heading">{_escape(heading_prefix)}: {_escape(label)}</h5>
+          <p>{_escape(_record_review_need_label(request, item, index))}</p>
+          <dl>
+            <dt>Complaint/control/source-record identifier</dt>
+            <dd>{_escape(label)}; source record key {_escape(source_record_key)}</dd>
+            <dt>Source-derived date/finding/flag summary</dt>
+            <dd>{_escape(_record_source_summary(request, item, index))}</dd>
+            <dt>Reviewer-created status/note cue</dt>
+            <dd>{_escape(_reviewer_state_text(item.reviewer_state))}</dd>
+            <dt>Source traceability availability cue</dt>
+            <dd>{_escape(_traceability_summary(item.complaint_record))}</dd>
+            <dt>Loaded local/test bundle context</dt>
+            <dd>{_escape(_loaded_context_text(item))}</dd>
+          </dl>
+          <p>Why this record is prioritized:</p>
+          <ul>
+{reasons}
+          </ul>
+          <p><a href="{_escape(detail_href)}">Open review workspace for {_escape(label)}</a></p>
+        </article>"""
+
+
+def _queue_priority_reason_items(
+    request: CcldRecordRequest,
+    item: CcldRequestQueueItem,
+    index: int,
+) -> str:
+    record = _case_brief_record_from_queue_item(index, request, item)
+    reasons = priority_reason_labels(record)
+    if not reasons:
+        reasons = ("No review flags are visible from loaded source-derived fields.",)
+    return "\n".join(f"          <li>{_escape(reason)}</li>" for reason in reasons)
+
+
+def _record_review_need_label(
+    request: CcldRecordRequest,
+    item: CcldRequestQueueItem,
+    index: int,
+) -> str:
+    record = _case_brief_record_from_queue_item(index, request, item)
+    if has_review_flag(record):
+        return "Review need: flagged for review from source-derived cues; check detail before relying on the summary."
+    if _summary_int(item.reviewer_state, "total_rows") == 0:
+        return "Review need: no reviewer-created status/note recorded yet."
+    return "Review need: reviewer-created status/note cue exists; continue from detail if follow-up is needed."
+
+
+def _record_source_summary(
+    request: CcldRecordRequest,
+    item: CcldRequestQueueItem,
+    index: int,
+) -> str:
+    complaint = _mapping(item.complaint_record, "original_values")
+    record = _case_brief_record_from_queue_item(index, request, item)
+    parts = [
+        f"dates: {_complaint_date_summary(complaint)}",
+        f"finding value: {_optional_string(complaint, 'finding') or 'unknown'}",
+    ]
+    if record.delay_thresholds:
+        parts.append(f"possible delay indicator over {max(record.delay_thresholds)} days")
+    if has_review_flag(record):
+        parts.append("flagged for review; needs source check on detail")
+    else:
+        parts.append("no review flag visible from loaded fields")
+    return "; ".join(parts)
+
+
 def _render_queue_continue_guidance(
         request: CcldRecordRequest,
         items: tuple[CcldRequestQueueItem, ...],
@@ -2482,6 +2665,61 @@ def _next_queue_item(
             if _queue_status(item) == status:
                 return item
     return None
+
+
+def _decision_sorted_queue_items(
+    request: CcldRecordRequest,
+    items: tuple[CcldRequestQueueItem, ...],
+) -> tuple[CcldRequestQueueItem, ...]:
+    indexed_items = tuple(enumerate(items))
+    sorted_pairs = sorted(
+        indexed_items,
+        key=lambda pair: _queue_decision_sort_key(request, pair[1], pair[0]),
+    )
+    return tuple(item for _index, item in sorted_pairs)
+
+
+def _queue_decision_sort_key(
+    request: CcldRecordRequest,
+    item: CcldRequestQueueItem,
+    index: int,
+) -> tuple[int, int, int, int, str, int]:
+    status_rank = _NEXT_REVIEW_STATUS_ORDER.index(_queue_status(item))
+    record = _case_brief_record_from_queue_item(index, request, item)
+    review_flag_rank = 0 if has_review_flag(record) else 1
+    no_state_rank = 0 if _summary_int(item.reviewer_state, "total_rows") == 0 else 1
+    traceability_rank = 0 if _has_source_traceability(item.complaint_record) else 1
+    complaint = _mapping(item.complaint_record, "original_values")
+    date_value = (
+        _optional_string(complaint, "complaint_received_date")
+        or _optional_string(complaint, "report_date")
+        or _optional_string(complaint, "visit_date")
+        or _optional_string(complaint, "date_signed")
+        or ""
+    )
+    return (
+        status_rank,
+        review_flag_rank,
+        no_state_rank,
+        traceability_rank,
+        _reverse_date_key(date_value),
+        index,
+    )
+
+
+def _queue_record_label(item: CcldRequestQueueItem) -> str:
+    complaint = _mapping(item.complaint_record, "original_values")
+    complaint_control_number = complaint.get("complaint_control_number")
+    if _has_display_value(complaint_control_number):
+        return _display_value(complaint_control_number)
+    source_record_key = _string(item.complaint_record, "source_record_key")
+    return source_record_key or "Complaint record"
+
+
+def _reverse_date_key(value: str) -> str:
+    if not value:
+        return "9999-99-99"
+    return "".join(str(9 - int(ch)) if ch.isdigit() else ch for ch in value)
 
 
 def _has_source_traceability(record: Mapping[str, Any]) -> bool:
