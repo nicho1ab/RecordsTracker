@@ -268,6 +268,16 @@ queue`, and `Open next priority record`; preserves source-derived/reviewer-
 created separation; creates audit rows only through the existing note/status
 service path; and keeps queue cards aligned with reviewer-created status and
 note cues without adding assignments, schema changes, or workflow-engine state.
+Review packet preview tests should prove `/reviewer/packet/preview` renders from
+the existing local/test reviewer queue and reviewer-created state read seams;
+shows facility/license context, date range, included record count, source
+traceability readiness, reviewer-created state summary, included complaint
+records, cautious inclusion reasons, review flags, findings, note/status cues,
+and `Open record` links; links from retrieval results, reviewer queue, and saved
+detail confirmations; remains non-mutating across source-derived,
+reviewer-created, audit, import, and operational metadata rows; writes no export
+files; and states that the preview is not a legal report, final export,
+production packet, or source-completeness proof.
 Hosted UI evidence packet tests should verify that
 `scripts/capture-hosted-ui-evidence.ps1` exists, accepts `-BaseUrl`, `-Mode`,
 `-OutputDir`, viewport, timeout, and `-AllowUnavailable` parameters, captures

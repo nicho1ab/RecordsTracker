@@ -308,8 +308,9 @@ $coreRoutes = @(
     @{ Name = "retrieve"; Path = "/ccld/records/request"; Label = "03-retrieve"; ActiveHref = "/ccld/records/request"; WorkflowStep = "Facility" },
     @{ Name = "jobs"; Path = "/ccld/retrieval/jobs"; Label = "04-jobs"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Results" },
     @{ Name = "reviewer"; Path = "/reviewer"; Label = "05-reviewer"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
-    @{ Name = "feedback"; Path = "/feedback"; Label = "06-feedback"; ActiveHref = "/feedback"; WorkflowStep = "Feedback" },
-    @{ Name = "help"; Path = "/ccld/help"; Label = "07-help"; ActiveHref = "/ccld/help" }
+    @{ Name = "packet-preview"; Path = "/reviewer/packet/preview"; Label = "06-packet-preview"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
+    @{ Name = "feedback"; Path = "/feedback"; Label = "07-feedback"; ActiveHref = "/feedback"; WorkflowStep = "Feedback" },
+    @{ Name = "help"; Path = "/ccld/help"; Label = "08-help"; ActiveHref = "/ccld/help" }
 )
 
 $routeResults = [System.Collections.ArrayList]::new()
