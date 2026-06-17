@@ -1120,6 +1120,9 @@ def route_response(
     if parsed_path == "/help":
         path = CCLD_HELP_PATH
         parsed_path = CCLD_HELP_PATH
+    if parsed_path == f"{CCLD_UI_PREFIX}/":
+        path = CCLD_UI_PREFIX
+        parsed_path = CCLD_UI_PREFIX
     if parsed_path == CCLD_FACILITY_LOOKUP_PATH:
         if active_page_data_mode == FIXTURE_DEMO_PAGE_DATA_MODE:
             return route_ccld_facility_lookup_response(path)

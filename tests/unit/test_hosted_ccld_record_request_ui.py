@@ -97,6 +97,22 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert_no_secret_html(html)
 
 
+def test_ccld_trailing_slash_route_renders_request_start() -> None:
+    status, content_type, body = route_response(
+        "/ccld/",
+        auth_runtime_config=_local_dev_auth_config(),
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Retrieve complaint records" in html
+    assert "Start review request context" in html
+    assert "Which facility should be reviewed?" in html
+    assert_no_secret_html(html)
+
+
 def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     status, content_type, body = route_response("/ccld/help")
     html = body.decode("utf-8")
