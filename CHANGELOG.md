@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Added acceptance checklist and non-mutating verification script for the hosted reviewer local/test flow: `docs/developer/hosted-reviewer-acceptance.md` and `scripts/verify-hosted-reviewer-acceptance.ps1`. The verifier defaults to non-mutating GET checks, can optionally run evidence capture, and checks packet-preview/draft empty/context routes and draft workflow-step assertions.
 
 - Added a print-ready local/test attorney review packet draft at
 	`/reviewer/packet/draft`. The draft preserves facility/date context, provides
