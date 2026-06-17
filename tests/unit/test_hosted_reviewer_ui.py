@@ -169,6 +169,9 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098" in html
     assert "Return to same facility/date queue" in html
     assert "/ccld/records/request?facility_number=157806098" in html
+    assert "Report packet preview readiness concern" in html
+    assert "workflow_area=packet-preview" in html
+    assert "Describe+packet+readiness%2C+source-check%2C+or+reviewer-state+confusion" in html
     assert "Facility / license" in html
     assert "157806098" in html
     assert "Date range" in html
@@ -214,6 +217,7 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Open record 32-CR-20220407124448" in html
     assert "Review packet notes" in html
     assert "This preview is a local/test preparation aid." in html
+    assert "use the feedback link with this packet context" in html
     assert "Source-derived fields remain separate from reviewer-created notes/status." in html
     assert "Review flags are screening aids, not legal conclusions." in html
     assert "The CCLD public portal remains the source of record." in html
@@ -321,6 +325,9 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> 
     assert "Source traceability readiness" in html
     assert "Back to packet preview" in html
     assert "Back to review queue" in html
+    assert "Report copy/print preparation concern" in html
+    assert "workflow_area=packet-draft" in html
+    assert "Describe+copy%2Fprint+preparation+or+packet+readiness+confusion" in html
     assert "@media print" in html
     assert "packet-draft" in html
     assert "site-header" in html and "display: none" in html
@@ -543,6 +550,10 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "After this detail" in html
     assert "Return to same facility/date queue" in html
     assert "Open next recommended record from this context" in html
+    assert "Report confusion about this reviewer detail" in html
+    assert "workflow_area=reviewer-detail" in html
+    assert "source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448" in html
+    assert "Describe+what+was+confusing+about+this+reviewer+detail+step" in html
     assert (
         "Review source traceability before relying on missing, confusing, or proxy-related values"
         in html
@@ -591,6 +602,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Review source traceability" in html
     assert "Review source-derived context" in html
     assert "Prepare tester feedback" in html
+    assert "Report reviewer-detail feedback with safe context" in html
     assert "Record summary" in html
     assert "This summary orients the selected CCLD complaint record" not in normalized_html
     assert "Complaint review workspace" in html
@@ -779,6 +791,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Queue refresh behavior" in html
     assert "confusing labels, wording, keyboard flow" in normalized_html
     assert "/ccld/records/request?facility_number=157806098" in html
+    assert "Open feedback with this record context" in html
     assert "/ccld/facilities" in html
     assert "/ccld/help" in html
     assert_no_secret_html(html)
@@ -999,6 +1012,9 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert "Next" in html
     assert "Return to facility queue" in html
     assert "Open next priority record" in html
+    assert "Report save or return-to-queue confusion" in html
+    assert "workflow_area=save-confirmation" in html
+    assert "Describe+note%2Fstatus+save%2C+return-to-queue%2C+or+next-record+confusion" in html
     assert "Preview local/test preparation packet" in html
     assert f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?facility_number=157806098" in html
     assert "Open local/test preparation draft" in html
@@ -1141,6 +1157,8 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "Next" in html
     assert "Return to facility queue" in html
     assert "Open next priority record" in html
+    assert "Report save or return-to-queue confusion" in html
+    assert "workflow_area=save-confirmation" in html
     assert "Preview local/test preparation packet" in html
     assert f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?facility_number=157806098" in html
     assert "Open local/test preparation draft" in html
