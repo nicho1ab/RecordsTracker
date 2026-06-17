@@ -57,6 +57,7 @@ from ccld_complaints.hosted_app.reviewer_created_state_routes import (
 )
 from ccld_complaints.hosted_app.reviewer_ui import (
     REVIEWER_UI_DETAIL_PATH,
+    REVIEWER_UI_PACKET_DRAFT_PATH,
     REVIEWER_UI_PACKET_PREVIEW_PATH,
     REVIEWER_UI_RECORDS_PATH,
     ReviewerUiContext,
@@ -2270,6 +2271,7 @@ def _render_request_case_brief(
             record_count_label="Complaint records visible/imported",
             full_queue_href=REVIEWER_UI_RECORDS_PATH,
             packet_preview_href=_packet_preview_href_for_request(request),
+            packet_draft_href=_packet_draft_href_for_request(request),
         )
     )
 
@@ -2842,6 +2844,17 @@ def _packet_preview_href_for_request(request: CcldRecordRequest) -> str:
         "lookup_facility_name": request.lookup_facility_name or "",
     }
     return f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?{urlencode(query_values)}"
+
+
+def _packet_draft_href_for_request(request: CcldRecordRequest) -> str:
+    query_values = {
+        "facility_number": request.facility_number,
+        "start_date": request.start_date or "",
+        "end_date": request.end_date or "",
+        "request_context_origin": request.request_context_origin,
+        "lookup_facility_name": request.lookup_facility_name or "",
+    }
+    return f"{REVIEWER_UI_PACKET_DRAFT_PATH}?{urlencode(query_values)}"
 
 
 def _render_reviewer_link(

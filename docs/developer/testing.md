@@ -278,6 +278,16 @@ detail confirmations; remains non-mutating across source-derived,
 reviewer-created, audit, import, and operational metadata rows; writes no export
 files; and states that the preview is not a legal report, final export,
 production packet, or source-completeness proof.
+Print-ready packet draft tests should prove `/reviewer/packet/draft` renders with
+facility/date context, shows print/save-as-PDF guidance, generated/prepared-from
+context, included record summaries, source traceability readiness,
+reviewer-created state cues, limitations, descriptive record links, and a static
+copyable packet summary; shows clear context-needed guidance when opened without
+facility/date context; includes print CSS that hides navigation/workflow chrome
+without hiding critical packet content; remains non-mutating; and does not create
+server-side PDFs, Word files, ZIPs, CSVs, downloadable legal packets, export
+persistence, packet lifecycle state, or unsupported legal/source-completeness
+claims.
 Hosted UI evidence packet tests should verify that
 `scripts/capture-hosted-ui-evidence.ps1` exists, accepts `-BaseUrl`, `-Mode`,
 `-OutputDir`, viewport, timeout, and `-AllowUnavailable` parameters, captures
