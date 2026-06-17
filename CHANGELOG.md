@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Improved hosted reviewer detail as the continuation of the priority worklist.
+	Detail pages now show active facility/date request context, selected record
+	identity, cautious worklist-priority rationale, source-derived values to check
+	first, same-context queue return, next-record guidance, local/test packet
+	preparation links, and clearer cautious note/status guidance without changing
+	note/status writes, audit behavior, source-derived records, schemas,
+	migrations, retrieval, auth, exports, or legal conclusions.
+
 - Improved the hosted local/test CCLD review-priority queue as a decision screen.
 	The queue now shows active facility/date context, local/test reference source,
 	source-derived complaint counts, reviewer-created status/note cues, review-flag
