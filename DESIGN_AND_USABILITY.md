@@ -101,6 +101,11 @@ state, understand which traceability fields are visible or missing in the
 local/test record, and avoid treating missing local/test values as public-source
 absence, completeness, legal, facility-wide, harm, abuse, neglect, liability, or
 automated-finding conclusions.
+When a queue, reviewer detail, packet preview/draft, or feedback cue summarizes
+source traceability, it should use the same visible convention: name available
+source traceability values, name missing local/test traceability values, remind
+testers to check source traceability before relying on source-derived values,
+and state that missing local/test traceability is not source-completeness proof.
 Reviewer detail source-confidence cues should stay presentation-only and should
 use existing source-derived fields, traceability fields, missing-value flags, and
 proxy flags only. They may tell testers which loaded complaint values are

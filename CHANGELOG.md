@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Improved hosted source-traceability review readiness. Queue/worklist, reviewer
+	detail, packet preview/draft, help, and feedback cues now more clearly label
+	existing source traceability values, missing local/test traceability values,
+	and check-before-relying guidance for source-derived values without adding
+	source fields, schemas, migrations, connector behavior, retrieval behavior,
+	extraction behavior, exports, source-derived mutation, reviewer-created writes
+	from GET rendering, legal conclusions, or source-completeness claims.
+
 - Improved hosted tester-readiness acceptance closure. The non-mutating hosted
 	reviewer acceptance verifier now checks the primary local/test workflow route
 	set across home, facility lookup, request/context, review queue, reviewer

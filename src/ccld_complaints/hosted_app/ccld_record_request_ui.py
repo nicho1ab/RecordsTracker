@@ -799,9 +799,19 @@ def _render_help_page() -> str:
                     </details>
                     <details>
                         <summary id="help-traceability-heading">How source traceability works</summary>
-                        <p>Imported records retain safe source URL, raw SHA-256, connector, retrieval time,
-                        and source document identifiers when available. Raw artifact paths and private
-                        server details are not shown in the browser.</p>
+                        <p>Imported records retain safe source traceability values when available:
+                        source URL, raw SHA-256 hash, raw artifact reference, connector metadata,
+                        retrieval timestamp, source document/report markers, import batch context,
+                        and report index cues.</p>
+                        <p>When a page says local/test traceability value missing, it means the value
+                        is not visible in the loaded local/test record. It is not proof that the
+                        public CCLD portal lacks a value, not a source-completeness proof, and not a
+                        legal, final export, or certified report conclusion.</p>
+                        <p>Before relying on a source-derived value in a note, status, packet preview,
+                        or packet draft, check source traceability on reviewer detail. Use feedback
+                        when source URL, raw SHA-256 hash, connector metadata, retrieval timestamp,
+                        source document/report marker, report index, or missing-value wording is
+                        confusing.</p>
                     </details>
                     <details>
                         <summary id="help-separation-heading">How reviewer-created notes/status work</summary>
@@ -2393,8 +2403,8 @@ def _render_queue_triage_summary(
       local/test request, existing source-derived traceability fields, and existing
       reviewer-created notes/statuses.</p>
     <p>Queue summaries do not prove record completeness. Open reviewer detail for
-    source-confidence cues before relying on a summary value that looks missing,
-    confusing, or proxy-related.</p>
+    source traceability and source-confidence cues before relying on a summary value that
+    looks missing, confusing, proxy-related, or missing local/test traceability values.</p>
       <dl>
         <dt>Request scope</dt>
                 <dd>{_escape(request_scope)}; date range {_escape(date_scope)}</dd>
@@ -2409,7 +2419,8 @@ def _render_queue_triage_summary(
       </dl>
     <p>The manual feedback checklist below uses these queue counts and reviewer-created
         note/status cues so testers can report missing records, record-specific
-        reviewer-detail observations, confusing wording, or unexpected filter behavior.</p>
+        reviewer-detail observations, missing or confusing source traceability, confusing
+        wording, or unexpected filter behavior.</p>
     <p>Carry both queue-level observations and reviewer-detail observations into that same
         manual feedback checklist; this queue does not create a second checklist or persist
         feedback.</p>
@@ -2453,6 +2464,9 @@ def _render_worklist_decision_flow(
       <p>Use this local/test worklist as a decision screen: confirm the CCLD request
       context, open the suggested next record, then continue to packet preparation only
       after checking source traceability on reviewer detail.</p>
+    <p>Record cards name source traceability values that are available or missing in the
+    loaded local/test row. Missing local/test traceability values are review cues, not
+    proof of public-source absence or a source-completeness proof.</p>
       <dl>
         <dt>Active CCLD request context</dt>
         <dd>{_escape(_facility_scope_for_summary(request))}; date range {_escape(_date_scope_text(request))}</dd>
@@ -3223,22 +3237,48 @@ def _source_document_summary(
 
 
 def _traceability_summary(record: Mapping[str, Any]) -> str:
+    available, missing = _traceability_value_labels(record)
+    if available and not missing:
+        return (
+            "Source traceability available: "
+            + ", ".join(available)
+            + ". Missing local/test traceability values: none. Check source traceability before relying on source-derived values."
+        )
+    if available:
+        return (
+            "Source traceability available for: "
+            + ", ".join(available)
+            + ". Local/test traceability value missing: "
+            + ", ".join(missing)
+            + ". Check source traceability before relying on source-derived values."
+        )
+    return (
+        "No source traceability values are visible in this local/test row. Local/test traceability value missing: "
+        + ", ".join(missing)
+        + ". This is not proof of public-source absence or a source-completeness proof."
+    )
+
+
+def _traceability_value_labels(record: Mapping[str, Any]) -> tuple[list[str], list[str]]:
     fields = (
         ("source URL", _optional_string(record, "source_url")),
-        ("raw SHA-256", _optional_string(record, "raw_sha256")),
-        ("raw path", _optional_string(record, "raw_path")),
-        ("connector", _optional_string(record, "connector_name")),
-        ("retrieved", _optional_string(record, "retrieved_at")),
+        ("raw SHA-256 hash", _optional_string(record, "raw_sha256")),
+        ("raw artifact reference", _optional_string(record, "raw_path")),
+        ("connector metadata", _connector_label(record)),
+        ("retrieval timestamp", _optional_string(record, "retrieved_at")),
+        ("source document/report marker", _optional_string(record, "source_document_id")),
     )
-    present = [label for label, value in fields if value]
-    if len(present) == len(fields):
-        return (
-            "Complete source traceability: source URL, raw SHA-256, raw path, "
-            "connector, retrieval time."
-        )
-    if present:
-        return "Partial source traceability: " + ", ".join(present) + "."
-    return "Source traceability not available in this local/test row."
+    available = [label for label, value in fields if _has_display_value(value)]
+    missing = [label for label, value in fields if not _has_display_value(value)]
+    return available, missing
+
+
+def _connector_label(record: Mapping[str, Any]) -> str | None:
+    connector_name = _optional_string(record, "connector_name")
+    connector_version = _optional_string(record, "connector_version")
+    if connector_name and connector_version:
+        return f"{connector_name} {connector_version}"
+    return connector_name or connector_version
 
 
 def _loaded_context_text(item: CcldRequestQueueItem) -> str:
