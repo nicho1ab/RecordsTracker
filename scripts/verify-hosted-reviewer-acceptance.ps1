@@ -160,12 +160,22 @@ if ($IncludeCapture) {
     $captureCmd = ".\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl `"$BaseUrl`" -Mode $Mode -IncludeScreenshots `$false -AllowUnavailable"
     Write-Host "Capture command: $captureCmd"
     try {
-        $captureOutput = & .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl $BaseUrl -Mode $Mode -IncludeScreenshots $false -AllowUnavailable 2>&1 | Out-String
+        $beforeCapture = Get-Date
+        $captureOutput = & .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl $BaseUrl -Mode $Mode -IncludeScreenshots $false -AllowUnavailable *>&1 | Out-String
         Write-Host $captureOutput
         $evidenceLine = ($captureOutput -split "`n" | Where-Object { $_ -match "EVIDENCE_PACKET_PATH=" }) | Select-Object -First 1
+        $evidencePath = $null
         if ($evidenceLine) {
-            $evidencePath = $evidenceLine -replace '.*EVIDENCE_PACKET_PATH=', ''
-            $evidencePath = $evidencePath.Trim()
+            $evidencePath = ($evidenceLine -replace '.*EVIDENCE_PACKET_PATH=', '').Trim()
+        }
+        if (-not $evidencePath -or -not (Test-Path -LiteralPath $evidencePath -PathType Container)) {
+            $evidenceRoot = Join-Path $PSScriptRoot ".." "data" "processed" "ui-evidence"
+            $newest = Get-ChildItem -LiteralPath $evidenceRoot -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.LastWriteTime -gt $beforeCapture } |
+            Sort-Object LastWriteTime -Descending | Select-Object -First 1
+            if ($newest) { $evidencePath = $newest.FullName; Write-Host "Evidence packet (fallback lookup): $evidencePath" }
+        }
+        if ($evidencePath) {
             Write-Host "Evidence packet: $evidencePath"
             $assertionsCsv = Join-Path $evidencePath 'route-assertions.csv'
             if (Test-Path -LiteralPath $assertionsCsv) {
@@ -179,11 +189,13 @@ if ($IncludeCapture) {
                     else {
                         foreach ($r in $rows) {
                             if ($r.status -ne 'PASS') {
-                                Write-Error "Unexpected workflow-step status for $routeName: $($r.status) - $($r.message)"
+                                $rStatus = $r.status; $rMessage = $r.message
+                                Write-Error "Unexpected workflow-step status for ${routeName}: ${rStatus} - ${rMessage}"
                                 $failCount++
                             }
                             else {
-                                Write-Host "Workflow-step assertion for $routeName: PASS - $($r.message)"
+                                $rMessage = $r.message
+                                Write-Host "Workflow-step assertion for ${routeName}: PASS - ${rMessage}"
                             }
                         }
                     }
