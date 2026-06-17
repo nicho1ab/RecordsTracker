@@ -73,11 +73,17 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Send feedback" in html
     assert "What issue should be reported?" in html
+    assert "packet/export-readiness" in html
+    assert "browser copy or print" in html
     assert "A complaint record looked missing or unexpected." in html
     assert "The source traceability summary was hard to use." in html
     assert "active status-filter counts" in html
     assert "filtered-empty recovery" in html
     assert "The active reviewer-created status filter, shown count" in html
+    assert "Packet readiness, browser copy or print preparation" in html
+    assert "boundary between local/test packet preparation and final export" in html
+    assert "missing or unexpected record" in html
+    assert "reviewer-created note/status concern" in html
     assert "correction-readiness guidance" in html
     assert (
         "A source-derived value looked wrong or incomplete after checking source traceability."
@@ -102,6 +108,8 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert 'aria-describedby="description-help"' in html
     assert "Keyboard flow: choose a feedback type, Tab to Description" in html
     assert "Describe the route, control, keyboard flow" in html
+    assert "packet/export-readiness concern" in html
+    assert "local/test export boundary confusion" in html
     assert "Submit feedback" in html
     assert html.count('<option value="Bug report">Bug report</option>') == 1
     assert html.count('<option value="Feature request">Feature request</option>') == 1
@@ -150,6 +158,10 @@ def test_feedback_page_renders_safe_optional_handoff_context() -> None:
     assert "complaint:ccld:complaint:32-CR-20220407124448" in html
     assert "32-CR-20220407124448" in html
     assert "Describe packet readiness confusion." in html
+    assert "packet/export-readiness confusion" in normalized_html
+    assert "browser copy or print confusion" in normalized_html
+    assert "missing or unexpected records in packet content" in normalized_html
+    assert "local/test packet boundary" in normalized_html
     assert "not a source-completeness proof" in normalized_html
     assert (
         "possible correction concerns where a source-derived value looked wrong"

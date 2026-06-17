@@ -176,8 +176,12 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Report copy/print preparation concern" in html
     assert "workflow_area=packet-preview" in html
     assert "Describe+copy%2Fprint+preparation%2C+packet+readiness" in html
+    assert "Packet readiness means local/test review readiness only" in html
+    assert "ready for manual review, browser copy, or browser print" in normalized_html
+    assert "active facility/date context, included record count" in normalized_html
     assert "Before copying or printing" in html
     assert "Use this checklist before using browser copy or print" in normalized_html
+    assert "Confirm the active facility/date context" in html
     assert "Review records flagged for source check" in html
     assert "Review records missing reviewer-created status/note cues" in html
     assert "Confirm source traceability for important source-derived values" in html
@@ -196,6 +200,8 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Review-readiness checkpoint" in html
     assert "Review-readiness summary" in html
     assert "before browser copy or print" in normalized_html
+    assert "Review before relying on this packet" in normalized_html
+    assert "confusing, incomplete, risky, or not-ready records" in normalized_html
     assert "Records ready for preparation review" in html
     assert "Records needing source check" in html
     assert "Records needing reviewer-created status/note attention" in html
@@ -308,6 +314,9 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> 
     assert "Use browser copy or print only after review" in html
     assert "Copy/print preparation guidance" in html
     assert "manual browser copy or print" in normalized_html
+    assert "Packet readiness means local/test review readiness only" in html
+    assert "ready for manual review, browser copy, or browser print" in normalized_html
+    assert "active facility/date context, included record count" in normalized_html
     assert "Review before copying or printing" in html
     assert "Source traceability available means visible source URL" in html
     assert "raw SHA-256 hash" in html
@@ -331,6 +340,8 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> 
     assert "Records needing reviewer-created status/note attention" in html
     assert "Review-readiness before copying or printing" in html
     assert "Review before copying or printing" in html
+    assert "Review before relying on this packet" in normalized_html
+    assert "return to the queue, open reviewer detail, or use feedback" in normalized_html
     assert "preparation draft" in html
     assert "Possible correction concerns should remain reviewer-created observations" in html
     assert "future correction workflow is not implemented here" in html
@@ -366,6 +377,10 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> 
     assert "Facility/license: 157806098" in html
     assert "Reviewer-created state summary" in html
     assert "Records ready for preparation review" in html
+    assert (
+        "Packet readiness means local/test review readiness for manual browser copy or print"
+        in html
+    )
     assert "Review-readiness before copy/print" in html
     assert "Source traceability readiness" in html
     assert "Back to local/test packet preview" in html

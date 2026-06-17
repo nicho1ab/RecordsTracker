@@ -1,6 +1,20 @@
 # Changelog
 
 ## Unreleased
+- Improved hosted reviewer export-readiness clarity. Packet preview and packet
+	draft now define packet readiness as local/test review readiness for manual
+	review, browser copy, or browser print after checking active facility/date
+	context, included records, source-derived values, source traceability,
+	reviewer-created note/status cues, and possible correction-readiness concerns.
+	Feedback and help cues now name packet/export-readiness confusion and preserve
+	the boundary that packet pages are not legal reports, final exports, certified
+	reports, product-generated exports, packet lifecycle state, or source-
+	completeness proof. This does not add schemas, migrations, export generation,
+	export persistence, packet lifecycle, retrieval behavior, correction behavior,
+	source-derived mutation, reviewer-created writes from GET rendering, note/status
+	behavior changes, legal conclusions, source-completeness claims, or committed
+	evidence files.
+
 - Improved hosted reviewer status-filter accessibility and readability. The
 	local/test CCLD request queue now states the active reviewer-created status
 	filter, records shown under that filter, total records in the same
