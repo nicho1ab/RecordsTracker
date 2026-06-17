@@ -328,7 +328,7 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert "not complaint source truth" in html
     assert 'for="facility-search-input"' in html
     assert "facility-suggestion-list" in html
-    assert "Search" in html
+    assert "Search CCLD facilities" in html
     assert "Search by name, license number, city, ZIP, type, or status." in (
         normalized_html
     )
@@ -351,7 +351,7 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Facility matches" in html
     assert "Showing 1 of 1 matching facility." in normalized_html
-    assert "Review this facility" in html
+    assert "Use this facility for complaint record retrieval" in html
     assert "Find a facility" in html
     assert request_href in html
     assert "request_context_origin=facility_lookup" in html
@@ -539,7 +539,7 @@ def test_ccld_facility_lookup_page_no_internal_paths_in_primary_ui() -> None:
 
 
 def test_ccld_facility_lookup_result_card_review_action_has_descriptive_label() -> None:
-    """Each result card's 'Review this facility' button has a descriptive accessible label."""
+    """Each result card's use button has a descriptive accessible label."""
     status, content_type, body = route_response(
         f"{CCLD_FACILITY_LOOKUP_PATH}?q=orchard",
         page_data_mode="fixture-demo",
@@ -547,7 +547,10 @@ def test_ccld_facility_lookup_result_card_review_action_has_descriptive_label() 
     html = body.decode("utf-8")
 
     assert status == 200
-    assert 'aria-label="Review Synthetic Orchard Child Care facility complaint records"' in html
+    assert (
+        'aria-label="Use Synthetic Orchard Child Care / 900000001 for complaint record retrieval"'
+        in html
+    )
     assert_no_secret_html(html)
 
 

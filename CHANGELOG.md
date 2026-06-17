@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Improved hosted review-session accessibility. The shared workflow rail now
+	exposes screen-reader-readable step purpose text, and facility lookup controls
+	use more descriptive search, selected-facility change, and facility-use action
+	text while preserving existing local/test workflow behavior, source/reviewer
+	boundaries, retrieval behavior, persistence, and packet/feedback behavior.
+
 - Improved the hosted review-session start handoff. Home, facility lookup,
 	request intake, and help now make the first steps clearer: start with facility
 	lookup or direct facility/license entry, choose a complaint date range, load or

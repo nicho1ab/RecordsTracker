@@ -141,6 +141,10 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "No non-CCLD sources" not in normalized_html
     assert "Source-derived records stay separate from reviewer-created notes/status" in html
     assert "/reviewer" in html
+    assert "sr-only" in html
+    assert "Start facility complaint review." in html
+    assert "Select the facility/license number." in html
+    assert "Choose the complaint date range." in html
 
 
 def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None:
@@ -201,6 +205,7 @@ def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None
         assert "does not prove source coverage" in normalized_html
         assert "legal findings" in normalized_html
         assert "button:focus-visible" in html
+        assert ".sr-only" in html
         assert "@media (max-width: 760px)" in html
 
 
