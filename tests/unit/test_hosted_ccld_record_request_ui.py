@@ -341,6 +341,30 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Records with source traceability available" in html
     assert "Suggested next record to open" in html
     assert "Open reviewer detail for 32-CR-20220407124448" in html
+    assert "Review-priority decision flow" in html
+    assert "Use this local/test worklist as a decision screen" in normalized_html
+    assert "Active CCLD request context" in html
+    assert "Request origin" in html
+    assert "Active local/test reference source" in html
+    assert "Loaded local/test source-derived complaint records" in html
+    assert "Records with reviewer-created status/note cues" in html
+    assert "Records with review flags or possible delay indicators" in html
+    assert "Recommended next record action" in html
+    assert "Open next priority record: 32-CR-20220407124448" in html
+    assert "Why this record is prioritized" in html
+    assert "Prioritized worklist records" in html
+    assert "Recommended next record: 32-CR-20220407124448" in html
+    assert "Review need: flagged for review from source-derived cues" in html
+    assert "Complaint/control/source-record identifier" in html
+    assert "Source-derived date/finding/flag summary" in html
+    assert "Reviewer-created status/note cue" in html
+    assert "Source traceability availability cue" in html
+    assert "Open review workspace for 32-CR-20220407124448" in html
+    assert "Preview local/test preparation packet" in html
+    assert "Open print/copy local/test preparation draft" in html
+    assert "not a legal report, final export, or source-completeness proof" in normalized_html
+    assert "do not assign, claim, or mutate records" in normalized_html
+    assert "Queue decision actions" in html
     assert "Find another CCLD facility" in html
     assert "Start a new CCLD request" in html
     assert "Open CCLD workflow help" in html
@@ -387,6 +411,10 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Open reviewer records" in html
     assert "did not submit a controlled retrieval job for this request" in html
     assert "run-ccld-live-fetch.ps1 -FacilityNumber 157806098" in html
+    assert "legally sufficient" not in normalized_html.casefold()
+    assert "verified abuse" not in normalized_html.casefold()
+    assert "confirmed harm" not in normalized_html.casefold()
+    assert "complete source record" not in normalized_html.casefold()
     assert_no_secret_html(html)
 
 
@@ -473,6 +501,10 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
     assert reviewed_status == 200
     assert "Latest reviewer-created status: Reviewed" in reviewed_html
     assert "1 reviewer-created note(s)" in reviewed_html
+    assert "Review-priority decision flow" in reviewed_html
+    assert "Records with reviewer-created status/note cues" in reviewed_html
+    assert "Reviewer-created status/note cue" in reviewed_html
+    assert "Open review workspace for 32-CR-20220407124448" in reviewed_html
     assert "Records with reviewer-created notes" in reviewed_html
     assert "Records with reviewer-created status" in reviewed_html
     assert "Suggested next record to open" in reviewed_html
