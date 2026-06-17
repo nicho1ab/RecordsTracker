@@ -75,6 +75,8 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "What issue should be reported?" in html
     assert "A complaint record looked missing or unexpected." in html
     assert "The source traceability summary was hard to use." in html
+    assert "raw SHA-256 hash" in html
+    assert "source document/report marker looked missing or confusing" in html
     assert "support-layout" in html
     assert "Do not include private material" in html
     assert "Useful examples" in html

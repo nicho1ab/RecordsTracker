@@ -584,8 +584,8 @@ def _render_packet_draft(
                     <section aria-labelledby="draft-copy-print-guidance-heading">
                         <h3 id="draft-copy-print-guidance-heading">Copy/print preparation guidance</h3>
                         <p>This local/test preparation draft gathers the included complaint-record summaries, review-readiness counts, source-traceability cues, reviewer-created status/note cues, limitations, and a static copyable packet summary for manual browser copy or print.</p>
-                        <p><strong>Review before copying or printing:</strong> check records flagged for source check, records missing reviewer-created status/note cues, important source-derived values, and any wording that seems wrong, incomplete, confusing, or risky.</p>
-                        <p>Source traceability available means visible source URL, raw hash, connector, or retrieval cues are available to help check important source-derived values. It is not a source-completeness proof.</p>
+                        <p><strong>Review before copying or printing:</strong> check records flagged for source check, records missing reviewer-created status/note cues, important source-derived values, missing local/test traceability values, and any wording that seems wrong, incomplete, confusing, or risky.</p>
+                        <p>Source traceability available means visible source URL, raw SHA-256 hash, raw artifact reference, connector metadata, retrieval timestamp, or source document/report marker cues are available to help check important source-derived values. It is not a source-completeness proof.</p>
                         <p>If copy/print preparation content seems wrong, incomplete, confusing, or risky, use the feedback link before using this draft.</p>
                     </section>
                     <section aria-labelledby="draft-scope-heading">
@@ -669,7 +669,7 @@ def _render_packet_draft(
                     <section aria-labelledby="draft-does-not-prove-heading">
                         <h3 id="draft-does-not-prove-heading">What this draft does not prove</h3>
                         <ul>
-                            <li>It does not prove source completeness.</li>
+                            <li>It is not a source-completeness proof.</li>
                             <li>It does not prove no other complaints exist.</li>
                             <li>It does not make legal, facility-wide, harm, abuse, neglect, liability, or rights-deprivation conclusions.</li>
                             <li>It does not create official findings beyond source-derived finding labels.</li>
@@ -1185,7 +1185,7 @@ def _render_packet_preview(
                     <ul>
                         <li>Review records flagged for source check before relying on important source-derived values.</li>
                         <li>Review records missing reviewer-created status/note cues when the readiness counts show attention is needed.</li>
-                        <li>Confirm source traceability for important source-derived values; source traceability available means visible source URL, raw hash, connector, or retrieval cues are available for checking, not that the packet proves source completeness.</li>
+                        <li>Confirm source traceability for important source-derived values; source traceability available means visible source URL, raw SHA-256 hash, raw artifact reference, connector metadata, retrieval timestamp, or source document/report marker cues are available for checking, not that the packet is a source-completeness proof.</li>
                         <li>Use feedback if records, wording, readiness cues, or copy/print preparation content seems wrong, incomplete, confusing, or risky.</li>
                     </ul>
                 </section>
@@ -1301,6 +1301,8 @@ def _render_packet_preview_record(
               <dd>{_escape(_card_note_presence_text(state_summary))}</dd>
               <dt>Source traceability</dt>
               <dd>{_escape(_source_traceability_cue(source_document))}</dd>
+              <dt>Missing local/test traceability values</dt>
+              <dd>{_escape(_missing_traceability_values_text(source_document))}</dd>
                             <dt>Review-readiness cue</dt>
                             <dd>{_escape(readiness_cue)}</dd>
             </dl>
@@ -1356,6 +1358,8 @@ def _render_packet_draft_record(
                 <dd>{_escape(why)}</dd>
                 <dt>Source traceability summary</dt>
                 <dd>{_escape(_source_traceability_cue(source_document))}</dd>
+                <dt>Missing local/test traceability values</dt>
+                <dd>{_escape(_missing_traceability_values_text(source_document))}</dd>
                                 <dt>Review-readiness cue</dt>
                                 <dd>{_escape(readiness_cue)}</dd>
               </dl>
@@ -1420,6 +1424,7 @@ def _packet_copy_summary(
             + f"; reviewer status: {_latest_status_label_text(state_summary)}"
             + f"; reviewer note: {_card_note_presence_text(state_summary)}"
             + f"; source traceability: {_source_traceability_cue(source_document)}"
+            + f"; missing local/test traceability values: {_missing_traceability_values_text(source_document)}"
         )
     lines.extend(
         [
@@ -1591,6 +1596,8 @@ def _packet_inclusion_reasons(
             reasons.append("Report date proxy cue.")
     if _has_visible_traceability_document(source_document):
         reasons.append("Source traceability available.")
+    else:
+        reasons.append("Local/test traceability value missing; needs source check.")
     finding = _optional_string(original_values, "finding")
     if finding and finding != "unknown":
         reasons.append(f"Finding value shown: {finding}.")
@@ -2022,18 +2029,57 @@ def _review_action_label(original_values: Mapping[str, Any]) -> str:
 
 
 def _source_traceability_cue(source_document: Mapping[str, Any]) -> str:
+    available, missing = _traceability_value_labels(source_document)
+    if available and not missing:
+        return (
+            "Source traceability available: "
+            + ", ".join(available)
+            + ". Missing local/test traceability values: none. Check source traceability before relying on source-derived values."
+        )
+    if available:
+        return (
+            "Source traceability available for: "
+            + ", ".join(available)
+            + ". Local/test traceability value missing: "
+            + ", ".join(missing)
+            + ". Check source traceability before relying on source-derived values."
+        )
+    return (
+        "No source traceability values are visible in this local/test row. Local/test traceability value missing: "
+        + ", ".join(missing)
+        + ". This is not proof of public-source absence and not a source-completeness proof."
+    )
+
+
+def _traceability_value_labels(source_document: Mapping[str, Any]) -> tuple[list[str], list[str]]:
     fields = (
         ("source URL", source_document.get("source_url")),
-        ("raw SHA-256", source_document.get("raw_sha256")),
-        ("connector", source_document.get("connector_name")),
-        ("retrieval time", source_document.get("retrieved_at")),
+        ("raw SHA-256 hash", source_document.get("raw_sha256")),
+        ("raw artifact reference", source_document.get("raw_path")),
+        ("connector metadata", _connector_label(source_document)),
+        ("retrieval timestamp", source_document.get("retrieved_at")),
+        (
+            "source document/report marker",
+            source_document.get("report_index") or source_document.get("source_document_id"),
+        ),
     )
-    present = [label for label, value in fields if _has_display_value(value)]
-    if len(present) == len(fields):
-        return "Source traceability available: source URL, raw SHA-256, connector, retrieval time."
-    if present:
-        return "Partial source traceability available: " + ", ".join(present) + "."
-    return "Source traceability not visible in this local/test row."
+    available = [label for label, value in fields if _has_display_value(value)]
+    missing = [label for label, value in fields if not _has_display_value(value)]
+    return available, missing
+
+
+def _available_traceability_values_text(source_document: Mapping[str, Any]) -> str:
+    available, _missing = _traceability_value_labels(source_document)
+    if not available:
+        return "none visible in this local/test record"
+    return ", ".join(available)
+
+
+def _missing_traceability_values_text(source_document: Mapping[str, Any]) -> str:
+    _available, missing = _traceability_value_labels(source_document)
+    if not missing:
+        return "none"
+    return ", ".join(missing)
 
 
 def _has_delay_flag(original_values: Mapping[str, Any]) -> bool:
@@ -2851,6 +2897,9 @@ def _render_source_traceability_section(
       <p>Use these fields to confirm which local/test source-derived complaint record is
       selected and how it remains tied to preserved public-source material before adding a
       reviewer-created note or status.</p>
+    <p>Check source traceability before relying on source-derived values in notes, status,
+    packet preview, or packet draft. If traceability looks confusing or incomplete, use
+    feedback with the selected record identifiers below.</p>
       <p>Missing values are shown as <q>not available in this local/test record</q>. A missing
       local/test value is not proof that the public source lacks a record or that any event did
       or did not happen.</p>
@@ -2858,6 +2907,12 @@ def _render_source_traceability_section(
       completeness, harm, abuse, neglect, liability, or automated complaint-finding
       conclusions.</p>
             <dl class="summary-list">
+                <dt>Record-level source traceability status</dt>
+                <dd>{_escape(_source_traceability_cue(source_document))}</dd>
+                <dt>Traceability values available</dt>
+                <dd>{_escape(_available_traceability_values_text(source_document))}</dd>
+                <dt>Missing local/test traceability values</dt>
+                <dd>{_escape(_missing_traceability_values_text(source_document))}</dd>
                 <dt>Source URL</dt>
                 <dd>{_escape(_availability_label(source_document.get('source_url')))}</dd>
                 <dt>Raw SHA-256</dt>
@@ -3527,7 +3582,8 @@ def _render_review_actions(
                 <h3 id="cautious-action-guidance-heading">Cautious note/status guidance</h3>
                 <p>Use note text to record what you checked, not to create legal conclusions.
                 Helpful local/test wording can mention a review flag, possible delay indicator,
-                missing local/test value, source traceability available, or needs source check cue.</p>
+                missing local/test value, source traceability available, or needs source check cue.
+                Check source traceability before relying on this value in a note or status.</p>
                 <p>Do not write that abuse, neglect, harm, liability, rights deprivation, or source
                 completeness has been verified by this page.</p>
             </section>
@@ -3673,8 +3729,10 @@ def _render_detail_feedback_guidance(
             the tester feedback checklist. Include the record identifiers below and describe what
             looked missing, confusing, or unexpected.</p>
             <p>If source traceability fields are confusing or missing, report the field label and
-            the wording shown on this page. Do not treat missing local/test traceability display
-            as proof of public-source completeness or absence.</p>
+            the wording shown on this page, such as source URL, raw SHA-256 hash, connector
+            metadata, retrieval timestamp, source document/report marker, or local/test
+            traceability value missing. Do not treat missing local/test traceability display as
+            proof of public-source completeness or absence.</p>
             <p>Feedback remains manual-copy only. Return to the same CCLD request queue,
             resubmit the request when needed, and use the existing manual feedback checklist;
             this detail page does not create a second checklist or save feedback.</p>

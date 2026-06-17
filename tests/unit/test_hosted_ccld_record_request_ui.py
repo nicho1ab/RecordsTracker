@@ -125,6 +125,11 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "How to review a facility" in html
     assert "What review flags mean" in html
     assert "How source traceability works" in html
+    assert "source URL, raw SHA-256 hash" in html
+    assert "local/test traceability value missing" in normalized_html
+    assert "not proof that the public CCLD portal lacks a value" in normalized_html
+    assert "Before relying on a source-derived value" in html
+    assert "source document/report marker" in normalized_html
     assert "How reviewer-created notes/status work" in html
     assert "Retrieval modes" in html
     assert "What the app does not prove" in html
@@ -415,7 +420,9 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "return_facility_number=157806098" in html
     assert "return_start_date=2022-08-01" in html
     assert "return_end_date=2022-08-31" in html
-    assert "Complete source traceability" in html
+    assert "Source traceability available" in html
+    assert "Missing local/test traceability values: none" in html
+    assert "Check source traceability before relying on source-derived values" in html
     assert "Records with source traceability available</dt>" in html
     assert "Loaded record/source-confidence context" in html
     assert "No reviewer-created notes/status yet" in html
@@ -837,7 +844,9 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     assert "- Local validated records loaded or refreshed: no" in first_checklist
     assert "- Reviewer-created rows read for this queue: 0" in first_checklist
     assert "Queue records to spot-check" in first_checklist
-    assert "source traceability cue: Complete source traceability" in first_checklist
+    assert "source traceability cue: Source traceability available" in first_checklist
+    assert "Missing local/test traceability values: none" in first_checklist
+    assert "Check source traceability before relying on source-derived values" in first_checklist
     assert "reviewer note/status cue: No reviewer-created notes/status yet" in first_checklist
     assert "Reviewer detail and note/status confirmation" in first_checklist
     assert "- Review session path was clear from home/request/help:" in first_checklist
