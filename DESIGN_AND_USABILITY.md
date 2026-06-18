@@ -281,6 +281,14 @@ source traceability checks. They must not score facilities, verify sources,
 confirm complaints, imply complaint absence, or treat licensing/visit/citation
 summary rows as legal findings, complaint records, license validity, complaint
 coverage, or source-completeness proof.
+Facility review priority pages may group those same review cues across facilities
+to help testers choose which facility hub to open next. Default ordering should
+be transparent and cue-based rather than opaque scoring, with facilities that
+have multiple cue types, complaint visit activity, citation indicators, POC
+indicators, recent visit activity, high capacity, closed status, or long visit
+gaps surfaced clearly. Rows should link to facility hubs and keep the same
+not-legal-finding, not-source-verification, not-complaint-coverage, and not-
+source-completeness boundaries visible.
 The request and queue pages should also make the active request context visible:
 whether it came from facility lookup or manual entry, which facility/license
 number and date range are being used, which local/test facility reference source

@@ -20,6 +20,7 @@ from ccld_complaints.hosted_app.ui_shell import render_page_shell
 
 CCLD_FACILITY_LOOKUP_PATH = "/ccld/facilities"
 CCLD_FACILITY_REVIEW_HUB_PATH = f"{CCLD_FACILITY_LOOKUP_PATH}/detail"
+CCLD_FACILITY_REVIEW_PRIORITY_PATH = f"{CCLD_FACILITY_LOOKUP_PATH}/review-priority"
 CCLD_RECORD_REQUEST_PATH = "/ccld/records/request"
 REVIEWER_UI_RECORDS_PATH = "/reviewer/records"
 REVIEWER_UI_PACKET_PREVIEW_PATH = "/reviewer/packet/preview"
@@ -32,6 +33,7 @@ DEFAULT_FULL_CCLD_FACILITY_REFERENCE_PATH = Path(
 )
 CCLD_FACILITY_REFERENCE_CSV_ENV = "CCLD_FACILITY_REFERENCE_CSV"
 MAX_FACILITY_LOOKUP_RESULTS = 25
+MAX_FACILITY_PRIORITY_RESULTS = 100
 _PROGRAM_FACILITY_REQUIRED_COLUMNS = (
     "Facility Number",
     "Facility Name",
@@ -391,7 +393,11 @@ def route_ccld_facility_lookup_response_with_source(
     review_context: CcldFacilityReviewContext | None = None,
 ) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
-    if parsed_url.path not in {CCLD_FACILITY_LOOKUP_PATH, CCLD_FACILITY_REVIEW_HUB_PATH}:
+    if parsed_url.path not in {
+        CCLD_FACILITY_LOOKUP_PATH,
+        CCLD_FACILITY_REVIEW_HUB_PATH,
+        CCLD_FACILITY_REVIEW_PRIORITY_PATH,
+    }:
         return _html_response(
             404,
             _render_message_page(
@@ -401,6 +407,8 @@ def route_ccld_facility_lookup_response_with_source(
             ),
         )
     query_values = parse_qs(parsed_url.query, keep_blank_values=True)
+    if parsed_url.path == CCLD_FACILITY_REVIEW_PRIORITY_PATH:
+        return _html_response(200, render_ccld_facility_review_priority_page(query_values))
     if parsed_url.path == CCLD_FACILITY_REVIEW_HUB_PATH:
         facility_number = _first_query_value(query_values, "facility_number")
         return _html_response(
@@ -443,6 +451,11 @@ def render_ccld_facility_lookup_page(
     </section>
     {_render_facility_combobox_section(reference_source, query, limited_note)}
     {_render_lookup_results(result)}
+        <section class="quiet-section" aria-labelledby="facility-priority-link-heading">
+            <h2 id="facility-priority-link-heading">Review-priority list</h2>
+            <p>Use facility review priority to scan uploaded public summary fields across facilities before opening a facility hub.</p>
+            <p><a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}">Open facility review priority list</a></p>
+        </section>
     {_render_reference_details_section(reference_source)}
     <details class="technical-details">
       <summary id="manual-entry-heading">Enter a facility/license number directly</summary>
@@ -504,6 +517,55 @@ def render_ccld_facility_review_hub_page(
       <p>Opening this page does not auto-submit retrieval, create complaint records from facility-directory data, mutate source-derived records, or create reviewer-created notes/statuses.</p>
     </section>""",
     )
+
+
+def render_ccld_facility_review_priority_page(
+        query_values: dict[str, list[str]] | None = None,
+) -> str:
+        query_values = query_values or {}
+        signal_result = load_active_facility_review_signals()
+        cue_filter = _first_query_value(query_values, "cue")
+        summaries = _filtered_priority_summaries(signal_result.summaries, cue_filter)
+        returned_summaries = summaries[:MAX_FACILITY_PRIORITY_RESULTS]
+        rows = "\n".join(_render_priority_row(summary) for summary in returned_summaries)
+        if not rows:
+                rows = _render_priority_empty_rows(cue_filter)
+        return _page(
+                title="Facility review priority",
+                heading="Facility review priority",
+                main=f"""    <section class="hero-card attorney-hero" aria-labelledby="facility-priority-heading">
+            <div>
+                <p class="launch-kicker">Facility review priority</p>
+                <h2 id="facility-priority-heading">Which facilities should I review first?</h2>
+                <p class="launch-value">Use transparent review cue groups from uploaded public summary fields to choose which facility review hub to open next.</p>
+            </div>
+        </section>
+        <section aria-labelledby="facility-priority-boundary-heading">
+            <h2 id="facility-priority-boundary-heading">Public summary review cues</h2>
+            <p>This facility review priority list is derived from uploaded public summary fields in supported public licensing/visit/citation summary CSVs; complaint records are requested/reviewed separately.</p>
+            <p>These review cues are not a legal finding, not source verification, not a complaint-coverage determination, and not a source-completeness proof. A complaint visit signal is only a review cue, and a missing signal is not complaint absence.</p>
+            <p>Open facility review hub links continue into existing request, queue, packet preview, and source-traceability review paths without creating assignments, claims, corrections, exports, or reviewer-created state.</p>
+        </section>
+        {_render_priority_filter(cue_filter)}
+        {_render_priority_summary(signal_result, summaries, returned_summaries)}
+        <section aria-labelledby="facility-priority-list-heading">
+            <h2 id="facility-priority-list-heading">Facilities grouped by review cue priority</h2>
+            <table>
+                <caption>Facility review priority from uploaded public summary fields</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Facility</th>
+                        <th scope="col">Review cues</th>
+                        <th scope="col">Uploaded summary fields</th>
+                        <th scope="col">Next action</th>
+                    </tr>
+                </thead>
+                <tbody>
+{rows}
+                </tbody>
+            </table>
+        </section>""",
+        )
 
 
 def facility_reference_from_source_derived_records(
@@ -981,6 +1043,162 @@ def _render_facility_review_signals_section(
                 <p>Use these cues to decide whether to start a complaint request, review loaded records where available, or return to facility lookup. Review source traceability before relying on summary fields.</p>
             </section>
         </section>"""
+
+
+_PRIORITY_CUE_ORDER = (
+    "Multiple signal types present",
+    "Complaint visit activity present",
+    "Citation indicator present",
+    "POC indicator present",
+    "Recent visit activity",
+    "High-capacity facility",
+    "Closed status in uploaded summary",
+    "Long gap since last visit",
+)
+
+
+def _filtered_priority_summaries(
+    summaries: tuple[FacilityReviewSignalsSummary, ...],
+    cue_filter: str,
+) -> tuple[FacilityReviewSignalsSummary, ...]:
+    ordered = tuple(sorted(summaries, key=_priority_sort_key))
+    if not cue_filter or cue_filter == "all":
+        return ordered
+    return tuple(summary for summary in ordered if cue_filter in _priority_cues(summary))
+
+
+def _priority_sort_key(summary: FacilityReviewSignalsSummary) -> tuple[Any, ...]:
+    cues = _priority_cues(summary)
+    cue_ranks = tuple(_PRIORITY_CUE_ORDER.index(cue) for cue in cues if cue in _PRIORITY_CUE_ORDER)
+    best_rank = min(cue_ranks) if cue_ranks else len(_PRIORITY_CUE_ORDER)
+    return (
+        -len(cues),
+        best_rank,
+        -summary.complaint_visit_count,
+        -summary.citation_count,
+        -summary.poc_date_count,
+        _reverse_date_key(summary.last_visit_date),
+        summary.facility_name,
+        summary.facility_number,
+    )
+
+
+def _priority_cues(summary: FacilityReviewSignalsSummary) -> tuple[str, ...]:
+    cues = list(summary.review_cues)
+    if len(cues) >= 2:
+        cues.insert(0, "Multiple signal types present")
+    return tuple(cues)
+
+
+def _reverse_date_key(value: str) -> int:
+    return -int(value.replace("-", "")) if value and value.replace("-", "").isdigit() else 0
+
+
+def _render_priority_filter(active_cue: str) -> str:
+    options = ("all",) + _PRIORITY_CUE_ORDER
+    option_markup = "\n".join(
+        f'          <option value="{_escape(value)}"{_selected_attr(value, active_cue or "all")}>{_escape(_priority_filter_label(value))}</option>'
+        for value in options
+    )
+    return f"""    <section class="workflow-panel" aria-labelledby="facility-priority-filter-heading">
+      <h2 id="facility-priority-filter-heading">Filter review cues</h2>
+      <form action="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}" method="get">
+        <p>
+          <label for="priority-cue-filter">Cue type</label>
+          <select id="priority-cue-filter" name="cue" aria-describedby="priority-cue-filter-help">
+{option_markup}
+          </select>
+        </p>
+        <p id="priority-cue-filter-help" class="helper-text">Filter by transparent review cue. This is grouping over uploaded public summary fields, not scoring and not a legal conclusion.</p>
+        <p><button type="submit" class="button-secondary">Apply review cue filter</button></p>
+      </form>
+    </section>"""
+
+
+def _priority_filter_label(value: str) -> str:
+    return "All review cues" if value == "all" else value
+
+
+def _selected_attr(value: str, active_value: str) -> str:
+    return " selected" if value == active_value else ""
+
+
+def _render_priority_summary(
+    signal_result: Any,
+    summaries: tuple[FacilityReviewSignalsSummary, ...],
+    returned_summaries: tuple[FacilityReviewSignalsSummary, ...],
+) -> str:
+    cue_counts = {
+        cue: sum(1 for summary in signal_result.summaries if cue in _priority_cues(summary))
+        for cue in _PRIORITY_CUE_ORDER
+    }
+    cue_rows = "\n".join(
+        f"        <dt>{_escape(cue)} facilities</dt><dd>{count}</dd>"
+        for cue, count in cue_counts.items()
+        if count
+    )
+    if not cue_rows:
+        cue_rows = "        <dt>Review cue groups</dt><dd>No uploaded summary review cues available</dd>"
+    return f"""    <section aria-labelledby="facility-priority-summary-heading">
+      <h2 id="facility-priority-summary-heading">Priority list summary</h2>
+      <dl class="summary-list">
+        <dt>Facilities with supported uploaded summary signals</dt>
+        <dd>{len(signal_result.summaries)}</dd>
+        <dt>Facilities shown under current filter</dt>
+        <dd>{len(returned_summaries)} of {len(summaries)} matching facilit{"y" if len(summaries) == 1 else "ies"}</dd>
+        <dt>Supported summary CSV sources loaded</dt>
+        <dd>{signal_result.loaded_source_count}</dd>
+        <dt>Unsupported summary CSV sources skipped</dt>
+        <dd>{signal_result.unsupported_source_count}</dd>
+        <dt>Malformed or shifted rows skipped</dt>
+        <dd>{signal_result.skipped_malformed_row_count}</dd>
+{cue_rows}
+      </dl>
+    </section>"""
+
+
+def _render_priority_empty_rows(cue_filter: str) -> str:
+    filter_text = (
+        f" for review cue {_escape(cue_filter)}"
+        if cue_filter and cue_filter != "all"
+        else ""
+    )
+    return f"""          <tr>
+            <td colspan="4">
+              <p>No facility review priority rows are available{filter_text}.</p>
+              <p>This does not mean facilities have no complaints, visits, citations, POC dates, or public-source records. It only means supported uploaded public summary fields did not produce a visible row for this view.</p>
+            </td>
+          </tr>"""
+
+
+def _render_priority_row(summary: FacilityReviewSignalsSummary) -> str:
+    cues = _priority_cues(summary)
+    cue_text = "; ".join(f"{cue} review cue" for cue in cues) if cues else "No uploaded summary signals available"
+    field_text = (
+        f"{summary.total_visit_count} total visits; {summary.complaint_visit_count} complaint visits; "
+        f"{summary.citation_count} citation value(s); {summary.poc_date_count} POC date(s); "
+        f"last visit {_display_value(summary.last_visit_date)}; status {_display_tuple(summary.statuses)}; "
+        f"capacity {_display_tuple(summary.capacities)}"
+    )
+    facility_label = _safe_priority_text(summary.facility_name or summary.facility_number)
+    return f"""          <tr>
+            <th scope="row">
+              {_escape(facility_label)}<br>
+              <span class="helper-text">Facility/license {_escape(summary.facility_number)}</span>
+            </th>
+            <td>{_escape(cue_text)}</td>
+            <td>{_escape(_safe_priority_text(field_text))}</td>
+            <td><a href="{_escape(_facility_hub_href(summary.facility_number))}">Open facility review hub for {_escape(summary.facility_number)}</a></td>
+          </tr>"""
+
+
+def _safe_priority_text(value: str) -> str:
+    lowered = value.casefold()
+    if any(marker in lowered for marker in _SECRET_HTML_MARKERS):
+        return "review label hidden"
+    return value
+
+
 def _render_facility_hub_actions(
         record: CcldFacilityLookupRecord,
         review_context: CcldFacilityReviewContext,

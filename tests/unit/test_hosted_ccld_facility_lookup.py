@@ -23,6 +23,7 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_LOOKUP_PATH,
     CCLD_FACILITY_REFERENCE_CSV_ENV,
     CCLD_FACILITY_REVIEW_HUB_PATH,
+    CCLD_FACILITY_REVIEW_PRIORITY_PATH,
     CCLD_RECORD_REQUEST_PATH,
     CcldFacilityLookupRecord,
     load_active_ccld_facility_reference,
@@ -805,6 +806,161 @@ def test_ccld_facility_review_hub_renders_uploaded_public_summary_signals(
     assert_no_secret_html(html)
 
 
+def test_ccld_facility_review_priority_page_empty_state_is_safe() -> None:
+    status, content_type, body = route_response(
+        CCLD_FACILITY_REVIEW_PRIORITY_PATH,
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Facility review priority" in html
+    assert "uploaded public summary fields" in html
+    assert "review cue" in html
+    assert "No facility review priority rows are available" in html
+    assert "complaint records are requested/reviewed separately" in normalized_html
+    assert "not a legal finding" in html
+    assert "not source verification" in html
+    assert "not a complaint-coverage determination" in html
+    assert "not a source-completeness proof" in html
+    assert "missing signal is not complaint absence" in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_facility_review_priority_page_orders_filters_and_links_to_hubs(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    signals_csv = tmp_path / "ChildCareCenters06072026.csv"
+    _write_program_summary_signals_csv(
+        signals_csv,
+        rows=(
+            _program_summary_signal_row(
+                facility_number="900000001",
+                facility_name="Single Cue Facility",
+                last_visit_date="5/4/2026",
+                inspection_visits="1",
+                total_visits="1",
+            ),
+            _program_summary_signal_row(
+                facility_number="900000002",
+                facility_name="Multi Cue Facility",
+                capacity="75",
+                last_visit_date="6/1/2026",
+                complaint_visits="2",
+                total_visits="3",
+                citation_numbers="101, 102",
+                poc_dates="06/02/2026",
+            ),
+            _program_summary_signal_row(
+                facility_number="900000003",
+                facility_name="Long Gap Facility",
+                last_visit_date="1/5/2020",
+                total_visits="1",
+            ),
+            _program_summary_signal_row(
+                facility_number="900000004",
+                facility_name="Secret Garden Fixture",
+                complaint_visits="1",
+                total_visits="1",
+            ),
+        ),
+    )
+    monkeypatch.setenv(FACILITY_REVIEW_SIGNALS_CSVS_ENV, str(signals_csv))
+
+    status, content_type, body = route_response(
+        CCLD_FACILITY_REVIEW_PRIORITY_PATH,
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Multiple signal types present review cue" in html
+    assert "Complaint visit activity present review cue" in html
+    assert "Citation indicator present review cue" in html
+    assert "POC indicator present review cue" in html
+    assert "High-capacity facility review cue" in html
+    assert "Recent visit activity review cue" in html
+    assert "Long gap since last visit review cue" in html
+    assert html.index("Multi Cue Facility") < html.index("Single Cue Facility")
+    assert html.index("Single Cue Facility") < html.index("Long Gap Facility")
+    assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=900000002" in html
+    assert "Open facility review hub for 900000002" in html
+    assert "review label hidden" in html
+    assert "Secret Garden Fixture" not in html
+    assert "3 total visits; 2 complaint visits" in html
+    assert "2 citation value(s); 1 POC date(s)" in html
+    assert "not a legal finding" in html
+    assert "not source verification" in html
+    assert "not a complaint-coverage determination" in html
+    assert "not a source-completeness proof" in html
+    assert "verified complaint" not in normalized_html.casefold()
+    assert "risk score" not in normalized_html.casefold()
+    assert "facility has no complaints" not in normalized_html.casefold()
+    assert "official finding." not in normalized_html.casefold()
+    assert_no_secret_html(html)
+
+    filtered_status, _filtered_content_type, filtered_body = route_response(
+        f"{CCLD_FACILITY_REVIEW_PRIORITY_PATH}?cue=Complaint+visit+activity+present",
+        page_data_mode="fixture-demo",
+    )
+    filtered_html = filtered_body.decode("utf-8")
+
+    assert filtered_status == 200
+    assert "Multi Cue Facility" in filtered_html
+    assert "Single Cue Facility" not in filtered_html
+    assert "Long Gap Facility" not in filtered_html
+
+
+def test_ccld_facility_review_priority_page_does_not_mutate_hosted_tables(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    signals_csv = tmp_path / "FosterFamilyAgencies06072026.csv"
+    _write_program_summary_signals_csv(
+        signals_csv,
+        rows=(
+            _program_summary_signal_row(
+                facility_number="157806098",
+                facility_name="A. MIRIAM JAMISON CHILDREN'S CENTER",
+                complaint_visits="1",
+                total_visits="1",
+            ),
+        ),
+    )
+    monkeypatch.setenv(FACILITY_REVIEW_SIGNALS_CSVS_ENV, str(signals_csv))
+
+    with _seeded_connection() as connection:
+        before_source_rows = _source_rows(connection)
+        before_counts = _table_counts(connection)
+        status, content_type, body = route_response(
+            CCLD_FACILITY_REVIEW_PRIORITY_PATH,
+            page_data_mode="fixture-demo",
+            ccld_record_request_ui_context=ccld_record_request_context_for_reviewer_context(
+                reviewer_ui_context_for_connection(
+                    connection,
+                    actor=_actor(roles=("tester_reviewer",)),
+                )
+            ),
+        )
+        after_source_rows = _source_rows(connection)
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert before_counts == after_counts == _empty_reviewer_counts()
+    assert "Facility review priority" in html
+    assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
+    assert_no_secret_html(html)
+
+
 def test_ccld_facility_lookup_page_shows_no_match_guidance() -> None:
     status, content_type, body = route_response(
         f"{CCLD_FACILITY_LOOKUP_PATH}?q=no-match",
@@ -1135,6 +1291,60 @@ def _write_program_summary_signals_csv(
                 ",".join(f'"{row.get(fieldname, "")}"' for fieldname in fieldnames)
                 + "\n"
             )
+
+
+def _program_summary_signal_row(
+    *,
+    facility_number: str,
+    facility_name: str,
+    facility_type: str = "CHILD CARE CENTER",
+    status: str = "LICENSED",
+    capacity: str = "24",
+    county: str = "Los Angeles",
+    regional_office: str = "Regional Office",
+    license_first_date: str = "",
+    closed_date: str = "",
+    last_visit_date: str = "",
+    inspection_visits: str = "0",
+    complaint_visits: str = "0",
+    other_visits: str = "0",
+    total_visits: str = "0",
+    citation_numbers: str = "",
+    poc_dates: str = "",
+) -> dict[str, str]:
+    return {
+        "Facility Type": facility_type,
+        "Facility Number": facility_number,
+        "Facility Name": facility_name,
+        "Licensee": "Do Not Display Licensee",
+        "Facility Administrator": "Do Not Display Admin",
+        "Facility Telephone Number": "555-0199",
+        "Facility Address": "1 Private Fixture Way",
+        "Facility City": "Sample City",
+        "Facility State": "CA",
+        "Facility Zip": "90001",
+        "County Name": county,
+        "Regional Office": regional_office,
+        "Facility Capacity": capacity,
+        "Facility Status": status,
+        "License First Date": license_first_date,
+        "Closed Date": closed_date,
+        "Last Visit Date": last_visit_date,
+        "Inspection Visits": inspection_visits,
+        "Complaint Visits": complaint_visits,
+        "Other Visits": other_visits,
+        "Total Visits": total_visits,
+        "Citation Numbers": citation_numbers,
+        "POC Dates": poc_dates,
+        "All Visit Dates": "",
+        "Inspection Visit Dates": "",
+        "Inspect TypeA": "",
+        "Inspect TypeB": "",
+        "Other Visit Dates": "",
+        "Other TypeA": "",
+        "Other TypeB": "",
+        "Complaint Info- Date, #Sub Aleg, # Inc Aleg, # Uns Aleg, # TypeA, # TypeB ...": "",
+    }
 
 
 def _seeded_connection() -> Connection:
