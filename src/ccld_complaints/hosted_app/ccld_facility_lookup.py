@@ -480,7 +480,15 @@ def render_ccld_facility_review_hub_page(
         for record in reference_source.records
         if record.facility_number == facility_number
     )
+    signals_summary = load_active_facility_review_signals().summary_for_facility(
+        facility_number
+    )
     if not facility_number or not matching_records:
+        if facility_number and signals_summary is not None:
+            return _render_signal_only_facility_hub_page(
+                signals_summary,
+                review_context=review_context or CcldFacilityReviewContext(),
+            )
         return _page(
             title="Facility review hub not found",
             heading="Facility review hub",
@@ -488,9 +496,6 @@ def render_ccld_facility_review_hub_page(
         )
     record = matching_records[0]
     review_context = review_context or CcldFacilityReviewContext()
-    signals_summary = load_active_facility_review_signals().summary_for_facility(
-        record.facility_number
-    )
     duplicate_note = ""
     if len(matching_records) > 1:
         duplicate_note = f"""      <p class="helper-text">This directory has {len(matching_records)} distinct rows with this facility number. The hub shows the first deterministic directory row for review navigation only.</p>"""
@@ -518,6 +523,57 @@ def render_ccld_facility_review_hub_page(
       <p>This hub does not check all complaints for this facility and does not prove complaint coverage, source completeness, license validity, official findings, legal conclusions, assignment, claiming, correction application, export approval, certified report status, or packet lifecycle state.</p>
       <p>Opening this page does not auto-submit retrieval, create complaint records from facility-directory data, mutate source-derived records, or create reviewer-created notes/statuses.</p>
     </section>""",
+    )
+
+
+def _render_signal_only_facility_hub_page(
+    summary: FacilityReviewSignalsSummary,
+    *,
+    review_context: CcldFacilityReviewContext,
+) -> str:
+    record = _facility_record_from_signal_summary(summary)
+    facility_label = _safe_priority_text(summary.facility_name or summary.facility_number)
+    return _page(
+    title=f"Signal-only facility hub {summary.facility_number}",
+    heading="Facility review hub",
+    main=f"""    <section class="hero-card attorney-hero" aria-labelledby="signal-only-facility-hub-heading">
+            <div>
+                <p class="launch-kicker">signal-only facility hub</p>
+                <h2 id="signal-only-facility-hub-heading">{_escape(facility_label)}</h2>
+                <p class="launch-value">Facility-directory record not available. Showing uploaded public summary fields for facility {_escape(summary.facility_number)}.</p>
+            </div>
+        </section>
+        <section aria-labelledby="signal-only-context-heading">
+            <h2 id="signal-only-context-heading">Facility-directory record not available</h2>
+            <p>Showing uploaded public summary fields because the active preloaded facility-directory data does not currently include this facility number.</p>
+            <p>This signal-only facility hub is not a facility-directory record, not source verification, not a complaint-coverage determination, not a source-completeness proof, and not a legal finding; complaint records are requested/reviewed separately.</p>
+        </section>
+        {_render_facility_review_signals_section(record, summary)}
+        {_render_facility_hub_review_context(record, review_context)}
+        {_render_facility_hub_actions(record, review_context)}
+        <section aria-labelledby="signal-only-boundaries-heading">
+            <h2 id="signal-only-boundaries-heading">Signal-only hub boundaries</h2>
+            <p>Opening this page does not auto-submit retrieval, create complaint records from signal data, mutate source-derived records, or create reviewer-created notes/statuses.</p>
+            <p>Missing local directory context means only that a local preloaded directory row is not available here. It is not complaint absence.</p>
+        </section>""",
+    )
+
+
+def _facility_record_from_signal_summary(
+    summary: FacilityReviewSignalsSummary,
+) -> CcldFacilityLookupRecord:
+    return CcldFacilityLookupRecord(
+    facility_number=summary.facility_number,
+    facility_name=summary.facility_name or summary.facility_number,
+    city="",
+    state="",
+    county=_display_tuple(summary.counties),
+    zip_code="",
+    facility_type=_display_tuple(summary.facility_types),
+    program_type="",
+    capacity=_display_tuple(summary.capacities),
+    status=_display_tuple(summary.statuses),
+    closed_date=_display_tuple(summary.closed_dates),
     )
 
 
@@ -1238,6 +1294,7 @@ def _render_facility_hub_actions(
                 <ul>
                     <li><a class="button" href="{_escape(request_href)}">Start complaint request for this facility</a></li>
 {context_actions}
+                    <li><a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}">Open facility review priority list</a></li>
                     <li><a class="button button-quiet" href="{_escape(lookup_href)}">Return to facility lookup</a></li>
                 </ul>
             </nav>
