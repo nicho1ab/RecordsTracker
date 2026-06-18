@@ -119,7 +119,9 @@ landing and detail HTML pages over the seeded fixture corpus, list-level
 reviewer-created note/status indicators and latest reviewer-created timestamp,
 plain-language record summaries, safe source traceability display, source-
 confidence cues for present, missing, and proxy-flagged local/test complaint
-fields, field-note guidance for cautious reviewer-created observations, safe
+fields, facility-context navigation cues for directory-backed facility hub,
+signal-only facility hub, and manual request context behavior, field-note guidance
+for cautious reviewer-created observations, safe
 related seeded bundle context with sensitive narrative fields hidden,
 clear missing-value wording for unavailable local/test traceability values, labeled search/
 note/status controls, note/status form delegation to the existing workflow
