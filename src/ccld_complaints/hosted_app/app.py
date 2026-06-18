@@ -37,7 +37,9 @@ from ccld_complaints.hosted_app.auth_provider_integration_plan import (
 )
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_LOOKUP_PATH,
+    CCLD_FACILITY_REVIEW_HUB_PATH,
     CcldFacilityReferenceSource,
+    CcldFacilityReviewContext,
     facility_reference_from_source_derived_records,
     route_ccld_facility_lookup_response,
     route_ccld_facility_lookup_response_with_source,
@@ -1123,9 +1125,27 @@ def route_response(
     if parsed_path == f"{CCLD_UI_PREFIX}/":
         path = CCLD_UI_PREFIX
         parsed_path = CCLD_UI_PREFIX
-    if parsed_path == CCLD_FACILITY_LOOKUP_PATH:
+    if parsed_path in {CCLD_FACILITY_LOOKUP_PATH, CCLD_FACILITY_REVIEW_HUB_PATH}:
         if active_page_data_mode == FIXTURE_DEMO_PAGE_DATA_MODE:
-            return route_ccld_facility_lookup_response(path)
+            if parsed_path == CCLD_FACILITY_LOOKUP_PATH:
+                return route_ccld_facility_lookup_response(path)
+            active_ccld_context = _default_ccld_context_for_mode(
+                active_auth_config,
+                active_page_data_mode,
+                ccld_record_request_ui_context,
+            )
+            facility_number = _first_query_value(
+                parse_qs(parsed_url.query, keep_blank_values=True),
+                "facility_number",
+            )
+            return route_ccld_facility_lookup_response_with_source(
+                path,
+                None,
+                _facility_review_context_from_context(
+                    active_ccld_context,
+                    facility_number,
+                ),
+            )
         active_ccld_context = _default_ccld_context_for_mode(
             active_auth_config,
             active_page_data_mode,
@@ -1134,7 +1154,15 @@ def route_response(
         if active_ccld_context is None:
             return _postgres_setup_required_response("Facility search setup required")
         facility_reference = _facility_reference_from_context(active_ccld_context)
-        return route_ccld_facility_lookup_response_with_source(path, facility_reference)
+        facility_number = _first_query_value(
+            parse_qs(parsed_url.query, keep_blank_values=True),
+            "facility_number",
+        )
+        return route_ccld_facility_lookup_response_with_source(
+            path,
+            facility_reference,
+            _facility_review_context_from_context(active_ccld_context, facility_number),
+        )
     if parsed_path.startswith(CCLD_UI_PREFIX):
         active_ccld_context = _default_ccld_context_for_mode(
             active_auth_config,
@@ -1387,6 +1415,82 @@ def _facility_reference_from_context(
     if not isinstance(records, list):
         records = []
     return facility_reference_from_source_derived_records(records)
+
+
+def _facility_review_context_from_context(
+    context: CcldRecordRequestUiContext | None,
+    facility_number: str,
+) -> CcldFacilityReviewContext:
+    if context is None or not facility_number:
+        return CcldFacilityReviewContext()
+    status, _content_type, body = route_source_derived_api_response(
+        "/api/source-derived-records?limit=100",
+        context.reviewer_ui_context.workflow_shell_context.source_derived_api_context,
+    )
+    if status != 200:
+        return CcldFacilityReviewContext(
+            source_label="Loaded local/test complaint context unavailable"
+        )
+    payload = json.loads(body.decode())
+    records = payload.get("records", [])
+    if not isinstance(records, list):
+        return CcldFacilityReviewContext()
+    facility_ids = {
+        _source_original_value(record, "facility_id")
+        for record in records
+        if _source_record_entity_type(record) == "facility"
+        and _source_original_value(record, "external_facility_number") == facility_number
+    }
+    facility_ids.discard("")
+    complaint_records = tuple(
+        record
+        for record in records
+        if _source_record_entity_type(record) == "complaint"
+        and (
+            _source_original_value(record, "external_facility_number") == facility_number
+            or _source_original_value(record, "facility_number") == facility_number
+            or _source_original_value(record, "facility_id") in facility_ids
+        )
+    )
+    dates = sorted(
+        {
+            value
+            for record in complaint_records
+            for value in (
+                _source_original_value(record, "complaint_received_date"),
+                _source_original_value(record, "visit_date"),
+                _source_original_value(record, "report_date"),
+                _source_original_value(record, "date_signed"),
+            )
+            if _looks_like_iso_date(value)
+        }
+    )
+    return CcldFacilityReviewContext(
+        loaded_complaint_record_count=len(complaint_records),
+        start_date=dates[0] if dates else "",
+        end_date=dates[-1] if dates else "",
+    )
+
+
+def _source_record_entity_type(record: object) -> str:
+    if isinstance(record, dict):
+        value = record.get("entity_type")
+        return value if isinstance(value, str) else ""
+    return ""
+
+
+def _source_original_value(record: object, key: str) -> str:
+    if not isinstance(record, dict):
+        return ""
+    original_values = record.get("original_values")
+    if not isinstance(original_values, dict):
+        return ""
+    value = original_values.get(key)
+    return value.strip() if isinstance(value, str) else ""
+
+
+def _looks_like_iso_date(value: str) -> bool:
+    return len(value) == 10 and value[4] == "-" and value[7] == "-"
 
 
 def _postgres_setup_required_response(heading: str) -> tuple[int, str, bytes]:

@@ -150,6 +150,7 @@ Open these local URLs on the same workstation:
 ```text
 http://127.0.0.1:8000/
 http://127.0.0.1:8000/ccld/facilities
+http://127.0.0.1:8000/ccld/facilities/detail?facility_number=157806098
 http://127.0.0.1:8000/ccld/records/request
 http://127.0.0.1:8000/ccld/retrieval/jobs
 http://127.0.0.1:8000/reviewer

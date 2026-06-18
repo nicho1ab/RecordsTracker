@@ -312,6 +312,7 @@ foreach ($dir in @($packetDir, $htmlDir, $textDir, $screenshotDir, $accessibilit
 $coreRoutes = @(
     @{ Name = "home"; Path = "/"; Label = "01-home"; ActiveHref = "/"; WorkflowStep = "Start" },
     @{ Name = "facility"; Path = "/ccld/facilities"; Label = "02-facility"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
+    @{ Name = "facility-hub"; Path = "/ccld/facilities/detail?facility_number=157806098"; Label = "02-facility-hub"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
     @{ Name = "retrieve"; Path = "/ccld/records/request"; Label = "03-retrieve"; ActiveHref = "/ccld/records/request"; WorkflowStep = "Facility" },
     @{ Name = "jobs"; Path = "/ccld/retrieval/jobs"; Label = "04-jobs"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Results" },
     @{ Name = "reviewer"; Path = "/reviewer"; Label = "05-reviewer"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
