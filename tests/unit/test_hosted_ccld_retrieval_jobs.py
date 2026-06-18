@@ -140,6 +140,10 @@ def test_retrieval_form_renders_record_type_and_safe_setup_state() -> None:
     assert blocked_status == 503
     assert "Controlled CCLD retrieval setup required" in blocked_html
     assert "No retrieval job was created" in blocked_html
+    assert "No controlled retrieval job exists for this request" in blocked_html
+    assert "Return to the request page to review already-loaded local/test records" in (
+        blocked_normalized
+    )
     assert "Operator setup checklist" in blocked_html
     assert "retrieval enablement" in blocked_normalized
     assert "server-side raw source storage" in blocked_normalized
@@ -229,6 +233,14 @@ def test_controlled_retrieval_imports_records_and_links_queue(tmp_path: Path) ->
     assert "Job state" in html
     assert "Completed" in html
     assert "Retrieval job created" in html
+    assert "Retrieval job submitted" in html
+    assert "Controlled retrieval job submitted and completed" in html
+    assert "1 loaded local/test queue row(s) are visible now" not in html
+    assert "1 complaint queue record(s) are visible now" in html
+    assert "1 complaint queue record(s) are ready for review" in html
+    assert "Complaint records ready" in html
+    assert "Retrieval status/progress summary" in html
+    assert "Next safe action" in html
     assert "Records imported" in html
     assert "Imported source derived records" in normalized
     assert "Controlled CCLD retrieval completed and imported validated records" in html
@@ -749,6 +761,10 @@ def test_retrieval_status_summary_explains_queued_running_and_failed_states() ->
     )
 
     assert "Queued" in queued_html
+    assert "Retrieval status/progress summary" in queued_html
+    assert "Current state" in queued_html
+    assert "Records ready" in queued_html
+    assert "0 imported source-derived record(s) are available from this job" in queued_html
     assert "Wait for the server-side job to start" in queued_html
     assert "Running" in running_html
     assert "Refresh the request status later" in running_html
@@ -779,6 +795,10 @@ def test_retrieval_job_history_empty_state_renders_for_allowed_local_dev_actor()
     assert "Job list" in html
     assert "Table view" in html
     assert "No retrieval jobs have been submitted" in html
+    assert "no controlled retrieval status/progress to wait on yet" in " ".join(
+        html.split()
+    )
+    assert "already-loaded local/test records" in html
     assert "Controlled retrieval setup is missing" in html
     assert "facility/date context" in html
     assert "imported-record counts" in html
@@ -860,6 +880,8 @@ def test_retrieval_job_history_renders_recent_jobs_safely_without_mutation(
     assert content_type == "text/html; charset=utf-8"
     assert before_counts == after_counts
     assert "Controlled retrieval is configured for this runtime" in html
+    assert "To review records already loaded without submitting a job" in normalized
+    assert "choose Show existing queue" in normalized
     assert "Not recorded" in html
     assert "completed-job" in html
     assert "warning-job" in html
@@ -875,6 +897,8 @@ def test_retrieval_job_history_renders_recent_jobs_safely_without_mutation(
     assert "Started timestamp" in html
     assert "Completed or last updated at" in html
     assert "Records imported" in html
+    assert "Current state" in html
+    assert "These counts summarize controlled retrieval job metadata only" in html
     assert "Review imported records in the CCLD queue" in html
     assert "Report 39 failed during fetch." in html
     assert "Completed with warnings" in html
@@ -921,6 +945,10 @@ def test_retrieval_job_detail_renders_completed_job_without_mutation(tmp_path: P
     assert before_counts == after_counts
     assert "Retrieval job detail" in html
     assert "Job summary and next step" in html
+    assert "Current status/progress" in html
+    assert "Controlled CCLD retrieval completed and imported validated records" in html
+    assert "Next safe action" in html
+    assert "Open imported records in the CCLD queue and review source traceability" in html
     assert "Technical counts, warnings, and errors" in html
     assert "completed-job" in html
     assert "Completed" in html
