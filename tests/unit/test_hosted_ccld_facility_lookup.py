@@ -23,6 +23,7 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_LOOKUP_PATH,
     CCLD_FACILITY_REFERENCE_CSV_ENV,
     CCLD_FACILITY_REVIEW_HUB_PATH,
+    CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
     CCLD_FACILITY_REVIEW_PRIORITY_PATH,
     CCLD_RECORD_REQUEST_PATH,
     PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER,
@@ -1126,6 +1127,151 @@ def test_ccld_facility_review_priority_page_does_not_mutate_hosted_tables(
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == _empty_reviewer_counts()
     assert "Facility review priority" in html
+    assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_facility_review_intelligence_dashboard_filters_sorts_and_links(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    signals_csv = tmp_path / "ChildCareCenters06072026.csv"
+    _write_program_summary_signals_csv(
+        signals_csv,
+        rows=(
+            _program_summary_signal_row(
+                facility_number="900000001",
+                facility_name="Complaint Citation Facility",
+                county="ALAMEDA",
+                capacity="24",
+                status="LICENSED",
+                last_visit_date="5/4/2026",
+                complaint_visits="4",
+                total_visits="6",
+                citation_numbers="101, 102",
+                poc_dates="06/02/2026",
+            ),
+            _program_summary_signal_row(
+                facility_number="900000002",
+                facility_name="High Capacity Facility",
+                county="SACRAMENTO",
+                capacity="80",
+                status="CLOSED",
+                closed_date="1/2/2025",
+                last_visit_date="1/5/2020",
+                total_visits="1",
+            ),
+            _program_summary_signal_row(
+                facility_number="900000003",
+                facility_name="Recent Visit Facility",
+                county="ALAMEDA",
+                capacity="30",
+                status="LICENSED",
+                last_visit_date="6/1/2026",
+                inspection_visits="1",
+                total_visits="1",
+            ),
+        ),
+    )
+    monkeypatch.setenv(FACILITY_REVIEW_SIGNALS_CSVS_ENV, str(signals_csv))
+
+    status, content_type, body = route_response(
+        f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?sort=complaint_activity",
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split()).casefold()
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Facility Review Intelligence Dashboard" in html
+    assert "Where should reviewers spend time first?" in html
+    assert "transparent review-priority indicators" in normalized_html
+    assert "Facilities with complaint activity" in html
+    assert "Facilities with citation activity" in html
+    assert "Facilities with POC activity" in html
+    assert "Facilities with recent visit activity" in html
+    assert "Facilities with long periods since last visit" in html
+    assert "High-capacity facilities" in html
+    assert "Closed facilities" in html
+    assert "Complaint visit activity present review cue" in html
+    assert "Citation indicator present review cue" in html
+    assert "POC indicator present review cue" in html
+    assert "Recent visit activity review cue" in html
+    assert "Long gap since last visit review cue" in html
+    assert "High-capacity facility review cue" in html
+    assert "Closed status in uploaded summary review cue" in html
+    assert html.index("Complaint Citation Facility") < html.index("Recent Visit Facility")
+    assert "Open Facility Review Hub for 900000001" in html
+    assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=900000001" in html
+    assert "Start Complaint Request for 900000001" in html
+    assert f"{CCLD_RECORD_REQUEST_PATH}?facility_number=900000001" in html
+    assert "Open Review Queue filtered to 900000001" in html
+    assert "not risk scores" in normalized_html
+    assert "not wrongdoing determinations" in normalized_html
+    assert "not source verification" in normalized_html
+    assert "not a complaint-coverage determination" in normalized_html
+    assert "not a source-completeness proof" in normalized_html
+    assert "not a legal finding" in normalized_html
+    assert "verified complaint" not in normalized_html
+    assert "risk score:" not in normalized_html
+    assert "wrongdoing determination:" not in normalized_html
+    assert "facility has no complaints" not in normalized_html
+    assert_no_secret_html(html)
+
+    filtered_status, _filtered_content_type, filtered_body = route_response(
+        f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?cue=High-capacity+facility&county=SACRAMENTO&status=CLOSED&sort=capacity",
+        page_data_mode="fixture-demo",
+    )
+    filtered_html = filtered_body.decode("utf-8")
+
+    assert filtered_status == 200
+    assert "High Capacity Facility" in filtered_html
+    assert "Complaint Citation Facility" not in filtered_html
+    assert "Recent Visit Facility" not in filtered_html
+
+
+def test_ccld_facility_review_intelligence_dashboard_does_not_mutate_hosted_tables(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    signals_csv = tmp_path / "FosterFamilyAgencies06072026.csv"
+    _write_program_summary_signals_csv(
+        signals_csv,
+        rows=(
+            _program_summary_signal_row(
+                facility_number="157806098",
+                facility_name="A. MIRIAM JAMISON CHILDREN'S CENTER",
+                complaint_visits="1",
+                total_visits="1",
+            ),
+        ),
+    )
+    monkeypatch.setenv(FACILITY_REVIEW_SIGNALS_CSVS_ENV, str(signals_csv))
+
+    with _seeded_connection() as connection:
+        before_source_rows = _source_rows(connection)
+        before_counts = _table_counts(connection)
+        status, content_type, body = route_response(
+            CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+            page_data_mode="fixture-demo",
+            ccld_record_request_ui_context=ccld_record_request_context_for_reviewer_context(
+                reviewer_ui_context_for_connection(
+                    connection,
+                    actor=_actor(roles=("tester_reviewer",)),
+                )
+            ),
+        )
+        after_source_rows = _source_rows(connection)
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert before_counts == after_counts == _empty_reviewer_counts()
+    assert "Facility Review Intelligence Dashboard" in html
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
     assert_no_secret_html(html)
 
