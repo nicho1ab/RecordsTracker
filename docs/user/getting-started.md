@@ -122,12 +122,15 @@ CCLD-only request page:
 
 Then open `http://127.0.0.1:8000/ccld/facilities` to search local/test CCLD
 facility reference data by facility/license number, facility name, city, county,
-ZIP code, facility type, or status. To use a full local/test facility CSV, set
+ZIP code, facility type, program type, capacity, or status code when those fields
+are present. To use a full local/test facility CSV, set
 `CCLD_FACILITY_REFERENCE_CSV` or place the file at the ignored local path
-`data/raw/ccld/facility-reference.csv`. If no full CSV is configured or available,
-the lookup falls back to the committed tiny fixture CSV. The page shows which
-reference source is active. Use a matching facility to carry the facility/license
-number into the request form. Manual entry is still available at
+`data/raw/ccld/facility-reference.csv`. The lookup supports the CCLD program
+facility shape and the CDSS/CHHS facility-directory shape with `FAC_NBR` and
+`NAME`; full/raw CSVs stay local and ignored. If no full CSV is configured or
+available, the lookup falls back to the committed tiny fixture CSV. The page
+shows which reference source is active. Use a matching facility to carry the
+facility/license number into the request form. Manual entry is still available at
 `http://127.0.0.1:8000/ccld/records/request` when you already know the number.
 The request form and result queue show a request-context confirmation so you can
 check whether the request came from facility lookup or manual entry, which

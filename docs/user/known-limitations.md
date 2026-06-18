@@ -169,10 +169,12 @@
   still a local/test step and does not prove public-source completeness or
   automate production imports.
 - The local hosted scaffold `/ccld/facilities` lookup page can read a full
-  local/test CCLD facility reference CSV from `CCLD_FACILITY_REFERENCE_CSV` or
-  ignored local path `data/raw/ccld/facility-reference.csv`; otherwise it falls
-  back to the committed tiny CCLD program facility reference CSV fixture. It
-  displays a bounded safe subset of fields for lookup assistance. It does not
+  local/test CCLD program facility CSV or CDSS/CHHS facility-directory CSV from
+  `CCLD_FACILITY_REFERENCE_CSV` or ignored local path
+  `data/raw/ccld/facility-reference.csv`; otherwise it falls back to the
+  committed tiny CCLD program facility reference CSV fixture. It displays a
+  bounded safe subset of facility number, name, location, county, facility type,
+  program type, capacity, and status fields for lookup assistance. It does not
   read generated profiling outputs, SQLite, a hosted database, live public-source
   data, import output, authentication state, or reviewer-created state, and it
   does not prove source completeness, statewide coverage, official facility

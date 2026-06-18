@@ -41,7 +41,8 @@ hosted tester MVP ADR boundaries.
 
 The following uploaded local source examples are known planning inputs by file
 name only. They are not tracked in the repository at the time this inventory was
-added, and this branch does not add them:
+added, and full/raw copies must remain untracked unless a later task explicitly
+approves repository storage:
 
 - `CDSS_CCL_Facilities_2065342970436235361.csv`
 - `community-care-licensing-facilities-metadata.csv`
@@ -55,6 +56,16 @@ Do not commit raw full-size CSVs unless they are already intentionally tracked
 and approved for repository storage. Use them locally for source profiling until
 an implementation task approves tiny sampled fixtures or a controlled raw-data
 storage approach.
+
+The hosted CCLD facility lookup can use `CDSS_CCL_Facilities_2065342970436235361.csv`
+as an ignored local facility-directory reference input through
+`CCLD_FACILITY_REFERENCE_CSV` or `data/raw/ccld/facility-reference.csv`. That
+support is limited to preloaded local/test lookup and request-page type-ahead
+fields such as `FAC_NBR`, `NAME`, `PROGRAM_TYPE`, `STATUS`, `CAPACITY`, location,
+county, and facility type. It does not commit the raw CSV, import rows, add a
+connector, change schemas or migrations, populate source-derived records, verify
+official facility status, prove complaint coverage, or make source-completeness
+claims.
 
 Recommended local profiling before implementation:
 

@@ -618,7 +618,7 @@ def _render_facility_selection_state(reference_source: CcldFacilityReferenceSour
             <p>Search for a facility when you do not know the exact facility/license number, or type the digit facility/license number directly if you already have it.</p>
             <form action="{CCLD_RECORD_REQUEST_PATH}" method="get" id="facility-select-form">
                 <label for="facility-search-input">Facility</label>
-                <p id="facility-search-hint" class="helper-text">Search by name, license number, city, ZIP, type, or status. Keyboard flow: type a search or digit number, use arrow keys or Tab to review suggestions and actions, then confirm facility to continue to date range.</p>
+                <p id="facility-search-hint" class="helper-text">Search by name, license number, city, county, ZIP, facility type, program type, or status code. Keyboard flow: type a search or digit number, use arrow keys or Tab to review suggestions and actions, then confirm facility to continue to date range.</p>
                 <div class="facility-combobox-outer" id="facility-combobox-outer">
                     <input id="facility-search-input" name="facility_number" type="text"
                         inputmode="numeric"
@@ -935,8 +935,9 @@ def _render_key_terms_section() -> str:
                 <dt>Facility/license number</dt>
                 <dd>The digit identifier CCLD uses for the facility or license record scope.</dd>
                 <dt>Facility lookup</dt>
-                <dd>A local/test search over committed CCLD facility reference CSV fields such
-                as facility/license number, name, city, county, ZIP code, type, and status.</dd>
+                <dd>A local/test search over preloaded public facility-directory CSV fields such
+                as facility/license number, name, city, county, ZIP code, facility type,
+                program type, capacity, and status code.</dd>
                 <dt>CCLD request context</dt>
                 <dd>The facility/license number, optional date range, request origin, and active
                 local/test facility reference source used for this request.</dd>

@@ -9,6 +9,7 @@ import pytest
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.engine import Connection
 
+from ccld_complaints.hosted_app import ccld_facility_lookup as facility_lookup
 from ccld_complaints.hosted_app.app import route_response
 from ccld_complaints.hosted_app.audit_events import hosted_audit_events
 from ccld_complaints.hosted_app.auth import (
@@ -52,6 +53,18 @@ TEST_SCOPE = LOCAL_REVIEWER_UI_SCOPE
 COMPLAINT_KEY = "complaint:ccld:complaint:32-CR-20220407124448"
 
 
+@pytest.fixture(autouse=True)
+def _ignore_local_default_full_facility_reference(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(
+        facility_lookup,
+        "DEFAULT_FULL_CCLD_FACILITY_REFERENCE_PATH",
+        tmp_path / "missing-facility-reference.csv",
+    )
+
+
 def _local_dev_auth_config() -> Any:
     return load_hosted_auth_runtime_config(
         environ={
@@ -90,12 +103,59 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "Which facility should be reviewed?" in html
     assert CCLD_FACILITY_LOOKUP_PATH in html
     assert "Confirm facility" in html
-    assert "Search by name, license number, city, ZIP, type, or status." in html
+    assert "Search by name, license number, city, county, ZIP" in html
+    assert "facility type, program type, or status code" in html
     assert "Keyboard flow: type a search or digit number" in html
     assert "Retrieval not configured" in html
     assert "Find facility" in html
     assert "Review boundary" not in html
     assert "provider" not in html.casefold()
+    assert_no_secret_html(html)
+
+
+def test_ccld_record_request_page_embeds_cdss_chhs_facility_directory_reference(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    full_csv = tmp_path / "CDSS_CCL_Facilities_2065342970436235361.csv"
+    _write_chhs_facility_directory_csv(
+        full_csv,
+        rows=(
+            {
+                "FAC_NBR": "214005552",
+                "NAME": "SUSD- TOMALES PRESCHOOL",
+                "PROGRAM_TYPE": "CHILD CARE",
+                "STATUS": "3",
+                "CAPACITY": "24",
+                "RES_CITY": "TOMALES",
+                "RES_STATE": "CA",
+                "RES_ZIP_CODE": "94971",
+                "COUNTY": "Marin",
+                "FAC_TYPE_DESC": "DAY CARE CENTER",
+                "RES_STREET_ADDR": "40 JOHN STREET",
+                "FAC_PHONE_NBR": "7078782214",
+            },
+        ),
+    )
+    monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(full_csv))
+
+    status, content_type, body = route_response(
+        CCLD_RECORD_REQUEST_PATH,
+        auth_runtime_config=_local_dev_auth_config(),
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert 'id="facility-reference-json"' in html
+    assert '"num": "214005552"' in html
+    assert '"n": "SUSD- TOMALES PRESCHOOL"' in html
+    assert '"state": "CA"' in html
+    assert '"p": "CHILD CARE"' in html
+    assert '"cap": "24"' in html
+    assert "40 JOHN STREET" not in html
+    assert "7078782214" not in html
     assert_no_secret_html(html)
 
 
@@ -241,7 +301,8 @@ def test_ccld_record_request_manual_entry_shows_context_confirmation() -> None:
     assert "Which facility should be reviewed?" in html
     assert "type the digit facility/license number directly" in html
     assert "Retrieval not configured" in html
-    assert "Search by name, license number, city, ZIP, type, or status." in normalized_html
+    assert "Search by name, license number, city, county, ZIP" in normalized_html
+    assert "facility type, program type, or status code" in normalized_html
     assert "name=\"request_context_origin\"" in html
     assert "value=\"manual_entry\"" in html
     assert_no_secret_html(html)
@@ -1071,7 +1132,8 @@ def test_ccld_request_page_facility_selector_has_concise_placeholder() -> None:
 
     assert status == 200
     assert 'placeholder="Facility/license number"' in html
-    assert "Search by name, license number, city, ZIP, type, or status." in html
+    assert "Search by name, license number, city, county, ZIP" in html
+    assert "facility type, program type, or status code" in html
     # Placeholder must not be the full helper sentence
     assert 'placeholder="Search facility name' not in html
     assert_no_secret_html(html)
@@ -1133,6 +1195,42 @@ def _feedback_checklist(markup: str) -> str:
 
 def _form_bytes(payload: dict[str, str]) -> bytes:
     return urlencode(payload).encode("utf-8")
+
+
+def _write_chhs_facility_directory_csv(
+    path: Path,
+    *,
+    rows: tuple[dict[str, str], ...],
+) -> None:
+    fieldnames = (
+        "FAC_LATITUDE",
+        "FAC_LONGITUDE",
+        "FAC_NBR",
+        "TYPE",
+        "PROGRAM_TYPE",
+        "STATUS",
+        "CLIENT_SERVED",
+        "CAPACITY",
+        "NAME",
+        "RES_STREET_ADDR",
+        "RES_CITY",
+        "RES_STATE",
+        "RES_ZIP_CODE",
+        "FAC_PHONE_NBR",
+        "FAC_CO_NBR",
+        "COUNTY",
+        "FAC_DO_DESC",
+        "FAC_TYPE_DESC",
+        "ObjectId",
+        "x",
+        "y",
+    )
+    with path.open("w", encoding="utf-8", newline="") as fixture_file:
+        fixture_file.write(",".join(fieldnames) + "\n")
+        for row in rows:
+            fixture_file.write(
+                ",".join(row.get(fieldname, "") for fieldname in fieldnames) + "\n"
+            )
 
 
 def _seeded_connection() -> Connection:

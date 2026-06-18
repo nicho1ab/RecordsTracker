@@ -1,6 +1,18 @@
 # Changelog
 
 ## Unreleased
+- Added preloaded hosted CCLD facility-directory lookup support for the
+	CDSS/CHHS facility CSV shape with `FAC_NBR`, `NAME`, `PROGRAM_TYPE`,
+	`STATUS`, `CAPACITY`, location, county, and facility-type fields. The lookup
+	and request-page type-ahead can use an ignored full local CSV from
+	`CCLD_FACILITY_REFERENCE_CSV` or `data/raw/ccld/facility-reference.csv`, keep
+	facility numbers as strings, deduplicate exact duplicate rows, preserve
+	distinct duplicate facility-number rows, and display only safe scalar
+	directory fields. Full raw CSVs remain uncommitted and ignored. Retrieval
+	behavior, schemas, migrations, connectors, imports, source-derived records,
+	reviewer-created writes, legal conclusions, complaint coverage, and source-
+	completeness claims are unchanged.
+
 - Improved hosted reviewer detail source-traceability clarity. Reviewer detail
   now explains what visible traceability cues mean, what locally missing
   traceability cues do and do not mean, what to check before reviewer-created

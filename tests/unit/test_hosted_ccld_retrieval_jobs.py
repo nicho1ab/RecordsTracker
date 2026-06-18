@@ -120,7 +120,8 @@ def test_retrieval_form_renders_record_type_and_safe_setup_state() -> None:
     assert "Retrieve complaint records" in html
     assert "facility-suggestion-list" in html
     assert "Confirm facility" in html
-    assert "Search by name, license number, city, ZIP, type, or status." in html
+    assert "Search by name, license number, city, county, ZIP" in html
+    assert "facility type, program type, or status code" in html
     assert "Review boundary" not in normalized
     assert "Confirm facility" in html
     assert "Find facility" in html
