@@ -241,7 +241,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"No retrieval jobs have been submitted" not in ccld_retrieval_history_body
         or b"Controlled retrieval setup is missing" not in ccld_retrieval_history_body
         or b"Submit or change retrieval request" not in ccld_retrieval_history_body
-        or b"Send tester feedback" not in ccld_retrieval_history_body
+        or b"Report confusing retrieval progress" not in ccld_retrieval_history_body
     ):
         raise RuntimeError("Hosted scaffold retrieval job history did not return safe guidance.")
     if (
@@ -301,7 +301,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Controlled CCLD retrieval setup required" not in ccld_retrieval_setup_body
         or b"No retrieval job was created" not in ccld_retrieval_setup_body
         or b"Operator setup checklist" not in ccld_retrieval_setup_body
-        or b"Send tester feedback" not in ccld_retrieval_setup_body
+        or b"Report retrieval setup confusion" not in ccld_retrieval_setup_body
     ):
         raise RuntimeError("Hosted scaffold retrieval setup state did not return safe guidance.")
     if (
