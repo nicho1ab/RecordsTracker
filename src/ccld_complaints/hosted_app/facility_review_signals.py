@@ -175,10 +175,14 @@ def _load_signal_records_from_path(path: Path) -> _FileLoadResult:
             unsupported_row_count = 0
             expected_column_count = len(header)
             for row in reader:
-                if len(row) != expected_column_count:
+                if len(row) < expected_column_count:
                     malformed_count += 1
                     continue
-                record = _record_from_program_summary_row(dict(zip(header, row, strict=True)), path.name)
+                supported_values = tuple(row[:expected_column_count])
+                record = _record_from_program_summary_row(
+                    dict(zip(header, supported_values, strict=True)),
+                    path.name,
+                )
                 if record is None:
                     unsupported_row_count += 1
                 else:
