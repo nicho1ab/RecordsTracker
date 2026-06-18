@@ -273,6 +273,14 @@ records and must not imply complaint coverage, source completeness, license
 validity, legal conclusions, official findings, assignment, claiming,
 correction application, export approval, certified report status, retrieval
 submission, or source-derived/reviewer-created mutation.
+Facility review signals on that hub may summarize supported uploaded public
+summary fields when they help testers decide what to review next. They should
+use cautious `review cue` wording, prefer concise scalar counts/dates/statuses,
+and direct testers to complaint request, loaded records, reviewer queue, and
+source traceability checks. They must not score facilities, verify sources,
+confirm complaints, imply complaint absence, or treat licensing/visit/citation
+summary rows as legal findings, complaint records, license validity, complaint
+coverage, or source-completeness proof.
 The request and queue pages should also make the active request context visible:
 whether it came from facility lookup or manual entry, which facility/license
 number and date range are being used, which local/test facility reference source

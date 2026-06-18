@@ -172,6 +172,14 @@
     and it does not prove source completeness, statewide coverage, official
     facility status, complaint availability, or legal or facility-wide
     conclusions. Full/raw facility CSV files must not be committed.
+- The local hosted scaffold facility hub can show facility review signals from
+    supported ignored uploaded public licensing/visit/citation summary CSVs.
+    These signals are uploaded public summary fields only, not complaint records,
+    not source verification, not legal findings, not complaint-coverage
+    determinations, and not source-completeness proof. Malformed, shifted, or
+    unsupported rows are skipped or counted internally without displaying raw row
+    contents. Missing signals do not mean a facility has no complaints, visits,
+    citations, POC dates, or public-source records.
 - Production-readiness items such as source-verification planning, auth provider
     integration, audit UI/export, export packet generation, reset/reload execution,
     public deployment, production monitoring, database-backed lookup, non-CCLD
