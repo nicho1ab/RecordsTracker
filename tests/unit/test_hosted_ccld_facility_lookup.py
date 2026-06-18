@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.engine import Connection
 
+from ccld_complaints.hosted_app import ccld_facility_lookup as facility_lookup
 from ccld_complaints.hosted_app.app import route_response
 from ccld_complaints.hosted_app.audit_events import hosted_audit_events
 from ccld_complaints.hosted_app.auth import (
@@ -49,6 +50,18 @@ FIXTURE = Path("tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json
 TEST_SCOPE = LOCAL_REVIEWER_UI_SCOPE
 
 
+@pytest.fixture(autouse=True)
+def _ignore_local_default_full_facility_reference(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(
+        facility_lookup,
+        "DEFAULT_FULL_CCLD_FACILITY_REFERENCE_PATH",
+        tmp_path / "missing-facility-reference.csv",
+    )
+
+
 def _local_dev_auth_config() -> Any:
     return load_hosted_auth_runtime_config(
         environ={
@@ -67,9 +80,12 @@ def test_ccld_facility_reference_loads_safe_lookup_columns() -> None:
         facility_number="900000001",
         facility_name="Synthetic Orchard Child Care",
         city="Sample City",
+        state="CA",
         county="Los Angeles",
         zip_code="90001",
         facility_type="Child Care Center",
+        program_type="",
+        capacity="24",
         status="Licensed",
         closed_date="",
     )
@@ -180,6 +196,160 @@ def test_active_ccld_facility_reference_uses_configured_full_local_csv(
     assert result.reference_source == source
 
 
+def test_active_ccld_facility_reference_loads_cdss_chhs_facility_directory_shape(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    full_csv = tmp_path / "CDSS_CCL_Facilities_2065342970436235361.csv"
+    _write_chhs_facility_directory_csv(
+        full_csv,
+        rows=(
+            {
+                "FAC_NBR": "214005552",
+                "NAME": "SUSD- TOMALES PRESCHOOL",
+                "PROGRAM_TYPE": "CHILD CARE",
+                "STATUS": "3",
+                "CAPACITY": "24",
+                "RES_CITY": "TOMALES",
+                "RES_STATE": "CA",
+                "RES_ZIP_CODE": "94971",
+                "COUNTY": "Marin",
+                "FAC_TYPE_DESC": "DAY CARE CENTER",
+                "RES_STREET_ADDR": "40 JOHN STREET",
+                "FAC_PHONE_NBR": "7078782214",
+                "FAC_LATITUDE": "38.24546602",
+                "FAC_LONGITUDE": "-122.901353",
+            },
+        ),
+    )
+    monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(full_csv))
+
+    source = load_active_ccld_facility_reference()
+    [record] = source.records
+
+    assert source.source_kind == "full_local_test_csv"
+    assert source.path_label == full_csv.name
+    assert record.facility_number == "214005552"
+    assert isinstance(record.facility_number, str)
+    assert record.facility_name == "SUSD- TOMALES PRESCHOOL"
+    assert record.city == "TOMALES"
+    assert record.state == "CA"
+    assert record.county == "Marin"
+    assert record.zip_code == "94971"
+    assert record.facility_type == "DAY CARE CENTER"
+    assert record.program_type == "CHILD CARE"
+    assert record.capacity == "24"
+    assert record.status == "3"
+    assert record.closed_date == ""
+
+
+def test_cdss_chhs_facility_directory_searches_supported_fields(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    full_csv = tmp_path / "facility-reference.csv"
+    _write_chhs_facility_directory_csv(
+        full_csv,
+        rows=(
+            {
+                "FAC_NBR": "214005552",
+                "NAME": "SUSD- TOMALES PRESCHOOL",
+                "PROGRAM_TYPE": "CHILD CARE",
+                "STATUS": "3",
+                "CAPACITY": "24",
+                "RES_CITY": "TOMALES",
+                "RES_STATE": "CA",
+                "RES_ZIP_CODE": "94971",
+                "COUNTY": "Marin",
+                "FAC_TYPE_DESC": "DAY CARE CENTER",
+            },
+            {
+                "FAC_NBR": "496804122",
+                "NAME": "MIRABEL LODGE",
+                "PROGRAM_TYPE": "ADULT AND SENIOR",
+                "STATUS": "3",
+                "CAPACITY": "34",
+                "RES_CITY": "FORESTVILLE",
+                "RES_STATE": "CA",
+                "RES_ZIP_CODE": "95436",
+                "COUNTY": "Sonoma",
+                "FAC_TYPE_DESC": "RESIDENTIAL-ELDERLY",
+            },
+        ),
+    )
+    monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(full_csv))
+    records = load_active_ccld_facility_reference().records
+
+    assert _matching_facility_numbers("214005", records) == ["214005552"]
+    assert _matching_facility_numbers("tomales preschool", records) == ["214005552"]
+    assert _matching_facility_numbers("forestville sonoma", records) == ["496804122"]
+    assert _matching_facility_numbers("95436", records) == ["496804122"]
+    assert _matching_facility_numbers("residential elderly", records) == ["496804122"]
+    assert _matching_facility_numbers("adult senior", records) == ["496804122"]
+    assert _matching_facility_numbers("capacity 34", records) == []
+    assert _matching_facility_numbers("34", records) == ["496804122"]
+
+
+def test_facility_directory_duplicate_facility_numbers_are_deterministic(
+    tmp_path: Path,
+) -> None:
+    full_csv = tmp_path / "duplicate-facility-reference.csv"
+    _write_chhs_facility_directory_csv(
+        full_csv,
+        rows=(
+            {
+                "FAC_NBR": "900123456",
+                "NAME": "DUPLICATE NUMBER CHILD CARE",
+                "PROGRAM_TYPE": "CHILD CARE",
+                "STATUS": "3",
+                "CAPACITY": "24",
+                "RES_CITY": "ALPHA",
+                "RES_STATE": "CA",
+                "RES_ZIP_CODE": "90001",
+                "COUNTY": "Los Angeles",
+                "FAC_TYPE_DESC": "DAY CARE CENTER",
+            },
+            {
+                "FAC_NBR": "900123456",
+                "NAME": "DUPLICATE NUMBER CHILD CARE",
+                "PROGRAM_TYPE": "CHILD CARE",
+                "STATUS": "3",
+                "CAPACITY": "24",
+                "RES_CITY": "ALPHA",
+                "RES_STATE": "CA",
+                "RES_ZIP_CODE": "90001",
+                "COUNTY": "Los Angeles",
+                "FAC_TYPE_DESC": "DAY CARE CENTER",
+            },
+            {
+                "FAC_NBR": "900123456",
+                "NAME": "DUPLICATE NUMBER SENIOR CARE",
+                "PROGRAM_TYPE": "ADULT AND SENIOR",
+                "STATUS": "3",
+                "CAPACITY": "12",
+                "RES_CITY": "BETA",
+                "RES_STATE": "CA",
+                "RES_ZIP_CODE": "90002",
+                "COUNTY": "Los Angeles",
+                "FAC_TYPE_DESC": "RESIDENTIAL-ELDERLY",
+            },
+        ),
+    )
+
+    records = load_ccld_facility_reference(full_csv)
+    result = search_ccld_facilities("900123456", records, result_limit=10)
+
+    assert len(records) == 2
+    assert [record.facility_name for record in records] == [
+        "DUPLICATE NUMBER CHILD CARE",
+        "DUPLICATE NUMBER SENIOR CARE",
+    ]
+    assert [record.facility_number for record in result.returned_records] == [
+        "900123456",
+        "900123456",
+    ]
+
+
 def test_ccld_facility_lookup_route_renders_configured_full_csv_source(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -286,9 +456,12 @@ def test_ccld_facility_search_is_bounded_and_deterministic() -> None:
             facility_number=f"9000000{index:02d}",
             facility_name=f"Synthetic Match {index:02d}",
             city="Sample City",
+            state="CA",
             county="Los Angeles",
             zip_code="90001",
             facility_type="Child Care Center",
+            program_type="Child Care",
+            capacity="24",
             status="Licensed",
             closed_date="",
         )
@@ -321,17 +494,23 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert '<main id="main-content" tabindex="-1">' in html
     assert "Find a facility" in html
     assert "Start review by finding the CCLD facility/license number" in html
+    assert "preloaded facility directory" in html
     assert "Lookup or manual entry?" in html
     assert "Use facility lookup when you know a facility name" in html
+    assert "facility type, program type, or status code" in html
     assert "Use manual entry when you already know the digit facility/license number" in html
-    assert "Lookup rows are local/test reference assistance" in html
-    assert "not complaint source truth" in html
+    assert "Lookup rows are public facility-directory data" in html
+    assert "Complaint records are retrieved separately" in html
+    assert "not complaint coverage" in html
+    assert "not source-completeness proof" in html
+    assert "not license-validity proof" in html
     assert 'for="facility-search-input"' in html
     assert "facility-suggestion-list" in html
     assert "Search CCLD facilities" in html
-    assert "Search by name, license number, city, ZIP, type, or status." in (
+    assert "Search by name, license number, city, county, ZIP" in (
         normalized_html
     )
+    assert "facility type, program type, or status code" in normalized_html
     assert "Keyboard flow: type a search, use arrow keys or Tab" in html
     assert "selected facility link to continue to the request page" in html
     assert "Enter a facility/license number directly" in html
@@ -352,8 +531,11 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Facility matches" in html
+    assert "Facility-directory results" in html
+    assert "These are public facility-directory results" in html
+    assert "Complaint records are retrieved separately" in html
     assert "Showing 1 of 1 matching facility." in normalized_html
-    assert "Use this facility for complaint record retrieval" in html
+    assert "Start complaint request for facility 900000001" in html
     assert "Find a facility" in html
     assert request_href in html
     assert "request_context_origin=facility_lookup" in html
@@ -361,9 +543,13 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
     assert "900000001" in html
     assert "Synthetic Orchard Child Care" in html
     assert "Sample City" in html
+    assert "CA 90001" in html
     assert "Los Angeles" in html
     assert "90001" in html
     assert "Child Care Center" in html
+    assert "Capacity directory field" in html
+    assert "24" in html
+    assert "Status code directory field" in html
     assert "Licensed" in html
     assert "Example Licensee" not in html
     assert "555-0101" not in html
@@ -381,10 +567,11 @@ def test_ccld_facility_lookup_page_shows_no_match_guidance() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "No facilities matched" in html
-    assert "Try a shorter name, license number, city, ZIP, or facility type." in (
+    assert "No facility-directory results matched" in html
+    assert "Try a shorter name, license number, city, county, ZIP" in (
         normalized_html
     )
+    assert "facility type, or program type" in normalized_html
     assert "Open request form" in html
     assert_no_secret_html(html)
 
@@ -471,7 +658,8 @@ def test_ccld_facility_lookup_page_has_concise_placeholder_not_full_helper_sente
     # Concise placeholder (not the full helper sentence)
     assert 'placeholder="Name, license number, city, or ZIP"' in html
     # Full helper text must appear separately (not inside the placeholder)
-    assert "Search by name, license number, city, ZIP, type, or status." in normalized_html
+    assert "Search by name, license number, city, county, ZIP" in normalized_html
+    assert "facility type, program type, or status code" in normalized_html
     assert_no_secret_html(html)
 
 
@@ -550,7 +738,7 @@ def test_ccld_facility_lookup_result_card_review_action_has_descriptive_label() 
 
     assert status == 200
     assert (
-        'aria-label="Use Synthetic Orchard Child Care / 900000001 for complaint record retrieval"'
+        'aria-label="Start complaint request for facility 900000001 (Synthetic Orchard Child Care)"'
         in html
     )
     assert_no_secret_html(html)
@@ -609,6 +797,42 @@ def _write_facility_reference_csv(
         "Facility Status",
         "License First Date",
         "Closed Date",
+    )
+    with path.open("w", encoding="utf-8", newline="") as fixture_file:
+        fixture_file.write(",".join(fieldnames) + "\n")
+        for row in rows:
+            fixture_file.write(
+                ",".join(row.get(fieldname, "") for fieldname in fieldnames) + "\n"
+            )
+
+
+def _write_chhs_facility_directory_csv(
+    path: Path,
+    *,
+    rows: tuple[dict[str, str], ...],
+) -> None:
+    fieldnames = (
+        "FAC_LATITUDE",
+        "FAC_LONGITUDE",
+        "FAC_NBR",
+        "TYPE",
+        "PROGRAM_TYPE",
+        "STATUS",
+        "CLIENT_SERVED",
+        "CAPACITY",
+        "NAME",
+        "RES_STREET_ADDR",
+        "RES_CITY",
+        "RES_STATE",
+        "RES_ZIP_CODE",
+        "FAC_PHONE_NBR",
+        "FAC_CO_NBR",
+        "COUNTY",
+        "FAC_DO_DESC",
+        "FAC_TYPE_DESC",
+        "ObjectId",
+        "x",
+        "y",
     )
     with path.open("w", encoding="utf-8", newline="") as fixture_file:
         fixture_file.write(",".join(fieldnames) + "\n")

@@ -382,15 +382,16 @@ The scaffold includes a browser-accessible local/test CCLD facility lookup page 
 http://127.0.0.1:8000/ccld/facilities
 ```
 
-The lookup is CCLD-only. It reads a full local/test CCLD program facility
-reference CSV when `CCLD_FACILITY_REFERENCE_CSV` points to one or when a file is
-available at the ignored local path `data/raw/ccld/facility-reference.csv`. When
-that full CSV is not configured, unavailable, or malformed, the lookup falls back
-to the committed tiny fixture CSV. Testers can search by facility/license number,
-facility name, city, county, ZIP code, facility type, or status when those fields
-are present. Results are bounded and display safe scalar fields only. The active
-reference source and any fallback guidance are visible on the page. The `Use for
-retrieval` action carries the selected facility/license number into
+The lookup is CCLD-only. It reads a full local/test CCLD program facility CSV or
+CDSS/CHHS facility-directory CSV when `CCLD_FACILITY_REFERENCE_CSV` points to one
+or when a file is available at the ignored local path
+`data/raw/ccld/facility-reference.csv`. When that full CSV is not configured,
+unavailable, or malformed, the lookup falls back to the committed tiny fixture
+CSV. Testers can search by facility/license number, facility name, city, county,
+ZIP code, facility type, program type, capacity, or status code when those fields
+are present. Results are bounded and display safe scalar directory fields only.
+The active reference source and any fallback guidance are visible on the page.
+The `Start complaint request` action carries the selected facility/license number into
 `/ccld/records/request`. Manual facility/license entry on the request page remains
 available.
 The request page includes a polished inline type-ahead combobox (accessible
