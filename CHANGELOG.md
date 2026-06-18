@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased
+- Fixed facility review signal parsing for supported uploaded public summary rows
+	that include trailing repeated complaint-detail columns after the supported
+	summary header. The loader now uses only the supported leading summary fields,
+	ignores trailing detail values, and still skips rows that are too short or have
+	unsupported facility identifiers. Signal-only facility hubs can now render for
+	those facilities without exposing trailing complaint-detail values. Retrieval,
+	extraction, schemas, migrations, source-derived records, reviewer-created state,
+	feedback, packets, exports, correction, assignment, claiming, source
+	verification, complaint coverage, source completeness, and legal conclusions are
+	unchanged.
+
 - Added signal-only facility hub support for facilities that appear in supported
 	uploaded public summary signals but not in the active preloaded facility
 	directory. When a directory row is not available locally, the facility hub can

@@ -16,6 +16,13 @@ Every extraction bug fix must add a failing fixture or test before the fix is ac
 
 Every bug fix, CI failure fix, or repeated review correction must include a root-cause review. If the root cause reveals a missing, unclear, or too-weak project rule, add or update the relevant governance, testing, fixture, connector, or workflow documentation in the same change. If no governance change is needed, state why in the PR or handoff.
 
+Facility review signal parser fixes must include fixture-style rows that cover
+the observed public CSV shape, including supported leading summary columns with
+trailing repeated detail columns when those trailing values are intentionally not
+rendered. Tests must prove unsupported, too-short, shifted, or private trailing
+detail values are skipped or ignored without creating source-derived complaint
+records or exposing private row contents.
+
 ### Contract tests
 
 Validate connector output against JSON schemas and the source connector contract.
