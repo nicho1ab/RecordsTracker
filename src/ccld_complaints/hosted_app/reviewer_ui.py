@@ -2932,12 +2932,23 @@ def _render_source_traceability_section(
 ) -> str:
         return f"""<section id="traceability-heading" aria-labelledby="traceability-title">
             <h2 id="traceability-title">Source traceability summary</h2>
-      <p>Use these fields to confirm which local/test source-derived complaint record is
-      selected and how it remains tied to preserved public-source material before adding a
-      reviewer-created note or status.</p>
-    <p>Check source traceability before relying on source-derived values in notes, status,
-    packet preview, or packet draft. If traceability looks confusing or incomplete, use
-    feedback with the selected record identifiers below.</p>
+            <p>This summary names which traceability cues are visible and which are locally
+            missing in this local/test detail view so reviewers can decide what to check before
+            reviewer-created notes/status, packet preparation, or feedback.</p>
+        <p><strong>Traceability values available means</strong> this page has visible local/test
+        identifiers or source-document cues that help identify and check the selected
+        source-derived record. It does not verify the source record or make a completeness
+        claim.</p>
+        <p><strong>Missing local/test traceability values means</strong> this local/test display
+        does not have that cue. It is not public-source absence, not proof that the source
+        lacks a record/event, and not source-completeness proof.</p>
+        <p><strong>Check first:</strong> confirm available and missing traceability cues before
+        relying on source-derived values in reviewer-created notes/status, packet preview, or
+        packet draft. If traceability looks confusing or incomplete, use feedback with the
+        selected record identifiers below.</p>
+        <p><strong>Next safe actions:</strong> continue review, add cautious reviewer-created
+        note/status wording only when it helps the local/test queue, use feedback when
+        traceability is confusing, or return to the queue.</p>
         <p><strong>Correction-readiness cue:</strong> if a source-derived value looks wrong or
         incomplete, check source traceability first, then document the possible correction concern
         in a reviewer-created note for now. Use feedback when the correction-readiness path is
@@ -2953,8 +2964,16 @@ def _render_source_traceability_section(
                 <dd>{_escape(_source_traceability_cue(source_document))}</dd>
                 <dt>Traceability values available</dt>
                 <dd>{_escape(_available_traceability_values_text(source_document))}</dd>
+                <dt>What available means</dt>
+                <dd>Visible local/test identifiers or source-document cues can help identify and
+                check the selected source-derived record; they are not source verification or a
+                source-completeness claim.</dd>
                 <dt>Missing local/test traceability values</dt>
                 <dd>{_escape(_missing_traceability_values_text(source_document))}</dd>
+                <dt>What missing locally means</dt>
+                <dd>This local/test detail view does not have that cue; it is not public-source
+                absence, not proof that an event did or did not happen, and not source-completeness
+                proof.</dd>
                 <dt>Source URL</dt>
                 <dd>{_escape(_availability_label(source_document.get('source_url')))}</dd>
                 <dt>Raw SHA-256</dt>
@@ -2963,6 +2982,10 @@ def _render_source_traceability_section(
                 <dd>{_escape(_connector_retrieval_availability(source_document))}</dd>
                 <dt>Reviewer-created separation</dt>
                 <dd>Source-derived values remain separate from reviewer-created notes/status.</dd>
+                <dt>Next safe action</dt>
+                <dd>Check traceability first, use cautious reviewer-created note/status wording
+                only when it helps, use feedback for confusing traceability, or return to the
+                queue.</dd>
             </dl>
             {_render_traceability_summary(source_document, source_traceability, import_batch)}
             <details class="technical-details">
