@@ -25,6 +25,7 @@ CCLD_RECORD_REQUEST_PATH = "/ccld/records/request"
 REVIEWER_UI_RECORDS_PATH = "/reviewer/records"
 REVIEWER_UI_PACKET_PREVIEW_PATH = "/reviewer/packet/preview"
 REVIEWER_UI_PACKET_DRAFT_PATH = "/reviewer/packet/draft"
+PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER = "434417302"
 DEFAULT_CCLD_FACILITY_REFERENCE_PATH = Path(
     "tests/fixtures/public_source_facilities/ccld_program_facilities_tiny.csv"
 )
@@ -448,6 +449,7 @@ def render_ccld_facility_lookup_page(
       <h2 id="facility-start-guidance-heading">Lookup or manual entry?</h2>
       <p>Use facility lookup when you know a facility name, city, county, ZIP, facility type, program type, or status code but not the exact facility/license number. Use manual entry when you already know the digit facility/license number.</p>
       <p>Lookup rows are public facility-directory data for local/test reference assistance. Complaint records are retrieved separately, and directory rows are not complaint coverage, not source-completeness proof, not license-validity proof, and not legal or facility-wide conclusions.</p>
+            <p>Try a preloaded facility-directory example: <a href="{_escape(_facility_hub_href(PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER))}">open facility review hub for known loaded facility {PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER}</a>.</p>
     </section>
     {_render_facility_combobox_section(reference_source, query, limited_note)}
     {_render_lookup_results(result)}

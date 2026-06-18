@@ -25,6 +25,7 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_REVIEW_HUB_PATH,
     CCLD_FACILITY_REVIEW_PRIORITY_PATH,
     CCLD_RECORD_REQUEST_PATH,
+    PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER,
     CcldFacilityLookupRecord,
     load_active_ccld_facility_reference,
     load_ccld_facility_reference,
@@ -510,6 +511,10 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert "Use facility lookup when you know a facility name" in html
     assert "facility type, program type, or status code" in html
     assert "Use manual entry when you already know the digit facility/license number" in html
+    assert "Try a preloaded facility-directory example" in html
+    assert "known loaded facility 434417302" in html
+    assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=434417302" in html
+    assert PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER == "434417302"
     assert "Lookup rows are public facility-directory data" in html
     assert "Complaint records are retrieved separately" in html
     assert "not complaint coverage" in html
@@ -618,6 +623,48 @@ def test_ccld_facility_review_hub_renders_safe_directory_context() -> None:
     assert_no_secret_html(html)
 
 
+def test_ccld_facility_review_hub_known_loaded_preloaded_example_renders(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    full_csv = tmp_path / "facility-reference.csv"
+    _write_chhs_facility_directory_csv(
+        full_csv,
+        rows=(
+            {
+                "FAC_NBR": "434417302",
+                "NAME": "7 MAGIC FLOWERS BILINGUAL MONTESSORI PRESCHOOL",
+                "PROGRAM_TYPE": "CHILD CARE",
+                "STATUS": "3",
+                "CAPACITY": "45",
+                "RES_CITY": "SAN JOSE",
+                "RES_STATE": "CA",
+                "RES_ZIP_CODE": "95112",
+                "COUNTY": "Santa Clara",
+                "FAC_TYPE_DESC": "DAY CARE CENTER",
+            },
+        ),
+    )
+    monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(full_csv))
+
+    status, content_type, body = route_response(
+        f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=434417302",
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Facility review hub" in html
+    assert "Facility-directory result not found" not in html
+    assert "7 MAGIC FLOWERS BILINGUAL MONTESSORI PRESCHOOL" in html
+    assert "434417302" in html
+    assert "DAY CARE CENTER" in html
+    assert "Santa Clara" in html
+    assert "Complaint records are requested and reviewed separately" in html
+    assert_no_secret_html(html)
+
+
 def test_ccld_facility_review_hub_not_found_state_is_safe() -> None:
     status, content_type, body = route_response(
         f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=999999999",
@@ -642,6 +689,8 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    # 157806098 is used here as the seeded manual complaint request context.
+    # Preloaded facility-directory examples use 434417302.
     full_csv = tmp_path / "facility-reference.csv"
     _write_chhs_facility_directory_csv(
         full_csv,
@@ -712,16 +761,16 @@ def test_ccld_facility_review_hub_renders_uploaded_public_summary_signals(
         facility_csv,
         rows=(
             {
-                "FAC_NBR": "157806098",
-                "NAME": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+                "FAC_NBR": "434417302",
+                "NAME": "7 MAGIC FLOWERS BILINGUAL MONTESSORI PRESCHOOL",
                 "PROGRAM_TYPE": "CHILD CARE",
                 "STATUS": "3",
                 "CAPACITY": "48",
-                "RES_CITY": "BAKERSFIELD",
+                "RES_CITY": "SAN JOSE",
                 "RES_STATE": "CA",
-                "RES_ZIP_CODE": "93307",
-                "COUNTY": "Kern",
-                "FAC_TYPE_DESC": "TEMPORARY SHELTER CARE FACILITY",
+                "RES_ZIP_CODE": "95112",
+                "COUNTY": "Santa Clara",
+                "FAC_TYPE_DESC": "DAY CARE CENTER",
             },
         ),
     )
@@ -729,17 +778,17 @@ def test_ccld_facility_review_hub_renders_uploaded_public_summary_signals(
         signals_csv,
         rows=(
             {
-                "Facility Type": "TEMPORARY SHELTER CARE FACILITY",
-                "Facility Number": "157806098",
-                "Facility Name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+                "Facility Type": "DAY CARE CENTER",
+                "Facility Number": "434417302",
+                "Facility Name": "7 MAGIC FLOWERS BILINGUAL MONTESSORI PRESCHOOL",
                 "Licensee": "Do Not Display Licensee",
                 "Facility Administrator": "Do Not Display Admin",
                 "Facility Telephone Number": "555-0199",
                 "Facility Address": "1 Private Fixture Way",
-                "Facility City": "BAKERSFIELD",
+                "Facility City": "SAN JOSE",
                 "Facility State": "CA",
-                "Facility Zip": "93307",
-                "County Name": "Kern",
+                "Facility Zip": "95112",
+                "County Name": "Santa Clara",
                 "Regional Office": "Central Valley",
                 "Facility Capacity": "48",
                 "Facility Status": "LICENSED",
@@ -763,7 +812,7 @@ def test_ccld_facility_review_hub_renders_uploaded_public_summary_signals(
     monkeypatch.setenv(FACILITY_REVIEW_SIGNALS_CSVS_ENV, str(signals_csv))
 
     status, content_type, body = route_response(
-        f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098",
+        f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=434417302",
         page_data_mode="fixture-demo",
     )
     html = body.decode("utf-8")
@@ -781,10 +830,10 @@ def test_ccld_facility_review_hub_renders_uploaded_public_summary_signals(
     assert "not a source-completeness proof" in html
     assert "check source traceability before relying on summary fields" in normalized_html
     assert "24HourResidentialCareforChildren06072026.csv" in html
-    assert "TEMPORARY SHELTER CARE FACILITY" in html
+    assert "DAY CARE CENTER" in html
     assert "LICENSED" in html
     assert "48" in html
-    assert "Kern" in html
+    assert "Santa Clara" in html
     assert "Central Valley" in html
     assert "2018-07-30" in html
     assert "2026-05-04" in html

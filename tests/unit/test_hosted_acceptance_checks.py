@@ -62,7 +62,7 @@ def test_verify_script_checks_complete_tester_readiness_route_set() -> None:
         'Path = "/ccld/"',
         'Path = "/ccld/facilities"',
         'Path = "/ccld/facilities/review-priority"',
-        'Path = "/ccld/facilities/detail?facility_number=$ContextFacilityNumber"',
+        'Path = "/ccld/facilities/detail?facility_number=$PreloadedFacilityNumber"',
         'Path = "/ccld/records/request"',
         'Path = "/reviewer"',
         'Path = "/reviewer/records"',
@@ -76,6 +76,7 @@ def test_verify_script_checks_complete_tester_readiness_route_set() -> None:
     for marker in (
         "Start a facility complaint review",
         "Lookup or manual entry?",
+        "PreloadedFacilityNumber",
         "Keyboard flow:",
         "Ready to retrieve complaint records",
         "Complaint overview",
