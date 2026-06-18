@@ -1,6 +1,22 @@
 # Changelog
 
 ## Unreleased
+- Added hosted CCLD facility review signals on the facility hub from supported
+	uploaded public licensing/visit/citation summary CSV fields. The first supported
+	shape is the shared 31-column CCLD program summary CSV shape used by local
+	files such as `24HourResidentialCareforChildren06072026.csv`,
+	`ChildCareCenters06072026.csv`, `CHILDCAREHOMEmorethan806072026.csv`,
+	`HomeCare06072026.csv`, and `FosterFamilyAgencies06072026.csv`. The loader
+	treats facility numbers as strings, deduplicates exact duplicate rows,
+	aggregates distinct rows by facility, skips malformed/shifted or unsupported
+	rows safely, and shows bounded scalar visit, complaint-visit, citation, POC,
+	status, capacity, license-date, and last-visit-date review cues. Retrieval
+	behavior, live crawling, connectors, extraction behavior, schemas, migrations,
+	source-derived complaint records, reviewer-created writes, feedback
+	persistence, packet/export lifecycle, correction, assignment, claiming, legal
+	conclusions, complaint-coverage claims, source verification, and source-
+	completeness claims are unchanged.
+
 - Added a hosted CCLD facility review hub route for selected facility-directory
 	results. Facility lookup results now include an `Open facility review hub`
 	action alongside the existing complaint-request action. The hub shows safe

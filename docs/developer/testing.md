@@ -207,7 +207,10 @@ bounded result lists, empty-search and no-match guidance, missing or malformed
 full CSV fallback guidance, active reference-source messages, selected facility carry-forward into
 `/ccld/records/request` with lookup-origin context, facility review hub links,
 safe facility hub directory details, not-found hub guidance, loaded local/test
-complaint context links where existing data supports them, manual entry preservation, no browser live retrieval, no
+complaint context links where existing data supports them, supported uploaded
+public licensing/visit/citation summary signal parsing, malformed/shifted or
+unsupported summary row skipping, facility hub signal rendering and empty states,
+manual entry preservation, no browser live retrieval, no
 direct browser crawling, no connector execution, no persistence, no source-derived/reviewer-created/audit/
 import/operational metadata mutation, accessible headings/labels/captions/link
 text, and no-secret HTML output.

@@ -12,6 +12,10 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
+from ccld_complaints.hosted_app.facility_review_signals import (
+    FacilityReviewSignalsSummary,
+    load_active_facility_review_signals,
+)
 from ccld_complaints.hosted_app.ui_shell import render_page_shell
 
 CCLD_FACILITY_LOOKUP_PATH = "/ccld/facilities"
@@ -469,6 +473,9 @@ def render_ccld_facility_review_hub_page(
         )
     record = matching_records[0]
     review_context = review_context or CcldFacilityReviewContext()
+    signals_summary = load_active_facility_review_signals().summary_for_facility(
+        record.facility_number
+    )
     duplicate_note = ""
     if len(matching_records) > 1:
         duplicate_note = f"""      <p class="helper-text">This directory has {len(matching_records)} distinct rows with this facility number. The hub shows the first deterministic directory row for review navigation only.</p>"""
@@ -488,6 +495,7 @@ def render_ccld_facility_review_hub_page(
 {duplicate_note}
       {_render_facility_directory_details(record)}
     </section>
+    {_render_facility_review_signals_section(record, signals_summary)}
     {_render_facility_hub_review_context(record, review_context)}
     {_render_facility_hub_actions(record, review_context)}
     <section aria-labelledby="facility-hub-boundaries-heading">
@@ -922,6 +930,57 @@ def _render_facility_hub_review_context(
         </section>"""
 
 
+def _render_facility_review_signals_section(
+        record: CcldFacilityLookupRecord,
+        summary: FacilityReviewSignalsSummary | None,
+) -> str:
+        if summary is None:
+                return f"""    <section class="empty-state-card" aria-labelledby="facility-review-signals-heading">
+            <h2 id="facility-review-signals-heading">Facility review signals</h2>
+            <p>No uploaded public summary fields are available for facility {_escape(record.facility_number)} in the supported local/test licensing/visit/citation summary CSV inputs.</p>
+            <p>This empty state does not mean the facility has no complaints, visits, citations, POC dates, or public-source records. Start a complaint request or return to facility lookup when you need a different facility context.</p>
+        </section>"""
+        cues = "\n".join(
+                f"        <li>{_escape(cue)} review cue</li>" for cue in summary.review_cues
+        )
+        if not cues:
+                cues = "        <li>No supported uploaded public summary review cue is present for this facility.</li>"
+        return f"""    <section aria-labelledby="facility-review-signals-heading">
+            <h2 id="facility-review-signals-heading">Facility review signals</h2>
+            <p>These facility review signals come from uploaded public summary fields in supported public licensing/visit/citation summary CSVs; complaint records are requested/reviewed separately.</p>
+            <p>Signals are review cues only: not a legal finding, not source verification, not a complaint-coverage determination, and not a source-completeness proof; check source traceability before relying on summary fields.</p>
+            <dl class="summary-list">
+                <dt>Source dataset label</dt>
+                <dd>{_escape(_display_tuple(summary.source_dataset_labels))}</dd>
+                <dt>Facility type in uploaded summary</dt>
+                <dd>{_escape(_display_tuple(summary.facility_types))}</dd>
+                <dt>Status in uploaded summary</dt>
+                <dd>{_escape(_display_tuple(summary.statuses))}</dd>
+                <dt>Capacity in uploaded summary</dt>
+                <dd>{_escape(_display_tuple(summary.capacities))}</dd>
+                <dt>County / regional office in uploaded summary</dt>
+                <dd>{_escape(_display_joined_parts((_display_tuple(summary.counties), _display_tuple(summary.regional_offices))))}</dd>
+                <dt>License first date in uploaded summary</dt>
+                <dd>{_escape(_display_tuple(summary.license_first_dates))}</dd>
+                <dt>Closed date in uploaded summary</dt>
+                <dd>{_escape(_display_tuple(summary.closed_dates))}</dd>
+                <dt>Last visit date in uploaded summary</dt>
+                <dd>{_escape(_display_value(summary.last_visit_date))}</dd>
+                <dt>Visit activity in uploaded summary</dt>
+                <dd>{summary.total_visit_count} total; {summary.inspection_visit_count} inspection; {summary.complaint_visit_count} complaint; {summary.other_visit_count} other</dd>
+                <dt>Citation indicators in uploaded summary</dt>
+                <dd>{summary.citation_count} citation value(s); {summary.type_a_citation_count} Type A value(s); {summary.type_b_citation_count} Type B value(s)</dd>
+                <dt>POC date indicators in uploaded summary</dt>
+                <dd>{summary.poc_date_count}</dd>
+            </dl>
+            <section aria-labelledby="facility-review-cues-heading">
+                <h3 id="facility-review-cues-heading">What to review next</h3>
+                <ul>
+{cues}
+                </ul>
+                <p>Use these cues to decide whether to start a complaint request, review loaded records where available, or return to facility lookup. Review source traceability before relying on summary fields.</p>
+            </section>
+        </section>"""
 def _render_facility_hub_actions(
         record: CcldFacilityLookupRecord,
         review_context: CcldFacilityReviewContext,
@@ -1050,6 +1109,15 @@ def _normalized_text(value: str) -> str:
 
 def _display_value(value: str) -> str:
     return value if value else "not listed"
+
+
+def _display_tuple(values: tuple[str, ...]) -> str:
+    return "; ".join(values) if values else "not listed"
+
+
+def _display_joined_parts(values: tuple[str, ...]) -> str:
+    parts = tuple(value for value in values if value and value != "not listed")
+    return " / ".join(parts) if parts else "not listed"
 
 
 def _user_facing_source_label(source: CcldFacilityReferenceSource) -> str:
