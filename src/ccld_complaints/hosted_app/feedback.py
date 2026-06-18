@@ -258,6 +258,9 @@ def render_feedback_page(
     form_values = {"feedback_type": [selected_type]} if selected_type in FEEDBACK_TYPE_OPTIONS else {}
     if handoff_context and handoff_context.page_path:
         form_values["page_path"] = [handoff_context.page_path]
+    issue_starter = _feedback_issue_starter(handoff_context)
+    if issue_starter:
+        form_values["description"] = [issue_starter]
     return _page(
                 title="Send feedback",
                 heading="Send feedback",
@@ -271,6 +274,7 @@ def render_feedback_page(
         </section>
         {_feedback_context_panel(handoff_context)}
         <div class="support-layout">
+            {_feedback_issue_starter_panel(issue_starter)}
             {_feedback_form(form_values)}
         </div>
         <section class="quiet-section" aria-labelledby="feedback-safety-heading">
@@ -362,6 +366,59 @@ def _feedback_context_panel(context: FeedbackHandoffContext | None) -> str:
             raw source narrative, secrets, provider claims, private URLs, stack traces, server
             paths, environment values, or legal conclusions.</p>
         </section>"""
+
+
+def _feedback_issue_starter_panel(starter: str) -> str:
+    if not starter:
+        return ""
+    return """    <section class="summary-card" aria-labelledby="feedback-starter-heading">
+      <h2 id="feedback-starter-heading">Suggested issue starter</h2>
+      <p><strong>Edit this before submitting.</strong> This starter uses only safe handoff context from the screen you came from.</p>
+      <p>Do not paste secrets, private URLs, stack traces, raw source narrative, or unrelated personal information.</p>
+    </section>"""
+
+
+def _feedback_issue_starter(context: FeedbackHandoffContext | None) -> str:
+    if context is None or not _feedback_context_rows(context):
+        return ""
+    surface = _feedback_starter_surface(context)
+    focus = "retrieval/status information" if _has_retrieval_context(context) else "review workflow information"
+    lines = [f"I am reporting confusion about the {focus} on {surface}."]
+    if context.facility_number:
+        lines.append(f"Facility/license: {context.facility_number}")
+    date_range = _feedback_starter_date_range(context)
+    if date_range:
+        lines.append(f"Date range: {date_range}")
+    if context.retrieval_context:
+        lines.append(f"Retrieval context: {context.retrieval_context}")
+    if context.retrieval_status:
+        lines.append(f"Retrieval status: {context.retrieval_status}")
+    if context.retrieval_job_id:
+        lines.append(f"Retrieval job ID: {context.retrieval_job_id}")
+    if context.prompt:
+        lines.extend(["", f"Prompt from previous screen: {context.prompt}"])
+    lines.extend(["", "What was confusing:", "[Edit this before submitting.]"])
+    return "\n".join(lines)
+
+
+def _feedback_starter_surface(context: FeedbackHandoffContext) -> str:
+    if context.workflow_area:
+        return context.workflow_area.replace("-", " ")
+    return "the review workflow page"
+
+
+def _feedback_starter_date_range(context: FeedbackHandoffContext) -> str:
+    if context.start_date and context.end_date:
+        return f"{context.start_date} to {context.end_date}"
+    if context.start_date:
+        return f"starting {context.start_date}"
+    if context.end_date:
+        return f"ending {context.end_date}"
+    return ""
+
+
+def _has_retrieval_context(context: FeedbackHandoffContext) -> bool:
+    return any((context.retrieval_context, context.retrieval_status, context.retrieval_job_id))
 
 
 def _feedback_context_rows(context: FeedbackHandoffContext) -> list[tuple[str, str]]:
