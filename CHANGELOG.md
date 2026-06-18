@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- Aligned hosted CCLD sample facility-directory examples with active preloaded
+	facility data. Facility lookup, facility hub, evidence capture, acceptance, and
+	README examples now use known loaded preloaded facility-directory example
+	`434417302` for facility hub links, while `157806098` remains clearly scoped to
+	the manual complaint request / seeded complaint review context. Retrieval
+	behavior, facility review signals, reviewer-created state, note/status
+	behavior, feedback persistence, packet/export lifecycle, schemas, migrations,
+	correction, assignment, claiming, legal conclusions, complaint-coverage claims,
+	and source-completeness claims are unchanged.
+
 - Added a hosted CCLD facility review priority list based on existing facility
 	review signals from supported uploaded public licensing/visit/citation summary
 	fields. The route groups and filters facilities by transparent review cues such
