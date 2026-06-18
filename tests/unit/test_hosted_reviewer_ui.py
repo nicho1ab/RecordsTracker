@@ -751,8 +751,24 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Selected complaint source traceability fields" in html
     assert "Record-level source traceability status" in html
     assert "Traceability values available" in html
+    assert "Traceability values available means" in html
+    assert "visible local/test identifiers or source-document cues" in normalized_html
+    assert "What available means" in html
+    assert "not source verification or a source-completeness claim" in normalized_html
     assert "Missing local/test traceability values" in html
+    assert "Missing local/test traceability values means" in html
+    assert "this local/test display does not have that cue" in normalized_html
+    assert "What missing locally means" in html
+    assert "not public-source absence" in normalized_html
     assert "Check source traceability before relying on source-derived values" in html
+    assert "Check first:" in html
+    assert "available and missing traceability cues" in normalized_html
+    assert "Next safe actions:" in html
+    assert "add cautious reviewer-created note/status wording only when it helps" in (
+        normalized_html
+    )
+    assert "use feedback when traceability is confusing" in normalized_html
+    assert "Next safe action" in html
     assert "Correction-readiness cue" in html
     assert "If a source-derived value looks wrong or incomplete" in html
     assert "check source traceability first" in normalized_html
@@ -762,9 +778,10 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
         in normalized_html
     )
     assert "source URL, raw SHA-256 hash, raw artifact reference" in normalized_html
-    assert "Use these fields to confirm which local/test source-derived complaint record" in (
+    assert "which traceability cues are visible and which are locally missing" in (
         normalized_html
     )
+    assert "so reviewers can decide what to check" in normalized_html
     assert "Missing values are shown as" in html
     assert "not available in this local/test record" in html
     assert "not proof that the public source lacks a record" in normalized_html
@@ -952,12 +969,15 @@ def test_reviewer_ui_detail_missing_traceability_uses_clear_non_conclusive_wordi
     assert "Raw artifact preservation" in html
     assert "not available in this local/test record" in html
     assert "Local/test traceability value missing: raw artifact reference" in html
+    assert "Missing local/test traceability values means" in html
+    assert "local/test detail view does not have that cue" in normalized_html
     assert "Source-confidence cues" in html
     assert "Field-note guidance" in html
     assert "First investigation activity date" in html
     assert "local/test missing-field flag is true" in normalized_html
     assert "raw paths are not shown in the browser" in html
     assert "not proof that the public source lacks a record" in normalized_html
+    assert "not proof that the source lacks a record/event" in normalized_html
     assert "does not make legal, facility-wide, completeness" in normalized_html
     assert_no_secret_html(html)
 

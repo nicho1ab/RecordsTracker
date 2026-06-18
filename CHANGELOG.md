@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Improved hosted reviewer detail source-traceability clarity. Reviewer detail
+  now explains what visible traceability cues mean, what locally missing
+  traceability cues do and do not mean, what to check before reviewer-created
+  notes/statuses or packet preparation, and when to use feedback for confusing
+  traceability. Retrieval behavior, schemas, migrations, source-derived records,
+  reviewer-created writes, note/status behavior, feedback submission/persistence,
+  packet lifecycle, legal conclusions, source verification, and source-
+  completeness claims are unchanged.
+
 - Improved hosted CCLD feedback context starter clarity. Feedback links with
   safe handoff context now show an editable suggested issue starter in the
   existing description field, using only sanitized workflow, facility/date,
