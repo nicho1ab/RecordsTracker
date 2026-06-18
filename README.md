@@ -147,11 +147,15 @@ For the offline fixture/mock demo with no live CCLD calls:
 
 Open these local URLs on the same workstation:
 
+`434417302` is a known loaded preloaded facility-directory example in the
+ignored local summary data. `157806098` remains a manual complaint request value
+for the bundled seeded complaint review context.
+
 ```text
 http://127.0.0.1:8000/
 http://127.0.0.1:8000/ccld/facilities
 http://127.0.0.1:8000/ccld/facilities/review-priority
-http://127.0.0.1:8000/ccld/facilities/detail?facility_number=157806098
+http://127.0.0.1:8000/ccld/facilities/detail?facility_number=434417302
 http://127.0.0.1:8000/ccld/records/request
 http://127.0.0.1:8000/ccld/retrieval/jobs
 http://127.0.0.1:8000/reviewer

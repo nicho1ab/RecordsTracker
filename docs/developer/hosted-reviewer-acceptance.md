@@ -29,7 +29,8 @@ GET-only and do not submit retrieval jobs.
 
 The verifier uses this stable local/test context by default:
 
-- Facility/license number: `157806098`
+- Manual complaint request value: `157806098`
+- Known loaded preloaded facility-directory example: `434417302`
 - Date range: `2026-01-01` to `2026-01-31`
 - Request context origin: `manual_entry`
 - Sample source record key: `complaint:ccld:complaint:32-CR-20220407124448`
@@ -75,7 +76,7 @@ requests and stable tester-readiness markers:
 - `ccld-start`: `/ccld/`
 - `facility-lookup`: `/ccld/facilities`
 - `facility-priority`: `/ccld/facilities/review-priority`
-- `facility-hub`: `/ccld/facilities/detail?facility_number=157806098`
+- `facility-hub`: `/ccld/facilities/detail?facility_number=434417302`
 - `record-request`: `/ccld/records/request`
 - `record-request-context`: `/ccld/records/request?facility_number=157806098&start_date=2026-01-01&end_date=2026-01-31&request_context_origin=manual_entry`
 - `reviewer`: `/reviewer`

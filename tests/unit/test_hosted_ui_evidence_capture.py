@@ -58,7 +58,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "/",
         "/ccld/facilities",
         "/ccld/facilities/review-priority",
-        "/ccld/facilities/detail?facility_number=157806098",
+        "/ccld/facilities/detail?facility_number=434417302",
         "/ccld/records/request",
         "/ccld/retrieval/jobs",
         "/reviewer",

@@ -18,6 +18,8 @@ Base URL of the already-running hosted app, e.g. http://127.0.0.1:8003
 Capture mode label: live, fixture, or scaffold (defaults to scaffold)
 .PARAMETER ContextFacilityNumber
 Facility number to use for context-route checks. Default: 157806098
+.PARAMETER PreloadedFacilityNumber
+Known loaded preloaded facility-directory example for facility-hub checks. Default: 434417302
 .PARAMETER ContextStartDate
 Context route start date. Default: 2026-01-01
 .PARAMETER ContextEndDate
@@ -39,6 +41,7 @@ param(
     [string]$Mode = "scaffold",
 
     [string]$ContextFacilityNumber = "157806098",
+    [string]$PreloadedFacilityNumber = "434417302",
     [string]$ContextStartDate = "2026-01-01",
     [string]$ContextEndDate = "2026-01-31",
 
@@ -114,7 +117,7 @@ $checks = @(
     @{ Name = "ccld-start"; Path = "/ccld/"; Required = @("Retrieve complaint records", "Start review request context", "Which facility should be reviewed?", "Keyboard flow:") },
     @{ Name = "facility-lookup"; Path = "/ccld/facilities"; Required = @("Find a facility", "Lookup or manual entry?", "Search by name, license number, city, county, ZIP", "Keyboard flow:") },
     @{ Name = "facility-priority"; Path = "/ccld/facilities/review-priority"; Required = @("Facility review priority", "review cue", "uploaded public summary fields") },
-    @{ Name = "facility-hub"; Path = "/ccld/facilities/detail?facility_number=$ContextFacilityNumber"; Required = @("Facility review hub", "Return to facility lookup") },
+    @{ Name = "facility-hub"; Path = "/ccld/facilities/detail?facility_number=$PreloadedFacilityNumber"; Required = @("Facility review hub", "Facility-directory details", "Return to facility lookup") },
     @{ Name = "record-request"; Path = "/ccld/records/request"; Required = @("Which facility should be reviewed?", "Confirm facility", "Start review request context", "Keyboard flow:") },
     @{ Name = "record-request-context"; Path = "/ccld/records/request?$contextQuery"; Required = @($ContextFacilityNumber, "Ready to retrieve complaint records", "Show existing queue", "Date range", "Keyboard flow:") },
     @{ Name = "reviewer"; Path = "/reviewer"; Required = @("Worklist", "Open local/test packet preview", "Open local/test preparation draft for browser copy or print", "Keyboard flow:") },
