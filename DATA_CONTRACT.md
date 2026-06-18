@@ -105,6 +105,17 @@ feedback checklist derived from the current request and queue state. Those are
 presentation or reviewer-workflow guidance surfaces only; they do not add
 canonical source-derived fields, persisted queue state, feedback persistence,
 schema changes, migrations, or separate source-derived read/write paths.
+A local/test complaint review matrix CSV export can render loaded complaint rows
+for a facility/date context using existing source-derived records and, where
+already available through existing read seams, clearly separated reviewer-created
+status/note presence columns. Matrix columns are output fields only; they do not
+add canonical source-derived fields, write reviewer-created state, create packet
+lifecycle state, produce a final legal export, or require schemas or migrations.
+Allowed matrix fields include request context, source record key, complaint
+identifier, complaint/visit/report/signed dates, allegation categories, finding,
+source label, source URL, source-traceability cue, missing-field cues, loaded
+local/test record indicator, and separated reviewer-created status/note presence
+metadata.
 A CCLD-only local/test artifact builder can convert validated CCLD SQLite
 pipeline output into that hosted seeded-corpus JSON format outside browser
 requests. The builder reuses existing canonical SQLite tables and hosted seeded

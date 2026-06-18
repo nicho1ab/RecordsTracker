@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import io
 from pathlib import Path
 from typing import Any, cast
 from urllib.parse import quote, urlencode
@@ -43,6 +44,7 @@ from ccld_complaints.hosted_app.reviewer_created_state import (
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
     REVIEWER_UI_DETAIL_PATH,
+    REVIEWER_UI_MATRIX_EXPORT_PATH,
     REVIEWER_UI_NOTE_PATH,
     REVIEWER_UI_PACKET_DRAFT_PATH,
     REVIEWER_UI_PACKET_PREVIEW_PATH,
@@ -669,6 +671,8 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Detail navigation" in html
     assert "Return to same facility/date queue" in html
     assert "Open next recommended record from this context" in html
+    assert "Download local/test complaint review matrix CSV" in html
+    assert f"{REVIEWER_UI_MATRIX_EXPORT_PATH}?facility_number=157806098" in html
     assert "Find another CCLD facility" in html
     assert "Open CCLD workflow help" in html
     assert "Back to reviewer records" in html
@@ -952,6 +956,128 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "/ccld/facilities" in html
     assert "/ccld/help" in html
     assert_no_secret_html(html)
+
+
+def test_reviewer_ui_matrix_export_returns_excel_ready_csv_without_mutation() -> None:
+    with _seeded_connection() as connection:
+        create_reviewer_note_scaffold(
+            connection,
+            _actor(roles=("tester_reviewer",), display_name="Fixture Matrix Note Reviewer"),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            note_text="Matrix export note marker.",
+        )
+        create_reviewer_status_scaffold(
+            connection,
+            _actor(roles=("tester_reviewer",), display_name="Fixture Matrix Status Reviewer"),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            reviewer_status="needs_follow_up",
+        )
+        before_source_rows = _source_rows(connection)
+        before_counts = _table_counts(connection)
+
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_MATRIX_EXPORT_PATH}?"
+            "facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31"
+            "&request_context_origin=manual_entry",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        after_source_rows = _source_rows(connection)
+        after_counts = _table_counts(connection)
+
+    csv_text = body.decode("utf-8-sig")
+    rows = list(csv.DictReader(io.StringIO(csv_text)))
+
+    assert status == 200
+    assert content_type == "text/csv; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 2,
+        "audit_events": 2,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert rows
+    [row] = rows
+    assert row["matrix_status"] == "loaded local/test complaint record"
+    assert "local/test complaint review matrix" in row["export_boundary"]
+    assert "CSV export" in row["export_boundary"]
+    assert "Excel-ready" in row["export_boundary"]
+    assert "not a certified report" in row["export_boundary"]
+    assert "not source verification" in row["export_boundary"]
+    assert "not a complaint-coverage determination" in row["export_boundary"]
+    assert "not a source-completeness proof" in row["export_boundary"]
+    assert "not a legal finding" in row["export_boundary"]
+    assert row["facility_number"] == "157806098"
+    assert row["facility_name"] == "A. MIRIAM JAMISON CHILDREN'S CENTER"
+    assert row["request_start_date"] == "2022-08-01"
+    assert row["request_end_date"] == "2022-08-31"
+    assert row["source_record_key"] == COMPLAINT_KEY
+    assert row["complaint_number"] == "32-CR-20220407124448"
+    assert row["complaint_date"] == "2022-04-07"
+    assert row["visit_date"] == "2022-08-24"
+    assert row["finding_or_resolution"] == "Unsubstantiated"
+    assert "Staff conduct" in row["allegation_categories"]
+    assert "Inadequate supervision" in row["allegation_categories"]
+    assert "ccld_facility_reports" in row["source_label"]
+    assert row["source_url"].startswith("https://www.ccld.dss.ca.gov/")
+    assert "Source traceability available" in row["source_traceability_status"]
+    assert row["loaded_local_test_record_indicator"] == "yes"
+    assert row["reviewer_created_status"] == "Needs follow-up"
+    assert row["reviewer_created_note_present"] == "yes"
+    assert row["reviewer_created_last_updated"]
+    assert "Matrix export note marker" not in csv_text
+    assert "raw_path" not in csv_text
+    assert "C:\\" not in csv_text
+    assert "provider_subject" not in csv_text
+    assert "token" not in csv_text.casefold()
+    assert "verified complaint" not in csv_text.casefold()
+    assert "source complete" not in csv_text.casefold()
+    assert "export approved" not in csv_text.casefold()
+
+
+def test_reviewer_ui_matrix_export_empty_context_is_safe() -> None:
+    with _seeded_connection() as connection:
+        before_source_rows = _source_rows(connection)
+        before_counts = _table_counts(connection)
+
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_MATRIX_EXPORT_PATH}?"
+            "facility_number=157806098&start_date=2026-01-01&end_date=2026-01-31"
+            "&request_context_origin=manual_entry",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        after_source_rows = _source_rows(connection)
+        after_counts = _table_counts(connection)
+
+    csv_text = body.decode("utf-8-sig")
+    rows = list(csv.DictReader(io.StringIO(csv_text)))
+
+    assert status == 200
+    assert content_type == "text/csv; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 0,
+        "audit_events": 0,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["matrix_status"] == (
+        "No loaded local/test complaint records matched this facility/date context."
+    )
+    assert row["facility_number"] == "157806098"
+    assert row["request_start_date"] == "2026-01-01"
+    assert row["request_end_date"] == "2026-01-31"
+    assert row["loaded_local_test_record_indicator"] == "no"
+    assert "not a complaint-coverage determination" in row["export_boundary"]
+    assert "no complaints found" not in csv_text.casefold()
 
 
 def test_reviewer_ui_detail_missing_traceability_uses_clear_non_conclusive_wording() -> None:

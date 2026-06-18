@@ -63,6 +63,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "/ccld/records/request",
         "/ccld/retrieval/jobs",
         "/reviewer",
+        "/reviewer/records/matrix.csv",
         "/feedback",
         "/ccld/help",
     ):

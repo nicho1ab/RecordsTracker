@@ -24,6 +24,7 @@ CCLD_FACILITY_REVIEW_PRIORITY_PATH = f"{CCLD_FACILITY_LOOKUP_PATH}/review-priori
 CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH = f"{CCLD_FACILITY_LOOKUP_PATH}/intelligence"
 CCLD_RECORD_REQUEST_PATH = "/ccld/records/request"
 REVIEWER_UI_RECORDS_PATH = "/reviewer/records"
+REVIEWER_UI_MATRIX_EXPORT_PATH = "/reviewer/records/matrix.csv"
 REVIEWER_UI_PACKET_PREVIEW_PATH = "/reviewer/packet/preview"
 REVIEWER_UI_PACKET_DRAFT_PATH = "/reviewer/packet/draft"
 PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER = "434417302"
@@ -1588,6 +1589,7 @@ def _render_facility_hub_actions(
                     </form>
                 </li>
                 <li><a class="button button-secondary" href="{REVIEWER_UI_RECORDS_PATH}?{_escape(urlencode({'q': record.facility_number}))}">Open reviewer queue filtered to this facility</a></li>
+                <li><a class="button button-secondary" href="{REVIEWER_UI_MATRIX_EXPORT_PATH}?{_escape(urlencode(queue_query))}">Download local/test complaint review matrix CSV</a></li>
                 <li><a class="button button-secondary" href="{REVIEWER_UI_PACKET_PREVIEW_PATH}?{_escape(urlencode(queue_query))}">Open local/test packet preview for this facility/date context</a></li>
                 <li><a class="button button-secondary" href="{REVIEWER_UI_PACKET_DRAFT_PATH}?{_escape(urlencode(queue_query))}">Open local/test packet draft for this facility/date context</a></li>"""
         elif review_context.has_loaded_context:

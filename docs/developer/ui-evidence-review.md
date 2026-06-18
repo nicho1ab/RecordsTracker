@@ -27,6 +27,9 @@ The capture command performs GET-only requests against an already-running local 
 - a facility-intelligence route capture that exercises `/ccld/facilities/intelligence`
 	as a GET-only dashboard over transparent public summary-field review-priority
 	indicators.
+- a matrix-export route capture that exercises `/reviewer/records/matrix.csv`
+	as a GET-only CSV export over loaded local/test complaint records for the
+	stable sample facility/date context.
 - `diagnostics/` git state, recent log, capture command, and non-secret capture settings.
 - `screenshots/` route screenshots when local screenshot tooling is available.
 

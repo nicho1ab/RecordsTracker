@@ -318,6 +318,7 @@ $coreRoutes = @(
     @{ Name = "retrieve"; Path = "/ccld/records/request"; Label = "03-retrieve"; ActiveHref = "/ccld/records/request"; WorkflowStep = "Facility" },
     @{ Name = "jobs"; Path = "/ccld/retrieval/jobs"; Label = "04-jobs"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Results" },
     @{ Name = "reviewer"; Path = "/reviewer"; Label = "05-reviewer"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
+    @{ Name = "matrix-export"; Path = "/reviewer/records/matrix.csv?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry"; Label = "05-matrix-export" },
     @{ Name = "packet-preview-empty"; Path = "/reviewer/packet/preview"; Label = "06-packet-preview-empty"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
     @{ Name = "packet-preview-context"; Path = "/reviewer/packet/preview?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry"; Label = "06-packet-preview-context"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
     @{ Name = "packet-draft-empty"; Path = "/reviewer/packet/draft"; Label = "07-packet-draft-empty"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
