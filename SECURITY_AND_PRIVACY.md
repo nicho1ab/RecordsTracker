@@ -194,6 +194,13 @@ Reviewer note/status confirmations may state that reviewer-created state was
 saved, show non-secret read-after-write reviewer-created state, and link back to
 the CCLD request queue. They must not expose raw provider claims, credentials,
 private values, or narrative source fields.
+The local/test complaint review matrix CSV route may expose only safe source-
+derived complaint fields, safe source URL/source-traceability cues, request
+context, and clearly separated reviewer-created status/note presence metadata
+already available through existing read seams. It must not expose raw narrative
+source text, raw server paths, provider claims, tokens, cookies, private headers,
+connection strings, client secrets, hosted URLs, private URLs, environment values,
+or credentials, and it must not create a final legal packet/export workflow.
 
 The current browser-accessible CCLD record request page is local/test only and
 runs at `/ccld/records/request` when the local scaffold process is started. It

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import csv
 import html
+import io
 import json
 import os
 from collections.abc import Mapping
@@ -65,6 +67,7 @@ from ccld_complaints.hosted_app.ui_shell import render_page_shell
 REVIEWER_UI_PREFIX = "/reviewer"
 REVIEWER_UI_RECORDS_PATH = f"{REVIEWER_UI_PREFIX}/records"
 REVIEWER_UI_DETAIL_PATH = f"{REVIEWER_UI_RECORDS_PATH}/detail"
+REVIEWER_UI_MATRIX_EXPORT_PATH = f"{REVIEWER_UI_RECORDS_PATH}/matrix.csv"
 REVIEWER_UI_NOTE_PATH = f"{REVIEWER_UI_RECORDS_PATH}/note"
 REVIEWER_UI_STATUS_PATH = f"{REVIEWER_UI_RECORDS_PATH}/status"
 REVIEWER_UI_PACKET_PREVIEW_PATH = f"{REVIEWER_UI_PREFIX}/packet/preview"
@@ -358,6 +361,8 @@ def route_reviewer_ui_response(
         )
     if parsed_url.path in {REVIEWER_UI_PREFIX, REVIEWER_UI_RECORDS_PATH}:
         return _record_list_response(parsed_url.query, context)
+    if parsed_url.path == REVIEWER_UI_MATRIX_EXPORT_PATH:
+        return _matrix_export_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_PACKET_PREVIEW_PATH:
         return _packet_preview_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_PACKET_DRAFT_PATH:
@@ -473,6 +478,198 @@ def _packet_preview_response(
             actor_label=_signed_in_actor_label(context),
         ),
     )
+
+
+def _matrix_export_response(
+    query: str,
+    context: ReviewerUiContext,
+) -> tuple[int, str, bytes]:
+    query_values = parse_qs(query, keep_blank_values=True)
+    return_context = _packet_preview_context_from_values(query_values)
+    status, _content_type, body = route_reviewer_workflow_shell_response(
+        f"{REVIEWER_WORKFLOW_API_PREFIX}/queue?limit=100",
+        context.workflow_shell_context,
+    )
+    if status != 200:
+        return _workflow_error_page(status, body)
+    payload = _json_object(body)
+    queue = _mapping(payload, "queue")
+    records = _filter_packet_preview_items(_record_list(queue, "records"), return_context)
+    state_status, state_body = _reviewer_created_state_records(context)
+    if state_status != 200:
+        if not isinstance(state_body, bytes):
+            raise ValueError("Expected reviewer-created state error body to be bytes.")
+        return _workflow_error_page(state_status, state_body)
+    if isinstance(state_body, bytes):
+        raise ValueError("Expected reviewer-created state records.")
+    state_summaries = _state_summaries_by_source_record(state_body)
+    related_records = _all_source_derived_records(context)
+    csv_text = _render_complaint_review_matrix_csv(
+        records,
+        state_summaries,
+        related_records,
+        return_context,
+    )
+    return 200, "text/csv; charset=utf-8", csv_text.encode("utf-8-sig")
+
+
+def _all_source_derived_records(context: ReviewerUiContext) -> list[Mapping[str, Any]]:
+    source_status, _content_type, source_body = route_source_derived_api_response(
+        f"{SOURCE_DERIVED_API_PREFIX}?limit=100",
+        context.workflow_shell_context.source_derived_api_context,
+    )
+    if source_status != 200:
+        return []
+    source_payload = _json_object(source_body)
+    return _record_list(source_payload, "records")
+
+
+def _render_complaint_review_matrix_csv(
+    records: list[Mapping[str, Any]],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    all_source_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> str:
+    output = io.StringIO(newline="")
+    fieldnames = _matrix_fieldnames()
+    writer = csv.DictWriter(output, fieldnames=fieldnames, lineterminator="\r\n")
+    writer.writeheader()
+    if not records:
+        writer.writerow(_empty_matrix_row(return_context))
+    for record in records:
+        writer.writerow(
+            _matrix_row_for_record(record, state_summaries, all_source_records, return_context)
+        )
+    return output.getvalue()
+
+
+def _matrix_fieldnames() -> list[str]:
+    return [
+        "matrix_status",
+        "export_boundary",
+        "facility_number",
+        "facility_name",
+        "request_start_date",
+        "request_end_date",
+        "source_record_key",
+        "complaint_number",
+        "complaint_date",
+        "visit_date",
+        "report_date",
+        "date_signed",
+        "allegation_categories",
+        "finding_or_resolution",
+        "source_label",
+        "source_url",
+        "source_traceability_status",
+        "missing_field_cues",
+        "loaded_local_test_record_indicator",
+        "reviewer_created_status",
+        "reviewer_created_note_present",
+        "reviewer_created_last_updated",
+    ]
+
+
+def _matrix_boundary_text() -> str:
+    return (
+        "local/test complaint review matrix; CSV export; Excel-ready; not a certified report; "
+        "not source verification; not a complaint-coverage determination; not a source-completeness proof; "
+        "not a legal finding; complaint records are requested/reviewed separately"
+    )
+
+
+def _empty_matrix_row(return_context: CcldQueueReturnContext) -> dict[str, str]:
+    return {
+        key: ""
+        for key in _matrix_fieldnames()
+    } | {
+        "matrix_status": "No loaded local/test complaint records matched this facility/date context.",
+        "export_boundary": _matrix_boundary_text(),
+        "facility_number": return_context.facility_number or "",
+        "request_start_date": return_context.start_date or "",
+        "request_end_date": return_context.end_date or "",
+        "loaded_local_test_record_indicator": "no",
+    }
+
+
+def _matrix_row_for_record(
+    item: Mapping[str, Any],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    all_source_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> dict[str, str]:
+    source_record = _mapping(item, "source_record")
+    identity = _mapping(source_record, "identity")
+    source_document = _mapping(source_record, "source_document")
+    original_values = _mapping(source_record, "original_values")
+    source_record_key = _string(identity, "source_record_key")
+    summary = state_summaries.get(source_record_key, _empty_state_summary())
+    related_records = _related_source_records(source_record, all_source_records)
+    facility = _facility_context(related_records)
+    return {
+        "matrix_status": "loaded local/test complaint record",
+        "export_boundary": _matrix_boundary_text(),
+        "facility_number": return_context.facility_number or _optional_string(identity, "facility_id"),
+        "facility_name": _facility_context_value(facility, "facility_name"),
+        "request_start_date": return_context.start_date or "",
+        "request_end_date": return_context.end_date or "",
+        "source_record_key": source_record_key,
+        "complaint_number": _optional_string(original_values, "complaint_control_number"),
+        "complaint_date": _optional_string(original_values, "complaint_received_date"),
+        "visit_date": _optional_string(original_values, "visit_date"),
+        "report_date": _optional_string(original_values, "report_date"),
+        "date_signed": _optional_string(original_values, "date_signed"),
+        "allegation_categories": _matrix_allegation_categories(related_records),
+        "finding_or_resolution": _optional_string(original_values, "finding"),
+        "source_label": _matrix_source_label(source_document),
+        "source_url": _optional_string(source_document, "source_url"),
+        "source_traceability_status": _source_traceability_cue(source_document),
+        "missing_field_cues": _matrix_missing_field_cues(original_values, source_document),
+        "loaded_local_test_record_indicator": "yes",
+        "reviewer_created_status": _latest_status_label_text(summary),
+        "reviewer_created_note_present": "yes" if _summary_int(summary, "note_count") > 0 else "no",
+        "reviewer_created_last_updated": _summary_optional_string(summary, "latest_created_at") or "",
+    }
+
+
+def _matrix_allegation_categories(related_records: list[Mapping[str, Any]]) -> str:
+    categories = []
+    for record in related_records:
+        if _string(record, "entity_type") == "allegation":
+            values = _mapping(record, "original_values")
+            category = _display_value(values.get("allegation_category"))
+            if category and category != "unknown":
+                categories.append(category)
+    return "; ".join(dict.fromkeys(categories))
+
+
+def _matrix_source_label(source_document: Mapping[str, Any]) -> str:
+    parts = [
+        _optional_string(source_document, "connector_name"),
+        _optional_string(source_document, "document_type"),
+        _optional_string(source_document, "source_document_id"),
+    ]
+    return "; ".join(part for part in parts if part and part != "unknown")
+
+
+def _matrix_missing_field_cues(
+    original_values: Mapping[str, Any],
+    source_document: Mapping[str, Any],
+) -> str:
+    cues: list[str] = []
+    for label, key in (
+        ("first investigation activity date not available locally", "missing_first_activity_date"),
+        ("visit date not available locally", "missing_visit_date"),
+        ("report date not available locally", "missing_report_date"),
+    ):
+        if original_values.get(key) is True:
+            cues.append(label)
+    if original_values.get("report_date_used_as_proxy") is True:
+        cues.append("report date proxy cue")
+    missing_traceability = _missing_traceability_values_text(source_document)
+    if missing_traceability != "none":
+        cues.append(f"missing local/test traceability values: {missing_traceability}")
+    return "; ".join(cues) if cues else "none visible from loaded local/test fields"
 
 
 def _packet_draft_response(
@@ -1804,6 +2001,19 @@ def _packet_draft_href(return_context: CcldQueueReturnContext) -> str:
     return f"{REVIEWER_UI_PACKET_DRAFT_PATH}?{urlencode(query_values)}"
 
 
+def _matrix_export_href(return_context: CcldQueueReturnContext) -> str:
+    if return_context.facility_number is None:
+        return REVIEWER_UI_MATRIX_EXPORT_PATH
+    query_values = {
+        "facility_number": return_context.facility_number,
+        "start_date": return_context.start_date or "",
+        "end_date": return_context.end_date or "",
+        "request_context_origin": return_context.context_origin or "manual_entry",
+        "lookup_facility_name": return_context.lookup_facility_name or "",
+    }
+    return f"{REVIEWER_UI_MATRIX_EXPORT_PATH}?{urlencode(query_values)}"
+
+
 def _packet_draft_href_for_queue(records: tuple[FacilityCaseBriefRecord, ...]) -> str:
     if not records:
         return REVIEWER_UI_PACKET_DRAFT_PATH
@@ -2726,6 +2936,7 @@ def _detail_packet_links(return_context: CcldQueueReturnContext) -> str:
     if return_context.facility_number is None:
         return ""
     return f"""              <a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Review packet readiness before copying or printing</a>
+              <a class="button button-secondary" href="{_escape(_matrix_export_href(return_context))}">Download local/test complaint review matrix CSV</a>
               <a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a>"""
 
 
@@ -2850,6 +3061,7 @@ def _detail_navigation_packet_items(return_context: CcldQueueReturnContext) -> s
     if return_context.facility_number is None:
         return ""
     return f"""                <li><a href="{_escape(_packet_preview_href(return_context))}">Review packet readiness before copying or printing</a></li>
+                <li><a href="{_escape(_matrix_export_href(return_context))}">Download local/test complaint review matrix CSV</a></li>
                 <li><a href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a></li>"""
 
 

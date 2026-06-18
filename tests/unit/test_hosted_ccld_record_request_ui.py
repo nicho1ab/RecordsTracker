@@ -41,6 +41,7 @@ from ccld_complaints.hosted_app.reviewer_created_state import hosted_reviewer_cr
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
     REVIEWER_UI_DETAIL_PATH,
+    REVIEWER_UI_MATRIX_EXPORT_PATH,
     REVIEWER_UI_NOTE_PATH,
     REVIEWER_UI_STATUS_PATH,
     reviewer_ui_context_for_connection,
@@ -502,6 +503,8 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Open full queue" in html
     assert "Open local/test packet preview" in html
     assert "/reviewer/packet/preview?facility_number=157806098" in html
+    assert "Download local/test complaint review matrix CSV" in html
+    assert f"{REVIEWER_UI_MATRIX_EXPORT_PATH}?facility_number=157806098" in html
     assert "Open local/test preparation draft for browser copy or print" in html
     assert "/reviewer/packet/draft?facility_number=157806098" in html
     assert "Matching source-derived rows shown" in html

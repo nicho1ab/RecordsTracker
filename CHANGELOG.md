@@ -1,6 +1,23 @@
 # Changelog
 
 ## Unreleased
+- Added a local/test complaint review matrix CSV export at
+	`/reviewer/records/matrix.csv`. The CSV is Excel-ready for a facility/date
+	context and includes source-derived complaint identifiers, key dates, finding,
+	allegation categories, source label, source URL, source-traceability cue,
+	missing-field cues, loaded-record indicator, and clearly separated
+	reviewer-created note/status columns. Export actions are linked from facility
+	hub contexts, request/queue results, and reviewer detail when a facility context
+	is available. The matrix states that it is a local/test review aid, not a
+	certified report, not source verification, not a complaint-coverage
+	determination, not a source-completeness proof, and not a legal finding.
+	Retrieval behavior, live crawling, connector/extraction behavior,
+	source-derived mutation, reviewer-created write behavior, feedback persistence
+	or submission, packet lifecycle, final legal export behavior, schemas,
+	migrations, correction behavior, assignment, claiming, auth, deployment, legal
+	conclusions, complaint-coverage claims, source verification claims, and
+	source-completeness claims are unchanged.
+
 - Added a hosted Facility Review Intelligence Dashboard at
 	`/ccld/facilities/intelligence`. The dashboard uses existing public
 	facility-directory rows and supported uploaded public facility-summary signals

@@ -160,6 +160,7 @@ http://127.0.0.1:8000/ccld/facilities/detail?facility_number=434417302
 http://127.0.0.1:8000/ccld/records/request
 http://127.0.0.1:8000/ccld/retrieval/jobs
 http://127.0.0.1:8000/reviewer
+http://127.0.0.1:8000/reviewer/records/matrix.csv?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry
 http://127.0.0.1:8000/reviewer/packet/preview
 http://127.0.0.1:8000/feedback
 http://127.0.0.1:8000/ccld/help
