@@ -76,6 +76,7 @@ requests and stable tester-readiness markers:
 - `ccld-start`: `/ccld/`
 - `facility-lookup`: `/ccld/facilities`
 - `facility-priority`: `/ccld/facilities/review-priority`
+- `facility-intelligence`: `/ccld/facilities/intelligence`
 - `facility-hub`: `/ccld/facilities/detail?facility_number=434417302`
 - `record-request`: `/ccld/records/request`
 - `record-request-context`: `/ccld/records/request?facility_number=157806098&start_date=2026-01-01&end_date=2026-01-31&request_context_origin=manual_entry`
@@ -111,8 +112,8 @@ It is not product packet generation, not a legal report, not a final export, not
 
 A passing acceptance run proves that the hosted local/test workflow exposes a
 repeatable tester-readiness path across Home, Facility Lookup, Facility Hub,
-Facility Review Priority, Request, Queue, Detail, Packet Preview, Packet Draft,
-Feedback, Help, and evidence capture. It also
+Facility Review Priority, Facility Review Intelligence, Request, Queue, Detail,
+Packet Preview, Packet Draft, Feedback, Help, and evidence capture. It also
 proves that the checked pages expose key visible markers for route reachability,
 review queue continuity, complaint review workspace access, packet preparation,
 feedback, help, local/test boundaries, and source traceability availability.

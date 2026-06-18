@@ -1,6 +1,20 @@
 # Changelog
 
 ## Unreleased
+- Added a hosted Facility Review Intelligence Dashboard at
+	`/ccld/facilities/intelligence`. The dashboard uses existing public
+	facility-directory rows and supported uploaded public facility-summary signals
+	to group facilities by transparent review-priority indicators such as complaint
+	activity, citation activity, POC activity, recent visit activity, long periods
+	since last visit, high capacity, and closed status. It provides filters, sorting,
+	visible explanations for why each facility appears, and direct navigation to
+	facility hubs, complaint requests, and reviewer queues. This is presentation-
+	only: retrieval behavior, crawling behavior, connector/extraction behavior,
+	reviewer-created write behavior, packet lifecycle, exports, schemas, migrations,
+	auth, deployment, legal conclusions, risk scores, wrongdoing determinations,
+	complaint-coverage claims, source-verification claims, and source-completeness
+	claims are unchanged.
+
 - Improved CCLD request and queue friction cues for the local/test review loop.
 	Request context cards now label the request context source, facility context
 	cue, and recovery actions for facility hubs, signal-only facility hubs, the
