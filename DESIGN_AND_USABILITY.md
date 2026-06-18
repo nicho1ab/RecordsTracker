@@ -264,6 +264,15 @@ available CSV fields, show bounded readable results, carry the selected
 facility/license number into the request form, preserve manual entry, and clearly
 state that lookup rows are local/test reference assistance rather than complaint
 source truth or completeness proof.
+When a selected facility has its own hub route, the hub should remain a
+facility-directory context page rather than a new data source. It may show safe
+directory fields, summarize already-loaded local/test complaint-review context,
+and offer links or forms into existing request, reviewer queue, packet preview,
+and packet draft routes. It must keep directory data separate from complaint
+records and must not imply complaint coverage, source completeness, license
+validity, legal conclusions, official findings, assignment, claiming,
+correction application, export approval, certified report status, retrieval
+submission, or source-derived/reviewer-created mutation.
 The request and queue pages should also make the active request context visible:
 whether it came from facility lookup or manual entry, which facility/license
 number and date range are being used, which local/test facility reference source

@@ -21,6 +21,7 @@ from ccld_complaints.hosted_app.auth import (
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_LOOKUP_PATH,
     CCLD_FACILITY_REFERENCE_CSV_ENV,
+    CCLD_FACILITY_REVIEW_HUB_PATH,
     CCLD_RECORD_REQUEST_PATH,
     CcldFacilityLookupRecord,
     load_active_ccld_facility_reference,
@@ -536,6 +537,8 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
     assert "Complaint records are retrieved separately" in html
     assert "Showing 1 of 1 matching facility." in normalized_html
     assert "Start complaint request for facility 900000001" in html
+    assert "Open facility review hub" in html
+    assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=900000001" in html
     assert "Find a facility" in html
     assert request_href in html
     assert "request_context_origin=facility_lookup" in html
@@ -554,6 +557,138 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
     assert "Example Licensee" not in html
     assert "555-0101" not in html
     assert "100 Example Way" not in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_facility_review_hub_renders_safe_directory_context() -> None:
+    status, content_type, body = route_response(
+        f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=900000001",
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Facility review hub" in html
+    assert "Facility-directory context" in html
+    assert "Synthetic Orchard Child Care" in html
+    assert "Facility-directory details" in html
+    assert "Facility number directory field" in html
+    assert "900000001" in html
+    assert "Program type directory field" in html
+    assert "Facility type directory field" in html
+    assert "Child Care Center" in html
+    assert "City/state/ZIP directory field" in html
+    assert "Sample City, CA 90001" in html
+    assert "County directory field" in html
+    assert "Los Angeles" in html
+    assert "Capacity directory field" in html
+    assert "24" in html
+    assert "Status code directory field" in html
+    assert "Licensed" in html
+    assert "Complaint records are requested and reviewed separately" in html
+    assert "public CCLD portal remains the source of record" in html
+    assert "No local/test complaint context is currently available" in html
+    assert "Date range is needed before the review queue" in html
+    assert "Start complaint request for this facility" in html
+    assert "Return to facility lookup" in html
+    assert f"{CCLD_RECORD_REQUEST_PATH}?facility_number=900000001" in html
+    assert "does not check all complaints" in normalized_html
+    assert "does not prove complaint coverage" in normalized_html
+    assert (
+        "does not prove complaint coverage, source completeness, license validity"
+        in normalized_html
+    )
+    assert "Opening this page does not auto-submit retrieval" in normalized_html
+    assert "create reviewer-created notes/statuses" in normalized_html
+    assert "Example Licensee" not in html
+    assert "555-0101" not in html
+    assert "100 Example Way" not in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_facility_review_hub_not_found_state_is_safe() -> None:
+    status, content_type, body = route_response(
+        f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=999999999",
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Facility-directory result not found" in html
+    assert "999999999" in html
+    assert "does not prove the facility is absent from public sources" in normalized_html
+    assert "does not prove complaint availability" in normalized_html
+    assert "does not validate or invalidate a license" in normalized_html
+    assert "Return to facility lookup" in html
+    assert "Start complaint request for facility 999999999" in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutation(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    full_csv = tmp_path / "facility-reference.csv"
+    _write_chhs_facility_directory_csv(
+        full_csv,
+        rows=(
+            {
+                "FAC_NBR": "157806098",
+                "NAME": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+                "PROGRAM_TYPE": "CHILD CARE",
+                "STATUS": "3",
+                "CAPACITY": "24",
+                "RES_CITY": "BAKERSFIELD",
+                "RES_STATE": "CA",
+                "RES_ZIP_CODE": "93307",
+                "COUNTY": "Kern",
+                "FAC_TYPE_DESC": "CHILDREN'S CENTER",
+            },
+        ),
+    )
+    monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(full_csv))
+
+    with _seeded_connection() as connection:
+        before_source_rows = _source_rows(connection)
+        before_counts = _table_counts(connection)
+        status, content_type, body = route_response(
+            f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098",
+            page_data_mode="fixture-demo",
+            ccld_record_request_ui_context=ccld_record_request_context_for_reviewer_context(
+                reviewer_ui_context_for_connection(
+                    connection,
+                    actor=_actor(roles=("tester_reviewer",)),
+                )
+            ),
+        )
+        after_source_rows = _source_rows(connection)
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert before_counts == after_counts == _empty_reviewer_counts()
+    assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
+    assert "1 loaded local/test complaint record(s)" in html
+    assert "2022-04-07 to 2022-08-26" in html
+    assert "Review loaded records for this facility/date context" in html
+    assert "Open reviewer queue filtered to this facility" in html
+    assert "/reviewer/records?q=157806098" in html
+    assert "Open local/test packet preview for this facility/date context" in html
+    assert "/reviewer/packet/preview?facility_number=157806098" in html
+    assert "start_date=2022-04-07" in html
+    assert "end_date=2022-08-26" in html
+    assert "Open local/test packet draft for this facility/date context" in html
+    assert "not complaint coverage" in normalized_html
+    assert "not public-source absence proof" in normalized_html
+    assert "not a source-completeness proof" in normalized_html
     assert_no_secret_html(html)
 
 
