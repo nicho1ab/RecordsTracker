@@ -303,6 +303,15 @@ indicators, recent visit activity, high capacity, closed status, or long visit
 gaps surfaced clearly. Rows should link to facility hubs and keep the same
 not-legal-finding, not-source-verification, not-complaint-coverage, and not-
 source-completeness boundaries visible.
+Facility review intelligence dashboards may combine the same uploaded public
+summary-field review cues with active local/test facility-directory context to
+help reviewers decide where to spend time first. They should show why each
+facility appears, support transparent filters and sorting over existing public
+fields, and link to facility hubs, complaint requests, and reviewer queues. They
+must not introduce risk scores, wrongdoing determinations, legal conclusions,
+complaint coverage, source verification, source completeness, assignment,
+claiming, correction, packet lifecycle, export readiness, or source-derived or
+reviewer-created mutation.
 The request and queue pages should also make the active request context visible:
 whether it came from facility lookup or manual entry, which facility/license
 number and date range are being used, which local/test facility reference source

@@ -155,6 +155,7 @@ for the bundled seeded complaint review context.
 http://127.0.0.1:8000/
 http://127.0.0.1:8000/ccld/facilities
 http://127.0.0.1:8000/ccld/facilities/review-priority
+http://127.0.0.1:8000/ccld/facilities/intelligence
 http://127.0.0.1:8000/ccld/facilities/detail?facility_number=434417302
 http://127.0.0.1:8000/ccld/records/request
 http://127.0.0.1:8000/ccld/retrieval/jobs

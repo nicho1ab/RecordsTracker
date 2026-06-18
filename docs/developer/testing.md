@@ -214,7 +214,10 @@ safe facility hub directory details, not-found hub guidance, loaded local/test
 complaint context links where existing data supports them, supported uploaded
 public licensing/visit/citation summary signal parsing, malformed/shifted or
 unsupported summary row skipping, facility hub signal rendering and empty states,
-facility review priority ordering/filtering/grouping and hub links,
+facility review priority ordering/filtering/grouping and hub links, facility
+review intelligence dashboard filtering/sorting, cue counts, visible why-this-
+facility explanations, direct hub/request/queue links, and no risk-score or
+wrongdoing-determination language,
 manual entry preservation, no browser live retrieval, no
 direct browser crawling, no connector execution, no persistence, no source-derived/reviewer-created/audit/
 import/operational metadata mutation, accessible headings/labels/captions/link
