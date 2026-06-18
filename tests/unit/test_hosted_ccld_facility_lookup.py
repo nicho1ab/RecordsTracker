@@ -8,6 +8,7 @@ from sqlalchemy import create_engine, func, select
 from sqlalchemy.engine import Connection
 
 from ccld_complaints.hosted_app import ccld_facility_lookup as facility_lookup
+from ccld_complaints.hosted_app import facility_review_signals as review_signals
 from ccld_complaints.hosted_app.app import route_response
 from ccld_complaints.hosted_app.audit_events import hosted_audit_events
 from ccld_complaints.hosted_app.auth import (
@@ -30,6 +31,9 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
 )
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     ccld_record_request_context_for_reviewer_context,
+)
+from ccld_complaints.hosted_app.facility_review_signals import (
+    FACILITY_REVIEW_SIGNALS_CSVS_ENV,
 )
 from ccld_complaints.hosted_app.reset_reload_dry_run import (
     hosted_reset_reload_planning_metadata,
@@ -60,6 +64,11 @@ def _ignore_local_default_full_facility_reference(
         facility_lookup,
         "DEFAULT_FULL_CCLD_FACILITY_REFERENCE_PATH",
         tmp_path / "missing-facility-reference.csv",
+    )
+    monkeypatch.setattr(
+        review_signals,
+        "DEFAULT_FACILITY_REVIEW_SIGNAL_PATHS",
+        (tmp_path / "missing-review-signals.csv",),
     )
 
 
@@ -692,6 +701,110 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
     assert_no_secret_html(html)
 
 
+def test_ccld_facility_review_hub_renders_uploaded_public_summary_signals(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    facility_csv = tmp_path / "facility-reference.csv"
+    signals_csv = tmp_path / "24HourResidentialCareforChildren06072026.csv"
+    _write_chhs_facility_directory_csv(
+        facility_csv,
+        rows=(
+            {
+                "FAC_NBR": "157806098",
+                "NAME": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+                "PROGRAM_TYPE": "CHILD CARE",
+                "STATUS": "3",
+                "CAPACITY": "48",
+                "RES_CITY": "BAKERSFIELD",
+                "RES_STATE": "CA",
+                "RES_ZIP_CODE": "93307",
+                "COUNTY": "Kern",
+                "FAC_TYPE_DESC": "TEMPORARY SHELTER CARE FACILITY",
+            },
+        ),
+    )
+    _write_program_summary_signals_csv(
+        signals_csv,
+        rows=(
+            {
+                "Facility Type": "TEMPORARY SHELTER CARE FACILITY",
+                "Facility Number": "157806098",
+                "Facility Name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+                "Licensee": "Do Not Display Licensee",
+                "Facility Administrator": "Do Not Display Admin",
+                "Facility Telephone Number": "555-0199",
+                "Facility Address": "1 Private Fixture Way",
+                "Facility City": "BAKERSFIELD",
+                "Facility State": "CA",
+                "Facility Zip": "93307",
+                "County Name": "Kern",
+                "Regional Office": "Central Valley",
+                "Facility Capacity": "48",
+                "Facility Status": "LICENSED",
+                "License First Date": "7/30/2018",
+                "Closed Date": "",
+                "Last Visit Date": "5/4/2026",
+                "Inspection Visits": "0",
+                "Complaint Visits": "12",
+                "Other Visits": "31",
+                "Total Visits": "43",
+                "Citation Numbers": "84072(d)(14), 84665.5(f)",
+                "POC Dates": "07/28/2021, 06/20/2024",
+                "Inspect TypeA": "",
+                "Inspect TypeB": "",
+                "Other TypeA": "A citation",
+                "Other TypeB": "B citation, another B citation",
+            },
+        ),
+    )
+    monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(facility_csv))
+    monkeypatch.setenv(FACILITY_REVIEW_SIGNALS_CSVS_ENV, str(signals_csv))
+
+    status, content_type, body = route_response(
+        f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098",
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Facility review signals" in html
+    assert "uploaded public summary fields" in html
+    assert "public licensing/visit/citation summary" in html
+    assert "complaint records are requested/reviewed separately" in normalized_html
+    assert "not a legal finding" in html
+    assert "not source verification" in html
+    assert "not a complaint-coverage determination" in html
+    assert "not a source-completeness proof" in html
+    assert "check source traceability before relying on summary fields" in normalized_html
+    assert "24HourResidentialCareforChildren06072026.csv" in html
+    assert "TEMPORARY SHELTER CARE FACILITY" in html
+    assert "LICENSED" in html
+    assert "48" in html
+    assert "Kern" in html
+    assert "Central Valley" in html
+    assert "2018-07-30" in html
+    assert "2026-05-04" in html
+    assert "43 total; 0 inspection; 12 complaint; 31 other" in html
+    assert "2 citation value(s); 1 Type A value(s); 2 Type B value(s)" in html
+    assert "POC date indicators in uploaded summary" in html
+    assert "Complaint visit activity present review cue" in html
+    assert "Citation indicator present review cue" in html
+    assert "POC indicator present review cue" in html
+    assert "Recent visit activity review cue" in html
+    assert "verified complaint" not in normalized_html.casefold()
+    assert "facility has no complaints" not in normalized_html.casefold()
+    assert "source complete." not in normalized_html.casefold()
+    assert "official finding." not in normalized_html.casefold()
+    assert "licensed and valid" not in normalized_html.casefold()
+    assert "Do Not Display" not in html
+    assert "555-0199" not in html
+    assert "1 Private Fixture Way" not in html
+    assert_no_secret_html(html)
+
+
 def test_ccld_facility_lookup_page_shows_no_match_guidance() -> None:
     status, content_type, body = route_response(
         f"{CCLD_FACILITY_LOOKUP_PATH}?q=no-match",
@@ -974,6 +1087,53 @@ def _write_chhs_facility_directory_csv(
         for row in rows:
             fixture_file.write(
                 ",".join(row.get(fieldname, "") for fieldname in fieldnames) + "\n"
+            )
+
+
+def _write_program_summary_signals_csv(
+    path: Path,
+    *,
+    rows: tuple[dict[str, str], ...],
+) -> None:
+    fieldnames = (
+        "Facility Type",
+        "Facility Number",
+        "Facility Name",
+        "Licensee",
+        "Facility Administrator",
+        "Facility Telephone Number",
+        "Facility Address",
+        "Facility City",
+        "Facility State",
+        "Facility Zip",
+        "County Name",
+        "Regional Office",
+        "Facility Capacity",
+        "Facility Status",
+        "License First Date",
+        "Closed Date",
+        "Last Visit Date",
+        "Inspection Visits",
+        "Complaint Visits",
+        "Other Visits",
+        "Total Visits",
+        "Citation Numbers",
+        "POC Dates",
+        "All Visit Dates",
+        "Inspection Visit Dates",
+        "Inspect TypeA",
+        "Inspect TypeB",
+        "Other Visit Dates",
+        "Other TypeA",
+        "Other TypeB",
+        "Complaint Info- Date, #Sub Aleg, # Inc Aleg, # Uns Aleg, # TypeA, # TypeB ...",
+    )
+    with path.open("w", encoding="utf-8", newline="") as fixture_file:
+        fixture_file.write(",".join(f'"{fieldname}"' for fieldname in fieldnames) + "\n")
+        for row in rows:
+            fixture_file.write(
+                ",".join(f'"{row.get(fieldname, "")}"' for fieldname in fieldnames)
+                + "\n"
             )
 
 

@@ -67,6 +67,22 @@ connector, change schemas or migrations, populate source-derived records, verify
 official facility status, prove complaint coverage, or make source-completeness
 claims.
 
+The hosted CCLD facility hub can also read supported ignored local public summary
+CSV inputs through `CCLD_FACILITY_REVIEW_SIGNALS_CSVS` or the existing ignored
+`data/raw/source-profiling/` filenames for the shared 31-column CCLD program
+summary shape used by `HomeCare06072026.csv`,
+`CHILDCAREHOMEmorethan806072026.csv`, `ChildCareCenters06072026.csv`,
+`24HourResidentialCareforChildren06072026.csv`, and
+`FosterFamilyAgencies06072026.csv`. Supported fields are limited to safe scalar
+facility-level review signals such as facility number, name, type, status,
+capacity, county, regional office, license first date, closed date, last visit
+date, inspection/complaint/other/total visit counts, citation indicators, Type A
+and Type B citation counts where represented, POC date counts, and source dataset
+label. Malformed, shifted, or unsupported rows are skipped or counted internally
+without exposing raw rows. This support does not commit raw CSVs, import data,
+add connectors, change schemas or migrations, populate source-derived records,
+verify sources, prove complaint coverage, or make source-completeness claims.
+
 Recommended local profiling before implementation:
 
 - Run `scripts/profile_public_source_csvs.py` or
