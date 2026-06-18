@@ -199,6 +199,13 @@ Reviewer detail and request-queue navigation should make next-record movement
 clear without implying persisted assignment, record claiming, or production
 workflow state. Suggested-next cues should remain derived from the current
 facility/date request context and existing reviewer-created note/status rows.
+Complaint review matrix CSV exports should be framed as local/test review aids
+for spreadsheet comparison. They should include source-derived values and source-
+traceability cues in clearly named columns, keep reviewer-created note/status
+columns visually and semantically separate when included, and repeat that the CSV
+is not a certified report, not source verification, not a complaint-coverage
+determination, not a source-completeness proof, and not a legal finding. Matrix
+links should appear only where a facility/date context can be carried safely.
 Reviewer status filters should read as explicit queue views, not hidden state.
 Queue pages should state the active reviewer-created status filter, records
 shown under that filter, total records in the same facility/date queue, available

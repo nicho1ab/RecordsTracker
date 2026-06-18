@@ -123,6 +123,9 @@ fields, facility-context navigation cues for directory-backed facility hub,
 signal-only facility hub, and manual request context behavior, field-note guidance
 for cautious reviewer-created observations, safe
 related seeded bundle context with sensitive narrative fields hidden,
+local/test complaint review matrix CSV export content, source-derived field
+columns, source-traceability cues, clearly separated reviewer-created note/status
+columns, empty-context CSV behavior, and matrix links from reviewer detail,
 clear missing-value wording for unavailable local/test traceability values, labeled search/
 note/status controls, note/status form delegation to the existing workflow
 actions, read-after-write reviewer-created state display, same-request
@@ -185,6 +188,7 @@ mutation, no operational metadata mutation, guided request result queue
 rendering, help page rendering, contextual facility/date/load/review help,
 facility hub or signal-only facility hub navigation when active local/test inputs
 support it, facility review priority navigation, request context source cues,
+local/test complaint review matrix CSV links from request/queue contexts,
 no-match guidance that distinguishes currently loaded local/test rows from
 public-source absence and tells testers when to change criteria, load local
 validated data, run outside-browser preparation, or report missing/unexpected

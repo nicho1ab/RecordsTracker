@@ -123,6 +123,7 @@ $checks = @(
     @{ Name = "record-request-context"; Path = "/ccld/records/request?$contextQuery"; Required = @($ContextFacilityNumber, "Ready to retrieve complaint records", "Show existing queue", "Date range", "Keyboard flow:") },
     @{ Name = "reviewer"; Path = "/reviewer"; Required = @("Worklist", "Open local/test packet preview", "Open local/test preparation draft for browser copy or print", "Keyboard flow:") },
     @{ Name = "reviewer-records"; Path = "/reviewer/records"; Required = @("Worklist", "Open record", "Source traceability available", "Keyboard flow:") },
+    @{ Name = "matrix-export"; Path = "/reviewer/records/matrix.csv?$contextQuery"; Required = @("local/test complaint review matrix", "CSV export", "source_record_key", "not source verification") },
     @{ Name = "reviewer-detail"; Path = "/reviewer/records/detail?source_record_key=$encodedSourceRecordKey&$contextQuery"; Required = @("Complaint overview", "Record review action", "Source traceability", "Reviewer-created", "Keyboard flow:") },
     @{ Name = "packet-preview-empty"; Path = "/reviewer/packet/preview"; Required = @("No facility/date packet context was supplied."); Forbidden = @("Date range: not provided") },
     @{ Name = "packet-preview-context"; Path = "/reviewer/packet/preview?$contextQuery"; Required = @($ContextFacilityNumber, "Before copying or printing", "browser copy or print", "not a certified report", "Report copy/print preparation concern") ; Forbidden = @("Date range: not provided") },
@@ -230,7 +231,7 @@ if ($IncludeCapture) {
             $routeStatusCsv = Join-Path $evidencePath 'route-status.csv'
             if (Test-Path -LiteralPath $routeStatusCsv) {
                 $routeStatusRows = Import-Csv -Path $routeStatusCsv
-                foreach ($routeName in @('home', 'facility', 'facility-priority', 'facility-intelligence', 'facility-hub', 'retrieve', 'reviewer', 'packet-preview-empty', 'packet-preview-context', 'packet-draft-empty', 'packet-draft-context', 'feedback', 'help')) {
+                foreach ($routeName in @('home', 'facility', 'facility-priority', 'facility-intelligence', 'facility-hub', 'retrieve', 'reviewer', 'matrix-export', 'packet-preview-empty', 'packet-preview-context', 'packet-draft-empty', 'packet-draft-context', 'feedback', 'help')) {
                     if (-not ($routeStatusRows | Where-Object { $_.route -eq $routeName -or $_.name -eq $routeName })) {
                         Write-Warning "Evidence route-status.csv is missing route: $routeName"
                         $failCount++

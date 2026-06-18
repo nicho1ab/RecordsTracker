@@ -44,6 +44,7 @@ from ccld_complaints.hosted_app.reset_reload_dry_run import (
 from ccld_complaints.hosted_app.reviewer_created_state import hosted_reviewer_created_state
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
+    REVIEWER_UI_MATRIX_EXPORT_PATH,
     reviewer_ui_context_for_connection,
 )
 from ccld_complaints.hosted_app.seeded_import import (
@@ -861,6 +862,8 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
     assert "Review loaded records for this facility/date context" in html
     assert "Open reviewer queue filtered to this facility" in html
     assert "/reviewer/records?q=157806098" in html
+    assert "Download local/test complaint review matrix CSV" in html
+    assert f"{REVIEWER_UI_MATRIX_EXPORT_PATH}?facility_number=157806098" in html
     assert "Open local/test packet preview for this facility/date context" in html
     assert "/reviewer/packet/preview?facility_number=157806098" in html
     assert "start_date=2022-04-07" in html
