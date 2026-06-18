@@ -95,6 +95,14 @@ summary, clear source-traceability explanation, related source/facility/context
 sections, visible reviewer-created state summaries, understandable note/status
 actions, clear saved-state confirmations, CCLD queue/request/help navigation,
 and feedback clues for reporting missing or confusing records.
+Reviewer detail facility-context cues should name whether the selected record is
+being reviewed from a directory-backed facility hub, a signal-only facility hub,
+or a manual request context when the active local/test inputs support that
+distinction. They should make next actions visible for returning to the facility
+hub, returning to the facility review priority list, returning to the same queue,
+opening packet preview/draft, starting a complaint request, and reporting
+confusing detail context, while preserving not-source-verification, not-
+complaint-coverage, not-source-completeness, and not-legal-finding boundaries.
 Reviewer detail source traceability should help testers identify the selected
 complaint record, distinguish source-derived identifiers from reviewer-created
 state, understand which traceability fields are visible or missing in the
