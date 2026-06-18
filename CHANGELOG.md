@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Improved hosted CCLD retrieval feedback handoff context. Request results,
+  retrieval setup-required states, retrieval job summaries, retrieval job
+  history, and retrieval job detail now link to feedback with bounded safe
+  CCLD-only context for the surface, facility/date request, retrieval status,
+  and safe job identifier when available. Feedback persistence, retrieval
+  execution, schemas, migrations, source-derived records, reviewer-created
+  writes, exports, packet lifecycle, legal conclusions, and source-completeness
+  claims are unchanged.
+
 - Improved hosted CCLD retrieval/status progress clarity. Request results now
 	state whether records came from already-loaded local/test rows or a submitted
 	controlled retrieval job, identify the current state, show when records are

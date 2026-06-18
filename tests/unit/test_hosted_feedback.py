@@ -195,6 +195,44 @@ def test_feedback_page_renders_safe_optional_handoff_context() -> None:
     assert_no_secret_html(html)
 
 
+def test_feedback_page_renders_safe_retrieval_handoff_context() -> None:
+    query = urlencode(
+        {
+            "feedback_type": "Bug report",
+            "workflow_area": "retrieval-job-detail",
+            "page_path": "/ccld/retrieval/jobs/detail",
+            "facility_number": "157806098",
+            "start_date": "2022-08-01",
+            "end_date": "2022-08-31",
+            "retrieval_context": "controlled-job-detail",
+            "retrieval_status": "completed_with_warnings",
+            "retrieval_job_id": "ccld-retrieval-157806098-20260615T120000Z",
+            "prompt": "Describe retrieval status confusion.",
+            "raw_storage_path": "C:/server/private/raw/artifact.html",
+        }
+    )
+
+    status, content_type, body = route_response(f"{FEEDBACK_PATH}?{query}")
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Feedback context from review workflow" in html
+    assert "retrieval-job-detail" in html
+    assert "/ccld/retrieval/jobs/detail" in html
+    assert "Retrieval context" in html
+    assert "controlled-job-detail" in html
+    assert "Retrieval status" in html
+    assert "completed_with_warnings" in html
+    assert "Retrieval job ID" in html
+    assert "ccld-retrieval-157806098-20260615T120000Z" in html
+    assert "retrieval job history/detail context" in normalized_html
+    assert "Describe retrieval status confusion." in html
+    assert "C:/server/private/raw/artifact.html" not in html
+    assert_no_secret_html(html)
+
+
 def test_feedback_page_ignores_unsafe_context_parameters() -> None:
     query = urlencode(
         {
@@ -202,6 +240,9 @@ def test_feedback_page_ignores_unsafe_context_parameters() -> None:
             "page_path": "https://private.example.test/app",
             "facility_number": "157806098-secret",
             "source_record_key": "token=abc123",
+            "retrieval_context": "raw-storage-path",
+            "retrieval_status": "provider_subject",
+            "retrieval_job_id": "token=abc123",
             "prompt": "authorization: bearer secret",
         }
     )

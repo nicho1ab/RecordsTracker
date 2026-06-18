@@ -33,11 +33,36 @@ MAX_FEEDBACK_DESCRIPTION_LENGTH = 4000
 FEEDBACK_TYPE_OPTIONS = ("Bug report", "Feature request", "New data source")
 SAFE_WORKFLOW_AREAS = (
     "queue",
+    "request-result",
+    "retrieval-setup-required",
+    "retrieval-job-summary",
+    "retrieval-job-history",
+    "retrieval-job-detail",
     "reviewer-detail",
     "save-confirmation",
     "packet-preview",
     "packet-draft",
     "help",
+)
+SAFE_RETRIEVAL_CONTEXTS = (
+    "already-loaded-records",
+    "controlled-job-submitted",
+    "controlled-job-history",
+    "controlled-job-detail",
+    "setup-required",
+    "no-jobs-yet",
+)
+SAFE_RETRIEVAL_STATUSES = (
+    "not_submitted",
+    "setup_required",
+    "no_jobs_yet",
+    "queued",
+    "running",
+    "completed",
+    "completed_with_warnings",
+    "failed",
+    "blocked_by_validation",
+    "rate_limited",
 )
 BASE_FEEDBACK_LABELS = ("feedback", "from-app", "needs-triage")
 TYPE_LABELS = {
@@ -116,6 +141,9 @@ class FeedbackHandoffContext:
     end_date: str | None = None
     request_context_origin: str | None = None
     reviewer_status_filter: str | None = None
+    retrieval_context: str | None = None
+    retrieval_status: str | None = None
+    retrieval_job_id: str | None = None
     source_record_key: str | None = None
     complaint_control_number: str | None = None
     prompt: str | None = None
@@ -290,6 +318,13 @@ def _feedback_handoff_context_from_values(
         end_date=_safe_date_value(_first_form_value(values, "end_date")),
         request_context_origin=_safe_short_value(_first_form_value(values, "request_context_origin")),
         reviewer_status_filter=_safe_short_value(_first_form_value(values, "reviewer_status_filter")),
+        retrieval_context=_safe_choice(
+            _first_form_value(values, "retrieval_context"), SAFE_RETRIEVAL_CONTEXTS
+        ),
+        retrieval_status=_safe_choice(
+            _first_form_value(values, "retrieval_status"), SAFE_RETRIEVAL_STATUSES
+        ),
+        retrieval_job_id=_safe_retrieval_job_id(_first_form_value(values, "retrieval_job_id")),
         source_record_key=_safe_short_value(_first_form_value(values, "source_record_key"), max_length=180),
         complaint_control_number=_safe_short_value(_first_form_value(values, "complaint_control_number"), max_length=80),
         prompt=_safe_short_value(_first_form_value(values, "prompt"), max_length=220),
@@ -317,7 +352,7 @@ def _feedback_context_panel(context: FeedbackHandoffContext | None) -> str:
             <p>Describe what was confusing, missing, unexpected, or hard to use, including active
             reviewer-created status filter confusion, shown-count or total-count confusion,
             filtered-empty recovery problems, source traceability concerns such as source URL, raw SHA-256 hash, connector metadata,
-            retrieval timestamp, source document/report marker, or local/test traceability value
+            retrieval timestamp, retrieval job history/detail context, source document/report marker, or local/test traceability value
             missing; source-confidence next-step confusion for missing local/test source values,
             proxy-related cues, or cautious note/status wording; possible correction concerns where a source-derived value looked wrong or
             incomplete after checking traceability; or uncertainty about whether to use a
@@ -338,6 +373,9 @@ def _feedback_context_rows(context: FeedbackHandoffContext) -> list[tuple[str, s
         ("End date", context.end_date),
         ("Request origin", context.request_context_origin),
         ("Reviewer-status filter", context.reviewer_status_filter),
+        ("Retrieval context", context.retrieval_context),
+        ("Retrieval status", context.retrieval_status),
+        ("Retrieval job ID", context.retrieval_job_id),
         ("Source record key", context.source_record_key),
         ("Complaint/control identifier", context.complaint_control_number),
         ("Suggested prompt", context.prompt),
@@ -355,6 +393,16 @@ def _safe_date_value(value: str) -> str | None:
     if len(value) == 10 and value[4] == "-" and value[7] == "-" and value.replace("-", "").isdigit():
         return value
     return None
+
+
+def _safe_retrieval_job_id(value: str) -> str | None:
+    if not value or len(value) > 96:
+        return None
+    if _contains_secret_marker(value):
+        return None
+    if not all(ch.isalnum() or ch in "_.:-" for ch in value):
+        return None
+    return value
 
 
 def _safe_short_value(

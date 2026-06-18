@@ -147,7 +147,11 @@ def test_retrieval_form_renders_record_type_and_safe_setup_state() -> None:
     assert "Operator setup checklist" in blocked_html
     assert "retrieval enablement" in blocked_normalized
     assert "server-side raw source storage" in blocked_normalized
-    assert "Send tester feedback" in blocked_html
+    assert "Report retrieval setup confusion" in blocked_html
+    assert "workflow_area=retrieval-setup-required" in blocked_html
+    assert "retrieval_context=setup-required" in blocked_html
+    assert "retrieval_status=setup_required" in blocked_html
+    assert "facility_number=157806098" in blocked_html
     assert_no_secret_html(blocked_html)
 
 
@@ -249,7 +253,11 @@ def test_controlled_retrieval_imports_records_and_links_queue(tmp_path: Path) ->
     assert "Review imported records" in html
     assert "View retrieval job history" in html
     assert "View job details" in html
-    assert "Send tester feedback" in html
+    assert "Report retrieval status confusion" in html
+    assert "workflow_area=retrieval-job-summary" in html
+    assert "retrieval_context=controlled-job-submitted" in html
+    assert "retrieval_status=completed" in html
+    assert "retrieval_job_id=ccld-retrieval-157806098-" in html
     assert "Complaint records ready for attorney review" in html
     assert "Open reviewer detail" in html
     assert_no_secret_html(html)
@@ -770,6 +778,10 @@ def test_retrieval_status_summary_explains_queued_running_and_failed_states() ->
     assert "Refresh the request status later" in running_html
     assert "Failed" in failed_html
     assert "Retry later or ask an operator" in failed_html
+    assert "Report retrieval status confusion" in queued_html
+    assert "workflow_area=retrieval-job-summary" in queued_html
+    assert "retrieval_context=controlled-job-submitted" in queued_html
+    assert "retrieval_status=queued" in queued_html
     assert "Traceback" not in failed_html
     assert_no_secret_html(queued_html)
     assert_no_secret_html(running_html)
@@ -803,7 +815,10 @@ def test_retrieval_job_history_empty_state_renders_for_allowed_local_dev_actor()
     assert "facility/date context" in html
     assert "imported-record counts" in html
     assert "Submit or change retrieval request" in html
-    assert "Send tester feedback" in html
+    assert "Report confusing retrieval progress" in html
+    assert "workflow_area=retrieval-job-history" in html
+    assert "retrieval_context=no-jobs-yet" in html
+    assert "retrieval_status=no_jobs_yet" in html
     assert_no_secret_html(html)
 
 
@@ -908,7 +923,11 @@ def test_retrieval_job_history_renders_recent_jobs_safely_without_mutation(
     assert "Rate limited" in html
     assert "Wait for an active retrieval job to finish" in normalized
     assert "raw artifact preserved; source artifact identity available; raw paths not shown" in html
-    assert "Send tester feedback" in html
+    assert "Report confusing retrieval progress" in html
+    assert "workflow_area=retrieval-job-history" in html
+    assert "retrieval_context=controlled-job-history" in html
+    assert "retrieval_job_id=completed-job" in html
+    assert "retrieval_job_id=failed-job" in html
     assert "Traceback" not in html
     assert "provider_subject" not in html
     assert_no_secret_html(html)
@@ -972,7 +991,11 @@ def test_retrieval_job_detail_renders_completed_job_without_mutation(tmp_path: P
     assert "Return to retrieval job history" in html
     assert "Submit or change a CCLD record request" in html
     assert "Read CCLD workflow help" in html
-    assert "Send tester feedback" in html
+    assert "Report retrieval status confusion" in html
+    assert "workflow_area=retrieval-job-detail" in html
+    assert "retrieval_context=controlled-job-detail" in html
+    assert "retrieval_status=completed" in html
+    assert "retrieval_job_id=completed-job" in html
     assert "C:/server/private/raw/artifact.html" not in html
     assert "157806098_inx3" not in html
     assert_no_secret_html(html)
@@ -1007,6 +1030,9 @@ def test_retrieval_job_detail_safe_missing_and_invalid_job_ids(tmp_path: Path) -
     assert blank_status == 400
     assert "Retrieval job detail needs a valid job ID" in invalid_html
     assert "Retrieval job detail needs a valid job ID" in blank_html
+    assert "Report confusing retrieval job detail" in missing_html
+    assert "workflow_area=retrieval-job-detail" in missing_html
+    assert "retrieval_context=controlled-job-detail" in invalid_html
     assert "token-value" not in invalid_html
     assert counts == _empty_counts()
     assert_no_secret_html(missing_html)
