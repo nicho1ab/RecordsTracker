@@ -198,11 +198,13 @@ button text, saved-state confirmation wording, return-to-queue links, and
 read-after-write detail state while preserving existing read/write and audit
 behavior.
 Hosted CCLD facility lookup tests should cover committed tiny fixture fallback,
-configured full local/test CCLD facility reference CSV loading, safe scalar field
-display, partial and case-insensitive matching by facility/license number,
-facility name, city, county, ZIP code, facility type, and status, bounded result
-lists, empty-search and no-match guidance, missing or malformed full CSV fallback
-guidance, active reference-source messages, selected facility carry-forward into
+configured full local/test CCLD program facility CSV loading, CDSS/CHHS
+facility-directory CSV loading, safe scalar field display, exact duplicate row
+deduplication, distinct duplicate facility-number preservation, partial and
+case-insensitive matching by facility/license number, facility name, city,
+county, ZIP code, facility type, program type, capacity, and status code,
+bounded result lists, empty-search and no-match guidance, missing or malformed
+full CSV fallback guidance, active reference-source messages, selected facility carry-forward into
 `/ccld/records/request` with lookup-origin context, manual entry preservation, no browser live retrieval, no
 direct browser crawling, no connector execution, no persistence, no source-derived/reviewer-created/audit/
 import/operational metadata mutation, accessible headings/labels/captions/link

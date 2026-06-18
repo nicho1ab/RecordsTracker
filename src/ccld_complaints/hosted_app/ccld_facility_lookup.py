@@ -24,15 +24,29 @@ DEFAULT_FULL_CCLD_FACILITY_REFERENCE_PATH = Path(
 )
 CCLD_FACILITY_REFERENCE_CSV_ENV = "CCLD_FACILITY_REFERENCE_CSV"
 MAX_FACILITY_LOOKUP_RESULTS = 25
-_REQUIRED_COLUMNS = (
+_PROGRAM_FACILITY_REQUIRED_COLUMNS = (
     "Facility Number",
     "Facility Name",
     "Facility City",
+    "Facility State",
     "County Name",
     "Facility Zip",
     "Facility Type",
+    "Facility Capacity",
     "Facility Status",
     "Closed Date",
+)
+_CHHS_FACILITY_MASTER_REQUIRED_COLUMNS = (
+    "FAC_NBR",
+    "NAME",
+    "PROGRAM_TYPE",
+    "STATUS",
+    "CAPACITY",
+    "RES_CITY",
+    "RES_STATE",
+    "RES_ZIP_CODE",
+    "COUNTY",
+    "FAC_TYPE_DESC",
 )
 _SECRET_HTML_MARKERS = (
     "authorization",
@@ -78,7 +92,7 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
   sl.setAttribute('role','listbox');
   function norm(s){return(s||'').toLowerCase().replace(/\s+/g,' ').trim();}
   function match(f,toks){
-    var h=norm([f.num,f.n,f.city,f.co,f.zip,f.t,f.s].join(' '));
+        var h=norm([f.num,f.n,f.city,f.state,f.co,f.zip,f.t,f.p,f.cap,f.s].join(' '));
     return toks.every(function(t){return h.indexOf(t)!==-1;});
   }
   function esc(s){
@@ -88,13 +102,14 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
     var h='';
     for(var i=0;i<matches.length;i++){
       var f=matches[i];
-      var geo=[f.city,f.zip].filter(Boolean).join(' \u00b7 ');
-      var meta=[f.t,f.s].filter(Boolean).join(' \u2022 ');
+    var geo=[f.city,f.state,f.zip].filter(Boolean).join(' \u00b7 ');
+    var meta=[f.t,f.p,f.s].filter(Boolean).join(' \u2022 ');
       var det=[geo,meta].filter(Boolean).join(' | ');
       h+='<li role="option"><button type="button" class="suggestion-btn"'
         +' data-num="'+esc(f.num)+'" data-name="'+esc(f.n)+'"'
-        +' data-city="'+esc(f.city||'')+'" data-zip="'+esc(f.zip||'')+'"'
-        +' data-type="'+esc(f.t||'')+'" data-status="'+esc(f.s||'')+'">'
+        +' data-city="'+esc(f.city||'')+'" data-state="'+esc(f.state||'')+'"'
+        +' data-zip="'+esc(f.zip||'')+'" data-type="'+esc(f.t||'')+'"'
+        +' data-program="'+esc(f.p||'')+'" data-status="'+esc(f.s||'')+'">'
         +'<span class="suggestion-name">'+esc(f.n)+'</span>'
         +' <span class="suggestion-badge">'+esc(f.num)+'</span>'
         +(det?'<span class="suggestion-details">'+esc(det)+'</span>':'')
@@ -125,8 +140,8 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
     var ul=sc.querySelector('.selected-use-link');
     if(ne)ne.textContent=f.n;
     if(nue)nue.textContent=f.num;
-    if(ge)ge.textContent=[f.city,f.zip].filter(Boolean).join(', ');
-    if(me)me.textContent=[f.t,f.s].filter(Boolean).join(' \u2022 ');
+    if(ge)ge.textContent=[f.city,f.state,f.zip].filter(Boolean).join(', ');
+    if(me)me.textContent=[f.t,f.p,f.s].filter(Boolean).join(' \u2022 ');
     if(ul){
       ul.href='/ccld/records/request?facility_number='+encodeURIComponent(f.num)
         +'&request_context_origin=facility_lookup'
@@ -146,7 +161,8 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
     var f={
       num:btn.getAttribute('data-num'),n:btn.getAttribute('data-name'),
       city:btn.getAttribute('data-city'),zip:btn.getAttribute('data-zip'),
-      t:btn.getAttribute('data-type'),s:btn.getAttribute('data-status')
+            state:btn.getAttribute('data-state'),t:btn.getAttribute('data-type'),
+            p:btn.getAttribute('data-program'),s:btn.getAttribute('data-status')
     };
     hideSugs();
     if(mode==='request'){
@@ -201,9 +217,12 @@ class CcldFacilityLookupRecord:
     facility_number: str
     facility_name: str
     city: str
+    state: str
     county: str
     zip_code: str
     facility_type: str
+    program_type: str
+    capacity: str
     status: str
     closed_date: str
 
@@ -237,21 +256,12 @@ class CcldFacilityLookupResult:
 def load_ccld_facility_reference(
     path: Path = DEFAULT_CCLD_FACILITY_REFERENCE_PATH,
 ) -> tuple[CcldFacilityLookupRecord, ...]:
-    with path.open("r", encoding="utf-8", newline="") as fixture_file:
+    with path.open("r", encoding="utf-8-sig", newline="") as fixture_file:
         reader = csv.DictReader(fixture_file)
         fieldnames = tuple(reader.fieldnames or ())
-        missing_columns = [
-            column for column in _REQUIRED_COLUMNS if column not in fieldnames
-        ]
-        if missing_columns:
-            raise ValueError(
-                "CCLD facility reference CSV is missing required column(s): "
-                + ", ".join(missing_columns)
-            )
-        records = tuple(_record_from_row(row) for row in reader)
-    return tuple(
-        sorted(records, key=lambda record: (record.facility_name, record.facility_number))
-    )
+        row_mapper = _facility_row_mapper(fieldnames)
+        records = tuple(row_mapper(row) for row in reader)
+    return _deduplicate_facility_records(records)
 
 
 def load_active_ccld_facility_reference(
@@ -388,13 +398,13 @@ def render_ccld_facility_lookup_page(
                     <div>
                         <p class="launch-kicker">Facility intake</p>
             <h2 id="facility-lookup-scope-heading">Find a facility</h2>
-                        <p class="launch-value">Start review by finding the CCLD facility/license number, then carry that selected facility into the request page to choose a complaint date range.</p>
+                        <p class="launch-value">Start review by finding the CCLD facility/license number in the preloaded facility directory, then carry that selected facility into the request page to choose a complaint date range.</p>
                     </div>
         </section>
         <section class="quiet-section" aria-labelledby="facility-start-guidance-heading">
             <h2 id="facility-start-guidance-heading">Lookup or manual entry?</h2>
-            <p>Use facility lookup when you know a facility name, city, ZIP, type, or status but not the exact facility/license number. Use manual entry when you already know the digit facility/license number.</p>
-            <p>Lookup rows are local/test reference assistance, not complaint source truth, not statewide completeness proof, and not legal or facility-wide conclusions.</p>
+            <p>Use facility lookup when you know a facility name, city, county, ZIP, facility type, program type, or status code but not the exact facility/license number. Use manual entry when you already know the digit facility/license number.</p>
+            <p>Lookup rows are public facility-directory data for local/test reference assistance. Complaint records are retrieved separately, and directory rows are not complaint coverage, not source-completeness proof, not license-validity proof, and not legal or facility-wide conclusions.</p>
         </section>
     {_render_facility_combobox_section(reference_source, query, limited_note)}
     {_render_lookup_results(result)}
@@ -454,9 +464,12 @@ def _facility_lookup_record_from_source_record(
         facility_number=facility_number,
         facility_name=_source_value(values, "facility_name"),
         city=_source_value(values, "city"),
+        state=_source_value(values, "state"),
         county=_source_value(values, "county"),
         zip_code=_source_value(values, "zip_code"),
         facility_type=_source_value(values, "facility_type"),
+        program_type=_source_value(values, "program_type"),
+        capacity=_source_value(values, "capacity"),
         status=_source_value(values, "status"),
         closed_date=_source_value(values, "closed_date"),
     )
@@ -468,6 +481,31 @@ def _source_value(values: Mapping[str, Any], key: str) -> str:
 
 
 def _record_from_row(row: dict[str, str]) -> CcldFacilityLookupRecord:
+    return _record_from_program_facility_row(row)
+
+
+def _facility_row_mapper(fieldnames: tuple[str, ...]) -> Any:
+    if all(column in fieldnames for column in _PROGRAM_FACILITY_REQUIRED_COLUMNS):
+        return _record_from_program_facility_row
+    if all(column in fieldnames for column in _CHHS_FACILITY_MASTER_REQUIRED_COLUMNS):
+        return _record_from_chhs_facility_master_row
+    missing_program_columns = [
+        column for column in _PROGRAM_FACILITY_REQUIRED_COLUMNS if column not in fieldnames
+    ]
+    missing_chhs_columns = [
+        column for column in _CHHS_FACILITY_MASTER_REQUIRED_COLUMNS if column not in fieldnames
+    ]
+    raise ValueError(
+        "CCLD facility reference CSV is missing required column set. "
+        "Program CSV missing: "
+        + ", ".join(missing_program_columns)
+        + ". CDSS/CHHS facility directory CSV missing: "
+        + ", ".join(missing_chhs_columns)
+        + "."
+    )
+
+
+def _record_from_program_facility_row(row: dict[str, str]) -> CcldFacilityLookupRecord:
     facility_number = _clean_value(row["Facility Number"])
     if not facility_number.isdigit():
         raise ValueError("CCLD facility reference facility numbers must contain digits only.")
@@ -475,11 +513,56 @@ def _record_from_row(row: dict[str, str]) -> CcldFacilityLookupRecord:
         facility_number=facility_number,
         facility_name=_clean_value(row["Facility Name"]),
         city=_clean_value(row["Facility City"]),
+        state=_clean_value(row["Facility State"]),
         county=_clean_value(row["County Name"]),
         zip_code=_clean_value(row["Facility Zip"]),
         facility_type=_clean_value(row["Facility Type"]),
+        program_type=_clean_value(row.get("Program Type", "")),
+        capacity=_clean_value(row["Facility Capacity"]),
         status=_clean_value(row["Facility Status"]),
         closed_date=_clean_value(row["Closed Date"]),
+    )
+
+
+def _record_from_chhs_facility_master_row(row: dict[str, str]) -> CcldFacilityLookupRecord:
+    facility_number = _clean_value(row["FAC_NBR"])
+    if not facility_number.isdigit():
+        raise ValueError("CCLD facility reference facility numbers must contain digits only.")
+    return CcldFacilityLookupRecord(
+        facility_number=facility_number,
+        facility_name=_clean_value(row["NAME"]),
+        city=_clean_value(row["RES_CITY"]),
+        state=_clean_value(row["RES_STATE"]),
+        county=_clean_value(row["COUNTY"]),
+        zip_code=_clean_value(row["RES_ZIP_CODE"]),
+        facility_type=_clean_value(row["FAC_TYPE_DESC"]),
+        program_type=_clean_value(row["PROGRAM_TYPE"]),
+        capacity=_clean_value(row["CAPACITY"]),
+        status=_clean_value(row["STATUS"]),
+        closed_date="",
+    )
+
+
+def _deduplicate_facility_records(
+    records: tuple[CcldFacilityLookupRecord, ...],
+) -> tuple[CcldFacilityLookupRecord, ...]:
+    unique_records = dict.fromkeys(records)
+    return tuple(
+        sorted(
+            unique_records,
+            key=lambda record: (
+                record.facility_name,
+                record.facility_number,
+                record.city,
+                record.state,
+                record.county,
+                record.zip_code,
+                record.facility_type,
+                record.program_type,
+                record.capacity,
+                record.status,
+            ),
+        )
     )
 
 
@@ -506,9 +589,12 @@ def _record_matches_query(
                 record.facility_number,
                 record.facility_name,
                 record.city,
+                record.state,
                 record.county,
                 record.zip_code,
                 record.facility_type,
+                record.program_type,
+                record.capacity,
                 record.status,
                 record.closed_date,
             )
@@ -549,7 +635,7 @@ def _render_facility_combobox_section(
     selected_card = _render_facility_selected_card_html(mode="facility")
     return f"""    <section class="workflow-panel" aria-labelledby="facility-combobox-heading" id="facility-selector-wrap" data-facility-mode="facility">
             <label for="facility-search-input">Facility</label>
-            <p id="facility-search-hint" class="helper-text">Search by name, license number, city, ZIP, type, or status. Keyboard flow: type a search, use arrow keys or Tab to review suggestions and actions, then use the selected facility link to continue to the request page.</p>
+            <p id="facility-search-hint" class="helper-text">Search by name, license number, city, county, ZIP, facility type, program type, or status code. Keyboard flow: type a search, use arrow keys or Tab to review suggestions and actions, then use the selected facility link to continue to the request page.</p>
             <form action="{CCLD_FACILITY_LOOKUP_PATH}" method="get" class="facility-search-form">
                 <div class="facility-combobox-outer" id="facility-combobox-outer">
                     <input id="facility-search-input" name="q" type="search" autocomplete="off"
@@ -578,7 +664,7 @@ def _render_facility_selected_card_html(*, mode: str = "facility") -> str:
                 </div>"""
     else:
         actions = """<div class="form-actions">
-                    <a id="facility-use-link" class="button selected-use-link" href="#">Use this facility for complaint record retrieval</a>
+                    <a id="facility-use-link" class="button selected-use-link" href="#">Start complaint request for selected facility</a>
                     <button type="button" id="facility-change-btn" class="button-secondary">Change selected facility</button>
                 </div>"""
     return f"""    <div id="facility-selected-card" class="facility-selected-card" hidden>
@@ -647,16 +733,19 @@ def _render_reference_details_section(source: CcldFacilityReferenceSource) -> st
 
 def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
     if result.empty_search:
-                return ""
+        return ""
     if not result.returned_records:
         return f"""    <section class="empty-state-card" aria-labelledby="facility-results-heading">
       <h2 id="facility-results-heading">Facility results</h2>
-      <p>No facilities matched <strong>{_escape(result.query)}</strong>.</p>
-      <p>Try a shorter name, license number, city, ZIP, or facility type. You can also enter
+        <p>No facility-directory results matched <strong>{_escape(result.query)}</strong>.</p>
+        <p>Try a shorter name, license number, city, county, ZIP, facility type, or program type. You can also enter
       a facility/license number directly on the request form.</p>
     <p><a class="button-quiet" href="{CCLD_RECORD_REQUEST_PATH}">Open request form</a></p>
     </section>"""
-    cards = "\n".join(_render_result_card(record) for record in result.returned_records)
+    cards = "\n".join(
+        _render_result_card(record, index=index)
+        for index, record in enumerate(result.returned_records, start=1)
+    )
     if result.has_more_matches:
         more_guidance = f"""      <p class="helper-text">Showing {len(result.returned_records)} of
       {result.total_match_count} matches. Refine your search to narrow the list.</p>"""
@@ -664,7 +753,8 @@ def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
         more_guidance = f"""      <p class="helper-text">Showing {len(result.returned_records)} of
       {result.total_match_count} matching facilit{"y" if result.total_match_count == 1 else "ies"}.</p>"""
     return f"""    <section aria-labelledby="facility-results-heading">
-      <h2 id="facility-results-heading">Facility results</h2>
+        <h2 id="facility-results-heading">Facility-directory results</h2>
+        <p>These are public facility-directory results. Complaint records are retrieved separately after a tester starts a complaint request for a selected facility number.</p>
 {more_guidance}
             <div class="result-list" aria-label="Facility matches">
 {cards}
@@ -672,29 +762,41 @@ def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
     </section>"""
 
 
-def _render_result_card(record: CcldFacilityLookupRecord) -> str:
-    query_values = {
-        "facility_number": record.facility_number,
-        "request_context_origin": "facility_lookup",
-        "lookup_facility_name": record.facility_name,
-    }
-    href = f"{CCLD_RECORD_REQUEST_PATH}?{urlencode(query_values)}"
-    geo_parts = [record.city, record.county, record.zip_code]
-    geo = ", ".join(p for p in geo_parts if p)
-    type_status = " ".join(
-        f'<span class="badge badge-muted">{_escape(value)}</span>'
-        for value in (record.facility_type, record.status)
-        if value
-    )
-    return f"""        <article class="result-card" aria-labelledby="facility-{_escape(record.facility_number)}-heading">
-          <div>
-            <h3 id="facility-{_escape(record.facility_number)}-heading">{_escape(record.facility_name)}</h3>
-            <p><span class="badge badge-muted">{_escape(record.facility_number)}</span></p>
-            {f'<p class="sr-note">{_escape(geo)}</p>' if geo else ''}
-                        {f'<p>{type_status}</p>' if type_status else ''}
-          </div>
-          <p><a class="button" href="{_escape(href)}" aria-label="Use {_escape(record.facility_name)} / {_escape(record.facility_number)} for complaint record retrieval">Use this facility for complaint record retrieval</a></p>
-        </article>"""
+def _render_result_card(record: CcldFacilityLookupRecord, *, index: int) -> str:
+        query_values = {
+                "facility_number": record.facility_number,
+                "request_context_origin": "facility_lookup",
+                "lookup_facility_name": record.facility_name,
+        }
+        href = f"{CCLD_RECORD_REQUEST_PATH}?{urlencode(query_values)}"
+        heading_id = f"facility-{_escape(record.facility_number)}-{index}-heading"
+        return f"""        <article class="result-card" aria-labelledby="{heading_id}">
+                    <div>
+                        <h3 id="{heading_id}">{_escape(record.facility_name)}</h3>
+                        <dl class="summary-list">
+                            <dt>Facility number directory field</dt>
+                            <dd>{_escape(record.facility_number)}</dd>
+                            <dt>Location directory field</dt>
+                            <dd>{_escape(_display_value(_display_location(record)))}</dd>
+                            <dt>County directory field</dt>
+                            <dd>{_escape(_display_value(record.county))}</dd>
+                            <dt>Facility type directory field</dt>
+                            <dd>{_escape(_display_value(record.facility_type))}</dd>
+                            <dt>Program type directory field</dt>
+                            <dd>{_escape(_display_value(record.program_type))}</dd>
+                            <dt>Capacity directory field</dt>
+                            <dd>{_escape(_display_value(record.capacity))}</dd>
+                            <dt>Status code directory field</dt>
+                            <dd>{_escape(_display_value(record.status))}</dd>
+                        </dl>
+                    </div>
+                    <p><a class="button" href="{_escape(href)}" aria-label="Start complaint request for facility {_escape(record.facility_number)} ({_escape(record.facility_name)})">Start complaint request for facility {_escape(record.facility_number)}</a></p>
+                </article>"""
+
+
+def _display_location(record: CcldFacilityLookupRecord) -> str:
+    city_state = ", ".join(part for part in (record.city, record.state) if part)
+    return " ".join(part for part in (city_state, record.zip_code) if part)
 
 
 def _render_message_page(*, title: str, heading: str, message: str) -> str:
@@ -774,9 +876,12 @@ def _build_facility_json_data(
             "num": record.facility_number,
             "n": record.facility_name,
             "city": record.city,
+            "state": record.state,
             "co": record.county,
             "zip": record.zip_code,
             "t": record.facility_type,
+            "p": record.program_type,
+            "cap": record.capacity,
             "s": record.status,
         }
         for record in source.records[:limit]

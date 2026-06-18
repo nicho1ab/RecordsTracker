@@ -49,12 +49,14 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     previous_retrieval_raw_dir = os.environ.get("CCLD_RETRIEVAL_RAW_DIR")
     previous_retrieval_max_range = os.environ.get("CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS")
     previous_retrieval_demo_mode = os.environ.get("CCLD_RETRIEVAL_DEMO_MODE")
+    previous_facility_reference_csv = os.environ.get("CCLD_FACILITY_REFERENCE_CSV")
     os.environ["CCLD_HOSTED_TESTER_AUTH_MODE"] = "local-dev"
     os.environ["CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH"] = "enabled"
     os.environ["CCLD_HOSTED_PAGE_DATA_MODE"] = "fixture-demo"
     os.environ["CCLD_RETRIEVAL_ENABLED"] = "disabled"
     os.environ["CCLD_RETRIEVAL_RAW_DIR"] = ""
     os.environ["CCLD_RETRIEVAL_DEMO_MODE"] = ""
+    os.environ["CCLD_FACILITY_REFERENCE_CSV"] = "__missing_smoke_facility_reference__.csv"
     reset_default_ccld_record_request_ui_context()
     reset_default_local_test_reviewer_ui_context()
     try:
@@ -198,6 +200,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         _restore_env("CCLD_RETRIEVAL_RAW_DIR", previous_retrieval_raw_dir)
         _restore_env("CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS", previous_retrieval_max_range)
         _restore_env("CCLD_RETRIEVAL_DEMO_MODE", previous_retrieval_demo_mode)
+        _restore_env("CCLD_FACILITY_REFERENCE_CSV", previous_facility_reference_csv)
 
     payload = json.loads(health_body.decode("utf-8"))
     if health_status != 200 or payload.get("status") != "ok":
@@ -230,7 +233,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"facility-suggestion-list" not in ccld_body
         or b"Which facility should be reviewed?" not in ccld_body
         or b"Confirm facility" not in ccld_body
-        or b"Search by name, license number, city, ZIP, type, or status." not in ccld_body
+        or b"Search by name, license number, city, county, ZIP" not in ccld_body
         or b"Retrieval not configured" not in ccld_body
         or b"Skip to main CCLD request content" not in ccld_body
     ):
