@@ -471,6 +471,10 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "do not assign, claim, or mutate records" in normalized_html
     assert "Queue decision actions" in html
     assert "tester feedback for this queue context" in normalized_html
+    assert "Report unclear loaded-record versus retrieval-job state" in html
+    assert "workflow_area=request-result" in html
+    assert "retrieval_context=already-loaded-records" in html
+    assert "retrieval_status=not_submitted" in html
     assert "source-confidence cue, missing local/test value" in normalized_html
     assert "proxy-related value" in normalized_html
     assert "/feedback?feedback_type=Bug+report" in html
@@ -736,6 +740,10 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert "Copyable tester feedback checklist" in html
     assert "Technical retrieval details" in html
     assert "Copy details for feedback" in html
+    assert "Report unclear loaded-record versus retrieval-job state" in html
+    assert "workflow_area=request-result" in html
+    assert "retrieval_context=already-loaded-records" in html
+    assert "retrieval_status=not_submitted" in html
     assert "Advanced local/operator actions" in html
     assert "- Matching source-derived rows shown: 0" in html
     assert "- Matching complaint records in queue: 0" in html
@@ -826,6 +834,10 @@ def test_ccld_record_request_empty_hosted_records_offers_local_validated_load() 
     assert "Loaded local/test rows for this facility before date filtering" in html
     assert "not submitted for this request" in html
     assert "Copyable tester feedback checklist" in html
+    assert "Report unclear loaded-record versus retrieval-job state" in html
+    assert "workflow_area=request-result" in html
+    assert "retrieval_context=already-loaded-records" in html
+    assert "retrieval_status=not_submitted" in html
     assert "- Local facility rows before date filtering: 0" in html
     assert "does not run live public web requests" in html
     assert "ccld_import_reload_action" in html

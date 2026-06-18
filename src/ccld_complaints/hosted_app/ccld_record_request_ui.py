@@ -409,7 +409,7 @@ def _post_request_response(
         if context.retrieval_context is None:
             return _html_response(
                 503,
-                _render_retrieval_setup_required_page(),
+                _render_retrieval_setup_required_page(form_values),
             )
         retrieval_validation = validate_ccld_retrieval_request(
             form_values,
@@ -996,8 +996,9 @@ def _render_feedback_guidance_section() -> str:
         </section>"""
 
 
-def _render_retrieval_setup_required_page() -> str:
-        return _page(
+def _render_retrieval_setup_required_page(values: Mapping[str, list[str]]) -> str:
+    feedback_href = _feedback_href_for_retrieval_setup_values(values)
+    return _page(
                 title="Controlled CCLD retrieval setup required",
                 heading="Controlled CCLD retrieval setup required",
             step_id="retrieve",
@@ -1039,7 +1040,7 @@ def _render_retrieval_setup_required_page() -> str:
             operator to configure controlled retrieval. If this message is confusing, send a bug
             report from the feedback page and include the facility/date/type request.</p>
             <p><a href="{CCLD_RECORD_REQUEST_PATH}">Return to CCLD request</a></p>
-            <p><a href="{_FEEDBACK_PATH}">Send tester feedback</a></p>
+            <p><a href="{_escape(feedback_href)}">Report retrieval setup confusion</a></p>
         </section>""",
         )
 
@@ -1238,6 +1239,20 @@ def _render_result_focus_panel(
         detail_link = (
             f'<a class="button button-secondary" href="{_escape(_retrieval_job_detail_href(retrieval_result.retrieval_job_id))}">View job details</a>'
         )
+    feedback_href = _feedback_href_for_retrieval_request(
+        request,
+        workflow_area="request-result",
+        retrieval_context=(
+            "controlled-job-submitted"
+            if retrieval_result is not None
+            else "already-loaded-records"
+        ),
+        retrieval_status=retrieval_result.job_state if retrieval_result is not None else "not_submitted",
+        retrieval_job_id=(
+            retrieval_result.retrieval_job_id if retrieval_result is not None else None
+        ),
+        prompt="Describe what was unclear about loaded records versus retrieval job status.",
+    )
     current_state = _request_result_current_state_text(
         retrieval_result,
         queue_count=queue_count,
@@ -1275,7 +1290,7 @@ def _render_result_focus_panel(
                 <summary>Other result actions</summary>
                 {detail_link}
                 <p><a href="{CCLD_RECORD_REQUEST_PATH}">Run another retrieval</a></p>
-                <p><a href="{_FEEDBACK_PATH}">Send feedback</a></p>
+                <p><a href="{_escape(feedback_href)}">Report unclear loaded-record versus retrieval-job state</a></p>
             </details>
     </section>"""
 
@@ -1348,6 +1363,20 @@ def _render_no_match_recovery_panel(
         imported_count=0,
     )
     next_action = _request_result_next_action_text(retrieval_result, queue_count=0)
+    feedback_href = _feedback_href_for_retrieval_request(
+        request,
+        workflow_area="request-result",
+        retrieval_context=(
+            "controlled-job-submitted"
+            if retrieval_result is not None
+            else "already-loaded-records"
+        ),
+        retrieval_status=retrieval_result.job_state if retrieval_result is not None else "not_submitted",
+        retrieval_job_id=(
+            retrieval_result.retrieval_job_id if retrieval_result is not None else None
+        ),
+        prompt="Describe what was confusing about this no-match retrieval result.",
+    )
     return f"""<section class="hero-card recovery-panel" aria-labelledby="no-local-records-heading">
       <p class="stage-kicker">Recovery</p>
       <h2 id="no-local-records-heading">{_escape(headline)}</h2>
@@ -1371,6 +1400,7 @@ def _render_no_match_recovery_panel(
       </dl>
             <p><strong>Recommended next action:</strong> Confirm the facility/date context, then use the action below.</p>
       <p>{primary_action}</p>
+    <p><a href="{_escape(feedback_href)}">Report unclear loaded-record versus retrieval-job state</a></p>
     </section>"""
 
 
@@ -1670,6 +1700,13 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
     mode_class = _mode_badge_class(mode_label)
     stat_grid = _render_retrieval_count_grid(result.result_counts, imported_count)
     next_action = _retrieval_next_action_message(result, imported_count)
+    feedback_href = _feedback_href_for_retrieval_job(
+        result,
+        workflow_area="retrieval-job-summary",
+        page_path=CCLD_RECORD_REQUEST_PATH,
+        retrieval_context="controlled-job-submitted",
+        prompt="Describe what was confusing about this retrieval status/progress summary.",
+    )
     if result.job_state in {"completed", "completed_with_warnings"} and imported_count > 0:
         queue_link = (
             f'            <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}?'
@@ -1737,7 +1774,7 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
             when the job completed. No connector credentials or server-side private values
             are shown.</p>
             </details>
-            {_render_retrieval_next_steps(result, imported_count)}
+            {_render_retrieval_next_steps(result, imported_count, feedback_href)}
                 <p><a class="button button-secondary" href="{_escape(detail_href)}">View job details</a></p>
                 <p><a href="{CCLD_RETRIEVAL_JOBS_PATH}">View retrieval job history</a></p>
 {queue_link}
@@ -1836,7 +1873,11 @@ def _retrieval_mode_label_from_message(message: str) -> str:
     return "Not recorded"
 
 
-def _render_retrieval_next_steps(result: CcldRetrievalJobResult, imported_count: int) -> str:
+def _render_retrieval_next_steps(
+    result: CcldRetrievalJobResult,
+    imported_count: int,
+    feedback_href: str,
+) -> str:
     message = _retrieval_next_action_message(result, imported_count)
     return f"""            <section aria-labelledby="retrieval-next-steps-heading">
               <h3 id="retrieval-next-steps-heading">What to do next</h3>
@@ -1844,7 +1885,7 @@ def _render_retrieval_next_steps(result: CcldRetrievalJobResult, imported_count:
               <p>If the status, counts, or next step is confusing, use the feedback page for a
               bug report or feature request. For a new source request, use the new data source
               feedback type; do not put source credentials or private values in feedback.</p>
-              <p><a href="{_FEEDBACK_PATH}">Send tester feedback</a></p>
+                            <p><a href="{_escape(feedback_href)}">Report retrieval status confusion</a></p>
             </section>"""
 
 
@@ -1913,6 +1954,13 @@ def _render_retrieval_job_history_page(
     rows = "\n".join(_render_retrieval_history_row(job) for job in jobs)
     job_cards = "\n".join(_render_retrieval_history_card(job) for job in jobs)
     if not rows:
+        empty_feedback_href = _feedback_href_for_retrieval_surface(
+            workflow_area="retrieval-job-history",
+            page_path=CCLD_RETRIEVAL_JOBS_PATH,
+            retrieval_context="no-jobs-yet",
+            retrieval_status="no_jobs_yet",
+            prompt="Describe what was confusing about retrieval history with no jobs yet.",
+        )
         rows = """        <tr>
           <td colspan="9">No retrieval jobs have been submitted for this authorized scope.</td>
         </tr>"""
@@ -1925,6 +1973,7 @@ def _render_retrieval_job_history_page(
                         they exist for the facility/date context.</p>
                     </div>
                     <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Submit retrieval request</a></p>
+                    <p><a href="{_escape(empty_feedback_href)}">Report confusing retrieval progress</a></p>
                 </article>"""
     setup_text = (
         "Controlled retrieval is configured for this runtime."
@@ -1934,6 +1983,13 @@ def _render_retrieval_job_history_page(
             "still be read when metadata exists, but new jobs cannot be submitted until an "
             "operator enables retrieval and server-side raw source storage."
         )
+    )
+    history_feedback_href = _feedback_href_for_retrieval_surface(
+        workflow_area="retrieval-job-history",
+        page_path=CCLD_RETRIEVAL_JOBS_PATH,
+        retrieval_context="controlled-job-history",
+        retrieval_status="no_jobs_yet" if not jobs else "completed",
+        prompt="Describe what was confusing about retrieval job history.",
     )
     return _page(
         title="Retrieval status center",
@@ -1992,7 +2048,7 @@ def _render_retrieval_job_history_page(
       message shown here first. Operators can check server logs without sharing private
       values. Testers can send feedback with the facility/date/type request and the visible
       job state.</p>
-      <p><a href="{_FEEDBACK_PATH}">Send tester feedback</a></p>
+      <p><a href="{_escape(history_feedback_href)}">Report confusing retrieval progress</a></p>
       <p><a href="{CCLD_HELP_PATH}">Read CCLD workflow help</a></p>
         </details>""",
     )
@@ -2026,10 +2082,17 @@ def _render_retrieval_history_summary(
 
 
 def _render_retrieval_history_card(job: CcldRetrievalJobHistoryEntry) -> str:
-        imported_count = job.result_counts.get("imported_source_derived_records", 0)
-        detail_href = _retrieval_job_detail_href(job.retrieval_job_id)
-        mode_label = _retrieval_mode_label_from_message(job.safe_message)
-        return f"""        <article class="result-card work-item" aria-labelledby="job-{_escape(job.retrieval_job_id)}-heading">
+    imported_count = job.result_counts.get("imported_source_derived_records", 0)
+    detail_href = _retrieval_job_detail_href(job.retrieval_job_id)
+    feedback_href = _feedback_href_for_retrieval_job(
+        job,
+        workflow_area="retrieval-job-history",
+        page_path=CCLD_RETRIEVAL_JOBS_PATH,
+        retrieval_context="controlled-job-history",
+        prompt="Describe what was confusing about this retrieval job history row.",
+    )
+    mode_label = _retrieval_mode_label_from_message(job.safe_message)
+    return f"""        <article class="result-card work-item" aria-labelledby="job-{_escape(job.retrieval_job_id)}-heading">
                     <div>
                         <p><span class="{_status_badge_class(job.job_state)}">{_escape(_retrieval_state_label(job.job_state))}</span>
                         <span class="{_mode_badge_class(mode_label)}">{_escape(mode_label)}</span></p>
@@ -2049,6 +2112,7 @@ def _render_retrieval_history_card(job: CcldRetrievalJobHistoryEntry) -> str:
                     </div>
                       <div>{_render_history_next_step(job, imported_count)}</div>
                     <p><a class="button button-secondary" href="{_escape(detail_href)}">View job details</a></p>
+                                        <p><a href="{_escape(feedback_href)}">Report confusing retrieval progress</a></p>
                 </article>"""
 
 
@@ -2131,6 +2195,13 @@ def _safe_retrieval_job_id(value: str) -> str | None:
 
 
 def _render_retrieval_job_detail_invalid_page() -> str:
+    feedback_href = _feedback_href_for_retrieval_surface(
+        workflow_area="retrieval-job-detail",
+        page_path=CCLD_RETRIEVAL_JOB_DETAIL_PATH,
+        retrieval_context="controlled-job-detail",
+        retrieval_status="not_submitted",
+        prompt="Describe what was confusing about retrieval job detail lookup.",
+    )
     return _render_message_page(
         title="Retrieval job detail needs a valid job ID",
         heading="Retrieval job detail needs a valid job ID",
@@ -2139,12 +2210,20 @@ def _render_retrieval_job_detail_invalid_page() -> str:
         links=(
             ("Return to retrieval job history", CCLD_RETRIEVAL_JOBS_PATH),
             ("Return to CCLD request", CCLD_RECORD_REQUEST_PATH),
+            ("Report confusing retrieval job detail", feedback_href),
         ),
         active_path=CCLD_RETRIEVAL_JOBS_PATH,
     )
 
 
 def _render_retrieval_job_detail_not_found_page() -> str:
+    feedback_href = _feedback_href_for_retrieval_surface(
+        workflow_area="retrieval-job-detail",
+        page_path=CCLD_RETRIEVAL_JOB_DETAIL_PATH,
+        retrieval_context="controlled-job-detail",
+        retrieval_status="not_submitted",
+        prompt="Describe what was confusing about missing retrieval job detail.",
+    )
     return _render_message_page(
         title="Retrieval job detail not found",
         heading="Retrieval job detail not found",
@@ -2156,6 +2235,7 @@ def _render_retrieval_job_detail_not_found_page() -> str:
         links=(
             ("Return to retrieval job history", CCLD_RETRIEVAL_JOBS_PATH),
             ("Submit or change a CCLD request", CCLD_RECORD_REQUEST_PATH),
+            ("Report confusing retrieval job detail", feedback_href),
         ),
         active_path=CCLD_RETRIEVAL_JOBS_PATH,
     )
@@ -2288,6 +2368,13 @@ def _render_retrieval_detail_next_steps(
 ) -> str:
     queue_link = _retrieval_history_queue_link(job) if imported_count > 0 else ""
     message = _retrieval_detail_next_action_message(job, imported_count)
+    feedback_href = _feedback_href_for_retrieval_job(
+        job,
+        workflow_area="retrieval-job-detail",
+        page_path=CCLD_RETRIEVAL_JOB_DETAIL_PATH,
+        retrieval_context="controlled-job-detail",
+        prompt="Describe what was confusing about this retrieval job detail.",
+    )
     return f"""    <section aria-labelledby="retrieval-detail-next-heading">
       <h2 id="retrieval-detail-next-heading">What to do next</h2>
       <p>{_escape(message)}</p>
@@ -2296,7 +2383,7 @@ def _render_retrieval_detail_next_steps(
         <li><a href="{CCLD_RETRIEVAL_JOBS_PATH}">Return to retrieval job history</a></li>
         <li><a href="{CCLD_RECORD_REQUEST_PATH}">Submit or change a CCLD record request</a></li>
         <li><a href="{CCLD_HELP_PATH}">Read CCLD workflow help</a></li>
-        <li><a href="{_FEEDBACK_PATH}">Send tester feedback</a></li>
+                <li><a href="{_escape(feedback_href)}">Report retrieval status confusion</a></li>
       </ul>
     </section>"""
 
@@ -2346,7 +2433,16 @@ def _raw_artifact_status(job: CcldRetrievalJobHistoryEntry) -> str:
 
 def _render_history_next_step(job: CcldRetrievalJobHistoryEntry, imported_count: int) -> str:
     queue_link = _retrieval_history_queue_link(job) if imported_count > 0 else ""
-    feedback_link = f'<p><a href="{_FEEDBACK_PATH}">Send tester feedback</a></p>'
+    feedback_href = _feedback_href_for_retrieval_job(
+        job,
+        workflow_area="retrieval-job-history",
+        page_path=CCLD_RETRIEVAL_JOBS_PATH,
+        retrieval_context="controlled-job-history",
+        prompt="Describe what was confusing about this retrieval job state.",
+    )
+    feedback_link = (
+        f'<p><a href="{_escape(feedback_href)}">Report confusing retrieval progress</a></p>'
+    )
     if job.job_state == "completed" and imported_count > 0:
         return queue_link
     if job.job_state == "completed_with_warnings" and imported_count > 0:
@@ -2397,14 +2493,21 @@ def _render_retrieval_action(
     retrieval_available: bool,
 ) -> str:
     if not retrieval_available:
-        return """    <section aria-labelledby="retrieval-action-heading">
+        feedback_href = _feedback_href_for_retrieval_request(
+            request,
+            workflow_area="retrieval-setup-required",
+            retrieval_context="setup-required",
+            retrieval_status="setup_required",
+            prompt="Describe what was confusing about unavailable controlled retrieval setup.",
+        )
+        return f"""    <section aria-labelledby="retrieval-action-heading">
             <h2 id="retrieval-action-heading">Controlled CCLD retrieval setup required</h2>
             <p>Server-side retrieval is not configured with database context and raw source
             storage in this runtime. No retrieval job will be created from this browser page.</p>
             <p>Operators should enable retrieval only after PostgreSQL migrations, raw artifact
             storage, auth boundary, rate limits, and CCLD source allowlists are ready.</p>
             <p>If this setup state is confusing, use the feedback page to send a bug report.</p>
-            <p><a href="/feedback">Send tester feedback</a></p>
+            <p><a href="{_escape(feedback_href)}">Report retrieval setup confusion</a></p>
         </section>"""
     return f"""    <section aria-labelledby="retrieval-action-heading">
             <h2 id="retrieval-action-heading">Controlled CCLD retrieval</h2>
@@ -2886,6 +2989,116 @@ def _feedback_href_for_queue(request: CcldRecordRequest) -> str:
         "prompt": "Describe what was confusing about this queue or filter.",
     }
     return f"{_FEEDBACK_PATH}?{urlencode(query_values)}"
+
+
+def _feedback_href_for_retrieval_request(
+    request: CcldRecordRequest,
+    *,
+    workflow_area: str,
+    retrieval_context: str,
+    retrieval_status: str,
+    prompt: str,
+    retrieval_job_id: str | None = None,
+) -> str:
+    return _feedback_href_for_retrieval_surface(
+        workflow_area=workflow_area,
+        page_path=CCLD_RECORD_REQUEST_PATH,
+        retrieval_context=retrieval_context,
+        retrieval_status=retrieval_status,
+        prompt=prompt,
+        facility_number=request.facility_number,
+        start_date=request.start_date or "",
+        end_date=request.end_date or "",
+        request_context_origin=request.request_context_origin,
+        retrieval_job_id=retrieval_job_id,
+    )
+
+
+def _feedback_href_for_retrieval_job(
+    job: CcldRetrievalJobResult | CcldRetrievalJobHistoryEntry,
+    *,
+    workflow_area: str,
+    page_path: str,
+    retrieval_context: str,
+    prompt: str,
+) -> str:
+    return _feedback_href_for_retrieval_surface(
+        workflow_area=workflow_area,
+        page_path=page_path,
+        retrieval_context=retrieval_context,
+        retrieval_status=job.job_state,
+        prompt=prompt,
+        facility_number=job.facility_number,
+        start_date=job.start_date,
+        end_date=job.end_date,
+        retrieval_job_id=job.retrieval_job_id,
+    )
+
+
+def _feedback_href_for_retrieval_setup_values(values: Mapping[str, list[str]]) -> str:
+    facility_number = _safe_feedback_facility_number(
+        _first_form_value(values, "facility_number")
+    )
+    start_date = _safe_feedback_date(_first_form_value(values, "start_date"))
+    end_date = _safe_feedback_date(_first_form_value(values, "end_date"))
+    request_context_origin = _first_form_value(values, _REQUEST_CONTEXT_ORIGIN_FIELD)
+    if request_context_origin not in _REQUEST_CONTEXT_ORIGIN_VALUES:
+        request_context_origin = ""
+    return _feedback_href_for_retrieval_surface(
+        workflow_area="retrieval-setup-required",
+        page_path=CCLD_RECORD_REQUEST_PATH,
+        retrieval_context="setup-required",
+        retrieval_status="setup_required",
+        prompt="Describe what was confusing about retrieval setup required state.",
+        facility_number=facility_number or "",
+        start_date=start_date or "",
+        end_date=end_date or "",
+        request_context_origin=request_context_origin,
+    )
+
+
+def _feedback_href_for_retrieval_surface(
+    *,
+    workflow_area: str,
+    page_path: str,
+    retrieval_context: str,
+    retrieval_status: str,
+    prompt: str,
+    facility_number: str = "",
+    start_date: str = "",
+    end_date: str = "",
+    request_context_origin: str = "",
+    retrieval_job_id: str | None = None,
+) -> str:
+    query_values = {
+        "feedback_type": "Bug report",
+        "workflow_area": workflow_area,
+        "page_path": page_path,
+        "facility_number": facility_number,
+        "start_date": start_date,
+        "end_date": end_date,
+        "request_context_origin": request_context_origin,
+        "retrieval_context": retrieval_context,
+        "retrieval_status": retrieval_status,
+        "retrieval_job_id": retrieval_job_id or "",
+        "prompt": prompt,
+    }
+    encoded_query = urlencode(
+        {key: value for key, value in query_values.items() if value}
+    )
+    return f"{_FEEDBACK_PATH}?{encoded_query}"
+
+
+def _safe_feedback_facility_number(value: str) -> str | None:
+    if _FACILITY_NUMBER_RE.match(value):
+        return value
+    return None
+
+
+def _safe_feedback_date(value: str) -> str | None:
+    if len(value) == 10 and value[4] == "-" and value[7] == "-" and value.replace("-", "").isdigit():
+        return value
+    return None
 
 
 def _facility_scope_for_summary(request: CcldRecordRequest) -> str:
