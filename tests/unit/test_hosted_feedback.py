@@ -74,11 +74,15 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "Send feedback" in html
     assert "What issue should be reported?" in html
     assert "packet/export-readiness" in html
+    assert "retrieval status/progress" in html
+    assert "already-loaded record review" in html
     assert "browser copy or print" in html
     assert "source-confidence next steps" in html
     assert "missing local/test source values" in html
     assert "proxy-related cues" in html
     assert "A complaint record looked missing or unexpected." in html
+    assert "already-loaded local/test records or a controlled retrieval job status" in html
+    assert "retrieval job state, progress count, warning, or next safe action" in html
     assert "The source traceability summary was hard to use." in html
     assert "A source-confidence cue did not make the next safe action clear." in html
     assert "active status-filter counts" in html

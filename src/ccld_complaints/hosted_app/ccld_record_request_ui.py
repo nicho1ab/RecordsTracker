@@ -862,6 +862,15 @@ def _render_help_page() -> str:
                         <p>When the mode badge says live public retrieval, controlled server-side
                         public CCLD HTTP requests occur only after browser submit. When the mode badge
                         says fixture/mock demo, committed fixtures are used and no live CCLD calls are made.</p>
+                        <p>Show existing queue means the page searched already-loaded local/test
+                        source-derived rows only; it did not submit a controlled retrieval job. Retrieve
+                        complaint records means a configured controlled retrieval job was submitted, then
+                        status/progress pages show the current job state, records imported, warnings or
+                        errors, and the next safe action.</p>
+                        <p>Loaded local/test records can be ready for review even when no retrieval job was
+                        submitted for the current request. Retrieval status/progress is operational
+                        metadata and is not production monitoring, source-completeness proof, or a legal
+                        conclusion.</p>
                     </details>
                     <details>
                         <summary id="help-feedback-heading">How to send useful feedback</summary>
@@ -1004,8 +1013,13 @@ def _render_retrieval_setup_required_page() -> str:
                 <dt>What happened</dt>
                 <dd>The server blocked retrieval before creating a job because setup is
                 incomplete.</dd>
+                <dt>Current state</dt>
+                <dd>No controlled retrieval job exists for this request.</dd>
                 <dt>Records imported</dt>
                 <dd>none</dd>
+                <dt>Next safe action</dt>
+                <dd>Return to the request page to review already-loaded local/test records, or
+                ask an operator to configure controlled retrieval before submitting a job.</dd>
             </dl>
         </section>
         <details class="technical-details">
@@ -1208,6 +1222,8 @@ def _render_result_focus_panel(
         if retrieval_result is not None
         else len(result.matched_records)
     )
+    queue_count = len(result.matched_complaint_keys)
+    imported_label = "Records imported" if retrieval_result is not None else "Source-derived rows shown"
     if retrieval_result is not None and imported_count > 0:
         headline = "Complaint records ready for attorney review"
     else:
@@ -1222,14 +1238,23 @@ def _render_result_focus_panel(
         detail_link = (
             f'<a class="button button-secondary" href="{_escape(_retrieval_job_detail_href(retrieval_result.retrieval_job_id))}">View job details</a>'
         )
+    current_state = _request_result_current_state_text(
+        retrieval_result,
+        queue_count=queue_count,
+        imported_count=imported_count,
+    )
+    next_action = _request_result_next_action_text(
+        retrieval_result,
+        queue_count=queue_count,
+    )
     return f"""<section class="hero-card" aria-labelledby="request-result-heading">
       <p class="stage-kicker">Result</p>
       <h2 id="request-result-heading">{_escape(headline)}</h2>
       <p><span class="{_mode_badge_class(mode_label)}">{_escape(mode_label)}</span></p>
       <p>{_escape(_request_execution_boundary_text(retrieval_result))}</p>
             <div class="metric-strip" aria-label="Retrieval result summary">
-                <div class="metric-card"><strong>{imported_count}</strong><span>Records imported</span></div>
-                <div class="metric-card"><strong>{len(result.matched_records)}</strong><span>Rows ready in queue</span></div>
+                <div class="metric-card"><strong>{imported_count}</strong><span>{_escape(imported_label)}</span></div>
+                <div class="metric-card"><strong>{queue_count}</strong><span>Complaint records ready</span></div>
                 <div class="metric-card"><strong>{_escape(_date_scope_text(request))}</strong><span>Complaint date range</span></div>
             </div>
             <dl class="summary-list">
@@ -1237,6 +1262,14 @@ def _render_result_focus_panel(
                 <dd>{_escape(request.facility_number)}</dd>
                 <dt>Load state</dt>
                 <dd>{_escape(load_text)}</dd>
+                <dt>Retrieval job submitted</dt>
+                <dd>{_yes_no(retrieval_result is not None)}</dd>
+                <dt>Current state</dt>
+                <dd>{_escape(current_state)}</dd>
+                <dt>Records ready</dt>
+                <dd>{queue_count} complaint queue record(s) are ready for review.</dd>
+                <dt>Next safe action</dt>
+                <dd>{_escape(next_action)}</dd>
             </dl>
             <details class="technical-details secondary-actions">
                 <summary>Other result actions</summary>
@@ -1309,6 +1342,12 @@ def _render_no_match_recovery_panel(
     primary_action: str,
 ) -> str:
     reason_bucket = _no_match_reason_bucket(retrieval_result, local_count)
+    current_state = _request_result_current_state_text(
+        retrieval_result,
+        queue_count=0,
+        imported_count=0,
+    )
+    next_action = _request_result_next_action_text(retrieval_result, queue_count=0)
     return f"""<section class="hero-card recovery-panel" aria-labelledby="no-local-records-heading">
       <p class="stage-kicker">Recovery</p>
       <h2 id="no-local-records-heading">{_escape(headline)}</h2>
@@ -1321,6 +1360,12 @@ def _render_no_match_recovery_panel(
         <dd>{_escape(_date_scope_text(request))}</dd>
         <dt>Rows available before date filtering</dt>
         <dd>{local_count}</dd>
+        <dt>Retrieval job submitted</dt>
+        <dd>{_yes_no(retrieval_result is not None)}</dd>
+        <dt>Current state</dt>
+        <dd>{_escape(current_state)}</dd>
+        <dt>Next safe action</dt>
+        <dd>{_escape(next_action)}</dd>
                 <dt>What this does not prove</dt>
         <dd>This does not prove no complaints exist, source coverage is complete, or any legal or facility-wide conclusion.</dd>
       </dl>
@@ -1458,6 +1503,57 @@ def _request_execution_boundary_text(
     )
 
 
+def _request_result_current_state_text(
+    retrieval_result: CcldRetrievalJobResult | None,
+    *,
+    queue_count: int,
+    imported_count: int,
+) -> str:
+    if retrieval_result is None:
+        return (
+            "Already-loaded local/test source-derived rows were searched; no controlled "
+            "retrieval job was submitted for this request."
+        )
+    state_label = _retrieval_state_label(retrieval_result.job_state)
+    if queue_count > 0:
+        return (
+            f"Controlled retrieval job submitted and {state_label.lower()}; "
+            f"{queue_count} complaint queue record(s) are visible now."
+        )
+    if imported_count > 0:
+        return (
+            f"Controlled retrieval job submitted and {state_label.lower()}; imported records "
+            "may need the request queue to be opened or refreshed."
+        )
+    return (
+        f"Controlled retrieval job submitted and {state_label.lower()}; no queue rows are "
+        "ready for this request yet."
+    )
+
+
+def _request_result_next_action_text(
+    retrieval_result: CcldRetrievalJobResult | None,
+    *,
+    queue_count: int,
+) -> str:
+    if retrieval_result is None:
+        if queue_count > 0:
+            return (
+                "Review the already-loaded local/test records in the queue, or change the "
+                "facility/date criteria before submitting a controlled retrieval job."
+            )
+        return (
+            "Change the facility/date criteria, load validated local/test records when available, "
+            "or submit controlled retrieval only after confirming the request context."
+        )
+    if queue_count > 0:
+        return (
+            "Review the records now visible in the queue, then check job details only if the "
+            "status, warnings, counts, or imported rows are confusing."
+        )
+    return _retrieval_next_action_message(retrieval_result, imported_count=0)
+
+
 def _no_match_load_state(result: CcldImportReloadResult | None) -> str:
     if result is None:
         return "not submitted for this request"
@@ -1573,6 +1669,7 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
     status_class = _status_badge_class(result.job_state)
     mode_class = _mode_badge_class(mode_label)
     stat_grid = _render_retrieval_count_grid(result.result_counts, imported_count)
+    next_action = _retrieval_next_action_message(result, imported_count)
     if result.job_state in {"completed", "completed_with_warnings"} and imported_count > 0:
         queue_link = (
             f'            <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}?'
@@ -1588,6 +1685,19 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
             <p><span class="{status_class}">{_escape(_retrieval_state_label(result.job_state))}</span>
             <span class="{mode_class}">{_escape(mode_label)}</span></p>
             <p>{_escape(_retrieval_state_intro(result))}</p>
+            <section aria-labelledby="retrieval-progress-summary-heading">
+                <h3 id="retrieval-progress-summary-heading">Retrieval status/progress summary</h3>
+                <dl class="summary-list">
+                    <dt>Current state</dt>
+                    <dd>{_escape(_retrieval_state_label(result.job_state))}</dd>
+                    <dt>Retrieval job submitted</dt>
+                    <dd>yes</dd>
+                    <dt>Records ready</dt>
+                    <dd>{imported_count} imported source-derived record(s) are available from this job.</dd>
+                    <dt>Next safe action</dt>
+                    <dd>{_escape(next_action)}</dd>
+                </dl>
+            </section>
                         <details class="technical-details">
                             <summary>Technical job details</summary>
             {stat_grid}
@@ -1727,25 +1837,7 @@ def _retrieval_mode_label_from_message(message: str) -> str:
 
 
 def _render_retrieval_next_steps(result: CcldRetrievalJobResult, imported_count: int) -> str:
-    if result.job_state == "completed" and imported_count > 0:
-        message = "Open the imported records in the queue and review source traceability."
-    elif result.job_state == "completed_with_warnings" and imported_count > 0:
-        message = "Review imported records, then include warning details if sending feedback."
-    elif result.job_state == "completed_with_warnings":
-        message = "No records were imported; check warnings and adjust the request if needed."
-    elif result.job_state == "failed":
-        message = (
-            "Retry later or ask an operator to inspect server logs without sharing "
-            "private values."
-        )
-    elif result.job_state == "blocked_by_validation":
-        message = "Change the facility/date/type request before retrying retrieval."
-    elif result.job_state == "rate_limited":
-        message = "Wait for an active retrieval job to finish before trying again."
-    elif result.job_state == "running":
-        message = "Refresh the request status later; do not resubmit repeatedly."
-    else:
-        message = "Wait for the server-side job to start, then refresh status later."
+    message = _retrieval_next_action_message(result, imported_count)
     return f"""            <section aria-labelledby="retrieval-next-steps-heading">
               <h3 id="retrieval-next-steps-heading">What to do next</h3>
               <p>{_escape(message)}</p>
@@ -1754,6 +1846,30 @@ def _render_retrieval_next_steps(result: CcldRetrievalJobResult, imported_count:
               feedback type; do not put source credentials or private values in feedback.</p>
               <p><a href="{_FEEDBACK_PATH}">Send tester feedback</a></p>
             </section>"""
+
+
+def _retrieval_next_action_message(
+    result: CcldRetrievalJobResult,
+    imported_count: int,
+) -> str:
+    if result.job_state == "completed" and imported_count > 0:
+        return "Open the imported records in the queue and review source traceability."
+    if result.job_state == "completed_with_warnings" and imported_count > 0:
+        return "Review imported records, then include warning details if sending feedback."
+    if result.job_state == "completed_with_warnings":
+        return "No records were imported; check warnings and adjust the request if needed."
+    if result.job_state == "failed":
+        return (
+            "Retry later or ask an operator to inspect server logs without sharing "
+            "private values."
+        )
+    if result.job_state == "blocked_by_validation":
+        return "Change the facility/date/type request before retrying retrieval."
+    if result.job_state == "rate_limited":
+        return "Wait for an active retrieval job to finish before trying again."
+    if result.job_state == "running":
+        return "Refresh the request status later; do not resubmit repeatedly."
+    return "Wait for the server-side job to start, then refresh status later."
 
 
 def _retrieval_job_history_response(
@@ -1804,6 +1920,9 @@ def _render_retrieval_job_history_page(
                     <div>
                         <h3>No retrieval jobs yet</h3>
                         <p>No retrieval jobs have been submitted for this authorized scope.</p>
+                        <p>This means there is no controlled retrieval status/progress to wait on
+                        yet. The request page can still show already-loaded local/test records if
+                        they exist for the facility/date context.</p>
                     </div>
                     <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Submit retrieval request</a></p>
                 </article>"""
@@ -1827,6 +1946,9 @@ def _render_retrieval_job_history_page(
       <h2 id="retrieval-history-purpose-heading">Track complaint retrieval jobs</h2>
       <p>This page shows recent controlled CCLD retrieval jobs with facility/date context,
       imported-record counts, warnings/errors, and the next action for review.</p>
+    <p>Use this status center after submitting controlled retrieval. To review records
+    already loaded without submitting a job, return to the request page and choose Show
+    existing queue.</p>
             <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Submit or change retrieval request</a></p>
             <details class="technical-details">
                 <summary>Runtime and boundary details</summary>
@@ -1895,6 +2017,8 @@ def _render_retrieval_history_summary(
     )
     return f"""    <section aria-labelledby="retrieval-status-summary-heading">
       <h2 id="retrieval-status-summary-heading">Status summary</h2>
+        <p>These counts summarize controlled retrieval job metadata only. They do not include
+        already-loaded local/test rows that can appear from Show existing queue without a job.</p>
       <div class="stat-grid">
 {cards}
       </div>
@@ -1911,6 +2035,8 @@ def _render_retrieval_history_card(job: CcldRetrievalJobHistoryEntry) -> str:
                         <span class="{_mode_badge_class(mode_label)}">{_escape(mode_label)}</span></p>
                         <h3 id="job-{_escape(job.retrieval_job_id)}-heading">Facility {_escape(job.facility_number)} retrieval</h3>
                         <dl>
+                            <dt>Current state</dt>
+                            <dd>{_escape(_retrieval_state_label(job.job_state))}</dd>
                             <dt>Date range</dt>
                             <dd>{_escape(job.start_date)} to {_escape(job.end_date)}</dd>
                             <dt>Records imported</dt>
@@ -2060,6 +2186,10 @@ def _render_retrieval_job_detail_page(job: CcldRetrievalJobHistoryEntry) -> str:
     <dl class="summary-list">
         <dt>Job state</dt>
         <dd>{_escape(_retrieval_state_label(job.job_state))}</dd>
+                <dt>Current status/progress</dt>
+                <dd>{_escape(_retrieval_state_intro_for_history(job))}</dd>
+                <dt>Next safe action</dt>
+                <dd>{_escape(_retrieval_detail_next_action_message(job, imported_count))}</dd>
         <dt>Status message</dt>
         <dd>{_escape(job.safe_message)}</dd>
         <dt>Retrieval mode</dt>
@@ -2157,25 +2287,7 @@ def _render_retrieval_detail_next_steps(
     imported_count: int,
 ) -> str:
     queue_link = _retrieval_history_queue_link(job) if imported_count > 0 else ""
-    if job.job_state == "completed" and imported_count > 0:
-        message = "Open imported records in the CCLD queue and review source traceability."
-    elif job.job_state == "completed_with_warnings" and imported_count > 0:
-        message = "Review imported records, then include warning details if sending feedback."
-    elif job.job_state == "completed_with_warnings":
-        message = "No records were imported. Review warnings and adjust the request if needed."
-    elif job.job_state == "failed":
-        message = (
-            "Retry later or ask an operator to inspect server logs without sharing "
-            "private values."
-        )
-    elif job.job_state == "blocked_by_validation":
-        message = "Change the facility/date/type request before retrying retrieval."
-    elif job.job_state == "rate_limited":
-        message = "Wait for an active retrieval job to finish before trying again."
-    elif job.job_state == "running":
-        message = "Refresh job history later; do not resubmit repeatedly."
-    else:
-        message = "Wait for the server-side job to start, then refresh job history later."
+    message = _retrieval_detail_next_action_message(job, imported_count)
     return f"""    <section aria-labelledby="retrieval-detail-next-heading">
       <h2 id="retrieval-detail-next-heading">What to do next</h2>
       <p>{_escape(message)}</p>
@@ -2187,6 +2299,30 @@ def _render_retrieval_detail_next_steps(
         <li><a href="{_FEEDBACK_PATH}">Send tester feedback</a></li>
       </ul>
     </section>"""
+
+
+def _retrieval_detail_next_action_message(
+    job: CcldRetrievalJobHistoryEntry,
+    imported_count: int,
+) -> str:
+    if job.job_state == "completed" and imported_count > 0:
+        return "Open imported records in the CCLD queue and review source traceability."
+    if job.job_state == "completed_with_warnings" and imported_count > 0:
+        return "Review imported records, then include warning details if sending feedback."
+    if job.job_state == "completed_with_warnings":
+        return "No records were imported. Review warnings and adjust the request if needed."
+    if job.job_state == "failed":
+        return (
+            "Retry later or ask an operator to inspect server logs without sharing "
+            "private values."
+        )
+    if job.job_state == "blocked_by_validation":
+        return "Change the facility/date/type request before retrying retrieval."
+    if job.job_state == "rate_limited":
+        return "Wait for an active retrieval job to finish before trying again."
+    if job.job_state == "running":
+        return "Refresh job history later; do not resubmit repeatedly."
+    return "Wait for the server-side job to start, then refresh job history later."
 
 
 def _render_history_message_list(values: tuple[str, ...]) -> str:
@@ -2956,6 +3092,11 @@ def _feedback_checklist_text(
         "- Saved note/status was visible after save:",
         "- Return-to-queue link worked:",
         "- Queue showed updated note/status after returning and resubmitting:",
+        "",
+        "Retrieval status/progress clarity",
+        "- It was clear whether records were already loaded, a controlled retrieval job was submitted, or a job was still waiting:",
+        "- Retrieval job/status/progress wording that was confusing:",
+        "- Next safe action after retrieval status was clear:",
         "",
         "Missing, unexpected, or confusing results",
         "- Records that seemed missing:",
