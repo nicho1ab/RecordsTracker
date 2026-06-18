@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Improved hosted CCLD feedback context starter clarity. Feedback links with
+  safe handoff context now show an editable suggested issue starter in the
+  existing description field, using only sanitized workflow, facility/date,
+  retrieval context/status, safe job identifier, and visible prompt text when
+  available. Feedback persistence, GitHub issue submission behavior, retrieval
+  execution, schemas, migrations, source-derived records, reviewer-created
+  writes, exports, packet lifecycle, legal conclusions, and source-completeness
+  claims are unchanged.
+
 - Improved hosted CCLD retrieval feedback handoff context. Request results,
   retrieval setup-required states, retrieval job summaries, retrieval job
   history, and retrieval job detail now link to feedback with bounded safe

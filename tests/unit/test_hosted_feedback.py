@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import html as html_lib
+import re
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -102,6 +104,7 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "raw SHA-256 hash" in html
     assert "source document/report marker looked missing or confusing" in html
     assert "support-layout" in html
+    assert "Suggested issue starter" not in html
     assert "Do not include private material" in html
     assert "Useful examples" in html
     assert "Choose the best feedback type" not in html
@@ -233,6 +236,100 @@ def test_feedback_page_renders_safe_retrieval_handoff_context() -> None:
     assert_no_secret_html(html)
 
 
+def test_feedback_page_prefills_editable_starter_from_safe_handoff_context() -> None:
+    query = urlencode(
+        {
+            "feedback_type": "Bug report",
+            "workflow_area": "retrieval-job-detail",
+            "page_path": "/ccld/retrieval/jobs/detail",
+            "facility_number": "157806098",
+            "start_date": "2022-08-01",
+            "end_date": "2022-08-31",
+            "retrieval_context": "controlled-job-detail",
+            "retrieval_status": "completed_with_warnings",
+            "retrieval_job_id": "ccld-retrieval-157806098-20260615T120000Z",
+            "prompt": "Describe retrieval status confusion.",
+            "raw_storage_path": "C:/server/private/raw/artifact.html",
+        }
+    )
+
+    status, _content_type, body = route_response(f"{FEEDBACK_PATH}?{query}")
+    html = body.decode("utf-8")
+    starter = _description_textarea(html)
+
+    assert status == 200
+    assert "Suggested issue starter" in html
+    assert "Edit this before submitting" in html
+    assert "This starter uses only safe handoff context from the screen you came from." in html
+    assert (
+        "Do not paste secrets, private URLs, stack traces, raw source narrative, or "
+        "unrelated personal information."
+        in html
+    )
+    starter_opening = (
+        "I am reporting confusion about the retrieval/status information on "
+        "retrieval job detail."
+    )
+    assert starter == "\n".join(
+        [
+            starter_opening,
+            "Facility/license: 157806098",
+            "Date range: 2022-08-01 to 2022-08-31",
+            "Retrieval context: controlled-job-detail",
+            "Retrieval status: completed_with_warnings",
+            "Retrieval job ID: ccld-retrieval-157806098-20260615T120000Z",
+            "",
+            "Prompt from previous screen: Describe retrieval status confusion.",
+            "",
+            "What was confusing:",
+            "[Edit this before submitting.]",
+        ]
+    )
+    assert "C:/server/private/raw/artifact.html" not in starter
+    forbidden_starter_markers = (
+        "secret",
+        "private",
+        "provider",
+        "token",
+        "stack trace",
+        "raw source narrative",
+        "server path",
+        "public-source completeness",
+        "legal conclusion",
+    )
+    assert not any(marker in starter.casefold() for marker in forbidden_starter_markers)
+    assert_no_secret_html(html)
+
+
+def test_feedback_starter_omits_unavailable_handoff_values() -> None:
+    query = urlencode(
+        {
+            "feedback_type": "Bug report",
+            "workflow_area": "request-result",
+            "facility_number": "157806098",
+            "retrieval_context": "already-loaded-records",
+        }
+    )
+
+    status, _content_type, body = route_response(f"{FEEDBACK_PATH}?{query}")
+    html = body.decode("utf-8")
+    starter = _description_textarea(html)
+
+    assert status == 200
+    assert "Suggested issue starter" in html
+    assert (
+        "I am reporting confusion about the retrieval/status information on request result."
+        in starter
+    )
+    assert "Facility/license: 157806098" in starter
+    assert "Retrieval context: already-loaded-records" in starter
+    assert "Date range:" not in starter
+    assert "Retrieval status:" not in starter
+    assert "Retrieval job ID:" not in starter
+    assert "Prompt from previous screen:" not in starter
+    assert_no_secret_html(html)
+
+
 def test_feedback_page_ignores_unsafe_context_parameters() -> None:
     query = urlencode(
         {
@@ -252,6 +349,8 @@ def test_feedback_page_ignores_unsafe_context_parameters() -> None:
 
     assert status == 200
     assert "Feedback context from review workflow" not in html
+    assert "Suggested issue starter" not in html
+    assert "I am reporting confusion" not in html
     assert "private.example" not in html
     assert "authorization" not in html.casefold()
     assert "bearer" not in html.casefold()
@@ -554,3 +653,14 @@ def assert_no_secret_html(markup: str) -> None:
         "private_header",
     ]:
         assert marker not in lowered
+
+
+def _description_textarea(markup: str) -> str:
+    match = re.search(
+        r'<textarea id="description" name="description"[^>]*>(.*?)</textarea>',
+        markup,
+        flags=re.DOTALL,
+    )
+    if match is None:
+        raise AssertionError("Feedback description textarea not found")
+    return html_lib.unescape(match.group(1))
