@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- Improved hosted CCLD retrieval/status progress clarity. Request results now
+	state whether records came from already-loaded local/test rows or a submitted
+	controlled retrieval job, identify the current state, show when records are
+	ready, and name the next safe action. Retrieval job summary, history/detail,
+	help, feedback examples, and the copyable feedback checklist now reinforce the
+	loaded-record versus job-status boundary without changing retrieval behavior,
+	schemas, migrations, exports, packet lifecycle, reviewer-created writes,
+	source-derived records, feedback persistence, legal conclusions, or source-
+	completeness claims.
+
 - Improved the README live-mode queue and reviewer-detail screenshot
 	composition so the public landing page better shows the review-priority
 	decision flow, recommended next record action, source traceability summary,

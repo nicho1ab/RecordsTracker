@@ -238,7 +238,7 @@ def render_feedback_page(
         <section class="hero-card" aria-labelledby="feedback-purpose-heading">
             <p class="launch-kicker">Tester support</p>
             <h2 id="feedback-purpose-heading">What issue should be reported?</h2>
-            <p>Choose the feedback type and describe what blocked retrieval, review, packet/export-readiness, browser copy or print, active status-filter counts, filtered-empty recovery, source traceability, source-confidence next steps, correction-readiness guidance, missing local/test traceability values, missing local/test source values, proxy-related cues, wording, or keyboard flow.</p>
+            <p>Choose the feedback type and describe what blocked retrieval, retrieval status/progress, already-loaded record review, packet/export-readiness, browser copy or print, active status-filter counts, filtered-empty recovery, source traceability, source-confidence next steps, correction-readiness guidance, missing local/test traceability values, missing local/test source values, proxy-related cues, wording, or keyboard flow.</p>
             <p class="helper-text">Keyboard flow: choose a feedback type, Tab to Description, submit only safe details, and use the visible validation message if a required field is missing.</p>
         </section>
         {_feedback_context_panel(handoff_context)}
@@ -255,6 +255,8 @@ def render_feedback_page(
             <summary>Useful examples</summary>
             <ul>
                 <li>A complaint record looked missing or unexpected.</li>
+                <li>It was unclear whether the page was showing already-loaded local/test records or a controlled retrieval job status.</li>
+                <li>A retrieval job state, progress count, warning, or next safe action was unclear.</li>
                 <li>A date or finding looked confusing.</li>
                 <li>A review flag was unclear.</li>
                 <li>A source-confidence cue did not make the next safe action clear.</li>
