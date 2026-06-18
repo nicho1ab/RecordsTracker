@@ -113,6 +113,7 @@ $checks = @(
     @{ Name = "home-start"; Path = "/"; Required = @("Start a facility complaint review", "How the local/test review loop works", "Keyboard flow:", "public CCLD portal remains the source of record") },
     @{ Name = "ccld-start"; Path = "/ccld/"; Required = @("Retrieve complaint records", "Start review request context", "Which facility should be reviewed?", "Keyboard flow:") },
     @{ Name = "facility-lookup"; Path = "/ccld/facilities"; Required = @("Find a facility", "Lookup or manual entry?", "Search by name, license number, city, county, ZIP", "Keyboard flow:") },
+    @{ Name = "facility-hub"; Path = "/ccld/facilities/detail?facility_number=$ContextFacilityNumber"; Required = @("Facility review hub", "Return to facility lookup") },
     @{ Name = "record-request"; Path = "/ccld/records/request"; Required = @("Which facility should be reviewed?", "Confirm facility", "Start review request context", "Keyboard flow:") },
     @{ Name = "record-request-context"; Path = "/ccld/records/request?$contextQuery"; Required = @($ContextFacilityNumber, "Ready to retrieve complaint records", "Show existing queue", "Date range", "Keyboard flow:") },
     @{ Name = "reviewer"; Path = "/reviewer"; Required = @("Worklist", "Open local/test packet preview", "Open local/test preparation draft for browser copy or print", "Keyboard flow:") },
@@ -224,7 +225,7 @@ if ($IncludeCapture) {
             $routeStatusCsv = Join-Path $evidencePath 'route-status.csv'
             if (Test-Path -LiteralPath $routeStatusCsv) {
                 $routeStatusRows = Import-Csv -Path $routeStatusCsv
-                foreach ($routeName in @('home', 'facility', 'retrieve', 'reviewer', 'packet-preview-empty', 'packet-preview-context', 'packet-draft-empty', 'packet-draft-context', 'feedback', 'help')) {
+                foreach ($routeName in @('home', 'facility', 'facility-hub', 'retrieve', 'reviewer', 'packet-preview-empty', 'packet-preview-context', 'packet-draft-empty', 'packet-draft-context', 'feedback', 'help')) {
                     if (-not ($routeStatusRows | Where-Object { $_.route -eq $routeName -or $_.name -eq $routeName })) {
                         Write-Warning "Evidence route-status.csv is missing route: $routeName"
                         $failCount++

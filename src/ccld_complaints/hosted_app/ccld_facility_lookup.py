@@ -15,7 +15,11 @@ from urllib.parse import parse_qs, urlencode, urlparse
 from ccld_complaints.hosted_app.ui_shell import render_page_shell
 
 CCLD_FACILITY_LOOKUP_PATH = "/ccld/facilities"
+CCLD_FACILITY_REVIEW_HUB_PATH = f"{CCLD_FACILITY_LOOKUP_PATH}/detail"
 CCLD_RECORD_REQUEST_PATH = "/ccld/records/request"
+REVIEWER_UI_RECORDS_PATH = "/reviewer/records"
+REVIEWER_UI_PACKET_PREVIEW_PATH = "/reviewer/packet/preview"
+REVIEWER_UI_PACKET_DRAFT_PATH = "/reviewer/packet/draft"
 DEFAULT_CCLD_FACILITY_REFERENCE_PATH = Path(
     "tests/fixtures/public_source_facilities/ccld_program_facilities_tiny.csv"
 )
@@ -253,6 +257,22 @@ class CcldFacilityLookupResult:
     return self.total_match_count > len(self.returned_records)
 
 
+@dataclass(frozen=True)
+class CcldFacilityReviewContext:
+    loaded_complaint_record_count: int = 0
+    start_date: str = ""
+    end_date: str = ""
+    source_label: str = "Loaded local/test source-derived complaint records"
+
+    @property
+    def has_loaded_context(self) -> bool:
+        return self.loaded_complaint_record_count > 0
+
+    @property
+    def has_date_context(self) -> bool:
+        return bool(self.start_date and self.end_date)
+
+
 def load_ccld_facility_reference(
     path: Path = DEFAULT_CCLD_FACILITY_REFERENCE_PATH,
 ) -> tuple[CcldFacilityLookupRecord, ...]:
@@ -364,9 +384,10 @@ def route_ccld_facility_lookup_response(path: str) -> tuple[int, str, bytes]:
 def route_ccld_facility_lookup_response_with_source(
     path: str,
     reference_source: CcldFacilityReferenceSource | None,
+    review_context: CcldFacilityReviewContext | None = None,
 ) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
-    if parsed_url.path != CCLD_FACILITY_LOOKUP_PATH:
+    if parsed_url.path not in {CCLD_FACILITY_LOOKUP_PATH, CCLD_FACILITY_REVIEW_HUB_PATH}:
         return _html_response(
             404,
             _render_message_page(
@@ -376,6 +397,16 @@ def route_ccld_facility_lookup_response_with_source(
             ),
         )
     query_values = parse_qs(parsed_url.query, keep_blank_values=True)
+    if parsed_url.path == CCLD_FACILITY_REVIEW_HUB_PATH:
+        facility_number = _first_query_value(query_values, "facility_number")
+        return _html_response(
+            200,
+            render_ccld_facility_review_hub_page(
+                facility_number,
+                reference_source,
+                review_context=review_context,
+            ),
+        )
     query = _first_query_value(query_values, "q")
     return _html_response(200, render_ccld_facility_lookup_page(query, reference_source))
 
@@ -393,27 +424,77 @@ def render_ccld_facility_lookup_page(
     limited_note = _limited_reference_note(reference_source)
     return _page(
         title="Find CCLD facility",
-                heading="Find a facility",
-                main=f"""    <section class="hero-card attorney-hero" aria-labelledby="facility-lookup-scope-heading">
-                    <div>
-                        <p class="launch-kicker">Facility intake</p>
-            <h2 id="facility-lookup-scope-heading">Find a facility</h2>
-                        <p class="launch-value">Start review by finding the CCLD facility/license number in the preloaded facility directory, then carry that selected facility into the request page to choose a complaint date range.</p>
-                    </div>
-        </section>
-        <section class="quiet-section" aria-labelledby="facility-start-guidance-heading">
-            <h2 id="facility-start-guidance-heading">Lookup or manual entry?</h2>
-            <p>Use facility lookup when you know a facility name, city, county, ZIP, facility type, program type, or status code but not the exact facility/license number. Use manual entry when you already know the digit facility/license number.</p>
-            <p>Lookup rows are public facility-directory data for local/test reference assistance. Complaint records are retrieved separately, and directory rows are not complaint coverage, not source-completeness proof, not license-validity proof, and not legal or facility-wide conclusions.</p>
-        </section>
+        heading="Find a facility",
+        main=f"""    <section class="hero-card attorney-hero" aria-labelledby="facility-lookup-scope-heading">
+      <div>
+        <p class="launch-kicker">Facility intake</p>
+        <h2 id="facility-lookup-scope-heading">Find a facility</h2>
+        <p class="launch-value">Start review by finding the CCLD facility/license number in the preloaded facility directory, then carry that selected facility into the request page to choose a complaint date range.</p>
+      </div>
+    </section>
+    <section class="quiet-section" aria-labelledby="facility-start-guidance-heading">
+      <h2 id="facility-start-guidance-heading">Lookup or manual entry?</h2>
+      <p>Use facility lookup when you know a facility name, city, county, ZIP, facility type, program type, or status code but not the exact facility/license number. Use manual entry when you already know the digit facility/license number.</p>
+      <p>Lookup rows are public facility-directory data for local/test reference assistance. Complaint records are retrieved separately, and directory rows are not complaint coverage, not source-completeness proof, not license-validity proof, and not legal or facility-wide conclusions.</p>
+    </section>
     {_render_facility_combobox_section(reference_source, query, limited_note)}
     {_render_lookup_results(result)}
     {_render_reference_details_section(reference_source)}
-        <details class="technical-details">
-            <summary id="manual-entry-heading">Enter a facility/license number directly</summary>
-            <p>If you already know the CCLD facility/license number, type it on the request form.</p>
-            <p><a class="button-quiet" href="{CCLD_RECORD_REQUEST_PATH}">Open request form</a></p>
-        </details>""",
+    <details class="technical-details">
+      <summary id="manual-entry-heading">Enter a facility/license number directly</summary>
+      <p>If you already know the CCLD facility/license number, type it on the request form.</p>
+      <p><a class="button-quiet" href="{CCLD_RECORD_REQUEST_PATH}">Open request form</a></p>
+    </details>""",
+    )
+
+
+def render_ccld_facility_review_hub_page(
+    facility_number: str,
+    reference_source: CcldFacilityReferenceSource | None = None,
+    *,
+    review_context: CcldFacilityReviewContext | None = None,
+) -> str:
+    reference_source = reference_source or load_active_ccld_facility_reference()
+    facility_number = facility_number.strip()
+    matching_records = tuple(
+        record
+        for record in reference_source.records
+        if record.facility_number == facility_number
+    )
+    if not facility_number or not matching_records:
+        return _page(
+            title="Facility review hub not found",
+            heading="Facility review hub",
+            main=_render_facility_hub_not_found(facility_number),
+        )
+    record = matching_records[0]
+    review_context = review_context or CcldFacilityReviewContext()
+    duplicate_note = ""
+    if len(matching_records) > 1:
+        duplicate_note = f"""      <p class="helper-text">This directory has {len(matching_records)} distinct rows with this facility number. The hub shows the first deterministic directory row for review navigation only.</p>"""
+    return _page(
+        title=f"Facility review hub {record.facility_number}",
+        heading="Facility review hub",
+        main=f"""    <section class="hero-card attorney-hero" aria-labelledby="facility-hub-heading">
+      <div>
+        <p class="launch-kicker">Facility-directory context</p>
+        <h2 id="facility-hub-heading">{_escape(record.facility_name)}</h2>
+        <p class="launch-value">Use this facility-centered hub to move from directory discovery into the existing complaint request and review routes for facility {_escape(record.facility_number)}.</p>
+      </div>
+    </section>
+    <section aria-labelledby="facility-directory-details-heading">
+      <h2 id="facility-directory-details-heading">Facility-directory details</h2>
+      <p>These fields come from the active preloaded facility directory. Complaint records are requested and reviewed separately. The public CCLD portal remains the source of record.</p>
+{duplicate_note}
+      {_render_facility_directory_details(record)}
+    </section>
+    {_render_facility_hub_review_context(record, review_context)}
+    {_render_facility_hub_actions(record, review_context)}
+    <section aria-labelledby="facility-hub-boundaries-heading">
+      <h2 id="facility-hub-boundaries-heading">Facility hub boundaries</h2>
+      <p>This hub does not check all complaints for this facility and does not prove complaint coverage, source completeness, license validity, official findings, legal conclusions, assignment, claiming, correction application, export approval, certified report status, or packet lifecycle state.</p>
+      <p>Opening this page does not auto-submit retrieval, create complaint records from facility-directory data, mutate source-derived records, or create reviewer-created notes/statuses.</p>
+    </section>""",
     )
 
 
@@ -763,35 +844,155 @@ def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
 
 
 def _render_result_card(record: CcldFacilityLookupRecord, *, index: int) -> str:
-        query_values = {
-                "facility_number": record.facility_number,
-                "request_context_origin": "facility_lookup",
-                "lookup_facility_name": record.facility_name,
-        }
-        href = f"{CCLD_RECORD_REQUEST_PATH}?{urlencode(query_values)}"
+        request_href = _facility_request_href(record)
+        hub_href = _facility_hub_href(record.facility_number)
         heading_id = f"facility-{_escape(record.facility_number)}-{index}-heading"
         return f"""        <article class="result-card" aria-labelledby="{heading_id}">
                     <div>
                         <h3 id="{heading_id}">{_escape(record.facility_name)}</h3>
-                        <dl class="summary-list">
-                            <dt>Facility number directory field</dt>
-                            <dd>{_escape(record.facility_number)}</dd>
-                            <dt>Location directory field</dt>
-                            <dd>{_escape(_display_value(_display_location(record)))}</dd>
-                            <dt>County directory field</dt>
-                            <dd>{_escape(_display_value(record.county))}</dd>
-                            <dt>Facility type directory field</dt>
-                            <dd>{_escape(_display_value(record.facility_type))}</dd>
-                            <dt>Program type directory field</dt>
-                            <dd>{_escape(_display_value(record.program_type))}</dd>
-                            <dt>Capacity directory field</dt>
-                            <dd>{_escape(_display_value(record.capacity))}</dd>
-                            <dt>Status code directory field</dt>
-                            <dd>{_escape(_display_value(record.status))}</dd>
-                        </dl>
+                        {_render_facility_directory_details(record)}
                     </div>
-                    <p><a class="button" href="{_escape(href)}" aria-label="Start complaint request for facility {_escape(record.facility_number)} ({_escape(record.facility_name)})">Start complaint request for facility {_escape(record.facility_number)}</a></p>
+                    <div class="form-actions" aria-label="Actions for facility {_escape(record.facility_number)}">
+                        <a class="button" href="{_escape(hub_href)}" aria-label="Open facility review hub for {_escape(record.facility_number)} ({_escape(record.facility_name)})">Open facility review hub</a>
+                        <a class="button button-secondary" href="{_escape(request_href)}" aria-label="Start complaint request for facility {_escape(record.facility_number)} ({_escape(record.facility_name)})">Start complaint request for facility {_escape(record.facility_number)}</a>
+                    </div>
                 </article>"""
+
+
+def _render_facility_directory_details(record: CcldFacilityLookupRecord) -> str:
+        return f"""<dl class="summary-list">
+                <dt>Facility number directory field</dt>
+                <dd>{_escape(record.facility_number)}</dd>
+                <dt>Name directory field</dt>
+                <dd>{_escape(_display_value(record.facility_name))}</dd>
+                <dt>Program type directory field</dt>
+                <dd>{_escape(_display_value(record.program_type))}</dd>
+                <dt>Facility type directory field</dt>
+                <dd>{_escape(_display_value(record.facility_type))}</dd>
+                <dt>City/state/ZIP directory field</dt>
+                <dd>{_escape(_display_value(_display_location(record)))}</dd>
+                <dt>County directory field</dt>
+                <dd>{_escape(_display_value(record.county))}</dd>
+                <dt>Capacity directory field</dt>
+                <dd>{_escape(_display_value(record.capacity))}</dd>
+                <dt>Status code directory field</dt>
+                <dd>{_escape(_display_value(record.status))}</dd>
+            </dl>"""
+
+
+def _render_facility_hub_not_found(facility_number: str) -> str:
+        searched = facility_number if facility_number else "not provided"
+        request_link = ""
+        if facility_number.isdigit():
+                request_link = f"""        <li><a href="{_escape(_facility_request_href_for_values(facility_number=facility_number))}">Start complaint request for facility { _escape(facility_number) }</a></li>"""
+        return f"""    <section class="empty-state-card" aria-labelledby="facility-hub-not-found-heading">
+            <h2 id="facility-hub-not-found-heading">Facility-directory result not found</h2>
+            <p>No active preloaded facility-directory row matched facility number <strong>{_escape(searched)}</strong>.</p>
+            <p>This does not prove the facility is absent from public sources, does not prove complaint availability, and does not validate or invalidate a license.</p>
+            <nav aria-label="Facility hub recovery actions">
+                <ul>
+                    <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Return to facility lookup</a></li>
+{request_link}
+                </ul>
+            </nav>
+        </section>"""
+
+
+def _render_facility_hub_review_context(
+        record: CcldFacilityLookupRecord,
+        review_context: CcldFacilityReviewContext,
+) -> str:
+        if not review_context.has_loaded_context:
+                return f"""    <section class="empty-state-card" aria-labelledby="facility-hub-context-heading">
+            <h2 id="facility-hub-context-heading">Local/test complaint-review context</h2>
+            <p>No local/test complaint context is currently available for facility {_escape(record.facility_number)} in the loaded review data.</p>
+            <p>Date range is needed before the review queue, packet preview, or packet draft can be scoped for this facility. Start a complaint request to choose dates or retrieve records through the existing controlled workflow.</p>
+        </section>"""
+        date_text = _hub_date_context_text(review_context)
+        return f"""    <section aria-labelledby="facility-hub-context-heading">
+            <h2 id="facility-hub-context-heading">Local/test complaint-review context</h2>
+            <p>{review_context.loaded_complaint_record_count} loaded local/test complaint record(s) currently reference this facility in existing source-derived review data.</p>
+            <dl class="summary-list">
+                <dt>Complaint context basis</dt>
+                <dd>{_escape(review_context.source_label)}</dd>
+                <dt>Known local/test date context</dt>
+                <dd>{_escape(date_text)}</dd>
+            </dl>
+            <p>This context is a local/test navigation aid only. It is not complaint coverage, not public-source absence proof, and not a source-completeness proof.</p>
+        </section>"""
+
+
+def _render_facility_hub_actions(
+        record: CcldFacilityLookupRecord,
+        review_context: CcldFacilityReviewContext,
+) -> str:
+        request_href = _facility_request_href(record)
+        lookup_href = f"{CCLD_FACILITY_LOOKUP_PATH}?{urlencode({'q': record.facility_number})}"
+        context_actions = ""
+        if review_context.has_loaded_context and review_context.has_date_context:
+                queue_query = {
+                        "facility_number": record.facility_number,
+                        "start_date": review_context.start_date,
+                        "end_date": review_context.end_date,
+                        "request_context_origin": "facility_lookup",
+                        "lookup_facility_name": record.facility_name,
+                }
+                context_actions = f"""        <li>
+                    <form action="{CCLD_RECORD_REQUEST_PATH}" method="post">
+                        <input type="hidden" name="facility_number" value="{_escape(record.facility_number)}">
+                        <input type="hidden" name="record_type" value="complaints">
+                        <input type="hidden" name="start_date" value="{_escape(review_context.start_date)}">
+                        <input type="hidden" name="end_date" value="{_escape(review_context.end_date)}">
+                        <input type="hidden" name="request_context_origin" value="facility_lookup">
+                        <input type="hidden" name="lookup_facility_name" value="{_escape(record.facility_name)}">
+                        <button type="submit" class="button button-secondary">Review loaded records for this facility/date context</button>
+                    </form>
+                </li>
+                <li><a class="button button-secondary" href="{REVIEWER_UI_RECORDS_PATH}?{_escape(urlencode({'q': record.facility_number}))}">Open reviewer queue filtered to this facility</a></li>
+                <li><a class="button button-secondary" href="{REVIEWER_UI_PACKET_PREVIEW_PATH}?{_escape(urlencode(queue_query))}">Open local/test packet preview for this facility/date context</a></li>
+                <li><a class="button button-secondary" href="{REVIEWER_UI_PACKET_DRAFT_PATH}?{_escape(urlencode(queue_query))}">Open local/test packet draft for this facility/date context</a></li>"""
+        elif review_context.has_loaded_context:
+                context_actions = """        <li><span>Date range needed before review queue or packet routes can be scoped.</span></li>"""
+        return f"""    <section aria-labelledby="facility-hub-actions-heading">
+            <h2 id="facility-hub-actions-heading">Next actions</h2>
+            <nav aria-label="Facility review hub actions">
+                <ul>
+                    <li><a class="button" href="{_escape(request_href)}">Start complaint request for this facility</a></li>
+{context_actions}
+                    <li><a class="button button-quiet" href="{_escape(lookup_href)}">Return to facility lookup</a></li>
+                </ul>
+            </nav>
+        </section>"""
+
+
+def _hub_date_context_text(review_context: CcldFacilityReviewContext) -> str:
+        if review_context.has_date_context:
+                return f"{review_context.start_date} to {review_context.end_date}"
+        return "date range needed before review queue can be scoped"
+
+
+def _facility_request_href(record: CcldFacilityLookupRecord) -> str:
+        return _facility_request_href_for_values(
+                facility_number=record.facility_number,
+                facility_name=record.facility_name,
+        )
+
+
+def _facility_request_href_for_values(
+        *,
+        facility_number: str,
+        facility_name: str = "",
+) -> str:
+        query_values = {
+                "facility_number": facility_number,
+                "request_context_origin": "facility_lookup",
+                "lookup_facility_name": facility_name,
+        }
+        return f"{CCLD_RECORD_REQUEST_PATH}?{urlencode(query_values)}"
+
+
+def _facility_hub_href(facility_number: str) -> str:
+        return f"{CCLD_FACILITY_REVIEW_HUB_PATH}?{urlencode({'facility_number': facility_number})}"
 
 
 def _display_location(record: CcldFacilityLookupRecord) -> str:

@@ -1,6 +1,18 @@
 # Changelog
 
 ## Unreleased
+- Added a hosted CCLD facility review hub route for selected facility-directory
+	results. Facility lookup results now include an `Open facility review hub`
+	action alongside the existing complaint-request action. The hub shows safe
+	facility-directory fields, separates directory data from complaint records,
+	surfaces available local/test complaint-review context when existing loaded
+	data supports it, and links to existing request, reviewer queue, packet
+	preview, packet draft, and facility lookup routes. Retrieval behavior,
+	schemas, migrations, connectors, extraction behavior, source-derived records,
+	reviewer-created writes, note/status behavior, feedback persistence,
+	packet/export lifecycle, correction, assignment, claiming, legal conclusions,
+	complaint coverage, and source-completeness claims are unchanged.
+
 - Added preloaded hosted CCLD facility-directory lookup support for the
 	CDSS/CHHS facility CSV shape with `FAC_NBR`, `NAME`, `PROGRAM_TYPE`,
 	`STATUS`, `CAPACITY`, location, county, and facility-type fields. The lookup
