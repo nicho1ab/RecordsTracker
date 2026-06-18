@@ -1,6 +1,21 @@
 # Changelog
 
 ## Unreleased
+- Improved CCLD request and queue friction cues for the local/test review loop.
+	Request context cards now label the request context source, facility context
+	cue, and recovery actions for facility hubs, signal-only facility hubs, the
+	facility review priority list, and new complaint request flow. Request no-match
+	states now say when no loaded local/test records matched the current
+	facility/date context and keep recovery links visible. Queue decision actions
+	now include facility review priority navigation while preserving reviewer detail,
+	packet preview/draft, same queue, filter, and feedback paths. Complaint
+	retrieval behavior, live crawling, connector/extraction behavior,
+	source-derived mutation, reviewer-created write behavior, feedback persistence
+	or submission, packet lifecycle, export behavior, schemas, migrations,
+	correction behavior, assignment, claiming, legal conclusions, complaint-
+	coverage claims, source verification claims, and source-completeness claims are
+	unchanged.
+
 - Improved reviewer detail usability cues for the local/test review loop. Reviewer
 	detail now labels facility context as a directory-backed facility hub,
 	signal-only facility hub, or manual request context when the active local/test

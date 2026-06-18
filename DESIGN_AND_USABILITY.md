@@ -308,6 +308,15 @@ whether it came from facility lookup or manual entry, which facility/license
 number and date range are being used, which local/test facility reference source
 is active, and how to change facility/date criteria before reviewing queue
 results.
+Request and queue friction cues should keep recovery links close to the current
+state. When a request has a facility/license number, pages should link to the
+facility hub or signal-only facility hub when active local/test inputs support
+one, the facility review priority list, the same request/queue path, and the
+complaint request flow. No-match and filtered-empty states should state that no
+loaded local/test records matched the current request context or filter, explain
+what to try next, and avoid implying complaint coverage, source completeness,
+source verification, legal findings, assignment, claiming, correction, or export
+approval.
 CCLD local/test pages should use the same plain-language terms for repeated
 concepts: facility/license number, CCLD request context, facility/date request,
 loaded local/test CCLD records, source-derived records, source traceability,
