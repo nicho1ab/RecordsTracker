@@ -21,6 +21,8 @@ from ccld_complaints.hosted_app.auth import (
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
     _FACILITY_COMBOBOX_JS,
     CCLD_FACILITY_LOOKUP_PATH,
+    CCLD_FACILITY_REVIEW_HUB_PATH,
+    CCLD_FACILITY_REVIEW_PRIORITY_PATH,
     CcldFacilityReferenceSource,
     _build_facility_json_data,
     _limited_reference_note,
@@ -1314,7 +1316,7 @@ def _render_no_match_result(
                 heading=headline,
                 step_id="review_results",
                 next_action="Adjust the request or view job details",
-                main=f"""    {_render_no_match_recovery_panel(request, headline, local_count, retrieval_result, primary_action)}
+                main=f"""    {_render_no_match_recovery_panel(request, headline, local_count, retrieval_result, primary_action, reference_source)}
         {_render_request_context_confirmation(
                 facility_number=request.facility_number,
                 start_date=request.start_date,
@@ -1356,6 +1358,7 @@ def _render_no_match_recovery_panel(
     local_count: int,
     retrieval_result: CcldRetrievalJobResult | None,
     primary_action: str,
+    reference_source: CcldFacilityReferenceSource,
 ) -> str:
     reason_bucket = _no_match_reason_bucket(retrieval_result, local_count)
     current_state = _request_result_current_state_text(
@@ -1381,6 +1384,7 @@ def _render_no_match_recovery_panel(
     return f"""<section class="hero-card recovery-panel" aria-labelledby="no-local-records-heading">
       <p class="stage-kicker">Recovery</p>
       <h2 id="no-local-records-heading">{_escape(headline)}</h2>
+            <p>No loaded local/test records matched this request context. This is a local/test records state for the current facility/date context, not a complaint-coverage determination.</p>
       <dl>
         <dt>What happened</dt>
         <dd>{_escape(reason_bucket)}</dd>
@@ -1401,6 +1405,9 @@ def _render_no_match_recovery_panel(
       </dl>
             <p><strong>Recommended next action:</strong> Confirm the facility/date context, then use the action below.</p>
       <p>{primary_action}</p>
+    <ul>
+{_request_context_navigation_items(request, reference_source)}
+    </ul>
     <p><a href="{_escape(feedback_href)}">Report unclear loaded-record versus retrieval-job state</a></p>
     </section>"""
 
@@ -2785,6 +2792,8 @@ def _render_worklist_decision_flow(
       </dl>
       {next_card}
       <div class="form-actions" aria-label="Queue decision actions">
+                {_request_context_facility_hub_button(request, reference_source)}
+                <a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}">Open facility review priority list</a>
         <a class="button button-secondary" href="{_escape(change_href)}">Return to change facility/date criteria</a>
         <a class="button button-secondary" href="{_escape(_packet_preview_href_for_request(request))}">Review packet readiness before copying or printing</a>
         <a class="button button-secondary" href="{_escape(_packet_draft_href_for_request(request))}">Open local/test preparation draft for browser copy or print</a>
@@ -3952,7 +3961,17 @@ def _render_request_context_confirmation(
         <dd>{_escape(facility_display)}</dd>{lookup_name_markup}
         <dt>Date range being requested</dt>
         <dd>{_escape(_date_scope_from_values(start_date, end_date))}</dd>
+        <dt>Request context type</dt>
+        <dd>{_escape(_request_origin_label(request_context_origin))}</dd>
+        <dt>Request context source</dt>
+        <dd>{_escape(_request_context_source_label(request_context_origin))}</dd>
+        <dt>Facility context cue</dt>
+        <dd>{_escape(_request_facility_context_label(facility_number, reference_source))}</dd>
             </dl>
+            <p class="helper-text">Use this request context to decide the next review action. Complaint records are requested/reviewed separately; this cue is not source verification, not a complaint-coverage determination, not a source-completeness proof, and not a legal finding.</p>
+            <ul>
+{_request_context_navigation_items_for_values(facility_number, reference_source)}
+            </ul>
             <details class="technical-details">
                 <summary>Request and lookup details</summary>
                 <dl>
@@ -3998,6 +4017,81 @@ def _request_change_href(
 
 def _request_origin_label(value: str) -> str:
     return _REQUEST_CONTEXT_ORIGIN_LABELS.get(value, "Manual facility/license entry")
+
+
+def _request_context_source_label(value: str) -> str:
+    if value == "facility_lookup":
+        return "facility lookup request context"
+    if value == "prefilled_link":
+        return "prefilled request context"
+    return "manual request context"
+
+
+def _request_facility_context_label(
+    facility_number: str,
+    reference_source: CcldFacilityReferenceSource,
+) -> str:
+    label, _href = _request_facility_context_link(facility_number, reference_source)
+    return label
+
+
+def _request_context_navigation_items(
+    request: CcldRecordRequest,
+    reference_source: CcldFacilityReferenceSource,
+) -> str:
+    return _request_context_navigation_items_for_values(
+        request.facility_number,
+        reference_source,
+    )
+
+
+def _request_context_navigation_items_for_values(
+    facility_number: str,
+    reference_source: CcldFacilityReferenceSource,
+) -> str:
+    label, href = _request_facility_context_link(facility_number, reference_source)
+    if href:
+        action_label = _request_facility_context_action_label(label)
+        facility_item = f'        <li><a href="{_escape(href)}">{_escape(action_label)}</a></li>'
+    else:
+        facility_item = (
+            "        <li>Facility hub is not available from active directory/signals for this manual request context.</li>"
+        )
+    return f"""{facility_item}
+        <li><a href="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}">Open facility review priority list</a></li>
+        <li><a href="{CCLD_RECORD_REQUEST_PATH}">Start a new complaint request flow</a></li>"""
+
+
+def _request_context_facility_hub_button(
+    request: CcldRecordRequest,
+    reference_source: CcldFacilityReferenceSource,
+) -> str:
+    label, href = _request_facility_context_link(request.facility_number, reference_source)
+    if href is None:
+        return ""
+    return f'<a class="button button-secondary" href="{_escape(href)}">{_escape(_request_facility_context_action_label(label))}</a>'
+
+
+def _request_facility_context_link(
+    facility_number: str,
+    reference_source: CcldFacilityReferenceSource,
+) -> tuple[str, str | None]:
+    normalized = facility_number.strip()
+    if not normalized:
+        return "manual request context", None
+    if any(record.facility_number == normalized for record in reference_source.records):
+        return "facility hub", _facility_hub_href(normalized)
+    return "manual request context", _facility_hub_href(normalized)
+
+
+def _request_facility_context_action_label(label: str) -> str:
+    if label == "facility hub":
+        return "Open facility hub for this request context"
+    return "Check facility hub or signal-only facility hub for this request context"
+
+
+def _facility_hub_href(facility_number: str) -> str:
+    return f"{CCLD_FACILITY_REVIEW_HUB_PATH}?{urlencode({'facility_number': facility_number})}"
 
 
 def _request_context_origin_from_values(
