@@ -180,6 +180,11 @@
     unsupported rows are skipped or counted internally without displaying raw row
     contents. Missing signals do not mean a facility has no complaints, visits,
     citations, POC dates, or public-source records.
+    When a facility-directory row is not available locally but supported signals
+    are available, the hub can render a signal-only facility hub. That fallback
+    is a navigation aid over uploaded public summary fields only; it does not
+    diagnose official directory status, validate a license, verify a source,
+    prove complaint coverage, or create complaint records.
 - Production-readiness items such as source-verification planning, auth provider
     integration, audit UI/export, export packet generation, reset/reload execution,
     public deployment, production monitoring, database-backed lookup, non-CCLD

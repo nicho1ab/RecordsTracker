@@ -281,6 +281,12 @@ source traceability checks. They must not score facilities, verify sources,
 confirm complaints, imply complaint absence, or treat licensing/visit/citation
 summary rows as legal findings, complaint records, license validity, complaint
 coverage, or source-completeness proof.
+If a facility number has uploaded public summary signals but no current local
+directory row, the hub may render as a signal-only facility hub. It should say
+the facility-directory record is not available locally, show only safe summary
+fields, preserve normal next actions, and avoid implying a directory problem,
+verified source state, complaint coverage, source completeness, legal findings,
+license validity, assignment, claiming, correction, or export readiness.
 Facility review priority pages may group those same review cues across facilities
 to help testers choose which facility hub to open next. Default ordering should
 be transparent and cue-based rather than opaque scoring, with facilities that

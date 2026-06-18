@@ -685,6 +685,126 @@ def test_ccld_facility_review_hub_not_found_state_is_safe() -> None:
     assert_no_secret_html(html)
 
 
+def test_ccld_facility_review_hub_renders_signal_only_context_without_mutation(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    facility_csv = tmp_path / "facility-reference.csv"
+    signals_csv = tmp_path / "24HourResidentialCareforChildren06072026.csv"
+    _write_chhs_facility_directory_csv(
+        facility_csv,
+        rows=(
+            {
+                "FAC_NBR": "434417302",
+                "NAME": "7 MAGIC FLOWERS BILINGUAL MONTESSORI PRESCHOOL",
+                "PROGRAM_TYPE": "CHILD CARE",
+                "STATUS": "3",
+                "CAPACITY": "45",
+                "RES_CITY": "SAN JOSE",
+                "RES_STATE": "CA",
+                "RES_ZIP_CODE": "95112",
+                "COUNTY": "Santa Clara",
+                "FAC_TYPE_DESC": "DAY CARE CENTER",
+            },
+        ),
+    )
+    _write_program_summary_signals_csv(
+        signals_csv,
+        rows=(
+            {
+                "Facility Type": "TEMPORARY SHELTER CARE FACILITY",
+                "Facility Number": "157806098",
+                "Facility Name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+                "Licensee": "Do Not Display Licensee",
+                "Facility Administrator": "Do Not Display Admin",
+                "Facility Telephone Number": "555-0199",
+                "Facility Address": "1 Private Fixture Way",
+                "Facility City": "BAKERSFIELD",
+                "Facility State": "CA",
+                "Facility Zip": "93307",
+                "County Name": "KERN",
+                "Regional Office": "Central Valley",
+                "Facility Capacity": "48",
+                "Facility Status": "LICENSED",
+                "License First Date": "7/30/2018",
+                "Closed Date": "",
+                "Last Visit Date": "5/4/2026",
+                "Inspection Visits": "0",
+                "Complaint Visits": "12",
+                "Other Visits": "31",
+                "Total Visits": "43",
+                "Citation Numbers": "84072(d)(14), 84665.5(f)",
+                "POC Dates": "07/28/2021, 06/20/2024",
+                "Inspect TypeA": "",
+                "Inspect TypeB": "",
+                "Other TypeA": "A citation",
+                "Other TypeB": "B citation",
+            },
+        ),
+    )
+    monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(facility_csv))
+    monkeypatch.setenv(FACILITY_REVIEW_SIGNALS_CSVS_ENV, str(signals_csv))
+
+    with _seeded_connection() as connection:
+        before_source_rows = _source_rows(connection)
+        before_counts = _table_counts(connection)
+        status, content_type, body = route_response(
+            f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098",
+            page_data_mode="fixture-demo",
+            ccld_record_request_ui_context=ccld_record_request_context_for_reviewer_context(
+                reviewer_ui_context_for_connection(
+                    connection,
+                    actor=_actor(roles=("tester_reviewer",)),
+                )
+            ),
+        )
+        after_source_rows = _source_rows(connection)
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split()).casefold()
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert before_counts == after_counts == _empty_reviewer_counts()
+    assert "signal-only facility hub" in html
+    assert "Facility-directory record not available" in html
+    assert "Showing uploaded public summary fields" in html
+    assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
+    assert "157806098" in html
+    assert "TEMPORARY SHELTER CARE FACILITY" in html
+    assert "KERN" in html
+    assert "LICENSED" in html
+    assert "48" in html
+    assert "2026-05-04" in html
+    assert "43 total; 0 inspection; 12 complaint; 31 other" in html
+    assert "Complaint visit activity present review cue" in html
+    assert "Citation indicator present review cue" in html
+    assert "POC indicator present review cue" in html
+    assert "Start complaint request for this facility" in html
+    assert f"{CCLD_RECORD_REQUEST_PATH}?facility_number=157806098" in html
+    assert "Open facility review priority list" in html
+    assert "Return to facility lookup" in html
+    assert "1 loaded local/test complaint record(s)" in html
+    assert "/reviewer/packet/preview?facility_number=157806098" in html
+    assert "not a facility-directory record" in normalized_html
+    assert "not source verification" in normalized_html
+    assert "not a complaint-coverage determination" in normalized_html
+    assert "not a source-completeness proof" in normalized_html
+    assert "not a legal finding" in normalized_html
+    assert "complaint records are requested/reviewed separately" in normalized_html
+    assert "verified complaint" not in normalized_html
+    assert "facility has no complaints" not in normalized_html
+    assert "source complete" not in normalized_html
+    assert "directory error" not in normalized_html
+    assert "missing from official records" not in normalized_html
+    assert "Do Not Display" not in html
+    assert "555-0199" not in html
+    assert "1 Private Fixture Way" not in html
+    assert_no_secret_html(html)
+
+
 def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutation(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
