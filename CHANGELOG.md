@@ -1,6 +1,19 @@
 # Changelog
 
 ## Unreleased
+- Added a hosted CCLD facility review priority list based on existing facility
+	review signals from supported uploaded public licensing/visit/citation summary
+	fields. The route groups and filters facilities by transparent review cues such
+	as complaint visit activity, citation indicators, POC indicators, recent visit
+	activity, closed status, high capacity, long gap since last visit, and multiple
+	signal types, with each row linking to the facility review hub. This is
+	grouping over uploaded public summary fields only. Retrieval behavior, live
+	crawling, connectors, extraction behavior, schemas, migrations, source-derived
+	complaint records, reviewer-created writes, feedback persistence, packet/export
+	lifecycle, correction, assignment, claiming, legal conclusions, complaint-
+	coverage claims, source verification, and source-completeness claims are
+	unchanged.
+
 - Added hosted CCLD facility review signals on the facility hub from supported
 	uploaded public licensing/visit/citation summary CSV fields. The first supported
 	shape is the shared 31-column CCLD program summary CSV shape used by local

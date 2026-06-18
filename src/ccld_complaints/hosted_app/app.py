@@ -38,6 +38,7 @@ from ccld_complaints.hosted_app.auth_provider_integration_plan import (
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_LOOKUP_PATH,
     CCLD_FACILITY_REVIEW_HUB_PATH,
+    CCLD_FACILITY_REVIEW_PRIORITY_PATH,
     CcldFacilityReferenceSource,
     CcldFacilityReviewContext,
     facility_reference_from_source_derived_records,
@@ -1125,7 +1126,11 @@ def route_response(
     if parsed_path == f"{CCLD_UI_PREFIX}/":
         path = CCLD_UI_PREFIX
         parsed_path = CCLD_UI_PREFIX
-    if parsed_path in {CCLD_FACILITY_LOOKUP_PATH, CCLD_FACILITY_REVIEW_HUB_PATH}:
+    if parsed_path in {
+        CCLD_FACILITY_LOOKUP_PATH,
+        CCLD_FACILITY_REVIEW_HUB_PATH,
+        CCLD_FACILITY_REVIEW_PRIORITY_PATH,
+    }:
         if active_page_data_mode == FIXTURE_DEMO_PAGE_DATA_MODE:
             if parsed_path == CCLD_FACILITY_LOOKUP_PATH:
                 return route_ccld_facility_lookup_response(path)

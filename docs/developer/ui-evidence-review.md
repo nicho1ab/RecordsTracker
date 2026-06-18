@@ -22,6 +22,8 @@ The capture command performs GET-only requests against an already-running local 
 - a facility-hub route capture that exercises `/ccld/facilities/detail` as a
 	GET-only navigation surface from directory lookup into existing complaint
 	request and review routes.
+- a facility-priority route capture that exercises `/ccld/facilities/review-priority`
+  as a GET-only view over uploaded public summary-field review cues.
 - `diagnostics/` git state, recent log, capture command, and non-secret capture settings.
 - `screenshots/` route screenshots when local screenshot tooling is available.
 
