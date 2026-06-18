@@ -1,6 +1,18 @@
 # Changelog
 
 ## Unreleased
+- Added signal-only facility hub support for facilities that appear in supported
+	uploaded public summary signals but not in the active preloaded facility
+	directory. When a directory row is not available locally, the facility hub can
+	show bounded uploaded public summary fields, review cues, existing complaint
+	request/review links, and clear not-directory/not-source-verification/not-
+	complaint-coverage/not-source-completeness/not-legal-finding boundaries.
+	Retrieval behavior, facility review signals parsing, reviewer-created state,
+	note/status behavior, feedback persistence, packet/export lifecycle, schemas,
+	migrations, correction, assignment, claiming, legal conclusions, complaint-
+	coverage claims, source verification claims, and source-completeness claims are
+	unchanged.
+
 - Aligned hosted CCLD sample facility-directory examples with active preloaded
 	facility data. Facility lookup, facility hub, evidence capture, acceptance, and
 	README examples now use known loaded preloaded facility-directory example
