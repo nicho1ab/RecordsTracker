@@ -136,6 +136,59 @@ def test_program_summary_loader_skips_malformed_shifted_and_unsupported_rows(
     assert result.summary_for_facility("not-a-number") is None
 
 
+def test_program_summary_loader_accepts_trailing_detail_columns(
+    tmp_path: Path,
+) -> None:
+    csv_path = tmp_path / "24HourResidentialCareforChildren06072026.csv"
+    _write_program_summary_csv(
+        csv_path,
+        rows=(
+            _program_summary_row(
+                facility_number="157806098",
+                facility_name="A. Miriam Jamison Children's Center",
+                facility_type="TEMPORARY SHELTER CARE FACILITY",
+                county="KERN",
+                regional_office="32",
+                capacity="48",
+                status="LICENSED",
+                license_first_date="7/30/2018",
+                last_visit_date="5/4/2026",
+                inspection_visits="0",
+                complaint_visits="12",
+                other_visits="31",
+                total_visits="43",
+                citation_numbers="84072(d)(14), 84665.5(f)",
+                poc_dates="07/28/2021, 06/20/2024",
+                other_type_a="0",
+                other_type_b="9",
+            ),
+        ),
+        trailing_values=("02/26/2026", "private trailing complaint detail"),
+    )
+
+    result = load_facility_review_signals((csv_path,))
+    summary = result.summary_for_facility("157806098")
+
+    assert result.loaded_source_count == 1
+    assert result.skipped_malformed_row_count == 0
+    assert result.skipped_unsupported_row_count == 0
+    assert result.parsed_row_count == 1
+    assert summary is not None
+    assert summary.facility_name == "A. Miriam Jamison Children's Center"
+    assert summary.facility_types == ("TEMPORARY SHELTER CARE FACILITY",)
+    assert summary.counties == ("KERN",)
+    assert summary.regional_offices == ("32",)
+    assert summary.capacities == ("48",)
+    assert summary.statuses == ("LICENSED",)
+    assert summary.license_first_dates == ("2018-07-30",)
+    assert summary.last_visit_date == "2026-05-04"
+    assert summary.complaint_visit_count == 12
+    assert summary.total_visit_count == 43
+    assert summary.citation_count == 2
+    assert summary.poc_date_count == 2
+    assert "private trailing complaint detail" not in repr(summary)
+
+
 def _program_summary_row(
     *,
     facility_number: str,
@@ -202,13 +255,16 @@ def _write_program_summary_csv(
     *,
     rows: tuple[dict[str, str], ...],
     extra_lines: tuple[str, ...] = (),
+    trailing_values: tuple[str, ...] = (),
 ) -> None:
     fieldnames = tuple(_program_summary_row(facility_number="0"))
     with path.open("w", encoding="utf-8", newline="") as csv_file:
         csv_file.write(",".join(f'"{fieldname}"' for fieldname in fieldnames) + "\n")
         for row in rows:
+            trailing_columns = "".join(f',"{value}"' for value in trailing_values)
             csv_file.write(
                 ",".join(f'"{row.get(fieldname, "")}"' for fieldname in fieldnames)
+                + trailing_columns
                 + "\n"
             )
         for line in extra_lines:
