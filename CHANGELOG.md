@@ -1,6 +1,20 @@
 # Changelog
 
 ## Unreleased
+- Improved reviewer detail usability cues for the local/test review loop. Reviewer
+	detail now labels facility context as a directory-backed facility hub,
+	signal-only facility hub, or manual request context when the active local/test
+	inputs support that distinction; it also surfaces clearer next actions for the
+	facility hub, facility review priority list, same facility/date queue, packet
+	preview/draft, complaint request, and feedback. The page keeps source-derived
+	values, source-traceability cues, and reviewer-created note/status boundaries
+	separate. Complaint retrieval behavior, live crawling, connector/extraction
+	behavior, source-derived mutation, reviewer-created write behavior, feedback
+	persistence/submission, packet lifecycle, export behavior, schemas, migrations,
+	correction behavior, assignment, claiming, legal conclusions, complaint-
+	coverage claims, source verification claims, and source-completeness claims are
+	unchanged.
+
 - Fixed facility review signal parsing for supported uploaded public summary rows
 	that include trailing repeated complaint-detail columns after the supported
 	summary header. The loader now uses only the supported leading summary fields,

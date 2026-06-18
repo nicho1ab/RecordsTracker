@@ -24,7 +24,10 @@ from ccld_complaints.hosted_app.auth import (
 )
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_LOOKUP_PATH,
+    CCLD_FACILITY_REVIEW_HUB_PATH,
+    CCLD_FACILITY_REVIEW_PRIORITY_PATH,
     CCLD_RECORD_REQUEST_PATH,
+    load_active_ccld_facility_reference,
 )
 from ccld_complaints.hosted_app.facility_case_brief import (
     FacilityCaseBrief,
@@ -32,6 +35,9 @@ from ccld_complaints.hosted_app.facility_case_brief import (
     priority_reason_labels,
     render_facility_case_brief,
     render_record_flag_reason_section,
+)
+from ccld_complaints.hosted_app.facility_review_signals import (
+    load_active_facility_review_signals,
 )
 from ccld_complaints.hosted_app.reviewer_created_state import REVIEWER_STATUS_VALUES
 from ccld_complaints.hosted_app.reviewer_created_state_routes import (
@@ -679,7 +685,7 @@ def _render_packet_draft(
                             <li>It is not a source-completeness proof.</li>
                             <li>It does not prove no other complaints exist.</li>
                             <li>It does not make legal, facility-wide, harm, abuse, neglect, liability, or rights-deprivation conclusions.</li>
-                            <li>It does not create official findings beyond source-derived finding labels.</li>
+                            <li>It does not create source conclusions beyond source-derived finding labels.</li>
                             <li>It does not submit correction decisions or replace source-derived records.</li>
                         </ul>
                     </section>
@@ -2540,6 +2546,7 @@ def _render_detail_decision_continuity(
               <dd>{_escape(_request_origin_label(return_context.context_origin))}</dd>
             </dl>
           </section>
+                      {_render_detail_facility_context_cues(related_records, return_context)}
           <section aria-labelledby="selected-record-identity-heading">
             <h3 id="selected-record-identity-heading">Selected record identity</h3>
             <dl>
@@ -2589,6 +2596,9 @@ def _render_detail_decision_continuity(
             <div class="form-actions">
               <a class="button" href="{_escape(ccld_request_href)}">Return to same facility/date queue</a>
               <a class="button button-secondary" href="{_escape(next_record_href)}">{_escape(next_record_text)}</a>
+                              {_detail_facility_hub_action(return_context)}
+                              <a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}">Return to facility review priority list</a>
+                              <a class="button button-secondary" href="{_escape(_ccld_request_href(related_records, return_context))}">Start complaint request if needed</a>
 {packet_links}
               <a class="button button-secondary" href="{_escape(feedback_href)}">Report confusion about this reviewer detail</a>
             </div>
@@ -2604,6 +2614,112 @@ def _request_origin_label(value: str | None) -> str:
     if value == "prefilled_link":
         return "Prefilled facility/license link"
     return "Manual facility/license entry"
+
+
+def _render_detail_facility_context_cues(
+    related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> str:
+    facility_number = _detail_facility_number(related_records, return_context)
+    context_label, context_guidance, hub_link = _detail_facility_context_status(
+        facility_number
+    )
+    hub_item = (
+        f'              <li><a href="{_escape(hub_link)}">Open {context_label}</a></li>'
+        if hub_link
+        else ""
+    )
+    return f"""          <section aria-labelledby="detail-facility-context-heading">
+            <h3 id="detail-facility-context-heading">Facility context cues</h3>
+                        <p>{_escape(context_guidance)} This local/test review cue and source-traceability cue helps choose the next safe navigation step without changing source-derived values.</p>
+            <dl>
+              <dt>Facility context type</dt>
+              <dd>{_escape(context_label)}</dd>
+              <dt>Facility/license number</dt>
+              <dd>{_escape(_display_value(facility_number))}</dd>
+                              <dt>Request context source</dt>
+                              <dd>{_escape(_detail_request_context_label(return_context.context_origin))}</dd>
+              <dt>Boundary</dt>
+              <dd>Complaint records are requested/reviewed separately; this cue is not source verification, not a complaint-coverage determination, not a source-completeness proof, and not a legal finding.</dd>
+            </dl>
+            <ul>
+{hub_item}
+              <li><a href="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}">Return to facility review priority list</a></li>
+              <li><a href="{_escape(_ccld_request_href(related_records, return_context))}">Start complaint request if needed</a></li>
+            </ul>
+          </section>"""
+
+
+def _detail_facility_context_status(
+    facility_number: str | None,
+) -> tuple[str, str, str | None]:
+    if not facility_number:
+        return (
+            "manual request context",
+            "No facility/license number is available for a facility hub cue on this local/test detail page. Use the same queue or start a complaint request when a facility/license number is needed.",
+            None,
+        )
+    if _active_directory_has_facility(facility_number):
+        return (
+            "facility hub",
+            "This record has a directory-backed facility hub cue from the active local/test facility-directory context. Use it to return to facility context before continuing review.",
+            _facility_hub_href(facility_number),
+        )
+    if load_active_facility_review_signals().summary_for_facility(facility_number) is not None:
+        return (
+            "signal-only facility hub",
+            "This record has a signal-only facility hub cue because uploaded public summary signals are available but the active local/test directory row is not available here.",
+            _facility_hub_href(facility_number),
+        )
+    return (
+        "manual request context",
+        "This record is tied to a manual request context in local/test review. A facility hub cue is not available from the active directory or uploaded summary signals, so return to the same queue or start a complaint request if more context is needed.",
+        None,
+    )
+
+
+def _detail_request_context_label(value: str | None) -> str:
+    if value == "facility_lookup":
+        return "facility lookup context"
+    if value == "prefilled_link":
+        return "prefilled request context"
+    return "manual request context"
+
+
+def _detail_facility_number(
+    related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> str | None:
+    if return_context.facility_number:
+        return return_context.facility_number
+    facility = _facility_context(related_records)
+    facility_number = _facility_context_value(facility, "external_facility_number")
+    if facility_number == "unknown":
+        return None
+    return facility_number
+
+
+def _active_directory_has_facility(facility_number: str) -> bool:
+    reference_source = load_active_ccld_facility_reference()
+    return any(
+        record.facility_number == facility_number
+        for record in reference_source.records
+    )
+
+
+def _facility_hub_href(facility_number: str) -> str:
+    return f"{CCLD_FACILITY_REVIEW_HUB_PATH}?{urlencode({'facility_number': facility_number})}"
+
+
+def _detail_facility_hub_action(return_context: CcldQueueReturnContext) -> str:
+    if return_context.facility_number is None:
+        return ""
+    context_label, _context_guidance, hub_link = _detail_facility_context_status(
+        return_context.facility_number
+    )
+    if hub_link is None:
+        return ""
+    return f'<a class="button button-secondary" href="{_escape(hub_link)}">Return to {context_label}</a>'
 
 
 def _detail_packet_links(return_context: CcldQueueReturnContext) -> str:
@@ -3042,7 +3158,7 @@ def _render_field_note_guidance_section() -> str:
             same queue context.</p>
             <p>Keep notes short and cautious. When a value is unclear, describe what the
             local/test page showed and what still needs checking rather than making a source,
-            legal, facility-wide, or official finding.</p>
+            legal, facility-wide, or public-source conclusion.</p>
             <table>
                 <caption>Cautious wording for reviewer-created notes/status</caption>
                 <thead>
@@ -3057,7 +3173,7 @@ def _render_field_note_guidance_section() -> str:
                         <th scope="row">Field is present</th>
                         <td>Say the local/test record shows the value and name the field you
                         checked. Example: local/test record shows complaint received date.</td>
-                        <td>Do not say the value is legally verified or an official finding.</td>
+                        <td>Do not say the value is legally verified or a public-source conclusion.</td>
                     </tr>
                     <tr>
                         <th scope="row">Field is not available locally</th>

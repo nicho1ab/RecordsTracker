@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 from pathlib import Path
 from typing import Any, cast
 from urllib.parse import quote, urlencode
@@ -18,9 +19,17 @@ from ccld_complaints.hosted_app.auth import (
     HostedTesterRole,
     load_hosted_auth_runtime_config,
 )
+from ccld_complaints.hosted_app.ccld_facility_lookup import (
+    CCLD_FACILITY_REFERENCE_CSV_ENV,
+    CCLD_FACILITY_REVIEW_HUB_PATH,
+    CCLD_FACILITY_REVIEW_PRIORITY_PATH,
+)
 from ccld_complaints.hosted_app.facility_case_brief import (
     FacilityCaseBriefRecord,
     select_priority_record,
+)
+from ccld_complaints.hosted_app.facility_review_signals import (
+    FACILITY_REVIEW_SIGNALS_CSVS_ENV,
 )
 from ccld_complaints.hosted_app.reset_reload_dry_run import (
     hosted_reset_reload_planning_metadata,
@@ -370,7 +379,7 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> 
     assert "What this draft does not prove" in html
     assert "It is not a source-completeness proof." in html
     assert "It does not prove no other complaints exist." in html
-    assert "official findings beyond source-derived finding labels" in html
+    assert "source conclusions beyond source-derived finding labels" in html
     assert "It does not submit correction decisions or replace source-derived records" in html
     assert "Copyable packet summary" in html
     assert "Attorney Review Packet Draft" in html
@@ -729,7 +738,10 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "continue review from the same queue context" in normalized_html
     assert "Field is present" in html
     assert "local/test record shows complaint received date" in html
-    assert "Do not say the value is legally verified or an official finding" in normalized_html
+    assert (
+        "Do not say the value is legally verified or a public-source conclusion"
+        in normalized_html
+    )
     assert "Field is not available locally" in html
     assert "Do not say the source does not contain this" in normalized_html
     assert "the record is incomplete" in html
@@ -1018,6 +1030,158 @@ def test_reviewer_ui_detail_preserves_direct_queue_request_context() -> None:
     assert "legally sufficient" not in normalized_html.casefold()
     assert "verified abuse" not in normalized_html.casefold()
     assert "complete source record" not in normalized_html.casefold()
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_detail_links_signal_only_facility_context_without_mutation(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    facility_csv = tmp_path / "facility-reference.csv"
+    signals_csv = tmp_path / "24HourResidentialCareforChildren06072026.csv"
+    _write_chhs_facility_directory_csv(facility_csv, facility_numbers=("434417302",))
+    _write_program_summary_signals_csv(
+        signals_csv,
+        facility_number="157806098",
+        facility_name="A. MIRIAM JAMISON CHILDREN'S CENTER",
+    )
+    monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(facility_csv))
+    monkeypatch.setenv(FACILITY_REVIEW_SIGNALS_CSVS_ENV, str(signals_csv))
+
+    with _seeded_connection() as connection:
+        before_source_rows = _source_rows(connection)
+        before_counts = _table_counts(connection)
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}"
+            "&facility_number=157806098&start_date=2026-01-01&end_date=2026-01-31"
+            "&request_context_origin=manual_entry",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+        after_source_rows = _source_rows(connection)
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split()).casefold()
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 0,
+        "audit_events": 0,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert "Facility context cues" in html
+    assert "signal-only facility hub" in html
+    assert "uploaded public summary signals are available" in html
+    assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098" in html
+    assert "Open signal-only facility hub" in html
+    assert "Return to signal-only facility hub" in html
+    assert CCLD_FACILITY_REVIEW_PRIORITY_PATH in html
+    assert "Return to facility review priority list" in html
+    assert "Start complaint request if needed" in html
+    assert "/ccld/records/request?facility_number=157806098" in html
+    assert "Return to same facility/date queue" in html
+    assert f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?facility_number=157806098" in html
+    assert f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098" in html
+    assert "complaint records are requested/reviewed separately" in normalized_html
+    assert "not source verification" in normalized_html
+    assert "not a complaint-coverage determination" in normalized_html
+    assert "not a source-completeness proof" in normalized_html
+    assert "not a legal finding" in normalized_html
+    assert "review cue" in normalized_html
+    assert "source-traceability cue" in normalized_html
+    assert "source-derived value" in normalized_html
+    assert "reviewer-created note/status" in normalized_html
+    assert "local/test review" in normalized_html
+    assert "manual request context" in normalized_html
+    assert "verified complaint" not in normalized_html
+    assert "proven complaint" not in normalized_html
+    assert "complete public record" not in normalized_html
+    assert "facility has no complaints" not in normalized_html
+    assert "no complaints found" not in normalized_html
+    assert "official finding" not in normalized_html
+    assert "licensed and valid" not in normalized_html
+    assert "assigned record" not in normalized_html
+    assert "claimed record" not in normalized_html
+    assert "export approved" not in normalized_html
+    assert "correction applied" not in normalized_html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_detail_distinguishes_directory_backed_facility_context(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    facility_csv = tmp_path / "facility-reference.csv"
+    signals_csv = tmp_path / "missing-signals.csv"
+    _write_chhs_facility_directory_csv(facility_csv, facility_numbers=("157806098",))
+    monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(facility_csv))
+    monkeypatch.setenv(FACILITY_REVIEW_SIGNALS_CSVS_ENV, str(signals_csv))
+
+    with _seeded_connection() as connection:
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}"
+            "&facility_number=157806098&request_context_origin=facility_lookup",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Facility context cues" in html
+    assert "directory-backed facility hub cue" in html
+    assert "Facility context type" in html
+    assert "facility hub" in html
+    assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098" in html
+    assert "Open facility hub" in html
+    assert "Return to facility hub" in html
+    assert "signal-only facility hub" not in html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_detail_shows_manual_context_when_facility_hub_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    facility_csv = tmp_path / "facility-reference.csv"
+    signals_csv = tmp_path / "missing-signals.csv"
+    _write_chhs_facility_directory_csv(facility_csv, facility_numbers=("434417302",))
+    monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(facility_csv))
+    monkeypatch.setenv(FACILITY_REVIEW_SIGNALS_CSVS_ENV, str(signals_csv))
+
+    with _seeded_connection() as connection:
+        before_counts = _table_counts(connection)
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}"
+            "&facility_number=157806098&request_context_origin=manual_entry",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split()).casefold()
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 0,
+        "audit_events": 0,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert "Facility context cues" in html
+    assert "manual request context" in normalized_html
+    assert "A facility hub cue is not available" in html
+    assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098" not in html
+    assert "Open signal-only facility hub" not in html
+    assert "Open facility hub" not in html
+    assert "Return to facility review priority list" in html
+    assert "Start complaint request if needed" in html
     assert_no_secret_html(html)
 
 
@@ -1735,6 +1899,122 @@ def _table_counts(connection: Connection) -> dict[str, int]:
         "audit_events": audit_events,
         "reset_reload_planning_metadata": reset_reload_planning_metadata,
     }
+
+
+def _write_chhs_facility_directory_csv(
+    path: Path,
+    *,
+    facility_numbers: tuple[str, ...],
+) -> None:
+    fieldnames = (
+        "FAC_NBR",
+        "NAME",
+        "PROGRAM_TYPE",
+        "STATUS",
+        "CAPACITY",
+        "RES_CITY",
+        "RES_STATE",
+        "RES_ZIP_CODE",
+        "COUNTY",
+        "FAC_TYPE_DESC",
+    )
+    rows = [
+        {
+            "FAC_NBR": facility_number,
+            "NAME": f"Fixture Facility {facility_number}",
+            "PROGRAM_TYPE": "CHILD CARE",
+            "STATUS": "LICENSED",
+            "CAPACITY": "48",
+            "RES_CITY": "BAKERSFIELD",
+            "RES_STATE": "CA",
+            "RES_ZIP_CODE": "93307",
+            "COUNTY": "KERN",
+            "FAC_TYPE_DESC": "TEMPORARY SHELTER CARE FACILITY",
+        }
+        for facility_number in facility_numbers
+    ]
+    with path.open("w", encoding="utf-8", newline="") as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def _write_program_summary_signals_csv(
+    path: Path,
+    *,
+    facility_number: str,
+    facility_name: str,
+) -> None:
+    fieldnames = (
+        "Facility Type",
+        "Facility Number",
+        "Facility Name",
+        "Licensee",
+        "Facility Administrator",
+        "Facility Telephone Number",
+        "Facility Address",
+        "Facility City",
+        "Facility State",
+        "Facility Zip",
+        "County Name",
+        "Regional Office",
+        "Facility Capacity",
+        "Facility Status",
+        "License First Date",
+        "Closed Date",
+        "Last Visit Date",
+        "Inspection Visits",
+        "Complaint Visits",
+        "Other Visits",
+        "Total Visits",
+        "Citation Numbers",
+        "POC Dates",
+        "All Visit Dates",
+        "Inspection Visit Dates",
+        "Inspect TypeA",
+        "Inspect TypeB",
+        "Other Visit Dates",
+        "Other TypeA",
+        "Other TypeB",
+        "Complaint Info- Date, #Sub Aleg, # Inc Aleg, # Uns Aleg, # TypeA, # TypeB ...",
+    )
+    row = {
+        "Facility Type": "TEMPORARY SHELTER CARE FACILITY",
+        "Facility Number": facility_number,
+        "Facility Name": facility_name,
+        "Licensee": "Do Not Display Licensee",
+        "Facility Administrator": "Do Not Display Admin",
+        "Facility Telephone Number": "555-0199",
+        "Facility Address": "1 Private Fixture Way",
+        "Facility City": "BAKERSFIELD",
+        "Facility State": "CA",
+        "Facility Zip": "93307",
+        "County Name": "KERN",
+        "Regional Office": "Central Valley",
+        "Facility Capacity": "48",
+        "Facility Status": "LICENSED",
+        "License First Date": "7/30/2018",
+        "Closed Date": "",
+        "Last Visit Date": "5/4/2026",
+        "Inspection Visits": "0",
+        "Complaint Visits": "12",
+        "Other Visits": "31",
+        "Total Visits": "43",
+        "Citation Numbers": "84072(d)(14), 84665.5(f)",
+        "POC Dates": "07/28/2021, 06/20/2024",
+        "All Visit Dates": "",
+        "Inspection Visit Dates": "",
+        "Inspect TypeA": "",
+        "Inspect TypeB": "",
+        "Other Visit Dates": "",
+        "Other TypeA": "A citation",
+        "Other TypeB": "B citation",
+        "Complaint Info- Date, #Sub Aleg, # Inc Aleg, # Uns Aleg, # TypeA, # TypeB ...": "",
+    }
+    with path.open("w", encoding="utf-8", newline="") as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerow(row)
 
 
 def _case_brief_record_for_priority(
