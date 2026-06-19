@@ -52,9 +52,8 @@ Use this section to capture stakeholder requests for fields, documents, or outpu
 
 | Requested field, document, or output | Why it matters | Current status | Notes |
 |---|---|---|---|
-| Additional complaint or investigation report fields Dylan needs | Helps compare the current app against real attorney workflow needs. | To discuss | Capture exact field names, where Dylan sees them now, and what output he needs. |
+| Additional complaint or investigation report fields stakeholders need | Helps compare the current app against real attorney workflow needs. | To discuss | Capture exact field names, where stakeholders see them now, and what output stakeholders need. |
 | Specific PDF or report documents that should be captured or linked | Helps determine whether RecordsTracker needs additional document handling beyond current source-derived fields. | To discuss | Record whether the document is a CCLD complaint report, investigation report, citation document, plan of correction, or another public source. |
-| Preferred finished work product | Helps decide whether the next output should be a complaint matrix, timeline, packet, Word-style summary, dashboard, or CSV/Excel export. | To discuss | Ask what Dylan currently produces after reviewing a facility. |
+| Preferred finished work product | Helps decide whether the next output should be a complaint matrix, timeline, packet, Word-style summary, dashboard, or CSV/Excel export. | To discuss | Ask what reviewers currently produce after reviewing a facility. |
 | Timing or delay review fields | Helps evaluate whether existing complaint received, visit, investigation activity, report date, and delay flags meet reviewer needs. | To discuss | Keep wording cautious. Do not label records as delayed without attorney review. |
 | Citation or plan of correction detail | Helps determine whether facility-level indicators are enough or whether complaint-linked citation/POC detail is needed. | To discuss | Current data may be summary-level and may not map one-to-one to complaints. |
-
