@@ -732,6 +732,18 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert html.index(
         "CSV exports include"
     ) < html.index("Download local/test complaint review matrix CSV")
+    assert (
+        "Use CSV exports to triage and navigate records. "
+        "Open the linked source record before relying on exported values."
+    ) in html
+    assert "triage and navigate records" in normalized_html
+    assert "Open the linked source record" in normalized_html
+    assert html.index("CSV exports include") < html.index(
+        "Use CSV exports to triage and navigate records."
+    )
+    assert html.index(
+        "Use CSV exports to triage and navigate records."
+    ) < html.index("Download local/test complaint review matrix CSV")
     assert "This facility complaint export records:" in html
     assert "Facility-scoped complaint exports" in html
     assert "Download this facility's substantiated complaint CSV" in html
