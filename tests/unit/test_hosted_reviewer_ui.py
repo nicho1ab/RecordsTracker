@@ -737,6 +737,8 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Download this facility's substantiated complaint CSV" in html
     assert "Download this facility's all complaint CSV" in html
     assert "Download this facility's serious review cue CSV" in html
+    assert "Download this facility's last 30 days complaint CSV" in html
+    assert "Download this facility's last 90 days complaint CSV" in html
     assert (
         f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?facility=157806098&amp;status=substantiated"
     ) in html
@@ -747,6 +749,16 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
         f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?facility=157806098&amp;status=all"
         "&amp;review_cue=serious"
     ) in html
+    assert (
+        f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?facility=157806098&amp;status=all"
+        "&amp;start_date="
+    ) in html
+    assert html.index("Download this facility's serious review cue CSV") < html.index(
+        "Download this facility's last 30 days complaint CSV"
+    )
+    assert html.index("Download this facility's last 30 days complaint CSV") < html.index(
+        "Download this facility's last 90 days complaint CSV"
+    )
     assert html.index(
         "Download all complaint CSV"
     ) < html.index("This facility complaint export records:")

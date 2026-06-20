@@ -2517,6 +2517,28 @@ def _last_90_days_complaint_export_href(reference_date: datetime) -> str:
     return f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{urlencode(query_values)}"
 
 
+def _facility_last_30_days_complaint_export_href(facility_number: str, reference_date: datetime) -> str:
+    start_date, end_date = _date_range_for_days_back(reference_date, 30)
+    query_values = {
+        "facility": facility_number,
+        "status": "all",
+        "start_date": start_date,
+        "end_date": end_date,
+    }
+    return f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{urlencode(query_values)}"
+
+
+def _facility_last_90_days_complaint_export_href(facility_number: str, reference_date: datetime) -> str:
+    start_date, end_date = _date_range_for_days_back(reference_date, 90)
+    query_values = {
+        "facility": facility_number,
+        "status": "all",
+        "start_date": start_date,
+        "end_date": end_date,
+    }
+    return f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{urlencode(query_values)}"
+
+
 def _packet_draft_href_for_queue(records: tuple[FacilityCaseBriefRecord, ...]) -> str:
     if not records:
         return REVIEWER_UI_PACKET_DRAFT_PATH
@@ -3457,7 +3479,9 @@ def _detail_packet_links(
               <p class="helper-text">Facility-scoped complaint exports (for {_escape(return_context.facility_number)})</p>
               <a class="button button-secondary" href="{_escape(_facility_substantiated_export_href(return_context.facility_number))}">Download this facility's substantiated complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_facility_all_complaints_export_href(return_context.facility_number))}">Download this facility's all complaint CSV</a>
-              <a class="button button-secondary" href="{_escape(_facility_serious_review_cue_export_href(return_context.facility_number))}">Download this facility's serious review cue CSV</a>"""
+              <a class="button button-secondary" href="{_escape(_facility_serious_review_cue_export_href(return_context.facility_number))}">Download this facility's serious review cue CSV</a>
+              <a class="button button-secondary" href="{_escape(_facility_last_30_days_complaint_export_href(return_context.facility_number, now))}">Download this facility's last 30 days complaint CSV</a>
+              <a class="button button-secondary" href="{_escape(_facility_last_90_days_complaint_export_href(return_context.facility_number, now))}">Download this facility's last 90 days complaint CSV</a>"""
     return f"""              <a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Review packet readiness before copying or printing</a>
               <p class="helper-text">Complaint export records (source-derived): {complaint_counts['all']} all, {complaint_counts['substantiated']} substantiated, {complaint_counts['unsubstantiated']} unsubstantiated</p>
               <p class="helper-text">Serious review cue records: {serious_review_cue_count}</p>
