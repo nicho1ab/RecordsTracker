@@ -1117,16 +1117,19 @@ def test_reviewer_ui_substantiated_export_returns_excel_ready_csv_without_mutati
 
 
 @pytest.mark.parametrize(
-    ("status_value", "finding_value"),
+    ("status_value", "finding_value", "facility_value", "expect_row"),
     (
-        ("substantiated", "Substantiated"),
-        ("unsubstantiated", "Unsubstantiated"),
-        ("all", "Unsubstantiated"),
+        ("all", "Unsubstantiated", "157806098", True),
+        ("substantiated", "Substantiated", "157806098", True),
+        ("unsubstantiated", "Unsubstantiated", "157806098", True),
+        ("all", "Unsubstantiated", "999999999", False),
     ),
 )
 def test_reviewer_ui_complaint_export_status_query_filters_without_mutation(
     status_value: str,
     finding_value: str,
+    facility_value: str,
+    expect_row: bool,
 ) -> None:
     with _seeded_connection() as connection:
         create_reviewer_note_scaffold(
@@ -1162,9 +1165,10 @@ def test_reviewer_ui_complaint_export_status_query_filters_without_mutation(
 
         status, content_type, body = route_response(
             f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?"
-            "facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31"
+            "start_date=2022-08-01&end_date=2022-08-31"
             "&request_context_origin=manual_entry"
-            f"&status={quote(status_value)}",
+            f"&status={quote(status_value)}"
+            f"&facility={quote(facility_value)}",
             reviewer_ui_context=reviewer_ui_context_for_connection(connection),
         )
 
@@ -1186,16 +1190,22 @@ def test_reviewer_ui_complaint_export_status_query_filters_without_mutation(
     }
     assert rows
     [record] = rows
-    assert record["Facility Name"] == "A. MIRIAM JAMISON CHILDREN'S CENTER"
-    assert record["Facility/License Number"] == "157806098"
-    assert record["Complaint Received Date"] == "2022-04-07"
-    assert record["Visit Date"] == "2022-08-24"
-    assert record["Finding/Status"] == finding_value
-    assert record["Complaint Control Number"] == "32-CR-20220407124448"
-    assert record["Source Report URL"].startswith("https://www.ccld.dss.ca.gov/")
-    assert "Source traceability available" in record["Source Traceability Status"]
-    assert record["Reviewer-created status"] == "Reviewed"
-    assert record["Reviewer-created note present"] == "yes"
+    if expect_row:
+        assert record["Facility Name"] == "A. MIRIAM JAMISON CHILDREN'S CENTER"
+        assert record["Facility/License Number"] == "157806098"
+        assert record["Complaint Received Date"] == "2022-04-07"
+        assert record["Visit Date"] == "2022-08-24"
+        assert record["Finding/Status"] == finding_value
+        assert record["Complaint Control Number"] == "32-CR-20220407124448"
+        assert record["Source Report URL"].startswith("https://www.ccld.dss.ca.gov/")
+        assert "Source traceability available" in record["Source Traceability Status"]
+        assert record["Reviewer-created status"] == "Reviewed"
+        assert record["Reviewer-created note present"] == "yes"
+    else:
+        assert record["Facility Name"] == ""
+        assert record["Facility/License Number"] == ""
+        assert record["Finding/Status"] == ""
+        assert record["Complaint Control Number"] == ""
     assert "Status query export note" not in csv_text
     assert "raw_path" not in csv_text
     assert "C:\\" not in csv_text
