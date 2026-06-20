@@ -2,6 +2,31 @@
 
 Exports should include clear headers and source traceability fields.
 
+## Export a stakeholder facility overview
+
+After populating the local SQLite database, use the stakeholder facility overview script to write a ZIP package with a per-facility summary CSV, a substantiated/equivalent complaints CSV, a README, and a manifest:
+
+```powershell
+.\scripts\export-stakeholder-facility-overview.ps1
+```
+
+Output goes under `data/processed/stakeholder-extracts/<timestamp>/`. Use `-DbPath` to export from a different database:
+
+```powershell
+.\scripts\export-stakeholder-facility-overview.ps1 -DbPath data\processed\live-ccld.sqlite
+```
+
+The ZIP package includes:
+
+- `facility-overview.csv` for per-facility complaint counts, substantiated/equivalent counts, date ranges, source-traceability counts, and a Limitations column.
+- `substantiated-complaints.csv` for individual records where the source-derived finding/resolution/status indicates substantiated or an equivalent value, with source URL, raw hash, and a stable reviewer detail path.
+- `README.md` with scope and limitations notes.
+- `manifest.json` with generation metadata and row counts.
+
+If the database is absent or empty, valid CSVs with headers, README, manifest, and ZIP are produced without failing.
+
+This extract is a review aid over loaded source-derived records. The public CCLD portal remains the source of record. Counts reflect only loaded records; zero does not prove no complaints exist. Finding/resolution values are source-derived and not independently verified by RecordsTracker. Raw narrative allegation text is intentionally excluded.
+
 ## Export a local review bundle
 
 After populating the local SQLite database, use the review bundle script to write source-traceable CSV files and a short README with review cautions:
