@@ -50,6 +50,7 @@ from ccld_complaints.hosted_app.reviewer_ui import (
     REVIEWER_UI_PACKET_PREVIEW_PATH,
     REVIEWER_UI_STATUS_PATH,
     REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH,
+    complaint_export_attachment_filename,
     reviewer_ui_context_for_connection,
 )
 from ccld_complaints.hosted_app.seeded_import import (
@@ -1420,6 +1421,96 @@ def test_reviewer_ui_complaint_export_serious_review_cue_without_mutation(
     assert "C:\\" not in csv_text
     assert "provider_subject" not in csv_text
     assert "token" not in csv_text.casefold()
+
+
+def test_reviewer_ui_complaint_export_default_filename_is_attachment() -> None:
+    path = (
+        f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?"
+        "request_context_origin=manual_entry"
+    )
+
+    with _seeded_connection() as connection:
+        status, content_type, _body = route_response(
+            path,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    assert status == 200
+    assert content_type == "text/csv; charset=utf-8"
+    assert complaint_export_attachment_filename("request_context_origin=manual_entry") == (
+        "complaints-substantiated.csv"
+    )
+
+
+@pytest.mark.parametrize(
+    ("query", "expected_filename"),
+    (
+        ("status=all", "complaints-all.csv"),
+        ("status=unsubstantiated", "complaints-unsubstantiated.csv"),
+        ("status=all&facility=157806098", "complaints-all-facility-157806098.csv"),
+        (
+            "status=substantiated&facility=157806098&start_date=2026-01-01&end_date=2026-01-31",
+            "complaints-substantiated-facility-157806098-2026-01-01-to-2026-01-31.csv",
+        ),
+        (
+            "status=all&facility=1578/06098&start_date=invalid&end_date=2026-01-31",
+            "complaints-all-to-2026-01-31.csv",
+        ),
+    ),
+)
+def test_reviewer_ui_complaint_export_filename_segments_are_deterministic(
+    query: str,
+    expected_filename: str,
+) -> None:
+    path = f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{query}"
+
+    with _seeded_connection() as connection:
+        status, content_type, _body = route_response(
+            path,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    assert status == 200
+    assert content_type == "text/csv; charset=utf-8"
+    assert complaint_export_attachment_filename(query) == expected_filename
+
+
+def test_reviewer_ui_complaint_export_csv_body_header_unchanged_for_filtered_export() -> None:
+    with _seeded_connection() as connection:
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?"
+            "status=all&facility=157806098&start_date=2022-04-01&end_date=2022-04-30"
+            "&request_context_origin=manual_entry",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    csv_text = body.decode("utf-8-sig")
+    reader = csv.DictReader(io.StringIO(csv_text))
+    rows = list(reader)
+
+    assert status == 200
+    assert content_type == "text/csv; charset=utf-8"
+    assert reader.fieldnames == [
+        "Facility Name",
+        "Facility/License Number",
+        "Complaint Received Date",
+        "Report Date",
+        "Visit Date",
+        "Date Signed",
+        "Finding/Status",
+        "Complaint Control Number",
+        "Source Report URL",
+        "Source Traceability Status",
+        "Serious Review Cue",
+        "Reviewer-created status",
+        "Reviewer-created note present",
+    ]
+    assert rows
+    [record] = rows
+    assert record["Facility Name"] == "A. MIRIAM JAMISON CHILDREN'S CENTER"
+    assert record["Facility/License Number"] == "157806098"
+    assert record["Complaint Received Date"] == "2022-04-07"
+    assert record["Complaint Control Number"] == "32-CR-20220407124448"
 
 
 def test_reviewer_ui_matrix_export_empty_context_is_safe() -> None:
