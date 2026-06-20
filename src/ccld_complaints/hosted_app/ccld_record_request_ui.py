@@ -2800,6 +2800,8 @@ def _render_worklist_decision_flow(
         <a class="button button-secondary" href="{_escape(_packet_preview_href_for_request(request))}">Review packet readiness before copying or printing</a>
         <a class="button button-secondary" href="{_escape(_matrix_export_href_for_request(request))}">Download local/test complaint review matrix CSV</a>
         <a class="button button-secondary" href="{_escape(_substantiated_export_href_for_request(request))}">Download substantiated complaint CSV</a>
+                <a class="button button-secondary" href="{_escape(_unsubstantiated_export_href_for_request(request))}">Download unsubstantiated complaint CSV</a>
+                <a class="button button-secondary" href="{_escape(_all_complaints_export_href_for_request(request))}">Download all complaint CSV</a>
         <a class="button button-secondary" href="{_escape(_packet_draft_href_for_request(request))}">Open local/test preparation draft for browser copy or print</a>
         <a class="button button-secondary" href="{CCLD_HELP_PATH}">Open CCLD workflow help</a>
       </div>
@@ -3621,6 +3623,18 @@ def _matrix_export_href_for_request(request: CcldRecordRequest) -> str:
 
 
 def _substantiated_export_href_for_request(request: CcldRecordRequest) -> str:
+    return _complaint_export_href_for_request(request, "substantiated")
+
+
+def _unsubstantiated_export_href_for_request(request: CcldRecordRequest) -> str:
+    return _complaint_export_href_for_request(request, "unsubstantiated")
+
+
+def _all_complaints_export_href_for_request(request: CcldRecordRequest) -> str:
+    return _complaint_export_href_for_request(request, "all")
+
+
+def _complaint_export_href_for_request(request: CcldRecordRequest, status: str) -> str:
     query_values = {
         "facility_number": request.facility_number,
         "start_date": request.start_date or "",
@@ -3628,6 +3642,8 @@ def _substantiated_export_href_for_request(request: CcldRecordRequest) -> str:
         "request_context_origin": request.request_context_origin,
         "lookup_facility_name": request.lookup_facility_name or "",
     }
+    if status != "substantiated":
+        query_values["status"] = status
     return f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{urlencode(query_values)}"
 
 

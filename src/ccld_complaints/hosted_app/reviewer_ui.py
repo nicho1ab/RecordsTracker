@@ -589,33 +589,23 @@ def _render_substantiated_complaint_csv(
     state_summaries: Mapping[str, Mapping[str, Any]],
     all_source_records: list[Mapping[str, Any]],
     return_context: CcldQueueReturnContext,
+    complaint_status_filter: str,
 ) -> str:
     output = io.StringIO(newline="")
     fieldnames = _substantiated_fieldnames()
     writer = csv.DictWriter(output, fieldnames=fieldnames, lineterminator="\r\n")
     writer.writeheader()
-    # Filter to substantiated findings. Some queue item shapes omit entity_type
-    # so perform a robust check directly against original_values.
+    # Filter to complaint records and requested finding status.
     filtered_records: list[Mapping[str, Any]] = []
     for item in records:
         try:
             src = _mapping(item, "source_record")
+            if _queue_source_record_entity_type(src) != "complaint":
+                continue
             vals = _mapping(src, "original_values")
-            fv = vals.get("finding")
-            try:
-                fv_norm = str(fv).strip().lower() if fv is not None else ""
-            except Exception:
-                fv_norm = ""
-            matched = False
-            if fv_norm == "substantiated":
-                matched = True
-            else:
-                try:
-                    if "substantiated" in str(vals).lower():
-                        matched = True
-                except Exception:
-                    matched = False
-            if matched:
+            finding = vals.get("finding")
+            finding_norm = _normalized_complaint_finding(finding)
+            if complaint_status_filter == "all" or finding_norm == complaint_status_filter:
                 filtered_records.append(item)
         except Exception:
             continue
@@ -722,41 +712,7 @@ def _substantiated_export_response(
     queue = _mapping(payload, "queue")
     records = _filter_packet_preview_items(_record_list(queue, "records"), return_context)
 
-    # Filter to complaint entity_type and Substantiated finding only
-    substantiated: list[Mapping[str, Any]] = []
-    # No debug prints: proceed to filter records
-    for item in records:
-        source_record = _mapping(item, "source_record")
-        # Derive entity type from source_record identity key when not present
-        identity = _mapping(source_record, "identity")
-        source_record_key = _string(identity, "source_record_key")
-        # Derive entity type from source_record_key to filter by entity_type
-        try:
-            ent_type = source_record_key.split(":")[1] if ":" in source_record_key else ""
-            ent_norm = str(ent_type).strip().lower() if ent_type is not None else ""
-        except Exception:
-            ent_norm = ""
-        if ent_norm != "complaint":
-            continue
-        original_values = _mapping(source_record, "original_values")
-        fv = original_values.get("finding")
-        # Accept case-insensitive matches and non-string values by coercing to str
-        try:
-            fv_norm = str(fv).strip().lower() if fv is not None else ""
-        except Exception:
-            fv_norm = ""
-        matched = False
-        if fv_norm == "substantiated":
-            matched = True
-        else:
-            # Fallback: check if the stringified original_values contain the word
-            try:
-                if "substantiated" in str(original_values).lower():
-                    matched = True
-            except Exception:
-                matched = False
-        if matched:
-            substantiated.append(item)
+    complaint_status_filter = _complaint_export_status_filter(query_values)
 
     state_status, state_body = _reviewer_created_state_records(context)
     if state_status != 200:
@@ -774,13 +730,41 @@ def _substantiated_export_response(
         state_summaries,
         related_records,
         return_context,
+        complaint_status_filter,
     )
-    # DEBUG: print csv for failing test investigation
-    try:
-        print(csv_text)
-    except Exception:
-        pass
     return 200, "text/csv; charset=utf-8", csv_text.encode("utf-8-sig")
+
+
+def _complaint_export_status_filter(query_values: Mapping[str, list[str]]) -> str:
+    raw_status = query_values.get("status", ["substantiated"])[0]
+    normalized = raw_status.strip().lower()
+    if normalized in {"substantiated", "unsubstantiated", "all"}:
+        return normalized
+    return "substantiated"
+
+
+def _normalized_complaint_finding(value: object) -> str:
+    if value is None:
+        return ""
+    try:
+        normalized = str(value).strip().lower()
+    except Exception:
+        return ""
+    if normalized in {"substantiated", "unsubstantiated"}:
+        return normalized
+    return ""
+
+
+def _queue_source_record_entity_type(source_record: Mapping[str, Any]) -> str:
+    raw_entity_type = source_record.get("entity_type")
+    if isinstance(raw_entity_type, str) and raw_entity_type.strip():
+        return raw_entity_type.strip().lower()
+    try:
+        identity = _mapping(source_record, "identity")
+        source_record_key = _string(identity, "source_record_key")
+        return source_record_key.split(":", 1)[0].strip().lower()
+    except Exception:
+        return ""
 
 
 def _matrix_fieldnames() -> list[str]:
@@ -2255,8 +2239,25 @@ def _matrix_export_href(return_context: CcldQueueReturnContext) -> str:
 
 
 def _substantiated_export_href(return_context: CcldQueueReturnContext) -> str:
+    return _complaint_export_href(return_context, "substantiated")
+
+
+def _unsubstantiated_export_href(return_context: CcldQueueReturnContext) -> str:
+    return _complaint_export_href(return_context, "unsubstantiated")
+
+
+def _all_complaints_export_href(return_context: CcldQueueReturnContext) -> str:
+    return _complaint_export_href(return_context, "all")
+
+
+def _complaint_export_href(
+    return_context: CcldQueueReturnContext,
+    status: str,
+) -> str:
     if return_context.facility_number is None:
-        return REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH
+        if status == "substantiated":
+            return REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH
+        return f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{urlencode({'status': status})}"
     query_values = {
         "facility_number": return_context.facility_number,
         "start_date": return_context.start_date or "",
@@ -2264,6 +2265,8 @@ def _substantiated_export_href(return_context: CcldQueueReturnContext) -> str:
         "request_context_origin": return_context.context_origin or "manual_entry",
         "lookup_facility_name": return_context.lookup_facility_name or "",
     }
+    if status != "substantiated":
+        query_values["status"] = status
     return f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{urlencode(query_values)}"
 
 
@@ -3191,6 +3194,8 @@ def _detail_packet_links(return_context: CcldQueueReturnContext) -> str:
     return f"""              <a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Review packet readiness before copying or printing</a>
               <a class="button button-secondary" href="{_escape(_matrix_export_href(return_context))}">Download local/test complaint review matrix CSV</a>
               <a class="button button-secondary" href="{_escape(_substantiated_export_href(return_context))}">Download substantiated complaint CSV</a>
+              <a class="button button-secondary" href="{_escape(_unsubstantiated_export_href(return_context))}">Download unsubstantiated complaint CSV</a>
+              <a class="button button-secondary" href="{_escape(_all_complaints_export_href(return_context))}">Download all complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a>"""
 
 
@@ -3317,6 +3322,8 @@ def _detail_navigation_packet_items(return_context: CcldQueueReturnContext) -> s
     return f"""                <li><a href="{_escape(_packet_preview_href(return_context))}">Review packet readiness before copying or printing</a></li>
                 <li><a href="{_escape(_matrix_export_href(return_context))}">Download local/test complaint review matrix CSV</a></li>
                 <li><a href="{_escape(_substantiated_export_href(return_context))}">Download substantiated complaint CSV</a></li>
+                <li><a href="{_escape(_unsubstantiated_export_href(return_context))}">Download unsubstantiated complaint CSV</a></li>
+                <li><a href="{_escape(_all_complaints_export_href(return_context))}">Download all complaint CSV</a></li>
                 <li><a href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a></li>"""
 
 
