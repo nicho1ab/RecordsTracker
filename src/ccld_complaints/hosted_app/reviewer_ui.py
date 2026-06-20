@@ -590,6 +590,7 @@ def _render_substantiated_complaint_csv(
     all_source_records: list[Mapping[str, Any]],
     return_context: CcldQueueReturnContext,
     complaint_status_filter: str,
+    complaint_facility_filter: str | None,
 ) -> str:
     output = io.StringIO(newline="")
     fieldnames = _substantiated_fieldnames()
@@ -601,6 +602,9 @@ def _render_substantiated_complaint_csv(
         try:
             src = _mapping(item, "source_record")
             if _queue_source_record_entity_type(src) != "complaint":
+                continue
+            row_facility_number = _complaint_export_row_facility_number(src, return_context)
+            if complaint_facility_filter is not None and row_facility_number != complaint_facility_filter:
                 continue
             vals = _mapping(src, "original_values")
             finding = vals.get("finding")
@@ -682,7 +686,7 @@ def _substantiated_row_for_record(
             pass
     return {
         "Facility Name": facility_name,
-        "Facility/License Number": return_context.facility_number or _optional_string(identity, "facility_id"),
+        "Facility/License Number": _complaint_export_row_facility_number(source_record, return_context),
         "Complaint Received Date": _optional_string(original_values, "complaint_received_date"),
         "Report Date": _optional_string(original_values, "report_date"),
         "Visit Date": _optional_string(original_values, "visit_date"),
@@ -713,6 +717,7 @@ def _substantiated_export_response(
     records = _filter_packet_preview_items(_record_list(queue, "records"), return_context)
 
     complaint_status_filter = _complaint_export_status_filter(query_values)
+    complaint_facility_filter = _complaint_export_facility_filter(query_values)
 
     state_status, state_body = _reviewer_created_state_records(context)
     if state_status != 200:
@@ -731,6 +736,7 @@ def _substantiated_export_response(
         related_records,
         return_context,
         complaint_status_filter,
+        complaint_facility_filter,
     )
     return 200, "text/csv; charset=utf-8", csv_text.encode("utf-8-sig")
 
@@ -741,6 +747,14 @@ def _complaint_export_status_filter(query_values: Mapping[str, list[str]]) -> st
     if normalized in {"substantiated", "unsubstantiated", "all"}:
         return normalized
     return "substantiated"
+
+
+def _complaint_export_facility_filter(query_values: Mapping[str, list[str]]) -> str | None:
+    raw_facility = query_values.get("facility", [""])[0]
+    normalized = raw_facility.strip()
+    if not normalized:
+        return None
+    return normalized
 
 
 def _normalized_complaint_finding(value: object) -> str:
@@ -765,6 +779,21 @@ def _queue_source_record_entity_type(source_record: Mapping[str, Any]) -> str:
         return source_record_key.split(":", 1)[0].strip().lower()
     except Exception:
         return ""
+
+
+def _complaint_export_row_facility_number(
+    source_record: Mapping[str, Any],
+    return_context: CcldQueueReturnContext,
+) -> str:
+    if return_context.facility_number:
+        return return_context.facility_number
+    identity = _mapping(source_record, "identity")
+    facility_id = _optional_string(identity, "facility_id")
+    if facility_id.startswith("ccld:facility:"):
+        suffix = facility_id.rsplit(":", 1)[-1].strip()
+        if suffix:
+            return suffix
+    return facility_id
 
 
 def _matrix_fieldnames() -> list[str]:
@@ -2264,6 +2293,7 @@ def _complaint_export_href(
         "end_date": return_context.end_date or "",
         "request_context_origin": return_context.context_origin or "manual_entry",
         "lookup_facility_name": return_context.lookup_facility_name or "",
+        "facility": return_context.facility_number,
     }
     if status != "substantiated":
         query_values["status"] = status

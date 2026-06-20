@@ -3641,6 +3641,7 @@ def _complaint_export_href_for_request(request: CcldRecordRequest, status: str) 
         "end_date": request.end_date or "",
         "request_context_origin": request.request_context_origin,
         "lookup_facility_name": request.lookup_facility_name or "",
+        "facility": request.facility_number,
     }
     if status != "substantiated":
         query_values["status"] = status
