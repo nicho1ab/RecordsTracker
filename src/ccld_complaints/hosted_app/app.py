@@ -95,7 +95,9 @@ from ccld_complaints.hosted_app.reviewer_created_state_routes import (
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
     REVIEWER_UI_PREFIX,
+    REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH,
     ReviewerUiContext,
+    complaint_export_attachment_filename,
     default_local_test_reviewer_ui_context,
     local_test_reviewer_actor,
     reviewer_ui_context_for_connection,
@@ -1578,6 +1580,9 @@ class HostedScaffoldHandler(BaseHTTPRequestHandler):
         status, content_type, body = route_response(self.path, method="GET")
         self.send_response(status)
         self.send_header("Content-Type", content_type)
+        disposition = _content_disposition_header(self.path, status, content_type)
+        if disposition is not None:
+            self.send_header("Content-Disposition", disposition)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -1592,6 +1597,9 @@ class HostedScaffoldHandler(BaseHTTPRequestHandler):
         )
         self.send_response(status)
         self.send_header("Content-Type", content_type)
+        disposition = _content_disposition_header(self.path, status, content_type)
+        if disposition is not None:
+            self.send_header("Content-Disposition", disposition)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -1602,6 +1610,16 @@ class HostedScaffoldHandler(BaseHTTPRequestHandler):
 
 def create_server(host: str, port: int) -> ThreadingHTTPServer:
     return ThreadingHTTPServer((host, port), HostedScaffoldHandler)
+
+
+def _content_disposition_header(path: str, status: int, content_type: str) -> str | None:
+    if status != 200 or not content_type.startswith("text/csv"):
+        return None
+    parsed = urlparse(path)
+    if parsed.path != REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH:
+        return None
+    filename = complaint_export_attachment_filename(parsed.query)
+    return f'attachment; filename="{filename}"'
 
 
 def main(argv: list[str] | None = None) -> int:
