@@ -139,6 +139,50 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert_no_secret_html(html)
 
 
+def test_reviewer_ui_landing_shows_visible_complaint_export_controls() -> None:
+    with _seeded_connection() as connection:
+        status, content_type, body = route_response(
+            "/reviewer",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert 'id="complaint-export-controls"' in html
+    assert "Global complaint exports" in html
+    assert "Complaint export records (source-derived):" in html
+    assert "Serious review cue records:" in html
+    assert (
+        "Serious review cues are deterministic keyword-based review aids and are not "
+        "verified severity findings."
+    ) in html
+    assert "Download substantiated complaint CSV" in html
+    assert "Download unsubstantiated complaint CSV" in html
+    assert "Download all complaint CSV" in html
+    assert "Download serious review cue CSV" in html
+    assert "Download last 30 days complaint CSV" in html
+    assert "Download last 90 days complaint CSV" in html
+    assert "This facility complaint export records:" in html
+    assert "This facility complaint exports" in html
+    assert "Download this facility's substantiated complaint CSV" in html
+    assert "Download this facility's all complaint CSV" in html
+    assert "Download this facility's serious review cue CSV" in html
+    assert "Download this facility's last 30 days complaint CSV" in html
+    assert "Download this facility's last 90 days complaint CSV" in html
+    assert (
+        "Use CSV exports to triage and navigate records. "
+        "Open the linked source record before relying on exported values."
+    ) in html
+    assert "Facility case brief" in html
+    assert "Worklist" in html
+    assert html.index("Facility case brief") < html.index("Global complaint exports")
+    assert html.index("Global complaint exports") < html.index("Worklist")
+    assert "triage and navigate records" in normalized_html
+
+
 def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     with _seeded_connection() as connection:
         create_reviewer_note_scaffold(
@@ -708,8 +752,8 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
         "verified severity findings."
     ) < html.index("Download serious review cue CSV")
     assert "Global complaint exports" in html
-    assert html.index("Serious review cue records: 0") < html.index(
-        "Global complaint exports"
+    assert html.index("Global complaint exports") < html.index(
+        "Serious review cue records: 0"
     )
     assert html.index("Global complaint exports") < html.index(
         "Download substantiated complaint CSV"

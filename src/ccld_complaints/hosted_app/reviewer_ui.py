@@ -439,6 +439,8 @@ def _record_list_response(
     if isinstance(state_body, bytes):
         raise ValueError("Expected reviewer-created state records.")
     state_summaries = _state_summaries_by_source_record(state_body)
+    export_context = _reviewer_queue_export_context(filtered_records)
+    export_records = _all_source_derived_records(context)
     return _html_response(
         status,
         _render_record_list(
@@ -446,6 +448,8 @@ def _record_list_response(
             filtered_records,
             search_query,
             state_summaries,
+            export_context,
+            export_records,
             actor_label=_signed_in_actor_label(context),
         ),
     )
@@ -1529,6 +1533,8 @@ def _render_record_list(
     records: list[Mapping[str, Any]],
     search_query: str,
     state_summaries: Mapping[str, Mapping[str, Any]],
+    export_context: CcldQueueReturnContext,
+    export_records: list[Mapping[str, Any]],
     *,
     actor_label: str | None,
 ) -> str:
@@ -1560,6 +1566,7 @@ def _render_record_list(
         actor_label=actor_label,
         main=f"""
         {_render_reviewer_case_brief(records, state_summaries)}
+        {_render_complaint_export_controls(export_context, export_records)}
                 {no_results_notice}
         <section aria-labelledby="reviewer-list-heading">
                         <h2 id="reviewer-list-heading">Worklist</h2>
@@ -3463,18 +3470,30 @@ def _detail_packet_links(
 ) -> str:
     if return_context.facility_number is None:
         return ""
+    return f"""              <a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Review packet readiness before copying or printing</a>
+              {_render_complaint_export_controls(return_context, related_records)}
+              <a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a>"""
+
+
+def _render_complaint_export_controls(
+    return_context: CcldQueueReturnContext,
+    related_records: list[Mapping[str, Any]],
+) -> str:
     serious_review_cue_count = _serious_review_cue_record_count(related_records)
     complaint_counts = _complaint_export_status_counts(related_records)
-    facility_complaint_counts = _facility_complaint_export_status_counts(
-        related_records, return_context.facility_number
-    )
-    facility_serious_cue_count = _facility_serious_review_cue_record_count(
-        related_records, return_context.facility_number
-    )
     now = datetime.now(UTC)
     date_shortcut_links = f"""              <a class="button button-secondary" href="{_escape(_last_30_days_complaint_export_href(now))}">Download last 30 days complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_last_90_days_complaint_export_href(now))}">Download last 90 days complaint CSV</a>"""
-    facility_scoped_links = f"""              <p class="helper-text">This facility complaint export records: {facility_complaint_counts['all']} all, {facility_complaint_counts['substantiated']} substantiated, {facility_complaint_counts['unsubstantiated']} unsubstantiated, {facility_serious_cue_count} serious review cue</p>
+    facility_scoped_links = ""
+    if return_context.facility_number is not None:
+        facility_complaint_counts = _facility_complaint_export_status_counts(
+            related_records, return_context.facility_number
+        )
+        facility_serious_cue_count = _facility_serious_review_cue_record_count(
+            related_records, return_context.facility_number
+        )
+        facility_scoped_links = f"""
+              <p class="helper-text">This facility complaint export records: {facility_complaint_counts['all']} all, {facility_complaint_counts['substantiated']} substantiated, {facility_complaint_counts['unsubstantiated']} unsubstantiated, {facility_serious_cue_count} serious review cue</p>
               <p class="helper-text">Use these facility CSV links when reviewing this facility. Use the global complaint exports to compare records across facilities.</p>
               <p class="helper-text">This facility complaint exports (for {_escape(return_context.facility_number)})</p>
               <a class="button button-secondary" href="{_escape(_facility_substantiated_export_href(return_context.facility_number))}">Download this facility's substantiated complaint CSV</a>
@@ -3482,11 +3501,11 @@ def _detail_packet_links(
               <a class="button button-secondary" href="{_escape(_facility_serious_review_cue_export_href(return_context.facility_number))}">Download this facility's serious review cue CSV</a>
               <a class="button button-secondary" href="{_escape(_facility_last_30_days_complaint_export_href(return_context.facility_number, now))}">Download this facility's last 30 days complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_facility_last_90_days_complaint_export_href(return_context.facility_number, now))}">Download this facility's last 90 days complaint CSV</a>"""
-    return f"""              <a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Review packet readiness before copying or printing</a>
+    return f"""<section id="complaint-export-controls" aria-labelledby="complaint-export-controls-heading">
+              <p class="helper-text" id="complaint-export-controls-heading">Global complaint exports</p>
               <p class="helper-text">Complaint export records (source-derived): {complaint_counts['all']} all, {complaint_counts['substantiated']} substantiated, {complaint_counts['unsubstantiated']} unsubstantiated</p>
               <p class="helper-text">Serious review cue records: {serious_review_cue_count}</p>
               <p class="helper-text">Serious review cues are deterministic keyword-based review aids and are not verified severity findings.</p>
-              <p class="helper-text">Global complaint exports</p>
               <p class="helper-text">Start with the substantiated complaint CSV for the clearest first review set. Use the serious review cue CSV to triage possible priority topics across all complaint statuses.</p>
               <p class="helper-text">CSV exports include facility name, complaint received date, complaint status, source link, and serious review cue.</p>
               <p class="helper-text">Use CSV exports to triage and navigate records. Open the linked source record before relying on exported values.</p>
@@ -3497,7 +3516,40 @@ def _detail_packet_links(
               <a class="button button-secondary" href="{_escape(_serious_review_cue_export_href(return_context))}">Download serious review cue CSV</a>
 {date_shortcut_links}
 {facility_scoped_links}
-              <a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a>"""
+            </section>"""
+
+
+def _queue_source_records(records: list[Mapping[str, Any]]) -> list[Mapping[str, Any]]:
+    source_records: list[Mapping[str, Any]] = []
+    for record in records:
+        try:
+            source_records.append(_mapping(record, "source_record"))
+        except Exception:
+            continue
+    return source_records
+
+
+def _reviewer_queue_export_context(
+    records: list[Mapping[str, Any]],
+) -> CcldQueueReturnContext:
+    empty_context = CcldQueueReturnContext()
+    facility_numbers: set[str] = set()
+    for record in records:
+        try:
+            source_record = _mapping(record, "source_record")
+            if _queue_source_record_entity_type(source_record) != "complaint":
+                continue
+            facility_number = _complaint_export_row_facility_number(
+                source_record,
+                empty_context,
+            )
+            if facility_number:
+                facility_numbers.add(facility_number)
+        except Exception:
+            continue
+    if len(facility_numbers) == 1:
+        return CcldQueueReturnContext(facility_number=next(iter(facility_numbers)))
+    return CcldQueueReturnContext()
 
 
 def _complaint_export_status_counts(records: list[Mapping[str, Any]]) -> dict[str, int]:
