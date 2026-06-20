@@ -72,7 +72,8 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     assert "OutputDir must be inside the ignored data/processed folder" in script
     assert "screenshot tool" in script.lower()
     assert "This evidence packet is local UI review evidence only" in script
-    assert "09-reviewer-detail-complaint-exports.png" in script
+    assert "05-reviewer-complaint-exports.png" in script
+    assert 'Join-RouteUrl -Base $normalizedBaseUrl -Path "/reviewer"' in script
     assert "complaint export" in script.lower()
 
 
