@@ -3378,7 +3378,9 @@ def _detail_packet_links(
     if return_context.facility_number is None:
         return ""
     serious_review_cue_count = _serious_review_cue_record_count(related_records)
+    complaint_counts = _complaint_export_status_counts(related_records)
     return f"""              <a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Review packet readiness before copying or printing</a>
+              <p class="helper-text">Complaint export records (source-derived): {complaint_counts['all']} all, {complaint_counts['substantiated']} substantiated, {complaint_counts['unsubstantiated']} unsubstantiated</p>
               <p class="helper-text">Serious review cue records: {serious_review_cue_count}</p>
               <a class="button button-secondary" href="{_escape(_matrix_export_href(return_context))}">Download local/test complaint review matrix CSV</a>
               <a class="button button-secondary" href="{_escape(_substantiated_export_href(return_context))}">Download substantiated complaint CSV</a>
@@ -3386,6 +3388,23 @@ def _detail_packet_links(
               <a class="button button-secondary" href="{_escape(_all_complaints_export_href(return_context))}">Download all complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_serious_review_cue_export_href(return_context))}">Download serious review cue CSV</a>
               <a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a>"""
+
+
+def _complaint_export_status_counts(records: list[Mapping[str, Any]]) -> dict[str, int]:
+    counts = {
+        "all": 0,
+        "substantiated": 0,
+        "unsubstantiated": 0,
+    }
+    for record in records:
+        if _string(record, "entity_type") != "complaint":
+            continue
+        counts["all"] += 1
+        finding = _mapping(record, "original_values").get("finding")
+        finding_norm = _normalized_complaint_finding(finding)
+        if finding_norm in {"substantiated", "unsubstantiated"}:
+            counts[finding_norm] += 1
+    return counts
 
 
 def _detail_check_first_items(original_values: Mapping[str, Any]) -> tuple[str, ...]:
