@@ -3476,7 +3476,7 @@ def _detail_packet_links(
               <a class="button button-secondary" href="{_escape(_last_90_days_complaint_export_href(now))}">Download last 90 days complaint CSV</a>"""
     facility_scoped_links = f"""              <p class="helper-text">This facility complaint export records: {facility_complaint_counts['all']} all, {facility_complaint_counts['substantiated']} substantiated, {facility_complaint_counts['unsubstantiated']} unsubstantiated, {facility_serious_cue_count} serious review cue</p>
               <p class="helper-text">Use these facility CSV links when reviewing this facility. Use the global complaint exports to compare records across facilities.</p>
-              <p class="helper-text">Facility-scoped complaint exports (for {_escape(return_context.facility_number)})</p>
+              <p class="helper-text">This facility complaint exports (for {_escape(return_context.facility_number)})</p>
               <a class="button button-secondary" href="{_escape(_facility_substantiated_export_href(return_context.facility_number))}">Download this facility's substantiated complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_facility_all_complaints_export_href(return_context.facility_number))}">Download this facility's all complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_facility_serious_review_cue_export_href(return_context.facility_number))}">Download this facility's serious review cue CSV</a>
@@ -3486,6 +3486,7 @@ def _detail_packet_links(
               <p class="helper-text">Complaint export records (source-derived): {complaint_counts['all']} all, {complaint_counts['substantiated']} substantiated, {complaint_counts['unsubstantiated']} unsubstantiated</p>
               <p class="helper-text">Serious review cue records: {serious_review_cue_count}</p>
               <p class="helper-text">Serious review cues are deterministic keyword-based review aids and are not verified severity findings.</p>
+              <p class="helper-text">Global complaint exports</p>
               <p class="helper-text">Start with the substantiated complaint CSV for the clearest first review set. Use the serious review cue CSV to triage possible priority topics across all complaint statuses.</p>
               <p class="helper-text">CSV exports include facility name, complaint received date, complaint status, source link, and serious review cue.</p>
               <p class="helper-text">Use CSV exports to triage and navigate records. Open the linked source record before relying on exported values.</p>
