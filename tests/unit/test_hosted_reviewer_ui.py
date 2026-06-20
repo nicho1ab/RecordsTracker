@@ -693,7 +693,20 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "detail-top-grid" in html
     assert "Complaint export records (source-derived):" in html
     assert "Serious review cue records: 0" in html
+    assert (
+        "Serious review cues are deterministic keyword-based review aids and are not "
+        "verified severity findings."
+    ) in html
+    assert "not verified severity findings" in normalized_html
     assert "Download serious review cue CSV" in html
+    assert html.index("Serious review cue records: 0") < html.index(
+        "Serious review cues are deterministic keyword-based review aids and are not "
+        "verified severity findings."
+    )
+    assert html.index(
+        "Serious review cues are deterministic keyword-based review aids and are not "
+        "verified severity findings."
+    ) < html.index("Download serious review cue CSV")
     assert (
         f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?facility_number=157806098"
         "&amp;start_date=&amp;end_date=&amp;request_context_origin=prefilled_link"
