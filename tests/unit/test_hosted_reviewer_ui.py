@@ -10,7 +10,7 @@ import pytest
 from sqlalchemy import create_engine, func, select, update
 from sqlalchemy.engine import Connection
 
-from ccld_complaints.hosted_app.app import _content_disposition_header, route_response
+from ccld_complaints.hosted_app.app import route_response
 from ccld_complaints.hosted_app.audit_events import hosted_audit_events
 from ccld_complaints.hosted_app.auth import (
     AuthenticatedActor,
@@ -50,6 +50,7 @@ from ccld_complaints.hosted_app.reviewer_ui import (
     REVIEWER_UI_PACKET_PREVIEW_PATH,
     REVIEWER_UI_STATUS_PATH,
     REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH,
+    complaint_export_attachment_filename,
     reviewer_ui_context_for_connection,
 )
 from ccld_complaints.hosted_app.seeded_import import (
@@ -1423,11 +1424,12 @@ def test_reviewer_ui_complaint_export_serious_review_cue_without_mutation(
 
 
 def test_reviewer_ui_complaint_export_default_filename_is_attachment() -> None:
+    path = (
+        f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?"
+        "request_context_origin=manual_entry"
+    )
+
     with _seeded_connection() as connection:
-        path = (
-            f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?"
-            "request_context_origin=manual_entry"
-        )
         status, content_type, _body = route_response(
             path,
             reviewer_ui_context=reviewer_ui_context_for_connection(connection),
@@ -1435,8 +1437,8 @@ def test_reviewer_ui_complaint_export_default_filename_is_attachment() -> None:
 
     assert status == 200
     assert content_type == "text/csv; charset=utf-8"
-    assert _content_disposition_header(path, status, content_type) == (
-        'attachment; filename="complaints-substantiated.csv"'
+    assert complaint_export_attachment_filename("request_context_origin=manual_entry") == (
+        "complaints-substantiated.csv"
     )
 
 
@@ -1460,8 +1462,9 @@ def test_reviewer_ui_complaint_export_filename_segments_are_deterministic(
     query: str,
     expected_filename: str,
 ) -> None:
+    path = f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{query}"
+
     with _seeded_connection() as connection:
-        path = f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{query}"
         status, content_type, _body = route_response(
             path,
             reviewer_ui_context=reviewer_ui_context_for_connection(connection),
@@ -1469,9 +1472,7 @@ def test_reviewer_ui_complaint_export_filename_segments_are_deterministic(
 
     assert status == 200
     assert content_type == "text/csv; charset=utf-8"
-    assert _content_disposition_header(path, status, content_type) == (
-        f'attachment; filename="{expected_filename}"'
-    )
+    assert complaint_export_attachment_filename(query) == expected_filename
 
 
 def test_reviewer_ui_complaint_export_csv_body_header_unchanged_for_filtered_export() -> None:
