@@ -97,6 +97,17 @@ _SECRET_HTML_MARKERS = (
     "secret",
     "token",
 )
+_SERIOUS_REVIEW_TOPIC_KEYWORDS: tuple[str, ...] = (
+    "sexual assault",
+    "abuse",
+    "neglect",
+    "injury",
+    "restraint",
+    "runaway",
+    "awol",
+    "medication",
+    "staff misconduct",
+)
 _SAFE_ORIGINAL_VALUE_DENYLIST = (
     "allegation_text",
     "event_text",
@@ -498,21 +509,6 @@ def _matrix_export_response(
     payload = _json_object(body)
     queue = _mapping(payload, "queue")
     records = _filter_packet_preview_items(_record_list(queue, "records"), return_context)
-    try:
-        print(f"DEBUG: queue records count={len(_record_list(queue,'records'))}, filtered count={len(records)}")
-        for r in _record_list(queue, "records"):
-            try:
-                sr = _mapping(r, "source_record")
-                ident = _mapping(sr, "identity")
-                key = _string(ident, "source_record_key")
-                orig = _mapping(sr, "original_values")
-                finding = orig.get("finding")
-            except Exception:
-                key = "<err>"
-                finding = "<err>"
-            print(f"DEBUG-RECORD: {key} finding={finding}")
-    except Exception:
-        pass
     state_status, state_body = _reviewer_created_state_records(context)
     if state_status != 200:
         if not isinstance(state_body, bytes):
@@ -573,6 +569,7 @@ def _substantiated_fieldnames() -> list[str]:
         "Complaint Control Number",
         "Source Report URL",
         "Source Traceability Status",
+        "Serious Review Cue",
         "Reviewer-created status",
         "Reviewer-created note present",
     ]
@@ -704,6 +701,7 @@ def _substantiated_row_for_record(
         "Complaint Control Number": _optional_string(original_values, "complaint_control_number"),
         "Source Report URL": _optional_string(source_document, "source_url"),
         "Source Traceability Status": _source_traceability_cue(source_document),
+        "Serious Review Cue": _serious_review_cue(source_record, related_records),
         "Reviewer-created status": _latest_status_label_text(summary),
         "Reviewer-created note present": "yes" if _summary_int(summary, "note_count") > 0 else "no",
     }
@@ -853,6 +851,38 @@ def _complaint_export_date_in_range(
     if end_date is not None and complaint_received_date > end_date:
         return False
     return True
+
+
+def _serious_review_cue(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> str:
+    values = _mapping(source_record, "original_values")
+    search_parts: list[str] = []
+    for key in (
+        "finding",
+        "complaint_control_number",
+    ):
+        value = values.get(key)
+        if _has_display_value(value):
+            search_parts.append(str(value))
+
+    for record in related_records:
+        if _string(record, "entity_type") != "allegation":
+            continue
+        allegation_values = _mapping(record, "original_values")
+        for key in (
+            "allegation_category",
+            "finding",
+        ):
+            value = allegation_values.get(key)
+            if _has_display_value(value):
+                search_parts.append(str(value))
+
+    haystack = " ".join(search_parts).lower()
+    if any(keyword in haystack for keyword in _SERIOUS_REVIEW_TOPIC_KEYWORDS):
+        return "Possible serious allegation topic"
+    return ""
 
 
 def _matrix_fieldnames() -> list[str]:

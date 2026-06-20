@@ -1322,6 +1322,106 @@ def test_reviewer_ui_complaint_export_date_query_filters_without_mutation(
     assert "token" not in csv_text.casefold()
 
 
+@pytest.mark.parametrize(
+    ("finding_value", "allegation_category", "expect_cue"),
+    (
+        ("Unsubstantiated", "staff misconduct concern", "Possible serious allegation topic"),
+        ("Unsubstantiated", "licensing paperwork", ""),
+    ),
+)
+def test_reviewer_ui_complaint_export_serious_review_cue_without_mutation(
+    finding_value: str,
+    allegation_category: str,
+    expect_cue: str,
+) -> None:
+    with _seeded_connection() as connection:
+        create_reviewer_note_scaffold(
+            connection,
+            _actor(roles=("tester_reviewer",), display_name="Fixture Serious Cue Note Reviewer"),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            note_text="Serious cue export note.",
+        )
+        create_reviewer_status_scaffold(
+            connection,
+            _actor(roles=("tester_reviewer",), display_name="Fixture Serious Cue Reviewer"),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            reviewer_status="reviewed",
+        )
+
+        complaint_row = connection.execute(
+            select(hosted_source_derived_records).where(
+                hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY
+            )
+        ).mappings().one()
+        complaint_values = dict(complaint_row["original_values"])
+        complaint_values["finding"] = finding_value
+        connection.execute(
+            update(hosted_source_derived_records)
+            .where(hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY)
+            .values(original_values=complaint_values)
+        )
+
+        allegation_key = "allegation:ccld:allegation:32-CR-20220407124448:1"
+        allegation_row = connection.execute(
+            select(hosted_source_derived_records).where(
+                hosted_source_derived_records.c.source_record_key == allegation_key
+            )
+        ).mappings().one()
+        allegation_values = dict(allegation_row["original_values"])
+        allegation_values["allegation_category"] = allegation_category
+        connection.execute(
+            update(hosted_source_derived_records)
+            .where(hosted_source_derived_records.c.source_record_key == allegation_key)
+            .values(original_values=allegation_values)
+        )
+
+        before_source_rows = _source_rows(connection)
+        before_counts = _table_counts(connection)
+
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?"
+            "request_context_origin=manual_entry"
+            "&status=all"
+            "&facility=157806098"
+            "&start_date=2022-04-01"
+            "&end_date=2022-04-30",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        after_source_rows = _source_rows(connection)
+        after_counts = _table_counts(connection)
+
+    csv_text = body.decode("utf-8-sig")
+    rows = list(csv.DictReader(io.StringIO(csv_text)))
+
+    assert status == 200
+    assert content_type == "text/csv; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 2,
+        "audit_events": 2,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert rows
+    [record] = rows
+    assert "Serious Review Cue" in record
+    assert record["Facility/License Number"] == "157806098"
+    assert record["Complaint Received Date"] == "2022-04-07"
+    assert record["Finding/Status"] == finding_value
+    assert record["Serious Review Cue"] == expect_cue
+    assert record["Reviewer-created status"] == "Reviewed"
+    assert record["Reviewer-created note present"] == "yes"
+    assert "Serious cue export note" not in csv_text
+    assert "raw_path" not in csv_text
+    assert "C:\\" not in csv_text
+    assert "provider_subject" not in csv_text
+    assert "token" not in csv_text.casefold()
+
+
 def test_reviewer_ui_matrix_export_empty_context_is_safe() -> None:
     with _seeded_connection() as connection:
         before_source_rows = _source_rows(connection)
