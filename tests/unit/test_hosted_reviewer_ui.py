@@ -1116,6 +1116,93 @@ def test_reviewer_ui_substantiated_export_returns_excel_ready_csv_without_mutati
     assert "token" not in csv_text.casefold()
 
 
+@pytest.mark.parametrize(
+    ("status_value", "finding_value"),
+    (
+        ("substantiated", "Substantiated"),
+        ("unsubstantiated", "Unsubstantiated"),
+        ("all", "Unsubstantiated"),
+    ),
+)
+def test_reviewer_ui_complaint_export_status_query_filters_without_mutation(
+    status_value: str,
+    finding_value: str,
+) -> None:
+    with _seeded_connection() as connection:
+        create_reviewer_note_scaffold(
+            connection,
+            _actor(roles=("tester_reviewer",), display_name="Fixture Status Note Reviewer"),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            note_text="Status query export note.",
+        )
+        create_reviewer_status_scaffold(
+            connection,
+            _actor(roles=("tester_reviewer",), display_name="Fixture Status Reviewer"),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            reviewer_status="reviewed",
+        )
+
+        row = connection.execute(
+            select(hosted_source_derived_records).where(
+                hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY
+            )
+        ).mappings().one()
+        original_values = dict(row["original_values"])
+        original_values["finding"] = finding_value
+        connection.execute(
+            update(hosted_source_derived_records)
+            .where(hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY)
+            .values(original_values=original_values)
+        )
+
+        before_source_rows = _source_rows(connection)
+        before_counts = _table_counts(connection)
+
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?"
+            "facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31"
+            "&request_context_origin=manual_entry"
+            f"&status={quote(status_value)}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        after_source_rows = _source_rows(connection)
+        after_counts = _table_counts(connection)
+
+    csv_text = body.decode("utf-8-sig")
+    rows = list(csv.DictReader(io.StringIO(csv_text)))
+
+    assert status == 200
+    assert content_type == "text/csv; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 2,
+        "audit_events": 2,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert rows
+    [record] = rows
+    assert record["Facility Name"] == "A. MIRIAM JAMISON CHILDREN'S CENTER"
+    assert record["Facility/License Number"] == "157806098"
+    assert record["Complaint Received Date"] == "2022-04-07"
+    assert record["Visit Date"] == "2022-08-24"
+    assert record["Finding/Status"] == finding_value
+    assert record["Complaint Control Number"] == "32-CR-20220407124448"
+    assert record["Source Report URL"].startswith("https://www.ccld.dss.ca.gov/")
+    assert "Source traceability available" in record["Source Traceability Status"]
+    assert record["Reviewer-created status"] == "Reviewed"
+    assert record["Reviewer-created note present"] == "yes"
+    assert "Status query export note" not in csv_text
+    assert "raw_path" not in csv_text
+    assert "C:\\" not in csv_text
+    assert "provider_subject" not in csv_text
+    assert "token" not in csv_text.casefold()
+
+
 def test_reviewer_ui_matrix_export_empty_context_is_safe() -> None:
     with _seeded_connection() as connection:
         before_source_rows = _source_rows(connection)
