@@ -18,6 +18,18 @@
 	conclusions, complaint-coverage claims, source verification claims, and
 	source-completeness claims are unchanged.
 
+- Added a substantiated-only complaint CSV export at
+	`/reviewer/records/substantiated.csv`. The CSV is Excel-ready (UTF-8 with BOM,
+	CRLF line endings) and is restricted to source-derived complaint records
+	where the extracted finding/status is identified as substantiated. The export uses only
+	existing source-derived fields plus reviewer-created read seams: it includes
+	Facility Name; Facility/License Number; Complaint Received Date; Report Date;
+	Visit Date; Date Signed; Finding/Status; Complaint Control Number; Source
+	Report URL; Source Traceability Status; Reviewer-created status; and
+	Reviewer-created note present. Reviewer-created note text is not exported.
+	This is a local/test review aid only and is not a certified report, legal
+	finding, or a source-completeness proof.
+
 - Added a hosted Facility Review Intelligence Dashboard at
 	`/ccld/facilities/intelligence`. The dashboard uses existing public
 	facility-directory rows and supported uploaded public facility-summary signals

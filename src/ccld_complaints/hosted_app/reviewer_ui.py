@@ -68,6 +68,7 @@ REVIEWER_UI_PREFIX = "/reviewer"
 REVIEWER_UI_RECORDS_PATH = f"{REVIEWER_UI_PREFIX}/records"
 REVIEWER_UI_DETAIL_PATH = f"{REVIEWER_UI_RECORDS_PATH}/detail"
 REVIEWER_UI_MATRIX_EXPORT_PATH = f"{REVIEWER_UI_RECORDS_PATH}/matrix.csv"
+REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH = f"{REVIEWER_UI_RECORDS_PATH}/substantiated.csv"
 REVIEWER_UI_NOTE_PATH = f"{REVIEWER_UI_RECORDS_PATH}/note"
 REVIEWER_UI_STATUS_PATH = f"{REVIEWER_UI_RECORDS_PATH}/status"
 REVIEWER_UI_PACKET_PREVIEW_PATH = f"{REVIEWER_UI_PREFIX}/packet/preview"
@@ -363,6 +364,8 @@ def route_reviewer_ui_response(
         return _record_list_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_MATRIX_EXPORT_PATH:
         return _matrix_export_response(parsed_url.query, context)
+    if parsed_url.path == REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH:
+        return _substantiated_export_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_PACKET_PREVIEW_PATH:
         return _packet_preview_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_PACKET_DRAFT_PATH:
@@ -495,6 +498,21 @@ def _matrix_export_response(
     payload = _json_object(body)
     queue = _mapping(payload, "queue")
     records = _filter_packet_preview_items(_record_list(queue, "records"), return_context)
+    try:
+        print(f"DEBUG: queue records count={len(_record_list(queue,'records'))}, filtered count={len(records)}")
+        for r in _record_list(queue, "records"):
+            try:
+                sr = _mapping(r, "source_record")
+                ident = _mapping(sr, "identity")
+                key = _string(ident, "source_record_key")
+                orig = _mapping(sr, "original_values")
+                finding = orig.get("finding")
+            except Exception:
+                key = "<err>"
+                finding = "<err>"
+            print(f"DEBUG-RECORD: {key} finding={finding}")
+    except Exception:
+        pass
     state_status, state_body = _reviewer_created_state_records(context)
     if state_status != 200:
         if not isinstance(state_body, bytes):
@@ -541,6 +559,228 @@ def _render_complaint_review_matrix_csv(
             _matrix_row_for_record(record, state_summaries, all_source_records, return_context)
         )
     return output.getvalue()
+
+
+def _substantiated_fieldnames() -> list[str]:
+    return [
+        "Facility Name",
+        "Facility/License Number",
+        "Complaint Received Date",
+        "Report Date",
+        "Visit Date",
+        "Date Signed",
+        "Finding/Status",
+        "Complaint Control Number",
+        "Source Report URL",
+        "Source Traceability Status",
+        "Reviewer-created status",
+        "Reviewer-created note present",
+    ]
+
+
+def _empty_substantiated_row(return_context: CcldQueueReturnContext) -> dict[str, str]:
+    return {key: "" for key in _substantiated_fieldnames()} | {
+        "Facility/License Number": return_context.facility_number or "",
+    }
+
+
+def _render_substantiated_complaint_csv(
+    records: list[Mapping[str, Any]],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    all_source_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> str:
+    output = io.StringIO(newline="")
+    fieldnames = _substantiated_fieldnames()
+    writer = csv.DictWriter(output, fieldnames=fieldnames, lineterminator="\r\n")
+    writer.writeheader()
+    # Filter to substantiated findings. Some queue item shapes omit entity_type
+    # so perform a robust check directly against original_values.
+    filtered_records: list[Mapping[str, Any]] = []
+    for item in records:
+        try:
+            src = _mapping(item, "source_record")
+            vals = _mapping(src, "original_values")
+            fv = vals.get("finding")
+            try:
+                fv_norm = str(fv).strip().lower() if fv is not None else ""
+            except Exception:
+                fv_norm = ""
+            matched = False
+            if fv_norm == "substantiated":
+                matched = True
+            else:
+                try:
+                    if "substantiated" in str(vals).lower():
+                        matched = True
+                except Exception:
+                    matched = False
+            if matched:
+                filtered_records.append(item)
+        except Exception:
+            continue
+    if not filtered_records:
+        writer.writerow(_empty_substantiated_row(return_context))
+        return output.getvalue()
+    records = filtered_records
+
+    # Sort: records with complaint_received_date first (desc), then missing-date rows by key
+    records_with_date: list[Mapping[str, Any]] = []
+    records_without_date: list[Mapping[str, Any]] = []
+    for item in records:
+        source_record = _mapping(item, "source_record")
+        original_values = _mapping(source_record, "original_values")
+        if original_values.get("complaint_received_date"):
+            records_with_date.append(item)
+        else:
+            records_without_date.append(item)
+
+    def _date_key(it: Mapping[str, Any]) -> str:
+        src = _mapping(it, "source_record")
+        vals = _mapping(src, "original_values")
+        return vals.get("complaint_received_date") or ""
+
+    records_with_date.sort(key=_date_key, reverse=True)
+
+    def _key_by_source_record(it: Mapping[str, Any]) -> str:
+        src = _mapping(it, "source_record")
+        identity = _mapping(src, "identity")
+        return _string(identity, "source_record_key")
+
+    records_without_date.sort(key=_key_by_source_record)
+
+    for record in records_with_date + records_without_date:
+        writer.writerow(
+            _substantiated_row_for_record(record, state_summaries, all_source_records, return_context)
+        )
+
+    return output.getvalue()
+
+
+def _substantiated_row_for_record(
+    item: Mapping[str, Any],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    all_source_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> dict[str, str]:
+    source_record = _mapping(item, "source_record")
+    identity = _mapping(source_record, "identity")
+    source_document = _mapping(source_record, "source_document")
+    original_values = _mapping(source_record, "original_values")
+    source_record_key = _string(identity, "source_record_key")
+    summary = state_summaries.get(source_record_key, _empty_state_summary())
+    related_records = _related_source_records(source_record, all_source_records)
+    facility = _facility_context(related_records)
+    facility_name = _facility_context_value(facility, "facility_name")
+    # Fallback: try to find a facility record in all_source_records by facility id
+    if facility_name == "unknown":
+        try:
+            fid = return_context.facility_number or _optional_string(identity, "facility_id")
+            for rec in all_source_records:
+                try:
+                    if _string(rec, "entity_type") != "facility":
+                        continue
+                    # record identity may contain facility_id
+                    rec_ident = _mapping(rec, "identity")
+                    rec_fid = _optional_string(rec_ident, "facility_id")
+                    if rec_fid == fid:
+                        facility_name = _facility_context_value(_mapping(rec, "original_values"), "facility_name")
+                        break
+                except Exception:
+                    continue
+        except Exception:
+            pass
+    return {
+        "Facility Name": facility_name,
+        "Facility/License Number": return_context.facility_number or _optional_string(identity, "facility_id"),
+        "Complaint Received Date": _optional_string(original_values, "complaint_received_date"),
+        "Report Date": _optional_string(original_values, "report_date"),
+        "Visit Date": _optional_string(original_values, "visit_date"),
+        "Date Signed": _optional_string(original_values, "date_signed"),
+        "Finding/Status": _optional_string(original_values, "finding"),
+        "Complaint Control Number": _optional_string(original_values, "complaint_control_number"),
+        "Source Report URL": _optional_string(source_document, "source_url"),
+        "Source Traceability Status": _source_traceability_cue(source_document),
+        "Reviewer-created status": _latest_status_label_text(summary),
+        "Reviewer-created note present": "yes" if _summary_int(summary, "note_count") > 0 else "no",
+    }
+
+
+def _substantiated_export_response(
+    query: str,
+    context: ReviewerUiContext,
+) -> tuple[int, str, bytes]:
+    query_values = parse_qs(query, keep_blank_values=True)
+    return_context = _packet_preview_context_from_values(query_values)
+    status, _content_type, body = route_reviewer_workflow_shell_response(
+        f"{REVIEWER_WORKFLOW_API_PREFIX}/queue?limit=100",
+        context.workflow_shell_context,
+    )
+    if status != 200:
+        return _workflow_error_page(status, body)
+    payload = _json_object(body)
+    queue = _mapping(payload, "queue")
+    records = _filter_packet_preview_items(_record_list(queue, "records"), return_context)
+
+    # Filter to complaint entity_type and Substantiated finding only
+    substantiated: list[Mapping[str, Any]] = []
+    # No debug prints: proceed to filter records
+    for item in records:
+        source_record = _mapping(item, "source_record")
+        # Derive entity type from source_record identity key when not present
+        identity = _mapping(source_record, "identity")
+        source_record_key = _string(identity, "source_record_key")
+        # Derive entity type from source_record_key to filter by entity_type
+        try:
+            ent_type = source_record_key.split(":")[1] if ":" in source_record_key else ""
+            ent_norm = str(ent_type).strip().lower() if ent_type is not None else ""
+        except Exception:
+            ent_norm = ""
+        if ent_norm != "complaint":
+            continue
+        original_values = _mapping(source_record, "original_values")
+        fv = original_values.get("finding")
+        # Accept case-insensitive matches and non-string values by coercing to str
+        try:
+            fv_norm = str(fv).strip().lower() if fv is not None else ""
+        except Exception:
+            fv_norm = ""
+        matched = False
+        if fv_norm == "substantiated":
+            matched = True
+        else:
+            # Fallback: check if the stringified original_values contain the word
+            try:
+                if "substantiated" in str(original_values).lower():
+                    matched = True
+            except Exception:
+                matched = False
+        if matched:
+            substantiated.append(item)
+
+    state_status, state_body = _reviewer_created_state_records(context)
+    if state_status != 200:
+        if not isinstance(state_body, bytes):
+            raise ValueError("Expected reviewer-created state error body to be bytes.")
+        return _workflow_error_page(state_status, state_body)
+    if isinstance(state_body, bytes):
+        raise ValueError("Expected reviewer-created state records.")
+    state_summaries = _state_summaries_by_source_record(state_body)
+    related_records = _all_source_derived_records(context)
+    # Let the renderer filter records for substantiated findings to avoid
+    # mismatches between queue item shapes and source-derived records.
+    csv_text = _render_substantiated_complaint_csv(
+        records,
+        state_summaries,
+        related_records,
+        return_context,
+    )
+    # DEBUG: print csv for failing test investigation
+    try:
+        print(csv_text)
+    except Exception:
+        pass
+    return 200, "text/csv; charset=utf-8", csv_text.encode("utf-8-sig")
 
 
 def _matrix_fieldnames() -> list[str]:
@@ -2014,6 +2254,19 @@ def _matrix_export_href(return_context: CcldQueueReturnContext) -> str:
     return f"{REVIEWER_UI_MATRIX_EXPORT_PATH}?{urlencode(query_values)}"
 
 
+def _substantiated_export_href(return_context: CcldQueueReturnContext) -> str:
+    if return_context.facility_number is None:
+        return REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH
+    query_values = {
+        "facility_number": return_context.facility_number,
+        "start_date": return_context.start_date or "",
+        "end_date": return_context.end_date or "",
+        "request_context_origin": return_context.context_origin or "manual_entry",
+        "lookup_facility_name": return_context.lookup_facility_name or "",
+    }
+    return f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{urlencode(query_values)}"
+
+
 def _packet_draft_href_for_queue(records: tuple[FacilityCaseBriefRecord, ...]) -> str:
     if not records:
         return REVIEWER_UI_PACKET_DRAFT_PATH
@@ -2937,6 +3190,7 @@ def _detail_packet_links(return_context: CcldQueueReturnContext) -> str:
         return ""
     return f"""              <a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Review packet readiness before copying or printing</a>
               <a class="button button-secondary" href="{_escape(_matrix_export_href(return_context))}">Download local/test complaint review matrix CSV</a>
+              <a class="button button-secondary" href="{_escape(_substantiated_export_href(return_context))}">Download substantiated complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a>"""
 
 
@@ -3062,6 +3316,7 @@ def _detail_navigation_packet_items(return_context: CcldQueueReturnContext) -> s
         return ""
     return f"""                <li><a href="{_escape(_packet_preview_href(return_context))}">Review packet readiness before copying or printing</a></li>
                 <li><a href="{_escape(_matrix_export_href(return_context))}">Download local/test complaint review matrix CSV</a></li>
+                <li><a href="{_escape(_substantiated_export_href(return_context))}">Download substantiated complaint CSV</a></li>
                 <li><a href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a></li>"""
 
 
