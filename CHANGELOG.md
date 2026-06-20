@@ -1,6 +1,19 @@
 # Changelog
 
 ## Unreleased
+- Added a browser-accessible cross-facility substantiated complaint triage page
+	at `/reviewer/records/substantiated`. The page lists currently loaded
+	complaint records across facilities when the source-derived
+	finding/resolution/status indicates substantiated or an equivalent
+	source-derived value, and each row includes facility context, complaint/report
+	date context when available, the source-derived value, and safe links to
+	reviewer detail and source traceability. The page includes plain-language
+	caution copy: it is a triage aid, source-derived values are not independently
+	verified by RecordsTracker, the list is based only on currently loaded
+	records, and an empty state means no currently loaded matches (not that no
+	substantiated reports exist in the public source). Existing complaint matrix
+	export and complaint CSV export behavior is unchanged.
+
 - Added a local/test complaint review matrix CSV export at
 	`/reviewer/records/matrix.csv`. The CSV is Excel-ready for a facility/date
 	context and includes source-derived complaint identifiers, key dates, finding,
