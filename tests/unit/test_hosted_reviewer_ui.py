@@ -690,6 +690,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Complaint review workspace" in html
     assert "Legal-review flags and source checks" in html
     assert "detail-top-grid" in html
+    assert "Serious review cue records: 0" in html
     assert "Download serious review cue CSV" in html
     assert (
         f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?facility_number=157806098"
@@ -1771,6 +1772,51 @@ def test_reviewer_ui_detail_preserves_direct_queue_request_context() -> None:
     assert "legally sufficient" not in normalized_html.casefold()
     assert "verified abuse" not in normalized_html.casefold()
     assert "complete source record" not in normalized_html.casefold()
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_detail_shows_serious_review_cue_count_when_present() -> None:
+    with _seeded_connection() as connection:
+        complaint_row = connection.execute(
+            select(hosted_source_derived_records).where(
+                hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY
+            )
+        ).mappings().one()
+        complaint_values = dict(complaint_row["original_values"])
+        complaint_values["finding"] = "Unsubstantiated"
+        connection.execute(
+            update(hosted_source_derived_records)
+            .where(hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY)
+            .values(original_values=complaint_values)
+        )
+
+        allegation_key = "allegation:ccld:allegation:32-CR-20220407124448:1"
+        allegation_row = connection.execute(
+            select(hosted_source_derived_records).where(
+                hosted_source_derived_records.c.source_record_key == allegation_key
+            )
+        ).mappings().one()
+        allegation_values = dict(allegation_row["original_values"])
+        allegation_values["allegation_category"] = "staff misconduct concern"
+        connection.execute(
+            update(hosted_source_derived_records)
+            .where(hosted_source_derived_records.c.source_record_key == allegation_key)
+            .values(original_values=allegation_values)
+        )
+
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Serious review cue records: 1" in html
+    assert "Download serious review cue CSV" in html
+    assert f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?facility_number=157806098" in html
+    assert "review_cue=serious" in html
     assert_no_secret_html(html)
 
 
