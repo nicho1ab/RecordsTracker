@@ -1079,6 +1079,78 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert_no_secret_html(html)
 
 
+def test_reviewer_ui_complaint_export_section_smoke_regression() -> None:
+    with _seeded_connection() as connection:
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        csv_status, csv_content_type, csv_body = route_response(
+            f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?"
+            "status=all&facility=157806098&start_date=2022-04-01&end_date=2022-04-30"
+            "&request_context_origin=manual_entry",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Global complaint exports" in html
+    assert "This facility complaint exports" in html
+    assert "Complaint export records (source-derived):" in html
+    assert "This facility complaint export records:" in html
+    assert "Serious review cue records: 0" in html
+    assert (
+        "Serious review cues are deterministic keyword-based review aids and are not "
+        "verified severity findings."
+    ) in html
+    assert "Download substantiated complaint CSV" in html
+    assert "Download unsubstantiated complaint CSV" in html
+    assert "Download all complaint CSV" in html
+    assert "Download serious review cue CSV" in html
+    assert "Download last 30 days complaint CSV" in html
+    assert "Download last 90 days complaint CSV" in html
+    assert "Download this facility's substantiated complaint CSV" in html
+    assert "Download this facility's all complaint CSV" in html
+    assert "Download this facility's serious review cue CSV" in html
+    assert "Download this facility's last 30 days complaint CSV" in html
+    assert "Download this facility's last 90 days complaint CSV" in html
+    assert (
+        "Use CSV exports to triage and navigate records. "
+        "Open the linked source record before relying on exported values."
+    ) in html
+    assert "triage and navigate records" in normalized_html
+
+    csv_text = csv_body.decode("utf-8-sig")
+    reader = csv.DictReader(io.StringIO(csv_text))
+    rows = list(reader)
+
+    assert csv_status == 200
+    assert csv_content_type == "text/csv; charset=utf-8"
+    assert reader.fieldnames == [
+        "Facility Name",
+        "Facility/License Number",
+        "Complaint Received Date",
+        "Report Date",
+        "Visit Date",
+        "Date Signed",
+        "Finding/Status",
+        "Complaint Control Number",
+        "Source Report URL",
+        "Source Traceability Status",
+        "Serious Review Cue",
+        "Reviewer-created status",
+        "Reviewer-created note present",
+    ]
+    assert rows
+    [record] = rows
+    assert record["Facility/License Number"] == "157806098"
+    assert record["Complaint Control Number"] == "32-CR-20220407124448"
+
+
 def test_complaint_export_status_counts_align_with_status_filter_semantics() -> None:
     counts = _complaint_export_status_counts(
         [
