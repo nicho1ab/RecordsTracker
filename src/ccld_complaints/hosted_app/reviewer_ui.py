@@ -68,6 +68,7 @@ REVIEWER_UI_PREFIX = "/reviewer"
 REVIEWER_UI_RECORDS_PATH = f"{REVIEWER_UI_PREFIX}/records"
 REVIEWER_UI_DETAIL_PATH = f"{REVIEWER_UI_RECORDS_PATH}/detail"
 REVIEWER_UI_MATRIX_EXPORT_PATH = f"{REVIEWER_UI_RECORDS_PATH}/matrix.csv"
+REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH = f"{REVIEWER_UI_RECORDS_PATH}/substantiated"
 REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH = f"{REVIEWER_UI_RECORDS_PATH}/substantiated.csv"
 REVIEWER_UI_NOTE_PATH = f"{REVIEWER_UI_RECORDS_PATH}/note"
 REVIEWER_UI_STATUS_PATH = f"{REVIEWER_UI_RECORDS_PATH}/status"
@@ -107,6 +108,11 @@ _SERIOUS_REVIEW_TOPIC_KEYWORDS: tuple[str, ...] = (
     "awol",
     "medication",
     "staff misconduct",
+)
+_SUBSTANTIATED_EQUIVALENT_KEYWORDS: tuple[str, ...] = (
+    "substantiated",
+    "founded",
+    "sustained",
 )
 _SAFE_ORIGINAL_VALUE_DENYLIST = (
     "allegation_text",
@@ -373,6 +379,8 @@ def route_reviewer_ui_response(
         )
     if parsed_url.path in {REVIEWER_UI_PREFIX, REVIEWER_UI_RECORDS_PATH}:
         return _record_list_response(parsed_url.query, context)
+    if parsed_url.path == REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH:
+        return _substantiated_triage_response(context)
     if parsed_url.path == REVIEWER_UI_MATRIX_EXPORT_PATH:
         return _matrix_export_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH:
@@ -529,6 +537,199 @@ def _matrix_export_response(
         return_context,
     )
     return 200, "text/csv; charset=utf-8", csv_text.encode("utf-8-sig")
+
+
+def _substantiated_triage_response(
+    context: ReviewerUiContext,
+) -> tuple[int, str, bytes]:
+    status, _content_type, body = route_reviewer_workflow_shell_response(
+        f"{REVIEWER_WORKFLOW_API_PREFIX}/queue?limit=100",
+        context.workflow_shell_context,
+    )
+    if status != 200:
+        return _workflow_error_page(status, body)
+    payload = _json_object(body)
+    queue = _mapping(payload, "queue")
+    records = _record_list(queue, "records")
+    source_records = _all_source_derived_records(context)
+    substantiated_items = _substantiated_triage_items(records, source_records)
+    return _html_response(
+        200,
+        _render_substantiated_triage(
+            substantiated_items,
+            actor_label=_signed_in_actor_label(context),
+        ),
+    )
+
+
+def _substantiated_triage_items(
+    records: list[Mapping[str, Any]],
+    source_records: list[Mapping[str, Any]],
+) -> list[dict[str, str]]:
+    items: list[dict[str, str]] = []
+    for record in records:
+        source_record = _mapping(record, "source_record")
+        if _queue_source_record_entity_type(source_record) != "complaint":
+            continue
+        original_values = _mapping(source_record, "original_values")
+        finding_label = _substantiated_finding_label(original_values)
+        if finding_label is None:
+            continue
+        identity = _mapping(source_record, "identity")
+        source_record_key = _string(identity, "source_record_key")
+        related_records = _related_source_records(source_record, source_records)
+        facility = _facility_context(related_records)
+        facility_name = _facility_context_value(facility, "facility_name")
+        facility_number = _complaint_export_row_facility_number(
+            source_record,
+            CcldQueueReturnContext(),
+        )
+        if facility_name == "unknown":
+            facility_display = f"Facility/license {_display_value(facility_number)}"
+        else:
+            facility_display = facility_name
+        date_context = _substantiated_date_context(original_values)
+        detail_href = _reviewer_detail_href(
+            source_record_key,
+            CcldQueueReturnContext(
+                facility_number=facility_number if facility_number != "unknown" else None,
+            ),
+        )
+        source_document = _mapping(source_record, "source_document")
+        source_url = _optional_string(source_document, "source_url")
+        source_url_href = source_url if _has_display_value(source_url) and source_url != "unknown" else ""
+        items.append(
+            {
+                "source_record_key": source_record_key,
+                "facility_display": facility_display,
+                "facility_number": facility_number,
+                "date_context": date_context,
+                "finding_label": finding_label,
+                "detail_href": detail_href,
+                "source_url_href": source_url_href,
+            }
+        )
+
+    items.sort(
+        key=lambda item: (
+            item["date_context"],
+            item["facility_display"].casefold(),
+            item["source_record_key"],
+        ),
+        reverse=True,
+    )
+    return items
+
+
+def _substantiated_finding_label(values: Mapping[str, Any]) -> str | None:
+    for key in ("finding", "resolution", "status"):
+        raw_value = values.get(key)
+        if not _has_display_value(raw_value):
+            continue
+        value = _display_value(raw_value)
+        if _is_substantiated_equivalent(value):
+            return f"{key}: {value}"
+    return None
+
+
+def _is_substantiated_equivalent(value: str) -> bool:
+    normalized = " ".join(value.strip().casefold().split())
+    if not normalized:
+        return False
+    if "unsubstantiated" in normalized or "not substantiated" in normalized:
+        return False
+    return any(keyword in normalized for keyword in _SUBSTANTIATED_EQUIVALENT_KEYWORDS)
+
+
+def _substantiated_date_context(values: Mapping[str, Any]) -> str:
+    parts: list[str] = []
+    for label, key in (
+        ("Complaint received", "complaint_received_date"),
+        ("Report date", "report_date"),
+        ("Visit date", "visit_date"),
+        ("Date signed", "date_signed"),
+    ):
+        raw_value = values.get(key)
+        if not _has_display_value(raw_value):
+            continue
+        parts.append(f"{label}: {_display_value(raw_value)}")
+    if parts:
+        return "; ".join(parts)
+    return "No complaint/report date context available in currently loaded records."
+
+
+def _render_substantiated_triage(
+    items: list[dict[str, str]],
+    *,
+    actor_label: str | None,
+) -> str:
+    if not items:
+        list_markup = """        <section class=\"hero-card\" aria-labelledby=\"substantiated-empty-heading\">
+          <h2 id=\"substantiated-empty-heading\">No loaded substantiated/equivalent complaint records matched.</h2>
+          <p>Empty state means no currently loaded records matched, not that no substantiated reports exist in the public source.</p>
+        </section>"""
+    else:
+        rows = "\n".join(
+            f"""        <tr>
+          <th scope=\"row\">{_escape(item['facility_display'])}</th>
+          <td>{_escape(item['date_context'])}</td>
+          <td>{_escape(item['finding_label'])}</td>
+          <td>
+            <a href=\"{_escape(item['detail_href'])}\">Open reviewer detail</a>{_substantiated_source_link(item['source_url_href'])}
+          </td>
+        </tr>"""
+            for item in items
+        )
+        list_markup = f"""        <section aria-labelledby=\"substantiated-results-heading\">
+          <h2 id=\"substantiated-results-heading\">Loaded substantiated/equivalent complaint records</h2>
+          <p>Showing {len(items)} loaded complaint record(s) across currently loaded facilities.</p>
+          <table>
+            <caption>Cross-facility substantiated complaint triage</caption>
+            <thead>
+              <tr>
+                <th scope=\"col\">Facility</th>
+                <th scope=\"col\">Complaint/report date context</th>
+                <th scope=\"col\">Source-derived finding/resolution/status</th>
+                <th scope=\"col\">Review links</th>
+              </tr>
+            </thead>
+            <tbody>
+{rows}
+            </tbody>
+          </table>
+        </section>"""
+    return _page(
+        title="Cross-facility substantiated complaint triage",
+        heading="Cross-facility substantiated complaint triage",
+        actor_label=actor_label,
+        main=f"""
+        <section class=\"quiet-section\" aria-labelledby=\"substantiated-caution-heading\">
+          <h2 id=\"substantiated-caution-heading\">Use this view carefully</h2>
+          <ul>
+            <li>This is a review triage aid.</li>
+            <li>Source-derived finding/resolution/status values are not independently verified by RecordsTracker.</li>
+            <li>This view is based only on currently loaded records.</li>
+            <li>Empty state means no currently loaded records matched, not that no substantiated reports exist in the public source.</li>
+          </ul>
+        </section>
+{list_markup}
+        <section class=\"quiet-section\" aria-labelledby=\"substantiated-next-heading\">
+          <h2 id=\"substantiated-next-heading\">Next steps</h2>
+          <ul>
+            <li><a href=\"{REVIEWER_UI_RECORDS_PATH}\">Return to review queue</a></li>
+            <li><a href=\"{CCLD_RECORD_REQUEST_PATH}\">Return to CCLD request queue</a></li>
+          </ul>
+        </section>
+""",
+    )
+
+
+def _substantiated_source_link(source_url_href: str) -> str:
+    if not source_url_href:
+        return ""
+    return (
+        f"<br><a href=\"{_escape(source_url_href)}\">Open source report</a>"
+    )
 
 
 def _all_source_derived_records(context: ReviewerUiContext) -> list[Mapping[str, Any]]:
@@ -3511,6 +3712,7 @@ def _render_complaint_export_controls(
               <p class="helper-text">Start with the substantiated complaint CSV for the clearest first review set. Use the serious review cue CSV to triage possible priority topics across all complaint statuses.</p>
               <p class="helper-text">CSV exports include facility name, complaint received date, complaint status, source link, and serious review cue.</p>
               <p class="helper-text">Use CSV exports to triage and navigate records. Open the linked source record before relying on exported values.</p>
+              <a class="button button-secondary" href="{_escape(REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH)}">Open cross-facility substantiated triage</a>
               <a class="button button-secondary" href="{_escape(_substantiated_export_href(return_context))}">Download substantiated complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_unsubstantiated_export_href(return_context))}">Download unsubstantiated complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_all_complaints_export_href(return_context))}">Download all complaint CSV</a>
