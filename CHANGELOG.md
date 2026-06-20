@@ -1,6 +1,23 @@
 # Changelog
 
 ## Unreleased
+- Added a repeatable local stakeholder facility overview extract script at
+	`scripts/export-stakeholder-facility-overview.ps1`. The script reads the
+	local SQLite database and writes a timestamped ZIP package under
+	`data/processed/stakeholder-extracts/<timestamp>/` containing
+	`facility-overview.csv` (per-facility complaint counts including
+	substantiated/equivalent counts, date ranges, and source-traceability
+	counts), `substantiated-complaints.csv` (individual substantiated/equivalent
+	records with source URL, raw hash, and a stable reviewer detail path),
+	`README.md` (plain-language scope and limitations note), and `manifest.json`
+	(generation metadata and row counts). Substantiated/equivalent matching uses
+	the same conservative keyword logic as the hosted triage page. If the
+	database is absent or empty, valid empty CSVs with headers, README, manifest,
+	and ZIP are produced without failing. Raw narrative allegation text is
+	intentionally excluded. No risk scores, severity scores, legal conclusions,
+	facility-wide conclusions, verified severity claims, or source-completeness
+	claims are made.
+
 - Added a browser-accessible cross-facility substantiated complaint triage page
 	at `/reviewer/records/substantiated`. The page lists currently loaded
 	complaint records across facilities when the source-derived
