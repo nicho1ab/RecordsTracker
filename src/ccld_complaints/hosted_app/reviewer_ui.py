@@ -590,6 +590,7 @@ def _render_substantiated_complaint_csv(
     complaint_facility_filter: str | None,
     complaint_start_date_filter: str | None,
     complaint_end_date_filter: str | None,
+    serious_review_cue_only: bool,
 ) -> str:
     output = io.StringIO(newline="")
     fieldnames = _substantiated_fieldnames()
@@ -616,6 +617,10 @@ def _render_substantiated_complaint_csv(
             finding = vals.get("finding")
             finding_norm = _normalized_complaint_finding(finding)
             if complaint_status_filter == "all" or finding_norm == complaint_status_filter:
+                if serious_review_cue_only:
+                    related_records = _related_source_records(src, all_source_records)
+                    if not _serious_review_cue(src, related_records):
+                        continue
                 filtered_records.append(item)
         except Exception:
             continue
@@ -733,6 +738,7 @@ def _substantiated_export_response(
 
     complaint_status_filter = _complaint_export_status_filter(query_values)
     complaint_facility_filter = _complaint_export_facility_filter(query_values)
+    serious_review_cue_only = _complaint_export_serious_review_cue_filter(query_values)
 
     state_status, state_body = _reviewer_created_state_records(context)
     if state_status != 200:
@@ -754,6 +760,7 @@ def _substantiated_export_response(
         complaint_facility_filter,
         complaint_start_date_filter,
         complaint_end_date_filter,
+        serious_review_cue_only,
     )
     return 200, "text/csv; charset=utf-8", csv_text.encode("utf-8-sig")
 
@@ -790,6 +797,13 @@ def _complaint_export_facility_filter(query_values: Mapping[str, list[str]]) -> 
     if not normalized:
         return None
     return normalized
+
+
+def _complaint_export_serious_review_cue_filter(
+    query_values: Mapping[str, list[str]],
+) -> bool:
+    raw_review_cue = query_values.get("review_cue", [""])[0]
+    return raw_review_cue.strip().lower() == "serious"
 
 
 def _complaint_export_filename_facility_segment(

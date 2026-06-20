@@ -1513,6 +1513,140 @@ def test_reviewer_ui_complaint_export_csv_body_header_unchanged_for_filtered_exp
     assert record["Complaint Control Number"] == "32-CR-20220407124448"
 
 
+@pytest.mark.parametrize(
+    (
+        "allegation_category",
+        "review_cue_query",
+        "status_value",
+        "expect_row",
+    ),
+    (
+        ("staff misconduct concern", "", "all", True),
+        ("staff misconduct concern", "serious", "all", True),
+        ("licensing paperwork", "serious", "all", False),
+        ("licensing paperwork", "not-known", "all", True),
+        ("staff misconduct concern", "serious", "substantiated", True),
+    ),
+)
+def test_reviewer_ui_complaint_export_review_cue_query_filter_without_mutation(
+    allegation_category: str,
+    review_cue_query: str,
+    status_value: str,
+    expect_row: bool,
+) -> None:
+    with _seeded_connection() as connection:
+        create_reviewer_note_scaffold(
+            connection,
+            _actor(roles=("tester_reviewer",), display_name="Fixture Cue Filter Note Reviewer"),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            note_text="Cue filter export note.",
+        )
+        create_reviewer_status_scaffold(
+            connection,
+            _actor(roles=("tester_reviewer",), display_name="Fixture Cue Filter Reviewer"),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            reviewer_status="reviewed",
+        )
+
+        complaint_row = connection.execute(
+            select(hosted_source_derived_records).where(
+                hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY
+            )
+        ).mappings().one()
+        complaint_values = dict(complaint_row["original_values"])
+        complaint_values["finding"] = "Substantiated"
+        connection.execute(
+            update(hosted_source_derived_records)
+            .where(hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY)
+            .values(original_values=complaint_values)
+        )
+
+        allegation_key = "allegation:ccld:allegation:32-CR-20220407124448:1"
+        allegation_row = connection.execute(
+            select(hosted_source_derived_records).where(
+                hosted_source_derived_records.c.source_record_key == allegation_key
+            )
+        ).mappings().one()
+        allegation_values = dict(allegation_row["original_values"])
+        allegation_values["allegation_category"] = allegation_category
+        connection.execute(
+            update(hosted_source_derived_records)
+            .where(hosted_source_derived_records.c.source_record_key == allegation_key)
+            .values(original_values=allegation_values)
+        )
+
+        before_source_rows = _source_rows(connection)
+        before_counts = _table_counts(connection)
+
+        query = (
+            f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?"
+            f"status={quote(status_value)}"
+            "&facility=157806098"
+            "&start_date=2022-04-01"
+            "&end_date=2022-04-30"
+            "&request_context_origin=manual_entry"
+        )
+        if review_cue_query:
+            query = f"{query}&review_cue={quote(review_cue_query)}"
+
+        status, content_type, body = route_response(
+            query,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        after_source_rows = _source_rows(connection)
+        after_counts = _table_counts(connection)
+
+    csv_text = body.decode("utf-8-sig")
+    reader = csv.DictReader(io.StringIO(csv_text))
+    rows = list(reader)
+
+    assert status == 200
+    assert content_type == "text/csv; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 2,
+        "audit_events": 2,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert reader.fieldnames == [
+        "Facility Name",
+        "Facility/License Number",
+        "Complaint Received Date",
+        "Report Date",
+        "Visit Date",
+        "Date Signed",
+        "Finding/Status",
+        "Complaint Control Number",
+        "Source Report URL",
+        "Source Traceability Status",
+        "Serious Review Cue",
+        "Reviewer-created status",
+        "Reviewer-created note present",
+    ]
+    assert rows
+    [record] = rows
+    if expect_row:
+        assert record["Facility Name"] == "A. MIRIAM JAMISON CHILDREN'S CENTER"
+        assert record["Facility/License Number"] == "157806098"
+        assert record["Complaint Received Date"] == "2022-04-07"
+        assert record["Finding/Status"] == "Substantiated"
+    else:
+        assert record["Facility Name"] == ""
+        assert record["Facility/License Number"] == ""
+        assert record["Complaint Received Date"] == ""
+        assert record["Finding/Status"] == ""
+    assert "Cue filter export note." not in csv_text
+    assert "raw_path" not in csv_text
+    assert "C:\\" not in csv_text
+    assert "provider_subject" not in csv_text
+    assert "token" not in csv_text.casefold()
+
+
 def test_reviewer_ui_matrix_export_empty_context_is_safe() -> None:
     with _seeded_connection() as connection:
         before_source_rows = _source_rows(connection)
