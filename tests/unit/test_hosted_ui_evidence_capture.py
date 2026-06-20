@@ -178,6 +178,97 @@ def test_capture_script_allow_unavailable_writes_manifest() -> None:
         shutil.rmtree(output_dir, ignore_errors=True)
 
 
+def test_capture_script_restores_local_dev_auth_env_after_capture() -> None:
+    output_dir = ROOT / "data" / "processed" / "ui-evidence-test"
+    shutil.rmtree(output_dir, ignore_errors=True)
+    try:
+        capture_call = (
+            f"& '{CAPTURE_SCRIPT}' -BaseUrl 'http://127.0.0.1:9' -Mode fixture "
+            "-OutputDir 'data/processed/ui-evidence-test' -TimeoutSeconds 1 "
+            "-IncludeScreenshots:$false -AllowUnavailable | Out-Null; "
+        )
+        post_env_json = (
+            "$post=[ordered]@{ "
+            "pageData=[Environment]::GetEnvironmentVariable("
+            "'CCLD_HOSTED_PAGE_DATA_MODE','Process'); "
+            "authMode=[Environment]::GetEnvironmentVariable("
+            "'CCLD_HOSTED_TESTER_AUTH_MODE','Process'); "
+            "localDev=[Environment]::GetEnvironmentVariable("
+            "'CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH','Process') "
+            "}; "
+            "Write-Output ('POST_ENV_JSON=' + ($post | ConvertTo-Json -Compress))"
+        )
+        unset_command = (
+            "$ErrorActionPreference='Stop'; "
+            "$vars=@("
+            "'CCLD_HOSTED_PAGE_DATA_MODE',"
+            "'CCLD_HOSTED_TESTER_AUTH_MODE',"
+            "'CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH'"
+            "); "
+            "foreach($v in $vars){ "
+            "Remove-Item -LiteralPath (\"Env:{0}\" -f $v) "
+            "-ErrorAction SilentlyContinue "
+            "}; "
+            + capture_call
+            + post_env_json
+        )
+        unset_result = subprocess.run(
+            [
+                powershell(),
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                unset_command,
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        unset_output = plain_output(unset_result)
+        assert unset_result.returncode == 0, unset_output
+        unset_match = re.search(r"POST_ENV_JSON=(\{.*\})", unset_output)
+        assert unset_match, unset_output
+        unset_env = json.loads(unset_match.group(1))
+        assert unset_env["pageData"] is None
+        assert unset_env["authMode"] is None
+        assert unset_env["localDev"] is None
+
+        preserve_command = (
+            "$ErrorActionPreference='Stop'; "
+            "$env:CCLD_HOSTED_PAGE_DATA_MODE='pre-existing-page'; "
+            "$env:CCLD_HOSTED_TESTER_AUTH_MODE='pre-existing-auth'; "
+            "$env:CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH='pre-existing-local'; "
+            + capture_call
+            + post_env_json
+        )
+        preserve_result = subprocess.run(
+            [
+                powershell(),
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                preserve_command,
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        preserve_output = plain_output(preserve_result)
+        assert preserve_result.returncode == 0, preserve_output
+        preserve_match = re.search(r"POST_ENV_JSON=(\{.*\})", preserve_output)
+        assert preserve_match, preserve_output
+        preserved_env = json.loads(preserve_match.group(1))
+        assert preserved_env["pageData"] == "pre-existing-page"
+        assert preserved_env["authMode"] == "pre-existing-auth"
+        assert preserved_env["localDev"] == "pre-existing-local"
+    finally:
+        shutil.rmtree(output_dir, ignore_errors=True)
+
+
 def test_ui_evidence_documentation_links_commands_and_boundaries() -> None:
     guide = GUIDE.read_text(encoding="utf-8")
     testing_doc = read_repo_text("docs/developer/testing.md")
