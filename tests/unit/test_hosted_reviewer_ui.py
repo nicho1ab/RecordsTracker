@@ -49,6 +49,7 @@ from ccld_complaints.hosted_app.reviewer_ui import (
     REVIEWER_UI_PACKET_DRAFT_PATH,
     REVIEWER_UI_PACKET_PREVIEW_PATH,
     REVIEWER_UI_STATUS_PATH,
+    REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH,
     reviewer_ui_context_for_connection,
 )
 from ccld_complaints.hosted_app.seeded_import import (
@@ -1037,6 +1038,82 @@ def test_reviewer_ui_matrix_export_returns_excel_ready_csv_without_mutation() ->
     assert "verified complaint" not in csv_text.casefold()
     assert "source complete" not in csv_text.casefold()
     assert "export approved" not in csv_text.casefold()
+
+
+def test_reviewer_ui_substantiated_export_returns_excel_ready_csv_without_mutation() -> None:
+    with _seeded_connection() as connection:
+        create_reviewer_note_scaffold(
+            connection,
+            _actor(roles=("tester_reviewer",), display_name="Fixture Subst Note Reviewer"),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            note_text="Substantiated export note.",
+        )
+        create_reviewer_status_scaffold(
+            connection,
+            _actor(roles=("tester_reviewer",), display_name="Fixture Subst Status Reviewer"),
+            scope=TEST_SCOPE,
+            source_record_key=COMPLAINT_KEY,
+            reviewer_status="reviewed",
+        )
+
+        # Update seeded complaint finding to Substantiated for this test
+        row = connection.execute(
+            select(hosted_source_derived_records).where(
+                hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY
+            )
+        ).mappings().one()
+        original_values = dict(row["original_values"])
+        original_values["finding"] = "Substantiated"
+        connection.execute(
+            update(hosted_source_derived_records)
+            .where(hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY)
+            .values(original_values=original_values)
+        )
+
+        before_source_rows = _source_rows(connection)
+        before_counts = _table_counts(connection)
+
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?"
+            "facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31"
+            "&request_context_origin=manual_entry",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        after_source_rows = _source_rows(connection)
+        after_counts = _table_counts(connection)
+
+    csv_text = body.decode("utf-8-sig")
+    rows = list(csv.DictReader(io.StringIO(csv_text)))
+
+    assert status == 200
+    assert content_type == "text/csv; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 2,
+        "audit_events": 2,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert rows
+    [row] = rows  # type: ignore[assignment]
+    assert row["Facility Name"] == "A. MIRIAM JAMISON CHILDREN'S CENTER"
+    assert row["Facility/License Number"] == "157806098"
+    assert row["Complaint Received Date"] == "2022-04-07"
+    assert row["Visit Date"] == "2022-08-24"
+    assert row["Finding/Status"] == "Substantiated"
+    assert row["Complaint Control Number"] == "32-CR-20220407124448"
+    assert row["Source Report URL"].startswith("https://www.ccld.dss.ca.gov/")
+    assert "Source traceability available" in row["Source Traceability Status"]
+    assert row["Reviewer-created status"] == "Reviewed"
+    assert row["Reviewer-created note present"] == "yes"
+    assert "Substantiated export note" not in csv_text
+    assert "raw_path" not in csv_text
+    assert "C:\\" not in csv_text
+    assert "provider_subject" not in csv_text
+    assert "token" not in csv_text.casefold()
 
 
 def test_reviewer_ui_matrix_export_empty_context_is_safe() -> None:
