@@ -398,6 +398,19 @@ try {
     if ($reviewerDetailHref) { $dynamicLinks.reviewerDetail = $reviewerDetailHref; Capture-Route -Route @{ Name = "reviewer-detail"; Path = $reviewerDetailHref; Label = "09-reviewer-detail"; ActiveHref = "/reviewer"; WorkflowStep = "Review" } }
     else { Add-AssertionResult -Target $assertions -RouteName "reviewer" -Check "dynamic reviewer detail" -Status "WARN" -Message "No safe reviewer detail link discovered." }
 
+    # Capture a supplemental screenshot anchored to the complaint export section of the reviewer
+    # detail page. For headless browsers that do not support full-page screenshots, the fragment
+    # anchor causes the browser to scroll to that position before capturing the viewport, making
+    # the complaint export section visible even when the full page height exceeds the viewport.
+    if ($reviewerDetailHref -and $IncludeScreenshots -and $null -ne $screenshotTool) {
+        $exportAnchorUrl = (Join-RouteUrl -Base $normalizedBaseUrl -Path $reviewerDetailHref) + "#main-content"
+        $exportShotFile = Join-Path $screenshotDir "09-reviewer-detail-complaint-exports.png"
+        $exportShotError = Invoke-RouteScreenshot -Tool $screenshotTool -Url $exportAnchorUrl -ScreenshotPath $exportShotFile
+        if ($exportShotError) {
+            $script:screenshotWarnings += "reviewer-detail-complaint-exports: $exportShotError"
+        }
+    }
+
     $routeStatusRows = @("route,label,path,statusCode,title,h1,htmlPath,textPath,screenshotPath,failure")
     foreach ($result in $routeResults) {
         $values = @($result.name, $result.label, $result.path, $result.statusCode, $result.title, $result.h1, $result.htmlPath, $result.textPath, $result.screenshotPath, $result.failure)
