@@ -50,6 +50,7 @@ from ccld_complaints.hosted_app.reviewer_ui import (
     REVIEWER_UI_PACKET_PREVIEW_PATH,
     REVIEWER_UI_STATUS_PATH,
     REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH,
+    _complaint_export_status_counts,
     complaint_export_attachment_filename,
     reviewer_ui_context_for_connection,
 )
@@ -690,6 +691,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Complaint review workspace" in html
     assert "Legal-review flags and source checks" in html
     assert "detail-top-grid" in html
+    assert "Complaint export records (source-derived):" in html
     assert "Serious review cue records: 0" in html
     assert "Download serious review cue CSV" in html
     assert (
@@ -966,6 +968,39 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "/ccld/facilities" in html
     assert "/ccld/help" in html
     assert_no_secret_html(html)
+
+
+def test_complaint_export_status_counts_align_with_status_filter_semantics() -> None:
+    counts = _complaint_export_status_counts(
+        [
+            {
+                "entity_type": "facility",
+                "original_values": {},
+            },
+            {
+                "entity_type": "complaint",
+                "original_values": {"finding": "Substantiated"},
+            },
+            {
+                "entity_type": "complaint",
+                "original_values": {"finding": "Unsubstantiated"},
+            },
+            {
+                "entity_type": "complaint",
+                "original_values": {"finding": "Inconclusive"},
+            },
+            {
+                "entity_type": "allegation",
+                "original_values": {"finding": "Substantiated"},
+            },
+        ]
+    )
+
+    assert counts == {
+        "all": 3,
+        "substantiated": 1,
+        "unsubstantiated": 1,
+    }
 
 
 def test_reviewer_ui_matrix_export_returns_excel_ready_csv_without_mutation() -> None:
