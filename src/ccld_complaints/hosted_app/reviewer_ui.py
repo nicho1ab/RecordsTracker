@@ -591,6 +591,8 @@ def _render_substantiated_complaint_csv(
     return_context: CcldQueueReturnContext,
     complaint_status_filter: str,
     complaint_facility_filter: str | None,
+    complaint_start_date_filter: str | None,
+    complaint_end_date_filter: str | None,
 ) -> str:
     output = io.StringIO(newline="")
     fieldnames = _substantiated_fieldnames()
@@ -605,6 +607,13 @@ def _render_substantiated_complaint_csv(
                 continue
             row_facility_number = _complaint_export_row_facility_number(src, return_context)
             if complaint_facility_filter is not None and row_facility_number != complaint_facility_filter:
+                continue
+            complaint_received_date = _complaint_export_row_complaint_received_date(src)
+            if not _complaint_export_date_in_range(
+                complaint_received_date,
+                complaint_start_date_filter,
+                complaint_end_date_filter,
+            ):
                 continue
             vals = _mapping(src, "original_values")
             finding = vals.get("finding")
@@ -706,6 +715,14 @@ def _substantiated_export_response(
 ) -> tuple[int, str, bytes]:
     query_values = parse_qs(query, keep_blank_values=True)
     return_context = _packet_preview_context_from_values(query_values)
+    complaint_start_date_filter, complaint_end_date_filter = _complaint_export_date_filters(query_values)
+    export_context = CcldQueueReturnContext(
+        facility_number=return_context.facility_number,
+        start_date=complaint_start_date_filter,
+        end_date=complaint_end_date_filter,
+        context_origin=return_context.context_origin,
+        lookup_facility_name=return_context.lookup_facility_name,
+    )
     status, _content_type, body = route_reviewer_workflow_shell_response(
         f"{REVIEWER_WORKFLOW_API_PREFIX}/queue?limit=100",
         context.workflow_shell_context,
@@ -714,7 +731,7 @@ def _substantiated_export_response(
         return _workflow_error_page(status, body)
     payload = _json_object(body)
     queue = _mapping(payload, "queue")
-    records = _filter_packet_preview_items(_record_list(queue, "records"), return_context)
+    records = _filter_packet_preview_items(_record_list(queue, "records"), export_context)
 
     complaint_status_filter = _complaint_export_status_filter(query_values)
     complaint_facility_filter = _complaint_export_facility_filter(query_values)
@@ -734,9 +751,11 @@ def _substantiated_export_response(
         records,
         state_summaries,
         related_records,
-        return_context,
+        export_context,
         complaint_status_filter,
         complaint_facility_filter,
+        complaint_start_date_filter,
+        complaint_end_date_filter,
     )
     return 200, "text/csv; charset=utf-8", csv_text.encode("utf-8-sig")
 
@@ -755,6 +774,25 @@ def _complaint_export_facility_filter(query_values: Mapping[str, list[str]]) -> 
     if not normalized:
         return None
     return normalized
+
+
+def _complaint_export_date_filters(
+    query_values: Mapping[str, list[str]],
+) -> tuple[str | None, str | None]:
+    raw_start = query_values.get("start_date", [""])[0]
+    raw_end = query_values.get("end_date", [""])[0]
+    return _validated_iso_date_or_none(raw_start), _validated_iso_date_or_none(raw_end)
+
+
+def _validated_iso_date_or_none(value: str) -> str | None:
+    candidate = value.strip()
+    if not candidate:
+        return None
+    try:
+        datetime.strptime(candidate, "%Y-%m-%d")
+    except ValueError:
+        return None
+    return candidate
 
 
 def _normalized_complaint_finding(value: object) -> str:
@@ -794,6 +832,27 @@ def _complaint_export_row_facility_number(
         if suffix:
             return suffix
     return facility_id
+
+
+def _complaint_export_row_complaint_received_date(source_record: Mapping[str, Any]) -> str:
+    original_values = _mapping(source_record, "original_values")
+    return _optional_string(original_values, "complaint_received_date")
+
+
+def _complaint_export_date_in_range(
+    complaint_received_date: str,
+    start_date: str | None,
+    end_date: str | None,
+) -> bool:
+    if start_date is None and end_date is None:
+        return True
+    if complaint_received_date == "unknown":
+        return False
+    if start_date is not None and complaint_received_date < start_date:
+        return False
+    if end_date is not None and complaint_received_date > end_date:
+        return False
+    return True
 
 
 def _matrix_fieldnames() -> list[str]:
