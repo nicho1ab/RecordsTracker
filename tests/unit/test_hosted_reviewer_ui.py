@@ -708,6 +708,19 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
         "verified severity findings."
     ) < html.index("Download serious review cue CSV")
     assert (
+        "Start with the substantiated complaint CSV for the clearest first review set. "
+        "Use the serious review cue CSV to triage possible priority topics across all "
+        "complaint statuses."
+    ) in html
+    assert "Start with the substantiated complaint CSV" in normalized_html
+    assert "triage possible priority topics" in normalized_html
+    assert html.index("Serious review cue records: 0") < html.index(
+        "Start with the substantiated complaint CSV"
+    )
+    assert html.index(
+        "Start with the substantiated complaint CSV"
+    ) < html.index("Download local/test complaint review matrix CSV")
+    assert (
         f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?facility_number=157806098"
         "&amp;start_date=&amp;end_date=&amp;request_context_origin=prefilled_link"
         "&amp;lookup_facility_name=&amp;facility=157806098"
