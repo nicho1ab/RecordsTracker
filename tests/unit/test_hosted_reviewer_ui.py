@@ -721,6 +721,18 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
         "Start with the substantiated complaint CSV"
     ) < html.index("Download local/test complaint review matrix CSV")
     assert (
+        "CSV exports include facility name, complaint received date, complaint status, "
+        "source link, and serious review cue."
+    ) in html
+    assert "facility name" in normalized_html
+    assert "complaint received date" in normalized_html
+    assert "complaint status" in normalized_html
+    assert "source link" in normalized_html
+    assert "serious review cue" in normalized_html
+    assert html.index(
+        "CSV exports include"
+    ) < html.index("Download local/test complaint review matrix CSV")
+    assert (
         f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?facility_number=157806098"
         "&amp;start_date=&amp;end_date=&amp;request_context_origin=prefilled_link"
         "&amp;lookup_facility_name=&amp;facility=157806098"
