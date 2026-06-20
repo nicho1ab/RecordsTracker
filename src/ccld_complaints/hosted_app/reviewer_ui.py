@@ -497,7 +497,7 @@ def _packet_preview_response(
 def _matrix_export_response(
     query: str,
     context: ReviewerUiContext,
-) -> tuple[int, str, bytes]:
+ ) -> tuple[int, str, bytes]:
     query_values = parse_qs(query, keep_blank_values=True)
     return_context = _packet_preview_context_from_values(query_values)
     status, _content_type, body = route_reviewer_workflow_shell_response(
@@ -928,6 +928,15 @@ def _serious_review_cue(
     if any(keyword in haystack for keyword in _SERIOUS_REVIEW_TOPIC_KEYWORDS):
         return "Possible serious allegation topic"
     return ""
+
+
+def _serious_review_cue_record_count(records: list[Mapping[str, Any]]) -> int:
+    return sum(
+        1
+        for record in records
+        if _string(record, "entity_type") == "complaint"
+        and _serious_review_cue(record, records)
+    )
 
 
 def _matrix_fieldnames() -> list[str]:
@@ -3159,7 +3168,7 @@ def _render_detail_decision_continuity(
         if next_record_href != ccld_request_href
         else "Return to the same facility/date queue to choose the next record"
     )
-    packet_links = _detail_packet_links(return_context)
+    packet_links = _detail_packet_links(return_context, related_records)
     feedback_href = _feedback_href(
         workflow_area="reviewer-detail",
         page_path=REVIEWER_UI_DETAIL_PATH,
@@ -3362,10 +3371,15 @@ def _detail_facility_hub_action(return_context: CcldQueueReturnContext) -> str:
     return f'<a class="button button-secondary" href="{_escape(hub_link)}">Return to {context_label}</a>'
 
 
-def _detail_packet_links(return_context: CcldQueueReturnContext) -> str:
+def _detail_packet_links(
+    return_context: CcldQueueReturnContext,
+    related_records: list[Mapping[str, Any]],
+) -> str:
     if return_context.facility_number is None:
         return ""
+    serious_review_cue_count = _serious_review_cue_record_count(related_records)
     return f"""              <a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Review packet readiness before copying or printing</a>
+              <p class="helper-text">Serious review cue records: {serious_review_cue_count}</p>
               <a class="button button-secondary" href="{_escape(_matrix_export_href(return_context))}">Download local/test complaint review matrix CSV</a>
               <a class="button button-secondary" href="{_escape(_substantiated_export_href(return_context))}">Download substantiated complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_unsubstantiated_export_href(return_context))}">Download unsubstantiated complaint CSV</a>
