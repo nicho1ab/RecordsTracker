@@ -752,8 +752,8 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
         "verified severity findings."
     ) < html.index("Download serious review cue CSV")
     assert "Global complaint exports" in html
-    assert html.index("Serious review cue records: 0") < html.index(
-        "Global complaint exports"
+    assert html.index("Global complaint exports") < html.index(
+        "Serious review cue records: 0"
     )
     assert html.index("Global complaint exports") < html.index(
         "Download substantiated complaint CSV"
