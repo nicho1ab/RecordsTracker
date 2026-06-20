@@ -294,174 +294,193 @@ function Get-SafeDynamicHref {
     return $href
 }
 
-Test-AllowedBaseUrl -Value $BaseUrl
-Assert-OutputDir -Path $OutputDir
-$baseUri = [System.Uri]::new($BaseUrl)
-$normalizedBaseUrl = $baseUri.GetLeftPart([System.UriPartial]::Authority).TrimEnd("/")
-$timestamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmssZ")
-$packetName = "$timestamp-$Mode"
-$outputRoot = Join-Path $PWD $OutputDir
-$packetDir = Join-Path $outputRoot $packetName
-$htmlDir = Join-Path $packetDir "html"
-$textDir = Join-Path $packetDir "text"
-$screenshotDir = Join-Path $packetDir "screenshots"
-$accessibilityDir = Join-Path $packetDir "accessibility"
-$diagnosticsDir = Join-Path $packetDir "diagnostics"
-foreach ($dir in @($packetDir, $htmlDir, $textDir, $screenshotDir, $accessibilityDir, $diagnosticsDir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
-
-$coreRoutes = @(
-    @{ Name = "home"; Path = "/"; Label = "01-home"; ActiveHref = "/"; WorkflowStep = "Start" },
-    @{ Name = "facility"; Path = "/ccld/facilities"; Label = "02-facility"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
-    @{ Name = "facility-priority"; Path = "/ccld/facilities/review-priority"; Label = "02-facility-priority"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
-    @{ Name = "facility-intelligence"; Path = "/ccld/facilities/intelligence"; Label = "02-facility-intelligence"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
-    @{ Name = "facility-hub"; Path = "/ccld/facilities/detail?facility_number=434417302"; Label = "02-facility-hub"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
-    @{ Name = "retrieve"; Path = "/ccld/records/request"; Label = "03-retrieve"; ActiveHref = "/ccld/records/request"; WorkflowStep = "Facility" },
-    @{ Name = "jobs"; Path = "/ccld/retrieval/jobs"; Label = "04-jobs"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Results" },
-    @{ Name = "reviewer"; Path = "/reviewer"; Label = "05-reviewer"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
-    @{ Name = "matrix-export"; Path = "/reviewer/records/matrix.csv?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry"; Label = "05-matrix-export" },
-    @{ Name = "packet-preview-empty"; Path = "/reviewer/packet/preview"; Label = "06-packet-preview-empty"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
-    @{ Name = "packet-preview-context"; Path = "/reviewer/packet/preview?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry"; Label = "06-packet-preview-context"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
-    @{ Name = "packet-draft-empty"; Path = "/reviewer/packet/draft"; Label = "07-packet-draft-empty"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
-    @{ Name = "packet-draft-context"; Path = "/reviewer/packet/draft?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry"; Label = "08-packet-draft-context"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
-    @{ Name = "feedback"; Path = "/feedback"; Label = "09-feedback"; ActiveHref = "/feedback"; WorkflowStep = "Feedback" },
-    @{ Name = "help"; Path = "/ccld/help"; Label = "10-help"; ActiveHref = "/ccld/help" }
-)
-
-$routeResults = [System.Collections.ArrayList]::new()
-$assertions = [System.Collections.ArrayList]::new()
-$dynamicLinks = [ordered]@{ jobDetail = $null; reviewerDetail = $null }
-$routeHtmlByName = @{}
-$screenshotTool = if ($IncludeScreenshots) { Find-ScreenshotTool } else { $null }
-$screenshotWarnings = @()
-
-function Capture-Route {
-    param([hashtable]$Route)
-    $url = Join-RouteUrl -Base $normalizedBaseUrl -Path $Route.Path
-    $response = Get-RouteContent -Url $url -Timeout $TimeoutSeconds
-    $safeHtml = Redact-EvidenceText -Text $response.Content
-    $plainText = Redact-EvidenceText -Text (ConvertFrom-HtmlText -Html $safeHtml)
-    $title = Get-FirstHtmlMatch -Html $safeHtml -Pattern "<title[^>]*>(.*?)</title>"
-    $h1 = Get-FirstHtmlMatch -Html $safeHtml -Pattern "<h1[^>]*>(.*?)</h1>"
-    $htmlPath = ""
-    $textPath = ""
-    $screenshotPath = ""
-    $failure = ""
-    if ($response.Error) { $failure = Redact-EvidenceText -Text $response.Error }
-    if ($IncludeHtml -and $response.Content) {
-        $htmlFile = Join-Path $htmlDir "$($Route.Label).html"
-        Set-Content -LiteralPath $htmlFile -Value $safeHtml -Encoding UTF8
-        $htmlPath = ConvertTo-RelativeEvidencePath -Path $htmlFile -Root $packetDir
+$captureEnvOverrides = [ordered]@{
+    CCLD_HOSTED_PAGE_DATA_MODE        = "fixture-demo"
+    CCLD_HOSTED_TESTER_AUTH_MODE      = "local-dev"
+    CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH = "enabled"
+}
+$captureEnvOriginal = @{}
+foreach ($entry in $captureEnvOverrides.GetEnumerator()) {
+    $name = [string]$entry.Key
+    $existingItem = Get-Item -LiteralPath ("Env:{0}" -f $name) -ErrorAction SilentlyContinue
+    if ($null -ne $existingItem) {
+        $captureEnvOriginal[$name] = [pscustomobject]@{ Exists = $true; Value = [string]$existingItem.Value }
     }
-    if ($response.Content) {
-        $textFile = Join-Path $textDir "$($Route.Label).txt"
-        Set-Content -LiteralPath $textFile -Value $plainText -Encoding UTF8
-        $textPath = ConvertTo-RelativeEvidencePath -Path $textFile -Root $packetDir
-        if ($IncludeScreenshots -and $null -ne $screenshotTool -and $response.StatusCode -gt 0) {
-            $shotFile = Join-Path $screenshotDir "$($Route.Label).png"
-            $shotError = Invoke-RouteScreenshot -Tool $screenshotTool -Url $url -ScreenshotPath $shotFile
-            if ($shotError) { $script:screenshotWarnings += "$($Route.Name): $shotError" }
-            elseif (Test-Path -LiteralPath $shotFile) { $screenshotPath = ConvertTo-RelativeEvidencePath -Path $shotFile -Root $packetDir }
+    else {
+        $captureEnvOriginal[$name] = [pscustomobject]@{ Exists = $false; Value = $null }
+    }
+    Set-Item -LiteralPath ("Env:{0}" -f $name) -Value ([string]$entry.Value)
+}
+
+try {
+    Test-AllowedBaseUrl -Value $BaseUrl
+    Assert-OutputDir -Path $OutputDir
+    $baseUri = [System.Uri]::new($BaseUrl)
+    $normalizedBaseUrl = $baseUri.GetLeftPart([System.UriPartial]::Authority).TrimEnd("/")
+    $timestamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmssZ")
+    $packetName = "$timestamp-$Mode"
+    $outputRoot = Join-Path $PWD $OutputDir
+    $packetDir = Join-Path $outputRoot $packetName
+    $htmlDir = Join-Path $packetDir "html"
+    $textDir = Join-Path $packetDir "text"
+    $screenshotDir = Join-Path $packetDir "screenshots"
+    $accessibilityDir = Join-Path $packetDir "accessibility"
+    $diagnosticsDir = Join-Path $packetDir "diagnostics"
+    foreach ($dir in @($packetDir, $htmlDir, $textDir, $screenshotDir, $accessibilityDir, $diagnosticsDir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+
+    $coreRoutes = @(
+        @{ Name = "home"; Path = "/"; Label = "01-home"; ActiveHref = "/"; WorkflowStep = "Start" },
+        @{ Name = "facility"; Path = "/ccld/facilities"; Label = "02-facility"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
+        @{ Name = "facility-priority"; Path = "/ccld/facilities/review-priority"; Label = "02-facility-priority"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
+        @{ Name = "facility-intelligence"; Path = "/ccld/facilities/intelligence"; Label = "02-facility-intelligence"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
+        @{ Name = "facility-hub"; Path = "/ccld/facilities/detail?facility_number=434417302"; Label = "02-facility-hub"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
+        @{ Name = "retrieve"; Path = "/ccld/records/request"; Label = "03-retrieve"; ActiveHref = "/ccld/records/request"; WorkflowStep = "Facility" },
+        @{ Name = "jobs"; Path = "/ccld/retrieval/jobs"; Label = "04-jobs"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Results" },
+        @{ Name = "reviewer"; Path = "/reviewer"; Label = "05-reviewer"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
+        @{ Name = "matrix-export"; Path = "/reviewer/records/matrix.csv?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry"; Label = "05-matrix-export" },
+        @{ Name = "packet-preview-empty"; Path = "/reviewer/packet/preview"; Label = "06-packet-preview-empty"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
+        @{ Name = "packet-preview-context"; Path = "/reviewer/packet/preview?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry"; Label = "06-packet-preview-context"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
+        @{ Name = "packet-draft-empty"; Path = "/reviewer/packet/draft"; Label = "07-packet-draft-empty"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
+        @{ Name = "packet-draft-context"; Path = "/reviewer/packet/draft?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry"; Label = "08-packet-draft-context"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
+        @{ Name = "feedback"; Path = "/feedback"; Label = "09-feedback"; ActiveHref = "/feedback"; WorkflowStep = "Feedback" },
+        @{ Name = "help"; Path = "/ccld/help"; Label = "10-help"; ActiveHref = "/ccld/help" }
+    )
+
+    $routeResults = [System.Collections.ArrayList]::new()
+    $assertions = [System.Collections.ArrayList]::new()
+    $dynamicLinks = [ordered]@{ jobDetail = $null; reviewerDetail = $null }
+    $routeHtmlByName = @{}
+    $screenshotTool = if ($IncludeScreenshots) { Find-ScreenshotTool } else { $null }
+    $screenshotWarnings = @()
+
+    function Capture-Route {
+        param([hashtable]$Route)
+        $url = Join-RouteUrl -Base $normalizedBaseUrl -Path $Route.Path
+        $response = Get-RouteContent -Url $url -Timeout $TimeoutSeconds
+        $safeHtml = Redact-EvidenceText -Text $response.Content
+        $plainText = Redact-EvidenceText -Text (ConvertFrom-HtmlText -Html $safeHtml)
+        $title = Get-FirstHtmlMatch -Html $safeHtml -Pattern "<title[^>]*>(.*?)</title>"
+        $h1 = Get-FirstHtmlMatch -Html $safeHtml -Pattern "<h1[^>]*>(.*?)</h1>"
+        $htmlPath = ""
+        $textPath = ""
+        $screenshotPath = ""
+        $failure = ""
+        if ($response.Error) { $failure = Redact-EvidenceText -Text $response.Error }
+        if ($IncludeHtml -and $response.Content) {
+            $htmlFile = Join-Path $htmlDir "$($Route.Label).html"
+            Set-Content -LiteralPath $htmlFile -Value $safeHtml -Encoding UTF8
+            $htmlPath = ConvertTo-RelativeEvidencePath -Path $htmlFile -Root $packetDir
         }
+        if ($response.Content) {
+            $textFile = Join-Path $textDir "$($Route.Label).txt"
+            Set-Content -LiteralPath $textFile -Value $plainText -Encoding UTF8
+            $textPath = ConvertTo-RelativeEvidencePath -Path $textFile -Root $packetDir
+            if ($IncludeScreenshots -and $null -ne $screenshotTool -and $response.StatusCode -gt 0) {
+                $shotFile = Join-Path $screenshotDir "$($Route.Label).png"
+                $shotError = Invoke-RouteScreenshot -Tool $screenshotTool -Url $url -ScreenshotPath $shotFile
+                if ($shotError) { $script:screenshotWarnings += "$($Route.Name): $shotError" }
+                elseif (Test-Path -LiteralPath $shotFile) { $screenshotPath = ConvertTo-RelativeEvidencePath -Path $shotFile -Root $packetDir }
+            }
+        }
+        Test-RouteAssertions -Route $Route -Html $safeHtml -StatusCode $response.StatusCode -Assertions $assertions
+        if (($response.StatusCode -ge 400 -or $response.StatusCode -eq 0) -and -not $AllowUnavailable) { $failure = if ($failure) { $failure } else { "Route returned HTTP $($response.StatusCode)." } }
+        [void]$routeResults.Add([pscustomobject]@{ name = $Route.Name; path = $Route.Path; label = $Route.Label; url = $url; statusCode = $response.StatusCode; title = $title; h1 = $h1; htmlPath = $htmlPath; textPath = $textPath; screenshotPath = $screenshotPath; failure = $failure })
+        $routeHtmlByName[$Route.Name] = $safeHtml
     }
-    Test-RouteAssertions -Route $Route -Html $safeHtml -StatusCode $response.StatusCode -Assertions $assertions
-    if (($response.StatusCode -ge 400 -or $response.StatusCode -eq 0) -and -not $AllowUnavailable) { $failure = if ($failure) { $failure } else { "Route returned HTTP $($response.StatusCode)." } }
-    [void]$routeResults.Add([pscustomobject]@{ name = $Route.Name; path = $Route.Path; label = $Route.Label; url = $url; statusCode = $response.StatusCode; title = $title; h1 = $h1; htmlPath = $htmlPath; textPath = $textPath; screenshotPath = $screenshotPath; failure = $failure })
-    $routeHtmlByName[$Route.Name] = $safeHtml
-}
 
-foreach ($route in $coreRoutes) { Capture-Route -Route $route }
+    foreach ($route in $coreRoutes) { Capture-Route -Route $route }
 
-$jobDetailHref = Get-SafeDynamicHref -Html ([string]$routeHtmlByName["jobs"]) -Pattern 'href\s*=\s*["'']([^"'']*/ccld/retrieval/jobs/detail\?job_id=[A-Za-z0-9_.:%-]+)["'']'
-if ($jobDetailHref) { $dynamicLinks.jobDetail = $jobDetailHref; Capture-Route -Route @{ Name = "job-detail"; Path = $jobDetailHref; Label = "08-job-detail"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Results" } }
-else { Add-AssertionResult -Target $assertions -RouteName "jobs" -Check "dynamic job detail" -Status "WARN" -Message "No safe retrieval job detail link discovered." }
+    $jobDetailHref = Get-SafeDynamicHref -Html ([string]$routeHtmlByName["jobs"]) -Pattern 'href\s*=\s*["'']([^"'']*/ccld/retrieval/jobs/detail\?job_id=[A-Za-z0-9_.:%-]+)["'']'
+    if ($jobDetailHref) { $dynamicLinks.jobDetail = $jobDetailHref; Capture-Route -Route @{ Name = "job-detail"; Path = $jobDetailHref; Label = "08-job-detail"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Results" } }
+    else { Add-AssertionResult -Target $assertions -RouteName "jobs" -Check "dynamic job detail" -Status "WARN" -Message "No safe retrieval job detail link discovered." }
 
-$reviewerDetailHref = Get-SafeDynamicHref -Html ([string]$routeHtmlByName["reviewer"]) -Pattern 'href\s*=\s*["'']([^"'']*/reviewer/records/detail\?source_record_key=[^"'']+)["'']'
-if ($reviewerDetailHref) { $dynamicLinks.reviewerDetail = $reviewerDetailHref; Capture-Route -Route @{ Name = "reviewer-detail"; Path = $reviewerDetailHref; Label = "09-reviewer-detail"; ActiveHref = "/reviewer"; WorkflowStep = "Review" } }
-else { Add-AssertionResult -Target $assertions -RouteName "reviewer" -Check "dynamic reviewer detail" -Status "WARN" -Message "No safe reviewer detail link discovered." }
+    $reviewerDetailHref = Get-SafeDynamicHref -Html ([string]$routeHtmlByName["reviewer"]) -Pattern 'href\s*=\s*["'']([^"'']*/reviewer/records/detail\?source_record_key=[^"'']+)["'']'
+    if ($reviewerDetailHref) { $dynamicLinks.reviewerDetail = $reviewerDetailHref; Capture-Route -Route @{ Name = "reviewer-detail"; Path = $reviewerDetailHref; Label = "09-reviewer-detail"; ActiveHref = "/reviewer"; WorkflowStep = "Review" } }
+    else { Add-AssertionResult -Target $assertions -RouteName "reviewer" -Check "dynamic reviewer detail" -Status "WARN" -Message "No safe reviewer detail link discovered." }
 
-$routeStatusRows = @("route,label,path,statusCode,title,h1,htmlPath,textPath,screenshotPath,failure")
-foreach ($result in $routeResults) {
-    $values = @($result.name, $result.label, $result.path, $result.statusCode, $result.title, $result.h1, $result.htmlPath, $result.textPath, $result.screenshotPath, $result.failure)
-    $escaped = $values | ForEach-Object { '"' + ([string]$_).Replace('"', '""') + '"' }
-    $routeStatusRows += ($escaped -join ",")
-}
-Set-Content -LiteralPath (Join-Path $packetDir "route-status.csv") -Value ($routeStatusRows -join "`n") -Encoding UTF8
-
-$assertionRows = @("route,check,status,message")
-foreach ($assertion in $assertions) {
-    $values = @($assertion.route, $assertion.check, $assertion.status, $assertion.message)
-    $escaped = $values | ForEach-Object { '"' + ([string]$_).Replace('"', '""') + '"' }
-    $assertionRows += ($escaped -join ",")
-}
-Set-Content -LiteralPath (Join-Path $packetDir "route-assertions.csv") -Value ($assertionRows -join "`n") -Encoding UTF8
-
-$markerLines = [System.Collections.Generic.List[string]]::new()
-$headingsLines = [System.Collections.Generic.List[string]]::new()
-$linksLines = [System.Collections.Generic.List[string]]::new()
-$formsLines = [System.Collections.Generic.List[string]]::new()
-$landmarksLines = [System.Collections.Generic.List[string]]::new()
-foreach ($result in $routeResults) {
-    $htmlText = [string]$routeHtmlByName[$result.name]
-    $h2s = Get-HtmlMatches -Html $htmlText -Pattern "<h2[^>]*>(.*?)</h2>"
-    $h3s = Get-HtmlMatches -Html $htmlText -Pattern "<h3[^>]*>(.*?)</h3>"
-    $buttons = Get-HtmlMatches -Html $htmlText -Pattern "<button[^>]*>(.*?)</button>"
-    $details = Get-HtmlMatches -Html $htmlText -Pattern "<summary[^>]*>(.*?)</summary>"
-    $markerLines.Add("[$($result.label)] $($result.path)")
-    $markerLines.Add("title: $($result.title)")
-    $markerLines.Add("h1: $($result.h1)")
-    $markerLines.Add("h2: $($h2s -join ' | ')")
-    $markerLines.Add("h3: $($h3s -join ' | ')")
-    $markerLines.Add("buttons: $($buttons -join ' | ')")
-    $markerLines.Add("details: $($details -join ' | ')")
-    $markerLines.Add("")
-    $headingsLines.Add("[$($result.label)] $($result.path)")
-    foreach ($level in 1..3) { foreach ($heading in (Get-HtmlMatches -Html $htmlText -Pattern "<h$level[^>]*>(.*?)</h$level>")) { $headingsLines.Add("H${level}: $heading") } }
-    $headingsLines.Add("")
-    $linksLines.Add("[$($result.label)] $($result.path)")
-    foreach ($match in [regex]::Matches($htmlText, '<a\b(?<attrs>[^>]*)>(?<text>.*?)</a>', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [System.Text.RegularExpressions.RegexOptions]::Singleline)) {
-        $hrefMatch = [regex]::Match($match.Groups["attrs"].Value, 'href\s*=\s*["'']([^"'']+)["'']', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-        $href = if ($hrefMatch.Success) { [System.Net.WebUtility]::HtmlDecode($hrefMatch.Groups[1].Value) } else { "" }
-        $textValue = (ConvertFrom-HtmlText -Html $match.Groups["text"].Value).Trim()
-        if ($textValue) { $linksLines.Add("$textValue -> $href") }
+    $routeStatusRows = @("route,label,path,statusCode,title,h1,htmlPath,textPath,screenshotPath,failure")
+    foreach ($result in $routeResults) {
+        $values = @($result.name, $result.label, $result.path, $result.statusCode, $result.title, $result.h1, $result.htmlPath, $result.textPath, $result.screenshotPath, $result.failure)
+        $escaped = $values | ForEach-Object { '"' + ([string]$_).Replace('"', '""') + '"' }
+        $routeStatusRows += ($escaped -join ",")
     }
-    $linksLines.Add("")
-    $formsLines.Add("[$($result.label)] $($result.path)")
-    foreach ($label in (Get-HtmlMatches -Html $htmlText -Pattern "<label[^>]*>(.*?)</label>")) { $formsLines.Add("label: $label") }
-    foreach ($button in $buttons) { $formsLines.Add("button: $button") }
-    foreach ($legend in (Get-HtmlMatches -Html $htmlText -Pattern "<legend[^>]*>(.*?)</legend>")) { $formsLines.Add("legend: $legend") }
-    $formsLines.Add("")
-    $landmarksLines.Add("[$($result.label)] $($result.path)")
-    foreach ($tag in @("header", "nav", "main", "footer", "section", "form")) {
-        $count = ([regex]::Matches($htmlText, "<$tag\b", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Count
-        $landmarksLines.Add("${tag}: $count")
+    Set-Content -LiteralPath (Join-Path $packetDir "route-status.csv") -Value ($routeStatusRows -join "`n") -Encoding UTF8
+
+    $assertionRows = @("route,check,status,message")
+    foreach ($assertion in $assertions) {
+        $values = @($assertion.route, $assertion.check, $assertion.status, $assertion.message)
+        $escaped = $values | ForEach-Object { '"' + ([string]$_).Replace('"', '""') + '"' }
+        $assertionRows += ($escaped -join ",")
     }
-    $landmarksLines.Add("")
-}
-Set-Content -LiteralPath (Join-Path $packetDir "route-text-markers.txt") -Value $markerLines -Encoding UTF8
-Set-Content -LiteralPath (Join-Path $accessibilityDir "headings.txt") -Value $headingsLines -Encoding UTF8
-Set-Content -LiteralPath (Join-Path $accessibilityDir "links.txt") -Value $linksLines -Encoding UTF8
-Set-Content -LiteralPath (Join-Path $accessibilityDir "forms.txt") -Value $formsLines -Encoding UTF8
-Set-Content -LiteralPath (Join-Path $accessibilityDir "landmarks.txt") -Value $landmarksLines -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $packetDir "route-assertions.csv") -Value ($assertionRows -join "`n") -Encoding UTF8
 
-$gitBranch = (git branch --show-current 2>$null) -join ""
-$gitCommit = (git rev-parse HEAD 2>$null) -join ""
-$gitStatus = (git status --short 2>$null) -join "`n"
-$workingTreeClean = [string]::IsNullOrWhiteSpace($gitStatus)
-$gitStatusText = if ($workingTreeClean) { "clean" } else { $gitStatus }
-Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-status.txt") -Value $gitStatusText -Encoding UTF8
-Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-log.txt") -Value ((git log --oneline -n 5 2>$null) -join "`n") -Encoding UTF8
-Set-Content -LiteralPath (Join-Path $diagnosticsDir "capture-command.txt") -Value "capture-hosted-ui-evidence.ps1 -BaseUrl $normalizedBaseUrl -Mode $Mode -OutputDir $OutputDir -ViewportWidth $ViewportWidth -ViewportHeight $ViewportHeight -TimeoutSeconds $TimeoutSeconds" -Encoding UTF8
-Set-Content -LiteralPath (Join-Path $diagnosticsDir "environment-summary.txt") -Value @(
-    "mode=$Mode",
-    "baseUrl=$normalizedBaseUrl",
-    "viewport=${ViewportWidth}x${ViewportHeight}",
-    "screenshotsRequested=$IncludeScreenshots",
-    "screenshotTool=$(if ($screenshotTool) { $screenshotTool.Name } else { 'none' })",
-    "fullPageScreenshots=$(if ($screenshotTool) { $screenshotTool.FullPage } else { $false })",
-    "boundary=$boundaryStatement"
-) -Encoding UTF8
+    $markerLines = [System.Collections.Generic.List[string]]::new()
+    $headingsLines = [System.Collections.Generic.List[string]]::new()
+    $linksLines = [System.Collections.Generic.List[string]]::new()
+    $formsLines = [System.Collections.Generic.List[string]]::new()
+    $landmarksLines = [System.Collections.Generic.List[string]]::new()
+    foreach ($result in $routeResults) {
+        $htmlText = [string]$routeHtmlByName[$result.name]
+        $h2s = Get-HtmlMatches -Html $htmlText -Pattern "<h2[^>]*>(.*?)</h2>"
+        $h3s = Get-HtmlMatches -Html $htmlText -Pattern "<h3[^>]*>(.*?)</h3>"
+        $buttons = Get-HtmlMatches -Html $htmlText -Pattern "<button[^>]*>(.*?)</button>"
+        $details = Get-HtmlMatches -Html $htmlText -Pattern "<summary[^>]*>(.*?)</summary>"
+        $markerLines.Add("[$($result.label)] $($result.path)")
+        $markerLines.Add("title: $($result.title)")
+        $markerLines.Add("h1: $($result.h1)")
+        $markerLines.Add("h2: $($h2s -join ' | ')")
+        $markerLines.Add("h3: $($h3s -join ' | ')")
+        $markerLines.Add("buttons: $($buttons -join ' | ')")
+        $markerLines.Add("details: $($details -join ' | ')")
+        $markerLines.Add("")
+        $headingsLines.Add("[$($result.label)] $($result.path)")
+        foreach ($level in 1..3) { foreach ($heading in (Get-HtmlMatches -Html $htmlText -Pattern "<h$level[^>]*>(.*?)</h$level>")) { $headingsLines.Add("H${level}: $heading") } }
+        $headingsLines.Add("")
+        $linksLines.Add("[$($result.label)] $($result.path)")
+        foreach ($match in [regex]::Matches($htmlText, '<a\b(?<attrs>[^>]*)>(?<text>.*?)</a>', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [System.Text.RegularExpressions.RegexOptions]::Singleline)) {
+            $hrefMatch = [regex]::Match($match.Groups["attrs"].Value, 'href\s*=\s*["'']([^"'']+)["'']', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+            $href = if ($hrefMatch.Success) { [System.Net.WebUtility]::HtmlDecode($hrefMatch.Groups[1].Value) } else { "" }
+            $textValue = (ConvertFrom-HtmlText -Html $match.Groups["text"].Value).Trim()
+            if ($textValue) { $linksLines.Add("$textValue -> $href") }
+        }
+        $linksLines.Add("")
+        $formsLines.Add("[$($result.label)] $($result.path)")
+        foreach ($label in (Get-HtmlMatches -Html $htmlText -Pattern "<label[^>]*>(.*?)</label>")) { $formsLines.Add("label: $label") }
+        foreach ($button in $buttons) { $formsLines.Add("button: $button") }
+        foreach ($legend in (Get-HtmlMatches -Html $htmlText -Pattern "<legend[^>]*>(.*?)</legend>")) { $formsLines.Add("legend: $legend") }
+        $formsLines.Add("")
+        $landmarksLines.Add("[$($result.label)] $($result.path)")
+        foreach ($tag in @("header", "nav", "main", "footer", "section", "form")) {
+            $count = ([regex]::Matches($htmlText, "<$tag\b", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Count
+            $landmarksLines.Add("${tag}: $count")
+        }
+        $landmarksLines.Add("")
+    }
+    Set-Content -LiteralPath (Join-Path $packetDir "route-text-markers.txt") -Value $markerLines -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $accessibilityDir "headings.txt") -Value $headingsLines -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $accessibilityDir "links.txt") -Value $linksLines -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $accessibilityDir "forms.txt") -Value $formsLines -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $accessibilityDir "landmarks.txt") -Value $landmarksLines -Encoding UTF8
 
-$readmeText = @"
+    $gitBranch = (git branch --show-current 2>$null) -join ""
+    $gitCommit = (git rev-parse HEAD 2>$null) -join ""
+    $gitStatus = (git status --short 2>$null) -join "`n"
+    $workingTreeClean = [string]::IsNullOrWhiteSpace($gitStatus)
+    $gitStatusText = if ($workingTreeClean) { "clean" } else { $gitStatus }
+    Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-status.txt") -Value $gitStatusText -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-log.txt") -Value ((git log --oneline -n 5 2>$null) -join "`n") -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $diagnosticsDir "capture-command.txt") -Value "capture-hosted-ui-evidence.ps1 -BaseUrl $normalizedBaseUrl -Mode $Mode -OutputDir $OutputDir -ViewportWidth $ViewportWidth -ViewportHeight $ViewportHeight -TimeoutSeconds $TimeoutSeconds" -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $diagnosticsDir "environment-summary.txt") -Value @(
+        "mode=$Mode",
+        "baseUrl=$normalizedBaseUrl",
+        "viewport=${ViewportWidth}x${ViewportHeight}",
+        "screenshotsRequested=$IncludeScreenshots",
+        "screenshotTool=$(if ($screenshotTool) { $screenshotTool.Name } else { 'none' })",
+        "fullPageScreenshots=$(if ($screenshotTool) { $screenshotTool.FullPage } else { $false })",
+        "boundary=$boundaryStatement"
+    ) -Encoding UTF8
+
+    $readmeText = @"
 CCLD RecordsTracker hosted UI evidence packet
 
 Mode: $Mode
@@ -486,44 +505,57 @@ HTML files are sanitized route captures from GET requests only. Text files are
 plain-text summaries derived from those HTML captures. Screenshots are included
 only when a local screenshot tool is available.
 "@
-Set-Content -LiteralPath (Join-Path $packetDir "README.txt") -Value $readmeText -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $packetDir "README.txt") -Value $readmeText -Encoding UTF8
 
-$routeFailures = @($routeResults | Where-Object { $_.statusCode -eq 0 -or $_.statusCode -ge 400 -or $_.failure })
-$assertionFailures = @($assertions | Where-Object { $_.status -eq "FAIL" })
-$manifest = [ordered]@{
-    generatedAt            = (Get-Date).ToUniversalTime().ToString("o")
-    mode                   = $Mode
-    baseUrl                = $normalizedBaseUrl
-    viewport               = [ordered]@{ width = $ViewportWidth; height = $ViewportHeight }
-    routeList              = @($routeResults | ForEach-Object { [ordered]@{ name = $_.name; path = $_.path; label = $_.label } })
-    routes                 = @($routeResults)
-    dynamicLinksDiscovered = $dynamicLinks
-    routeFailures          = @($routeFailures | ForEach-Object { [ordered]@{ name = $_.name; path = $_.path; statusCode = $_.statusCode; failure = $_.failure } })
-    assertions             = @($assertions)
-    assertionFailures      = @($assertionFailures)
-    screenshotsRequested   = [bool]$IncludeScreenshots
-    screenshotsAvailable   = [bool]($screenshotTool -ne $null)
-    screenshotsCaptured    = [bool](@($routeResults | Where-Object { $_.screenshotPath }).Count -gt 0)
-    screenshotsFullPage    = [bool]($screenshotTool -and $screenshotTool.FullPage)
-    screenshotWarnings     = $screenshotWarnings
-    captureToolUsed        = if ($screenshotTool) { $screenshotTool.Name } else { "http-get-html-text-only" }
-    git                    = [ordered]@{ branch = $gitBranch; commit = $gitCommit; workingTreeClean = [bool]$workingTreeClean; warning = if ($workingTreeClean) { "" } else { "Working tree was not clean when evidence was captured." } }
-    output                 = [ordered]@{ packetDirectory = ConvertTo-RelativeEvidencePath -Path $packetDir -Root $PWD; manifest = "manifest.json"; routeStatusCsv = "route-status.csv"; routeAssertionsCsv = "route-assertions.csv"; textMarkers = "route-text-markers.txt" }
-    boundaryStatement      = $boundaryStatement
-    safety                 = [ordered]@{ getOnly = $true; formsSubmitted = $false; retrievalSubmitted = $false; reviewerStateMutated = $false; importsOrReloadsRun = $false; productionAuthRequired = $false; responseHeadersCaptured = $false; cookiesCaptured = $false; environmentValuesCaptured = $false }
-}
-Set-Content -LiteralPath (Join-Path $packetDir "manifest.json") -Value ($manifest | ConvertTo-Json -Depth 8) -Encoding UTF8
+    $routeFailures = @($routeResults | Where-Object { $_.statusCode -eq 0 -or $_.statusCode -ge 400 -or $_.failure })
+    $assertionFailures = @($assertions | Where-Object { $_.status -eq "FAIL" })
+    $manifest = [ordered]@{
+        generatedAt            = (Get-Date).ToUniversalTime().ToString("o")
+        mode                   = $Mode
+        baseUrl                = $normalizedBaseUrl
+        viewport               = [ordered]@{ width = $ViewportWidth; height = $ViewportHeight }
+        routeList              = @($routeResults | ForEach-Object { [ordered]@{ name = $_.name; path = $_.path; label = $_.label } })
+        routes                 = @($routeResults)
+        dynamicLinksDiscovered = $dynamicLinks
+        routeFailures          = @($routeFailures | ForEach-Object { [ordered]@{ name = $_.name; path = $_.path; statusCode = $_.statusCode; failure = $_.failure } })
+        assertions             = @($assertions)
+        assertionFailures      = @($assertionFailures)
+        screenshotsRequested   = [bool]$IncludeScreenshots
+        screenshotsAvailable   = [bool]($screenshotTool -ne $null)
+        screenshotsCaptured    = [bool](@($routeResults | Where-Object { $_.screenshotPath }).Count -gt 0)
+        screenshotsFullPage    = [bool]($screenshotTool -and $screenshotTool.FullPage)
+        screenshotWarnings     = $screenshotWarnings
+        captureToolUsed        = if ($screenshotTool) { $screenshotTool.Name } else { "http-get-html-text-only" }
+        git                    = [ordered]@{ branch = $gitBranch; commit = $gitCommit; workingTreeClean = [bool]$workingTreeClean; warning = if ($workingTreeClean) { "" } else { "Working tree was not clean when evidence was captured." } }
+        output                 = [ordered]@{ packetDirectory = ConvertTo-RelativeEvidencePath -Path $packetDir -Root $PWD; manifest = "manifest.json"; routeStatusCsv = "route-status.csv"; routeAssertionsCsv = "route-assertions.csv"; textMarkers = "route-text-markers.txt" }
+        boundaryStatement      = $boundaryStatement
+        safety                 = [ordered]@{ getOnly = $true; formsSubmitted = $false; retrievalSubmitted = $false; reviewerStateMutated = $false; importsOrReloadsRun = $false; productionAuthRequired = $false; responseHeadersCaptured = $false; cookiesCaptured = $false; environmentValuesCaptured = $false }
+    }
+    Set-Content -LiteralPath (Join-Path $packetDir "manifest.json") -Value ($manifest | ConvertTo-Json -Depth 8) -Encoding UTF8
 
-if (($routeFailures.Count -gt 0 -or $assertionFailures.Count -gt 0) -and -not $AllowUnavailable) {
+    if (($routeFailures.Count -gt 0 -or $assertionFailures.Count -gt 0) -and -not $AllowUnavailable) {
+        Write-Host "Evidence packet path: $packetDir"
+        Write-Host "EVIDENCE_PACKET_PATH=$packetDir"
+        Stop-CaptureFail "Evidence capture completed with route or assertion failures. Use -AllowUnavailable to keep packets for unavailable routes."
+    }
+
     Write-Host "Evidence packet path: $packetDir"
     Write-Host "EVIDENCE_PACKET_PATH=$packetDir"
-    Stop-CaptureFail "Evidence capture completed with route or assertion failures. Use -AllowUnavailable to keep packets for unavailable routes."
+    Write-Host "manifest.json: $(Join-Path $packetDir 'manifest.json')"
+    Write-Host "route-status.csv: $(Join-Path $packetDir 'route-status.csv')"
+    if ($screenshotTool) { Write-Host "Screenshot support: $($screenshotTool.Name) (full page: $($screenshotTool.FullPage))" }
+    else { Write-Host "Screenshot support: skipped; install Playwright locally or run with a local Edge/Chrome headless CLI to enable screenshots." }
+    exit 0
 }
-
-Write-Host "Evidence packet path: $packetDir"
-Write-Host "EVIDENCE_PACKET_PATH=$packetDir"
-Write-Host "manifest.json: $(Join-Path $packetDir 'manifest.json')"
-Write-Host "route-status.csv: $(Join-Path $packetDir 'route-status.csv')"
-if ($screenshotTool) { Write-Host "Screenshot support: $($screenshotTool.Name) (full page: $($screenshotTool.FullPage))" }
-else { Write-Host "Screenshot support: skipped; install Playwright locally or run with a local Edge/Chrome headless CLI to enable screenshots." }
-exit 0
+finally {
+    foreach ($entry in $captureEnvOriginal.GetEnumerator()) {
+        $name = [string]$entry.Key
+        $original = $entry.Value
+        if ($original.Exists) {
+            Set-Item -LiteralPath ("Env:{0}" -f $name) -Value ([string]$original.Value)
+        }
+        else {
+            Remove-Item -LiteralPath ("Env:{0}" -f $name) -ErrorAction SilentlyContinue
+        }
+    }
+}
