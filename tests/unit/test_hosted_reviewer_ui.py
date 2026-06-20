@@ -690,6 +690,13 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Complaint review workspace" in html
     assert "Legal-review flags and source checks" in html
     assert "detail-top-grid" in html
+    assert "Download serious review cue CSV" in html
+    assert (
+        f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?facility_number=157806098"
+        "&amp;start_date=&amp;end_date=&amp;request_context_origin=prefilled_link"
+        "&amp;lookup_facility_name=&amp;facility=157806098"
+        "&amp;status=all&amp;review_cue=serious"
+    ) in html
     assert "Source-confidence cues" in html
     assert "Field-note and technical context" in html
     assert "Complaint and report dates" in html

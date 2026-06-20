@@ -2413,14 +2413,22 @@ def _all_complaints_export_href(return_context: CcldQueueReturnContext) -> str:
     return _complaint_export_href(return_context, "all")
 
 
+def _serious_review_cue_export_href(return_context: CcldQueueReturnContext) -> str:
+    return _complaint_export_href(return_context, "all", review_cue="serious")
+
+
 def _complaint_export_href(
     return_context: CcldQueueReturnContext,
     status: str,
+    review_cue: str | None = None,
 ) -> str:
     if return_context.facility_number is None:
         if status == "substantiated":
             return REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH
-        return f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{urlencode({'status': status})}"
+        query_values = {"status": status}
+        if review_cue is not None:
+            query_values["review_cue"] = review_cue
+        return f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{urlencode(query_values)}"
     query_values = {
         "facility_number": return_context.facility_number,
         "start_date": return_context.start_date or "",
@@ -2431,6 +2439,8 @@ def _complaint_export_href(
     }
     if status != "substantiated":
         query_values["status"] = status
+    if review_cue is not None:
+        query_values["review_cue"] = review_cue
     return f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{urlencode(query_values)}"
 
 
@@ -3360,6 +3370,7 @@ def _detail_packet_links(return_context: CcldQueueReturnContext) -> str:
               <a class="button button-secondary" href="{_escape(_substantiated_export_href(return_context))}">Download substantiated complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_unsubstantiated_export_href(return_context))}">Download unsubstantiated complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_all_complaints_export_href(return_context))}">Download all complaint CSV</a>
+              <a class="button button-secondary" href="{_escape(_serious_review_cue_export_href(return_context))}">Download serious review cue CSV</a>
               <a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a>"""
 
 
