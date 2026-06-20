@@ -3404,7 +3404,14 @@ def _detail_packet_links(
         return ""
     serious_review_cue_count = _serious_review_cue_record_count(related_records)
     complaint_counts = _complaint_export_status_counts(related_records)
-    facility_scoped_links = f"""              <p class="helper-text">Facility-scoped complaint exports (for {_escape(return_context.facility_number)})</p>
+    facility_complaint_counts = _facility_complaint_export_status_counts(
+        related_records, return_context.facility_number
+    )
+    facility_serious_cue_count = _facility_serious_review_cue_record_count(
+        related_records, return_context.facility_number
+    )
+    facility_scoped_links = f"""              <p class="helper-text">This facility complaint export records: {facility_complaint_counts['all']} all, {facility_complaint_counts['substantiated']} substantiated, {facility_complaint_counts['unsubstantiated']} unsubstantiated, {facility_serious_cue_count} serious review cue</p>
+              <p class="helper-text">Facility-scoped complaint exports (for {_escape(return_context.facility_number)})</p>
               <a class="button button-secondary" href="{_escape(_facility_substantiated_export_href(return_context.facility_number))}">Download this facility's substantiated complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_facility_all_complaints_export_href(return_context.facility_number))}">Download this facility's all complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_facility_serious_review_cue_export_href(return_context.facility_number))}">Download this facility's serious review cue CSV</a>"""
@@ -3438,6 +3445,40 @@ def _complaint_export_status_counts(records: list[Mapping[str, Any]]) -> dict[st
         if finding_norm in {"substantiated", "unsubstantiated"}:
             counts[finding_norm] += 1
     return counts
+
+
+def _facility_complaint_export_status_counts(
+    records: list[Mapping[str, Any]], facility_number: str
+) -> dict[str, int]:
+    counts = {
+        "all": 0,
+        "substantiated": 0,
+        "unsubstantiated": 0,
+    }
+    for record in records:
+        if _string(record, "entity_type") != "complaint":
+            continue
+        rec_facility_id = _optional_string(record, "facility_id")
+        if rec_facility_id != facility_number:
+            continue
+        counts["all"] += 1
+        finding = _mapping(record, "original_values").get("finding")
+        finding_norm = _normalized_complaint_finding(finding)
+        if finding_norm in {"substantiated", "unsubstantiated"}:
+            counts[finding_norm] += 1
+    return counts
+
+
+def _facility_serious_review_cue_record_count(
+    records: list[Mapping[str, Any]], facility_number: str
+) -> int:
+    return sum(
+        1
+        for record in records
+        if _string(record, "entity_type") == "complaint"
+        and _optional_string(record, "facility_id") == facility_number
+        and _serious_review_cue(record, records)
+    )
 
 
 def _detail_check_first_items(original_values: Mapping[str, Any]) -> tuple[str, ...]:
