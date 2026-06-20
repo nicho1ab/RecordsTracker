@@ -2453,6 +2453,31 @@ def _complaint_export_href(
     return f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{urlencode(query_values)}"
 
 
+def _facility_substantiated_export_href(facility_number: str) -> str:
+    query_values = {
+        "facility": facility_number,
+        "status": "substantiated",
+    }
+    return f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{urlencode(query_values)}"
+
+
+def _facility_all_complaints_export_href(facility_number: str) -> str:
+    query_values = {
+        "facility": facility_number,
+        "status": "all",
+    }
+    return f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{urlencode(query_values)}"
+
+
+def _facility_serious_review_cue_export_href(facility_number: str) -> str:
+    query_values = {
+        "facility": facility_number,
+        "status": "all",
+        "review_cue": "serious",
+    }
+    return f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{urlencode(query_values)}"
+
+
 def _packet_draft_href_for_queue(records: tuple[FacilityCaseBriefRecord, ...]) -> str:
     if not records:
         return REVIEWER_UI_PACKET_DRAFT_PATH
@@ -3379,6 +3404,10 @@ def _detail_packet_links(
         return ""
     serious_review_cue_count = _serious_review_cue_record_count(related_records)
     complaint_counts = _complaint_export_status_counts(related_records)
+    facility_scoped_links = f"""              <p class="helper-text">Facility-scoped complaint exports (for {_escape(return_context.facility_number)})</p>
+              <a class="button button-secondary" href="{_escape(_facility_substantiated_export_href(return_context.facility_number))}">Download this facility's substantiated complaint CSV</a>
+              <a class="button button-secondary" href="{_escape(_facility_all_complaints_export_href(return_context.facility_number))}">Download this facility's all complaint CSV</a>
+              <a class="button button-secondary" href="{_escape(_facility_serious_review_cue_export_href(return_context.facility_number))}">Download this facility's serious review cue CSV</a>"""
     return f"""              <a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Review packet readiness before copying or printing</a>
               <p class="helper-text">Complaint export records (source-derived): {complaint_counts['all']} all, {complaint_counts['substantiated']} substantiated, {complaint_counts['unsubstantiated']} unsubstantiated</p>
               <p class="helper-text">Serious review cue records: {serious_review_cue_count}</p>
@@ -3390,6 +3419,7 @@ def _detail_packet_links(
               <a class="button button-secondary" href="{_escape(_unsubstantiated_export_href(return_context))}">Download unsubstantiated complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_all_complaints_export_href(return_context))}">Download all complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_serious_review_cue_export_href(return_context))}">Download serious review cue CSV</a>
+{facility_scoped_links}
               <a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a>"""
 
 
