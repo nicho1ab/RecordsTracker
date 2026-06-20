@@ -758,6 +758,24 @@ def _substantiated_export_response(
     return 200, "text/csv; charset=utf-8", csv_text.encode("utf-8-sig")
 
 
+def complaint_export_attachment_filename(query: str) -> str:
+    query_values = parse_qs(query, keep_blank_values=True)
+    status = _complaint_export_status_filter(query_values)
+    facility = _complaint_export_filename_facility_segment(query_values)
+    start_date, end_date = _complaint_export_date_filters(query_values)
+
+    segments = ["complaints", status]
+    if facility is not None:
+        segments.extend(("facility", facility))
+    if start_date is not None and end_date is not None:
+        segments.extend((start_date, "to", end_date))
+    elif start_date is not None:
+        segments.extend(("from", start_date))
+    elif end_date is not None:
+        segments.extend(("to", end_date))
+    return "-".join(segments) + ".csv"
+
+
 def _complaint_export_status_filter(query_values: Mapping[str, list[str]]) -> str:
     raw_status = query_values.get("status", ["substantiated"])[0]
     normalized = raw_status.strip().lower()
@@ -770,6 +788,19 @@ def _complaint_export_facility_filter(query_values: Mapping[str, list[str]]) -> 
     raw_facility = query_values.get("facility", [""])[0]
     normalized = raw_facility.strip()
     if not normalized:
+        return None
+    return normalized
+
+
+def _complaint_export_filename_facility_segment(
+    query_values: Mapping[str, list[str]],
+) -> str | None:
+    facility = _complaint_export_facility_filter(query_values)
+    if facility is None:
+        return None
+    normalized = facility.lower()
+    allowed = set("abcdefghijklmnopqrstuvwxyz0123456789-")
+    if not normalized or any(char not in allowed for char in normalized):
         return None
     return normalized
 
