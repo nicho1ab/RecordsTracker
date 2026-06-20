@@ -169,6 +169,13 @@ The request queue uses the same checklist for queue observations and reviewer-
 detail observations, including filter confusion, source-confidence questions,
 note/status confirmation behavior, return-to-queue refresh behavior, and next-
 record navigation confusion.
+From reviewer queue export controls, open
+`http://127.0.0.1:8000/reviewer/records/substantiated` for a cross-facility
+triage list of currently loaded complaint records whose source-derived
+finding/resolution/status indicates substantiated or an equivalent source-derived
+value. Use this page as a triage aid only: values are source-derived and not
+independently verified by RecordsTracker, and an empty list means no currently
+loaded records matched (not that no substantiated public reports exist).
 Missing local/test values should be described as not available in the local/test
 record, not as public-source absence, record incompleteness, or data loss. After adding a note or status in reviewer detail, return to the
 CCLD request page and submit the same request to see updated progress.

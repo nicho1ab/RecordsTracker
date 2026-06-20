@@ -50,6 +50,7 @@ from ccld_complaints.hosted_app.reviewer_ui import (
     REVIEWER_UI_PACKET_PREVIEW_PATH,
     REVIEWER_UI_STATUS_PATH,
     REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH,
+    REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH,
     _complaint_export_status_counts,
     complaint_export_attachment_filename,
     reviewer_ui_context_for_connection,
@@ -163,6 +164,7 @@ def test_reviewer_ui_landing_shows_visible_complaint_export_controls() -> None:
     assert "Download unsubstantiated complaint CSV" in html
     assert "Download all complaint CSV" in html
     assert "Download serious review cue CSV" in html
+    assert "Open cross-facility substantiated triage" in html
     assert "Download last 30 days complaint CSV" in html
     assert "Download last 90 days complaint CSV" in html
     assert "This facility complaint export records:" in html
@@ -185,11 +187,182 @@ def test_reviewer_ui_landing_shows_visible_complaint_export_controls() -> None:
         "Global complaint exports"
     )
     assert html.index("Global complaint exports") < html.index(
+        "Open cross-facility substantiated triage"
+    )
+    assert html.index("Global complaint exports") < html.index(
         "Download substantiated complaint CSV"
     )
     assert html.index("Facility case brief") < html.index("Global complaint exports")
     assert html.index("Global complaint exports") < html.index("Worklist")
     assert "triage and navigate records" in normalized_html
+
+
+def test_reviewer_ui_substantiated_triage_lists_cross_facility_matches() -> None:
+    with _seeded_connection() as connection:
+        _set_complaint_original_values(
+            connection,
+            COMPLAINT_KEY,
+            {
+                "finding": "Substantiated",
+                "complaint_received_date": "2022-04-07",
+            },
+        )
+        second_key = _insert_substantiated_complaint_for_facility(
+            connection,
+            facility_number="157806097",
+            facility_name="SECOND FIXTURE FACILITY",
+            complaint_control_number="32-CR-20220611112233",
+            complaint_received_date="2022-06-11",
+            report_date="2022-06-14",
+            source_value_key="status",
+            source_value="Founded",
+            source_url="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806097&inx=1",
+        )
+        before_source_rows = _source_rows(connection)
+        before_counts = _table_counts(connection)
+
+        status, content_type, body = route_response(
+            REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        after_source_rows = _source_rows(connection)
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 9,
+        "reviewer_created_state": 0,
+        "audit_events": 0,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert "Cross-facility substantiated complaint triage" in html
+    assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
+    assert "SECOND FIXTURE FACILITY" in html
+    assert "Complaint received: 2022-04-07" in html
+    assert "Report date: 2022-06-14" in html
+    assert "finding: Substantiated" in html
+    assert "status: Founded" in html
+    assert f"source_record_key={quote(COMPLAINT_KEY)}" in html
+    assert f"source_record_key={quote(second_key)}" in html
+    assert "Open source report" in html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_substantiated_triage_empty_state_is_cautious() -> None:
+    with _seeded_connection() as connection:
+        before_source_rows = _source_rows(connection)
+        before_counts = _table_counts(connection)
+
+        status, content_type, body = route_response(
+            REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        after_source_rows = _source_rows(connection)
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 0,
+        "audit_events": 0,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert "No loaded substantiated/equivalent complaint records matched." in html
+    assert (
+        "Empty state means no currently loaded records matched, not that no "
+        "substantiated reports exist in the public source."
+        in html
+    )
+    assert "not independently verified by RecordsTracker" in html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_substantiated_triage_uses_safe_fallbacks() -> None:
+    with _seeded_connection() as connection:
+        _set_source_record_original_values(
+            connection,
+            "facility:ccld:facility:157806098",
+            {
+                "facility_name": None,
+            },
+        )
+        _set_complaint_original_values(
+            connection,
+            COMPLAINT_KEY,
+            {
+                "finding": None,
+                "resolution": "Substantiated",
+                "complaint_received_date": None,
+                "report_date": None,
+                "visit_date": None,
+                "date_signed": None,
+            },
+        )
+
+        status, content_type, body = route_response(
+            REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Facility/license 157806098" in html
+    assert "No complaint/report date context available in currently loaded records." in html
+    assert "resolution: Substantiated" in html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_substantiated_triage_hides_raw_narrative_and_unsupported_claims() -> None:
+    with _seeded_connection() as connection:
+        _set_complaint_original_values(
+            connection,
+            COMPLAINT_KEY,
+            {
+                "finding": "Substantiated",
+            },
+        )
+        connection.execute(
+            update(hosted_source_derived_records)
+            .where(
+                hosted_source_derived_records.c.source_record_key
+                == "allegation:ccld:allegation:32-CR-20220407124448:1"
+            )
+            .values(
+                original_values={
+                    "allegation_category": "Staff conduct",
+                    "allegation_text": "raw narrative should never appear in triage view",
+                }
+            )
+        )
+
+        status, content_type, body = route_response(
+            REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split()).casefold()
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "raw narrative should never appear in triage view" not in normalized_html
+    assert "verified severity" not in normalized_html
+    assert "not independently verified by RecordsTracker" in html
+    assert_no_secret_html(html)
 
 def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     with _seeded_connection() as connection:
@@ -2853,6 +3026,156 @@ def assert_no_correction_workflow_html(markup: str) -> None:
 def _form_bytes(payload: dict[str, str]) -> bytes:
     return urlencode(payload).encode("utf-8")
 
+
+def _set_source_record_original_values(
+    connection: Connection,
+    source_record_key: str,
+    updates: dict[str, Any],
+) -> None:
+    row = connection.execute(
+        select(hosted_source_derived_records.c.original_values).where(
+            hosted_source_derived_records.c.source_record_key == source_record_key
+        )
+    ).scalar_one()
+    original_values = dict(row)
+    original_values.update(updates)
+    connection.execute(
+        update(hosted_source_derived_records)
+        .where(hosted_source_derived_records.c.source_record_key == source_record_key)
+        .values(original_values=original_values)
+    )
+
+
+def _set_complaint_original_values(
+    connection: Connection,
+    source_record_key: str,
+    updates: dict[str, Any],
+) -> None:
+    _set_source_record_original_values(connection, source_record_key, updates)
+
+
+def _insert_substantiated_complaint_for_facility(
+    connection: Connection,
+    *,
+    facility_number: str,
+    facility_name: str,
+    complaint_control_number: str,
+    complaint_received_date: str,
+    report_date: str,
+    source_value_key: str,
+    source_value: str,
+    source_url: str,
+) -> str:
+    batch_id = connection.execute(
+        select(hosted_import_batches.c.import_batch_id)
+    ).scalar_one()
+    template_row = connection.execute(
+        select(hosted_source_derived_records).where(
+            hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY
+        )
+    ).mappings().one()
+
+    facility_id = f"ccld:facility:{facility_number}"
+    document_id = f"ccld:document:{facility_number}:1"
+    complaint_id = f"ccld:complaint:{complaint_control_number}"
+    complaint_key = f"complaint:{complaint_id}"
+    source_traceability = dict(template_row["source_traceability"])
+    source_traceability.update(
+        {
+            "source_url": source_url,
+            "raw_sha256": "f" * 64,
+            "raw_path": "tests/fixtures/ccld/raw/157806097_inx1.html",
+        }
+    )
+
+    connection.execute(
+        hosted_source_derived_records.insert().values(
+            source_record_key=f"facility:{facility_id}",
+            entity_type="facility",
+            stable_source_id=facility_id,
+            import_batch_id=batch_id,
+            source_document_id=document_id,
+            facility_id=facility_id,
+            source_url=source_url,
+            raw_sha256="f" * 64,
+            raw_path="tests/fixtures/ccld/raw/157806097_inx1.html",
+            connector_name="ccld_facility_reports",
+            connector_version="0.1.0",
+            retrieved_at="2026-06-10T00:00:00+00:00",
+            original_values={
+                "facility_id": facility_id,
+                "source_id": "ccld",
+                "external_facility_number": facility_number,
+                "facility_name": facility_name,
+                "facility_type": "Children's Center",
+                "county": "Kern",
+            },
+            source_traceability=source_traceability,
+        )
+    )
+
+    connection.execute(
+        hosted_source_derived_records.insert().values(
+            source_record_key=f"source_document:{document_id}",
+            entity_type="source_document",
+            stable_source_id=document_id,
+            import_batch_id=batch_id,
+            source_document_id=document_id,
+            facility_id=facility_id,
+            source_url=source_url,
+            raw_sha256="f" * 64,
+            raw_path="tests/fixtures/ccld/raw/157806097_inx1.html",
+            connector_name="ccld_facility_reports",
+            connector_version="0.1.0",
+            retrieved_at="2026-06-10T00:00:00+00:00",
+            original_values={
+                "document_id": document_id,
+                "source_id": "ccld",
+                "facility_id": facility_id,
+                "source_url": source_url,
+                "retrieved_at": "2026-06-10T00:00:00+00:00",
+                "raw_sha256": "f" * 64,
+                "connector_name": "ccld_facility_reports",
+                "connector_version": "0.1.0",
+                "raw_path": "tests/fixtures/ccld/raw/157806097_inx1.html",
+                "document_type": "complaint_investigation_report",
+                "report_index": 1,
+            },
+            source_traceability=source_traceability,
+        )
+    )
+
+    complaint_values: dict[str, Any] = {
+        "complaint_id": complaint_id,
+        "facility_id": facility_id,
+        "document_id": document_id,
+        "complaint_control_number": complaint_control_number,
+        "complaint_received_date": complaint_received_date,
+        "report_date": report_date,
+    }
+    complaint_values[source_value_key] = source_value
+
+    connection.execute(
+        hosted_source_derived_records.insert().values(
+            source_record_key=complaint_key,
+            entity_type="complaint",
+            stable_source_id=complaint_id,
+            import_batch_id=batch_id,
+            source_document_id=document_id,
+            facility_id=facility_id,
+            source_url=source_url,
+            raw_sha256="f" * 64,
+            raw_path="tests/fixtures/ccld/raw/157806097_inx1.html",
+            connector_name="ccld_facility_reports",
+            connector_version="0.1.0",
+            retrieved_at="2026-06-10T00:00:00+00:00",
+            original_values=complaint_values,
+            source_traceability=source_traceability,
+        )
+    )
+
+    return complaint_key
+
 def _seeded_connection() -> Connection:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     hosted_seeded_import_metadata.create_all(engine)
@@ -3060,3 +3383,4 @@ def _case_brief_record_for_priority(
         report_date_used_as_proxy=False,
         order_index=order_index,
     )
+
