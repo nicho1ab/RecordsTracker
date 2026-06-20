@@ -2478,6 +2478,45 @@ def _facility_serious_review_cue_export_href(facility_number: str) -> str:
     return f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{urlencode(query_values)}"
 
 
+def _date_range_for_days_back(reference_date: datetime, days_back: int) -> tuple[str, str]:
+    """Compute start_date and end_date for a date range N days back from reference_date.
+
+    Args:
+        reference_date: The end date (inclusive) for the range. Should be timezone-aware.
+        days_back: Number of days to go back (inclusive). E.g., days_back=30 includes
+                   the last 30 days ending on reference_date.
+
+    Returns:
+        Tuple of (start_date_str, end_date_str) in YYYY-MM-DD format.
+    """
+    from datetime import timedelta
+    if reference_date.tzinfo is None:
+        reference_date = reference_date.replace(tzinfo=UTC)
+    end_date = reference_date.date()
+    start_date = end_date - timedelta(days=days_back - 1)
+    return (start_date.isoformat(), end_date.isoformat())
+
+
+def _last_30_days_complaint_export_href(reference_date: datetime) -> str:
+    start_date, end_date = _date_range_for_days_back(reference_date, 30)
+    query_values = {
+        "status": "all",
+        "start_date": start_date,
+        "end_date": end_date,
+    }
+    return f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{urlencode(query_values)}"
+
+
+def _last_90_days_complaint_export_href(reference_date: datetime) -> str:
+    start_date, end_date = _date_range_for_days_back(reference_date, 90)
+    query_values = {
+        "status": "all",
+        "start_date": start_date,
+        "end_date": end_date,
+    }
+    return f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?{urlencode(query_values)}"
+
+
 def _packet_draft_href_for_queue(records: tuple[FacilityCaseBriefRecord, ...]) -> str:
     if not records:
         return REVIEWER_UI_PACKET_DRAFT_PATH
@@ -3410,6 +3449,9 @@ def _detail_packet_links(
     facility_serious_cue_count = _facility_serious_review_cue_record_count(
         related_records, return_context.facility_number
     )
+    now = datetime.now(UTC)
+    date_shortcut_links = f"""              <a class="button button-secondary" href="{_escape(_last_30_days_complaint_export_href(now))}">Download last 30 days complaint CSV</a>
+              <a class="button button-secondary" href="{_escape(_last_90_days_complaint_export_href(now))}">Download last 90 days complaint CSV</a>"""
     facility_scoped_links = f"""              <p class="helper-text">This facility complaint export records: {facility_complaint_counts['all']} all, {facility_complaint_counts['substantiated']} substantiated, {facility_complaint_counts['unsubstantiated']} unsubstantiated, {facility_serious_cue_count} serious review cue</p>
               <p class="helper-text">Use these facility CSV links when reviewing this facility. Use the global complaint exports to compare records across facilities.</p>
               <p class="helper-text">Facility-scoped complaint exports (for {_escape(return_context.facility_number)})</p>
@@ -3427,6 +3469,7 @@ def _detail_packet_links(
               <a class="button button-secondary" href="{_escape(_unsubstantiated_export_href(return_context))}">Download unsubstantiated complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_all_complaints_export_href(return_context))}">Download all complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_serious_review_cue_export_href(return_context))}">Download serious review cue CSV</a>
+{date_shortcut_links}
 {facility_scoped_links}
               <a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a>"""
 

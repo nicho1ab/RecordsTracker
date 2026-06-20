@@ -750,6 +750,13 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert html.index(
         "Download all complaint CSV"
     ) < html.index("This facility complaint export records:")
+    assert "Download last 30 days complaint CSV" in html
+    assert "Download last 90 days complaint CSV" in html
+    assert f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?status=all&amp;start_date=" in html
+    assert "&amp;end_date=" in html
+    assert html.index("Download serious review cue CSV") < html.index(
+        "Download last 30 days complaint CSV"
+    )
     assert (
         "Use these facility CSV links when reviewing this facility. "
         "Use the global complaint exports to compare records across facilities."
