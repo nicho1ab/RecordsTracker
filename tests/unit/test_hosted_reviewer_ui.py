@@ -707,6 +707,13 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
         "Serious review cues are deterministic keyword-based review aids and are not "
         "verified severity findings."
     ) < html.index("Download serious review cue CSV")
+    assert "Global complaint exports" in html
+    assert html.index("Serious review cue records: 0") < html.index(
+        "Global complaint exports"
+    )
+    assert html.index("Global complaint exports") < html.index(
+        "Download substantiated complaint CSV"
+    )
     assert (
         "Start with the substantiated complaint CSV for the clearest first review set. "
         "Use the serious review cue CSV to triage possible priority topics across all "
@@ -745,7 +752,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
         "Use CSV exports to triage and navigate records."
     ) < html.index("Download local/test complaint review matrix CSV")
     assert "This facility complaint export records:" in html
-    assert "Facility-scoped complaint exports" in html
+    assert "This facility complaint exports" in html
     assert "Download this facility's substantiated complaint CSV" in html
     assert "Download this facility's all complaint CSV" in html
     assert "Download this facility's serious review cue CSV" in html
@@ -790,6 +797,12 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert html.index(
         "This facility complaint export records:"
     ) < html.index("Use these facility CSV links")
+    assert html.index("Use these facility CSV links") < html.index(
+        "This facility complaint exports"
+    )
+    assert html.index("This facility complaint exports") < html.index(
+        "Download this facility's substantiated complaint CSV"
+    )
     assert (
         f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?facility_number=157806098"
         "&amp;start_date=&amp;end_date=&amp;request_context_origin=prefilled_link"
