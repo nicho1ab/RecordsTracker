@@ -751,6 +751,15 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
         "Download all complaint CSV"
     ) < html.index("This facility complaint export records:")
     assert (
+        "Use these facility CSV links when reviewing this facility. "
+        "Use the global complaint exports to compare records across facilities."
+    ) in html
+    assert "Use these facility CSV links" in normalized_html
+    assert "compare records across facilities" in normalized_html
+    assert html.index(
+        "This facility complaint export records:"
+    ) < html.index("Use these facility CSV links")
+    assert (
         f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?facility_number=157806098"
         "&amp;start_date=&amp;end_date=&amp;request_context_origin=prefilled_link"
         "&amp;lookup_facility_name=&amp;facility=157806098"
