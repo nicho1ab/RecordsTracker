@@ -3502,6 +3502,8 @@ def _render_complaint_export_controls(
               <a class="button button-secondary" href="{_escape(_facility_last_30_days_complaint_export_href(return_context.facility_number, now))}">Download this facility's last 30 days complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_facility_last_90_days_complaint_export_href(return_context.facility_number, now))}">Download this facility's last 90 days complaint CSV</a>"""
     return f"""<section id="complaint-export-controls" aria-labelledby="complaint-export-controls-heading">
+              <p class="helper-text" id="review-matrix-export-heading">Local/test review matrix export</p>
+              <a class="button button-secondary" href="{_escape(_matrix_export_href(return_context))}">Download local/test complaint review matrix CSV</a>
               <p class="helper-text" id="complaint-export-controls-heading">Global complaint exports</p>
               <p class="helper-text">Complaint export records (source-derived): {complaint_counts['all']} all, {complaint_counts['substantiated']} substantiated, {complaint_counts['unsubstantiated']} unsubstantiated</p>
               <p class="helper-text">Serious review cue records: {serious_review_cue_count}</p>
@@ -3509,7 +3511,6 @@ def _render_complaint_export_controls(
               <p class="helper-text">Start with the substantiated complaint CSV for the clearest first review set. Use the serious review cue CSV to triage possible priority topics across all complaint statuses.</p>
               <p class="helper-text">CSV exports include facility name, complaint received date, complaint status, source link, and serious review cue.</p>
               <p class="helper-text">Use CSV exports to triage and navigate records. Open the linked source record before relying on exported values.</p>
-              <a class="button button-secondary" href="{_escape(_matrix_export_href(return_context))}">Download local/test complaint review matrix CSV</a>
               <a class="button button-secondary" href="{_escape(_substantiated_export_href(return_context))}">Download substantiated complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_unsubstantiated_export_href(return_context))}">Download unsubstantiated complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_all_complaints_export_href(return_context))}">Download all complaint CSV</a>
