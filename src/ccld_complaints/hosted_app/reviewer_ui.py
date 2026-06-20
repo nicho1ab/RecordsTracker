@@ -3411,6 +3411,7 @@ def _detail_packet_links(
         related_records, return_context.facility_number
     )
     facility_scoped_links = f"""              <p class="helper-text">This facility complaint export records: {facility_complaint_counts['all']} all, {facility_complaint_counts['substantiated']} substantiated, {facility_complaint_counts['unsubstantiated']} unsubstantiated, {facility_serious_cue_count} serious review cue</p>
+              <p class="helper-text">Use these facility CSV links when reviewing this facility. Use the global complaint exports to compare records across facilities.</p>
               <p class="helper-text">Facility-scoped complaint exports (for {_escape(return_context.facility_number)})</p>
               <a class="button button-secondary" href="{_escape(_facility_substantiated_export_href(return_context.facility_number))}">Download this facility's substantiated complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_facility_all_complaints_export_href(return_context.facility_number))}">Download this facility's all complaint CSV</a>
