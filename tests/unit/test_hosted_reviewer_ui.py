@@ -67,7 +67,6 @@ TEST_SCOPE = LOCAL_REVIEWER_UI_SCOPE
 OTHER_SCOPE = HostedAccessScope("seeded_corpus", "different-seeded-corpus")
 COMPLAINT_KEY = "complaint:ccld:complaint:32-CR-20220407124448"
 
-
 def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     with _seeded_connection() as connection:
         status, content_type, body = route_response(
@@ -138,7 +137,6 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert "Open record 32-CR-20220407124448" in html
     assert_no_secret_html(html)
 
-
 def test_reviewer_ui_landing_shows_visible_complaint_export_controls() -> None:
     with _seeded_connection() as connection:
         status, content_type, body = route_response(
@@ -152,6 +150,8 @@ def test_reviewer_ui_landing_shows_visible_complaint_export_controls() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert 'id="complaint-export-controls"' in html
+    assert "Local/test review matrix export" in html
+    assert "Download local/test complaint review matrix CSV" in html
     assert "Global complaint exports" in html
     assert "Complaint export records (source-derived):" in html
     assert "Serious review cue records:" in html
@@ -178,10 +178,18 @@ def test_reviewer_ui_landing_shows_visible_complaint_export_controls() -> None:
     ) in html
     assert "Facility case brief" in html
     assert "Worklist" in html
+    assert html.index("Local/test review matrix export") < html.index(
+        "Download local/test complaint review matrix CSV"
+    )
+    assert html.index("Download local/test complaint review matrix CSV") < html.index(
+        "Global complaint exports"
+    )
+    assert html.index("Global complaint exports") < html.index(
+        "Download substantiated complaint CSV"
+    )
     assert html.index("Facility case brief") < html.index("Global complaint exports")
     assert html.index("Global complaint exports") < html.index("Worklist")
     assert "triage and navigate records" in normalized_html
-
 
 def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     with _seeded_connection() as connection:
@@ -324,7 +332,6 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert_no_correction_workflow_html(html)
     assert_no_secret_html(html)
 
-
 def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> None:
     with _seeded_connection() as connection:
         create_reviewer_note_scaffold(
@@ -461,7 +468,6 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> 
     assert_no_correction_workflow_html(html)
     assert_no_secret_html(html)
 
-
 def test_reviewer_packet_draft_without_context_shows_context_needed_state() -> None:
     with _seeded_connection() as connection:
         before_counts = _table_counts(connection)
@@ -493,7 +499,6 @@ def test_reviewer_packet_draft_without_context_shows_context_needed_state() -> N
     assert "Date range: not provided" not in html
     assert_no_secret_html(html)
 
-
 def test_reviewer_packet_preview_without_context_shows_context_needed() -> None:
     with _seeded_connection() as connection:
         before_counts = _table_counts(connection)
@@ -523,7 +528,6 @@ def test_reviewer_packet_preview_without_context_shows_context_needed() -> None:
     assert "not a certified report" in html
     assert "Date range: not provided" not in html
     assert_no_secret_html(html)
-
 
 def test_reviewer_ui_landing_shows_reviewer_created_state_indicators() -> None:
     with _seeded_connection() as connection:
@@ -564,7 +568,6 @@ def test_reviewer_ui_landing_shows_reviewer_created_state_indicators() -> None:
     assert "No reviewer-created note/status yet" not in html
     assert_no_secret_html(html)
 
-
 def test_reviewer_ui_landing_supports_simple_search() -> None:
     with _seeded_connection() as connection:
         matched_status, _content_type, matched_body = route_response(
@@ -589,7 +592,6 @@ def test_reviewer_ui_landing_supports_simple_search() -> None:
     assert "No matching seeded reviewer records" in empty_html
     assert "Clear search" in empty_html
     assert "Return to reviewer home" in empty_html
-
 
 def test_reviewer_priority_prefers_records_without_reviewer_created_state_then_flags() -> None:
     reviewed_stronger_flag = _case_brief_record_for_priority(
@@ -620,7 +622,6 @@ def test_reviewer_priority_prefers_records_without_reviewer_created_state_then_f
 
     assert selected.source_record_key == "unreviewed-stronger-record"
 
-
 def test_reviewer_ui_missing_detail_record_has_clear_next_step() -> None:
     with _seeded_connection() as connection:
         missing_key_status, _content_type, missing_key_body = route_response(
@@ -647,7 +648,6 @@ def test_reviewer_ui_missing_detail_record_has_clear_next_step() -> None:
     assert "Return to reviewer records" in invalid_key_html
     assert_no_secret_html(missing_key_html)
     assert_no_secret_html(invalid_key_html)
-
 
 def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     with _seeded_connection() as connection:
@@ -768,9 +768,23 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert html.index("Serious review cue records: 0") < html.index(
         "Start with the substantiated complaint CSV"
     )
-    assert html.index(
-        "Start with the substantiated complaint CSV"
-    ) < html.index("Download local/test complaint review matrix CSV")
+    assert "Local/test review matrix export" in html
+    matrix_heading_index = html.index("Local/test review matrix export")
+    matrix_link_index = html.index("Download local/test complaint review matrix CSV")
+    global_exports_index = html.index("Global complaint exports")
+    cue_count_index = html.index("Serious review cue records: 0")
+    download_hint_index = html.index("Start with the substantiated complaint CSV")
+    field_summary_index = html.index("CSV exports include")
+    source_guidance_index = html.index("Use CSV exports to triage and navigate records.")
+    substantiated_export_index = html.index("Download substantiated complaint CSV")
+
+    assert matrix_heading_index < matrix_link_index
+    assert matrix_link_index < global_exports_index
+    assert global_exports_index < cue_count_index
+    assert cue_count_index < download_hint_index
+    assert download_hint_index < field_summary_index
+    assert field_summary_index < source_guidance_index
+    assert source_guidance_index < substantiated_export_index
     assert (
         "CSV exports include facility name, complaint received date, complaint status, "
         "source link, and serious review cue."
@@ -780,21 +794,14 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "complaint status" in normalized_html
     assert "source link" in normalized_html
     assert "serious review cue" in normalized_html
-    assert html.index(
-        "CSV exports include"
-    ) < html.index("Download local/test complaint review matrix CSV")
+
     assert (
         "Use CSV exports to triage and navigate records. "
         "Open the linked source record before relying on exported values."
     ) in html
     assert "triage and navigate records" in normalized_html
     assert "Open the linked source record" in normalized_html
-    assert html.index("CSV exports include") < html.index(
-        "Use CSV exports to triage and navigate records."
-    )
-    assert html.index(
-        "Use CSV exports to triage and navigate records."
-    ) < html.index("Download local/test complaint review matrix CSV")
+
     assert "This facility complaint export records:" in html
     assert "This facility complaint exports" in html
     assert "Download this facility's substantiated complaint CSV" in html
@@ -1122,7 +1129,6 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "/ccld/help" in html
     assert_no_secret_html(html)
 
-
 def test_reviewer_ui_complaint_export_section_smoke_regression() -> None:
     with _seeded_connection() as connection:
         status, content_type, body = route_response(
@@ -1194,7 +1200,6 @@ def test_reviewer_ui_complaint_export_section_smoke_regression() -> None:
     assert record["Facility/License Number"] == "157806098"
     assert record["Complaint Control Number"] == "32-CR-20220407124448"
 
-
 def test_complaint_export_status_counts_align_with_status_filter_semantics() -> None:
     counts = _complaint_export_status_counts(
         [
@@ -1226,7 +1231,6 @@ def test_complaint_export_status_counts_align_with_status_filter_semantics() -> 
         "substantiated": 1,
         "unsubstantiated": 1,
     }
-
 
 def test_reviewer_ui_matrix_export_returns_excel_ready_csv_without_mutation() -> None:
     with _seeded_connection() as connection:
@@ -1308,7 +1312,6 @@ def test_reviewer_ui_matrix_export_returns_excel_ready_csv_without_mutation() ->
     assert "source complete" not in csv_text.casefold()
     assert "export approved" not in csv_text.casefold()
 
-
 def test_reviewer_ui_substantiated_export_returns_excel_ready_csv_without_mutation() -> None:
     with _seeded_connection() as connection:
         create_reviewer_note_scaffold(
@@ -1383,7 +1386,6 @@ def test_reviewer_ui_substantiated_export_returns_excel_ready_csv_without_mutati
     assert "C:\\" not in csv_text
     assert "provider_subject" not in csv_text
     assert "token" not in csv_text.casefold()
-
 
 @pytest.mark.parametrize(
     ("status_value", "finding_value", "facility_value", "expect_row"),
@@ -1479,7 +1481,6 @@ def test_reviewer_ui_complaint_export_status_query_filters_without_mutation(
     assert "C:\\" not in csv_text
     assert "provider_subject" not in csv_text
     assert "token" not in csv_text.casefold()
-
 
 @pytest.mark.parametrize(
     (
@@ -1590,7 +1591,6 @@ def test_reviewer_ui_complaint_export_date_query_filters_without_mutation(
     assert "provider_subject" not in csv_text
     assert "token" not in csv_text.casefold()
 
-
 @pytest.mark.parametrize(
     ("finding_value", "allegation_category", "expect_cue"),
     (
@@ -1690,7 +1690,6 @@ def test_reviewer_ui_complaint_export_serious_review_cue_without_mutation(
     assert "provider_subject" not in csv_text
     assert "token" not in csv_text.casefold()
 
-
 def test_reviewer_ui_complaint_export_default_filename_is_attachment() -> None:
     path = (
         f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?"
@@ -1708,7 +1707,6 @@ def test_reviewer_ui_complaint_export_default_filename_is_attachment() -> None:
     assert complaint_export_attachment_filename("request_context_origin=manual_entry") == (
         "complaints-substantiated.csv"
     )
-
 
 @pytest.mark.parametrize(
     ("query", "expected_filename"),
@@ -1741,7 +1739,6 @@ def test_reviewer_ui_complaint_export_filename_segments_are_deterministic(
     assert status == 200
     assert content_type == "text/csv; charset=utf-8"
     assert complaint_export_attachment_filename(query) == expected_filename
-
 
 def test_reviewer_ui_complaint_export_csv_body_header_unchanged_for_filtered_export() -> None:
     with _seeded_connection() as connection:
@@ -1779,7 +1776,6 @@ def test_reviewer_ui_complaint_export_csv_body_header_unchanged_for_filtered_exp
     assert record["Facility/License Number"] == "157806098"
     assert record["Complaint Received Date"] == "2022-04-07"
     assert record["Complaint Control Number"] == "32-CR-20220407124448"
-
 
 @pytest.mark.parametrize(
     (
@@ -1914,7 +1910,6 @@ def test_reviewer_ui_complaint_export_review_cue_query_filter_without_mutation(
     assert "provider_subject" not in csv_text
     assert "token" not in csv_text.casefold()
 
-
 def test_reviewer_ui_matrix_export_empty_context_is_safe() -> None:
     with _seeded_connection() as connection:
         before_source_rows = _source_rows(connection)
@@ -1955,7 +1950,6 @@ def test_reviewer_ui_matrix_export_empty_context_is_safe() -> None:
     assert "not a complaint-coverage determination" in row["export_boundary"]
     assert "no complaints found" not in csv_text.casefold()
 
-
 def test_reviewer_ui_detail_missing_traceability_uses_clear_non_conclusive_wording() -> None:
     with _seeded_connection() as connection:
         connection.execute(update(hosted_source_derived_records).values(raw_path=None))
@@ -1995,7 +1989,6 @@ def test_reviewer_ui_detail_missing_traceability_uses_clear_non_conclusive_wordi
     assert "does not make legal, facility-wide, completeness" in normalized_html
     assert_no_secret_html(html)
 
-
 def test_reviewer_ui_detail_preserves_direct_queue_request_context() -> None:
     with _seeded_connection() as connection:
         before_counts = _table_counts(connection)
@@ -2033,7 +2026,6 @@ def test_reviewer_ui_detail_preserves_direct_queue_request_context() -> None:
     assert "verified abuse" not in normalized_html.casefold()
     assert "complete source record" not in normalized_html.casefold()
     assert_no_secret_html(html)
-
 
 def test_reviewer_ui_detail_shows_serious_review_cue_count_when_present() -> None:
     with _seeded_connection() as connection:
@@ -2078,7 +2070,6 @@ def test_reviewer_ui_detail_shows_serious_review_cue_count_when_present() -> Non
     assert f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?facility_number=157806098" in html
     assert "review_cue=serious" in html
     assert_no_secret_html(html)
-
 
 def test_reviewer_ui_detail_links_signal_only_facility_context_without_mutation(
     monkeypatch: pytest.MonkeyPatch,
@@ -2157,7 +2148,6 @@ def test_reviewer_ui_detail_links_signal_only_facility_context_without_mutation(
     assert "correction applied" not in normalized_html
     assert_no_secret_html(html)
 
-
 def test_reviewer_ui_detail_distinguishes_directory_backed_facility_context(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -2188,7 +2178,6 @@ def test_reviewer_ui_detail_distinguishes_directory_backed_facility_context(
     assert "Return to facility hub" in html
     assert "signal-only facility hub" not in html
     assert_no_secret_html(html)
-
 
 def test_reviewer_ui_detail_shows_manual_context_when_facility_hub_unavailable(
     monkeypatch: pytest.MonkeyPatch,
@@ -2230,7 +2219,6 @@ def test_reviewer_ui_detail_shows_manual_context_when_facility_hub_unavailable(
     assert "Return to facility review priority list" in html
     assert "Start complaint request if needed" in html
     assert_no_secret_html(html)
-
 
 def test_reviewer_ui_detail_source_confidence_proxy_cues_are_non_mutating() -> None:
     with _seeded_connection() as connection:
@@ -2286,7 +2274,6 @@ def test_reviewer_ui_detail_source_confidence_proxy_cues_are_non_mutating() -> N
     assert "public-source absence finding" in html
     assert_no_secret_html(html)
 
-
 def test_reviewer_ui_detail_render_is_non_mutating() -> None:
     with _seeded_connection() as connection:
         before_source_rows = _source_rows(connection)
@@ -2316,7 +2303,6 @@ def test_reviewer_ui_detail_render_is_non_mutating() -> None:
     assert "Field-note guidance" in html
     assert "Feedback clues for this record" in html
     assert_no_secret_html(html)
-
 
 def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write() -> None:
     with _seeded_connection() as connection:
@@ -2423,7 +2409,6 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     ]
     assert_no_secret_html(html)
 
-
 def test_reviewer_ui_invalid_note_submission_has_clear_error_without_mutation() -> None:
     with _seeded_connection() as connection:
         missing_status, _content_type, missing_body = route_response(
@@ -2469,7 +2454,6 @@ def test_reviewer_ui_invalid_note_submission_has_clear_error_without_mutation() 
     assert counts["audit_events"] == 0
     assert_no_secret_html(missing_html)
     assert_no_secret_html(blocked_value_html)
-
 
 def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_write() -> None:
     with _seeded_connection() as connection:
@@ -2575,7 +2559,6 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     ]
     assert_no_secret_html(html)
 
-
 def test_reviewer_ui_invalid_status_submission_has_clear_error_without_mutation() -> None:
     with _seeded_connection() as connection:
         missing_status, _content_type, missing_body = route_response(
@@ -2622,7 +2605,6 @@ def test_reviewer_ui_invalid_status_submission_has_clear_error_without_mutation(
     assert_no_secret_html(missing_html)
     assert_no_secret_html(invalid_html)
 
-
 def test_reviewer_status_values_do_not_add_correction_workflow_status() -> None:
     assert "correction" not in " ".join(REVIEWER_STATUS_VALUES).casefold()
     assert set(REVIEWER_STATUS_VALUES) == {
@@ -2632,7 +2614,6 @@ def test_reviewer_status_values_do_not_add_correction_workflow_status() -> None:
         "blocked",
         "needs_follow_up",
     }
-
 
 def test_reviewer_ui_note_status_writes_are_visible_on_list_after_write() -> None:
     with _seeded_connection() as connection:
@@ -2697,7 +2678,6 @@ def test_reviewer_ui_note_status_writes_are_visible_on_list_after_write() -> Non
     assert "No reviewer-created note/status yet" not in list_html
     assert_no_secret_html(list_html)
 
-
 @pytest.mark.parametrize(
     ("actor_case", "expected_status", "expected_text"),
     [
@@ -2744,7 +2724,6 @@ def test_reviewer_ui_rejects_blocked_list_contexts(
     assert "Return to reviewer records" in html
     assert_no_secret_html(html)
 
-
 def test_reviewer_ui_rejects_source_read_without_reviewer_state_read_on_detail() -> None:
     with _seeded_connection() as connection:
         status, _content_type, body = route_response(
@@ -2764,7 +2743,6 @@ def test_reviewer_ui_rejects_source_read_without_reviewer_state_read_on_detail()
     assert "Return to reviewer records" in html
     assert_no_secret_html(html)
 
-
 def test_reviewer_ui_rejects_source_read_without_reviewer_state_read_on_list() -> None:
     with _seeded_connection() as connection:
         status, _content_type, body = route_response(
@@ -2783,7 +2761,6 @@ def test_reviewer_ui_rejects_source_read_without_reviewer_state_read_on_list() -
     assert "What you can do next" in html
     assert "Return to reviewer records" in html
     assert_no_secret_html(html)
-
 
 def test_reviewer_ui_rejects_note_write_without_reviewer_state_write() -> None:
     with _seeded_connection() as connection:
@@ -2812,7 +2789,6 @@ def test_reviewer_ui_rejects_note_write_without_reviewer_state_write() -> None:
     assert counts["audit_events"] == 0
     assert_no_secret_html(html)
 
-
 def test_reviewer_ui_default_route_context_is_browser_accessible() -> None:
     status, content_type, body = route_response(
         "/reviewer",
@@ -2827,7 +2803,6 @@ def test_reviewer_ui_default_route_context_is_browser_accessible() -> None:
     assert "32-CR-20220407124448" in html
     assert_no_secret_html(html)
 
-
 def _local_dev_auth_config() -> Any:
     return load_hosted_auth_runtime_config(
         environ={
@@ -2835,7 +2810,6 @@ def _local_dev_auth_config() -> Any:
             "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
         }
     )
-
 
 def assert_no_secret_html(markup: str) -> None:
     lowered = markup.casefold()
@@ -2857,7 +2831,6 @@ def assert_no_secret_html(markup: str) -> None:
     ]:
         assert marker not in lowered
 
-
 def assert_no_correction_workflow_html(markup: str) -> None:
     lowered = " ".join(markup.casefold().split())
     for marker in [
@@ -2877,10 +2850,8 @@ def assert_no_correction_workflow_html(markup: str) -> None:
     ]:
         assert marker not in lowered
 
-
 def _form_bytes(payload: dict[str, str]) -> bytes:
     return urlencode(payload).encode("utf-8")
-
 
 def _seeded_connection() -> Connection:
     engine = create_engine("sqlite+pysqlite:///:memory:")
@@ -2891,7 +2862,6 @@ def _seeded_connection() -> Connection:
     import_seeded_corpus_artifact(connection, artifact)
     transaction.commit()
     return connection
-
 
 def _actor(
     *,
@@ -2913,7 +2883,6 @@ def _actor(
         scopes=scopes,
     )
 
-
 def _source_rows(connection: Connection) -> list[dict[str, Any]]:
     rows = connection.execute(
         select(hosted_source_derived_records).order_by(
@@ -2921,7 +2890,6 @@ def _source_rows(connection: Connection) -> list[dict[str, Any]]:
         )
     ).mappings()
     return [dict(row) for row in rows]
-
 
 def _table_counts(connection: Connection) -> dict[str, int]:
     import_batches = connection.execute(
@@ -2946,7 +2914,6 @@ def _table_counts(connection: Connection) -> dict[str, int]:
         "audit_events": audit_events,
         "reset_reload_planning_metadata": reset_reload_planning_metadata,
     }
-
 
 def _write_chhs_facility_directory_csv(
     path: Path,
@@ -2984,7 +2951,6 @@ def _write_chhs_facility_directory_csv(
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
-
 
 def _write_program_summary_signals_csv(
     path: Path,
@@ -3062,7 +3028,6 @@ def _write_program_summary_signals_csv(
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerow(row)
-
 
 def _case_brief_record_for_priority(
     source_record_key: str,
