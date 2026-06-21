@@ -1070,3 +1070,353 @@ def _facility_overview_headers() -> tuple[str, ...]:
 def _substantiated_complaints_headers() -> tuple[str, ...]:
     from ccld_complaints.stakeholder_extract import _SUBSTANTIATED_COMPLAINTS_FIELDS
     return _SUBSTANTIATED_COMPLAINTS_FIELDS
+
+
+def _insert_allegation(
+    conn: sqlite3.Connection,
+    *,
+    aid: str,
+    cid: str,
+    allegation_text: str = "allegation text",
+    category: str | None = None,
+) -> None:
+    conn.execute(
+        """
+        INSERT INTO allegations
+            (allegation_id, complaint_id, allegation_text, allegation_category)
+        VALUES (?, ?, ?, ?)
+        """,
+        (aid, cid, allegation_text, category),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tests: complaint-records.csv
+# ---------------------------------------------------------------------------
+
+
+class TestComplaintRecordsExport:
+    def _make_two_complaint_db(
+        self, tmp_path: Path
+    ) -> tuple[Path, Path]:
+        """Return (db_path, extracts_root) with one substantiated + one unsubstantiated."""
+        conn = _make_db()
+        _insert_facility(conn, fid="f1", fnum="100001", name="Alpha Care")
+        _insert_source_doc(conn, doc_id="d1", fid="f1", url="http://example.test/1")
+        _insert_source_doc(conn, doc_id="d2", fid="f1", url="http://example.test/2")
+        _insert_complaint(
+            conn, cid="c1", fid="f1", doc_id="d1",
+            control_number="CR-001", finding="Substantiated",
+        )
+        _insert_complaint(
+            conn, cid="c2", fid="f1", doc_id="d2",
+            control_number="CR-002", finding="Unsubstantiated",
+        )
+        conn.commit()
+        db_path = tmp_path / "test.sqlite"
+        _save_db(conn, db_path)
+        return db_path, tmp_path / "extracts"
+
+    def test_complaint_records_includes_all_complaint_statuses(
+        self, tmp_path: Path
+    ) -> None:
+        """complaint-records.csv has both substantiated and non-substantiated rows."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        rows = _read_csv(result.complaint_records_path)
+        control_numbers = {r["ComplaintControlNumber"] for r in rows}
+        assert "CR-001" in control_numbers
+        assert "CR-002" in control_numbers
+        assert result.complaint_record_row_count == 2
+
+    def test_substantiated_complaints_csv_unchanged(self, tmp_path: Path) -> None:
+        """substantiated-complaints.csv still contains only substantiated/equivalent."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        sub_rows = _read_csv(result.substantiated_complaints_path)
+        assert len(sub_rows) == 1
+        assert sub_rows[0]["ComplaintControlNumber"] == "CR-001"
+        assert result.substantiated_complaint_row_count == 1
+
+    def test_complaint_records_excludes_raw_narrative_text(
+        self, tmp_path: Path
+    ) -> None:
+        """complaint-records.csv columns must not include allegation_text."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        raw = _read_csv_raw(result.complaint_records_path)
+        headers = raw[0]
+        prohibited = {"allegation_text", "AllegationText", "allegation text"}
+        assert not prohibited.intersection(set(headers))
+        # Also verify no row cell contains the raw string "allegation text"
+        for data_row in raw[1:]:
+            assert "allegation text" not in " ".join(data_row).casefold()
+
+    def test_manifest_includes_complaint_record_row_count(
+        self, tmp_path: Path
+    ) -> None:
+        """manifest.json has complaint_record_row_count and complaint-records.csv."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+        assert "complaint_record_row_count" in manifest
+        assert manifest["complaint_record_row_count"] == 2
+        assert "complaint-records.csv" in manifest["output_files"]
+
+    def test_readme_explains_complaint_records(self, tmp_path: Path) -> None:
+        """README.md mentions complaint-records.csv and its cautious limitations."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        readme = result.readme_path.read_text(encoding="utf-8")
+        assert "complaint-records.csv" in readme
+        assert "KeywordReviewCues" in readme
+        assert "review-cue" in readme.casefold()
+        assert "not a severity score" in readme.casefold()
+
+    def test_missing_category_and_type_become_not_available(
+        self, tmp_path: Path
+    ) -> None:
+        """Missing AllegationCategory and ComplaintType become 'not available'."""
+        conn = _make_db()
+        _insert_facility(conn, fid="f1", fnum="100001")
+        _insert_source_doc(
+            conn, doc_id="d1", fid="f1", url="http://example.test/1"
+        )
+        _insert_complaint(
+            conn, cid="c1", fid="f1", doc_id="d1",
+            control_number="CR-001", finding="Unsubstantiated",
+        )
+        conn.commit()
+        db_path = tmp_path / "test.sqlite"
+        _save_db(conn, db_path)
+
+        result = export_stakeholder_facility_overview(db_path, tmp_path / "extracts")
+        rows = _read_csv(result.complaint_records_path)
+        assert rows[0]["AllegationCategory"] == UNKNOWN
+        assert rows[0]["ComplaintType"] == UNKNOWN
+
+    def test_finding_group_derived_from_source_finding(
+        self, tmp_path: Path
+    ) -> None:
+        """FindingGroup values come from source-derived finding text only."""
+        conn = _make_db()
+        _insert_facility(conn, fid="f1", fnum="100001")
+        for i, (doc_id, ctrl, finding) in enumerate([
+            ("d1", "CR-001", "Substantiated"),
+            ("d2", "CR-002", "Unsubstantiated"),
+            ("d3", "CR-003", ""),
+        ]):
+            _insert_source_doc(
+                conn, doc_id=doc_id, fid="f1",
+                url=f"http://example.test/{i}",
+            )
+            _insert_complaint(
+                conn, cid=f"c{i}", fid="f1", doc_id=doc_id,
+                control_number=ctrl, finding=finding,
+            )
+        conn.commit()
+        db_path = tmp_path / "test.sqlite"
+        _save_db(conn, db_path)
+
+        result = export_stakeholder_facility_overview(db_path, tmp_path / "extracts")
+        rows = _read_csv(result.complaint_records_path)
+        by_ctrl = {r["ComplaintControlNumber"]: r["FindingGroup"] for r in rows}
+        assert by_ctrl["CR-001"] == "SubstantiatedOrEquivalent"
+        assert by_ctrl["CR-002"] == "NotSubstantiatedOrEquivalent"
+        assert by_ctrl["CR-003"] == "UnknownOrMissing"
+
+    def test_keyword_review_cue_from_finding(self, tmp_path: Path) -> None:
+        """KeywordReviewCues fires when finding contains a review-cue keyword."""
+        conn = _make_db()
+        _insert_facility(conn, fid="f1", fnum="100001")
+        _insert_source_doc(conn, doc_id="d1", fid="f1", url="http://example.test/1")
+        _insert_complaint(
+            conn, cid="c1", fid="f1", doc_id="d1",
+            control_number="CR-001", finding="Substantiated - Abuse",
+        )
+        conn.commit()
+        db_path = tmp_path / "test.sqlite"
+        _save_db(conn, db_path)
+
+        result = export_stakeholder_facility_overview(db_path, tmp_path / "extracts")
+        rows = _read_csv(result.complaint_records_path)
+        assert rows[0]["KeywordReviewCues"] == "Possible serious allegation topic"
+
+    def test_keyword_review_cue_from_allegation_category(
+        self, tmp_path: Path
+    ) -> None:
+        """KeywordReviewCues fires when allegation_category matches a keyword."""
+        conn = _make_db()
+        _insert_facility(conn, fid="f1", fnum="100001")
+        _insert_source_doc(conn, doc_id="d1", fid="f1", url="http://example.test/1")
+        _insert_complaint(
+            conn, cid="c1", fid="f1", doc_id="d1",
+            control_number="CR-001", finding="Unsubstantiated",
+        )
+        _insert_allegation(
+            conn, aid="a1", cid="c1", category="Physical Abuse",
+        )
+        conn.commit()
+        db_path = tmp_path / "test.sqlite"
+        _save_db(conn, db_path)
+
+        result = export_stakeholder_facility_overview(db_path, tmp_path / "extracts")
+        rows = _read_csv(result.complaint_records_path)
+        assert rows[0]["KeywordReviewCues"] == "Possible serious allegation topic"
+
+    def test_keyword_review_cue_not_available_when_no_match(
+        self, tmp_path: Path
+    ) -> None:
+        """KeywordReviewCues is UNKNOWN when no keyword matches."""
+        conn = _make_db()
+        _insert_facility(conn, fid="f1", fnum="100001")
+        _insert_source_doc(conn, doc_id="d1", fid="f1", url="http://example.test/1")
+        _insert_complaint(
+            conn, cid="c1", fid="f1", doc_id="d1",
+            control_number="CR-001", finding="Unsubstantiated",
+        )
+        _insert_allegation(conn, aid="a1", cid="c1", category="Licensing Violation")
+        conn.commit()
+        db_path = tmp_path / "test.sqlite"
+        _save_db(conn, db_path)
+
+        result = export_stakeholder_facility_overview(db_path, tmp_path / "extracts")
+        rows = _read_csv(result.complaint_records_path)
+        assert rows[0]["KeywordReviewCues"] == UNKNOWN
+
+    def test_allegation_category_populated_from_allegations_table(
+        self, tmp_path: Path
+    ) -> None:
+        """AllegationCategory in complaint-records.csv comes from allegations table."""
+        conn = _make_db()
+        _insert_facility(conn, fid="f1", fnum="100001")
+        _insert_source_doc(conn, doc_id="d1", fid="f1", url="http://example.test/1")
+        _insert_complaint(
+            conn, cid="c1", fid="f1", doc_id="d1",
+            control_number="CR-001", finding="Unsubstantiated",
+        )
+        _insert_allegation(conn, aid="a1", cid="c1", category="Neglect")
+        conn.commit()
+        db_path = tmp_path / "test.sqlite"
+        _save_db(conn, db_path)
+
+        result = export_stakeholder_facility_overview(db_path, tmp_path / "extracts")
+        rows = _read_csv(result.complaint_records_path)
+        assert "Neglect" in rows[0]["AllegationCategory"]
+
+    def test_complaint_records_in_zip(self, tmp_path: Path) -> None:
+        """complaint-records.csv is included in the ZIP package."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        with zipfile.ZipFile(result.zip_path) as zf:
+            names = zf.namelist()
+        assert "complaint-records.csv" in names
+
+    def test_complaint_records_respects_only_facility_reference_rows(
+        self, tmp_path: Path
+    ) -> None:
+        """complaint-records.csv excludes non-reference facilities when filter enabled."""
+        conn = _make_db()
+        # Reference facility
+        _insert_facility(conn, fid="f1", fnum="100001", name="In Reference")
+        _insert_source_doc(conn, doc_id="d1", fid="f1", url="http://example.test/1")
+        _insert_complaint(
+            conn, cid="c1", fid="f1", doc_id="d1",
+            control_number="CR-001", finding="Unsubstantiated",
+        )
+        # Unrelated facility (not in reference)
+        _insert_facility(conn, fid="f2", fnum="999999", name="Not In Reference")
+        _insert_source_doc(conn, doc_id="d2", fid="f2", url="http://example.test/2")
+        _insert_complaint(
+            conn, cid="c2", fid="f2", doc_id="d2",
+            control_number="CR-002", finding="Substantiated",
+        )
+        conn.commit()
+        db_path = tmp_path / "test.sqlite"
+        _save_db(conn, db_path)
+
+        ref_csv = tmp_path / "facilities.csv"
+        _write_ref_csv(
+            ref_csv,
+            [{"FacilityNumber": "100001", "FacilityName": "In Reference"}],
+            header=["FacilityNumber", "FacilityName"],
+        )
+
+        result = export_stakeholder_facility_overview(
+            db_path, tmp_path / "extracts",
+            facility_reference_csv=ref_csv,
+            only_facility_reference_rows=True,
+        )
+
+        rows = _read_csv(result.complaint_records_path)
+        facility_numbers = {r["FacilityNumber"] for r in rows}
+        assert "100001" in facility_numbers
+        assert "999999" not in facility_numbers
+        assert result.complaint_record_row_count == 1
+
+
+# ---------------------------------------------------------------------------
+# Tests: _derive_finding_group and _derive_keyword_review_cues
+# ---------------------------------------------------------------------------
+
+
+class TestFindingGroupDerivation:
+    def _group(self, finding: str | None) -> str:
+        from ccld_complaints.stakeholder_extract import _derive_finding_group
+        return _derive_finding_group(finding)
+
+    def test_substantiated_is_substantiated_group(self) -> None:
+        assert self._group("Substantiated") == "SubstantiatedOrEquivalent"
+
+    def test_founded_is_substantiated_group(self) -> None:
+        assert self._group("Founded") == "SubstantiatedOrEquivalent"
+
+    def test_unsubstantiated_is_not_substantiated_group(self) -> None:
+        assert self._group("Unsubstantiated") == "NotSubstantiatedOrEquivalent"
+
+    def test_inconclusive_is_not_substantiated_group(self) -> None:
+        assert self._group("Inconclusive") == "NotSubstantiatedOrEquivalent"
+
+    def test_dismissed_is_not_substantiated_group(self) -> None:
+        assert self._group("Dismissed") == "NotSubstantiatedOrEquivalent"
+
+    def test_empty_string_is_unknown(self) -> None:
+        assert self._group("") == "UnknownOrMissing"
+
+    def test_none_is_unknown(self) -> None:
+        assert self._group(None) == "UnknownOrMissing"
+
+    def test_not_available_sentinel_is_unknown(self) -> None:
+        assert self._group(UNKNOWN) == "UnknownOrMissing"
+
+
+class TestKeywordReviewCueDerivation:
+    def _cue(self, finding: str | None, categories: str | None) -> str:
+        from ccld_complaints.stakeholder_extract import _derive_keyword_review_cues
+        return _derive_keyword_review_cues(finding, categories)
+
+    def test_abuse_in_finding_triggers_cue(self) -> None:
+        assert self._cue("Substantiated - Abuse", None) == "Possible serious allegation topic"
+
+    def test_neglect_in_category_triggers_cue(self) -> None:
+        assert self._cue(None, "Neglect") == "Possible serious allegation topic"
+
+    def test_no_keyword_match_returns_not_available(self) -> None:
+        assert self._cue("Unsubstantiated", "Licensing Violation") == UNKNOWN
+
+    def test_none_finding_and_category_returns_not_available(self) -> None:
+        assert self._cue(None, None) == UNKNOWN
+
+    def test_cue_is_not_a_severity_score(self) -> None:
+        """Confirm the cue label does not use severity/risk language."""
+        result = self._cue("Neglect", None)
+        assert "severity" not in result.casefold()
+        assert "risk" not in result.casefold()
+        assert "verified" not in result.casefold()
+
