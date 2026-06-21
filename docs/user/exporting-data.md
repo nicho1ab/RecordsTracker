@@ -2,6 +2,36 @@
 
 Exports should include clear headers and source traceability fields.
 
+## Profile CCLD public download CSVs and generate a facility cohort
+
+CCLD public download CSV files (downloaded from ccld.dss.ca.gov into `data/raw/ccld/`) can be profiled locally to produce a normalized facility-reference CSV for use in targeted stakeholder extracts or live-fetch cohort selection.
+
+```powershell
+.\scripts\profile-ccld-public-download-csvs.ps1
+```
+
+This produces three ignored outputs under `data/processed/ccld-public-downloads/`:
+
+- `ccld-download-profile.json` — per-file profile: row count, header count, row-width warnings (rows with trailing Complaint Info values beyond the header), facility type counts, status counts, county counts.
+- `ccld-download-profile.csv` — flat per-file summary.
+- `facility-reference.csv` — normalized reference CSV with columns: FacilityNumber, FacilityName, FacilityType, ProgramType, Status, City, County, Capacity, LicenseFirstDate, ClosedDate, LastVisitDate, SourceFile.
+
+To produce a targeted cohort for a specific facility type and status, use `-FacilityType` and `-FacilityStatus`:
+
+```powershell
+.\scripts\profile-ccld-public-download-csvs.ps1 -FacilityType "Temporary Shelter Care Facility" -FacilityStatus "Licensed"
+```
+
+The resulting `facility-reference.csv` can be passed directly to the stakeholder export using `-FacilityReferenceCsv`, optionally combined with `-OnlyFacilityReferenceRows` to limit output to that cohort:
+
+```powershell
+.\scripts\export-stakeholder-facility-overview.ps1 `
+    -FacilityReferenceCsv data\processed\ccld-public-downloads\facility-reference.csv `
+    -OnlyFacilityReferenceRows
+```
+
+This script does not import facility rows into the database, modify raw files, add schemas, or make network requests. Public CCLD portal (ccld.dss.ca.gov) remains the source of record. Facility reference rows are reference aids only; absence or zero complaint counts is not source completeness.
+
 ## Export a stakeholder facility overview
 
 After populating the local SQLite database, use the stakeholder facility overview script to write a ZIP package with a per-facility summary CSV, a substantiated/equivalent complaints CSV, a README, and a manifest:
