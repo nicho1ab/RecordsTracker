@@ -885,6 +885,21 @@ _COMPLAINT_RECORDS_FIELDS = (
     "Limitations",
 )
 
+_FACILITY_REVIEW_CUES_FIELDS = (
+    "FacilityNumber",
+    "FacilityName",
+    "Status",
+    "County",
+    "LoadedComplaintCount",
+    "SubstantiatedOrEquivalentCount",
+    "LoadedDateRange",
+    "SourceTraceabilityReadyCount",
+    "MissingTraceabilityCount",
+    "ReviewCues",
+    "SuggestedNextStep",
+    "Limitations",
+)
+
 
 def _write_complaint_records_csv(
     path: Path, complaint_record_rows: list[_ComplaintRecordRow]
@@ -1051,13 +1066,16 @@ _HEADER_FILL = PatternFill(start_color="D6E4F0", end_color="D6E4F0", fill_type="
 _HEADER_BORDER_BOTTOM = Border(bottom=Side(style="thin"))
 _TITLE_FILL = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
 _TITLE_FONT = Font(bold=True, size=14, color="FFFFFF")
-# Tab colours for the six generated worksheets
+# Tab colours for the seven generated worksheets
 _TAB_COLOR_README = "1F4E79"
 _TAB_COLOR_SUMMARY = "7030A0"
+_TAB_COLOR_FACILITY_REVIEW_CUES = "4472C4"
 _TAB_COLOR_FACILITY_OVERVIEW = "2E75B6"
 _TAB_COLOR_SUBSTANTIATED = "C55A11"
 _TAB_COLOR_COMPLAINT_RECORDS = "538135"
 _TAB_COLOR_MANIFEST = "767171"
+# Column names that receive wrap_text alignment in data worksheets.
+_WRAP_COLS = frozenset({"Limitations", "ReviewCues", "SuggestedNextStep"})
 
 
 def _facility_overview_row_dicts(
@@ -1147,6 +1165,71 @@ def _complaint_record_row_dicts(
     ]
 
 
+def _derive_facility_review_cues(frow: _FacilityRow) -> tuple[str, str]:
+    """Return (review_cues_str, suggested_next_step) for a facility row.
+
+    Review cues are deterministic labels derived from loaded record counts only.
+    They are review aids, not risk scores, rankings, or legal conclusions.
+    """
+    cues: list[str] = []
+    if frow.substantiated_count > 0:
+        cues.append("substantiated/equivalent complaint records loaded")
+    if frow.loaded_complaint_count > 1:
+        cues.append("multiple loaded complaint records")
+    if frow.loaded_complaint_count == 0:
+        cues.append("no complaint records loaded in this extract")
+    if frow.missing_traceability > 0:
+        cues.append("missing source traceability in loaded rows")
+    if (
+        frow.status.strip().casefold().startswith("closed")
+        and frow.loaded_complaint_count > 0
+    ):
+        cues.append("closed facility with loaded complaint records")
+    review_cues = "; ".join(cues) if cues else "no review cues for loaded data"
+    if frow.loaded_complaint_count == 0:
+        suggested = (
+            "Confirm whether no loaded records reflects extract scope "
+            "before drawing any conclusion."
+        )
+    else:
+        suggested = (
+            "Review facility-overview and complaint-records rows; verify "
+            "important details against the public CCLD portal."
+        )
+    return review_cues, suggested
+
+
+def _facility_review_cues_row_dicts(
+    facility_rows: list[_FacilityRow],
+) -> list[dict[str, Any]]:
+    """Build row dicts for the facility-review-cues worksheet."""
+    lim = _limitations_sentence()
+    result: list[dict[str, Any]] = []
+    for frow in facility_rows:
+        dates = sorted(d for d in frow.complaint_dates if d)
+        earliest = dates[0] if dates else UNKNOWN
+        most_recent = dates[-1] if dates else UNKNOWN
+        date_range = f"{earliest} to {most_recent}" if dates else UNKNOWN
+        review_cues, suggested = _derive_facility_review_cues(frow)
+        result.append(
+            {
+                "FacilityNumber": frow.facility_number,
+                "FacilityName": frow.facility_name,
+                "Status": frow.status,
+                "County": frow.county,
+                "LoadedComplaintCount": frow.loaded_complaint_count,
+                "SubstantiatedOrEquivalentCount": frow.substantiated_count,
+                "LoadedDateRange": date_range,
+                "SourceTraceabilityReadyCount": frow.source_traceability_ready,
+                "MissingTraceabilityCount": frow.missing_traceability,
+                "ReviewCues": review_cues,
+                "SuggestedNextStep": suggested,
+                "Limitations": lim,
+            }
+        )
+    return result
+
+
 def _xlsx_autosize_columns(ws: Any, col_letter_fn: Any) -> None:
     """Auto-size worksheet columns, capped at _XLSX_MAX_COL_WIDTH characters."""
     for col_cells in ws.columns:
@@ -1171,36 +1254,39 @@ def _xlsx_data_sheet(
     """Write bold headers and data rows to a worksheet.
 
     Freezes the header row, applies auto-filter, and auto-sizes columns.
-    The Limitations column is last in all field tuples.
+    Applies top-left alignment to all cells; wrap_text for columns in _WRAP_COLS.
     """
+    _top_left = Alignment(horizontal="left", vertical="top")
     for col_idx, field_name in enumerate(fields, 1):
         cell = ws.cell(row=1, column=col_idx, value=field_name)
         cell.font = bold_font
         cell.fill = _HEADER_FILL
         cell.border = _HEADER_BORDER_BOTTOM
+        cell.alignment = _top_left
     for row_dict in rows:
         ws.append([row_dict.get(f, "") for f in fields])
     ws.freeze_panes = "A2"
     if ws.max_row >= 1 and ws.max_column >= 1:
         ws.auto_filter.ref = ws.dimensions
-    # Apply hyperlinks to SourceUrl column and wrap_text to Limitations column.
+    # Build column maps for per-cell formatting.
     source_url_col: int | None = None
-    limitations_col: int | None = None
+    wrap_col_indices: set[int] = set()
     for _col_idx, _fname in enumerate(fields, 1):
         if _fname == "SourceUrl":
             source_url_col = _col_idx
-        elif _fname == "Limitations":
-            limitations_col = _col_idx
+        if _fname in _WRAP_COLS:
+            wrap_col_indices.add(_col_idx)
+    # Apply top-left alignment to all data cells; wrap long-text columns.
     for _row_idx in range(2, ws.max_row + 1):
+        for _col_idx in range(1, len(fields) + 1):
+            _cell = ws.cell(row=_row_idx, column=_col_idx)
+            _wrap = _col_idx in wrap_col_indices
+            _cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=_wrap)
         if source_url_col is not None:
-            _cell = ws.cell(row=_row_idx, column=source_url_col)
-            _val = str(_cell.value or "")
+            _src_cell = ws.cell(row=_row_idx, column=source_url_col)
+            _val = str(_src_cell.value or "")
             if _val.startswith("http"):
-                _cell.hyperlink = _val
-        if limitations_col is not None:
-            ws.cell(row=_row_idx, column=limitations_col).alignment = Alignment(
-                wrap_text=True
-            )
+                _src_cell.hyperlink = _val
     _xlsx_autosize_columns(ws, col_letter_fn)
 
 
@@ -1272,6 +1358,11 @@ def _xlsx_populate_readme_sheet(
         "finding group breakdown, and keyword review cue breakdown.",
     )
     _row(
+        "facility-review-cues",
+        "One row per facility with source-derived review cue labels and a "
+        "suggested next step. Review aids only; does not rank or score facilities.",
+    )
+    _row(
         "facility-overview",
         "Per-facility complaint counts, substantiated/equivalent counts, "
         "date ranges, and source-traceability counts.",
@@ -1322,7 +1413,7 @@ def _xlsx_populate_readme_sheet(
     # Wrap all cell text in the README so long prose is readable.
     for _ws_row in ws.iter_rows():
         for _cell in _ws_row:
-            _cell.alignment = Alignment(wrap_text=True)
+            _cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
 
     ws.column_dimensions["A"].width = 50
     ws.column_dimensions["B"].width = 80
@@ -1411,11 +1502,20 @@ def _xlsx_populate_summary_sheet(
         if not cue_label:
             cue_label = "(no review cue match)"
         cue_counts[cue_label] = cue_counts.get(cue_label, 0) + 1
-    if cue_counts:
+    _has_cue_match = any(
+        label not in (UNKNOWN, "(no review cue match)")
+        for label in cue_counts
+    )
+    if not complaint_record_rows:
+        _kv("  (no complaint records loaded)")
+    elif not _has_cue_match:
+        _kv(
+            "  Keyword review cues were not available in this extract. "
+            "No loaded records matched the deterministic keyword list."
+        )
+    else:
         for _cue_label, _cue_count in sorted(cue_counts.items()):
             _kv(f"  {_cue_label}", str(_cue_count))
-    else:
-        _kv("  (no complaint records loaded)")
     _kv(
         "  Note: a keyword review cue match signals a possible serious allegation "
         "topic as a review aid only. It is not a severity score, not a risk score, "
@@ -1431,7 +1531,7 @@ def _xlsx_populate_summary_sheet(
     # Wrap all cell text so long prose is readable.
     for _ws_row in ws.iter_rows():
         for _cell in _ws_row:
-            _cell.alignment = Alignment(wrap_text=True)
+            _cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
 
     ws.freeze_panes = "A2"
     ws.column_dimensions["A"].width = 70
@@ -1448,8 +1548,8 @@ def _write_xlsx_workbook(
 ) -> None:
     """Write the stakeholder Excel workbook.
 
-    Sheet order: README, facility-overview, substantiated-complaints,
-    complaint-records, Manifest.
+    Sheet order: README, Summary, facility-review-cues, facility-overview,
+    substantiated-complaints, complaint-records, Manifest.
     """
     wb = openpyxl.Workbook()
     default_sheet = wb.active
@@ -1469,6 +1569,16 @@ def _write_xlsx_workbook(
         facility_rows=facility_rows,
         complaint_record_rows=complaint_record_rows,
         bold_font=bold,
+    )
+
+    ws_frc = wb.create_sheet("facility-review-cues")
+    ws_frc.sheet_properties.tabColor = _TAB_COLOR_FACILITY_REVIEW_CUES
+    _xlsx_data_sheet(
+        ws_frc,
+        fields=_FACILITY_REVIEW_CUES_FIELDS,
+        rows=_facility_review_cues_row_dicts(facility_rows),
+        bold_font=bold,
+        col_letter_fn=get_column_letter,
     )
 
     ws_fo = wb.create_sheet("facility-overview")
@@ -1519,6 +1629,10 @@ def _write_xlsx_workbook(
     ws_manifest.auto_filter.ref = ws_manifest.dimensions
     ws_manifest.column_dimensions["A"].width = 40
     ws_manifest.column_dimensions["B"].width = 80
+    # Apply top-left alignment to all Manifest cells.
+    for _ws_row in ws_manifest.iter_rows():
+        for _cell in _ws_row:
+            _cell.alignment = Alignment(horizontal="left", vertical="top")
 
     wb.save(xlsx_path)
 
