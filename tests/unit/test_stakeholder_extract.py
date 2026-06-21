@@ -571,8 +571,40 @@ class TestManifestCounts:
         assert not any(f.endswith(".zip") for f in listed)
 
 
+class TestLimitationsSentence:
+    """Regression guard for the canonical limitations sentence text."""
+
+    def test_exact_phrase_source_completeness_claims(self) -> None:
+        """_limitations_sentence contains 'source-completeness claims' with the space."""
+        from ccld_complaints.stakeholder_extract import _limitations_sentence
+
+        lim = _limitations_sentence()
+        assert "source-completeness claims" in lim, (
+            f"Expected 'source-completeness claims' in limitations sentence; got: {lim!r}"
+        )
+
+    def test_no_typo_source_completenessclaims(self) -> None:
+        """_limitations_sentence must not contain the run-together typo."""
+        from ccld_complaints.stakeholder_extract import _limitations_sentence
+
+        lim = _limitations_sentence()
+        assert "source-completenessclaims" not in lim, (
+            f"Typo 'source-completenessclaims' found in limitations sentence: {lim!r}"
+        )
+
+    def test_generated_manifest_limitations_has_exact_phrase(self, tmp_path: Path) -> None:
+        """Manifest limitations field in the generated export uses the correct phrase."""
+        db_path = tmp_path / "does_not_exist.sqlite"
+        result = export_stakeholder_facility_overview(db_path, tmp_path / "extracts")
+
+        import json
+        manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+        lim = manifest["limitations"]
+        assert "source-completeness claims" in lim
+        assert "source-completenessclaims" not in lim
+
+
 # ---------------------------------------------------------------------------
-# Tests: facility reference CSV input
 # ---------------------------------------------------------------------------
 
 
@@ -622,8 +654,10 @@ class TestFacilityReferenceInput:
 
         rows = _read_csv(result.facility_overview_path)
         limitations = rows[0]["Limitations"]
-        # Must carry the standard limitations sentence
-        assert "source-completeness" in limitations or "source of record" in limitations
+        # Must carry the exact canonical limitations phrase (guards against typo like
+        # "source-completenessclaims" that would collapse the space between words)
+        assert "source-completeness claims" in limitations
+        assert "source-completenessclaims" not in limitations
 
     def test_complaint_loaded_facility_merges_reference_metadata(
         self, tmp_path: Path
