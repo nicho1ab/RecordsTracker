@@ -25,6 +25,8 @@ Boundaries
   source-completeness claims.
 - Produces empty CSVs with headers if the database is absent or empty
   rather than raising.
+- Optional facility reference CSV enriches facility metadata but never
+  implies that zero loaded complaints means no public complaints exist.
 """
 from __future__ import annotations
 
@@ -40,6 +42,41 @@ from typing import Any
 
 DEFAULT_STAKEHOLDER_EXTRACT_ROOT = Path("data/processed/stakeholder-extracts")
 UNKNOWN = "not available"
+
+# ---------------------------------------------------------------------------
+# Facility reference CSV column aliases
+# ---------------------------------------------------------------------------
+# Each tuple lists accepted header spellings (case-insensitive, stripped) for
+# that logical field. First match wins.
+_FACILITY_NUMBER_ALIASES: tuple[str, ...] = (
+    "facilitynumber",
+    "facility number",
+    "licensenumber",
+    "license number",
+    "license_number",
+    "facility_number",
+)
+_FACILITY_NAME_ALIASES: tuple[str, ...] = (
+    "facilityname",
+    "facility name",
+    "facility_name",
+)
+_FACILITY_TYPE_ALIASES: tuple[str, ...] = (
+    "facilitytype",
+    "programtype",
+    "facility type",
+    "program type",
+    "facility_type",
+    "program_type",
+)
+_STATUS_ALIASES: tuple[str, ...] = (
+    "status",
+    "facilitystatus",
+    "facility status",
+    "facility_status",
+)
+_CITY_ALIASES: tuple[str, ...] = ("city",)
+_COUNTY_ALIASES: tuple[str, ...] = ("county",)
 
 # ---------------------------------------------------------------------------
 # Substantiated/equivalent matching — mirrors reviewer_ui._is_substantiated_equivalent
@@ -153,6 +190,9 @@ class StakeholderExtractResult:
     git_commit: str
     input_source: str
     limitations: str
+    facility_reference_csv: str
+    facility_reference_row_count: int
+    facility_reference_matched_count: int
 
 
 # ---------------------------------------------------------------------------
@@ -162,11 +202,17 @@ class StakeholderExtractResult:
 def export_stakeholder_facility_overview(
     db_path: Path,
     output_root: Path = DEFAULT_STAKEHOLDER_EXTRACT_ROOT,
+    facility_reference_csv: Path | None = None,
 ) -> StakeholderExtractResult:
     """Generate a stakeholder facility overview extract package.
 
     If *db_path* does not exist or contains no facilities, produces empty
     CSVs with correct headers, README, manifest, and ZIP without failing.
+
+    If *facility_reference_csv* is provided its rows are merged into
+    facility-overview.csv. Facilities present in the reference CSV but
+    absent from the database are included with zero complaint counts.
+    Complaint-derived counts are always based only on loaded records.
     """
     timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     output_dir = output_root / timestamp
@@ -180,6 +226,18 @@ def export_stakeholder_facility_overview(
         facility_rows, substantiated_rows = _read_db(db_path)
     else:
         facility_rows, substantiated_rows = [], []
+
+    # Merge optional facility reference CSV
+    ref_row_count = 0
+    ref_matched_count = 0
+    ref_csv_value = "none"
+    if facility_reference_csv is not None:
+        ref_records = read_facility_reference_csv(facility_reference_csv)
+        ref_row_count = len(ref_records)
+        ref_csv_value = facility_reference_csv.as_posix()
+        facility_rows, ref_matched_count = _merge_reference_facilities(
+            facility_rows, ref_records
+        )
 
     facility_overview_path = output_dir / "facility-overview.csv"
     substantiated_complaints_path = output_dir / "substantiated-complaints.csv"
@@ -207,6 +265,9 @@ def export_stakeholder_facility_overview(
             zip_name,
         ],
         limitations=limitations,
+        facility_reference_csv=ref_csv_value,
+        facility_reference_row_count=ref_row_count,
+        facility_reference_matched_count=ref_matched_count,
     )
     manifest_path.write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False),
@@ -230,6 +291,9 @@ def export_stakeholder_facility_overview(
         git_commit=git_commit,
         input_source=input_source,
         limitations=limitations,
+        facility_reference_csv=ref_csv_value,
+        facility_reference_row_count=ref_row_count,
+        facility_reference_matched_count=ref_matched_count,
     )
 
 
@@ -323,6 +387,154 @@ def _str(row: sqlite3.Row, key: str) -> str:
     if val is None:
         return ""
     return str(val).strip()
+
+
+# ---------------------------------------------------------------------------
+# Facility reference CSV reader
+# ---------------------------------------------------------------------------
+
+class FacilityReferenceError(ValueError):
+    """Raised when the facility reference CSV lacks a usable facility number column."""
+
+
+def _match_alias(
+    headers: list[str], aliases: tuple[str, ...]
+) -> str | None:
+    """Return the first header that matches any alias (case-insensitive stripped)."""
+    lower_headers = [h.strip().casefold() for h in headers]
+    for alias in aliases:
+        for i, lh in enumerate(lower_headers):
+            if lh == alias:
+                return headers[i]
+    return None
+
+
+def read_facility_reference_csv(
+    csv_path: Path,
+) -> list[dict[str, str]]:
+    """Read a facility reference CSV and return normalised row dicts.
+
+    Each returned dict has canonical keys: facility_number, facility_name,
+    facility_type, status, city, county.  Unknown / missing values are the
+    empty string.
+
+    Raises FacilityReferenceError if no usable facility number column is
+    found.  Duplicate facility numbers keep the first occurrence.
+    """
+    with csv_path.open(encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f)
+        raw_rows = list(reader)
+        headers = list(reader.fieldnames or [])
+
+    if not headers and raw_rows:
+        headers = list(raw_rows[0].keys())
+
+    fnum_col = _match_alias(headers, _FACILITY_NUMBER_ALIASES)
+    if fnum_col is None:
+        raise FacilityReferenceError(
+            f"Facility reference CSV '{csv_path}' does not contain a recognised "
+            "facility/license number column. "
+            f"Accepted column names (case-insensitive): "
+            f"{', '.join(_FACILITY_NUMBER_ALIASES)}"
+        )
+
+    name_col = _match_alias(headers, _FACILITY_NAME_ALIASES)
+    type_col = _match_alias(headers, _FACILITY_TYPE_ALIASES)
+    status_col = _match_alias(headers, _STATUS_ALIASES)
+    city_col = _match_alias(headers, _CITY_ALIASES)
+    county_col = _match_alias(headers, _COUNTY_ALIASES)
+
+    seen: set[str] = set()
+    result: list[dict[str, str]] = []
+    for raw in raw_rows:
+        fnum = (raw.get(fnum_col) or "").strip()
+        if not fnum:
+            continue  # skip rows with no facility number
+        if fnum in seen:
+            continue  # first occurrence wins
+        seen.add(fnum)
+        result.append({
+            "facility_number": fnum,
+            "facility_name": (raw.get(name_col) or "").strip() if name_col else "",
+            "facility_type": (raw.get(type_col) or "").strip() if type_col else "",
+            "status": (raw.get(status_col) or "").strip() if status_col else "",
+            "city": (raw.get(city_col) or "").strip() if city_col else "",
+            "county": (raw.get(county_col) or "").strip() if county_col else "",
+        })
+    return result
+
+
+def _merge_reference_facilities(
+    complaint_rows: list[_FacilityRow],
+    ref_records: list[dict[str, str]],
+) -> tuple[list[_FacilityRow], int]:
+    """Merge reference facility records with complaint-aggregated rows.
+
+    Returns (merged_rows, matched_count) where matched_count is the number
+    of reference facilities that already had loaded complaint records.
+
+    Reference metadata enriches existing rows (fills in blank city/name/type
+    from reference when the complaint aggregate returned UNKNOWN).  Reference
+    facilities with no loaded complaints are appended with zero counts.
+    """
+    complaint_map: dict[str, _FacilityRow] = {
+        row.facility_number: row for row in complaint_rows
+    }
+    matched = 0
+    for ref in ref_records:
+        fnum = ref["facility_number"]
+        if fnum in complaint_map:
+            matched += 1
+            existing = complaint_map[fnum]
+            # Enrich blank fields from reference without overwriting loaded data
+            complaint_map[fnum] = _FacilityRow(
+                facility_number=fnum,
+                facility_name=(
+                    existing.facility_name
+                    if existing.facility_name != UNKNOWN
+                    else (ref["facility_name"] or UNKNOWN)
+                ),
+                facility_type=(
+                    existing.facility_type
+                    if existing.facility_type != UNKNOWN
+                    else (ref["facility_type"] or UNKNOWN)
+                ),
+                status=(
+                    existing.status
+                    if existing.status != UNKNOWN
+                    else (ref["status"] or UNKNOWN)
+                ),
+                city=(
+                    existing.city
+                    if existing.city != UNKNOWN
+                    else (ref["city"] or UNKNOWN)
+                ),
+                county=(
+                    existing.county
+                    if existing.county != UNKNOWN
+                    else (ref["county"] or UNKNOWN)
+                ),
+                loaded_complaint_count=existing.loaded_complaint_count,
+                substantiated_count=existing.substantiated_count,
+                complaint_dates=existing.complaint_dates,
+                source_traceability_ready=existing.source_traceability_ready,
+                missing_traceability=existing.missing_traceability,
+            )
+        else:
+            # Reference-only facility — zero loaded complaints
+            complaint_map[fnum] = _FacilityRow(
+                facility_number=fnum,
+                facility_name=ref["facility_name"] or UNKNOWN,
+                facility_type=ref["facility_type"] or UNKNOWN,
+                status=ref["status"] or UNKNOWN,
+                city=ref["city"] or UNKNOWN,
+                county=ref["county"] or UNKNOWN,
+            )
+
+    merged: list[_FacilityRow] = sorted(
+        complaint_map.values(), key=lambda r: r.facility_number
+    )
+    return merged, matched
 
 
 # ---------------------------------------------------------------------------
@@ -493,6 +705,9 @@ def _build_manifest(
     git_commit: str,
     output_files: list[str],
     limitations: str,
+    facility_reference_csv: str,
+    facility_reference_row_count: int,
+    facility_reference_matched_count: int,
 ) -> dict[str, Any]:
     return {
         "generated_at": generated_at,
@@ -502,6 +717,9 @@ def _build_manifest(
         "facility_row_count": facility_row_count,
         "substantiated_complaint_row_count": substantiated_complaint_row_count,
         "git_commit": git_commit,
+        "facility_reference_csv": facility_reference_csv,
+        "facility_reference_row_count": facility_reference_row_count,
+        "facility_reference_matched_count": facility_reference_matched_count,
         "limitations": limitations,
     }
 

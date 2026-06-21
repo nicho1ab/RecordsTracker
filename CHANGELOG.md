@@ -1,6 +1,20 @@
 # Changelog
 
 ## Unreleased
+- Added optional `-FacilityReferenceCsv` parameter to
+	`scripts/export-stakeholder-facility-overview.ps1` (and the corresponding
+	`--facility-reference-csv` CLI argument). When a facility reference CSV is
+	supplied, facilities from that list are included in `facility-overview.csv`
+	even when no complaint records are loaded for them; those rows show
+	`LoadedComplaintCount=0` and `ComplaintDataLoadedStatus=No complaints
+	loaded`. Reference data enriches missing metadata fields (e.g. city) for
+	facilities that do appear in the loaded complaints. The facility number
+	column is matched case-insensitively using a list of common header aliases.
+	Duplicate facility numbers in the reference file are deduplicated
+	deterministically (first occurrence wins). Manifest fields
+	`facility_reference_csv`, `facility_reference_row_count`, and
+	`facility_reference_matched_count` are included when a reference CSV is
+	used.
 - Added a repeatable local stakeholder facility overview extract script at
 	`scripts/export-stakeholder-facility-overview.ps1`. The script reads the
 	local SQLite database and writes a timestamped ZIP package under

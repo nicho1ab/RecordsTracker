@@ -16,6 +16,14 @@ Output goes under `data/processed/stakeholder-extracts/<timestamp>/`. Use `-DbPa
 .\scripts\export-stakeholder-facility-overview.ps1 -DbPath data\processed\live-ccld.sqlite
 ```
 
+To include facilities from a reference list even when no complaint records are loaded for them, supply `-FacilityReferenceCsv` with a path to a CSV that has a facility number column (any common header alias is recognised):
+
+```powershell
+.\scripts\export-stakeholder-facility-overview.ps1 -FacilityReferenceCsv data\processed\active-facilities.csv
+```
+
+Facilities in the reference CSV that have no loaded complaint records appear in `facility-overview.csv` with `LoadedComplaintCount=0` and `ComplaintDataLoadedStatus=No complaints loaded`. A zero count does not imply no public complaints exist; it reflects only loaded records. Reference data also enriches missing metadata fields (for example, city) for facilities that do have loaded complaints. Duplicate facility numbers in the reference file are deduplicated deterministically (first occurrence wins).
+
 The ZIP package includes:
 
 - `facility-overview.csv` for per-facility complaint counts, substantiated/equivalent counts, date ranges, source-traceability counts, and a Limitations column.

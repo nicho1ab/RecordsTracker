@@ -9,8 +9,10 @@ from pathlib import Path
 
 from ccld_complaints.stakeholder_extract import (
     UNKNOWN,
+    FacilityReferenceError,
     export_stakeholder_facility_overview,
     is_substantiated_equivalent,
+    read_facility_reference_csv,
 )
 
 # ---------------------------------------------------------------------------
@@ -567,8 +569,230 @@ class TestManifestCounts:
 
 
 # ---------------------------------------------------------------------------
+# Tests: facility reference CSV input
+# ---------------------------------------------------------------------------
+
+
+class TestFacilityReferenceInput:
+    def test_reference_only_facility_has_zero_loaded_counts(
+        self, tmp_path: Path
+    ) -> None:
+        """A reference-only facility (no loaded complaints) appears with zero counts."""
+        ref_csv = tmp_path / "facilities.csv"
+        _write_ref_csv(
+            ref_csv,
+            [{"FacilityNumber": "999001", "FacilityName": "Reference Only Center"}],
+            header=["FacilityNumber", "FacilityName"],
+        )
+        db_path = tmp_path / "does_not_exist.sqlite"
+
+        result = export_stakeholder_facility_overview(
+            db_path, tmp_path / "extracts",
+            facility_reference_csv=ref_csv,
+        )
+
+        rows = _read_csv(result.facility_overview_path)
+        assert len(rows) == 1
+        row = rows[0]
+        assert row["FacilityNumber"] == "999001"
+        assert row["FacilityName"] == "Reference Only Center"
+        assert row["LoadedComplaintCount"] == "0"
+        assert row["SubstantiatedOrEquivalentCount"] == "0"
+        assert row["ComplaintDataLoadedStatus"] == "No complaints loaded"
+
+    def test_reference_only_facility_limitations_do_not_imply_no_complaints(
+        self, tmp_path: Path
+    ) -> None:
+        """Limitations text must not imply zero means no public complaints exist."""
+        ref_csv = tmp_path / "facilities.csv"
+        _write_ref_csv(
+            ref_csv,
+            [{"FacilityNumber": "999001", "FacilityName": "Test Center"}],
+            header=["FacilityNumber", "FacilityName"],
+        )
+        db_path = tmp_path / "does_not_exist.sqlite"
+
+        result = export_stakeholder_facility_overview(
+            db_path, tmp_path / "extracts",
+            facility_reference_csv=ref_csv,
+        )
+
+        rows = _read_csv(result.facility_overview_path)
+        limitations = rows[0]["Limitations"]
+        # Must carry the standard limitations sentence
+        assert "source-completeness" in limitations or "source of record" in limitations
+
+    def test_complaint_loaded_facility_merges_reference_metadata(
+        self, tmp_path: Path
+    ) -> None:
+        """Reference metadata (city) enriches a facility that has loaded complaints."""
+        conn = _make_db()
+        _insert_facility(conn, fid="f1", fnum="100001", name="Loaded Center")
+        _insert_source_doc(conn, doc_id="d1", fid="f1", url="http://example.test/1")
+        _insert_complaint(
+            conn, cid="c1", fid="f1", doc_id="d1",
+            control_number="CR-001", finding="Substantiated",
+        )
+        conn.commit()
+        db_path = tmp_path / "test.sqlite"
+        _save_db(conn, db_path)
+
+        ref_csv = tmp_path / "facilities.csv"
+        _write_ref_csv(
+            ref_csv,
+            [{
+                "FacilityNumber": "100001",
+                "FacilityName": "Loaded Center",
+                "City": "Sacramento",
+                "County": "Sacramento County",
+                "Status": "Licensed",
+            }],
+            header=["FacilityNumber", "FacilityName", "City", "County", "Status"],
+        )
+
+        result = export_stakeholder_facility_overview(
+            db_path, tmp_path / "extracts",
+            facility_reference_csv=ref_csv,
+        )
+
+        rows = _read_csv(result.facility_overview_path)
+        assert len(rows) == 1
+        row = rows[0]
+        assert row["FacilityNumber"] == "100001"
+        assert row["LoadedComplaintCount"] == "1"
+        assert row["SubstantiatedOrEquivalentCount"] == "1"
+        # City is reference-only (not in DB schema); it should come from reference CSV
+        assert row["City"] == "Sacramento"
+
+    def test_missing_facility_number_column_raises_clearly(
+        self, tmp_path: Path
+    ) -> None:
+        """CSV without a recognised facility number column raises FacilityReferenceError."""
+        ref_csv = tmp_path / "bad.csv"
+        _write_ref_csv(
+            ref_csv,
+            [{"Name": "Test", "Type": "Child Care"}],
+            header=["Name", "Type"],
+        )
+
+        import pytest
+
+        with pytest.raises(FacilityReferenceError) as exc_info:
+            read_facility_reference_csv(ref_csv)
+
+        assert "facility" in str(exc_info.value).casefold()
+        assert "number" in str(exc_info.value).casefold()
+
+    def test_duplicate_reference_rows_keep_first(self, tmp_path: Path) -> None:
+        """When the reference CSV has duplicate facility numbers, first row wins."""
+        ref_csv = tmp_path / "facilities.csv"
+        _write_ref_csv(
+            ref_csv,
+            [
+                {"FacilityNumber": "100001", "FacilityName": "First Name"},
+                {"FacilityNumber": "100001", "FacilityName": "Second Name"},
+            ],
+            header=["FacilityNumber", "FacilityName"],
+        )
+
+        records = read_facility_reference_csv(ref_csv)
+
+        assert len(records) == 1
+        assert records[0]["facility_name"] == "First Name"
+
+    def test_reference_input_no_raw_narrative_in_output(
+        self, tmp_path: Path
+    ) -> None:
+        """Raw narrative text from allegations is not present even with reference input."""
+        conn = _make_db()
+        _insert_facility(conn, fid="f1", fnum="100001")
+        _insert_source_doc(conn, doc_id="d1", fid="f1", url="http://example.test/1")
+        _insert_complaint(
+            conn, cid="c1", fid="f1", doc_id="d1",
+            control_number="CR-001", finding="Substantiated",
+        )
+        conn.execute(
+            """
+            INSERT INTO allegations (allegation_id, complaint_id, allegation_text)
+            VALUES ('a1', 'c1', 'SENTINEL_NARRATIVE_REFERENCE_TEST')
+            """
+        )
+        conn.commit()
+        db_path = tmp_path / "test.sqlite"
+        _save_db(conn, db_path)
+
+        ref_csv = tmp_path / "facilities.csv"
+        _write_ref_csv(
+            ref_csv,
+            [{"FacilityNumber": "100001", "FacilityName": "Test Center"}],
+            header=["FacilityNumber", "FacilityName"],
+        )
+
+        result = export_stakeholder_facility_overview(
+            db_path, tmp_path / "extracts",
+            facility_reference_csv=ref_csv,
+        )
+
+        for output_file in [
+            result.facility_overview_path,
+            result.substantiated_complaints_path,
+        ]:
+            assert "SENTINEL_NARRATIVE_REFERENCE_TEST" not in output_file.read_text(
+                encoding="utf-8"
+            )
+
+    def test_manifest_includes_reference_counts(self, tmp_path: Path) -> None:
+        """Manifest includes facility_reference_csv, _row_count, _matched_count."""
+        conn = _make_db()
+        _insert_facility(conn, fid="f1", fnum="100001")
+        _insert_source_doc(conn, doc_id="d1", fid="f1", url="http://example.test/1")
+        _insert_complaint(
+            conn, cid="c1", fid="f1", doc_id="d1",
+            control_number="CR-001", finding="Unsubstantiated",
+        )
+        conn.commit()
+        db_path = tmp_path / "test.sqlite"
+        _save_db(conn, db_path)
+
+        ref_csv = tmp_path / "facilities.csv"
+        _write_ref_csv(
+            ref_csv,
+            [
+                {"FacilityNumber": "100001", "FacilityName": "Matched"},
+                {"FacilityNumber": "999999", "FacilityName": "Unmatched"},
+            ],
+            header=["FacilityNumber", "FacilityName"],
+        )
+
+        result = export_stakeholder_facility_overview(
+            db_path, tmp_path / "extracts",
+            facility_reference_csv=ref_csv,
+        )
+
+        manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+        assert "facility_reference_csv" in manifest
+        assert manifest["facility_reference_row_count"] == 2
+        assert manifest["facility_reference_matched_count"] == 1
+        # Total facility rows = 1 loaded + 1 reference-only = 2
+        assert result.facility_row_count == 2
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _write_ref_csv(path: Path, rows: list[dict[str, str]], header: list[str]) -> None:
+    with path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=header, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def _save_db(conn: sqlite3.Connection, path: Path) -> None:
+    file_conn = sqlite3.connect(path)
+    conn.backup(file_conn)
+    file_conn.close()
+
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
     """Read CSV as list of dicts (excludes header row)."""
