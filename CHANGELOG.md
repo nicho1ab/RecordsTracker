@@ -1,6 +1,34 @@
 # Changelog
 
 ## Unreleased
+- Added `complaint-records.csv` to the stakeholder facility overview extract
+	package. The file contains one row per loaded complaint record (all statuses,
+	not just substantiated/equivalent) for all facilities in the extract. New
+	columns: `FindingGroup` (SubstantiatedOrEquivalent, NotSubstantiatedOrEquivalent,
+	or UnknownOrMissing — derived from source-derived finding text only),
+	`ComplaintType` (source-derived document type or "not available"),
+	`AllegationCategory` (source-derived category labels from the allegations
+	table, concatenated, or "not available"), `KeywordReviewCues` (deterministic
+	keyword-based review-cue label derived from finding and allegation_category
+	fields — review aid only, not a severity score, risk score, verified finding,
+	or legal classification). Raw narrative allegation text is never included.
+	`complaint-records.csv` is included in the ZIP package and in
+	`manifest.json` with a `complaint_record_row_count` field. The
+	`-OnlyFacilityReferenceRows` filter applies to this file as well. README.md
+	now explains complaint-records.csv and its limitations. No schema, migration,
+	live-retrieval, or hosted-UI changes.
+- Fixed `_candidates_from_report_list_json` discovery null/malformed payload
+	handling: JSON `null`, `{"REPORTARRAY": null}`, and null elements inside
+	`REPORTARRAY` are now treated as "no records discovered" instead of crashing
+	with `AttributeError`. Non-dict JSON responses surface as controlled
+	discovery failures with a descriptive message. Adds regression tests covering
+	all four cases plus normal discovery behavior.
+- Fixed `-FacilityStatus` and `-InputPath` parameter name mismatch in
+	`scripts/profile-ccld-public-download-csvs.ps1` (previously `$Status` and
+	`$InputDir` silently ignored user-supplied values). The Python CLI option was
+	also renamed from `--status` to `--facility-status`. Filter summary now always
+	prints both `FacilityType filter` and `FacilityStatus filter` lines before
+	the row count.
 - Added local profiling and cohort-generation utility for CCLD public download
 	CSVs: `scripts/profile-ccld-public-download-csvs.ps1` (PowerShell wrapper),
 	`scripts/profile_ccld_public_download_csvs.py` (CLI), and

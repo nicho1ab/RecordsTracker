@@ -66,8 +66,22 @@ The ZIP package includes:
 
 - `facility-overview.csv` for per-facility complaint counts, substantiated/equivalent counts, date ranges, source-traceability counts, and a Limitations column.
 - `substantiated-complaints.csv` for individual records where the source-derived finding/resolution/status indicates substantiated or an equivalent value, with source URL, raw hash, and a stable reviewer detail path.
+- `complaint-records.csv` for all loaded complaint records regardless of finding status. See below.
 - `README.md` with scope and limitations notes.
-- `manifest.json` with generation metadata and row counts.
+- `manifest.json` with generation metadata and row counts (including `complaint_record_row_count`).
+
+### complaint-records.csv
+
+One row per loaded complaint record for all facilities in the extract. Columns include:
+
+| Column | Description |
+|---|---|
+| `FindingGroup` | `SubstantiatedOrEquivalent`, `NotSubstantiatedOrEquivalent`, or `UnknownOrMissing` — derived from source-derived finding text only. Not a legal determination. |
+| `ComplaintType` | Source-derived document type from the loaded record, or "not available". |
+| `AllegationCategory` | Source-derived allegation category labels from the loaded record, or "not available". Raw narrative allegation text is never included. |
+| `KeywordReviewCues` | Deterministic keyword-based review-cue label derived from finding and allegation category fields. A match signals "Possible serious allegation topic" as a **review aid only** — not a severity score, not a risk score, not a verified finding, and not a legal classification. A non-match does not confirm the absence of serious topics. |
+
+`-OnlyFacilityReferenceRows` applies to this file as well: only facilities in the reference CSV appear when the filter is enabled.
 
 If the database is absent or empty, valid CSVs with headers, README, manifest, and ZIP are produced without failing.
 
