@@ -1506,6 +1506,7 @@ class TestExcelWorkbook:
         wb = openpyxl.load_workbook(result.xlsx_path)
         assert wb.sheetnames == [
             "README",
+            "Summary",
             "facility-overview",
             "substantiated-complaints",
             "complaint-records",
@@ -1745,6 +1746,70 @@ class TestExcelWorkbook:
         ).casefold()
         assert "counts and coverage" in all_text
         assert "zero" in all_text or "does not prove" in all_text or "does not mean" in all_text
+
+    def test_summary_worksheet_exists_after_readme(self, tmp_path: Path) -> None:
+        """Summary worksheet is the second sheet, immediately after README."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        assert wb.sheetnames[1] == "Summary"
+
+    def test_summary_worksheet_has_source_derived_metric_labels(
+        self, tmp_path: Path
+    ) -> None:
+        """Summary worksheet contains source-derived count labels."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["Summary"]
+        all_text = " ".join(
+            str(cell.value or "")
+            for row in ws.iter_rows()
+            for cell in row
+        ).casefold()
+        assert "source-derived" in all_text
+        assert "loaded complaint records" in all_text
+        assert "substantiated" in all_text
+        assert "finding group" in all_text
+        assert "keyword review cue" in all_text
+        assert "facility status" in all_text
+
+    def test_summary_worksheet_has_cautious_wording(self, tmp_path: Path) -> None:
+        """Summary worksheet contains cautious source-of-record and non-conclusion wording."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["Summary"]
+        all_text = " ".join(
+            str(cell.value or "")
+            for row in ws.iter_rows()
+            for cell in row
+        ).casefold()
+        assert "source of record" in all_text
+        assert "does not make legal conclusions" in all_text or "legal conclusions" in all_text
+        assert "source-completeness" in all_text
+        assert "does not prove" in all_text or "zero" in all_text
+
+    def test_summary_worksheet_has_no_prohibited_wording(self, tmp_path: Path) -> None:
+        """Summary worksheet does not contain positive-claim wording that would imply
+        risk scores, rankings, or verified conclusions."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["Summary"]
+        all_text = " ".join(
+            str(cell.value or "")
+            for row in ws.iter_rows()
+            for cell in row
+        ).casefold()
+        # These substrings only appear as positive claims, not in cautious disclaimers.
+        assert "is a risk score" not in all_text
+        assert "is a severity score" not in all_text
+        assert "ranked by" not in all_text
 
     def test_all_worksheets_have_tab_colors(self, tmp_path: Path) -> None:
         """All five generated worksheets have a tab color set."""
