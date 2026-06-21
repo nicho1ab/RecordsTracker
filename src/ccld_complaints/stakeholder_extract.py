@@ -1051,8 +1051,9 @@ _HEADER_FILL = PatternFill(start_color="D6E4F0", end_color="D6E4F0", fill_type="
 _HEADER_BORDER_BOTTOM = Border(bottom=Side(style="thin"))
 _TITLE_FILL = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
 _TITLE_FONT = Font(bold=True, size=14, color="FFFFFF")
-# Tab colours for the five generated worksheets
+# Tab colours for the six generated worksheets
 _TAB_COLOR_README = "1F4E79"
+_TAB_COLOR_SUMMARY = "7030A0"
 _TAB_COLOR_FACILITY_OVERVIEW = "2E75B6"
 _TAB_COLOR_SUBSTANTIATED = "C55A11"
 _TAB_COLOR_COMPLAINT_RECORDS = "538135"
@@ -1266,6 +1267,11 @@ def _xlsx_populate_readme_sheet(
     _section("TABS INCLUDED")
     _row("README", "This tab — scope, limitations, how to use this workbook.")
     _row(
+        "Summary",
+        "Source-derived workbook metrics: key counts, facility status breakdown, "
+        "finding group breakdown, and keyword review cue breakdown.",
+    )
+    _row(
         "facility-overview",
         "Per-facility complaint counts, substantiated/equivalent counts, "
         "date ranges, and source-traceability counts.",
@@ -1322,6 +1328,116 @@ def _xlsx_populate_readme_sheet(
     ws.column_dimensions["B"].width = 80
 
 
+def _xlsx_populate_summary_sheet(
+    ws: Any,
+    *,
+    manifest: dict[str, Any],
+    facility_rows: list[_FacilityRow],
+    complaint_record_rows: list[_ComplaintRecordRow],
+    bold_font: Any,
+) -> None:
+    """Populate the Summary worksheet with source-derived workbook metrics.
+
+    All counts are derived from records loaded locally.  Does not make legal
+    conclusions, facility-wide conclusions, source-completeness claims, risk
+    scores, severity scores, or rankings.
+    """
+
+    def _kv(label: str, value: str = "") -> None:
+        ws.append([label, value])
+
+    def _section(title: str) -> None:
+        ws.append([""])
+        cell = ws.cell(row=ws.max_row, column=1, value=title)
+        cell.font = bold_font
+        cell.fill = _HEADER_FILL
+        ws.cell(row=ws.max_row, column=2).fill = _HEADER_FILL
+
+    # Title
+    ws.append(["Summary — Source-Derived Workbook Metrics", ""])
+    ws.cell(row=1, column=1).font = _TITLE_FONT
+    ws.cell(row=1, column=1).fill = _TITLE_FILL
+    ws.cell(row=1, column=2).fill = _TITLE_FILL
+
+    _section("HOW TO USE THIS SUMMARY")
+    _kv(
+        "Counts and groups are based only on records currently loaded in the local "
+        "database. A facility may have additional complaint records in the public "
+        "source that were not retrieved or loaded. Zero or low counts do not prove "
+        "that no complaints exist. This summary does not make legal conclusions, "
+        "facility-wide conclusions, source-completeness claims, verified severity "
+        "claims, or abuse/neglect findings. Verify important details against the "
+        "public CCLD portal before citing this extract."
+    )
+
+    _section("KEY METRICS (source-derived count)")
+    _kv("Generated", str(manifest.get("generated_at", "")))
+    _kv("Facilities", str(manifest.get("facility_row_count", 0)))
+    _kv("Loaded complaint records", str(manifest.get("complaint_record_row_count", 0)))
+    _kv(
+        "Substantiated/equivalent complaints",
+        str(manifest.get("substantiated_complaint_row_count", 0)),
+    )
+    _kv("Facility reference rows", str(manifest.get("facility_reference_row_count", 0)))
+    _kv(
+        "Facility reference rows matched to loaded complaints",
+        str(manifest.get("facility_reference_matched_count", 0)),
+    )
+
+    _section("FACILITY STATUS COUNTS (source-derived, facility-overview tab)")
+    status_counts: dict[str, int] = {}
+    for _frow in facility_rows:
+        status_counts[_frow.status] = status_counts.get(_frow.status, 0) + 1
+    if status_counts:
+        for _status_val, _count in sorted(status_counts.items()):
+            _kv(f"  {_status_val}", str(_count))
+    else:
+        _kv("  (no facilities loaded)")
+
+    _section("FINDING GROUP COUNTS (source-derived, complaint-records tab)")
+    fg_counts: dict[str, int] = {}
+    for _cr in complaint_record_rows:
+        fg_counts[_cr.finding_group] = fg_counts.get(_cr.finding_group, 0) + 1
+    if fg_counts:
+        for _fg_val, _fg_count in sorted(fg_counts.items()):
+            _kv(f"  {_fg_val}", str(_fg_count))
+    else:
+        _kv("  (no complaint records loaded)")
+
+    _section("KEYWORD REVIEW CUE COUNTS (source-derived review aid, complaint-records tab)")
+    cue_counts: dict[str, int] = {}
+    for _cr in complaint_record_rows:
+        cue_label = _cr.keyword_review_cues.strip() if _cr.keyword_review_cues else ""
+        if not cue_label:
+            cue_label = "(no review cue match)"
+        cue_counts[cue_label] = cue_counts.get(cue_label, 0) + 1
+    if cue_counts:
+        for _cue_label, _cue_count in sorted(cue_counts.items()):
+            _kv(f"  {_cue_label}", str(_cue_count))
+    else:
+        _kv("  (no complaint records loaded)")
+    _kv(
+        "  Note: a keyword review cue match signals a possible serious allegation "
+        "topic as a review aid only. It is not a severity score, not a risk score, "
+        "not a verified finding, and not a legal classification."
+    )
+
+    _section("SOURCE OF RECORD")
+    _kv(
+        "The public CCLD portal (ccld.dss.ca.gov) remains the source of record. "
+        "Verify important details against the public source before citing this extract."
+    )
+
+    # Wrap all cell text so long prose is readable.
+    for _ws_row in ws.iter_rows():
+        for _cell in _ws_row:
+            _cell.alignment = Alignment(wrap_text=True)
+
+    ws.freeze_panes = "A2"
+    ws.column_dimensions["A"].width = 70
+    ws.column_dimensions["B"].width = 20
+
+
 def _write_xlsx_workbook(
     xlsx_path: Path,
     *,
@@ -1344,6 +1460,16 @@ def _write_xlsx_workbook(
     ws_readme = wb.create_sheet("README")
     ws_readme.sheet_properties.tabColor = _TAB_COLOR_README
     _xlsx_populate_readme_sheet(ws_readme, manifest=manifest, bold_font=bold)
+
+    ws_summary = wb.create_sheet("Summary")
+    ws_summary.sheet_properties.tabColor = _TAB_COLOR_SUMMARY
+    _xlsx_populate_summary_sheet(
+        ws_summary,
+        manifest=manifest,
+        facility_rows=facility_rows,
+        complaint_record_rows=complaint_record_rows,
+        bold_font=bold,
+    )
 
     ws_fo = wb.create_sheet("facility-overview")
     ws_fo.sheet_properties.tabColor = _TAB_COLOR_FACILITY_OVERVIEW
