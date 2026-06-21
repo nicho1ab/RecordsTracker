@@ -1159,6 +1159,23 @@ _COMPLAINT_RECORDS_XLSX_FIELDS = (
     "KeywordReviewCues",
     "SourceUrl",
 )
+# Display labels for the XLSX Manifest worksheet (maps manifest.json keys to
+# stakeholder-readable labels).  The external manifest.json is unchanged.
+_MANIFEST_DISPLAY_LABELS: dict[str, str] = {
+    "generated_at": "Generated",
+    "script_name": "Script Name",
+    "input_source": "Input Source",
+    "output_files": "Output Files",
+    "facility_row_count": "Facility Row Count",
+    "substantiated_complaint_row_count": "Substantiated Complaint Row Count",
+    "complaint_record_row_count": "Complaint Record Row Count",
+    "git_commit": "Git Commit",
+    "facility_reference_csv": "Facility Reference CSV",
+    "facility_reference_row_count": "Facility Reference Row Count",
+    "facility_reference_matched_count": "Facility Reference Matched Count",
+    "only_facility_reference_rows": "Reference-Only Filter Applied",
+    "limitations": "Limitations",
+}
 
 
 def _facility_overview_row_dicts(
@@ -1256,19 +1273,19 @@ def _derive_facility_review_cues(frow: _FacilityRow) -> tuple[str, str]:
     """
     cues: list[str] = []
     if frow.substantiated_count > 0:
-        cues.append("substantiated/equivalent complaint records loaded")
+        cues.append("Substantiated complaint records loaded")
     if frow.loaded_complaint_count > 1:
-        cues.append("multiple loaded complaint records")
+        cues.append("Multiple loaded complaint records")
     if frow.loaded_complaint_count == 0:
-        cues.append("no complaint records loaded in this extract")
+        cues.append("No complaint records loaded in this extract")
     if frow.missing_traceability > 0:
-        cues.append("missing source traceability in loaded rows")
+        cues.append("Missing source traceability in loaded rows")
     if (
         frow.status.strip().casefold().startswith("closed")
         and frow.loaded_complaint_count > 0
     ):
-        cues.append("closed facility with loaded complaint records")
-    review_cues = "; ".join(cues) if cues else "no review cues for loaded data"
+        cues.append("Closed facility with loaded complaint records")
+    review_cues = "; ".join(cues) if cues else "No review cues for loaded data"
     if frow.loaded_complaint_count == 0:
         suggested = (
             "Confirm whether no loaded records reflects extract scope "
@@ -1276,7 +1293,7 @@ def _derive_facility_review_cues(frow: _FacilityRow) -> tuple[str, str]:
         )
     else:
         suggested = (
-            "Review facility-overview and complaint-records rows; verify "
+            "Review Facility Overview and Complaint Records rows; verify "
             "important details against the public CCLD portal."
         )
     return review_cues, suggested
@@ -1415,9 +1432,15 @@ def _xlsx_populate_readme_sheet(
     bold_font: Any,
 ) -> None:
     """Populate the README worksheet with scope, limitations, and key details."""
+    _narrative_rows: list[int] = []
 
     def _row(col_a: str, col_b: str = "") -> None:
         ws.append([col_a, col_b])
+
+    def _narrative(text: str) -> None:
+        """Append a prose-only row; tracked for A:B merge after all rows are written."""
+        ws.append([text, ""])
+        _narrative_rows.append(ws.max_row)
 
     def _section(title: str) -> None:
         ws.append([""])
@@ -1432,18 +1455,18 @@ def _xlsx_populate_readme_sheet(
     ws.cell(row=1, column=2).fill = _TITLE_FILL
 
     _section("PURPOSE")
-    _row(
+    _narrative(
         "This workbook is a review aid derived from locally loaded public CCLD "
         "complaint records. It is not a certified report, legal finding, or "
         "source-completeness proof."
     )
 
     _section("KEY DETAILS")
-    _row("Generated", str(manifest.get("generated_at", "")))
+    _row("Generated", _format_generated_at(str(manifest.get("generated_at", ""))))
     _row("Git commit", str(manifest.get("git_commit", "")))
     _row("Facilities", str(manifest.get("facility_row_count", 0)))
     _row(
-        "Substantiated/equivalent complaints",
+        "Substantiated complaints",
         str(manifest.get("substantiated_complaint_row_count", 0)),
     )
     _row("All loaded complaint records", str(manifest.get("complaint_record_row_count", 0)))
@@ -1459,10 +1482,10 @@ def _xlsx_populate_readme_sheet(
     )
 
     _section("HOW TO USE THIS WORKBOOK")
-    _row(
+    _narrative(
         "Start with the Facility Overview tab for a per-facility summary. "
         "Use Substantiated Complaints for individual records where the source-derived "
-        "finding is substantiated or an equivalent value. "
+        "finding is substantiated. "
         "Use Complaint Records for all loaded complaint records regardless of finding status. "
         "Check the Manifest tab for generation metadata. "
         "Verify important details against the public CCLD portal before citing this extract."
@@ -1482,23 +1505,23 @@ def _xlsx_populate_readme_sheet(
     )
     _row(
         "Facility Overview",
-        "Per-facility complaint counts, substantiated/equivalent counts, "
+        "Per-facility complaint counts, substantiated counts, "
         "date ranges, and source-traceability counts.",
     )
     _row(
         "Substantiated Complaints",
         "Individual complaint records where the source-derived finding "
-        "indicates substantiated or an equivalent value.",
+        "indicates substantiated.",
     )
     _row(
         "Complaint Records",
         "All loaded complaint records regardless of finding status. "
-        "Includes FindingGroup, ComplaintType, AllegationCategory, KeywordReviewCues.",
+        "Includes Finding Group, Complaint Type, Allegation Category, Keyword Review Cues.",
     )
     _row("Manifest", "Generation metadata, row counts, and output file list.")
 
     _section("COUNTS AND COVERAGE")
-    _row(
+    _narrative(
         "Counts are based only on records currently loaded in the local database. "
         "A facility may have additional complaint records in the public source that "
         "were not retrieved or loaded. Zero or low counts do not prove that no "
@@ -1506,27 +1529,31 @@ def _xlsx_populate_readme_sheet(
     )
 
     _section("SOURCE OF RECORD")
-    _row(
+    _narrative(
         "The public CCLD portal (ccld.dss.ca.gov) remains the source of record. "
         "Verify important details against the public source before citing this extract."
     )
 
     _section("IMPORTANT LIMITATIONS")
-    _row(
+    _narrative(
         "This extract does not make legal conclusions, facility-wide conclusions, "
         "source-completeness claims, verified severity claims, or abuse/neglect findings. "
         "Finding/resolution values are source-derived and not independently verified by "
         "RecordsTracker. Raw narrative allegation text is intentionally excluded."
     )
-    _row(
-        "KeywordReviewCues is a deterministic keyword-based review-cue label derived from "
+    _narrative(
+        "Keyword Review Cues is a deterministic keyword-based review-cue label derived from "
         "source-extracted non-narrative fields (finding, allegation category). A match "
         "signals a possible serious allegation topic as a review aid only. It is not a "
         "severity score, not a risk score, not a verified finding, and not a legal "
         "classification. A non-match does not confirm the absence of serious topics."
     )
     _row("")
-    _row(str(manifest.get("limitations", "")))
+    _narrative(str(manifest.get("limitations", "")))
+
+    # Merge narrative rows across A:B so prose spans the full row width.
+    for _rn in _narrative_rows:
+        ws.merge_cells(f"A{_rn}:B{_rn}")
 
     # Wrap all cell text in the README so long prose is readable.
     for _ws_row in ws.iter_rows():
@@ -1551,9 +1578,15 @@ def _xlsx_populate_summary_sheet(
     conclusions, facility-wide conclusions, source-completeness claims, risk
     scores, severity scores, or rankings.
     """
+    _narrative_rows: list[int] = []
 
     def _kv(label: str, value: str = "") -> None:
         ws.append([label, value])
+
+    def _narrative(text: str) -> None:
+        """Append a prose-only row; tracked for A:B merge after all rows are written."""
+        ws.append([text, ""])
+        _narrative_rows.append(ws.max_row)
 
     def _section(title: str) -> None:
         ws.append([""])
@@ -1569,7 +1602,7 @@ def _xlsx_populate_summary_sheet(
     ws.cell(row=1, column=2).fill = _TITLE_FILL
 
     _section("HOW TO USE THIS SUMMARY")
-    _kv(
+    _narrative(
         "Counts and groups are based only on records currently loaded in the local "
         "database. A facility may have additional complaint records in the public "
         "source that were not retrieved or loaded. Zero or low counts do not prove "
@@ -1584,7 +1617,7 @@ def _xlsx_populate_summary_sheet(
     _kv("Facilities", str(manifest.get("facility_row_count", 0)))
     _kv("Loaded complaint records", str(manifest.get("complaint_record_row_count", 0)))
     _kv(
-        "Substantiated/equivalent complaints",
+        "Substantiated complaints",
         str(manifest.get("substantiated_complaint_row_count", 0)),
     )
     _kv("Facility reference rows", str(manifest.get("facility_reference_row_count", 0)))
@@ -1609,7 +1642,7 @@ def _xlsx_populate_summary_sheet(
         fg_counts[_cr.finding_group] = fg_counts.get(_cr.finding_group, 0) + 1
     if fg_counts:
         for _fg_val, _fg_count in sorted(fg_counts.items()):
-            _kv(f"  {_fg_val}", str(_fg_count))
+            _kv(f"  {_finding_group_display(_fg_val)}", str(_fg_count))
     else:
         _kv("  (no complaint records loaded)")
 
@@ -1627,24 +1660,28 @@ def _xlsx_populate_summary_sheet(
     if not complaint_record_rows:
         _kv("  (no complaint records loaded)")
     elif not _has_cue_match:
-        _kv(
-            "  Keyword review cues were not available in this extract. "
+        _narrative(
+            "Keyword review cues were not available in this extract. "
             "No loaded records matched the deterministic keyword list."
         )
     else:
         for _cue_label, _cue_count in sorted(cue_counts.items()):
             _kv(f"  {_cue_label}", str(_cue_count))
-    _kv(
-        "  Note: a keyword review cue match signals a possible serious allegation "
+    _narrative(
+        "Note: a keyword review cue match signals a possible serious allegation "
         "topic as a review aid only. It is not a severity score, not a risk score, "
         "not a verified finding, and not a legal classification."
     )
 
     _section("SOURCE OF RECORD")
-    _kv(
+    _narrative(
         "The public CCLD portal (ccld.dss.ca.gov) remains the source of record. "
         "Verify important details against the public source before citing this extract."
     )
+
+    # Merge narrative rows across A:B so prose spans the full row width.
+    for _rn in _narrative_rows:
+        ws.merge_cells(f"A{_rn}:B{_rn}")
 
     # Wrap all cell text so long prose is readable.
     for _ws_row in ws.iter_rows():
@@ -1740,7 +1777,7 @@ def _write_xlsx_workbook(
 
     ws_manifest = wb.create_sheet("Manifest")
     ws_manifest.sheet_properties.tabColor = _TAB_COLOR_MANIFEST
-    ws_manifest.append(["Key", "Value"])
+    ws_manifest.append(["Field", "Value"])
     ws_manifest.cell(row=1, column=1).font = bold
     ws_manifest.cell(row=1, column=1).fill = _HEADER_FILL
     ws_manifest.cell(row=1, column=1).border = _HEADER_BORDER_BOTTOM
@@ -1748,10 +1785,14 @@ def _write_xlsx_workbook(
     ws_manifest.cell(row=1, column=2).fill = _HEADER_FILL
     ws_manifest.cell(row=1, column=2).border = _HEADER_BORDER_BOTTOM
     for key, value in manifest.items():
-        if isinstance(value, list):
-            ws_manifest.append([key, "; ".join(str(v) for v in value)])
+        display_key = _MANIFEST_DISPLAY_LABELS.get(key, key)
+        if key == "generated_at":
+            display_val = _format_generated_at(str(value or ""))
+        elif isinstance(value, list):
+            display_val = "; ".join(str(v) for v in value)
         else:
-            ws_manifest.append([key, str(value) if value is not None else ""])
+            display_val = str(value) if value is not None else ""
+        ws_manifest.append([display_key, display_val])
     ws_manifest.freeze_panes = "A2"
     ws_manifest.auto_filter.ref = ws_manifest.dimensions
     ws_manifest.column_dimensions["A"].width = 40
