@@ -14,17 +14,24 @@ text is intentionally excluded.
 SQLite database path to export from.
 .PARAMETER OutputRoot
 Root directory under which a timestamped output folder will be created.
+.PARAMETER FacilityReferenceCsv
+Optional path to a facility reference CSV. When provided, facilities in the reference
+are included in facility-overview.csv even when no complaint records are loaded for
+them. Complaint counts are always based only on loaded records.
 .EXAMPLE
 .\scripts\export-stakeholder-facility-overview.ps1
 .EXAMPLE
 .\scripts\export-stakeholder-facility-overview.ps1 -DbPath data\processed\live-ccld.sqlite
+.EXAMPLE
+.\scripts\export-stakeholder-facility-overview.ps1 -FacilityReferenceCsv data\processed\facility-list.csv
 .NOTES
 Run from the repository root after populating the SQLite database.
 Requires Python venv to be initialised (run setup-project.ps1 first).
 #>
 param(
     [string]$DbPath = "data\processed\ccld.sqlite",
-    [string]$OutputRoot = "data\processed\stakeholder-extracts"
+    [string]$OutputRoot = "data\processed\stakeholder-extracts",
+    [string]$FacilityReferenceCsv = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -45,6 +52,9 @@ try {
         "--db-path", $DbPath,
         "--output-root", $OutputRoot
     )
+    if (-not [string]::IsNullOrWhiteSpace($FacilityReferenceCsv)) {
+        $args_list += @("--facility-reference-csv", $FacilityReferenceCsv)
+    }
 
     if (Test-Path $python) {
         & $python @args_list

@@ -29,9 +29,24 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_STAKEHOLDER_EXTRACT_ROOT,
         help="Root directory under which a timestamped output folder is created.",
     )
+    parser.add_argument(
+        "--facility-reference-csv",
+        type=Path,
+        default=None,
+        help=(
+            "Optional path to a facility reference CSV. When provided, "
+            "facilities in the reference are included in facility-overview.csv "
+            "even when no complaint records are loaded for them. "
+            "Complaint counts are always based only on loaded records."
+        ),
+    )
     args = parser.parse_args(argv)
 
-    result = export_stakeholder_facility_overview(args.db_path, args.output_root)
+    result = export_stakeholder_facility_overview(
+        args.db_path,
+        args.output_root,
+        facility_reference_csv=args.facility_reference_csv,
+    )
 
     print(f"Output directory: {result.output_dir.as_posix()}")
     print(f"facility-overview.csv: {result.facility_row_count} facilities")
@@ -39,6 +54,12 @@ def main(argv: list[str] | None = None) -> int:
         f"substantiated-complaints.csv: "
         f"{result.substantiated_complaint_row_count} substantiated/equivalent records"
     )
+    if result.facility_reference_csv != "none":
+        print(
+            f"Facility reference: {result.facility_reference_csv} "
+            f"({result.facility_reference_row_count} rows, "
+            f"{result.facility_reference_matched_count} matched loaded complaints)"
+        )
     print(f"ZIP: {result.zip_path.as_posix()}")
     print(f"Git commit: {result.git_commit}")
     print(result.limitations)
