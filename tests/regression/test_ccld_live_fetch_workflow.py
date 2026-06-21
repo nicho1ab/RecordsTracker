@@ -587,6 +587,215 @@ def test_facility_intake_summary_lines_show_accepted_duplicate_and_ignored_value
     assert "- Ignored blank, comment, or header values: 2" in summary
 
 
+# ---------------------------------------------------------------------------
+# Tests: null / empty / malformed discovery JSON responses
+# ---------------------------------------------------------------------------
+
+
+def _make_urlopen_stub(detail_html: bytes, json_response: bytes) -> Any:
+    """Return a fake urlopen callable that serves canned responses."""
+
+    def fake_urlopen(request: Any, timeout: object = None) -> Any:
+        url = str(request.full_url)
+
+        class _Response:
+            def read(self_inner) -> bytes:
+                if "FacDetail" in url:
+                    return detail_html
+                return json_response
+
+            def __enter__(self_inner) -> _Response:
+                return self_inner
+
+            def __exit__(self_inner, *args: object) -> None:
+                pass
+
+        return _Response()
+
+    return fake_urlopen
+
+
+_NO_LINKS_HTML = b"<html><body>Facility with no complaint report links.</body></html>"
+
+
+def test_null_json_discovery_response_treated_as_no_records(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CCLD returns JSON null for closed facilities with no records; must not raise."""
+    monkeypatch.setattr(
+        facility_reports, "urlopen", _make_urlopen_stub(_NO_LINKS_HTML, b"null")
+    )
+
+    result = ingest_facility_reports_for_facility(
+        facility_number="347006586",
+        discovered_at=RETRIEVED_AT,
+        limit=None,
+    )
+
+    assert result.candidates == []
+    assert result.discovered_count == 0
+    assert result.failures == []
+    assert result.records == []
+
+
+def test_null_json_discovery_response_not_counted_as_facility_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Null JSON response shows as no-records-discovered, not a discovery failure."""
+    monkeypatch.setattr(
+        facility_reports, "urlopen", _make_urlopen_stub(_NO_LINKS_HTML, b"null")
+    )
+
+    result = ingest_facility_reports_for_facilities(
+        ["347006586"],
+        connector_factory=_connector_factory(tmp_path / "raw" / "ccld", tmp_path / "ccld.sqlite"),
+        discovered_at=RETRIEVED_AT,
+    )
+
+    assert result.facility_failures == []
+    assert len(result.facility_results) == 1
+    assert result.facility_results[0].discovered_count == 0
+
+    summary = live_fetch_summary_lines(result.facility_results, result.facility_failures)
+    assert "- Facilities with no records discovered: 1" in summary
+    assert "- Facilities with discovery failures: 0" in summary
+
+
+def test_empty_json_discovery_response_is_a_controlled_facility_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """An empty HTTP body is not valid JSON; it must surface as a discovery failure."""
+    monkeypatch.setattr(
+        facility_reports, "urlopen", _make_urlopen_stub(_NO_LINKS_HTML, b"")
+    )
+
+    result = ingest_facility_reports_for_facilities(
+        ["347006586"],
+        connector_factory=_connector_factory(tmp_path / "raw" / "ccld", tmp_path / "ccld.sqlite"),
+        discovered_at=RETRIEVED_AT,
+    )
+
+    assert len(result.facility_failures) == 1
+    assert result.facility_failures[0].facility_number == "347006586"
+    assert result.facility_failures[0].stage == "discover"
+
+
+def test_malformed_json_discovery_response_is_a_controlled_facility_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A non-object JSON response (e.g. a bare array) must surface as a discovery failure."""
+    monkeypatch.setattr(
+        facility_reports, "urlopen", _make_urlopen_stub(_NO_LINKS_HTML, b"[1, 2, 3]")
+    )
+
+    result = ingest_facility_reports_for_facilities(
+        ["347006586"],
+        connector_factory=_connector_factory(tmp_path / "raw" / "ccld", tmp_path / "ccld.sqlite"),
+        discovered_at=RETRIEVED_AT,
+    )
+
+    assert len(result.facility_failures) == 1
+    assert result.facility_failures[0].facility_number == "347006586"
+    assert result.facility_failures[0].stage == "discover"
+    assert "unexpected structure" in result.facility_failures[0].message
+
+
+def test_normal_json_discovery_response_still_produces_candidates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A well-formed REPORTARRAY response must still produce candidates as before."""
+    report_json = (
+        b'{"REPORTARRAY":['
+        b'{"FACILITYNUMBER":"347006586","REPORTTYPE":"Complaint","REPORTDATE":"01/01/2023"},'
+        b'{"FACILITYNUMBER":"347006586","REPORTTYPE":"Complaint","REPORTDATE":"06/01/2023"}'
+        b"]}"
+    )
+    monkeypatch.setattr(
+        facility_reports, "urlopen", _make_urlopen_stub(_NO_LINKS_HTML, report_json)
+    )
+
+    result = ingest_facility_reports_for_facility(
+        facility_number="347006586",
+        discovered_at=RETRIEVED_AT,
+        limit=None,
+        fetch_report=lambda _url: b"<html><body>No content.</body></html>",
+    )
+
+    assert result.discovered_count == 2
+    assert len(result.candidates) == 2
+    assert all(c.facility_number == "347006586" for c in result.candidates)
+
+
+def test_empty_dict_discovery_response_treated_as_no_records(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An empty JSON object (no REPORTARRAY key) must be treated as no records."""
+    monkeypatch.setattr(
+        facility_reports, "urlopen", _make_urlopen_stub(_NO_LINKS_HTML, b"{}")
+    )
+
+    result = ingest_facility_reports_for_facility(
+        facility_number="347006586",
+        discovered_at=RETRIEVED_AT,
+        limit=None,
+    )
+
+    assert result.candidates == []
+    assert result.discovered_count == 0
+    assert result.failures == []
+
+
+def test_null_report_array_value_treated_as_no_records(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """REPORTARRAY key present but set to null must not raise AttributeError or TypeError."""
+    monkeypatch.setattr(
+        facility_reports,
+        "urlopen",
+        _make_urlopen_stub(_NO_LINKS_HTML, b'{"REPORTARRAY": null}'),
+    )
+
+    result = ingest_facility_reports_for_facility(
+        facility_number="347006586",
+        discovered_at=RETRIEVED_AT,
+        limit=None,
+    )
+
+    assert result.candidates == []
+    assert result.discovered_count == 0
+    assert result.failures == []
+
+
+def test_null_elements_in_report_array_are_skipped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Null elements inside REPORTARRAY must not raise AttributeError; valid entries kept."""
+    report_json = (
+        b'{"REPORTARRAY":['
+        b"null,"
+        b'{"FACILITYNUMBER":"347006586","REPORTTYPE":"Complaint","REPORTDATE":"01/01/2023"},'
+        b"null"
+        b"]}"
+    )
+    monkeypatch.setattr(
+        facility_reports, "urlopen", _make_urlopen_stub(_NO_LINKS_HTML, report_json)
+    )
+
+    result = ingest_facility_reports_for_facility(
+        facility_number="347006586",
+        discovered_at=RETRIEVED_AT,
+        limit=None,
+        fetch_report=lambda _url: b"<html><body>No content.</body></html>",
+    )
+
+    assert result.discovered_count == 1
+    assert len(result.candidates) == 1
+    assert result.candidates[0].facility_number == "347006586"
+
+
 def _fake_report_fetch(source_url: str) -> bytes:
     for report_index in (39, 37, 29):
         if f"inx={report_index}" in source_url:
