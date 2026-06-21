@@ -826,11 +826,35 @@ def _candidates_from_report_list_json(
     discovered_at: str | None = None,
     report_section: str | None = None,
 ) -> list[SourceDocumentCandidate]:
-    report_list = cast(dict[str, object], json.loads(report_list_content.decode("utf-8")))
-    report_array = cast(list[dict[str, object]], report_list.get("REPORTARRAY", []))
+    parsed = json.loads(report_list_content.decode("utf-8"))
+    # The CCLD API returns JSON null for facilities with no records (e.g. closed
+    # facilities that have never had a complaint report indexed).  Treat null as
+    # an authoritative "no records" response and return an empty candidate list.
+    if parsed is None:
+        return []
+    if not isinstance(parsed, dict):
+        raise ValueError(
+            f"Discovery response has unexpected structure: "
+            f"expected JSON object or null, got {type(parsed).__name__}"
+        )
+    report_list = cast(dict[str, object], parsed)
+    raw_array = report_list.get("REPORTARRAY")
+    # REPORTARRAY may be absent (no default needed), null, or a list.  Treat
+    # absent-or-null as "no records" so a closed facility with no report index
+    # is not misreported as a discovery failure.
+    if raw_array is None:
+        return []
+    if not isinstance(raw_array, list):
+        raise ValueError(
+            f"Discovery response REPORTARRAY has unexpected type: {type(raw_array).__name__}"
+        )
+    report_array = cast(list[dict[str, object]], raw_array)
     selected_report_section = _normalized_report_section(report_section)
     candidates = []
     for report_index, report in enumerate(report_array):
+        if not isinstance(report, dict):
+            # A null or non-object element is not a usable report entry; skip it.
+            continue
         if report.get("FACILITYNUMBER") != facility_number:
             continue
         section = _report_section_from_report_type(cast(str | None, report.get("REPORTTYPE")))
