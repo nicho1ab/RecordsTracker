@@ -432,8 +432,8 @@ class TestEmptyInput:
         assert result.xlsx_path.exists()
         wb = openpyxl.load_workbook(result.xlsx_path)
         assert "README" in wb.sheetnames
-        assert "facility-overview" in wb.sheetnames
-        assert "substantiated-complaints" in wb.sheetnames
+        assert "Facility Overview" in wb.sheetnames
+        assert "Substantiated Complaints" in wb.sheetnames
         assert "Manifest" in wb.sheetnames
 
     def test_empty_output_no_misleading_count_claims(self, tmp_path: Path) -> None:
@@ -1346,12 +1346,12 @@ class TestComplaintRecordsExport:
         assert "Neglect" in rows[0]["AllegationCategory"]
 
     def test_complaint_records_in_xlsx(self, tmp_path: Path) -> None:
-        """complaint-records worksheet is included in the Excel workbook."""
+        """Complaint Records worksheet is included in the Excel workbook."""
         db_path, extracts = self._make_two_complaint_db(tmp_path)
         result = export_stakeholder_facility_overview(db_path, extracts)
 
         wb = openpyxl.load_workbook(result.xlsx_path)
-        assert "complaint-records" in wb.sheetnames
+        assert "Complaint Records" in wb.sheetnames
 
     def test_complaint_records_respects_only_facility_reference_rows(
         self, tmp_path: Path
@@ -1498,8 +1498,8 @@ class TestExcelWorkbook:
         assert zip_files == [], f"Unexpected ZIP file(s): {zip_files}"
 
     def test_worksheet_order(self, tmp_path: Path) -> None:
-        """Workbook sheet order: README, facility-overview, substantiated-complaints,
-        complaint-records, Manifest."""
+        """Workbook sheet order: README, Summary, Facility Review Cues, Facility Overview,
+        Substantiated Complaints, Complaint Records, Manifest."""
         db_path, extracts = self._make_two_complaint_db(tmp_path)
         result = export_stakeholder_facility_overview(db_path, extracts)
 
@@ -1507,10 +1507,10 @@ class TestExcelWorkbook:
         assert wb.sheetnames == [
             "README",
             "Summary",
-            "facility-review-cues",
-            "facility-overview",
-            "substantiated-complaints",
-            "complaint-records",
+            "Facility Review Cues",
+            "Facility Overview",
+            "Substantiated Complaints",
+            "Complaint Records",
             "Manifest",
         ]
 
@@ -1587,33 +1587,33 @@ class TestExcelWorkbook:
         result = export_stakeholder_facility_overview(db_path, extracts)
 
         wb = openpyxl.load_workbook(result.xlsx_path)
-        ws_fo = wb["facility-overview"]
+        ws_fo = wb["Facility Overview"]
         assert ws_fo.max_row - 1 == result.facility_row_count
 
-        ws_cr = wb["complaint-records"]
+        ws_cr = wb["Complaint Records"]
         assert ws_cr.max_row - 1 == result.complaint_record_row_count
 
     def test_complaint_records_more_than_substantiated(self, tmp_path: Path) -> None:
-        """complaint-records worksheet has more data rows than substantiated-complaints."""
+        """Complaint Records worksheet has more data rows than Substantiated Complaints."""
         db_path, extracts = self._make_two_complaint_db(tmp_path)
         result = export_stakeholder_facility_overview(db_path, extracts)
 
         wb = openpyxl.load_workbook(result.xlsx_path)
-        cr_rows = wb["complaint-records"].max_row - 1
-        sub_rows = wb["substantiated-complaints"].max_row - 1
+        cr_rows = wb["Complaint Records"].max_row - 1
+        sub_rows = wb["Substantiated Complaints"].max_row - 1
         assert cr_rows > sub_rows
 
     def test_complaint_records_worksheet_includes_all_finding_groups(
         self, tmp_path: Path
     ) -> None:
-        """complaint-records worksheet includes both substantiated and non-substantiated."""
+        """Complaint Records worksheet includes both substantiated and non-substantiated."""
         db_path, extracts = self._make_two_complaint_db(tmp_path)
         result = export_stakeholder_facility_overview(db_path, extracts)
 
         wb = openpyxl.load_workbook(result.xlsx_path)
-        ws = wb["complaint-records"]
+        ws = wb["Complaint Records"]
         header = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
-        ctrl_col = header.index("ComplaintControlNumber") + 1
+        ctrl_col = header.index("Complaint Control Number") + 1
         control_numbers = {
             ws.cell(row=r, column=ctrl_col).value
             for r in range(2, ws.max_row + 1)
@@ -1651,59 +1651,57 @@ class TestExcelWorkbook:
                     ), f"Narrative text found in sheet {sheet_name!r}"
 
     def test_data_worksheets_freeze_top_row(self, tmp_path: Path) -> None:
-        """Data worksheets freeze the header row (freeze_panes == 'A2')."""
+        """Wide data worksheets freeze the header row and first two identifying columns
+        (freeze_panes == 'C2'), keeping Facility Number and Facility Name visible."""
         db_path, extracts = self._make_two_complaint_db(tmp_path)
         result = export_stakeholder_facility_overview(db_path, extracts)
 
         wb = openpyxl.load_workbook(result.xlsx_path)
         for sheet_name in [
-            "facility-overview",
-            "substantiated-complaints",
-            "complaint-records",
+            "Facility Overview",
+            "Substantiated Complaints",
+            "Complaint Records",
         ]:
             ws = wb[sheet_name]
-            assert ws.freeze_panes == "A2", (
-                f"Sheet {sheet_name!r} should freeze top row (freeze_panes='A2')"
+            assert ws.freeze_panes == "C2", (
+                f"Sheet {sheet_name!r} should freeze top row and two left columns "
+                f"(freeze_panes='C2'), got {ws.freeze_panes!r}"
             )
 
     def test_source_url_cells_have_hyperlinks(self, tmp_path: Path) -> None:
-        """SourceUrl column cells in data sheets carry hyperlink objects for http URLs."""
+        """Source URL column cells in data sheets carry hyperlink objects for http URLs."""
         db_path, extracts = self._make_two_complaint_db(tmp_path)
         result = export_stakeholder_facility_overview(db_path, extracts)
 
         wb = openpyxl.load_workbook(result.xlsx_path)
-        for sheet_name in ["substantiated-complaints", "complaint-records"]:
+        for sheet_name in ["Substantiated Complaints", "Complaint Records"]:
             ws = wb[sheet_name]
             header = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
-            assert "SourceUrl" in header, f"{sheet_name!r} missing SourceUrl column"
-            url_col = header.index("SourceUrl") + 1
+            assert "Source URL" in header, f"{sheet_name!r} missing 'Source URL' column"
+            url_col = header.index("Source URL") + 1
             for row_idx in range(2, ws.max_row + 1):
                 cell = ws.cell(row=row_idx, column=url_col)
                 val = str(cell.value or "")
                 if val.startswith("http"):
                     assert cell.hyperlink is not None, (
-                        f"SourceUrl cell in {sheet_name!r} row {row_idx} has no hyperlink"
+                        f"Source URL cell in {sheet_name!r} row {row_idx} has no hyperlink"
                     )
 
-    def test_limitations_column_has_wrap_text(self, tmp_path: Path) -> None:
-        """Limitations column data cells in data sheets have wrap_text enabled."""
+    def test_review_cues_column_has_wrap_text(self, tmp_path: Path) -> None:
+        """Review Cues and Suggested Next Step columns in Facility Review Cues have wrap_text."""
         db_path, extracts = self._make_two_complaint_db(tmp_path)
         result = export_stakeholder_facility_overview(db_path, extracts)
 
         wb = openpyxl.load_workbook(result.xlsx_path)
-        for sheet_name in [
-            "facility-overview",
-            "substantiated-complaints",
-            "complaint-records",
-        ]:
-            ws = wb[sheet_name]
-            header = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
-            assert "Limitations" in header, f"{sheet_name!r} missing Limitations column"
-            lim_col = header.index("Limitations") + 1
+        ws = wb["Facility Review Cues"]
+        header = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
+        for col_name in ("Review Cues", "Suggested Next Step"):
+            assert col_name in header, f"Facility Review Cues missing {col_name!r} column"
+            col_idx = header.index(col_name) + 1
             for row_idx in range(2, ws.max_row + 1):
-                cell = ws.cell(row=row_idx, column=lim_col)
+                cell = ws.cell(row=row_idx, column=col_idx)
                 assert cell.alignment.wrap_text, (
-                    f"Limitations cell in {sheet_name!r} row {row_idx} missing wrap_text"
+                    f"{col_name!r} cell in Facility Review Cues row {row_idx} missing wrap_text"
                 )
 
     def test_manifest_worksheet_has_auto_filter(self, tmp_path: Path) -> None:
@@ -1728,10 +1726,10 @@ class TestExcelWorkbook:
             for cell in row
         ).casefold()
         assert "tabs included" in all_text
-        assert "facility-review-cues" in all_text
-        assert "facility-overview" in all_text
-        assert "substantiated-complaints" in all_text
-        assert "complaint-records" in all_text
+        assert "facility review cues" in all_text
+        assert "facility overview" in all_text
+        assert "substantiated complaints" in all_text
+        assert "complaint records" in all_text
         assert "manifest" in all_text
 
     def test_readme_has_counts_and_coverage_guidance(self, tmp_path: Path) -> None:
@@ -1836,9 +1834,9 @@ class TestExcelWorkbook:
 
         wb = openpyxl.load_workbook(result.xlsx_path)
         for sheet_name in [
-            "facility-overview",
-            "substantiated-complaints",
-            "complaint-records",
+            "Facility Overview",
+            "Substantiated Complaints",
+            "Complaint Records",
         ]:
             ws = wb[sheet_name]
             for col_idx in range(1, ws.max_column + 1):
@@ -1878,52 +1876,55 @@ class TestExcelWorkbook:
     def test_facility_review_cues_has_one_row_per_facility(
         self, tmp_path: Path
     ) -> None:
-        """facility-review-cues has exactly one data row per facility overview row."""
+        """Facility Review Cues has exactly one data row per facility overview row."""
         db_path, extracts = self._make_two_complaint_db(tmp_path)
         result = export_stakeholder_facility_overview(db_path, extracts)
 
         wb = openpyxl.load_workbook(result.xlsx_path)
-        ws_frc = wb["facility-review-cues"]
-        ws_fo = wb["facility-overview"]
+        ws_frc = wb["Facility Review Cues"]
+        ws_fo = wb["Facility Overview"]
         # Both have same number of data rows (header excluded).
         assert ws_frc.max_row - 1 == ws_fo.max_row - 1
         assert ws_frc.max_row - 1 == result.facility_row_count
 
     def test_facility_review_cues_columns_are_present(self, tmp_path: Path) -> None:
-        """facility-review-cues contains expected column headers."""
+        """Facility Review Cues contains expected display column headers."""
         db_path, extracts = self._make_two_complaint_db(tmp_path)
         result = export_stakeholder_facility_overview(db_path, extracts)
 
         wb = openpyxl.load_workbook(result.xlsx_path)
-        ws = wb["facility-review-cues"]
+        ws = wb["Facility Review Cues"]
         header = [
             ws.cell(row=1, column=c).value
             for c in range(1, ws.max_column + 1)
         ]
         for col in (
-            "FacilityNumber",
-            "FacilityName",
+            "Facility Number",
+            "Facility Name",
             "Status",
             "County",
-            "LoadedComplaintCount",
-            "SubstantiatedOrEquivalentCount",
-            "ReviewCues",
-            "SuggestedNextStep",
-            "Limitations",
+            "Loaded Complaint Count",
+            "Substantiated Count",
+            "Review Cues",
+            "Suggested Next Step",
         ):
-            assert col in header, f"facility-review-cues missing column {col!r}"
+            assert col in header, f"Facility Review Cues missing column {col!r}"
+        # Limitations removed from XLSX display.
+        assert "Limitations" not in header, (
+            "Limitations column should not appear in Facility Review Cues XLSX"
+        )
 
     def test_facility_review_cues_review_cue_labels_are_deterministic(
         self, tmp_path: Path
     ) -> None:
-        """ReviewCues values in facility-review-cues use cautious source-derived labels."""
+        """Review Cues values in Facility Review Cues use cautious source-derived labels."""
         db_path, extracts = self._make_two_complaint_db(tmp_path)
         result = export_stakeholder_facility_overview(db_path, extracts)
 
         wb = openpyxl.load_workbook(result.xlsx_path)
-        ws = wb["facility-review-cues"]
+        ws = wb["Facility Review Cues"]
         header = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
-        cue_col = header.index("ReviewCues") + 1
+        cue_col = header.index("Review Cues") + 1
         cue_texts = " ".join(
             str(ws.cell(row=r, column=cue_col).value or "")
             for r in range(2, ws.max_row + 1)
@@ -1939,14 +1940,14 @@ class TestExcelWorkbook:
     def test_facility_review_cues_suggested_next_step_wording(
         self, tmp_path: Path
     ) -> None:
-        """SuggestedNextStep values are cautious and do not imply verified conclusions."""
+        """Suggested Next Step values are cautious and do not imply verified conclusions."""
         db_path, extracts = self._make_two_complaint_db(tmp_path)
         result = export_stakeholder_facility_overview(db_path, extracts)
 
         wb = openpyxl.load_workbook(result.xlsx_path)
-        ws = wb["facility-review-cues"]
+        ws = wb["Facility Review Cues"]
         header = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
-        step_col = header.index("SuggestedNextStep") + 1
+        step_col = header.index("Suggested Next Step") + 1
         step_texts = " ".join(
             str(ws.cell(row=r, column=step_col).value or "")
             for r in range(2, ws.max_row + 1)
@@ -1993,25 +1994,25 @@ class TestExcelWorkbook:
         ), "Count row for 'Possible serious allegation topic' should be suppressed"
 
     def test_data_cells_with_wrap_have_top_left_alignment(self, tmp_path: Path) -> None:
-        """Wrapped Limitations cells in data sheets are top-left aligned."""
+        """Wrapped Review Cues and Suggested Next Step cells are top-left aligned."""
         db_path, extracts = self._make_two_complaint_db(tmp_path)
         result = export_stakeholder_facility_overview(db_path, extracts)
 
         wb = openpyxl.load_workbook(result.xlsx_path)
-        for sheet_name in ["facility-overview", "complaint-records", "facility-review-cues"]:
-            ws = wb[sheet_name]
-            header = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
-            lim_col = header.index("Limitations") + 1
+        ws = wb["Facility Review Cues"]
+        header = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
+        for col_name in ("Review Cues", "Suggested Next Step"):
+            col_idx = header.index(col_name) + 1
             for row_idx in range(2, ws.max_row + 1):
-                cell = ws.cell(row=row_idx, column=lim_col)
+                cell = ws.cell(row=row_idx, column=col_idx)
                 assert cell.alignment.horizontal == "left", (
-                    f"{sheet_name!r} Limitations col {row_idx} alignment.horizontal != 'left'"
+                    f"Facility Review Cues {col_name!r} row {row_idx} horizontal != 'left'"
                 )
                 assert cell.alignment.vertical == "top", (
-                    f"{sheet_name!r} Limitations col {row_idx} alignment.vertical != 'top'"
+                    f"Facility Review Cues {col_name!r} row {row_idx} vertical != 'top'"
                 )
                 assert cell.alignment.wrap_text, (
-                    f"{sheet_name!r} Limitations col {row_idx} missing wrap_text"
+                    f"Facility Review Cues {col_name!r} row {row_idx} missing wrap_text"
                 )
 
     def test_all_table_based_sheets_have_freeze_and_filter(
@@ -2023,10 +2024,10 @@ class TestExcelWorkbook:
 
         wb = openpyxl.load_workbook(result.xlsx_path)
         table_sheets = [
-            "facility-review-cues",
-            "facility-overview",
-            "substantiated-complaints",
-            "complaint-records",
+            "Facility Review Cues",
+            "Facility Overview",
+            "Substantiated Complaints",
+            "Complaint Records",
             "Manifest",
         ]
         for sheet_name in table_sheets:
@@ -2051,46 +2052,127 @@ class TestExcelWorkbook:
         assert ws.auto_filter.ref is not None, "Summary sheet has no auto_filter"
 
     def test_non_wrap_data_cells_are_top_left_aligned(self, tmp_path: Path) -> None:
-        """Non-wrap data cells (FacilityNumber) in data sheets are left/top aligned."""
+        """Non-wrap data cells (Facility Number) in data sheets are left/top aligned."""
         db_path, extracts = self._make_two_complaint_db(tmp_path)
         result = export_stakeholder_facility_overview(db_path, extracts)
 
         wb = openpyxl.load_workbook(result.xlsx_path)
-        for sheet_name in ["facility-overview", "facility-review-cues", "complaint-records"]:
+        for sheet_name in ["Facility Overview", "Facility Review Cues", "Complaint Records"]:
             ws = wb[sheet_name]
             header = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
-            assert "FacilityNumber" in header, f"{sheet_name!r} missing FacilityNumber"
-            fn_col = header.index("FacilityNumber") + 1
+            assert "Facility Number" in header, f"{sheet_name!r} missing 'Facility Number'"
+            fn_col = header.index("Facility Number") + 1
             for row_idx in range(2, ws.max_row + 1):
                 cell = ws.cell(row=row_idx, column=fn_col)
                 if cell.value is None:
                     continue
                 assert cell.alignment.horizontal == "left", (
-                    f"{sheet_name!r} FacilityNumber row {row_idx} horizontal != 'left'"
+                    f"{sheet_name!r} Facility Number row {row_idx} horizontal != 'left'"
                 )
                 assert cell.alignment.vertical == "top", (
-                    f"{sheet_name!r} FacilityNumber row {row_idx} vertical != 'top'"
+                    f"{sheet_name!r} Facility Number row {row_idx} vertical != 'top'"
                 )
 
-    def test_facility_review_cues_limitations_contains_cautious_wording(
+    def test_facility_review_cues_limitations_column_absent_from_xlsx(
         self, tmp_path: Path
     ) -> None:
-        """Limitations cells in facility-review-cues contain source-of-record caution."""
+        """Limitations column is intentionally absent from the Facility Review Cues XLSX tab.
+        Cautious source-of-record wording is instead centralised in README and Summary."""
         db_path, extracts = self._make_two_complaint_db(tmp_path)
         result = export_stakeholder_facility_overview(db_path, extracts)
 
         wb = openpyxl.load_workbook(result.xlsx_path)
-        ws = wb["facility-review-cues"]
+        ws = wb["Facility Review Cues"]
         header = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
-        lim_col = header.index("Limitations") + 1
-        lim_texts = " ".join(
-            str(ws.cell(row=r, column=lim_col).value or "")
+        assert "Limitations" not in header, (
+            "Limitations column should be absent from Facility Review Cues XLSX tab"
+        )
+
+    def test_xlsx_column_headers_use_display_names(self, tmp_path: Path) -> None:
+        """XLSX data worksheets use stakeholder-friendly spaced column display names."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        for sheet_name in ["Facility Overview", "Complaint Records", "Facility Review Cues"]:
+            ws = wb[sheet_name]
+            header = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
+            assert "Facility Number" in header, f"{sheet_name!r}: missing 'Facility Number'"
+            assert "Facility Name" in header, f"{sheet_name!r}: missing 'Facility Name'"
+            assert "FacilityNumber" not in header, (
+                f"{sheet_name!r}: internal 'FacilityNumber' should not appear as header"
+            )
+            assert "FacilityName" not in header, (
+                f"{sheet_name!r}: internal 'FacilityName' should not appear as header"
+            )
+        ws_sub = wb["Substantiated Complaints"]
+        sub_header = [ws_sub.cell(row=1, column=c).value for c in range(1, ws_sub.max_column + 1)]
+        assert "Source URL" in sub_header, "Substantiated Complaints: missing 'Source URL'"
+        assert "SourceUrl" not in sub_header, (
+            "Substantiated Complaints: 'SourceUrl' should not appear as header"
+        )
+
+    def test_finding_group_uses_stakeholder_terms(self, tmp_path: Path) -> None:
+        """Complaint Records XLSX uses 'Substantiated'/'Unsubstantiated' not internal codes."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["Complaint Records"]
+        header = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
+        fg_col = header.index("Finding Group") + 1
+        fg_values = {
+            ws.cell(row=r, column=fg_col).value
             for r in range(2, ws.max_row + 1)
-        ).casefold()
-        assert "source of record" in lim_texts
-        assert "does not make legal conclusions" in lim_texts or "legal conclusions" in lim_texts
-        assert "source-completeness" in lim_texts
-        # Must not contain positive-claim language.
-        assert "is a risk score" not in lim_texts
-        assert "ranked by" not in lim_texts
+        }
+        assert "Substantiated" in fg_values, (
+            "Complaint Records: expected 'Substantiated' in Finding Group column"
+        )
+        assert "Unsubstantiated" in fg_values, (
+            "Complaint Records: expected 'Unsubstantiated' in Finding Group column"
+        )
+        for val in fg_values:
+            assert val not in ("SubstantiatedOrEquivalent", "NotSubstantiatedOrEquivalent"), (
+                f"Complaint Records: internal FindingGroup code {val!r} should not appear"
+            )
+
+    def test_summary_generated_timestamp_is_human_readable(self, tmp_path: Path) -> None:
+        """Summary worksheet 'Generated' row shows a human-readable timestamp, not compact form."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["Summary"]
+        generated_val = ""
+        for r in range(1, ws.max_row + 1):
+            if ws.cell(row=r, column=1).value == "Generated":
+                generated_val = str(ws.cell(row=r, column=2).value or "")
+                break
+        assert generated_val, "Summary: 'Generated' row not found or value is empty"
+        # Compact form contains 'T' between date and time; human-readable form must not.
+        import re
+        assert not re.match(r"\d{8}T\d{6}Z", generated_val), (
+            f"Summary 'Generated' value looks like compact form: {generated_val!r}"
+        )
+        assert "UTC" in generated_val, (
+            f"Summary 'Generated' value should contain 'UTC': {generated_val!r}"
+        )
+
+    def test_limitations_absent_from_all_xlsx_data_sheets(self, tmp_path: Path) -> None:
+        """Limitations column is intentionally removed from all four XLSX data tabs."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        for sheet_name in [
+            "Facility Review Cues",
+            "Facility Overview",
+            "Substantiated Complaints",
+            "Complaint Records",
+        ]:
+            ws = wb[sheet_name]
+            header = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
+            assert "Limitations" not in header, (
+                f"{sheet_name!r}: Limitations column should be absent from XLSX display"
+            )
 
