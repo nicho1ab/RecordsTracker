@@ -1534,6 +1534,7 @@ def _xlsx_populate_summary_sheet(
             _cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
 
     ws.freeze_panes = "A2"
+    ws.auto_filter.ref = ws.dimensions
     ws.column_dimensions["A"].width = 70
     ws.column_dimensions["B"].width = 20
 

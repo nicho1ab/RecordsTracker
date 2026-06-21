@@ -2014,3 +2014,83 @@ class TestExcelWorkbook:
                     f"{sheet_name!r} Limitations col {row_idx} missing wrap_text"
                 )
 
+    def test_all_table_based_sheets_have_freeze_and_filter(
+        self, tmp_path: Path
+    ) -> None:
+        """Every table-based generated worksheet has freeze panes and an auto_filter."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        table_sheets = [
+            "facility-review-cues",
+            "facility-overview",
+            "substantiated-complaints",
+            "complaint-records",
+            "Manifest",
+        ]
+        for sheet_name in table_sheets:
+            ws = wb[sheet_name]
+            assert ws.freeze_panes is not None and ws.freeze_panes != "", (
+                f"Sheet {sheet_name!r} has no freeze panes"
+            )
+            assert ws.auto_filter.ref is not None, (
+                f"Sheet {sheet_name!r} has no auto_filter"
+            )
+
+    def test_summary_sheet_has_freeze_and_filter(self, tmp_path: Path) -> None:
+        """Summary worksheet has freeze panes and an auto_filter."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["Summary"]
+        assert ws.freeze_panes is not None and ws.freeze_panes != "", (
+            "Summary sheet has no freeze panes"
+        )
+        assert ws.auto_filter.ref is not None, "Summary sheet has no auto_filter"
+
+    def test_non_wrap_data_cells_are_top_left_aligned(self, tmp_path: Path) -> None:
+        """Non-wrap data cells (FacilityNumber) in data sheets are left/top aligned."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        for sheet_name in ["facility-overview", "facility-review-cues", "complaint-records"]:
+            ws = wb[sheet_name]
+            header = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
+            assert "FacilityNumber" in header, f"{sheet_name!r} missing FacilityNumber"
+            fn_col = header.index("FacilityNumber") + 1
+            for row_idx in range(2, ws.max_row + 1):
+                cell = ws.cell(row=row_idx, column=fn_col)
+                if cell.value is None:
+                    continue
+                assert cell.alignment.horizontal == "left", (
+                    f"{sheet_name!r} FacilityNumber row {row_idx} horizontal != 'left'"
+                )
+                assert cell.alignment.vertical == "top", (
+                    f"{sheet_name!r} FacilityNumber row {row_idx} vertical != 'top'"
+                )
+
+    def test_facility_review_cues_limitations_contains_cautious_wording(
+        self, tmp_path: Path
+    ) -> None:
+        """Limitations cells in facility-review-cues contain source-of-record caution."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["facility-review-cues"]
+        header = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
+        lim_col = header.index("Limitations") + 1
+        lim_texts = " ".join(
+            str(ws.cell(row=r, column=lim_col).value or "")
+            for r in range(2, ws.max_row + 1)
+        ).casefold()
+        assert "source of record" in lim_texts
+        assert "does not make legal conclusions" in lim_texts or "legal conclusions" in lim_texts
+        assert "source-completeness" in lim_texts
+        # Must not contain positive-claim language.
+        assert "is a risk score" not in lim_texts
+        assert "ranked by" not in lim_texts
+
