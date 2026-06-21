@@ -40,7 +40,7 @@ from pathlib import Path
 from typing import Any
 
 import openpyxl
-from openpyxl.styles import Font
+from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 
 DEFAULT_STAKEHOLDER_EXTRACT_ROOT = Path("data/processed/stakeholder-extracts")
@@ -1166,6 +1166,24 @@ def _xlsx_data_sheet(
     ws.freeze_panes = "A2"
     if ws.max_row >= 1 and ws.max_column >= 1:
         ws.auto_filter.ref = ws.dimensions
+    # Apply hyperlinks to SourceUrl column and wrap_text to Limitations column.
+    source_url_col: int | None = None
+    limitations_col: int | None = None
+    for _col_idx, _fname in enumerate(fields, 1):
+        if _fname == "SourceUrl":
+            source_url_col = _col_idx
+        elif _fname == "Limitations":
+            limitations_col = _col_idx
+    for _row_idx in range(2, ws.max_row + 1):
+        if source_url_col is not None:
+            _cell = ws.cell(row=_row_idx, column=source_url_col)
+            _val = str(_cell.value or "")
+            if _val.startswith("http"):
+                _cell.hyperlink = _val
+        if limitations_col is not None:
+            ws.cell(row=_row_idx, column=limitations_col).alignment = Alignment(
+                wrap_text=True
+            )
     _xlsx_autosize_columns(ws, col_letter_fn)
 
 
@@ -1338,6 +1356,7 @@ def _write_xlsx_workbook(
         else:
             ws_manifest.append([key, str(value) if value is not None else ""])
     ws_manifest.freeze_panes = "A2"
+    ws_manifest.auto_filter.ref = ws_manifest.dimensions
     ws_manifest.column_dimensions["A"].width = 40
     ws_manifest.column_dimensions["B"].width = 80
 
