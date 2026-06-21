@@ -1,6 +1,23 @@
 # Changelog
 
 ## Unreleased
+- Added local profiling and cohort-generation utility for CCLD public download
+	CSVs: `scripts/profile-ccld-public-download-csvs.ps1` (PowerShell wrapper),
+	`scripts/profile_ccld_public_download_csvs.py` (CLI), and
+	`src/ccld_complaints/ccld_public_download.py` (module). Reads CSV files from
+	`data/raw/ccld`, tolerates rows with extra trailing Complaint Info values
+	beyond the 31-column header without crashing, and writes ignored outputs
+	under `data/processed/ccld-public-downloads/`:
+	`ccld-download-profile.json` (per-file row count, header count, row-width
+	warnings, facility type/status/county counts, limitations),
+	`ccld-download-profile.csv` (flat per-file summary), and
+	`facility-reference.csv` (normalized with columns FacilityNumber,
+	FacilityName, FacilityType, ProgramType, Status, City, County, Capacity,
+	LicenseFirstDate, ClosedDate, LastVisitDate, SourceFile). Use
+	`-FacilityType` and `-Status` to produce a targeted cohort CSV. The
+	reference CSV is designed for direct use with `-FacilityReferenceCsv` in
+	the stakeholder export. No database writes, schema changes, or network
+	requests.
 - Added optional `-OnlyFacilityReferenceRows` switch to
 	`scripts/export-stakeholder-facility-overview.ps1` (and the corresponding
 	`--only-facility-reference-rows` CLI flag). When set alongside
