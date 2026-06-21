@@ -1551,7 +1551,7 @@ class TestExcelWorkbook:
         assert "loaded" in all_text
 
     def test_manifest_worksheet_is_key_value(self, tmp_path: Path) -> None:
-        """Manifest worksheet uses key/value rows, not a raw JSON blob."""
+        """Manifest worksheet uses key/value rows with display labels, not a raw JSON blob."""
         db_path, extracts = self._make_two_complaint_db(tmp_path)
         result = export_stakeholder_facility_overview(db_path, extracts)
 
@@ -1561,7 +1561,11 @@ class TestExcelWorkbook:
             str(ws.cell(row=i, column=1).value or "")
             for i in range(1, ws.max_row + 1)
         ]
-        assert any("generated_at" in v for v in col_a_values)
+        # Display label 'Generated' replaces snake_case 'generated_at'.
+        assert any("Generated" in v for v in col_a_values)
+        assert not any("generated_at" in v for v in col_a_values), (
+            "Manifest should display 'Generated' not snake_case 'generated_at'"
+        )
         assert not any(v.strip().startswith("{") for v in col_a_values), (
             "Manifest sheet should not contain raw JSON blobs"
         )
@@ -1569,7 +1573,7 @@ class TestExcelWorkbook:
     def test_manifest_worksheet_includes_complaint_record_row_count(
         self, tmp_path: Path
     ) -> None:
-        """Manifest worksheet includes complaint_record_row_count key."""
+        """Manifest worksheet includes Complaint Record Row Count display label."""
         db_path, extracts = self._make_two_complaint_db(tmp_path)
         result = export_stakeholder_facility_overview(db_path, extracts)
 
@@ -1579,7 +1583,7 @@ class TestExcelWorkbook:
             str(ws.cell(row=i, column=1).value or "")
             for i in range(1, ws.max_row + 1)
         ]
-        assert "complaint_record_row_count" in col_a_values
+        assert "Complaint Record Row Count" in col_a_values
 
     def test_data_worksheet_row_counts_match(self, tmp_path: Path) -> None:
         """Data worksheet row counts (excluding header) match result row counts."""
@@ -1930,7 +1934,7 @@ class TestExcelWorkbook:
             for r in range(2, ws.max_row + 1)
         ).casefold()
         # Facility f1 has 1 substantiated + 1 unsubstantiated — expect these labels.
-        assert "substantiated/equivalent complaint records loaded" in cue_texts
+        assert "substantiated complaint records loaded" in cue_texts
         assert "multiple loaded complaint records" in cue_texts
         # Must not contain risk/ranking/score language.
         assert "risk" not in cue_texts
@@ -1982,8 +1986,7 @@ class TestExcelWorkbook:
             "Expected suppression note not found in Summary column A"
         )
         # The count-row label for a cue match must NOT appear as a standalone row label
-        # (it would appear indented as '  Possible serious allegation topic' if counts
-        # were emitted instead of suppressed).
+        # (it would appear as a regular row if counts were emitted instead of suppressed).
         assert not any(
             "possible serious allegation topic" in v
             and not any(
@@ -2175,4 +2178,182 @@ class TestExcelWorkbook:
             assert "Limitations" not in header, (
                 f"{sheet_name!r}: Limitations column should be absent from XLSX display"
             )
+
+    def test_readme_generated_timestamp_is_human_readable(self, tmp_path: Path) -> None:
+        """README KEY DETAILS Generated value is human-readable, not compact form."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["README"]
+        generated_val = ""
+        for r in range(1, ws.max_row + 1):
+            if ws.cell(row=r, column=1).value == "Generated":
+                generated_val = str(ws.cell(row=r, column=2).value or "")
+                break
+        assert generated_val, "README: 'Generated' key row not found"
+        import re
+        assert not re.match(r"\d{8}T\d{6}Z", generated_val), (
+            f"README 'Generated' value looks like compact form: {generated_val!r}"
+        )
+        assert "UTC" in generated_val, (
+            f"README 'Generated' value should contain 'UTC': {generated_val!r}"
+        )
+
+    def test_manifest_generated_timestamp_is_human_readable(self, tmp_path: Path) -> None:
+        """Manifest Generated row shows human-readable timestamp, not compact form."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["Manifest"]
+        generated_val = ""
+        for r in range(1, ws.max_row + 1):
+            if ws.cell(row=r, column=1).value == "Generated":
+                generated_val = str(ws.cell(row=r, column=2).value or "")
+                break
+        assert generated_val, "Manifest: 'Generated' row not found"
+        import re
+        assert not re.match(r"\d{8}T\d{6}Z", generated_val), (
+            f"Manifest 'Generated' value looks like compact form: {generated_val!r}"
+        )
+        assert "UTC" in generated_val, (
+            f"Manifest 'Generated' value should contain 'UTC': {generated_val!r}"
+        )
+
+    def test_readme_and_summary_have_merged_narrative_rows(self, tmp_path: Path) -> None:
+        """README and Summary have merged A:B cells for prose-only rows."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        for sheet_name in ("README", "Summary"):
+            ws = wb[sheet_name]
+            merged = {r for r1, r2, c1, c2 in (
+                (mr.min_row, mr.max_row, mr.min_col, mr.max_col)
+                for mr in ws.merged_cells.ranges
+            ) if c1 == 1 and c2 == 2 and r1 == r2 for r in (r1,)}
+            assert len(merged) > 0, (
+                f"{sheet_name!r}: expected at least one narrative row merged across A:B"
+            )
+
+    def test_no_merged_cells_in_data_table_sheets(self, tmp_path: Path) -> None:
+        """Data table worksheets (Facility Overview etc.) have no merged cells."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        for sheet_name in [
+            "Facility Overview",
+            "Facility Review Cues",
+            "Substantiated Complaints",
+            "Complaint Records",
+        ]:
+            ws = wb[sheet_name]
+            assert len(ws.merged_cells.ranges) == 0, (
+                f"{sheet_name!r}: data table sheet should have no merged cells"
+            )
+
+    def test_no_internal_terminology_in_workbook(self, tmp_path: Path) -> None:
+        """XLSX workbook cells do not contain internal or machine-style terminology."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        forbidden = (
+            "SubstantiatedOrEquivalent",
+            "NotSubstantiatedOrEquivalent",
+            "substantiated/equivalent",
+            "unsubstantiated/equivalent",
+            "KeywordReviewCues",
+            "SourceUrl",
+            "SourceURL",
+        )
+        for sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            for row in ws.iter_rows():
+                for cell in row:
+                    val = str(cell.value or "")
+                    for term in forbidden:
+                        assert term not in val, (
+                            f"Forbidden term {term!r} found in sheet {sheet_name!r} "
+                            f"row {cell.row} col {cell.column}: {val!r}"
+                        )
+
+    def test_summary_finding_group_labels_are_stakeholder_friendly(
+        self, tmp_path: Path
+    ) -> None:
+        """Summary finding group counts use 'Substantiated'/'Unsubstantiated' not codes."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["Summary"]
+        col_a_values = [
+            str(ws.cell(row=r, column=1).value or "")
+            for r in range(1, ws.max_row + 1)
+        ]
+        # The indented count rows for our two complaint findings should be friendly labels.
+        assert any("Substantiated" in v for v in col_a_values), (
+            "Summary: expected 'Substantiated' count row in finding group section"
+        )
+        assert any("Unsubstantiated" in v for v in col_a_values), (
+            "Summary: expected 'Unsubstantiated' count row in finding group section"
+        )
+        # Internal codes must not appear.
+        for v in col_a_values:
+            assert "SubstantiatedOrEquivalent" not in v, (
+                f"Summary: internal code 'SubstantiatedOrEquivalent' found in row: {v!r}"
+            )
+            assert "NotSubstantiatedOrEquivalent" not in v, (
+                f"Summary: internal code 'NotSubstantiatedOrEquivalent' found in row: {v!r}"
+            )
+
+    def test_manifest_uses_display_labels(self, tmp_path: Path) -> None:
+        """XLSX Manifest worksheet uses stakeholder display labels instead of snake_case keys."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["Manifest"]
+        col_a_values = [
+            str(ws.cell(row=i, column=1).value or "")
+            for i in range(1, ws.max_row + 1)
+        ]
+        expected_labels = (
+            "Generated",
+            "Facility Row Count",
+            "Substantiated Complaint Row Count",
+            "Complaint Record Row Count",
+        )
+        for label in expected_labels:
+            assert label in col_a_values, (
+                f"Manifest: expected display label {label!r} in column A"
+            )
+        forbidden_keys = (
+            "generated_at",
+            "facility_row_count",
+            "substantiated_complaint_row_count",
+            "complaint_record_row_count",
+        )
+        for key in forbidden_keys:
+            assert key not in col_a_values, (
+                f"Manifest: snake_case key {key!r} should not appear in XLSX display"
+            )
+
+    def test_narrative_cells_have_no_leading_spaces(self, tmp_path: Path) -> None:
+        """Merged narrative cells in README and Summary do not start with leading spaces."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        for sheet_name in ("README", "Summary"):
+            ws = wb[sheet_name]
+            for mr in ws.merged_cells.ranges:
+                if mr.min_col == 1 and mr.max_col == 2:
+                    cell_val = str(ws.cell(row=mr.min_row, column=1).value or "")
+                    assert not cell_val.startswith(" "), (
+                        f"{sheet_name!r} merged narrative row {mr.min_row} "
+                        f"has leading space: {cell_val[:30]!r}"
+                    )
 
