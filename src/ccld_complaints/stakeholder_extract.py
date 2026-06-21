@@ -1076,6 +1076,89 @@ _TAB_COLOR_COMPLAINT_RECORDS = "538135"
 _TAB_COLOR_MANIFEST = "767171"
 # Column names that receive wrap_text alignment in data worksheets.
 _WRAP_COLS = frozenset({"Limitations", "ReviewCues", "SuggestedNextStep"})
+# Display headers for XLSX worksheets (stakeholder-friendly spacing/capitalisation).
+_XLSX_DISPLAY_HEADERS: dict[str, str] = {
+    "FacilityNumber": "Facility Number",
+    "FacilityName": "Facility Name",
+    "FacilityType": "Facility Type",
+    "LoadedComplaintCount": "Loaded Complaint Count",
+    "SubstantiatedOrEquivalentCount": "Substantiated Count",
+    "EarliestComplaintDate": "Earliest Complaint Date",
+    "MostRecentComplaintDate": "Most Recent Complaint Date",
+    "LoadedDateRange": "Loaded Date Range",
+    "SourceTraceabilityReadyCount": "Source Traceability Ready Count",
+    "MissingTraceabilityCount": "Missing Traceability Count",
+    "ComplaintDataLoadedStatus": "Complaint Data Status",
+    "ComplaintControlNumber": "Complaint Control Number",
+    "ComplaintReceivedDate": "Complaint Received Date",
+    "ReportDate": "Report Date",
+    "FindingOrResolution": "Finding / Resolution",
+    "FindingGroup": "Finding Group",
+    "ComplaintType": "Complaint Type",
+    "AllegationCategory": "Allegation Category",
+    "KeywordReviewCues": "Keyword Review Cues",
+    "SourceUrl": "Source URL",
+    "ReviewCues": "Review Cues",
+    "SuggestedNextStep": "Suggested Next Step",
+}
+# XLSX display field tuples — subset of CSV fields for the workbook.
+# Columns removed: Limitations from all sheets; RawHashOrArtifactReference and
+# ReviewerDetailPath from complaint sheets; SourceSnapshotOrInput (always UNKNOWN).
+_FACILITY_REVIEW_CUES_XLSX_FIELDS = (
+    "FacilityNumber",
+    "FacilityName",
+    "Status",
+    "County",
+    "LoadedComplaintCount",
+    "SubstantiatedOrEquivalentCount",
+    "LoadedDateRange",
+    "SourceTraceabilityReadyCount",
+    "MissingTraceabilityCount",
+    "ReviewCues",
+    "SuggestedNextStep",
+)
+_FACILITY_OVERVIEW_XLSX_FIELDS = (
+    "FacilityNumber",
+    "FacilityName",
+    "FacilityType",
+    "Status",
+    "City",
+    "County",
+    "LoadedComplaintCount",
+    "SubstantiatedOrEquivalentCount",
+    "EarliestComplaintDate",
+    "MostRecentComplaintDate",
+    "LoadedDateRange",
+    "SourceTraceabilityReadyCount",
+    "MissingTraceabilityCount",
+    "ComplaintDataLoadedStatus",
+)
+_SUBSTANTIATED_COMPLAINTS_XLSX_FIELDS = (
+    "FacilityNumber",
+    "FacilityName",
+    "ComplaintControlNumber",
+    "ComplaintReceivedDate",
+    "ReportDate",
+    "FindingOrResolution",
+    "SourceUrl",
+)
+_COMPLAINT_RECORDS_XLSX_FIELDS = (
+    "FacilityNumber",
+    "FacilityName",
+    "FacilityType",
+    "Status",
+    "City",
+    "County",
+    "ComplaintControlNumber",
+    "ComplaintReceivedDate",
+    "ReportDate",
+    "FindingOrResolution",
+    "FindingGroup",
+    "ComplaintType",
+    "AllegationCategory",
+    "KeywordReviewCues",
+    "SourceUrl",
+)
 
 
 def _facility_overview_row_dicts(
@@ -1230,6 +1313,36 @@ def _facility_review_cues_row_dicts(
     return result
 
 
+def _finding_group_display(fg: str) -> str:
+    """Map internal FindingGroup labels to stakeholder-readable display values."""
+    return {
+        "SubstantiatedOrEquivalent": "Substantiated",
+        "NotSubstantiatedOrEquivalent": "Unsubstantiated",
+    }.get(fg, fg)
+
+
+def _xlsx_complaint_record_xlsx_row_dicts(
+    complaint_record_rows: list[_ComplaintRecordRow],
+) -> list[dict[str, Any]]:
+    """Build XLSX row dicts for complaint-records with stakeholder-readable FindingGroup."""
+    rows = _complaint_record_row_dicts(complaint_record_rows)
+    for row in rows:
+        row["FindingGroup"] = _finding_group_display(row.get("FindingGroup", ""))
+    return rows
+
+
+def _format_generated_at(timestamp: str) -> str:
+    """Convert '20260621T215952Z' to a human-readable form like 'June 21, 2026, 9:59 PM UTC'."""
+    try:
+        dt = datetime.strptime(timestamp, "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
+        hour = dt.strftime("%I").lstrip("0") or "12"
+        minute = dt.strftime("%M")
+        ampm = dt.strftime("%p")
+        return f"{dt.strftime('%B')} {dt.day}, {dt.year}, {hour}:{minute} {ampm} UTC"
+    except ValueError:
+        return timestamp
+
+
 def _xlsx_autosize_columns(ws: Any, col_letter_fn: Any) -> None:
     """Auto-size worksheet columns, capped at _XLSX_MAX_COL_WIDTH characters."""
     for col_cells in ws.columns:
@@ -1250,22 +1363,27 @@ def _xlsx_data_sheet(
     rows: list[dict[str, Any]],
     bold_font: Any,
     col_letter_fn: Any,
+    display_headers: dict[str, str] | None = None,
+    freeze_col: str = "A",
 ) -> None:
     """Write bold headers and data rows to a worksheet.
 
-    Freezes the header row, applies auto-filter, and auto-sizes columns.
+    Freezes the header row (and optionally identifying left columns via freeze_col),
+    applies auto-filter, and auto-sizes columns.
     Applies top-left alignment to all cells; wrap_text for columns in _WRAP_COLS.
     """
+    _dh = display_headers or {}
     _top_left = Alignment(horizontal="left", vertical="top")
     for col_idx, field_name in enumerate(fields, 1):
-        cell = ws.cell(row=1, column=col_idx, value=field_name)
+        display = _dh.get(field_name, field_name)
+        cell = ws.cell(row=1, column=col_idx, value=display)
         cell.font = bold_font
         cell.fill = _HEADER_FILL
         cell.border = _HEADER_BORDER_BOTTOM
         cell.alignment = _top_left
     for row_dict in rows:
         ws.append([row_dict.get(f, "") for f in fields])
-    ws.freeze_panes = "A2"
+    ws.freeze_panes = f"{freeze_col}2"
     if ws.max_row >= 1 and ws.max_column >= 1:
         ws.auto_filter.ref = ws.dimensions
     # Build column maps for per-cell formatting.
@@ -1342,10 +1460,10 @@ def _xlsx_populate_readme_sheet(
 
     _section("HOW TO USE THIS WORKBOOK")
     _row(
-        "Start with the facility-overview tab for a per-facility summary. "
-        "Use substantiated-complaints for individual records where the source-derived "
+        "Start with the Facility Overview tab for a per-facility summary. "
+        "Use Substantiated Complaints for individual records where the source-derived "
         "finding is substantiated or an equivalent value. "
-        "Use complaint-records for all loaded complaint records regardless of finding status. "
+        "Use Complaint Records for all loaded complaint records regardless of finding status. "
         "Check the Manifest tab for generation metadata. "
         "Verify important details against the public CCLD portal before citing this extract."
     )
@@ -1358,22 +1476,22 @@ def _xlsx_populate_readme_sheet(
         "finding group breakdown, and keyword review cue breakdown.",
     )
     _row(
-        "facility-review-cues",
+        "Facility Review Cues",
         "One row per facility with source-derived review cue labels and a "
         "suggested next step. Review aids only; does not rank or score facilities.",
     )
     _row(
-        "facility-overview",
+        "Facility Overview",
         "Per-facility complaint counts, substantiated/equivalent counts, "
         "date ranges, and source-traceability counts.",
     )
     _row(
-        "substantiated-complaints",
+        "Substantiated Complaints",
         "Individual complaint records where the source-derived finding "
         "indicates substantiated or an equivalent value.",
     )
     _row(
-        "complaint-records",
+        "Complaint Records",
         "All loaded complaint records regardless of finding status. "
         "Includes FindingGroup, ComplaintType, AllegationCategory, KeywordReviewCues.",
     )
@@ -1462,7 +1580,7 @@ def _xlsx_populate_summary_sheet(
     )
 
     _section("KEY METRICS (source-derived count)")
-    _kv("Generated", str(manifest.get("generated_at", "")))
+    _kv("Generated", _format_generated_at(str(manifest.get("generated_at", ""))))
     _kv("Facilities", str(manifest.get("facility_row_count", 0)))
     _kv("Loaded complaint records", str(manifest.get("complaint_record_row_count", 0)))
     _kv(
@@ -1475,7 +1593,7 @@ def _xlsx_populate_summary_sheet(
         str(manifest.get("facility_reference_matched_count", 0)),
     )
 
-    _section("FACILITY STATUS COUNTS (source-derived, facility-overview tab)")
+    _section("FACILITY STATUS COUNTS (source-derived, Facility Overview tab)")
     status_counts: dict[str, int] = {}
     for _frow in facility_rows:
         status_counts[_frow.status] = status_counts.get(_frow.status, 0) + 1
@@ -1485,7 +1603,7 @@ def _xlsx_populate_summary_sheet(
     else:
         _kv("  (no facilities loaded)")
 
-    _section("FINDING GROUP COUNTS (source-derived, complaint-records tab)")
+    _section("FINDING GROUP COUNTS (source-derived, Complaint Records tab)")
     fg_counts: dict[str, int] = {}
     for _cr in complaint_record_rows:
         fg_counts[_cr.finding_group] = fg_counts.get(_cr.finding_group, 0) + 1
@@ -1495,7 +1613,7 @@ def _xlsx_populate_summary_sheet(
     else:
         _kv("  (no complaint records loaded)")
 
-    _section("KEYWORD REVIEW CUE COUNTS (source-derived review aid, complaint-records tab)")
+    _section("KEYWORD REVIEW CUE COUNTS (source-derived review aid, Complaint Records tab)")
     cue_counts: dict[str, int] = {}
     for _cr in complaint_record_rows:
         cue_label = _cr.keyword_review_cues.strip() if _cr.keyword_review_cues else ""
@@ -1549,8 +1667,8 @@ def _write_xlsx_workbook(
 ) -> None:
     """Write the stakeholder Excel workbook.
 
-    Sheet order: README, Summary, facility-review-cues, facility-overview,
-    substantiated-complaints, complaint-records, Manifest.
+    Sheet order: README, Summary, Facility Review Cues, Facility Overview,
+    Substantiated Complaints, Complaint Records, Manifest.
     """
     wb = openpyxl.Workbook()
     default_sheet = wb.active
@@ -1572,44 +1690,52 @@ def _write_xlsx_workbook(
         bold_font=bold,
     )
 
-    ws_frc = wb.create_sheet("facility-review-cues")
+    ws_frc = wb.create_sheet("Facility Review Cues")
     ws_frc.sheet_properties.tabColor = _TAB_COLOR_FACILITY_REVIEW_CUES
     _xlsx_data_sheet(
         ws_frc,
-        fields=_FACILITY_REVIEW_CUES_FIELDS,
+        fields=_FACILITY_REVIEW_CUES_XLSX_FIELDS,
         rows=_facility_review_cues_row_dicts(facility_rows),
         bold_font=bold,
         col_letter_fn=get_column_letter,
+        display_headers=_XLSX_DISPLAY_HEADERS,
+        freeze_col="C",
     )
 
-    ws_fo = wb.create_sheet("facility-overview")
+    ws_fo = wb.create_sheet("Facility Overview")
     ws_fo.sheet_properties.tabColor = _TAB_COLOR_FACILITY_OVERVIEW
     _xlsx_data_sheet(
         ws_fo,
-        fields=_FACILITY_OVERVIEW_FIELDS,
+        fields=_FACILITY_OVERVIEW_XLSX_FIELDS,
         rows=_facility_overview_row_dicts(facility_rows),
         bold_font=bold,
         col_letter_fn=get_column_letter,
+        display_headers=_XLSX_DISPLAY_HEADERS,
+        freeze_col="C",
     )
 
-    ws_sub = wb.create_sheet("substantiated-complaints")
+    ws_sub = wb.create_sheet("Substantiated Complaints")
     ws_sub.sheet_properties.tabColor = _TAB_COLOR_SUBSTANTIATED
     _xlsx_data_sheet(
         ws_sub,
-        fields=_SUBSTANTIATED_COMPLAINTS_FIELDS,
+        fields=_SUBSTANTIATED_COMPLAINTS_XLSX_FIELDS,
         rows=_substantiated_row_dicts(substantiated_rows),
         bold_font=bold,
         col_letter_fn=get_column_letter,
+        display_headers=_XLSX_DISPLAY_HEADERS,
+        freeze_col="C",
     )
 
-    ws_cr = wb.create_sheet("complaint-records")
+    ws_cr = wb.create_sheet("Complaint Records")
     ws_cr.sheet_properties.tabColor = _TAB_COLOR_COMPLAINT_RECORDS
     _xlsx_data_sheet(
         ws_cr,
-        fields=_COMPLAINT_RECORDS_FIELDS,
-        rows=_complaint_record_row_dicts(complaint_record_rows),
+        fields=_COMPLAINT_RECORDS_XLSX_FIELDS,
+        rows=_xlsx_complaint_record_xlsx_row_dicts(complaint_record_rows),
         bold_font=bold,
         col_letter_fn=get_column_letter,
+        display_headers=_XLSX_DISPLAY_HEADERS,
+        freeze_col="C",
     )
 
     ws_manifest = wb.create_sheet("Manifest")
