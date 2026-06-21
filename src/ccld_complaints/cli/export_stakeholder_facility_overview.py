@@ -14,7 +14,7 @@ from ccld_complaints.stakeholder_extract import (
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Export a stakeholder facility overview extract (CSV ZIP) "
+            "Export a stakeholder facility overview Excel workbook (XLSX) "
             "from the local SQLite database."
         )
     )
@@ -76,7 +76,7 @@ def main(argv: list[str] | None = None) -> int:
             f"({result.facility_reference_row_count} rows, "
             f"{result.facility_reference_matched_count} matched loaded complaints)"
         )
-    print(f"ZIP: {result.zip_path.as_posix()}")
+    print(f"XLSX workbook: {result.xlsx_path.as_posix()}")
     print(f"Git commit: {result.git_commit}")
     print(result.limitations)
     return 0

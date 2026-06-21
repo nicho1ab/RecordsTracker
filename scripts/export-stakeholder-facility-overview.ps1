@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-Exports a stakeholder facility overview extract (CSV ZIP) from local source-derived data.
+Exports a stakeholder facility overview extract (Excel workbook) from local source-derived data.
 .DESCRIPTION
-Reads the local SQLite database and writes a stakeholder-ready ZIP package containing
-a per-facility summary CSV, a substantiated/equivalent complaint CSV, a README, and
-a manifest. Output goes under data/processed/stakeholder-extracts/<timestamp>/.
+Reads the local SQLite database and writes a stakeholder-ready Excel workbook (.xlsx) containing
+five worksheets: README, facility-overview, substantiated-complaints, complaint-records, and
+Manifest. Output goes under data/processed/stakeholder-extracts/<timestamp>/.
 
 This is a review aid only. The public CCLD portal remains the source of record.
 Counts reflect only loaded records. Does not make legal conclusions, facility-wide

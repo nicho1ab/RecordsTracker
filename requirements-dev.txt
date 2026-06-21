@@ -5,6 +5,8 @@ jsonschema
 python-dateutil
 types-jsonschema
 types-python-dateutil
+types-openpyxl
+openpyxl>=3.1
 datasette
 SQLAlchemy
 alembic

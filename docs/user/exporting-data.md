@@ -34,7 +34,7 @@ This script does not import facility rows into the database, modify raw files, a
 
 ## Export a stakeholder facility overview
 
-After populating the local SQLite database, use the stakeholder facility overview script to write a ZIP package with a per-facility summary CSV, a substantiated/equivalent complaints CSV, a README, and a manifest:
+After populating the local SQLite database, use the stakeholder facility overview script to write a single Excel workbook (`.xlsx`) with five worksheets:
 
 ```powershell
 .\scripts\export-stakeholder-facility-overview.ps1
@@ -62,13 +62,17 @@ To produce a targeted package limited to only the facilities in the reference CS
 
 Using `-OnlyFacilityReferenceRows` without `-FacilityReferenceCsv` fails with a clear error.
 
-The ZIP package includes:
+The Excel workbook includes these worksheets in order:
 
-- `facility-overview.csv` for per-facility complaint counts, substantiated/equivalent counts, date ranges, source-traceability counts, and a Limitations column.
-- `substantiated-complaints.csv` for individual records where the source-derived finding/resolution/status indicates substantiated or an equivalent value, with source URL, raw hash, and a stable reviewer detail path.
-- `complaint-records.csv` for all loaded complaint records regardless of finding status. See below.
-- `README.md` with scope and limitations notes.
-- `manifest.json` with generation metadata and row counts (including `complaint_record_row_count`).
+| Worksheet | Contents |
+|---|---|
+| `README` | Purpose, key details (row counts, timestamp, git commit), how-to-use guidance, tabs overview, counts and coverage note, source of record, and important limitations. |
+| `facility-overview` | Per-facility complaint counts, substantiated/equivalent counts, date ranges, source-traceability counts, and a Limitations column. |
+| `substantiated-complaints` | Individual records where the source-derived finding/resolution/status indicates substantiated or an equivalent value, with source URL, raw hash, and reviewer detail path. |
+| `complaint-records` | All loaded complaint records regardless of finding status. See below. |
+| `Manifest` | Generation metadata and row counts in key/value rows. |
+
+Data worksheets have bold headers, a frozen top row, auto-filter, and auto-sized columns.
 
 ### complaint-records.csv
 
@@ -83,7 +87,7 @@ One row per loaded complaint record for all facilities in the extract. Columns i
 
 `-OnlyFacilityReferenceRows` applies to this file as well: only facilities in the reference CSV appear when the filter is enabled.
 
-If the database is absent or empty, valid CSVs with headers, README, manifest, and ZIP are produced without failing.
+If the database is absent or empty, valid CSV files, README, manifest, and the Excel workbook are produced without failing.
 
 This extract is a review aid over loaded source-derived records. The public CCLD portal remains the source of record. Counts reflect only loaded records; zero does not prove no complaints exist. Finding/resolution values are source-derived and not independently verified by RecordsTracker. Raw narrative allegation text is intentionally excluded.
 
