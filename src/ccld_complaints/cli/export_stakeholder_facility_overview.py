@@ -6,6 +6,7 @@ from pathlib import Path
 from ccld_complaints.local_sample import DEFAULT_SAMPLE_DB_PATH
 from ccld_complaints.stakeholder_extract import (
     DEFAULT_STAKEHOLDER_EXTRACT_ROOT,
+    FacilityReferenceFilterError,
     export_stakeholder_facility_overview,
 )
 
@@ -40,13 +41,28 @@ def main(argv: list[str] | None = None) -> int:
             "Complaint counts are always based only on loaded records."
         ),
     )
+    parser.add_argument(
+        "--only-facility-reference-rows",
+        action="store_true",
+        default=False,
+        help=(
+            "When set, facility-overview.csv and substantiated-complaints.csv "
+            "include only facilities whose number appears in the reference CSV. "
+            "Requires --facility-reference-csv."
+        ),
+    )
     args = parser.parse_args(argv)
 
-    result = export_stakeholder_facility_overview(
-        args.db_path,
-        args.output_root,
-        facility_reference_csv=args.facility_reference_csv,
-    )
+    try:
+        result = export_stakeholder_facility_overview(
+            args.db_path,
+            args.output_root,
+            facility_reference_csv=args.facility_reference_csv,
+            only_facility_reference_rows=args.only_facility_reference_rows,
+        )
+    except FacilityReferenceFilterError as exc:
+        print(f"Error: {exc}")
+        return 1
 
     print(f"Output directory: {result.output_dir.as_posix()}")
     print(f"facility-overview.csv: {result.facility_row_count} facilities")

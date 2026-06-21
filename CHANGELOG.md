@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Added optional `-OnlyFacilityReferenceRows` switch to
+	`scripts/export-stakeholder-facility-overview.ps1` (and the corresponding
+	`--only-facility-reference-rows` CLI flag). When set alongside
+	`-FacilityReferenceCsv`, only facilities whose facility number appears in
+	the reference CSV are written to `facility-overview.csv` and
+	`substantiated-complaints.csv`; unrelated facilities already loaded in SQLite
+	are excluded. Using the switch without a reference CSV fails with a clear
+	error. The `only_facility_reference_rows` field is included in
+	`manifest.json`.
 - Added optional `-FacilityReferenceCsv` parameter to
 	`scripts/export-stakeholder-facility-overview.ps1` (and the corresponding
 	`--facility-reference-csv` CLI argument). When a facility reference CSV is

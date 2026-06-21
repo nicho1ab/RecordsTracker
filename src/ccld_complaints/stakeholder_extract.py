@@ -196,6 +196,7 @@ class StakeholderExtractResult:
     facility_reference_csv: str
     facility_reference_row_count: int
     facility_reference_matched_count: int
+    only_facility_reference_rows: bool
 
 
 # ---------------------------------------------------------------------------
@@ -206,6 +207,7 @@ def export_stakeholder_facility_overview(
     db_path: Path,
     output_root: Path = DEFAULT_STAKEHOLDER_EXTRACT_ROOT,
     facility_reference_csv: Path | None = None,
+    only_facility_reference_rows: bool = False,
 ) -> StakeholderExtractResult:
     """Generate a stakeholder facility overview extract package.
 
@@ -216,10 +218,19 @@ def export_stakeholder_facility_overview(
     facility-overview.csv. Facilities present in the reference CSV but
     absent from the database are included with zero complaint counts.
     Complaint-derived counts are always based only on loaded records.
+
+    If *only_facility_reference_rows* is True, only facilities whose
+    facility number appears in the reference CSV are included in output.
+    Raises FacilityReferenceFilterError when used without a reference CSV.
     """
     timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     output_dir = output_root / timestamp
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    if only_facility_reference_rows and facility_reference_csv is None:
+        raise FacilityReferenceFilterError(
+            "--only-facility-reference-rows requires --facility-reference-csv to be set."
+        )
 
     db_exists = db_path.exists()
     input_source = db_path.as_posix() if db_exists else f"{db_path.as_posix()} (not found)"
@@ -234,13 +245,24 @@ def export_stakeholder_facility_overview(
     ref_row_count = 0
     ref_matched_count = 0
     ref_csv_value = "none"
+    ref_numbers: set[str] = set()
     if facility_reference_csv is not None:
         ref_records = read_facility_reference_csv(facility_reference_csv)
         ref_row_count = len(ref_records)
         ref_csv_value = facility_reference_csv.as_posix()
+        ref_numbers = {r["facility_number"] for r in ref_records}
         facility_rows, ref_matched_count = _merge_reference_facilities(
             facility_rows, ref_records
         )
+
+    # Apply reference-only filter when requested
+    if only_facility_reference_rows:
+        facility_rows = [
+            r for r in facility_rows if r.facility_number in ref_numbers
+        ]
+        substantiated_rows = [
+            r for r in substantiated_rows if r.facility_number in ref_numbers
+        ]
 
     facility_overview_path = output_dir / "facility-overview.csv"
     substantiated_complaints_path = output_dir / "substantiated-complaints.csv"
@@ -271,6 +293,7 @@ def export_stakeholder_facility_overview(
         facility_reference_csv=ref_csv_value,
         facility_reference_row_count=ref_row_count,
         facility_reference_matched_count=ref_matched_count,
+        only_facility_reference_rows=only_facility_reference_rows,
     )
     manifest_path.write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False),
@@ -297,6 +320,7 @@ def export_stakeholder_facility_overview(
         facility_reference_csv=ref_csv_value,
         facility_reference_row_count=ref_row_count,
         facility_reference_matched_count=ref_matched_count,
+        only_facility_reference_rows=only_facility_reference_rows,
     )
 
 
@@ -398,6 +422,10 @@ def _str(row: sqlite3.Row, key: str) -> str:
 
 class FacilityReferenceError(ValueError):
     """Raised when the facility reference CSV lacks a usable facility number column."""
+
+
+class FacilityReferenceFilterError(ValueError):
+    """Raised when only_facility_reference_rows is requested without a reference CSV."""
 
 
 def _match_alias(
@@ -711,6 +739,7 @@ def _build_manifest(
     facility_reference_csv: str,
     facility_reference_row_count: int,
     facility_reference_matched_count: int,
+    only_facility_reference_rows: bool,
 ) -> dict[str, Any]:
     return {
         "generated_at": generated_at,
@@ -723,6 +752,7 @@ def _build_manifest(
         "facility_reference_csv": facility_reference_csv,
         "facility_reference_row_count": facility_reference_row_count,
         "facility_reference_matched_count": facility_reference_matched_count,
+        "only_facility_reference_rows": only_facility_reference_rows,
         "limitations": limitations,
     }
 
