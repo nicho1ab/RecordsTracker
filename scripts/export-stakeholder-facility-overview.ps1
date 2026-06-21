@@ -18,12 +18,18 @@ Root directory under which a timestamped output folder will be created.
 Optional path to a facility reference CSV. When provided, facilities in the reference
 are included in facility-overview.csv even when no complaint records are loaded for
 them. Complaint counts are always based only on loaded records.
+.PARAMETER OnlyFacilityReferenceRows
+When set, facility-overview.csv and substantiated-complaints.csv include only
+facilities whose facility number appears in the reference CSV. Requires
+-FacilityReferenceCsv.
 .EXAMPLE
 .\scripts\export-stakeholder-facility-overview.ps1
 .EXAMPLE
 .\scripts\export-stakeholder-facility-overview.ps1 -DbPath data\processed\live-ccld.sqlite
 .EXAMPLE
 .\scripts\export-stakeholder-facility-overview.ps1 -FacilityReferenceCsv data\processed\facility-list.csv
+.EXAMPLE
+.\scripts\export-stakeholder-facility-overview.ps1 -FacilityReferenceCsv data\raw\ccld\facility-reference.csv -OnlyFacilityReferenceRows
 .NOTES
 Run from the repository root after populating the SQLite database.
 Requires Python venv to be initialised (run setup-project.ps1 first).
@@ -31,7 +37,8 @@ Requires Python venv to be initialised (run setup-project.ps1 first).
 param(
     [string]$DbPath = "data\processed\ccld.sqlite",
     [string]$OutputRoot = "data\processed\stakeholder-extracts",
-    [string]$FacilityReferenceCsv = ""
+    [string]$FacilityReferenceCsv = "",
+    [switch]$OnlyFacilityReferenceRows
 )
 
 $ErrorActionPreference = "Stop"
@@ -54,6 +61,9 @@ try {
     )
     if (-not [string]::IsNullOrWhiteSpace($FacilityReferenceCsv)) {
         $args_list += @("--facility-reference-csv", $FacilityReferenceCsv)
+    }
+    if ($OnlyFacilityReferenceRows) {
+        $args_list += "--only-facility-reference-rows"
     }
 
     if (Test-Path $python) {

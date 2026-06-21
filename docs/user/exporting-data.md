@@ -24,6 +24,14 @@ To include facilities from a reference list even when no complaint records are l
 
 Facilities in the reference CSV that have no loaded complaint records appear in `facility-overview.csv` with `LoadedComplaintCount=0` and `ComplaintDataLoadedStatus=No complaints loaded`. A zero count does not imply no public complaints exist; it reflects only loaded records. Reference data also enriches missing metadata fields (for example, city) for facilities that do have loaded complaints. Duplicate facility numbers in the reference file are deduplicated deterministically (first occurrence wins).
 
+To produce a targeted package limited to only the facilities in the reference CSV, add `-OnlyFacilityReferenceRows`. Unrelated facilities already loaded in SQLite are excluded:
+
+```powershell
+.\scripts\export-stakeholder-facility-overview.ps1 -FacilityReferenceCsv data\raw\ccld\facility-reference.csv -OnlyFacilityReferenceRows
+```
+
+Using `-OnlyFacilityReferenceRows` without `-FacilityReferenceCsv` fails with a clear error.
+
 The ZIP package includes:
 
 - `facility-overview.csv` for per-facility complaint counts, substantiated/equivalent counts, date ranges, source-traceability counts, and a Limitations column.
