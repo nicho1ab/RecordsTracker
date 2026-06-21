@@ -4,8 +4,9 @@ from __future__ import annotations
 import csv
 import json
 import sqlite3
-import zipfile
 from pathlib import Path
+
+import openpyxl
 
 from ccld_complaints.stakeholder_extract import (
     UNKNOWN,
@@ -424,17 +425,16 @@ class TestEmptyInput:
         assert "limitations" in manifest
         assert manifest["script_name"] == "export-stakeholder-facility-overview.ps1"
 
-    def test_empty_output_zip_created(self, tmp_path: Path) -> None:
+    def test_empty_output_xlsx_created(self, tmp_path: Path) -> None:
         db_path = tmp_path / "does_not_exist.sqlite"
         result = export_stakeholder_facility_overview(db_path, tmp_path / "extracts")
 
-        assert result.zip_path.exists()
-        with zipfile.ZipFile(result.zip_path) as zf:
-            names = zf.namelist()
-        assert "facility-overview.csv" in names
-        assert "substantiated-complaints.csv" in names
-        assert "README.md" in names
-        assert "manifest.json" in names
+        assert result.xlsx_path.exists()
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        assert "README" in wb.sheetnames
+        assert "facility-overview" in wb.sheetnames
+        assert "substantiated-complaints" in wb.sheetnames
+        assert "Manifest" in wb.sheetnames
 
     def test_empty_output_no_misleading_count_claims(self, tmp_path: Path) -> None:
         db_path = tmp_path / "does_not_exist.sqlite"
@@ -565,8 +565,10 @@ class TestManifestCounts:
             "manifest.json",
         }
         assert expected.issubset(listed)
-        # At least one .zip file listed
-        assert any(f.endswith(".zip") for f in listed)
+        # At least one .xlsx file listed (ZIP replaced by XLSX deliverable)
+        assert any(f.endswith(".xlsx") for f in listed)
+        # No .zip file listed
+        assert not any(f.endswith(".zip") for f in listed)
 
 
 # ---------------------------------------------------------------------------
@@ -1309,14 +1311,13 @@ class TestComplaintRecordsExport:
         rows = _read_csv(result.complaint_records_path)
         assert "Neglect" in rows[0]["AllegationCategory"]
 
-    def test_complaint_records_in_zip(self, tmp_path: Path) -> None:
-        """complaint-records.csv is included in the ZIP package."""
+    def test_complaint_records_in_xlsx(self, tmp_path: Path) -> None:
+        """complaint-records worksheet is included in the Excel workbook."""
         db_path, extracts = self._make_two_complaint_db(tmp_path)
         result = export_stakeholder_facility_overview(db_path, extracts)
 
-        with zipfile.ZipFile(result.zip_path) as zf:
-            names = zf.namelist()
-        assert "complaint-records.csv" in names
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        assert "complaint-records" in wb.sheetnames
 
     def test_complaint_records_respects_only_facility_reference_rows(
         self, tmp_path: Path
@@ -1419,4 +1420,213 @@ class TestKeywordReviewCueDerivation:
         assert "severity" not in result.casefold()
         assert "risk" not in result.casefold()
         assert "verified" not in result.casefold()
+
+
+# ---------------------------------------------------------------------------
+# Tests: Excel workbook output
+# ---------------------------------------------------------------------------
+
+
+class TestExcelWorkbook:
+    def _make_two_complaint_db(self, tmp_path: Path) -> tuple[Path, Path]:
+        """Return (db_path, extracts_root) with one substantiated + one unsubstantiated."""
+        conn = _make_db()
+        _insert_facility(conn, fid="f1", fnum="100001", name="Alpha Care")
+        _insert_source_doc(conn, doc_id="d1", fid="f1", url="http://example.test/1")
+        _insert_source_doc(conn, doc_id="d2", fid="f1", url="http://example.test/2")
+        _insert_complaint(
+            conn, cid="c1", fid="f1", doc_id="d1",
+            control_number="CR-001", finding="Substantiated",
+        )
+        _insert_complaint(
+            conn, cid="c2", fid="f1", doc_id="d2",
+            control_number="CR-002", finding="Unsubstantiated",
+        )
+        conn.commit()
+        db_path = tmp_path / "test.sqlite"
+        _save_db(conn, db_path)
+        return db_path, tmp_path / "extracts"
+
+    def test_xlsx_file_is_generated(self, tmp_path: Path) -> None:
+        """The export produces an XLSX file."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        assert result.xlsx_path.exists()
+        assert result.xlsx_path.suffix == ".xlsx"
+
+    def test_zip_file_is_not_generated(self, tmp_path: Path) -> None:
+        """No ZIP file is created as the final stakeholder package."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        zip_files = list(result.output_dir.glob("*.zip"))
+        assert zip_files == [], f"Unexpected ZIP file(s): {zip_files}"
+
+    def test_worksheet_order(self, tmp_path: Path) -> None:
+        """Workbook sheet order: README, facility-overview, substantiated-complaints,
+        complaint-records, Manifest."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        assert wb.sheetnames == [
+            "README",
+            "facility-overview",
+            "substantiated-complaints",
+            "complaint-records",
+            "Manifest",
+        ]
+
+    def test_readme_worksheet_has_no_line_number_column(self, tmp_path: Path) -> None:
+        """README worksheet column A must not contain bare numeric row labels."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["README"]
+        col_a_values = [
+            str(ws.cell(row=i, column=1).value or "")
+            for i in range(1, ws.max_row + 1)
+        ]
+        for val in col_a_values:
+            assert not val.strip().isdigit(), (
+                f"README column A contains a bare numeric row label: {val!r}"
+            )
+
+    def test_readme_worksheet_includes_first_time_user_context(
+        self, tmp_path: Path
+    ) -> None:
+        """README worksheet contains helpful first-time-user guidance."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["README"]
+        all_text = " ".join(
+            str(cell.value or "")
+            for row in ws.iter_rows()
+            for cell in row
+        ).casefold()
+        assert "source of record" in all_text
+        assert "legal conclusions" in all_text
+        assert "how to use" in all_text
+        assert "limitations" in all_text
+        assert "loaded" in all_text
+
+    def test_manifest_worksheet_is_key_value(self, tmp_path: Path) -> None:
+        """Manifest worksheet uses key/value rows, not a raw JSON blob."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["Manifest"]
+        col_a_values = [
+            str(ws.cell(row=i, column=1).value or "")
+            for i in range(1, ws.max_row + 1)
+        ]
+        assert any("generated_at" in v for v in col_a_values)
+        assert not any(v.strip().startswith("{") for v in col_a_values), (
+            "Manifest sheet should not contain raw JSON blobs"
+        )
+
+    def test_manifest_worksheet_includes_complaint_record_row_count(
+        self, tmp_path: Path
+    ) -> None:
+        """Manifest worksheet includes complaint_record_row_count key."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["Manifest"]
+        col_a_values = [
+            str(ws.cell(row=i, column=1).value or "")
+            for i in range(1, ws.max_row + 1)
+        ]
+        assert "complaint_record_row_count" in col_a_values
+
+    def test_data_worksheet_row_counts_match(self, tmp_path: Path) -> None:
+        """Data worksheet row counts (excluding header) match result row counts."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws_fo = wb["facility-overview"]
+        assert ws_fo.max_row - 1 == result.facility_row_count
+
+        ws_cr = wb["complaint-records"]
+        assert ws_cr.max_row - 1 == result.complaint_record_row_count
+
+    def test_complaint_records_more_than_substantiated(self, tmp_path: Path) -> None:
+        """complaint-records worksheet has more data rows than substantiated-complaints."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        cr_rows = wb["complaint-records"].max_row - 1
+        sub_rows = wb["substantiated-complaints"].max_row - 1
+        assert cr_rows > sub_rows
+
+    def test_complaint_records_worksheet_includes_all_finding_groups(
+        self, tmp_path: Path
+    ) -> None:
+        """complaint-records worksheet includes both substantiated and non-substantiated."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["complaint-records"]
+        header = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
+        ctrl_col = header.index("ComplaintControlNumber") + 1
+        control_numbers = {
+            ws.cell(row=r, column=ctrl_col).value
+            for r in range(2, ws.max_row + 1)
+        }
+        assert "CR-001" in control_numbers
+        assert "CR-002" in control_numbers
+
+    def test_no_raw_narrative_in_xlsx(self, tmp_path: Path) -> None:
+        """No raw allegation narrative text appears in any XLSX worksheet."""
+        conn = _make_db()
+        _insert_facility(conn, fid="f1", fnum="100001")
+        _insert_source_doc(conn, doc_id="d1", fid="f1", url="http://example.test/1")
+        _insert_complaint(
+            conn, cid="c1", fid="f1", doc_id="d1",
+            control_number="CR-001", finding="Substantiated",
+        )
+        conn.execute(
+            """
+            INSERT INTO allegations (allegation_id, complaint_id, allegation_text)
+            VALUES ('a1', 'c1', 'XLSX_SENTINEL_NARRATIVE_SHOULD_NOT_APPEAR')
+            """
+        )
+        conn.commit()
+        db_path = tmp_path / "test.sqlite"
+        _save_db(conn, db_path)
+        result = export_stakeholder_facility_overview(db_path, tmp_path / "extracts")
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        for sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            for row in ws.iter_rows():
+                for cell in row:
+                    assert "XLSX_SENTINEL_NARRATIVE_SHOULD_NOT_APPEAR" not in str(
+                        cell.value or ""
+                    ), f"Narrative text found in sheet {sheet_name!r}"
+
+    def test_data_worksheets_freeze_top_row(self, tmp_path: Path) -> None:
+        """Data worksheets freeze the header row (freeze_panes == 'A2')."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        for sheet_name in [
+            "facility-overview",
+            "substantiated-complaints",
+            "complaint-records",
+        ]:
+            ws = wb[sheet_name]
+            assert ws.freeze_panes == "A2", (
+                f"Sheet {sheet_name!r} should freeze top row (freeze_panes='A2')"
+            )
 

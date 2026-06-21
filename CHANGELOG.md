@@ -1,6 +1,19 @@
 # Changelog
 
 ## Unreleased
+- Stakeholder facility overview export now produces a single Excel workbook
+	(`.xlsx`) instead of a ZIP of loose files. The workbook contains five
+	worksheets in order: `README`, `facility-overview`, `substantiated-complaints`,
+	`complaint-records`, `Manifest`. Data worksheets have bold headers, frozen
+	top row, auto-filter, and auto-sized columns (max 60 chars). The `README`
+	tab includes purpose, key details (row counts, timestamp, git commit),
+	how-to-use guidance, tabs overview, counts and coverage note, source of
+	record, and important limitations — all with plain cautious language and no
+	severity rankings or legal conclusions. The `Manifest` tab uses key/value
+	rows (not a raw JSON blob) and includes `complaint_record_row_count`.
+	`StakeholderExtractResult.zip_path` is replaced by `xlsx_path`; the ZIP is
+	no longer created. Adds `openpyxl>=3.1` dependency. No schema, migration,
+	live-retrieval, hosted-UI, or source-connector changes.
 - Added `complaint-records.csv` to the stakeholder facility overview extract
 	package. The file contains one row per loaded complaint record (all statuses,
 	not just substantiated/equivalent) for all facilities in the extract. New

@@ -34,11 +34,14 @@ import csv
 import json
 import sqlite3
 import subprocess
-import zipfile
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+import openpyxl
+from openpyxl.styles import Font
+from openpyxl.utils import get_column_letter
 
 DEFAULT_STAKEHOLDER_EXTRACT_ROOT = Path("data/processed/stakeholder-extracts")
 UNKNOWN = "not available"
@@ -247,7 +250,7 @@ class StakeholderExtractResult:
     substantiated_complaints_path: Path
     readme_path: Path
     manifest_path: Path
-    zip_path: Path
+    xlsx_path: Path
     facility_row_count: int
     substantiated_complaint_row_count: int
     git_commit: str
@@ -388,8 +391,8 @@ def export_stakeholder_facility_overview(
     complaint_records_path = output_dir / "complaint-records.csv"
     readme_path = output_dir / "README.md"
     manifest_path = output_dir / "manifest.json"
-    zip_name = f"stakeholder-facility-overview-{timestamp}.zip"
-    zip_path = output_dir / zip_name
+    xlsx_name = f"stakeholder-facility-overview-{timestamp}.xlsx"
+    xlsx_path = output_dir / xlsx_name
 
     _write_facility_overview_csv(facility_overview_path, facility_rows)
     _write_substantiated_complaints_csv(substantiated_complaints_path, substantiated_rows)
@@ -410,7 +413,7 @@ def export_stakeholder_facility_overview(
             "complaint-records.csv",
             "README.md",
             "manifest.json",
-            zip_name,
+            xlsx_name,
         ],
         limitations=limitations,
         facility_reference_csv=ref_csv_value,
@@ -423,15 +426,12 @@ def export_stakeholder_facility_overview(
         encoding="utf-8",
     )
 
-    _write_zip(
-        zip_path,
-        [
-            facility_overview_path,
-            substantiated_complaints_path,
-            complaint_records_path,
-            readme_path,
-            manifest_path,
-        ],
+    _write_xlsx_workbook(
+        xlsx_path,
+        facility_rows=facility_rows,
+        substantiated_rows=substantiated_rows,
+        complaint_record_rows=complaint_record_rows,
+        manifest=manifest,
     )
 
     return StakeholderExtractResult(
@@ -441,7 +441,7 @@ def export_stakeholder_facility_overview(
         complaint_records_path=complaint_records_path,
         readme_path=readme_path,
         manifest_path=manifest_path,
-        zip_path=zip_path,
+        xlsx_path=xlsx_path,
         facility_row_count=len(facility_rows),
         substantiated_complaint_row_count=len(substantiated_rows),
         complaint_record_row_count=len(complaint_record_rows),
@@ -1039,13 +1039,309 @@ def _limitations_sentence() -> str:
 
 
 # ---------------------------------------------------------------------------
-# ZIP
+# Excel workbook writer
 # ---------------------------------------------------------------------------
 
-def _write_zip(zip_path: Path, files: list[Path]) -> None:
-    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for file_path in files:
-            zf.write(file_path, arcname=file_path.name)
+_XLSX_MAX_COL_WIDTH = 60
+
+
+def _facility_overview_row_dicts(
+    facility_rows: list[_FacilityRow],
+) -> list[dict[str, Any]]:
+    """Build row dicts for the facility-overview worksheet."""
+    lim = _limitations_sentence()
+    result: list[dict[str, Any]] = []
+    for frow in facility_rows:
+        dates = sorted(d for d in frow.complaint_dates if d)
+        earliest = dates[0] if dates else UNKNOWN
+        most_recent = dates[-1] if dates else UNKNOWN
+        date_range = f"{earliest} to {most_recent}" if dates else UNKNOWN
+        loaded_status = (
+            "Complaints loaded" if frow.loaded_complaint_count > 0 else "No complaints loaded"
+        )
+        result.append(
+            {
+                "FacilityNumber": frow.facility_number,
+                "FacilityName": frow.facility_name,
+                "FacilityType": frow.facility_type,
+                "Status": frow.status,
+                "City": frow.city,
+                "County": frow.county,
+                "LoadedComplaintCount": frow.loaded_complaint_count,
+                "SubstantiatedOrEquivalentCount": frow.substantiated_count,
+                "EarliestComplaintDate": earliest,
+                "MostRecentComplaintDate": most_recent,
+                "LoadedDateRange": date_range,
+                "SourceTraceabilityReadyCount": frow.source_traceability_ready,
+                "MissingTraceabilityCount": frow.missing_traceability,
+                "ComplaintDataLoadedStatus": loaded_status,
+                "SourceSnapshotOrInput": UNKNOWN,
+                "Limitations": lim,
+            }
+        )
+    return result
+
+
+def _substantiated_row_dicts(
+    substantiated_rows: list[_SubstantiatedRow],
+) -> list[dict[str, Any]]:
+    """Build row dicts for the substantiated-complaints worksheet."""
+    return [
+        {
+            "FacilityNumber": row.facility_number,
+            "FacilityName": row.facility_name,
+            "ComplaintControlNumber": row.complaint_control_number,
+            "ComplaintReceivedDate": row.complaint_received_date,
+            "ReportDate": row.report_date,
+            "FindingOrResolution": row.finding_or_resolution,
+            "SourceUrl": row.source_url,
+            "RawHashOrArtifactReference": row.raw_hash_or_artifact_reference,
+            "ReviewerDetailPath": row.reviewer_detail_path,
+            "Limitations": row.limitations,
+        }
+        for row in substantiated_rows
+    ]
+
+
+def _complaint_record_row_dicts(
+    complaint_record_rows: list[_ComplaintRecordRow],
+) -> list[dict[str, Any]]:
+    """Build row dicts for the complaint-records worksheet."""
+    return [
+        {
+            "FacilityNumber": row.facility_number,
+            "FacilityName": row.facility_name,
+            "FacilityType": row.facility_type,
+            "Status": row.status,
+            "City": row.city,
+            "County": row.county,
+            "ComplaintControlNumber": row.complaint_control_number,
+            "ComplaintReceivedDate": row.complaint_received_date,
+            "ReportDate": row.report_date,
+            "FindingOrResolution": row.finding_or_resolution,
+            "FindingGroup": row.finding_group,
+            "ComplaintType": row.complaint_type,
+            "AllegationCategory": row.allegation_category,
+            "KeywordReviewCues": row.keyword_review_cues,
+            "SourceUrl": row.source_url,
+            "RawHashOrArtifactReference": row.raw_hash_or_artifact_reference,
+            "ReviewerDetailPath": row.reviewer_detail_path,
+            "Limitations": row.limitations,
+        }
+        for row in complaint_record_rows
+    ]
+
+
+def _xlsx_autosize_columns(ws: Any, col_letter_fn: Any) -> None:
+    """Auto-size worksheet columns, capped at _XLSX_MAX_COL_WIDTH characters."""
+    for col_cells in ws.columns:
+        col_letter = col_letter_fn(col_cells[0].column)
+        max_len = max(
+            (len(str(cell.value or "")) for cell in col_cells),
+            default=0,
+        )
+        ws.column_dimensions[col_letter].width = max(
+            min(max_len + 2, _XLSX_MAX_COL_WIDTH), 8
+        )
+
+
+def _xlsx_data_sheet(
+    ws: Any,
+    *,
+    fields: tuple[str, ...],
+    rows: list[dict[str, Any]],
+    bold_font: Any,
+    col_letter_fn: Any,
+) -> None:
+    """Write bold headers and data rows to a worksheet.
+
+    Freezes the header row, applies auto-filter, and auto-sizes columns.
+    The Limitations column is last in all field tuples.
+    """
+    for col_idx, field_name in enumerate(fields, 1):
+        cell = ws.cell(row=1, column=col_idx, value=field_name)
+        cell.font = bold_font
+    for row_dict in rows:
+        ws.append([row_dict.get(f, "") for f in fields])
+    ws.freeze_panes = "A2"
+    if ws.max_row >= 1 and ws.max_column >= 1:
+        ws.auto_filter.ref = ws.dimensions
+    _xlsx_autosize_columns(ws, col_letter_fn)
+
+
+def _xlsx_populate_readme_sheet(
+    ws: Any,
+    *,
+    manifest: dict[str, Any],
+    bold_font: Any,
+) -> None:
+    """Populate the README worksheet with scope, limitations, and key details."""
+
+    def _row(col_a: str, col_b: str = "") -> None:
+        ws.append([col_a, col_b])
+
+    def _section(title: str) -> None:
+        ws.append([""])
+        cell = ws.cell(row=ws.max_row, column=1, value=title)
+        cell.font = bold_font
+
+    _row("Stakeholder Facility Overview — Review Aid")
+    ws.cell(row=1, column=1).font = Font(bold=True, size=13)
+
+    _section("PURPOSE")
+    _row(
+        "This workbook is a review aid derived from locally loaded public CCLD "
+        "complaint records. It is not a certified report, legal finding, or "
+        "source-completeness proof."
+    )
+
+    _section("KEY DETAILS")
+    _row("Generated", str(manifest.get("generated_at", "")))
+    _row("Git commit", str(manifest.get("git_commit", "")))
+    _row("Facilities", str(manifest.get("facility_row_count", 0)))
+    _row(
+        "Substantiated/equivalent complaints",
+        str(manifest.get("substantiated_complaint_row_count", 0)),
+    )
+    _row("All loaded complaint records", str(manifest.get("complaint_record_row_count", 0)))
+    _row("Facility reference CSV", str(manifest.get("facility_reference_csv", "none")))
+    _row("Facility reference rows", str(manifest.get("facility_reference_row_count", 0)))
+    _row(
+        "Reference rows matched to loaded complaints",
+        str(manifest.get("facility_reference_matched_count", 0)),
+    )
+    _row(
+        "Reference-only filter applied",
+        str(manifest.get("only_facility_reference_rows", False)),
+    )
+
+    _section("HOW TO USE THIS WORKBOOK")
+    _row(
+        "Start with the facility-overview tab for a per-facility summary. "
+        "Use substantiated-complaints for individual records where the source-derived "
+        "finding is substantiated or an equivalent value. "
+        "Use complaint-records for all loaded complaint records regardless of finding status. "
+        "Check the Manifest tab for generation metadata. "
+        "Verify important details against the public CCLD portal before citing this extract."
+    )
+
+    _section("TABS INCLUDED")
+    _row("README", "This tab — scope, limitations, how to use this workbook.")
+    _row(
+        "facility-overview",
+        "Per-facility complaint counts, substantiated/equivalent counts, "
+        "date ranges, and source-traceability counts.",
+    )
+    _row(
+        "substantiated-complaints",
+        "Individual complaint records where the source-derived finding "
+        "indicates substantiated or an equivalent value.",
+    )
+    _row(
+        "complaint-records",
+        "All loaded complaint records regardless of finding status. "
+        "Includes FindingGroup, ComplaintType, AllegationCategory, KeywordReviewCues.",
+    )
+    _row("Manifest", "Generation metadata, row counts, and output file list.")
+
+    _section("COUNTS AND COVERAGE")
+    _row(
+        "Counts are based only on records currently loaded in the local database. "
+        "A facility may have additional complaint records in the public source that "
+        "were not retrieved or loaded. Zero or low counts do not prove that no "
+        "complaints exist; they reflect only what was loaded."
+    )
+
+    _section("SOURCE OF RECORD")
+    _row(
+        "The public CCLD portal (ccld.dss.ca.gov) remains the source of record. "
+        "Verify important details against the public source before citing this extract."
+    )
+
+    _section("IMPORTANT LIMITATIONS")
+    _row(
+        "This extract does not make legal conclusions, facility-wide conclusions, "
+        "source-completeness claims, verified severity claims, or abuse/neglect findings. "
+        "Finding/resolution values are source-derived and not independently verified by "
+        "RecordsTracker. Raw narrative allegation text is intentionally excluded."
+    )
+    _row(
+        "KeywordReviewCues is a deterministic keyword-based review-cue label derived from "
+        "source-extracted non-narrative fields (finding, allegation category). A match "
+        "signals a possible serious allegation topic as a review aid only. It is not a "
+        "severity score, not a risk score, not a verified finding, and not a legal "
+        "classification. A non-match does not confirm the absence of serious topics."
+    )
+    _row("")
+    _row(str(manifest.get("limitations", "")))
+
+    ws.column_dimensions["A"].width = 40
+    ws.column_dimensions["B"].width = 80
+
+
+def _write_xlsx_workbook(
+    xlsx_path: Path,
+    *,
+    facility_rows: list[_FacilityRow],
+    substantiated_rows: list[_SubstantiatedRow],
+    complaint_record_rows: list[_ComplaintRecordRow],
+    manifest: dict[str, Any],
+) -> None:
+    """Write the stakeholder Excel workbook.
+
+    Sheet order: README, facility-overview, substantiated-complaints,
+    complaint-records, Manifest.
+    """
+    wb = openpyxl.Workbook()
+    default_sheet = wb.active
+    if default_sheet is not None:
+        wb.remove(default_sheet)  # remove the default "Sheet"
+    bold = Font(bold=True)
+
+    ws_readme = wb.create_sheet("README")
+    _xlsx_populate_readme_sheet(ws_readme, manifest=manifest, bold_font=bold)
+
+    ws_fo = wb.create_sheet("facility-overview")
+    _xlsx_data_sheet(
+        ws_fo,
+        fields=_FACILITY_OVERVIEW_FIELDS,
+        rows=_facility_overview_row_dicts(facility_rows),
+        bold_font=bold,
+        col_letter_fn=get_column_letter,
+    )
+
+    ws_sub = wb.create_sheet("substantiated-complaints")
+    _xlsx_data_sheet(
+        ws_sub,
+        fields=_SUBSTANTIATED_COMPLAINTS_FIELDS,
+        rows=_substantiated_row_dicts(substantiated_rows),
+        bold_font=bold,
+        col_letter_fn=get_column_letter,
+    )
+
+    ws_cr = wb.create_sheet("complaint-records")
+    _xlsx_data_sheet(
+        ws_cr,
+        fields=_COMPLAINT_RECORDS_FIELDS,
+        rows=_complaint_record_row_dicts(complaint_record_rows),
+        bold_font=bold,
+        col_letter_fn=get_column_letter,
+    )
+
+    ws_manifest = wb.create_sheet("Manifest")
+    ws_manifest.append(["Key", "Value"])
+    ws_manifest.cell(row=1, column=1).font = bold
+    ws_manifest.cell(row=1, column=2).font = bold
+    for key, value in manifest.items():
+        if isinstance(value, list):
+            ws_manifest.append([key, "; ".join(str(v) for v in value)])
+        else:
+            ws_manifest.append([key, str(value) if value is not None else ""])
+    ws_manifest.freeze_panes = "A2"
+    ws_manifest.column_dimensions["A"].width = 40
+    ws_manifest.column_dimensions["B"].width = 80
+
+    wb.save(xlsx_path)
 
 
 # ---------------------------------------------------------------------------
