@@ -87,6 +87,21 @@ _COUNTY_ALIASES: tuple[str, ...] = ("county",)
 _SUBSTANTIATED_KEYWORDS: tuple[str, ...] = ("substantiated", "founded", "sustained")
 _EXCLUDE_PREFIXES: tuple[str, ...] = ("unsubstantiated", "not substantiated")
 
+# Keywords used for deterministic keyword review cues derived from non-narrative
+# source-extracted fields only (finding, allegation_category).  Matches signal
+# a review topic; they are NOT severity scores, risk scores, or verified findings.
+_KEYWORD_REVIEW_CUE_KEYWORDS: tuple[str, ...] = (
+    "sexual assault",
+    "abuse",
+    "neglect",
+    "injury",
+    "restraint",
+    "runaway",
+    "awol",
+    "medication",
+    "staff misconduct",
+)
+
 
 def is_substantiated_equivalent(value: str | None) -> bool:
     """Return True when *value* indicates a substantiated or equivalent finding."""
@@ -122,6 +137,29 @@ SELECT
     sd.raw_path,
     CASE WHEN sd.raw_sha256 IS NOT NULL AND sd.raw_sha256 != '' THEN 1 ELSE 0 END
         AS has_traceability
+FROM complaints c
+JOIN facilities f ON f.facility_id = c.facility_id
+JOIN source_documents sd ON sd.document_id = c.document_id
+ORDER BY f.external_facility_number, c.complaint_received_date DESC
+"""
+
+_ALL_COMPLAINTS_SQL = """
+SELECT
+    f.external_facility_number  AS facility_number,
+    c.complaint_control_number,
+    c.complaint_received_date,
+    c.report_date,
+    c.finding,
+    sd.document_type            AS complaint_type,
+    sd.source_url,
+    sd.raw_sha256,
+    (
+        SELECT GROUP_CONCAT(DISTINCT a.allegation_category)
+        FROM allegations a
+        WHERE a.complaint_id = c.complaint_id
+          AND a.allegation_category IS NOT NULL
+          AND a.allegation_category != ''
+    ) AS allegation_categories
 FROM complaints c
 JOIN facilities f ON f.facility_id = c.facility_id
 JOIN source_documents sd ON sd.document_id = c.document_id
@@ -181,6 +219,28 @@ class _SubstantiatedRow:
 
 
 @dataclass(frozen=True)
+class _ComplaintRecordRow:
+    facility_number: str
+    facility_name: str
+    facility_type: str
+    status: str
+    city: str
+    county: str
+    complaint_control_number: str
+    complaint_received_date: str
+    report_date: str
+    finding_or_resolution: str
+    finding_group: str
+    complaint_type: str
+    allegation_category: str
+    keyword_review_cues: str
+    source_url: str
+    raw_hash_or_artifact_reference: str
+    reviewer_detail_path: str
+    limitations: str
+
+
+@dataclass(frozen=True)
 class StakeholderExtractResult:
     output_dir: Path
     facility_overview_path: Path
@@ -197,6 +257,54 @@ class StakeholderExtractResult:
     facility_reference_row_count: int
     facility_reference_matched_count: int
     only_facility_reference_rows: bool
+    complaint_records_path: Path
+    complaint_record_row_count: int
+
+
+# ---------------------------------------------------------------------------
+# Finding group and keyword review cue derivation
+# ---------------------------------------------------------------------------
+
+def _derive_finding_group(finding: str | None) -> str:
+    """Classify a source-derived finding into a broad group label.
+
+    Groups are derived only from source-derived finding/resolution text and
+    do not constitute an independent legal determination.
+
+    - SubstantiatedOrEquivalent:    finding contains substantiated/founded/sustained
+    - NotSubstantiatedOrEquivalent: finding is present but not substantiated-equivalent
+    - UnknownOrMissing:             finding is absent, empty, or UNKNOWN
+    """
+    if not finding or finding == UNKNOWN:
+        return "UnknownOrMissing"
+    if is_substantiated_equivalent(finding):
+        return "SubstantiatedOrEquivalent"
+    return "NotSubstantiatedOrEquivalent"
+
+
+def _derive_keyword_review_cues(
+    finding: str | None,
+    allegation_categories: str | None,
+) -> str:
+    """Return a review-cue label when an extracted field matches a keyword.
+
+    Checks only source-derived non-narrative fields: finding and
+    allegation_category.  Does not inspect raw allegation text.
+
+    This is a review cue, not a severity score, not a risk score, not a
+    verified finding, and not a legal classification.
+
+    Returns UNKNOWN when no keyword matches.
+    """
+    parts: list[str] = []
+    if finding:
+        parts.append(finding)
+    if allegation_categories:
+        parts.append(allegation_categories)
+    haystack = " ".join(parts).casefold()
+    if any(keyword in haystack for keyword in _KEYWORD_REVIEW_CUE_KEYWORDS):
+        return "Possible serious allegation topic"
+    return UNKNOWN
 
 
 # ---------------------------------------------------------------------------
@@ -237,9 +345,9 @@ def export_stakeholder_facility_overview(
     limitations = _limitations_sentence()
 
     if db_exists:
-        facility_rows, substantiated_rows = _read_db(db_path)
+        facility_rows, substantiated_rows, complaint_sql_rows = _read_db(db_path)
     else:
-        facility_rows, substantiated_rows = [], []
+        facility_rows, substantiated_rows, complaint_sql_rows = [], [], []
 
     # Merge optional facility reference CSV
     ref_row_count = 0
@@ -255,6 +363,14 @@ def export_stakeholder_facility_overview(
             facility_rows, ref_records
         )
 
+    # Build enriched facility map (used to enrich complaint record rows)
+    all_facility_map: dict[str, _FacilityRow] = {
+        row.facility_number: row for row in facility_rows
+    }
+
+    # Build complaint record rows from all loaded complaints, enriched by facility map
+    complaint_record_rows = _build_complaint_records(complaint_sql_rows, all_facility_map)
+
     # Apply reference-only filter when requested
     if only_facility_reference_rows:
         facility_rows = [
@@ -263,9 +379,13 @@ def export_stakeholder_facility_overview(
         substantiated_rows = [
             r for r in substantiated_rows if r.facility_number in ref_numbers
         ]
+        complaint_record_rows = [
+            r for r in complaint_record_rows if r.facility_number in ref_numbers
+        ]
 
     facility_overview_path = output_dir / "facility-overview.csv"
     substantiated_complaints_path = output_dir / "substantiated-complaints.csv"
+    complaint_records_path = output_dir / "complaint-records.csv"
     readme_path = output_dir / "README.md"
     manifest_path = output_dir / "manifest.json"
     zip_name = f"stakeholder-facility-overview-{timestamp}.zip"
@@ -273,6 +393,7 @@ def export_stakeholder_facility_overview(
 
     _write_facility_overview_csv(facility_overview_path, facility_rows)
     _write_substantiated_complaints_csv(substantiated_complaints_path, substantiated_rows)
+    _write_complaint_records_csv(complaint_records_path, complaint_record_rows)
     readme_path.write_text(_readme_text(), encoding="utf-8")
 
     git_commit = _get_git_commit()
@@ -281,10 +402,12 @@ def export_stakeholder_facility_overview(
         input_source=input_source,
         facility_row_count=len(facility_rows),
         substantiated_complaint_row_count=len(substantiated_rows),
+        complaint_record_row_count=len(complaint_record_rows),
         git_commit=git_commit,
         output_files=[
             "facility-overview.csv",
             "substantiated-complaints.csv",
+            "complaint-records.csv",
             "README.md",
             "manifest.json",
             zip_name,
@@ -302,18 +425,26 @@ def export_stakeholder_facility_overview(
 
     _write_zip(
         zip_path,
-        [facility_overview_path, substantiated_complaints_path, readme_path, manifest_path],
+        [
+            facility_overview_path,
+            substantiated_complaints_path,
+            complaint_records_path,
+            readme_path,
+            manifest_path,
+        ],
     )
 
     return StakeholderExtractResult(
         output_dir=output_dir,
         facility_overview_path=facility_overview_path,
         substantiated_complaints_path=substantiated_complaints_path,
+        complaint_records_path=complaint_records_path,
         readme_path=readme_path,
         manifest_path=manifest_path,
         zip_path=zip_path,
         facility_row_count=len(facility_rows),
         substantiated_complaint_row_count=len(substantiated_rows),
+        complaint_record_row_count=len(complaint_record_rows),
         git_commit=git_commit,
         input_source=input_source,
         limitations=limitations,
@@ -330,7 +461,7 @@ def export_stakeholder_facility_overview(
 
 def _read_db(
     db_path: Path,
-) -> tuple[list[_FacilityRow], list[_SubstantiatedRow]]:
+) -> tuple[list[_FacilityRow], list[_SubstantiatedRow], list[sqlite3.Row]]:
     """Read facility and complaint data from SQLite and aggregate."""
     with sqlite3.connect(db_path) as conn:
         conn.row_factory = sqlite3.Row
@@ -338,9 +469,16 @@ def _read_db(
             raw_rows = list(conn.execute(_FACILITY_COMPLAINTS_SQL).fetchall())
         except sqlite3.OperationalError:
             # Table does not exist yet — treat as empty
-            return [], []
+            return [], [], []
+        try:
+            complaint_sql_rows: list[sqlite3.Row] = list(
+                conn.execute(_ALL_COMPLAINTS_SQL).fetchall()
+            )
+        except sqlite3.OperationalError:
+            complaint_sql_rows = []
 
-    return _aggregate(raw_rows)
+    facility_rows, substantiated_rows = _aggregate(raw_rows)
+    return facility_rows, substantiated_rows, complaint_sql_rows
 
 
 def _aggregate(
@@ -414,6 +552,64 @@ def _str(row: sqlite3.Row, key: str) -> str:
     if val is None:
         return ""
     return str(val).strip()
+
+
+def _build_complaint_records(
+    complaint_sql_rows: list[sqlite3.Row],
+    facility_map: dict[str, _FacilityRow],
+) -> list[_ComplaintRecordRow]:
+    """Build complaint record rows from raw SQL rows, enriched by facility_map.
+
+    Only source-derived non-narrative fields are used.  Raw allegation text
+    is never read or included.
+    """
+    rows: list[_ComplaintRecordRow] = []
+    for row in complaint_sql_rows:
+        fnum = _str(row, "facility_number") or UNKNOWN
+        frow = facility_map.get(fnum)
+        facility_name = frow.facility_name if frow else UNKNOWN
+        facility_type = frow.facility_type if frow else UNKNOWN
+        status = frow.status if frow else UNKNOWN
+        city = frow.city if frow else UNKNOWN
+        county = frow.county if frow else UNKNOWN
+
+        finding = _str(row, "finding")
+        allegation_categories = _str(row, "allegation_categories")
+        control_number = _str(row, "complaint_control_number") or UNKNOWN
+
+        detail_path = (
+            "/reviewer/records/detail?source_record_key="
+            f"complaint%3Accld%3Acomplaint%3A{control_number}"
+            if control_number != UNKNOWN
+            else UNKNOWN
+        )
+
+        rows.append(
+            _ComplaintRecordRow(
+                facility_number=fnum,
+                facility_name=facility_name,
+                facility_type=facility_type,
+                status=status,
+                city=city,
+                county=county,
+                complaint_control_number=control_number,
+                complaint_received_date=_str(row, "complaint_received_date") or UNKNOWN,
+                report_date=_str(row, "report_date") or UNKNOWN,
+                finding_or_resolution=finding or UNKNOWN,
+                finding_group=_derive_finding_group(finding if finding else None),
+                complaint_type=_str(row, "complaint_type") or UNKNOWN,
+                allegation_category=allegation_categories or UNKNOWN,
+                keyword_review_cues=_derive_keyword_review_cues(
+                    finding if finding else None,
+                    allegation_categories if allegation_categories else None,
+                ),
+                source_url=_str(row, "source_url") or UNKNOWN,
+                raw_hash_or_artifact_reference=_str(row, "raw_sha256") or UNKNOWN,
+                reviewer_detail_path=detail_path,
+                limitations=_limitations_sentence(),
+            )
+        )
+    return rows
 
 
 # ---------------------------------------------------------------------------
@@ -668,6 +864,59 @@ def _write_substantiated_complaints_csv(
             )
 
 
+_COMPLAINT_RECORDS_FIELDS = (
+    "FacilityNumber",
+    "FacilityName",
+    "FacilityType",
+    "Status",
+    "City",
+    "County",
+    "ComplaintControlNumber",
+    "ComplaintReceivedDate",
+    "ReportDate",
+    "FindingOrResolution",
+    "FindingGroup",
+    "ComplaintType",
+    "AllegationCategory",
+    "KeywordReviewCues",
+    "SourceUrl",
+    "RawHashOrArtifactReference",
+    "ReviewerDetailPath",
+    "Limitations",
+)
+
+
+def _write_complaint_records_csv(
+    path: Path, complaint_record_rows: list[_ComplaintRecordRow]
+) -> None:
+    with path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=_COMPLAINT_RECORDS_FIELDS)
+        writer.writeheader()
+        for row in complaint_record_rows:
+            writer.writerow(
+                {
+                    "FacilityNumber": row.facility_number,
+                    "FacilityName": row.facility_name,
+                    "FacilityType": row.facility_type,
+                    "Status": row.status,
+                    "City": row.city,
+                    "County": row.county,
+                    "ComplaintControlNumber": row.complaint_control_number,
+                    "ComplaintReceivedDate": row.complaint_received_date,
+                    "ReportDate": row.report_date,
+                    "FindingOrResolution": row.finding_or_resolution,
+                    "FindingGroup": row.finding_group,
+                    "ComplaintType": row.complaint_type,
+                    "AllegationCategory": row.allegation_category,
+                    "KeywordReviewCues": row.keyword_review_cues,
+                    "SourceUrl": row.source_url,
+                    "RawHashOrArtifactReference": row.raw_hash_or_artifact_reference,
+                    "ReviewerDetailPath": row.reviewer_detail_path,
+                    "Limitations": row.limitations,
+                }
+            )
+
+
 # ---------------------------------------------------------------------------
 # README
 # ---------------------------------------------------------------------------
@@ -717,9 +966,30 @@ verified findings.
 
 ## Limitations column
 
-Each row in facility-overview.csv and substantiated-complaints.csv includes a
-Limitations column repeating this scope note for use when rows are shared or
-excerpted outside this package.
+Each row in facility-overview.csv, substantiated-complaints.csv, and
+complaint-records.csv includes a Limitations column repeating this scope note
+for use when rows are shared or excerpted outside this package.
+
+## complaint-records.csv
+
+This file contains one row per loaded complaint record for all facilities in
+this extract, regardless of finding/resolution status.
+
+- **FindingGroup** classifies each record into SubstantiatedOrEquivalent,
+  NotSubstantiatedOrEquivalent, or UnknownOrMissing based on the source-derived
+  finding value. This is not an independent legal determination.
+- **ComplaintType** is a source-derived document type field when available;
+  otherwise "not available".
+- **AllegationCategory** is a source-derived category label when extracted;
+  otherwise "not available". Raw narrative allegation text is not included.
+- **KeywordReviewCues** is a deterministic keyword-based review-cue label
+  derived from source-extracted non-narrative fields (finding, allegation
+  category). A match signals a possible serious allegation topic as a review
+  aid only. It is not a severity score, not a risk score, not a verified
+  finding, and not a legal classification. A non-match does not confirm the
+  absence of serious topics.
+- Counts reflect only loaded records. Additional complaint records may exist
+  in the public source that were not retrieved or loaded.
 """
 
 
@@ -733,6 +1003,7 @@ def _build_manifest(
     input_source: str,
     facility_row_count: int,
     substantiated_complaint_row_count: int,
+    complaint_record_row_count: int,
     git_commit: str,
     output_files: list[str],
     limitations: str,
@@ -748,6 +1019,7 @@ def _build_manifest(
         "output_files": output_files,
         "facility_row_count": facility_row_count,
         "substantiated_complaint_row_count": substantiated_complaint_row_count,
+        "complaint_record_row_count": complaint_record_row_count,
         "git_commit": git_commit,
         "facility_reference_csv": facility_reference_csv,
         "facility_reference_row_count": facility_reference_row_count,
