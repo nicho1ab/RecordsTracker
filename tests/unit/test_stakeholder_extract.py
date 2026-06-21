@@ -1746,3 +1746,65 @@ class TestExcelWorkbook:
         assert "counts and coverage" in all_text
         assert "zero" in all_text or "does not prove" in all_text or "does not mean" in all_text
 
+    def test_all_worksheets_have_tab_colors(self, tmp_path: Path) -> None:
+        """All five generated worksheets have a tab color set."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        for sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            tab_color = ws.sheet_properties.tabColor
+            assert tab_color is not None, (
+                f"Sheet {sheet_name!r} has no tab color set"
+            )
+            assert str(tab_color.rgb) not in ("00000000", ""), (
+                f"Sheet {sheet_name!r} tab color is empty/transparent"
+            )
+
+    def test_data_worksheet_headers_have_fill(self, tmp_path: Path) -> None:
+        """Header row cells in data sheets have a background fill."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        for sheet_name in [
+            "facility-overview",
+            "substantiated-complaints",
+            "complaint-records",
+        ]:
+            ws = wb[sheet_name]
+            for col_idx in range(1, ws.max_column + 1):
+                cell = ws.cell(row=1, column=col_idx)
+                fill = cell.fill
+                assert fill is not None and fill.fill_type not in (None, "none"), (
+                    f"Header cell {sheet_name!r} col {col_idx} has no fill"
+                )
+
+    def test_readme_title_row_has_dark_fill(self, tmp_path: Path) -> None:
+        """README row 1 cell A1 has a non-default background fill (title styling)."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["README"]
+        title_cell = ws.cell(row=1, column=1)
+        fill = title_cell.fill
+        assert fill is not None and fill.fill_type not in (None, "none"), (
+            "README title cell A1 should have a background fill"
+        )
+
+    def test_manifest_header_row_has_fill(self, tmp_path: Path) -> None:
+        """Manifest worksheet header row cells have a background fill."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["Manifest"]
+        for col_idx in (1, 2):
+            cell = ws.cell(row=1, column=col_idx)
+            fill = cell.fill
+            assert fill is not None and fill.fill_type not in (None, "none"), (
+                f"Manifest header cell col {col_idx} has no fill"
+            )
+
