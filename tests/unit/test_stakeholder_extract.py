@@ -1664,3 +1664,85 @@ class TestExcelWorkbook:
                 f"Sheet {sheet_name!r} should freeze top row (freeze_panes='A2')"
             )
 
+    def test_source_url_cells_have_hyperlinks(self, tmp_path: Path) -> None:
+        """SourceUrl column cells in data sheets carry hyperlink objects for http URLs."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        for sheet_name in ["substantiated-complaints", "complaint-records"]:
+            ws = wb[sheet_name]
+            header = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
+            assert "SourceUrl" in header, f"{sheet_name!r} missing SourceUrl column"
+            url_col = header.index("SourceUrl") + 1
+            for row_idx in range(2, ws.max_row + 1):
+                cell = ws.cell(row=row_idx, column=url_col)
+                val = str(cell.value or "")
+                if val.startswith("http"):
+                    assert cell.hyperlink is not None, (
+                        f"SourceUrl cell in {sheet_name!r} row {row_idx} has no hyperlink"
+                    )
+
+    def test_limitations_column_has_wrap_text(self, tmp_path: Path) -> None:
+        """Limitations column data cells in data sheets have wrap_text enabled."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        for sheet_name in [
+            "facility-overview",
+            "substantiated-complaints",
+            "complaint-records",
+        ]:
+            ws = wb[sheet_name]
+            header = [ws.cell(row=1, column=c).value for c in range(1, ws.max_column + 1)]
+            assert "Limitations" in header, f"{sheet_name!r} missing Limitations column"
+            lim_col = header.index("Limitations") + 1
+            for row_idx in range(2, ws.max_row + 1):
+                cell = ws.cell(row=row_idx, column=lim_col)
+                assert cell.alignment.wrap_text, (
+                    f"Limitations cell in {sheet_name!r} row {row_idx} missing wrap_text"
+                )
+
+    def test_manifest_worksheet_has_auto_filter(self, tmp_path: Path) -> None:
+        """Manifest worksheet has an auto_filter set."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["Manifest"]
+        assert ws.auto_filter.ref is not None, "Manifest sheet should have auto_filter"
+
+    def test_readme_has_tabs_included_section(self, tmp_path: Path) -> None:
+        """README worksheet contains a 'TABS INCLUDED' section listing all tabs."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["README"]
+        all_text = " ".join(
+            str(cell.value or "")
+            for row in ws.iter_rows()
+            for cell in row
+        ).casefold()
+        assert "tabs included" in all_text
+        assert "facility-overview" in all_text
+        assert "substantiated-complaints" in all_text
+        assert "complaint-records" in all_text
+        assert "manifest" in all_text
+
+    def test_readme_has_counts_and_coverage_guidance(self, tmp_path: Path) -> None:
+        """README worksheet contains counts/coverage caution language."""
+        db_path, extracts = self._make_two_complaint_db(tmp_path)
+        result = export_stakeholder_facility_overview(db_path, extracts)
+
+        wb = openpyxl.load_workbook(result.xlsx_path)
+        ws = wb["README"]
+        all_text = " ".join(
+            str(cell.value or "")
+            for row in ws.iter_rows()
+            for cell in row
+        ).casefold()
+        assert "counts and coverage" in all_text
+        assert "zero" in all_text or "does not prove" in all_text or "does not mean" in all_text
+
