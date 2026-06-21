@@ -10,6 +10,7 @@ from pathlib import Path
 from ccld_complaints.stakeholder_extract import (
     UNKNOWN,
     FacilityReferenceError,
+    FacilityReferenceFilterError,
     export_stakeholder_facility_overview,
     is_substantiated_equivalent,
     read_facility_reference_csv,
@@ -830,6 +831,205 @@ class TestFacilityReferenceInput:
         assert manifest["facility_reference_row_count"] == 2
         assert manifest["facility_reference_matched_count"] == 1
         # Total facility rows = 1 loaded + 1 reference-only = 2
+        assert result.facility_row_count == 2
+
+
+# ---------------------------------------------------------------------------
+# Tests: reference-only filter (--only-facility-reference-rows)
+# ---------------------------------------------------------------------------
+
+
+class TestOnlyFacilityReferenceRows:
+    def test_unrelated_loaded_facility_excluded(self, tmp_path: Path) -> None:
+        """Loaded facilities not in the reference CSV are excluded."""
+        conn = _make_db()
+        # Reference facility
+        _insert_facility(conn, fid="f1", fnum="100001")
+        _insert_source_doc(conn, doc_id="d1", fid="f1", url="http://example.test/1")
+        _insert_complaint(
+            conn, cid="c1", fid="f1", doc_id="d1",
+            control_number="CR-001", finding="Unsubstantiated",
+        )
+        # Unrelated loaded facility (not in reference)
+        _insert_facility(conn, fid="f2", fnum="999999")
+        _insert_source_doc(conn, doc_id="d2", fid="f2", url="http://example.test/2")
+        _insert_complaint(
+            conn, cid="c2", fid="f2", doc_id="d2",
+            control_number="CR-002", finding="Unsubstantiated",
+        )
+        conn.commit()
+        db_path = tmp_path / "test.sqlite"
+        _save_db(conn, db_path)
+
+        ref_csv = tmp_path / "facilities.csv"
+        _write_ref_csv(
+            ref_csv,
+            [{"FacilityNumber": "100001", "FacilityName": "In Reference"}],
+            header=["FacilityNumber", "FacilityName"],
+        )
+
+        result = export_stakeholder_facility_overview(
+            db_path, tmp_path / "extracts",
+            facility_reference_csv=ref_csv,
+            only_facility_reference_rows=True,
+        )
+
+        rows = _read_csv(result.facility_overview_path)
+        facility_numbers = {r["FacilityNumber"] for r in rows}
+        assert "100001" in facility_numbers
+        assert "999999" not in facility_numbers
+        assert result.facility_row_count == 1
+
+    def test_reference_facility_with_loaded_complaints_included(
+        self, tmp_path: Path
+    ) -> None:
+        """A reference facility that has loaded complaints is retained."""
+        conn = _make_db()
+        _insert_facility(conn, fid="f1", fnum="100001")
+        _insert_source_doc(conn, doc_id="d1", fid="f1", url="http://example.test/1")
+        _insert_complaint(
+            conn, cid="c1", fid="f1", doc_id="d1",
+            control_number="CR-001", finding="Substantiated",
+        )
+        conn.commit()
+        db_path = tmp_path / "test.sqlite"
+        _save_db(conn, db_path)
+
+        ref_csv = tmp_path / "facilities.csv"
+        _write_ref_csv(
+            ref_csv,
+            [{"FacilityNumber": "100001", "FacilityName": "In Reference"}],
+            header=["FacilityNumber", "FacilityName"],
+        )
+
+        result = export_stakeholder_facility_overview(
+            db_path, tmp_path / "extracts",
+            facility_reference_csv=ref_csv,
+            only_facility_reference_rows=True,
+        )
+
+        rows = _read_csv(result.facility_overview_path)
+        assert len(rows) == 1
+        assert rows[0]["FacilityNumber"] == "100001"
+        assert rows[0]["LoadedComplaintCount"] == "1"
+
+    def test_reference_facility_without_loaded_complaints_included(
+        self, tmp_path: Path
+    ) -> None:
+        """A reference-only facility (zero loaded complaints) is retained."""
+        ref_csv = tmp_path / "facilities.csv"
+        _write_ref_csv(
+            ref_csv,
+            [{"FacilityNumber": "300001", "FacilityName": "Reference Only"}],
+            header=["FacilityNumber", "FacilityName"],
+        )
+        db_path = tmp_path / "does_not_exist.sqlite"
+
+        result = export_stakeholder_facility_overview(
+            db_path, tmp_path / "extracts",
+            facility_reference_csv=ref_csv,
+            only_facility_reference_rows=True,
+        )
+
+        rows = _read_csv(result.facility_overview_path)
+        assert len(rows) == 1
+        assert rows[0]["FacilityNumber"] == "300001"
+        assert rows[0]["LoadedComplaintCount"] == "0"
+
+    def test_substantiated_rows_limited_to_reference_facilities(
+        self, tmp_path: Path
+    ) -> None:
+        """substantiated-complaints.csv excludes rows from non-reference facilities."""
+        conn = _make_db()
+        # Reference facility with substantiated complaint
+        _insert_facility(conn, fid="f1", fnum="100001")
+        _insert_source_doc(conn, doc_id="d1", fid="f1", url="http://example.test/1")
+        _insert_complaint(
+            conn, cid="c1", fid="f1", doc_id="d1",
+            control_number="CR-001", finding="Substantiated",
+        )
+        # Unrelated facility with substantiated complaint — should be excluded
+        _insert_facility(conn, fid="f2", fnum="999999")
+        _insert_source_doc(conn, doc_id="d2", fid="f2", url="http://example.test/2")
+        _insert_complaint(
+            conn, cid="c2", fid="f2", doc_id="d2",
+            control_number="CR-002", finding="Substantiated",
+        )
+        conn.commit()
+        db_path = tmp_path / "test.sqlite"
+        _save_db(conn, db_path)
+
+        ref_csv = tmp_path / "facilities.csv"
+        _write_ref_csv(
+            ref_csv,
+            [{"FacilityNumber": "100001", "FacilityName": "In Reference"}],
+            header=["FacilityNumber", "FacilityName"],
+        )
+
+        result = export_stakeholder_facility_overview(
+            db_path, tmp_path / "extracts",
+            facility_reference_csv=ref_csv,
+            only_facility_reference_rows=True,
+        )
+
+        sub_rows = _read_csv(result.substantiated_complaints_path)
+        facility_numbers = {r["FacilityNumber"] for r in sub_rows}
+        assert "100001" in facility_numbers
+        assert "999999" not in facility_numbers
+        assert result.substantiated_complaint_row_count == 1
+
+    def test_without_reference_csv_raises_clearly(self, tmp_path: Path) -> None:
+        """Using only_facility_reference_rows without a CSV fails with a clear error."""
+        import pytest
+
+        with pytest.raises(FacilityReferenceFilterError) as exc_info:
+            export_stakeholder_facility_overview(
+                tmp_path / "does_not_exist.sqlite",
+                tmp_path / "extracts",
+                only_facility_reference_rows=True,
+            )
+
+        assert "reference" in str(exc_info.value).casefold()
+
+    def test_default_behavior_unchanged_without_option(
+        self, tmp_path: Path
+    ) -> None:
+        """Without only_facility_reference_rows, unrelated loaded facilities appear."""
+        conn = _make_db()
+        _insert_facility(conn, fid="f1", fnum="100001")
+        _insert_source_doc(conn, doc_id="d1", fid="f1", url="http://example.test/1")
+        _insert_complaint(
+            conn, cid="c1", fid="f1", doc_id="d1",
+            control_number="CR-001", finding="Unsubstantiated",
+        )
+        _insert_facility(conn, fid="f2", fnum="999999")
+        _insert_source_doc(conn, doc_id="d2", fid="f2", url="http://example.test/2")
+        _insert_complaint(
+            conn, cid="c2", fid="f2", doc_id="d2",
+            control_number="CR-002", finding="Unsubstantiated",
+        )
+        conn.commit()
+        db_path = tmp_path / "test.sqlite"
+        _save_db(conn, db_path)
+
+        ref_csv = tmp_path / "facilities.csv"
+        _write_ref_csv(
+            ref_csv,
+            [{"FacilityNumber": "100001", "FacilityName": "In Reference"}],
+            header=["FacilityNumber", "FacilityName"],
+        )
+
+        result = export_stakeholder_facility_overview(
+            db_path, tmp_path / "extracts",
+            facility_reference_csv=ref_csv,
+            # only_facility_reference_rows NOT set
+        )
+
+        rows = _read_csv(result.facility_overview_path)
+        facility_numbers = {r["FacilityNumber"] for r in rows}
+        # Both facilities present — default merges reference but does not filter
+        assert "100001" in facility_numbers
+        assert "999999" in facility_numbers
         assert result.facility_row_count == 2
 
 
