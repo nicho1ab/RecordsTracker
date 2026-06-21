@@ -55,18 +55,21 @@ _FACILITY_NUMBER_ALIASES: tuple[str, ...] = (
     "license number",
     "license_number",
     "facility_number",
+    "fac_nbr",
 )
 _FACILITY_NAME_ALIASES: tuple[str, ...] = (
     "facilityname",
     "facility name",
     "facility_name",
+    "name",
 )
 _FACILITY_TYPE_ALIASES: tuple[str, ...] = (
     "facilitytype",
-    "programtype",
+    "fac_type_desc",
     "facility type",
-    "program type",
     "facility_type",
+    "programtype",
+    "program type",
     "program_type",
 )
 _STATUS_ALIASES: tuple[str, ...] = (
@@ -75,7 +78,7 @@ _STATUS_ALIASES: tuple[str, ...] = (
     "facility status",
     "facility_status",
 )
-_CITY_ALIASES: tuple[str, ...] = ("city",)
+_CITY_ALIASES: tuple[str, ...] = ("city", "res_city")
 _COUNTY_ALIASES: tuple[str, ...] = ("county",)
 
 # ---------------------------------------------------------------------------

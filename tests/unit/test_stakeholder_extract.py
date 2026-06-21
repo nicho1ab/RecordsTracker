@@ -700,6 +700,62 @@ class TestFacilityReferenceInput:
         assert len(records) == 1
         assert records[0]["facility_name"] == "First Name"
 
+    def test_raw_ccld_headers_recognised(self, tmp_path: Path) -> None:
+        """Raw CCLD column headers (FAC_NBR, NAME, etc.) are accepted as aliases."""
+        ref_csv = tmp_path / "facility-reference.csv"
+        _write_ref_csv(
+            ref_csv,
+            [{
+                "FAC_NBR": "200001",
+                "NAME": "Raw CCLD Center",
+                "FAC_TYPE_DESC": "Child Care Center",
+                "PROGRAM_TYPE": "Child Day Care",
+                "STATUS": "Licensed",
+                "RES_CITY": "Fresno",
+                "COUNTY": "Fresno",
+            }],
+            header=[
+                "FAC_NBR", "NAME", "FAC_TYPE_DESC", "PROGRAM_TYPE",
+                "STATUS", "RES_CITY", "COUNTY",
+            ],
+        )
+
+        records = read_facility_reference_csv(ref_csv)
+
+        assert len(records) == 1
+        rec = records[0]
+        assert rec["facility_number"] == "200001"
+        assert rec["facility_name"] == "Raw CCLD Center"
+        assert rec["facility_type"] == "Child Care Center"
+        assert rec["status"] == "Licensed"
+        assert rec["city"] == "Fresno"
+        assert rec["county"] == "Fresno"
+
+    def test_raw_ccld_reference_only_facility_in_output(
+        self, tmp_path: Path
+    ) -> None:
+        """A reference-only facility supplied via raw CCLD headers appears in output."""
+        ref_csv = tmp_path / "facility-reference.csv"
+        _write_ref_csv(
+            ref_csv,
+            [{"FAC_NBR": "300001", "NAME": "CCLD Only Facility", "RES_CITY": "Modesto"}],
+            header=["FAC_NBR", "NAME", "RES_CITY"],
+        )
+        db_path = tmp_path / "does_not_exist.sqlite"
+
+        result = export_stakeholder_facility_overview(
+            db_path, tmp_path / "extracts",
+            facility_reference_csv=ref_csv,
+        )
+
+        rows = _read_csv(result.facility_overview_path)
+        assert len(rows) == 1
+        row = rows[0]
+        assert row["FacilityNumber"] == "300001"
+        assert row["FacilityName"] == "CCLD Only Facility"
+        assert row["City"] == "Modesto"
+        assert row["LoadedComplaintCount"] == "0"
+
     def test_reference_input_no_raw_narrative_in_output(
         self, tmp_path: Path
     ) -> None:
