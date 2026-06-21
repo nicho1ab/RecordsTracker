@@ -40,7 +40,7 @@ from pathlib import Path
 from typing import Any
 
 import openpyxl
-from openpyxl.styles import Alignment, Font
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 DEFAULT_STAKEHOLDER_EXTRACT_ROOT = Path("data/processed/stakeholder-extracts")
@@ -1044,6 +1044,20 @@ def _limitations_sentence() -> str:
 
 _XLSX_MAX_COL_WIDTH = 60
 
+# ---------------------------------------------------------------------------
+# Workbook presentation style constants
+# ---------------------------------------------------------------------------
+_HEADER_FILL = PatternFill(start_color="D6E4F0", end_color="D6E4F0", fill_type="solid")
+_HEADER_BORDER_BOTTOM = Border(bottom=Side(style="thin"))
+_TITLE_FILL = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+_TITLE_FONT = Font(bold=True, size=14, color="FFFFFF")
+# Tab colours for the five generated worksheets
+_TAB_COLOR_README = "1F4E79"
+_TAB_COLOR_FACILITY_OVERVIEW = "2E75B6"
+_TAB_COLOR_SUBSTANTIATED = "C55A11"
+_TAB_COLOR_COMPLAINT_RECORDS = "538135"
+_TAB_COLOR_MANIFEST = "767171"
+
 
 def _facility_overview_row_dicts(
     facility_rows: list[_FacilityRow],
@@ -1161,6 +1175,8 @@ def _xlsx_data_sheet(
     for col_idx, field_name in enumerate(fields, 1):
         cell = ws.cell(row=1, column=col_idx, value=field_name)
         cell.font = bold_font
+        cell.fill = _HEADER_FILL
+        cell.border = _HEADER_BORDER_BOTTOM
     for row_dict in rows:
         ws.append([row_dict.get(f, "") for f in fields])
     ws.freeze_panes = "A2"
@@ -1202,9 +1218,13 @@ def _xlsx_populate_readme_sheet(
         ws.append([""])
         cell = ws.cell(row=ws.max_row, column=1, value=title)
         cell.font = bold_font
+        cell.fill = _HEADER_FILL
+        ws.cell(row=ws.max_row, column=2).fill = _HEADER_FILL
 
     _row("Stakeholder Facility Overview — Review Aid")
-    ws.cell(row=1, column=1).font = Font(bold=True, size=13)
+    ws.cell(row=1, column=1).font = _TITLE_FONT
+    ws.cell(row=1, column=1).fill = _TITLE_FILL
+    ws.cell(row=1, column=2).fill = _TITLE_FILL
 
     _section("PURPOSE")
     _row(
@@ -1293,7 +1313,12 @@ def _xlsx_populate_readme_sheet(
     _row("")
     _row(str(manifest.get("limitations", "")))
 
-    ws.column_dimensions["A"].width = 40
+    # Wrap all cell text in the README so long prose is readable.
+    for _ws_row in ws.iter_rows():
+        for _cell in _ws_row:
+            _cell.alignment = Alignment(wrap_text=True)
+
+    ws.column_dimensions["A"].width = 50
     ws.column_dimensions["B"].width = 80
 
 
@@ -1317,9 +1342,11 @@ def _write_xlsx_workbook(
     bold = Font(bold=True)
 
     ws_readme = wb.create_sheet("README")
+    ws_readme.sheet_properties.tabColor = _TAB_COLOR_README
     _xlsx_populate_readme_sheet(ws_readme, manifest=manifest, bold_font=bold)
 
     ws_fo = wb.create_sheet("facility-overview")
+    ws_fo.sheet_properties.tabColor = _TAB_COLOR_FACILITY_OVERVIEW
     _xlsx_data_sheet(
         ws_fo,
         fields=_FACILITY_OVERVIEW_FIELDS,
@@ -1329,6 +1356,7 @@ def _write_xlsx_workbook(
     )
 
     ws_sub = wb.create_sheet("substantiated-complaints")
+    ws_sub.sheet_properties.tabColor = _TAB_COLOR_SUBSTANTIATED
     _xlsx_data_sheet(
         ws_sub,
         fields=_SUBSTANTIATED_COMPLAINTS_FIELDS,
@@ -1338,6 +1366,7 @@ def _write_xlsx_workbook(
     )
 
     ws_cr = wb.create_sheet("complaint-records")
+    ws_cr.sheet_properties.tabColor = _TAB_COLOR_COMPLAINT_RECORDS
     _xlsx_data_sheet(
         ws_cr,
         fields=_COMPLAINT_RECORDS_FIELDS,
@@ -1347,9 +1376,14 @@ def _write_xlsx_workbook(
     )
 
     ws_manifest = wb.create_sheet("Manifest")
+    ws_manifest.sheet_properties.tabColor = _TAB_COLOR_MANIFEST
     ws_manifest.append(["Key", "Value"])
     ws_manifest.cell(row=1, column=1).font = bold
+    ws_manifest.cell(row=1, column=1).fill = _HEADER_FILL
+    ws_manifest.cell(row=1, column=1).border = _HEADER_BORDER_BOTTOM
     ws_manifest.cell(row=1, column=2).font = bold
+    ws_manifest.cell(row=1, column=2).fill = _HEADER_FILL
+    ws_manifest.cell(row=1, column=2).border = _HEADER_BORDER_BOTTOM
     for key, value in manifest.items():
         if isinstance(value, list):
             ws_manifest.append([key, "; ".join(str(v) for v in value)])
