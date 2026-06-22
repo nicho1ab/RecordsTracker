@@ -47,15 +47,45 @@ into a partially started or unhealthy stack.
 ## 2. Step 1 — Build The Validated Artifact On Windows
 
 Run this command from the repository root on the Windows workstation. Replace
-`<db-path>` with the path to your validated CCLD SQLite file. Add
-`-FacilityNumber <number>` when the SQLite file contains more than one facility.
+`<db-path>` with the path to your validated CCLD SQLite file.
+
+**Single-facility artifact** — use when the SQLite file contains exactly one
+facility, or when you want to load only a specific facility:
 
 ```powershell
 .\scripts\build-hosted-ccld-artifact.ps1 `
     -DbPath <db-path> `
+    -FacilityNumber <facility-number> `
     -OutputPath data\processed\hosted_seeded_corpus\validated_ccld_seeded_corpus.json `
     -Overwrite
 ```
+
+**Full-corpus artifact** — use when the SQLite file contains multiple facilities
+and you want to load all of them into a single artifact. `-AllFacilities` is
+opt-in and explicit. Do not use `-FacilityNumber` together with `-AllFacilities`
+(they are mutually exclusive):
+
+```powershell
+.\scripts\build-hosted-ccld-artifact.ps1 `
+    -DbPath <db-path> `
+    -AllFacilities `
+    -OutputPath data\processed\hosted_seeded_corpus\validated_ccld_seeded_corpus.json `
+    -Overwrite
+```
+
+The artifact written for `-AllFacilities` includes `"corpus_scope": "full-corpus"`
+in the JSON. The single-facility artifact includes `"corpus_scope": "single-facility"`.
+Both distinguish the build scope, source artifact identity, import batch ID, and
+generated timestamp. Both must be imported using the same `import_hosted_seeded_corpus`
+command in step 5.
+
+The script prints `Corpus scope: full-corpus` and the number of facilities included
+when `-AllFacilities` is used. For single-facility, it prints the facility number.
+Neither print reveals secrets or private paths.
+
+If the SQLite contains multiple facilities and you pass neither `-FacilityNumber`
+nor `-AllFacilities`, the command will fail with a clear message asking you to
+choose. This failure is intentional.
 
 The script writes the artifact to
 `data\processed\hosted_seeded_corpus\validated_ccld_seeded_corpus.json` by
