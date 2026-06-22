@@ -755,7 +755,7 @@ def render_app_shell() -> str:
             <div>
                 <p class="launch-kicker">Attorney review workspace</p>
                 <h2 id="start-heading">Start a facility complaint review</h2>
-                <p class="launch-value">Attorney-focused public CCLD complaint/facility record review: select a facility, set a date range, load complaint records, work the review queue, open detail, prepare a local/test packet draft, and send feedback when something is confusing.</p>
+                <p class="launch-value">Attorney-focused public CCLD complaint/facility record review: select a facility, set a date range, load complaint records, work the review queue, open detail, prepare a packet draft, and send feedback when something is confusing.</p>
             </div>
             <div class="attorney-hero-actions" aria-label="Primary actions">
                 <a class="button button-large" href="{CCLD_FACILITY_LOOKUP_PATH}">Start with facility lookup</a>
@@ -764,40 +764,18 @@ def render_app_shell() -> str:
             </div>
         </section>
         <section class="quiet-section" aria-labelledby="session-start-overview-heading">
-            <h2 id="session-start-overview-heading">How the local/test review loop works</h2>
+            <h2 id="session-start-overview-heading">How the review workflow works</h2>
             <ol>
                 <li>Select a facility by lookup, or enter a facility/license number directly.</li>
                 <li>Choose a complaint date range to create the CCLD request context.</li>
-                <li>Retrieve or show loaded local/test complaint records.</li>
+                <li>Load or retrieve complaint records.</li>
                 <li>Use the review queue to open the recommended record first.</li>
                 <li>Use reviewer detail to check source traceability and save reviewer-created status/note observations.</li>
-                <li>Use packet preview/draft for local/test preparation after review.</li>
+                <li>Use packet preview/draft to prepare after review.</li>
                 <li>Use feedback when records, wording, keyboard flow, or packet readiness is confusing.</li>
             </ol>
-            <p>The public CCLD portal remains the source of record. Loaded local/test records are review aids. Packet preview and draft are not legal reports, not final exports, and not source-completeness proof.</p>
-        </section>
-        <section id="commands" class="quiet-section" aria-labelledby="commands-heading">
-            <details>
-            <summary id="commands-heading">Developer/operator commands</summary>
-            <div class="action-grid">
-                <section class="detail-card" aria-labelledby="live-command-heading">
-                    <h3 id="live-command-heading">Live public CCLD retrieval</h3>
-                    <p><code>.\\scripts\\run-hosted-complaint-retrieval-live.ps1 -Port 8000</code></p>
-                    <p>Public CCLD HTTP requests are made only after browser submit.</p>
-                </section>
-                <section class="detail-card" aria-labelledby="demo-command-heading">
-                    <h3 id="demo-command-heading">Fixture/mock demo</h3>
-                    <p><code>.\\scripts\\run-hosted-complaint-retrieval-demo.ps1 -Port 8010</code></p>
-                    <p>Uses committed fixtures and does not make live CCLD calls.</p>
-                </section>
-                <section class="detail-card" aria-labelledby="scaffold-command-heading">
-                    <h3 id="scaffold-command-heading">Local pilot runtime</h3>
-                    <p><code>.\\scripts\\run-hosted-scaffold.ps1 -Port 8000</code></p>
-                    <p>Starts the local pilot runtime with retrieval setup guidance.</p>
-                </section>
-            </div>
-            </details>
-        </section>""",
+            <p>The public CCLD portal remains the source of record. Loaded records are review aids. Packet preview and draft are not legal reports, not final exports, and not source-completeness proof.</p>
+        </section>"""
         )
 
 
