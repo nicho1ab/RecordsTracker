@@ -25,7 +25,10 @@ from ccld_complaints.hosted_app.seeded_import import (
     load_seeded_corpus_artifact,
     parse_seeded_corpus_artifact,
 )
-from ccld_complaints.local_sample import populate_sample_database
+from ccld_complaints.local_sample import (
+    populate_multi_facility_sample_database,
+    populate_sample_database,
+)
 from ccld_complaints.utils.hash import sha256_bytes
 
 RAW_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_inx3.html")
@@ -248,7 +251,109 @@ def test_ccld_hosted_artifact_builder_rejects_private_or_absolute_raw_path(
         )
 
 
+def test_ccld_hosted_artifact_builder_full_corpus_builds_from_multi_facility_sqlite(
+    tmp_path: Path,
+) -> None:
+    db_path = _multi_facility_sqlite_db(tmp_path)
+
+    result = build_ccld_hosted_seeded_corpus_artifact(
+        db_path,
+        all_facilities=True,
+        import_batch_id=LOCAL_REVIEWER_UI_SCOPE.scope_id,
+        imported_at="2026-06-14T00:00:00+00:00",
+        source_artifact_identity="fixture-ccld-multi-facility-sqlite-output",
+    )
+
+    assert result.corpus_scope == "full-corpus"
+    assert result.facility_number == "all"
+    assert len(result.facility_numbers) >= 2
+    assert "157806097" in result.facility_numbers
+    assert "157806098" in result.facility_numbers
+    assert result.record_count >= 2
+    artifact = parse_seeded_corpus_artifact(result.artifact)
+    assert artifact.import_batch_id == LOCAL_REVIEWER_UI_SCOPE.scope_id
+    assert artifact.validation_status == "validated"
+    assert result.artifact.get("corpus_scope") == "full-corpus"
+
+
+def test_ccld_hosted_artifact_builder_full_corpus_artifact_imports_into_hosted_rows(
+    tmp_path: Path,
+) -> None:
+    db_path = _multi_facility_sqlite_db(tmp_path)
+    output_path = tmp_path / "full-corpus-ccld-seeded-corpus.json"
+    write_ccld_hosted_seeded_corpus_artifact(
+        db_path,
+        output_path,
+        all_facilities=True,
+        import_batch_id=LOCAL_REVIEWER_UI_SCOPE.scope_id,
+        imported_at="2026-06-14T00:00:00+00:00",
+        source_artifact_identity="fixture-ccld-multi-facility-sqlite-output",
+        overwrite=True,
+    )
+    artifact = load_seeded_corpus_artifact(output_path)
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+
+    with engine.begin() as connection:
+        import_result = import_seeded_corpus_artifact(connection, artifact)
+        rows = connection.execute(
+            select(hosted_source_derived_records).order_by(
+                hosted_source_derived_records.c.source_record_key
+            )
+        ).mappings().all()
+
+    entity_types = {row["entity_type"] for row in rows}
+    facility_numbers_in_db = {
+        row["original_values"].get("external_facility_number")
+        for row in rows
+        if row["entity_type"] == "facility"
+    }
+
+    assert import_result.imported_record_count > 0
+    assert len(rows) == import_result.imported_record_count
+    assert "complaint" in entity_types
+    assert "facility" in entity_types
+    assert "157806097" in facility_numbers_in_db
+    assert "157806098" in facility_numbers_in_db
+
+
+def test_ccld_hosted_artifact_builder_rejects_multi_facility_sqlite_without_all_facilities(
+    tmp_path: Path,
+) -> None:
+    db_path = _multi_facility_sqlite_db(tmp_path)
+
+    with pytest.raises(ValueError, match="multiple"):
+        build_ccld_hosted_seeded_corpus_artifact(
+            db_path,
+            import_batch_id=LOCAL_REVIEWER_UI_SCOPE.scope_id,
+            imported_at="2026-06-14T00:00:00+00:00",
+            source_artifact_identity="fixture-ccld-sqlite-output",
+        )
+
+
+def test_ccld_hosted_artifact_builder_rejects_all_facilities_with_facility_number(
+    tmp_path: Path,
+) -> None:
+    db_path = _fixture_sqlite_db(tmp_path)
+
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        build_ccld_hosted_seeded_corpus_artifact(
+            db_path,
+            facility_number="157806098",
+            all_facilities=True,
+            import_batch_id=LOCAL_REVIEWER_UI_SCOPE.scope_id,
+            imported_at="2026-06-14T00:00:00+00:00",
+            source_artifact_identity="fixture-ccld-sqlite-output",
+        )
+
+
 def _fixture_sqlite_db(tmp_path: Path) -> Path:
     db_path = tmp_path / "validated-ccld.sqlite"
     populate_sample_database(db_path)
+    return db_path
+
+
+def _multi_facility_sqlite_db(tmp_path: Path) -> Path:
+    db_path = tmp_path / "validated-ccld-multi.sqlite"
+    populate_multi_facility_sample_database(db_path)
     return db_path

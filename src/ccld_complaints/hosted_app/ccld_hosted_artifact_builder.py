@@ -53,12 +53,15 @@ class CcldHostedArtifactBuildResult:
     record_count: int
     source_derived_record_count: int
     counts_by_entity: Mapping[str, int]
+    facility_numbers: tuple[str, ...] = ()
+    corpus_scope: str = "single-facility"
 
 
 def build_ccld_hosted_seeded_corpus_artifact(
     db_path: Path,
     *,
     facility_number: str | None = None,
+    all_facilities: bool = False,
     start_date: str | None = None,
     end_date: str | None = None,
     import_batch_id: str = DEFAULT_CCLD_HOSTED_IMPORT_BATCH_ID,
@@ -66,6 +69,11 @@ def build_ccld_hosted_seeded_corpus_artifact(
     source_artifact_identity: str | None = None,
     schema_dir: Path = Path("schemas"),
 ) -> CcldHostedArtifactBuildResult:
+    if all_facilities and facility_number is not None:
+        raise ValueError(
+            "--all-facilities and --facility-number are mutually exclusive; "
+            "use one or the other."
+        )
     resolved_db_path = _resolve_existing_db_path(db_path)
     parsed_start_date = _parse_optional_date(start_date, "start_date")
     parsed_end_date = _parse_optional_date(end_date, "end_date")
@@ -76,14 +84,22 @@ def build_ccld_hosted_seeded_corpus_artifact(
     with sqlite3.connect(resolved_db_path) as connection:
         connection.row_factory = sqlite3.Row
         _require_sqlite_tables(connection)
-        selected_facility_number = _selected_facility_number(connection, facility_number)
-        records = _record_bundles(
-            connection,
-            facility_number=selected_facility_number,
-            start_date=parsed_start_date,
-            end_date=parsed_end_date,
-            schema_dir=_resolve_schema_dir(schema_dir),
-        )
+        if all_facilities:
+            selected_facility_numbers = _all_facility_numbers(connection)
+        else:
+            selected_facility_numbers = [_selected_facility_number(connection, facility_number)]
+        resolved_schema_dir = _resolve_schema_dir(schema_dir)
+        records: list[dict[str, Any]] = []
+        for fn in selected_facility_numbers:
+            records.extend(
+                _record_bundles(
+                    connection,
+                    facility_number=fn,
+                    start_date=parsed_start_date,
+                    end_date=parsed_end_date,
+                    schema_dir=resolved_schema_dir,
+                )
+            )
 
     if not records:
         raise ValueError(
@@ -91,6 +107,7 @@ def build_ccld_hosted_seeded_corpus_artifact(
             "facility/license number and date range."
         )
 
+    corpus_scope = "full-corpus" if all_facilities else "single-facility"
     record_counts = _record_counts(records)
     artifact: dict[str, Any] = {
         "import_batch_id": _required_non_empty(import_batch_id, "import_batch_id"),
@@ -100,6 +117,7 @@ def build_ccld_hosted_seeded_corpus_artifact(
         "source_pipeline_version": ARTIFACT_BUILDER_VERSION,
         "validation_status": "validated",
         "raw_hash_validation_status": "validated",
+        "corpus_scope": corpus_scope,
         "record_counts": record_counts,
         "warnings": [
             "Local/test CCLD-only artifact built from validated SQLite output; not "
@@ -110,14 +128,19 @@ def build_ccld_hosted_seeded_corpus_artifact(
     }
     parsed_artifact = parse_seeded_corpus_artifact(artifact)
     flattened_records = flatten_seeded_corpus_records(parsed_artifact)
+    representative_facility_number = (
+        "all" if all_facilities else selected_facility_numbers[0]
+    )
 
     return CcldHostedArtifactBuildResult(
         artifact=artifact,
         output_path=None,
-        facility_number=selected_facility_number,
+        facility_number=representative_facility_number,
         record_count=len(records),
         source_derived_record_count=len(flattened_records),
         counts_by_entity=record_counts,
+        facility_numbers=tuple(selected_facility_numbers),
+        corpus_scope=corpus_scope,
     )
 
 
@@ -126,6 +149,7 @@ def write_ccld_hosted_seeded_corpus_artifact(
     output_path: Path,
     *,
     facility_number: str | None = None,
+    all_facilities: bool = False,
     start_date: str | None = None,
     end_date: str | None = None,
     import_batch_id: str = DEFAULT_CCLD_HOSTED_IMPORT_BATCH_ID,
@@ -140,6 +164,7 @@ def write_ccld_hosted_seeded_corpus_artifact(
     result = build_ccld_hosted_seeded_corpus_artifact(
         db_path,
         facility_number=facility_number,
+        all_facilities=all_facilities,
         start_date=start_date,
         end_date=end_date,
         import_batch_id=import_batch_id,
@@ -159,6 +184,8 @@ def write_ccld_hosted_seeded_corpus_artifact(
         record_count=result.record_count,
         source_derived_record_count=result.source_derived_record_count,
         counts_by_entity=result.counts_by_entity,
+        facility_numbers=result.facility_numbers,
+        corpus_scope=result.corpus_scope,
     )
 
 
@@ -223,9 +250,27 @@ def _selected_facility_number(
     if len(facility_numbers) > 1:
         raise ValueError(
             "SQLite output contains multiple CCLD facility/license numbers; pass "
-            "facility_number explicitly."
+            "--facility-number explicitly or use --all-facilities to load all facilities."
         )
     return facility_numbers[0]
+
+
+def _all_facility_numbers(connection: sqlite3.Connection) -> list[str]:
+    rows = connection.execute(
+        """
+        SELECT DISTINCT external_facility_number
+        FROM facilities
+        WHERE source_id = ?
+        ORDER BY external_facility_number
+        """,
+        (CCLD_SOURCE_ID,),
+    ).fetchall()
+    facility_numbers = [str(row[0]) for row in rows if row[0] is not None]
+    if not facility_numbers:
+        raise ValueError(
+            "Could not find any CCLD facility/license numbers in SQLite output."
+        )
+    return facility_numbers
 
 
 def _record_bundles(
