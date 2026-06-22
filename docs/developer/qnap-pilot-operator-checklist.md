@@ -13,6 +13,8 @@ current production-mode auth boundary and deferred real-login work. Use
 [QNAP pilot access-method decision](qnap-pilot-access-method-decision.md) before
 sharing any external tester link, credential, network rule, VPN rule, or reverse
 proxy route. Use
+[Cloudflare Tunnel + Access setup](qnap-cloudflare-tunnel-access-setup.md) to
+configure the Cloudflare access layer before sharing any tester-facing URL. Use
 [QNAP pilot tester invitation decision](qnap-pilot-tester-invitation-decision.md)
 before inviting testers. Use `scripts/build-qnap-pilot-evidence-packet.ps1` only
 as optional local operator convenience after separate readiness evidence and
@@ -218,6 +220,40 @@ docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic u
 - Record the PostgreSQL backup location and restore plan.
 - Record the raw artifact backup location and restore plan.
 - Record that known limitations were reviewed and acknowledged.
+
+## 11. Cloudflare Tunnel and Access Setup
+
+Complete this section before sharing any tester-facing URL. Use
+[Cloudflare Tunnel + Access setup](qnap-cloudflare-tunnel-access-setup.md)
+as the step-by-step runbook.
+
+- Confirm the QNAP LAN smoke test passed before starting Cloudflare setup.
+- Confirm Dream Machine Pro port forwarding is not configured for the app.
+- Confirm the Cloudflare account and zone are ready.
+- Confirm a pilot hostname placeholder has been chosen and recorded in local
+  operator notes (not committed).
+- Create the Cloudflare Tunnel. Record the tunnel name. Keep the tunnel token
+  in local storage only.
+- Start the `cloudflared` connector on the QNAP host (Docker container or
+  native binary). Confirm the tunnel shows Healthy in the Cloudflare dashboard.
+- Route only the app HTTP service (`CCLD_HOSTED_PORT`) through the tunnel.
+  Confirm no QNAP admin UI, Container Station, SSH, SMB, NAS service, Docker
+  socket, or database port has a public hostname route.
+- Configure Cloudflare Access with the allowlisted tester email addresses and
+  the selected identity method (one-time PIN, Google, Microsoft, or another
+  approved provider). Record the identity method in the access-method decision
+  doc. Record the session duration in local operator notes.
+- Confirm Cloudflare Access blocks unauthenticated requests (private/incognito
+  session should see an Access login page, not the app).
+- Confirm Cloudflare Access denies a non-allowlisted email.
+- Confirm an allowlisted test email can reach the app landing page and
+  `/health` through the tunnel.
+- Confirm `CCLD_HOSTED_TESTER_AUTH_MODE=production` and
+  `CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH=disabled` remain set.
+- Confirm no Cloudflare tokens, account IDs, private hostnames, or tester
+  emails are committed to the repository.
+- Record the evidence listed in the Cloudflare Tunnel + Access setup runbook
+  section 10 in local operator notes or the evidence packet.
 
 ## 11. Backup And Rollback Checklist
 
