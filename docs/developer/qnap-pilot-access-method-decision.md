@@ -61,6 +61,16 @@ Choose one category and record why it fits the current pilot stage:
   provider integration, callback handling, sessions or equivalent state, user or
   role persistence as needed, tests, and deployment guidance. It is not available
   in the current scaffold.
+- Cloudflare Tunnel + Cloudflare Access with individually allowlisted testers:
+  exposes only the app HTTP service through a Cloudflare Tunnel (no router port
+  forwarding). Cloudflare Access enforces email-based identity checks before any
+  tester-facing URL can be reached. Does not replace the app's own hosted auth
+  boundary. Does not expose QNAP admin UI, Container Station UI, SSH, SMB, or
+  NAS management services through the tunnel. Does not configure Dream Machine
+  Pro port forwarding. Requires recording the selected identity provider approach,
+  the named testers or approved group, and who owns ongoing Access policy
+  updates. Secrets, tunnel credentials, account IDs, and private hostnames must
+  not be committed to the repository.
 
 Do not invent another access method without recording the same owner, scope,
 expiration, revocation, no-secret, and no-conclusion boundaries.
@@ -153,3 +163,90 @@ These remain deferred and must not be implied by an access-method decision:
 - Do not invite testers without a revocation plan.
 - Do not make public-source completeness, legal, facility-wide, harm, abuse,
   neglect, liability, or rights-deprivation conclusions.
+
+## 9. Cloudflare Access Identity Decision
+
+This section records the selected access-layer approach for the QNAP pilot
+before any Cloudflare Tunnel or tester-facing URL is created.
+
+This is a pilot access-control decision, not a production security
+certification. It does not implement Cloudflare Tunnel, Cloudflare Access,
+DNS, TLS certificates, firewall rules, Dream Machine Pro configuration,
+or internet exposure.
+
+### 9.1 Selected Approach
+
+The selected access method for the QNAP pilot is:
+**Cloudflare Tunnel + Cloudflare Access with individually allowlisted testers.**
+
+- Cloudflare Tunnel will be used to make the app reachable from outside the
+  QNAP LAN without router port forwarding or Dream Machine Pro firewall changes.
+- Cloudflare Access will sit in front of the app URL and enforce identity checks
+  before any tester can reach the app.
+- Initial tester access will use individually allowlisted email addresses or a
+  small named tester group managed in Cloudflare Access.
+- No public unauthenticated route will be created.
+
+### 9.2 What This Decision Is Not
+
+- This is not production OIDC login. The app's `CCLD_HOSTED_TESTER_AUTH_MODE`
+  must stay `production` and `CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH` must stay
+  `disabled`. Cloudflare Access is a network-layer access control that sits in
+  front of the app; it is not the app's authentication layer.
+- Cloudflare Access does not replace the app's hosted auth boundary, session
+  handling, user tables, OIDC callback, or role enforcement. Those remain
+  deferred.
+- This is not a permanent deployment decision. The pilot remains portable and
+  QNAP is not a permanent platform lock-in.
+
+### 9.3 Guardrails
+
+- Only the app HTTP service (`CCLD_HOSTED_PORT`, container port 8000) may be
+  exposed through the tunnel.
+- QNAP admin UI, Container Station UI, SSH, SMB, AFP, NAS management services,
+  and any non-app QNAP service must not be exposed through the tunnel.
+- Dream Machine Pro port forwarding must not be configured for the app.
+- No broad anonymous public route may be created.
+- Access must be limited to the named tester group, the approved seeded corpus,
+  CCLD-only workflows, and the minimum role for each tester's task.
+- Revocation must be possible before testers are invited. Access can be revoked
+  by removing the email allowlist entry or disabling the Cloudflare Access
+  policy.
+- The Cloudflare Tunnel and Access configuration is operator-managed outside
+  the repository. It must not be committed.
+
+### 9.4 Secrets and Credentials
+
+Keep all of the following outside the repository and outside committed files:
+
+- Cloudflare tunnel token and tunnel credential files.
+- Cloudflare account ID and zone ID.
+- Cloudflare Access application client ID and client secret.
+- Private pilot hostname or subdomain.
+- Tester email addresses.
+- Any `cloudflared` configuration that references private values.
+
+### 9.5 Open Questions
+
+These must be resolved before sharing a tester-facing URL:
+
+| Question | Status |
+|---|---|
+| Final tester email list | Not yet finalized. Record in local operator notes before enabling Access policy. |
+| Final pilot hostname or subdomain | Not yet assigned. Keep out of repo when chosen. |
+| Identity provider for Cloudflare Access | Not yet decided. Options include one-time PIN (email OTP), Google identity, Microsoft identity, or another managed provider supported by Cloudflare Access. |
+| Who owns ongoing Access policy updates | Not yet assigned. Must be decided before inviting testers. |
+
+### 9.6 Next Step
+
+Once this decision is recorded, the next operator step is to create the
+Cloudflare Tunnel, configure Cloudflare Access, and verify that:
+
+- Only the app port is reachable through the tunnel.
+- The Access policy blocks unauthenticated requests.
+- At least one named tester can authenticate and reach the app landing page.
+- The app health route responds through the tunnel.
+- No QNAP admin or management service is reachable through the tunnel.
+
+Do not invite testers or share the pilot URL until those verifications pass
+and the open questions in section 9.5 are resolved.
