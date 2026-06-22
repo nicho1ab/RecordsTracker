@@ -45,6 +45,7 @@ REQUIRED = [
     "docs/developer/accessibility.md",
     "docs/developer/copilot-workflow.md",
     "docs/developer/release-process.md",
+    "docs/developer/qnap-pilot-deployment-inventory.md",
     "docs/user/getting-started.md",
     "docs/user/local-review-workflow.md",
     "docs/user/reviewing-records.md",
@@ -641,6 +642,17 @@ REQUIRED_CONTENT = {
         "QNAP Docker is the first deployment target",
         "PostgreSQL is the active production-style data store",
         "No schema changes in this branch",
+    ],
+    "docs/developer/qnap-pilot-deployment-inventory.md": [
+        "What Gets Built And Run",
+        "Named Volumes",
+        "What Is Not Deployed In This Stage",
+        "Pre-Cloudflare",
+        "Gaps Before Pilot Is Tester-Ready",
+        "CCLD_HOSTED_PAGE_DATA_MODE",
+        "CCLD_HOSTED_TESTER_AUTH_MODE",
+        "alembic upgrade head",
+        "docker-compose.qnap.yml",
     ],
 }
 
