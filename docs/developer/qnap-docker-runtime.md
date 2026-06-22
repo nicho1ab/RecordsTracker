@@ -386,25 +386,27 @@ workstation is:
    git archive --format=tar HEAD -o ccld-app.tar
    ```
 
-2. Transfer the archive to the QNAP host (replace `<qnap-user>` and
-   `<qnap-host>` with your QNAP credentials and LAN address):
+2. Transfer the archive to the QNAP host (replace `<qnap-user>`, `<qnap-host>`,
+   and `<qnap-deployment-root>` with your QNAP credentials, LAN address, and
+   chosen deployment directory):
 
    ```powershell
-   scp ccld-app.tar <qnap-user>@<qnap-host>:/share/Container/RecordsTracker/
+   scp ccld-app.tar <qnap-user>@<qnap-host>:<qnap-deployment-root>/
    ```
 
 3. On the QNAP host, create the deployment folder and extract:
 
    ```bash
-   mkdir -p /share/Container/RecordsTracker/app
-   tar -xf /share/Container/RecordsTracker/ccld-app.tar \
-       -C /share/Container/RecordsTracker/app
+   mkdir -p <qnap-deployment-root>/app
+   tar -xf <qnap-deployment-root>/ccld-app.tar \
+       -C <qnap-deployment-root>/app
    ```
 
-The deployment folder used in the first LAN smoke test was
-`/share/Container/RecordsTracker/app`. Adjust the share path to match your
-QNAP share and Container Station layout. Do not commit the generated archive
-or any extracted artifacts.
+Keep host-specific share paths and Container Station layout details in local
+operations notes rather than in committed files. For an example QNAP path that
+was used in the first LAN smoke test, see
+[qnap-pilot-deployment-inventory.md](qnap-pilot-deployment-inventory.md).
+Do not commit the generated archive or any extracted artifacts.
 
 ### Container Station Home Directory Permission Fix
 
