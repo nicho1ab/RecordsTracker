@@ -234,6 +234,13 @@ not share external tester links, credentials, network rules, VPN rules, or
 reverse proxy routes until the access-method decision is recorded and either a
 managed access layer or an approved alternative is in place.
 
+The Cloudflare Access identity approach has been recorded in
+[qnap-pilot-access-method-decision.md](qnap-pilot-access-method-decision.md)
+section 9. The selected method is Cloudflare Tunnel + Cloudflare Access with
+individually allowlisted testers. Open questions (tester email list, pilot
+hostname, identity provider choice, and Access policy owner) must be resolved
+before any tester-facing URL is shared.
+
 ## 10. Deferred Items
 
 These remain deferred and must not be implied by readiness evidence:
