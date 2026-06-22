@@ -158,6 +158,27 @@ Validate environment and Compose configuration before first startup:
 .\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env
 ```
 
+Run a full local smoke check (starts stack, waits for health, probes routes,
+then stops the stack cleanly):
+
+```powershell
+.\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env -SmokeStart
+```
+
+The `-SmokeStart` flag is opt-in and starts real containers. Use it only on the
+QNAP Docker host or a local Docker host, not in shared CI. If the health
+endpoint does not respond within the wait timeout (default 120 s, adjustable
+with `-SmokeWaitSeconds`), the script collects recent container logs and
+stops the stack. The default config-check mode (no `-SmokeStart`) does not
+start or stop any containers.
+
+After a smoke check passes, verify container state and routes against an
+already-running stack:
+
+```powershell
+.\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env -CheckContainers -BaseUrl http://<qnap-ip>:<CCLD_HOSTED_PORT>
+```
+
 ## 6. Database Bootstrap And Seed Data
 
 Before testers can review records, the PostgreSQL database must have:
