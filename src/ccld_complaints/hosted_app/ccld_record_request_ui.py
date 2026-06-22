@@ -249,7 +249,7 @@ def route_ccld_record_request_ui_response(
             _render_message_page(
                 title="CCLD request page not found",
                 heading="CCLD request page not found",
-                message="The requested local/test CCLD page was not found.",
+                message="The requested CCLD page was not found.",
                 guidance="Open the CCLD record request page and submit a facility number.",
                 links=(("Open CCLD record request", CCLD_RECORD_REQUEST_PATH),),
             ),
@@ -262,11 +262,11 @@ def route_ccld_record_request_ui_response(
             _render_message_page(
                 title="CCLD record request unavailable",
                 heading="CCLD record request unavailable",
-                message="Local/test CCLD record request context is not configured.",
+                message="CCLD record request context is not available.",
                 guidance=(
-                    "Return to the hosted scaffold home and retry the local/test request page."
+                    "Return to the home page and retry the request page."
                 ),
-                links=(("Hosted scaffold home", "/"),),
+                links=(("Home", "/"),),
             ),
         )
     if method == "GET":
@@ -433,7 +433,7 @@ def _post_request_response(
     if action and action != _IMPORT_RELOAD_ACTION_VALUE:
         return _html_response(
             400,
-            _render_invalid_request(("Choose a supported CCLD local/test action.",)),
+            _render_invalid_request(("Choose a supported CCLD action.",)),
         )
     if action == _IMPORT_RELOAD_ACTION_VALUE:
         if context.import_reload_context is None:
@@ -442,8 +442,8 @@ def _post_request_response(
                 _render_message_page(
                     title="CCLD local validated load unavailable",
                     heading="CCLD local validated load unavailable",
-                    message="Local/test CCLD import/reload context is not configured.",
-                    guidance="Return to the request page and retry the local/test request.",
+                    message="CCLD import/reload context is not available.",
+                    guidance="Return to the request page and retry.",
                     links=(("Return to CCLD request", CCLD_RECORD_REQUEST_PATH),),
                 ),
             )
@@ -463,11 +463,11 @@ def _post_request_response(
         return _html_response(
             source_status,
             _render_message_page(
-                title="CCLD local/test records unavailable",
-                heading="CCLD local/test records unavailable",
-                message="The local/test source-derived records could not be read.",
+                title="CCLD source-derived records unavailable",
+                heading="CCLD source-derived records unavailable",
+                message="Preloaded source-derived records could not be read.",
                 guidance=(
-                    "Return to the request page and retry with an authorized local/test context."
+                    "Return to the request page and retry."
                 ),
                 links=(("Return to CCLD request", CCLD_RECORD_REQUEST_PATH),),
             ),
@@ -556,7 +556,7 @@ def _render_request_form(
                 main=f"""    <section class="hero-card" aria-labelledby="request-hero-heading">
                     <p class="launch-kicker">Retrieval intake</p>
                     <h2 id="request-hero-heading">Retrieve complaint records for a facility</h2>
-                    <p class="launch-value">Create the review request context: confirm a CCLD facility/license number, choose a complaint date range, then retrieve or show loaded local/test complaint records.</p>
+                    <p class="launch-value">Create the review request context: confirm a CCLD facility/license number, choose a complaint date range, then retrieve or show loaded source-derived complaint records.</p>
                     <p class="helper-text">Keyboard flow: move from facility selection to date range, then choose Retrieve complaint records or Show existing queue before opening the review queue.</p>
             <p><span class="{mode_class}">{mode_label}</span></p>
         </section>
@@ -568,8 +568,8 @@ def _render_request_form(
 def _render_request_start_orientation() -> str:
         return """<section class="quiet-section" aria-labelledby="request-start-orientation-heading">
             <h2 id="request-start-orientation-heading">Start review request context</h2>
-            <p>Facility/license number identifies the CCLD facility. Date range narrows complaint, visit, report, signed, or retrieval dates already represented in local/test source-derived records.</p>
-            <p>Retrieve records uses the configured controlled server-side retrieval path only when available. Show existing queue searches loaded local/test source-derived records without proving public-source completeness.</p>
+            <p>Facility/license number identifies the CCLD facility. Date range narrows complaint, visit, report, signed, or retrieval dates already represented in preloaded source-derived records.</p>
+            <p>Retrieve records uses the configured controlled server-side retrieval path only when available. Show existing queue searches loaded source-derived records without proving public-source completeness.</p>
             <p>When records are found, continue to the review queue, open the recommended record, review source traceability on detail, then use packet preparation and feedback when needed.</p>
         </section>"""
 
@@ -693,7 +693,7 @@ def _render_date_ready_state(
         return f"""<section class="workflow-panel workflow-panel-primary" aria-labelledby="retrieve-ready-heading">
             <p class="stage-kicker">Retrieve records</p>
             <h2 id="retrieve-ready-heading">Ready to retrieve complaint records</h2>
-            <p>Review this facility/date context before retrieving or showing loaded local/test complaint records. After records are found, open the review queue and start with the recommended record.</p>
+            <p>Review this facility/date context before retrieving or showing loaded source-derived complaint records. After records are found, open the review queue and start with the recommended record.</p>
             <dl>
                 <dt>Facility/license number</dt>
                 <dd>{_escape(facility_number)}</dd>
@@ -715,7 +715,7 @@ def _render_date_ready_state(
                     <button class="secondary" type="submit">Show existing queue</button>
                     <a class="button button-quiet" href="{CCLD_RECORD_REQUEST_PATH}?{_escape(urlencode({'facility_number': facility_number, _REQUEST_CONTEXT_ORIGIN_FIELD: request_context_origin, _LOOKUP_FACILITY_NAME_FIELD: lookup_facility_name or ''}))}">Change date range</a>
                 </div>
-                <p id="retrieve-actions-help" class="helper-text">Keyboard flow: Retrieve complaint records creates a controlled retrieval job only when configured; Show existing queue reviews loaded local/test records; Change date range returns to the date step.</p>
+                <p id="retrieve-actions-help" class="helper-text">Keyboard flow: Retrieve complaint records creates a controlled retrieval job only when configured; Show existing queue reviews loaded source-derived records; Change date range returns to the date step.</p>
             </form>
         </section>"""
 
@@ -751,7 +751,7 @@ def _runtime_mode_label() -> str:
         return "Fixture/mock demo"
     if retrieval_enabled == "enabled" and raw_dir:
         return "Live public CCLD"
-    return "Retrieval not configured"
+    return "Live retrieval off"
 
 def _mode_badge_class(label: str) -> str:
     if label == "Live public CCLD":
@@ -788,13 +788,13 @@ def _render_help_page() -> str:
                         request page uses that context and a date range to retrieve or show matching
                         complaint records. The review queue helps you open the recommended record,
                         reviewer detail is the complaint review workspace, reviewer-created status/note
-                        cues update queue progress, packet preview/draft are local/test preparation
+                        cues update queue progress, packet preview/draft are preparation
                         checkpoints, and feedback carries safe context when something is confusing.</p>
                     </details>
                     <details>
                         <summary id="help-flags-heading">What review flags mean</summary>
                         <p>Review flags are source-derived screening aids such as possible delay indicators,
-                        missing local/test date fields, proxy-date cues, or source-traceability cues. They
+                        missing date fields, proxy-date cues, or source-traceability cues. They
                         identify records needing attorney review; they are not legal conclusions.</p>
                     </details>
                     <details>
@@ -809,8 +809,8 @@ def _render_help_page() -> str:
                         source URL, raw SHA-256 hash, raw artifact reference, connector metadata,
                         retrieval timestamp, source document/report markers, import batch context,
                         and report index cues.</p>
-                        <p>When a page says local/test traceability value missing, it means the value
-                        is not visible in the loaded local/test record. It is not proof that the
+                        <p>When a page says traceability value missing, it means the value
+                        is not visible in the loaded source-derived record. It is not proof that the
                         public CCLD portal lacks a value, not a source-completeness proof, and not a
                         legal, final export, or certified report conclusion.</p>
                         <p>Before relying on a source-derived value in a note, status, packet preview,
@@ -821,12 +821,12 @@ def _render_help_page() -> str:
                     </details>
                     <details>
                         <summary id="help-source-confidence-heading">What to do with source-confidence cues</summary>
-                        <p>Source-confidence cues are local/test review prompts for values that are
+                        <p>Source-confidence cues are review prompts for values that are
                         present, not available locally, confusing, or proxy-related. They are not
                         source verification, source absence, source completeness, legal sufficiency,
                         or correction decisions.</p>
                         <p>When a cue affects review, open reviewer detail, check source traceability,
-                        describe only what the local/test page showed in a cautious reviewer-created
+                        describe only what the page showed in a cautious reviewer-created
                         note/status, and use feedback when the safe next step or wording remains
                         confusing. Then return to the same queue and continue with the suggested next
                         record.</p>
@@ -841,7 +841,7 @@ def _render_help_page() -> str:
                         <p>The CCLD review queue can show an active reviewer-created status filter,
                         records shown under that filter, total records in the same facility/date
                         queue, and the available status filters.</p>
-                        <p>Reviewer-created status filters are local/test queue views. They are not
+                        <p>Reviewer-created status filters are queue views. They are not
                         source-derived facts, assignments, record claims, persisted queue state, or
                         source-completeness proof. A filtered-empty result can mean the filter is
                         hiding records; use the show-all recovery action before treating the queue as
@@ -852,7 +852,7 @@ def _render_help_page() -> str:
                         <p>Correction-readiness means a tester has noticed that a source-derived value
                         may need correction review later. Check source traceability first, then capture
                         the possible correction concern in a reviewer-created note or feedback for now.</p>
-                        <p>This local/test workflow does not change source-derived records, does not
+                        <p>This CCLD-only review workflow does not change source-derived records, does not
                         submit correction decisions, and does not make reviewer-created observations into
                         official public-source facts. A future correction workflow would be reviewer-created
                         state separate from source-derived records.</p>
@@ -866,12 +866,12 @@ def _render_help_page() -> str:
                         <p>When the mode badge says live public retrieval, controlled server-side
                         public CCLD HTTP requests occur only after browser submit. When the mode badge
                         says fixture/mock demo, committed fixtures are used and no live CCLD calls are made.</p>
-                        <p>Show existing queue means the page searched already-loaded local/test
+                        <p>Show existing queue means the page searched already-loaded source-derived
                         source-derived rows only; it did not submit a controlled retrieval job. Retrieve
                         complaint records means a configured controlled retrieval job was submitted, then
                         status/progress pages show the current job state, records imported, warnings or
                         errors, and the next safe action.</p>
-                        <p>Loaded local/test records can be ready for review even when no retrieval job was
+                        <p>Loaded source-derived records can be ready for review even when no retrieval job was
                         submitted for the current request. Retrieval status/progress is operational
                         metadata and is not production monitoring, source-completeness proof, or a legal
                         conclusion.</p>
@@ -885,9 +885,9 @@ def _render_help_page() -> str:
                     </details>
                     <details>
                         <summary id="help-packet-heading">How packet preparation fits in</summary>
-                        <p>Packet preview and packet draft summarize loaded local/test complaint records,
+                        <p>Packet preview and packet draft summarize loaded source-derived complaint records,
                         source traceability cues, reviewer-created status/note cues, and review-readiness
-                        concerns. Packet readiness means local/test review readiness for manual review,
+                        concerns. Packet readiness means review readiness for manual review,
                         browser copy, or browser print after checking facility/date context, included records,
                         source-derived values, source traceability, reviewer-created note/status cues, and
                         possible correction-readiness concerns. They are not legal reports, final exports,
@@ -911,10 +911,10 @@ def _render_workflow_overview() -> str:
                 <li>Start with facility lookup when you need the facility/license number, or
                 use manual entry when you already know it.</li>
                 <li>Confirm the CCLD request context: facility/license number, optional date
-                range, lookup/manual-entry origin, and active local/test facility reference
+                range, lookup/manual-entry origin, and active facility reference
                 source.</li>
-                <li>Submit the facility/date request to search loaded local/test CCLD records.
-                If no local match appears, use the no-match/load guidance without treating it as
+                <li>Submit the facility/date request to search loaded CCLD source-derived records.
+                If no match appears, use the no-match guidance without treating it as
                 public-source absence.</li>
                 <li>Use the CCLD review queue to choose a suggested next record, read the
                 active reviewer-created status filter and counts, or spot queue wording that
@@ -939,19 +939,19 @@ def _render_key_terms_section() -> str:
                 <dt>Facility/license number</dt>
                 <dd>The digit identifier CCLD uses for the facility or license record scope.</dd>
                 <dt>Facility lookup</dt>
-                <dd>A local/test search over preloaded public facility-directory CSV fields such
+                <dd>A search over preloaded public facility-directory fields such
                 as facility/license number, name, city, county, ZIP code, facility type,
                 program type, capacity, and status code.</dd>
                 <dt>CCLD request context</dt>
                 <dd>The facility/license number, optional date range, request origin, and active
-                local/test facility reference source used for this request.</dd>
+                facility reference source used for this request.</dd>
                 <dt>Facility/date request</dt>
                 <dd>A CCLD request for one facility/license number and optional date range.</dd>
                 <dt>Date range</dt>
-                <dd>An optional filter over dates already extracted into local/test CCLD records.
+                <dd>An optional filter over dates already extracted into preloaded CCLD source-derived records.
                 It is not a live public-source search.</dd>
-                <dt>Loaded local/test CCLD records</dt>
-                <dd>Validated local/test CCLD records staged from hosted seeded-corpus JSON into
+                <dt>Loaded CCLD source-derived records</dt>
+                <dd>Validated CCLD records staged from hosted seeded-corpus JSON into
                 source-derived records.</dd>
                 <dt>Source-derived records</dt>
                 <dd>Source-derived facility, source document, complaint, allegation, event, or
@@ -959,7 +959,7 @@ def _render_key_terms_section() -> str:
                 <dt>CCLD review queue</dt>
                 <dd>The facility/date-scoped list of matching complaint records to review next.</dd>
                 <dt>Reviewer-created notes/status</dt>
-                <dd>Reviewer-created local/test note/status rows stored separately from
+                <dd>Reviewer-created note/status rows stored separately from
                 source-derived records.</dd>
                 <dt>Correction-readiness</dt>
                 <dd>Guidance for describing a possible correction concern after checking source
@@ -968,17 +968,17 @@ def _render_key_terms_section() -> str:
                 <dt>Reviewer-status filter</dt>
                 <dd>A queue filter based on existing reviewer-created status rows. Records with
                 no saved reviewer status are counted as not started. The active filter and
-                counts describe this local/test queue view only; they are not source-derived
+                counts describe this queue view only; they are not source-derived
                 facts, assignments, record claims, persisted queue state, or public-source
                 completeness proof.</dd>
                 <dt>Suggested next record</dt>
-                <dd>Local/test navigation help derived from the current request context and
+                <dd>Navigation help derived from the current request context and
                 reviewer-created note/status cues, not an assignment or record claim.</dd>
                 <dt>Manual feedback checklist</dt>
                 <dd>The copyable checklist testers paste into the agreed external feedback
                 channel. The app does not save or send it.</dd>
                 <dt>Reviewer status value</dt>
-                <dd>A bounded local/test review state such as needs review, in review, reviewed,
+                <dd>A bounded review state such as needs review, in review, reviewed,
                 blocked, or needs follow-up. It is not a public-source finding.</dd>
             </dl>
         </section>"""
@@ -987,7 +987,7 @@ def _render_key_terms_section() -> str:
 def _render_feedback_guidance_section() -> str:
         return """    <section aria-labelledby="feedback-guidance-heading">
             <h2 id="feedback-guidance-heading">Feedback guidance</h2>
-            <p>This local/test app does not store, send, email, export, or otherwise persist
+            <p>This pilot app does not store, send, email, export, or otherwise persist
             feedback. Useful tester feedback includes the facility/license number, requested
             date range, lookup or request criteria that felt unclear, records that seemed
             missing or unexpected, active reviewer-created status filter or count confusion,
@@ -997,7 +997,7 @@ def _render_feedback_guidance_section() -> str:
             improvements.</p>
             <p>After submitting a CCLD request, copy the structured checklist into the agreed
             external feedback channel. The checklist is CCLD-only and reflects only the current
-            local/test request and queue state.</p>
+            request and queue state.</p>
         </section>"""
 
 
@@ -1024,7 +1024,7 @@ def _render_retrieval_setup_required_page(values: Mapping[str, list[str]]) -> st
                 <dt>Records imported</dt>
                 <dd>none</dd>
                 <dt>Next safe action</dt>
-                <dd>Return to the request page to review already-loaded local/test records, or
+                <dd>Return to the request page to review already-loaded source-derived records, or
                 ask an operator to configure controlled retrieval before submitting a job.</dd>
             </dl>
         </section>
@@ -1386,7 +1386,7 @@ def _render_no_match_recovery_panel(
     return f"""<section class="hero-card recovery-panel" aria-labelledby="no-local-records-heading">
       <p class="stage-kicker">Recovery</p>
       <h2 id="no-local-records-heading">{_escape(headline)}</h2>
-            <p>No loaded local/test records matched this request context. This is a local/test records state for the current facility/date context, not a complaint-coverage determination.</p>
+            <p>No loaded source-derived records matched this request context. This is a data state for the current facility/date context, not a complaint-coverage determination.</p>
       <dl>
         <dt>What happened</dt>
         <dd>{_escape(reason_bucket)}</dd>
@@ -1477,7 +1477,7 @@ def _render_pipeline_plan(request: CcldRecordRequest) -> str:
                 when live public requests are intended.</li>
         <li>Validate the generated SQLite/Datasette output and source traceability.</li>
             <li>Run <code>.\\scripts\\build-hosted-ccld-artifact.ps1</code> against
-            the validated SQLite output to create local/test hosted seeded-corpus JSON.</li>
+            the validated SQLite output to create the hosted seeded-corpus JSON.</li>
             <li>Return to this page and use the local validated CCLD load action.</li>
       </ol>
             <p>Use this outside-browser workflow only when the request context is correct and
@@ -1506,7 +1506,7 @@ def _render_no_match_guidance(
                 <dd>{_escape(request.facility_number)}</dd>
                 <dt>Date range searched</dt>
                 <dd>{_escape(date_scope)}</dd>
-                <dt>Loaded local/test rows for this facility before date filtering</dt>
+                <dt>Loaded source-derived rows for this facility before date filtering</dt>
                 <dd>{local_facility_record_count}</dd>
                 <dt>Local validated load state</dt>
                 <dd>{_escape(load_state)}</dd>
@@ -1518,12 +1518,12 @@ def _render_no_match_guidance(
                 use the local validated CCLD load action on this page when available.</li>
                 <li>If local validated output has not been prepared yet, run the existing
                 outside-browser live fetch and artifact-builder workflow, then return here to
-                load or refresh the generated local/test artifact.</li>
+                load or refresh the generated hosted artifact.</li>
                 <li>If records still seem missing or unexpected after checking criteria and
                 local validated data, copy the feedback checklist and include the facility/date
                 request, loaded-row counts, and what seemed missing or unexpected.</li>
             </ol>
-            <p>A no-match result is a local/test data state, not a public-source absence,
+            <p>A no-match result is a data state, not a public-source absence,
             record-completeness, legal, or facility-wide conclusion.</p>
         </section>"""
 
@@ -1533,7 +1533,7 @@ def _request_execution_boundary_text(
 ) -> str:
     if retrieval_result is None:
         return (
-            "This page searched currently loaded local/test source-derived rows only. It did not "
+            "This page searched currently loaded source-derived rows only. It did not "
             "submit a controlled retrieval job for this request."
         )
     return (
@@ -1551,7 +1551,7 @@ def _request_result_current_state_text(
 ) -> str:
     if retrieval_result is None:
         return (
-            "Already-loaded local/test source-derived rows were searched; no controlled "
+            "Already-loaded source-derived rows were searched; no controlled "
             "retrieval job was submitted for this request."
         )
     state_label = _retrieval_state_label(retrieval_result.job_state)
@@ -1579,11 +1579,11 @@ def _request_result_next_action_text(
     if retrieval_result is None:
         if queue_count > 0:
             return (
-                "Review the already-loaded local/test records in the queue, or change the "
+                "Review the already-loaded source-derived records in the queue, or change the "
                 "facility/date criteria before submitting a controlled retrieval job."
             )
         return (
-            "Change the facility/date criteria, load validated local/test records when available, "
+            "Change the facility/date criteria, load validated source-derived records when available, "
             "or submit controlled retrieval only after confirming the request context."
         )
     if queue_count > 0:
@@ -1624,7 +1624,7 @@ def _render_import_reload_summary(result: CcldImportReloadResult | None) -> str:
     return f"""    <section aria-labelledby="import-reload-summary-heading">
             <h2 id="import-reload-summary-heading">Local validated CCLD load result</h2>
             <p>Load executed: {_yes_no(result.import_executed)}.</p>
-            <p>This result summarizes the existing local/test validated load action. It reads
+            <p>This result summarizes the existing validated load action. It reads
             prepared hosted seeded-corpus JSON only; it does not run live CCLD retrieval,
             connector execution, or artifact building from the browser.</p>
             <dl>
@@ -1656,7 +1656,7 @@ def _render_import_reload_action(
     if not import_reload_available:
         return """    <section aria-labelledby="import-reload-action-heading">
             <h2 id="import-reload-action-heading">Local validated CCLD load unavailable</h2>
-            <p>This local/test process does not have a validated CCLD import/reload context.</p>
+            <p>This process does not have a validated CCLD import/reload context.</p>
         </section>"""
     button_label = (
         "Refresh from local validated CCLD output"
@@ -1665,7 +1665,7 @@ def _render_import_reload_action(
     )
     return f"""    <section aria-labelledby="import-reload-action-heading">
             <h2 id="import-reload-action-heading">Local validated CCLD load</h2>
-            <p>This action reads committed local/test validated CCLD output and stages
+            <p>This action reads committed validated CCLD output and stages
             matching source-derived records through the existing hosted seeded import path.
             It does not run live public web requests.</p>
             <p id="local-load-help">Use this only after the CCLD pipeline output has been
@@ -1979,7 +1979,7 @@ def _render_retrieval_job_history_page(
                         <h3>No retrieval jobs yet</h3>
                         <p>No retrieval jobs have been submitted for this authorized scope.</p>
                         <p>This means there is no controlled retrieval status/progress to wait on
-                        yet. The request page can still show already-loaded local/test records if
+                        yet. The request page can still show already-loaded source-derived records if
                         they exist for the facility/date context.</p>
                     </div>
                     <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Submit retrieval request</a></p>
@@ -2084,7 +2084,7 @@ def _render_retrieval_history_summary(
     return f"""    <section aria-labelledby="retrieval-status-summary-heading">
       <h2 id="retrieval-status-summary-heading">Status summary</h2>
         <p>These counts summarize controlled retrieval job metadata only. They do not include
-        already-loaded local/test rows that can appear from Show existing queue without a job.</p>
+        already-loaded source-derived rows that can appear from Show existing queue without a job.</p>
       <div class="stat-grid">
 {cards}
       </div>
@@ -2702,11 +2702,11 @@ def _render_queue_triage_summary(
     return f"""<section aria-labelledby="queue-triage-heading">
       <h3 id="queue-triage-heading">Queue triage summary</h3>
       <p>Use this summary to decide what to open first. It is derived from the current
-      local/test request, existing source-derived traceability fields, and existing
+      request, existing source-derived traceability fields, and existing
       reviewer-created notes/statuses.</p>
     <p>Queue summaries do not prove record completeness. Open reviewer detail for
     source traceability and source-confidence cues before relying on a summary value that
-    looks missing, confusing, proxy-related, or missing local/test traceability values.</p>
+    looks missing, confusing, proxy-related, or missing traceability values.</p>
     <p>Next safe action: check the detail traceability first, write only cautious
     reviewer-created note/status wording when needed, use feedback if the source-confidence
     cue or next step remains confusing, then return to this queue and continue with the
@@ -2767,11 +2767,11 @@ def _render_worklist_decision_flow(
     )
     return f"""<section aria-labelledby="worklist-decision-flow-heading">
       <h3 id="worklist-decision-flow-heading">Review-priority decision flow</h3>
-      <p>Use this local/test worklist as a decision screen: confirm the CCLD request
+      <p>Use this worklist as a decision screen: confirm the CCLD request
       context, open the suggested next record, then continue to packet preparation only
       after checking source traceability on reviewer detail.</p>
     <p>Record cards name source traceability values that are available or missing in the
-    loaded local/test row. Missing local/test traceability values are review cues, not
+    loaded source-derived record. Missing traceability values are review cues, not
     proof of public-source absence or a source-completeness proof.</p>
     <p>If a card shows a missing, confusing, or proxy-related value, the next step is
     reviewer detail: check source traceability, use cautious reviewer-created note/status
@@ -2781,9 +2781,9 @@ def _render_worklist_decision_flow(
         <dd>{_escape(_facility_scope_for_summary(request))}; date range {_escape(_date_scope_text(request))}</dd>
         <dt>Request origin</dt>
         <dd>{_escape(_request_origin_label(request.request_context_origin))}</dd>
-        <dt>Active local/test reference source</dt>
+        <dt>Active facility reference source</dt>
         <dd>{_escape(_user_facing_source_label(reference_source))}</dd>
-        <dt>Loaded local/test source-derived complaint records</dt>
+        <dt>Loaded source-derived complaint records</dt>
         <dd>{len(queue_items)}</dd>
         <dt>Records with reviewer-created status/note cues</dt>
         <dd>{note_or_status_count}</dd>
@@ -2798,14 +2798,14 @@ def _render_worklist_decision_flow(
                 <a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}">Open facility review priority list</a>
         <a class="button button-secondary" href="{_escape(change_href)}">Return to change facility/date criteria</a>
         <a class="button button-secondary" href="{_escape(_packet_preview_href_for_request(request))}">Review packet readiness before copying or printing</a>
-        <a class="button button-secondary" href="{_escape(_matrix_export_href_for_request(request))}">Download local/test complaint review matrix CSV</a>
+        <a class="button button-secondary" href="{_escape(_matrix_export_href_for_request(request))}">Download complaint review matrix CSV</a>
         <a class="button button-secondary" href="{_escape(_substantiated_export_href_for_request(request))}">Download substantiated complaint CSV</a>
                 <a class="button button-secondary" href="{_escape(_unsubstantiated_export_href_for_request(request))}">Download unsubstantiated complaint CSV</a>
                 <a class="button button-secondary" href="{_escape(_all_complaints_export_href_for_request(request))}">Download all complaint CSV</a>
-        <a class="button button-secondary" href="{_escape(_packet_draft_href_for_request(request))}">Open local/test preparation draft for browser copy or print</a>
+        <a class="button button-secondary" href="{_escape(_packet_draft_href_for_request(request))}">Open packet preparation draft for browser copy or print</a>
         <a class="button button-secondary" href="{CCLD_HELP_PATH}">Open CCLD workflow help</a>
       </div>
-    <p class="helper-text">Packet preview and draft links are local/test copy/print preparation aids,
+    <p class="helper-text">Packet preview and draft links are copy/print preparation aids,
     not a legal report, not a final export, not a certified report, and not a source-completeness proof.</p>
       <section aria-labelledby="priority-record-cards-heading">
         <h4 id="priority-record-cards-heading">Prioritized worklist records</h4>
@@ -4381,7 +4381,7 @@ def _page(
         heading=heading,
         main=main,
         skip_label="Skip to main CCLD request content",
-        nav_label="Hosted scaffold navigation",
+        nav_label="CCLD records navigation",
         active_path=active_path,
         step_id=step_id,
         next_action=next_action,

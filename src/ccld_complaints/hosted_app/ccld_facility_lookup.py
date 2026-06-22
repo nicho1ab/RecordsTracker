@@ -271,7 +271,7 @@ class CcldFacilityReviewContext:
     loaded_complaint_record_count: int = 0
     start_date: str = ""
     end_date: str = ""
-    source_label: str = "Loaded local/test source-derived complaint records"
+    source_label: str = "Loaded source-derived complaint records"
 
     @property
     def has_loaded_context(self) -> bool:
@@ -305,21 +305,21 @@ def load_active_ccld_facility_reference(
         if configured_reference.exists():
             try:
                 return CcldFacilityReferenceSource(
-                    source_kind="full_local_test_csv",
-                    label="Full local/test CCLD facility reference CSV",
+            source_kind="full_local_test_csv",
+                    label="Full CCLD facility reference CSV",
                     path_label=_safe_path_label(configured_reference),
                     records=load_ccld_facility_reference(configured_reference),
                 )
             except ValueError as error:
                 return _tiny_fixture_reference(
                     warnings=(
-                        "Configured full local/test CCLD facility reference CSV "
+                        "Configured full CCLD facility reference CSV "
                         f"could not be loaded: {error}. Using tiny fixture fallback.",
                     )
                 )
         return _tiny_fixture_reference(
             warnings=(
-                "Configured full local/test CCLD facility reference CSV was not found. "
+                "Configured full CCLD facility reference CSV was not found. "
                 "Using tiny fixture fallback.",
             )
         )
@@ -327,7 +327,7 @@ def load_active_ccld_facility_reference(
         try:
             return CcldFacilityReferenceSource(
                 source_kind="full_local_test_csv",
-                label="Full local/test CCLD facility reference CSV",
+                label="Full CCLD facility reference CSV",
                 path_label=_safe_path_label(DEFAULT_FULL_CCLD_FACILITY_REFERENCE_PATH),
                 records=load_ccld_facility_reference(
                     DEFAULT_FULL_CCLD_FACILITY_REFERENCE_PATH
@@ -336,13 +336,13 @@ def load_active_ccld_facility_reference(
         except ValueError as error:
             return _tiny_fixture_reference(
                 warnings=(
-                    "Default full local/test CCLD facility reference CSV could not be "
+                    "Default full CCLD facility reference CSV could not be "
                     f"loaded: {error}. Using tiny fixture fallback.",
                 )
             )
     return _tiny_fixture_reference(
         warnings=(
-            "No full local/test CCLD facility reference CSV is configured or available. "
+            "No full CCLD facility reference CSV is configured or available. "
             "Using tiny fixture fallback.",
         )
     )
@@ -407,7 +407,7 @@ def route_ccld_facility_lookup_response_with_source(
             _render_message_page(
                 title="CCLD facility lookup not found",
                 heading="CCLD facility lookup not found",
-                message="The requested local/test CCLD facility lookup page was not found.",
+                message="The requested CCLD facility lookup page was not found.",
             ),
         )
     query_values = parse_qs(parsed_url.query, keep_blank_values=True)
@@ -453,7 +453,7 @@ def render_ccld_facility_lookup_page(
     <section class="quiet-section" aria-labelledby="facility-start-guidance-heading">
       <h2 id="facility-start-guidance-heading">Lookup or manual entry?</h2>
       <p>Use facility lookup when you know a facility name, city, county, ZIP, facility type, program type, or status code but not the exact facility/license number. Use manual entry when you already know the digit facility/license number.</p>
-      <p>Lookup rows are public facility-directory data for local/test reference assistance. Complaint records are retrieved separately, and directory rows are not complaint coverage, not source-completeness proof, not license-validity proof, and not legal or facility-wide conclusions.</p>
+      <p>Lookup rows are public facility-directory data for facility lookup assistance. Complaint records are retrieved separately, and directory rows are not complaint coverage, not source-completeness proof, not license-validity proof, and not legal or facility-wide conclusions.</p>
             <p>Try a preloaded facility-directory example: <a href="{_escape(_facility_hub_href(PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER))}">open facility review hub for known loaded facility {PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER}</a>.</p>
     </section>
     {_render_facility_combobox_section(reference_source, query, limited_note)}
@@ -949,8 +949,8 @@ def facility_reference_from_source_derived_records(
     warnings = () if warning is None else (warning,)
     if not facility_records and warning is None:
         warnings = (
-            "No PostgreSQL-backed source-derived facility rows are loaded yet. "
-            "Run migrations and import a validated CCLD artifact before facility search.",
+            "Facility lookup suggestions are not available. Source-derived records may not include "
+            "facility directory rows. Enter a facility/license number directly if you know it.",
         )
     return CcldFacilityReferenceSource(
         source_kind="postgres_source_derived",
@@ -1214,9 +1214,9 @@ def _render_reference_source_section(source: CcldFacilityReferenceSource) -> str
         <p>Reference data is lookup assistance only. It is not imported, persisted, or source-completeness proof.</p>
         <details>
             <summary>Developer reference setup</summary>
-            <p>Full local/test CSV support is read-only. Full facility CSV files must stay outside
+            <p>Full facility CSV support is read-only. Full facility CSV files must stay outside
             the repository and are not imported or persisted by this app.</p>
-            <p>To use a full local/test CSV, set <code>{CCLD_FACILITY_REFERENCE_CSV_ENV}</code>
+            <p>To use a full facility CSV, set <code>{CCLD_FACILITY_REFERENCE_CSV_ENV}</code>
             or configure the documented ignored local reference location. Local paths are not shown in the browser.</p>
         </details>
     </section>"""
@@ -1337,21 +1337,21 @@ def _render_facility_hub_review_context(
 ) -> str:
         if not review_context.has_loaded_context:
                 return f"""    <section class="empty-state-card" aria-labelledby="facility-hub-context-heading">
-            <h2 id="facility-hub-context-heading">Local/test complaint-review context</h2>
-            <p>No local/test complaint context is currently available for facility {_escape(record.facility_number)} in the loaded review data.</p>
+            <h2 id="facility-hub-context-heading">Complaint review context</h2>
+            <p>No complaint context is currently available for facility {_escape(record.facility_number)} in the loaded review data.</p>
             <p>Date range is needed before the review queue, packet preview, or packet draft can be scoped for this facility. Start a complaint request to choose dates or retrieve records through the existing controlled workflow.</p>
         </section>"""
         date_text = _hub_date_context_text(review_context)
         return f"""    <section aria-labelledby="facility-hub-context-heading">
-            <h2 id="facility-hub-context-heading">Local/test complaint-review context</h2>
-            <p>{review_context.loaded_complaint_record_count} loaded local/test complaint record(s) currently reference this facility in existing source-derived review data.</p>
+            <h2 id="facility-hub-context-heading">Complaint review context</h2>
+            <p>{review_context.loaded_complaint_record_count} loaded complaint record(s) currently reference this facility in existing source-derived review data.</p>
             <dl class="summary-list">
                 <dt>Complaint context basis</dt>
                 <dd>{_escape(review_context.source_label)}</dd>
-                <dt>Known local/test date context</dt>
+                <dt>Known date context</dt>
                 <dd>{_escape(date_text)}</dd>
             </dl>
-            <p>This context is a local/test navigation aid only. It is not complaint coverage, not public-source absence proof, and not a source-completeness proof.</p>
+            <p>This context is a navigation aid only. It is not complaint coverage, not public-source absence proof, and not a source-completeness proof.</p>
         </section>"""
 
 
@@ -1362,7 +1362,7 @@ def _render_facility_review_signals_section(
         if summary is None:
                 return f"""    <section class="empty-state-card" aria-labelledby="facility-review-signals-heading">
             <h2 id="facility-review-signals-heading">Facility review signals</h2>
-            <p>No uploaded public summary fields are available for facility {_escape(record.facility_number)} in the supported local/test licensing/visit/citation summary CSV inputs.</p>
+            <p>No uploaded public summary fields are available for facility {_escape(record.facility_number)} in the supported licensing/visit/citation summary CSV inputs.</p>
             <p>This empty state does not mean the facility has no complaints, visits, citations, POC dates, or public-source records. Start a complaint request or return to facility lookup when you need a different facility context.</p>
         </section>"""
         cues = "\n".join(
@@ -1589,9 +1589,9 @@ def _render_facility_hub_actions(
                     </form>
                 </li>
                 <li><a class="button button-secondary" href="{REVIEWER_UI_RECORDS_PATH}?{_escape(urlencode({'q': record.facility_number}))}">Open reviewer queue filtered to this facility</a></li>
-                <li><a class="button button-secondary" href="{REVIEWER_UI_MATRIX_EXPORT_PATH}?{_escape(urlencode(queue_query))}">Download local/test complaint review matrix CSV</a></li>
-                <li><a class="button button-secondary" href="{REVIEWER_UI_PACKET_PREVIEW_PATH}?{_escape(urlencode(queue_query))}">Open local/test packet preview for this facility/date context</a></li>
-                <li><a class="button button-secondary" href="{REVIEWER_UI_PACKET_DRAFT_PATH}?{_escape(urlencode(queue_query))}">Open local/test packet draft for this facility/date context</a></li>"""
+                <li><a class="button button-secondary" href="{REVIEWER_UI_MATRIX_EXPORT_PATH}?{_escape(urlencode(queue_query))}">Download complaint review matrix CSV</a></li>
+                <li><a class="button button-secondary" href="{REVIEWER_UI_PACKET_PREVIEW_PATH}?{_escape(urlencode(queue_query))}">Open packet preview for this facility/date context</a></li>
+                <li><a class="button button-secondary" href="{REVIEWER_UI_PACKET_DRAFT_PATH}?{_escape(urlencode(queue_query))}">Open packet draft for this facility/date context</a></li>"""
         elif review_context.has_loaded_context:
                 context_actions = """        <li><span>Date range needed before review queue or packet routes can be scoped.</span></li>"""
         return f"""    <section aria-labelledby="facility-hub-actions-heading">
@@ -1660,7 +1660,7 @@ def _page(*, title: str, heading: str, main: str) -> str:
                 heading=heading,
                 main=main,
                 skip_label="Skip to main CCLD facility lookup content",
-                nav_label="Hosted scaffold navigation",
+                nav_label="CCLD facility navigation",
                 active_path=CCLD_FACILITY_LOOKUP_PATH,
                 step_id="facility",
                 next_action="Review this facility",
