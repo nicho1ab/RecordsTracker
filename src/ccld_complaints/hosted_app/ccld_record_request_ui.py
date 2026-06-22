@@ -867,7 +867,7 @@ def _render_help_page() -> str:
                         public CCLD HTTP requests occur only after browser submit. When the mode badge
                         says fixture/mock demo, committed fixtures are used and no live CCLD calls are made.</p>
                         <p>Show existing queue means the page searched already-loaded source-derived
-                        source-derived rows only; it did not submit a controlled retrieval job. Retrieve
+                        rows only; it did not submit a controlled retrieval job. Retrieve
                         complaint records means a configured controlled retrieval job was submitted, then
                         status/progress pages show the current job state, records imported, warnings or
                         errors, and the next safe action.</p>
