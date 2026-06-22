@@ -49,7 +49,12 @@ expected placeholder warnings that are resolved before external tester use.
 
 Use:
 
-- [QNAP pilot seeded import evidence](qnap-pilot-seeded-import-evidence.md).
+- [QNAP seed data import runbook](qnap-seed-data-import-runbook.md) — step-by-step
+  operator procedure for building a validated artifact on Windows, transferring it
+  to QNAP, copying it into the container volume, running the import, and verifying
+  the result. Start here before running evidence scripts.
+- [QNAP pilot seeded import evidence](qnap-pilot-seeded-import-evidence.md) —
+  read-only PostgreSQL evidence queries after import completes.
 - `scripts/summarize-qnap-pilot-seeded-import-evidence.ps1`.
 
 After a validated CCLD hosted artifact or seeded corpus is imported, run:
@@ -192,6 +197,10 @@ Do not invite early testers until all of these are true:
 - `.env` is configured on the host and remains untracked.
 - QNAP verifier passes.
 - PostgreSQL migrations and data readiness are confirmed.
+- A validated seeded-corpus artifact has been imported and PostgreSQL evidence
+  shows non-zero source-derived record counts (see the
+  [seed data import runbook](qnap-seed-data-import-runbook.md) and
+  `scripts/summarize-qnap-pilot-seeded-import-evidence.ps1`).
 - Route evidence is captured.
 - Auth readiness has been reviewed.
 - Access method, role/scope, approval, and revocation are deliberately decided.

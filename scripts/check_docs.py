@@ -46,6 +46,7 @@ REQUIRED = [
     "docs/developer/copilot-workflow.md",
     "docs/developer/release-process.md",
     "docs/developer/qnap-pilot-deployment-inventory.md",
+    "docs/developer/qnap-seed-data-import-runbook.md",
     "docs/user/getting-started.md",
     "docs/user/local-review-workflow.md",
     "docs/user/reviewing-records.md",
@@ -654,6 +655,18 @@ REQUIRED_CONTENT = {
         "alembic upgrade head",
         "docker-compose.qnap.yml",
         "-SmokeStart",
+    ],
+    "docs/developer/qnap-seed-data-import-runbook.md": [
+        "Preconditions",
+        "Build The Validated Artifact On Windows",
+        "Transfer The Artifact To The QNAP Host",
+        "Copy The Artifact Into The App Container Volume",
+        "Run The Import",
+        "Verify The Import",
+        "source_data_loaded",
+        "import_hosted_seeded_corpus",
+        "build-hosted-ccld-artifact.ps1",
+        "Readiness Gate",
     ],
 }
 
