@@ -146,6 +146,22 @@ Start the stack from the repository root on the Docker host:
 docker compose -f docker-compose.qnap.yml --env-file .env up --build -d
 ```
 
+### First LAN Smoke Test Results
+
+Docker Engine (`27.1.2-qnap8`) and Docker Compose (`v2.29.1-qnap2`) were
+confirmed available via Container Station. The deployment folder used in the
+first LAN smoke test was `/share/Container/RecordsTracker/app`. Git is not
+available on QNAP; the archive was created on Windows with `git archive` and
+transferred with `scp`. Both the health route and the landing page responded
+`200` on the LAN after startup. The app is LAN-only at this stage — no
+Cloudflare Tunnel, Cloudflare Access, DNS, reverse proxy, TLS certificate, or
+public internet exposure has been configured. The next access-layer milestone
+is Cloudflare Tunnel and Cloudflare Access.
+
+See [qnap-docker-runtime.md](qnap-docker-runtime.md) for the generic
+`git archive` + `scp` transfer commands and the Container Station home
+directory permission fix.
+
 Run migrations manually when needed without restarting the stack:
 
 ```powershell
