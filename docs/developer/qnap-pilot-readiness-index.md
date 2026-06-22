@@ -215,10 +215,31 @@ implemented.
 Do not add more readiness-only branches after this unless a concrete validation,
 security, privacy, data-integrity, or tester-blocking defect is found.
 
+### LAN Smoke Test Status
+
+The first LAN smoke test passed. Docker Engine (`27.1.2-qnap8`) and Docker
+Compose (`v2.29.1-qnap2`) were confirmed available via Container Station. The
+app and PostgreSQL containers started, Alembic migrations ran, and both the
+health route (`/health`) and landing page (`/`) responded `200` on the LAN.
+
+The app is LAN-only at this stage. No Cloudflare Tunnel, Cloudflare Access,
+DNS, reverse proxy, TLS certificate, or public internet exposure has been
+configured.
+
+### Next Access-Layer Milestone
+
+The next milestone is **Cloudflare Tunnel + Cloudflare Access**. Until that is
+configured, the app is accessible only on the QNAP host's local network. Do
+not share external tester links, credentials, network rules, VPN rules, or
+reverse proxy routes until the access-method decision is recorded and either a
+managed access layer or an approved alternative is in place.
+
 ## 10. Deferred Items
 
 These remain deferred and must not be implied by readiness evidence:
 
+- **Cloudflare Tunnel** (next access-layer milestone — not yet configured).
+- **Cloudflare Access** (next access-layer milestone — not yet configured).
 - Real OIDC/login.
 - OIDC/OAuth2 callback handling.
 - Sessions or cookies.
