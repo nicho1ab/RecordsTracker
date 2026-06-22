@@ -117,8 +117,8 @@ def test_postgres_mode_without_database_shows_setup_required_state() -> None:
     assert status == 503
     assert content_type == "text/html; charset=utf-8"
     assert "Facility search setup required" in html
-    assert "Run Alembic migrations" in html
-    assert "fixture-demo mode" in html
+    assert "Source-derived records are not yet available" in html
+    assert "Check that the database is migrated" in html
     assert_no_secret_html(html)
 
 
@@ -164,7 +164,7 @@ def test_active_ccld_facility_reference_uses_tiny_fallback_when_full_csv_unset(
     )
     assert len(source.records) == 2
     assert source.warnings == (
-        "No full local/test CCLD facility reference CSV is configured or available. "
+        "No full CCLD facility reference CSV is configured or available. "
         "Using tiny fixture fallback.",
     )
 
@@ -203,7 +203,7 @@ def test_active_ccld_facility_reference_uses_configured_full_local_csv(
     )
 
     assert source.source_kind == "full_local_test_csv"
-    assert source.label == "Full local/test CCLD facility reference CSV"
+    assert source.label == "Full CCLD facility reference CSV"
     assert source.path_label == full_csv.name
     assert source.warnings == ()
     assert [record.facility_number for record in result.returned_records] == ["910000001"]
@@ -422,7 +422,7 @@ def test_configured_missing_full_csv_falls_back_with_guidance(
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Limited reference list" in html
-    assert "Configured full local/test CCLD facility reference CSV was not found" in html
+    assert "Configured full CCLD facility reference CSV was not found" in html
     assert "Using tiny fixture fallback." in html
     assert "Synthetic Orchard Child Care" in html
     assert_no_secret_html(html)
@@ -606,7 +606,7 @@ def test_ccld_facility_review_hub_renders_safe_directory_context() -> None:
     assert "Licensed" in html
     assert "Complaint records are requested and reviewed separately" in html
     assert "public CCLD portal remains the source of record" in html
-    assert "No local/test complaint context is currently available" in html
+    assert "No complaint context is currently available" in html
     assert "Date range is needed before the review queue" in html
     assert "Start complaint request for this facility" in html
     assert "Return to facility lookup" in html
@@ -788,7 +788,7 @@ def test_ccld_facility_review_hub_renders_signal_only_context_without_mutation(
     assert f"{CCLD_RECORD_REQUEST_PATH}?facility_number=157806098" in html
     assert "Open facility review priority list" in html
     assert "Return to facility lookup" in html
-    assert "1 loaded local/test complaint record(s)" in html
+    assert "1 loaded complaint record(s)" in html
     assert "/reviewer/packet/preview?facility_number=157806098" in html
     assert "not a facility-directory record" in normalized_html
     assert "not source verification" in normalized_html
@@ -857,18 +857,18 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == _empty_reviewer_counts()
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
-    assert "1 loaded local/test complaint record(s)" in html
+    assert "1 loaded complaint record(s)" in html
     assert "2022-04-07 to 2022-08-26" in html
     assert "Review loaded records for this facility/date context" in html
     assert "Open reviewer queue filtered to this facility" in html
     assert "/reviewer/records?q=157806098" in html
-    assert "Download local/test complaint review matrix CSV" in html
+    assert "Download complaint review matrix CSV" in html
     assert f"{REVIEWER_UI_MATRIX_EXPORT_PATH}?facility_number=157806098" in html
-    assert "Open local/test packet preview for this facility/date context" in html
+    assert "Open packet preview for this facility/date context" in html
     assert "/reviewer/packet/preview?facility_number=157806098" in html
     assert "start_date=2022-04-07" in html
     assert "end_date=2022-08-26" in html
-    assert "Open local/test packet draft for this facility/date context" in html
+    assert "Open packet draft for this facility/date context" in html
     assert "not complaint coverage" in normalized_html
     assert "not public-source absence proof" in normalized_html
     assert "not a source-completeness proof" in normalized_html

@@ -104,7 +104,7 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "Start review request context" in html
     assert "Facility/license number identifies the CCLD facility" in html
     assert "Date range narrows complaint, visit, report, signed, or retrieval dates" in html
-    assert "Show existing queue searches loaded local/test source-derived records" in html
+    assert "Show existing queue searches loaded source-derived records" in html
     assert "without proving public-source completeness" in html
     assert "continue to the review queue" in html
     assert "Choose complaint date range" in html or "Which facility should be reviewed?" in html
@@ -116,7 +116,7 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "Search by name, license number, city, county, ZIP" in html
     assert "facility type, program type, or status code" in html
     assert "Keyboard flow: type a search or digit number" in html
-    assert "Retrieval not configured" in html
+    assert "Live retrieval off" in html
     assert "Find facility" in html
     assert "Review boundary" not in html
     assert "provider" not in html.casefold()
@@ -198,14 +198,14 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "What review flags mean" in html
     assert "How source traceability works" in html
     assert "What to do with source-confidence cues" in html
-    assert "Source-confidence cues are local/test review prompts" in normalized_html
+    assert "Source-confidence cues are review prompts" in normalized_html
     assert "not source verification, source absence, source completeness" in normalized_html
-    assert "describe only what the local/test page showed" in normalized_html
+    assert "describe only what the page showed" in normalized_html
     assert "return to the same queue and continue with the suggested next record" in (
         normalized_html
     )
     assert "source URL, raw SHA-256 hash" in html
-    assert "local/test traceability value missing" in normalized_html
+    assert "traceability value missing" in normalized_html
     assert "not proof that the public CCLD portal lacks a value" in normalized_html
     assert "Before relying on a source-derived value" in html
     assert "source document/report marker" in normalized_html
@@ -219,7 +219,7 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "A future correction workflow would be reviewer-created state" in normalized_html
     assert "public CCLD portal remains the source of record" in normalized_html
     assert "Retrieval modes" in html
-    assert "Show existing queue means the page searched already-loaded local/test" in (
+    assert "Show existing queue means the page searched already-loaded source-derived" in (
         normalized_html
     )
     assert "it did not submit a controlled retrieval job" in normalized_html
@@ -227,15 +227,15 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
         normalized_html
     )
     assert "status/progress pages show the current job state" in normalized_html
-    assert "Loaded local/test records can be ready for review" in normalized_html
+    assert "Loaded source-derived records can be ready for review" in normalized_html
     assert "Retrieval status/progress is operational metadata" in normalized_html
     assert "not production monitoring, source-completeness proof" in normalized_html
     assert "What the app does not prove" in html
     assert "How to send useful feedback" in html
     assert "How packet preparation fits in" in html
-    assert "packet preview/draft are local/test preparation" in normalized_html
+    assert "packet preview/draft are preparation" in normalized_html
     assert "feedback carries safe context" in normalized_html
-    assert "Packet readiness means local/test review readiness" in html
+    assert "Packet readiness means review readiness" in html
     assert "manual review, browser copy, or browser print" in normalized_html
     assert "source-derived values, source traceability" in normalized_html
     assert "possible correction-readiness concerns" in normalized_html
@@ -356,7 +356,7 @@ def test_ccld_record_request_manual_entry_shows_context_confirmation() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Which facility should be reviewed?" in html
     assert "type the digit facility/license number directly" in html
-    assert "Retrieval not configured" in html
+    assert "Live retrieval off" in html
     assert "Search by name, license number, city, county, ZIP" in normalized_html
     assert "facility type, program type, or status code" in normalized_html
     assert "name=\"request_context_origin\"" in html
@@ -479,11 +479,11 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert counts == _empty_reviewer_counts()
     assert "Complaint records ready for attorney review" in html
     assert "Retrieval job submitted" in html
-    assert "Already-loaded local/test source-derived rows were searched" in html
+    assert "Already-loaded source-derived rows were searched" in html
     assert "no controlled retrieval job was submitted for this request" in html
     assert "Records ready" in html
     assert "1 complaint queue record(s) are ready for review" in html
-    assert "Review the already-loaded local/test records in the queue" in html
+    assert "Review the already-loaded source-derived records in the queue" in html
     assert "Facility case brief" in html
     assert "Complaint records visible/imported" in html
     assert "Records with review flags" in html
@@ -501,11 +501,11 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Source traceability available" in html
     assert "Open priority record" in html
     assert "Open full queue" in html
-    assert "Open local/test packet preview" in html
+    assert "Review packet readiness before copying or printing" in html
     assert "/reviewer/packet/preview?facility_number=157806098" in html
-    assert "Download local/test complaint review matrix CSV" in html
+    assert "Download complaint review matrix CSV" in html
     assert f"{REVIEWER_UI_MATRIX_EXPORT_PATH}?facility_number=157806098" in html
-    assert "Open local/test preparation draft for browser copy or print" in html
+    assert "Open packet preparation draft for browser copy or print" in html
     assert "/reviewer/packet/draft?facility_number=157806098" in html
     assert "Matching source-derived rows shown" in html
     assert "facility/license number 157806098" in html
@@ -564,15 +564,15 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Suggested next record to open" in html
     assert "Open reviewer detail for 32-CR-20220407124448" in html
     assert "Review-priority decision flow" in html
-    assert "Use this local/test worklist as a decision screen" in normalized_html
+    assert "Use this worklist as a decision screen" in normalized_html
     assert "If a card shows a missing, confusing, or proxy-related value" in normalized_html
     assert "use cautious reviewer-created note/status wording only when helpful" in (
         normalized_html
     )
     assert "Active CCLD request context" in html
     assert "Request origin" in html
-    assert "Active local/test reference source" in html
-    assert "Loaded local/test source-derived complaint records" in html
+    assert "Active facility reference source" in html
+    assert "Loaded source-derived complaint records" in html
     assert "Records with reviewer-created status/note cues" in html
     assert "Records with review flags or possible delay indicators" in html
     assert "Recommended next record action" in html
@@ -590,7 +590,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Source traceability availability cue" in html
     assert "Open review workspace for 32-CR-20220407124448" in html
     assert "Review packet readiness before copying or printing" in html
-    assert "Open local/test preparation draft for browser copy or print" in html
+    assert "Open packet preparation draft for browser copy or print" in html
     assert "not a legal report, not a final export, not a certified report" in normalized_html
     assert "do not assign, claim, or mutate records" in normalized_html
     assert "Queue decision actions" in html
@@ -845,17 +845,17 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert "<dd>6</dd>" in html
     normalized_html = " ".join(html.split())
     assert "Confirm the facility/date context" in normalized_html
-    assert "No loaded local/test records matched this request context" in html
+    assert "No loaded source-derived records matched this request context" in html
     assert "not a complaint-coverage determination" in normalized_html.casefold()
     assert "How to interpret this no-match result" in html
-    assert "currently loaded local/test source-derived rows only" in normalized_html
+    assert "currently loaded source-derived rows only" in normalized_html
     assert "did not submit a controlled retrieval job for this request" in normalized_html
     assert "Retrieval job submitted" in html
-    assert "Already-loaded local/test source-derived rows were searched" in html
+    assert "Already-loaded source-derived rows were searched" in html
     assert "Change the facility/date criteria" in normalized_html
     assert "Facility/license number searched" in html
     assert "Date range searched" in html
-    assert "Loaded local/test rows for this facility before date filtering" in html
+    assert "Loaded source-derived rows for this facility before date filtering" in html
     assert "Local validated load state" in html
     assert "not submitted for this request" in html
     assert "Change the facility/license number or date range" in normalized_html
@@ -958,11 +958,11 @@ def test_ccld_record_request_empty_hosted_records_offers_local_validated_load() 
     assert "No loaded complaint records match this request yet" in html
     assert "Load local validated CCLD records" in html
     assert "How to interpret this no-match result" in html
-    assert "currently loaded local/test source-derived rows only" in " ".join(html.split())
+    assert "currently loaded source-derived rows only" in " ".join(html.split())
     assert "no controlled retrieval job was submitted for this request" in html
     assert "no</dd>" in html
     assert "Change the facility/date criteria" in " ".join(html.split())
-    assert "Loaded local/test rows for this facility before date filtering" in html
+    assert "Loaded source-derived rows for this facility before date filtering" in html
     assert "not submitted for this request" in html
     assert "Copyable tester feedback checklist" in html
     assert "Report unclear loaded-record versus retrieval-job state" in html
@@ -1011,9 +1011,9 @@ def test_ccld_record_request_loads_local_validated_output_then_shows_matches() -
     assert "Complaint records ready for attorney review" in html
     assert "Retrieval job submitted" in html
     assert "no</dd>" in html
-    assert "Already-loaded local/test source-derived rows were searched" in html
+    assert "Already-loaded source-derived rows were searched" in html
     assert "Complaint records ready" in html
-    assert "Review the already-loaded local/test records in the queue" in html
+    assert "Review the already-loaded source-derived records in the queue" in html
     assert "Matching source-derived rows shown" in html
     assert "- Load action submitted on this request: yes" in html
     assert "- Local validated records loaded or refreshed: yes" in html

@@ -234,7 +234,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Which facility should be reviewed?" not in ccld_body
         or b"Confirm facility" not in ccld_body
         or b"Search by name, license number, city, county, ZIP" not in ccld_body
-        or b"Retrieval not configured" not in ccld_body
+        or b"Live retrieval off" not in ccld_body
         or b"Skip to main CCLD request content" not in ccld_body
     ):
         raise RuntimeError("Hosted scaffold CCLD request shell did not return the request page.")
@@ -272,7 +272,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Queue triage summary" not in ccld_queue_body
         or b"Table view and queue guidance" not in ccld_queue_body
         or b"Suggested next record to open" not in ccld_queue_body
-        or b"Open local/test packet preview" not in ccld_queue_body
+        or b"Review packet readiness before copying or printing" not in ccld_queue_body
         or b"Copy details for feedback" not in ccld_queue_body
         or b"Advanced retrieval and local load actions" not in ccld_queue_body
     ):
@@ -294,7 +294,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
             and b"Candidates may be outside the selected date range" not in ccld_no_match_body
         )
         or b"How to interpret this no-match result" not in ccld_no_match_body
-        or b"currently loaded local/test source-derived rows only" not in ccld_no_match_body
+        or b"currently loaded source-derived rows only" not in ccld_no_match_body
         or b"outside-browser live fetch and artifact-builder workflow" not in ccld_no_match_body
         or b"not a public-source absence" not in ccld_no_match_body
     ):
