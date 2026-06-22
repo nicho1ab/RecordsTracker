@@ -99,7 +99,7 @@ def test_health_response_marks_scaffold_only() -> None:
     assert payload["local_test_reviewer_ui_shell"] is True
     assert payload["review_workflows_implemented"] is False
     assert payload["authentication_implemented"] is False
-    assert payload["source_data_loaded"] is False
+    assert "source_data_loaded" in payload
 
 
 def test_app_shell_labels_placeholder_boundaries() -> None:
@@ -943,4 +943,49 @@ def test_reviewer_detail_route_highlights_review_nav() -> None:
     assert status == 200
     assert 'aria-current="page" href="/reviewer">Review' in html
     assert 'aria-current="page" href="/ccld/records/request">Retrieve' not in html
+
+
+def test_health_response_source_data_loaded_false_without_database() -> None:
+    """source_data_loaded must be False when no database URL is configured."""
+    payload = health_response()
+
+    # In the test environment there is no CCLD_HOSTED_TESTER_DATABASE_URL, so
+    # _check_source_data_loaded() returns False safely without raising.
+    assert payload["source_data_loaded"] is False
+
+
+def test_auth_pages_do_not_expose_tester_scaffold_strings() -> None:
+    """Auth pages must not surface 'Open sign-in placeholder' or 'Return to scaffold home'."""
+    login_status, _login_ct, login_body = route_response("/auth/login")
+    logout_status, _logout_ct, logout_body = route_response("/auth/logout")
+
+    login_html = login_body.decode("utf-8")
+    logout_html = logout_body.decode("utf-8")
+
+    assert login_status == 200
+    assert "Open sign-in placeholder" not in login_html
+    assert "Return to scaffold home" not in login_html
+    assert "Return to home" in login_html
+
+    assert logout_status == 200
+    assert "Return to scaffold home" not in logout_html
+    assert "Return to home" in logout_html
+
+
+def test_sample_pages_do_not_expose_scaffold_notice() -> None:
+    """Sample/fixture pages must not show the scaffold-only notice string."""
+    src_status, _src_ct, src_body = route_response("/source-records")
+    fac_status, _fac_ct, fac_body = route_response("/facilities")
+
+    src_html = src_body.decode("utf-8")
+    fac_html = fac_body.decode("utf-8")
+
+    scaffold_notice_text = "Local/test scaffold only: not a production reviewer workflow."
+    assert src_status == 200
+    assert scaffold_notice_text not in src_html
+    assert "Local sample source-derived data only" in src_html
+
+    assert fac_status == 200
+    assert scaffold_notice_text not in fac_html
+    assert "Local sample source-derived data only" in fac_html
 
