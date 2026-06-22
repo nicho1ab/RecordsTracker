@@ -653,6 +653,7 @@ REQUIRED_CONTENT = {
         "CCLD_HOSTED_TESTER_AUTH_MODE",
         "alembic upgrade head",
         "docker-compose.qnap.yml",
+        "-SmokeStart",
     ],
 }
 

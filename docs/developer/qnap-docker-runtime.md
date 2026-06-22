@@ -148,9 +148,22 @@ environment file:
 .\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env
 ```
 
-That check verifies required `.env` keys, PostgreSQL-backed page mode, production
-auth boundary defaults, retrieval raw artifact storage path, and Docker Compose
-configuration. It warns when deployment values still look like placeholders.
+That check verifies required deployment files, required `.env` keys,
+PostgreSQL-backed page mode, production auth boundary defaults, retrieval raw
+artifact storage path, and Docker Compose configuration. It warns when
+deployment values still look like placeholders. Default mode does not start
+or stop any containers.
+
+To run a local smoke check that starts the stack, waits for the app health
+endpoint, probes standard routes, and stops the stack cleanly:
+
+```powershell
+.\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env -SmokeStart
+```
+
+The `-SmokeStart` flag is opt-in. It requires Docker and Docker Compose to be
+available. If the health endpoint does not respond within 120 seconds (tunable
+with `-SmokeWaitSeconds`), the script collects recent logs and stops the stack.
 
 Then start the app and PostgreSQL:
 
