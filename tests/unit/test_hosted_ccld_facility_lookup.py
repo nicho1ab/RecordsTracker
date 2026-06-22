@@ -1088,6 +1088,21 @@ def test_ccld_facility_review_priority_page_orders_filters_and_links_to_hubs(
     assert "Single Cue Facility" not in filtered_html
     assert "Long Gap Facility" not in filtered_html
 
+    # cue=all must show the same result set as the unfiltered default, not 0 rows.
+    all_cue_status, _all_cue_content_type, all_cue_body = route_response(
+        f"{CCLD_FACILITY_REVIEW_PRIORITY_PATH}?cue=all",
+        page_data_mode="fixture-demo",
+    )
+    all_cue_html = all_cue_body.decode("utf-8")
+
+    assert all_cue_status == 200
+    assert "No facility review priority rows are available" not in all_cue_html
+    assert "Multi Cue Facility" in all_cue_html
+    assert "Single Cue Facility" in all_cue_html
+    assert "Long Gap Facility" in all_cue_html
+    # "all" is a sentinel value, not a real cue; no row should show "all" as its cue label.
+    assert ">all review cue<" not in all_cue_html.casefold()
+
 
 def test_ccld_facility_review_priority_page_does_not_mutate_hosted_tables(
     monkeypatch: pytest.MonkeyPatch,
