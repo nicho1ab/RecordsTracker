@@ -1501,9 +1501,8 @@ def _postgres_setup_required_response(heading: str) -> tuple[int, str, bytes]:
     return _auth_html_response(
         503,
         heading,
-        "PostgreSQL-backed page data is selected, but no migrated/imported hosted "
-        "source-derived database context is available. Run Alembic migrations, import a "
-        "validated CCLD artifact, and keep fixture-demo mode limited to explicit local demos.",
+        "Source-derived records are not yet available. Check that the database is "
+        "migrated and a CCLD artifact has been imported.",
     )
 
 

@@ -94,7 +94,7 @@ DEFAULT_NEXT_ACTIONS: Mapping[str, str] = {
 MODE_BADGE_CLASSES = {
   "Live public CCLD": "badge badge-live",
   "Fixture/mock demo": "badge badge-demo",
-  "Retrieval not configured": "badge badge-muted",
+  "Live retrieval off": "badge badge-muted",
 }
 
 
@@ -290,7 +290,7 @@ def _runtime_mode_label() -> str:
     return "Fixture/mock demo"
   if retrieval_enabled == "enabled" and raw_dir:
     return "Live public CCLD"
-  return "Retrieval not configured"
+  return "Live retrieval off"
 
 
 SHARED_CSS = r"""

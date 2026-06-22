@@ -110,7 +110,7 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert '<main id="main-content" tabindex="-1">' in html
     assert "Attorney public-record review workspace." in html
     assert "CCLD RecordsTracker" in html
-    assert "Retrieval not configured" in html
+    assert "Live retrieval off" in html
     assert "Start a facility complaint review" in html
     assert "Start with facility lookup" in html
     assert "Enter a facility/license number directly" in html
@@ -988,4 +988,72 @@ def test_sample_pages_do_not_expose_scaffold_notice() -> None:
     assert fac_status == 200
     assert scaffold_notice_text not in fac_html
     assert "Local sample source-derived data only" in fac_html
+
+
+def test_tester_facing_pages_do_not_expose_developer_wording() -> None:
+    """Normal tester-facing pages must not surface developer/scaffold/demo wording.
+
+    These are the routes that a logged-in reviewer would visit in the Cloudflare
+    Access pilot.  The test uses fixture-demo mode with local-dev auth so no
+    PostgreSQL connection is required.
+    """
+    auth_config = load_hosted_auth_runtime_config(
+        environ={
+            "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
+            "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
+        }
+    )
+    pages = {
+        "home": route_response("/", auth_runtime_config=auth_config, page_data_mode="fixture-demo"),
+        "retrieve": route_response(
+            "/ccld/records/request",
+            auth_runtime_config=auth_config,
+            page_data_mode="fixture-demo",
+        ),
+        "facilities": route_response(
+            "/ccld/facilities",
+            auth_runtime_config=auth_config,
+            page_data_mode="fixture-demo",
+        ),
+        "help": route_response(
+            "/ccld/help",
+            auth_runtime_config=auth_config,
+            page_data_mode="fixture-demo",
+        ),
+        "jobs": route_response(
+            "/ccld/retrieval/jobs",
+            auth_runtime_config=auth_config,
+            page_data_mode="fixture-demo",
+        ),
+    }
+
+    forbidden = [
+        "local/test",
+        "scaffold home",
+        "Hosted scaffold",
+        "not a production reviewer workflow",
+        "Open sign-in placeholder",
+        "Return to scaffold home",
+        "Retrieval not configured",
+        "No PostgreSQL-backed source-derived facility rows are loaded yet",
+        "Run Alembic migrations",
+        "import a validated CCLD artifact",
+        "migrated/imported hosted source-derived database context",
+    ]
+
+    for page_name, (status, _ct, body) in pages.items():
+        html = body.decode("utf-8")
+        assert status == 200, f"{page_name}: expected 200, got {status}"
+        for phrase in forbidden:
+            assert phrase not in html, (
+                f"{page_name}: forbidden phrase found in rendered HTML: {phrase!r}"
+            )
+
+    # Positive check: tester-facing pages say "loaded source-derived records" or "preloaded"
+    retrieve_html = pages["retrieve"][2].decode("utf-8")
+    assert (
+        "loaded source-derived complaint records" in retrieve_html
+        or "preloaded source-derived records" in retrieve_html
+        or "loaded source-derived records" in retrieve_html
+    ), "retrieve page must describe source-derived records in tester-safe language"
 

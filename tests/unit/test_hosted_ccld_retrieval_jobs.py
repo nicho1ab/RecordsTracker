@@ -142,7 +142,7 @@ def test_retrieval_form_renders_record_type_and_safe_setup_state() -> None:
     assert "Controlled CCLD retrieval setup required" in blocked_html
     assert "No retrieval job was created" in blocked_html
     assert "No controlled retrieval job exists for this request" in blocked_html
-    assert "Return to the request page to review already-loaded local/test records" in (
+    assert "Return to the request page to review already-loaded source-derived records" in (
         blocked_normalized
     )
     assert "Operator setup checklist" in blocked_html
@@ -811,7 +811,7 @@ def test_retrieval_job_history_empty_state_renders_for_allowed_local_dev_actor()
     assert "no controlled retrieval status/progress to wait on yet" in " ".join(
         html.split()
     )
-    assert "already-loaded local/test records" in html
+    assert "already-loaded source-derived records" in html
     assert "Controlled retrieval setup is missing" in html
     assert "facility/date context" in html
     assert "imported-record counts" in html
