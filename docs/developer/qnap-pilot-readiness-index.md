@@ -241,6 +241,11 @@ individually allowlisted testers. Open questions (tester email list, pilot
 hostname, identity provider choice, and Access policy owner) must be resolved
 before any tester-facing URL is shared.
 
+The operator runbook for creating the tunnel and configuring Access is in
+[qnap-cloudflare-tunnel-access-setup.md](qnap-cloudflare-tunnel-access-setup.md).
+The next live operator step is to follow that runbook, complete the Access
+verification smoke tests in section 9, and capture the evidence in section 10.
+
 ## 10. Deferred Items
 
 These remain deferred and must not be implied by readiness evidence:
