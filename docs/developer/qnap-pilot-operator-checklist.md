@@ -13,6 +13,9 @@ current production-mode auth boundary and deferred real-login work. Use
 [QNAP pilot access-method decision](qnap-pilot-access-method-decision.md) before
 sharing any external tester link, credential, network rule, VPN rule, or reverse
 proxy route. Use
+[QNAP seed data import runbook](qnap-seed-data-import-runbook.md) to load a
+validated artifact into the QNAP PostgreSQL deployment before inviting testers.
+Use
 [Cloudflare Tunnel + Access setup](qnap-cloudflare-tunnel-access-setup.md) to
 configure the Cloudflare access layer before sharing any tester-facing URL. Use
 [QNAP pilot tester invitation decision](qnap-pilot-tester-invitation-decision.md)
@@ -125,6 +128,17 @@ docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic u
 
 - Confirm hosted pages are using PostgreSQL-backed page data mode, not
   `fixture-demo`.
+- Load a validated CCLD hosted seeded-corpus artifact into PostgreSQL using the
+  [QNAP seed data import runbook](qnap-seed-data-import-runbook.md). The runbook
+  covers: building the artifact on Windows, transferring it to QNAP, copying it
+  into the container volume, running the import command, and verifying with
+  read-only PostgreSQL queries.
+- After import, confirm `hosted_import_batches` and `hosted_source_derived_records`
+  contain validated rows (use the evidence queries in the runbook section 6 or
+  `scripts/summarize-qnap-pilot-seeded-import-evidence.ps1`).
+- Note: `/health` always reports `source_data_loaded: false` regardless of import
+  state. Use PostgreSQL evidence queries to confirm the import, not the health
+  endpoint.
 
 ## 7. Raw Artifact Storage
 
@@ -255,7 +269,7 @@ as the step-by-step runbook.
 - Record the evidence listed in the Cloudflare Tunnel + Access setup runbook
   section 10 in local operator notes or the evidence packet.
 
-## 11. Backup And Rollback Checklist
+## 12. Backup And Rollback Checklist
 
 - Back up the PostgreSQL volume or create a PostgreSQL dump before risky changes.
 - Back up raw artifact storage separately from PostgreSQL.
@@ -275,7 +289,7 @@ docker compose -f docker-compose.qnap.yml --env-file .env up --build -d
 - Preserve logs before destructive host maintenance or rollback.
 - Do not use destructive reset commands as a backup substitute.
 
-## 12. Do-Not-Do List
+## 13. Do-Not-Do List
 
 - Do not commit `.env`.
 - Do not commit database passwords, GitHub tokens, provider values, private URLs,
@@ -292,3 +306,6 @@ docker compose -f docker-compose.qnap.yml --env-file .env up --build -d
 - Do not invite testers until the access method, role/scope, and revocation plan
   are deliberately approved.
 - Do not share any access path until the access-method decision is recorded.
+- Do not commit the seeded corpus artifact
+  (`data/processed/hosted_seeded_corpus/`).
+- Do not treat non-zero import counts as proof of public-source completeness.
