@@ -115,12 +115,12 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "Start with facility lookup" in html
     assert "Enter a facility/license number directly" in html
     assert "Attorney-focused public CCLD complaint/facility record review" in html
-    assert "How the local/test review loop works" in html
+    assert "How the review workflow works" in html
     assert "Select a facility by lookup" in html
     assert "Choose a complaint date range" in html
     assert "work the review queue" in html
     assert "Use reviewer detail to check source traceability" in html
-    assert "Use packet preview/draft for local/test preparation" in html
+    assert "Use packet preview/draft to prepare after review" in html
     assert (
         "Use feedback when records, wording, keyboard flow, or packet readiness is confusing"
         in html
@@ -129,14 +129,14 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "not legal reports, not final exports, and not source-completeness proof" in html
     assert "Open review queue" in html
     assert "Feedback" in html
-    assert "Developer/operator commands" in html
+    assert "Developer/operator commands" not in html
+    assert "Local pilot runtime" not in html
+    assert "Live public CCLD retrieval" not in html
+    assert "Fixture/mock demo" not in html
+    assert "Starts the local pilot runtime" not in html
     assert '<section class="action-card"' not in html
     assert "Commands</a>" not in html
     assert "Health check</a>" not in html
-    assert "Local pilot runtime" in html
-    assert "Live public CCLD retrieval" in html
-    assert "Fixture/mock demo" in html
-    assert "Starts the local pilot runtime" in html
     assert "Review boundary" not in html
     assert "No non-CCLD sources" not in normalized_html
     assert "Source-derived records stay separate from reviewer-created notes/status" in html
