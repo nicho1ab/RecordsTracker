@@ -8,7 +8,9 @@ Validated CCLD SQLite pipeline output path.
 .PARAMETER OutputPath
 Hosted seeded-corpus JSON artifact path to write.
 .PARAMETER FacilityNumber
-CCLD facility/license number. Required when SQLite contains multiple facilities.
+CCLD facility/license number. Required when SQLite contains multiple facilities and you want a single-facility artifact. Mutually exclusive with AllFacilities.
+.PARAMETER AllFacilities
+Load all CCLD facilities from the SQLite output into a single full-corpus artifact. Mutually exclusive with FacilityNumber.
 .PARAMETER StartDate
 Optional inclusive YYYY-MM-DD start date filter.
 .PARAMETER EndDate
@@ -23,14 +25,19 @@ Optional non-secret artifact identity. Defaults to a SQLite file hash identity.
 Replace the output artifact if it already exists.
 .EXAMPLE
 .\scripts\build-hosted-ccld-artifact.ps1 -DbPath data\processed\ccld.sqlite -FacilityNumber 157806098 -Overwrite
+.EXAMPLE
+.\scripts\build-hosted-ccld-artifact.ps1 -DbPath data\processed\ccld.sqlite -AllFacilities -Overwrite
 .NOTES
 Run from the repository root after validating the CCLD SQLite output.
+Use -FacilityNumber for a single-facility artifact.
+Use -AllFacilities to load all facilities from the SQLite into one full-corpus artifact.
 #>
 param(
     [Parameter(Mandatory = $true)]
     [string]$DbPath,
     [string]$OutputPath = "data\processed\hosted_seeded_corpus\validated_ccld_seeded_corpus.json",
     [string]$FacilityNumber,
+    [switch]$AllFacilities,
     [string]$StartDate,
     [string]$EndDate,
     [string]$ImportBatchId = "seeded-ccld-fixture-2026-06-13",
@@ -65,6 +72,9 @@ try {
 
     if (-not [string]::IsNullOrWhiteSpace($FacilityNumber)) {
         $arguments += @("--facility-number", $FacilityNumber)
+    }
+    if ($AllFacilities) {
+        $arguments += "--all-facilities"
     }
     if (-not [string]::IsNullOrWhiteSpace($StartDate)) {
         $arguments += @("--start-date", $StartDate)

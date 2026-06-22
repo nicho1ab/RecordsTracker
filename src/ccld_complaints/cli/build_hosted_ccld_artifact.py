@@ -33,6 +33,15 @@ def main(argv: list[str] | None = None) -> int:
         "--facility-number",
         help="CCLD facility/license number. Required when SQLite contains multiple facilities.",
     )
+    parser.add_argument(
+        "--all-facilities",
+        action="store_true",
+        default=False,
+        help=(
+            "Load all CCLD facilities from the SQLite output into a single full-corpus artifact. "
+            "Mutually exclusive with --facility-number."
+        ),
+    )
     parser.add_argument("--start-date", help="Optional inclusive YYYY-MM-DD start date filter.")
     parser.add_argument("--end-date", help="Optional inclusive YYYY-MM-DD end date filter.")
     parser.add_argument(
@@ -60,6 +69,7 @@ def main(argv: list[str] | None = None) -> int:
             args.db_path,
             args.output_path,
             facility_number=args.facility_number,
+            all_facilities=args.all_facilities,
             start_date=args.start_date,
             end_date=args.end_date,
             import_batch_id=args.import_batch_id,
@@ -73,7 +83,11 @@ def main(argv: list[str] | None = None) -> int:
     if result.output_path is None:
         raise RuntimeError("Expected artifact builder to return the written output path.")
     print(f"Hosted seeded-corpus artifact: {result.output_path.as_posix()}")
-    print(f"CCLD facility/license number: {result.facility_number}")
+    print(f"Corpus scope: {result.corpus_scope}")
+    if result.corpus_scope == "full-corpus":
+        print(f"CCLD facility/license numbers: {len(result.facility_numbers)} facilities")
+    else:
+        print(f"CCLD facility/license number: {result.facility_number}")
     print(f"Normalized CCLD record bundles: {result.record_count}")
     print(f"Source-derived rows represented: {result.source_derived_record_count}")
     print("Live CCLD retrieval executed: no")
