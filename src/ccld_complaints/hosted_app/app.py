@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 from ccld_complaints.hosted_app.audit_coverage_plan import (
     AUDIT_COVERAGE_PLAN_API_PATH,
@@ -439,6 +439,23 @@ def format_host(host: object) -> str:
     return str(host)
 
 
+def _check_source_data_loaded() -> bool:
+    """Return True if at least one row exists in hosted_source_derived_records."""
+    try:
+        config = load_hosted_database_config()
+        if config.database_url is None:
+            return False
+        engine = create_engine(config.database_url)
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("SELECT COUNT(*) FROM hosted_source_derived_records")
+            )
+            count = result.scalar()
+            return (count or 0) > 0
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def health_response() -> dict[str, object]:
     return {
         "status": "ok",
@@ -447,7 +464,7 @@ def health_response() -> dict[str, object]:
         "local_test_reviewer_ui_shell": True,
         "review_workflows_implemented": False,
         "authentication_implemented": False,
-        "source_data_loaded": False,
+        "source_data_loaded": _check_source_data_loaded(),
     }
 
 
@@ -813,13 +830,12 @@ def render_source_record_list(filters: SourceRecordFilters | None = None) -> str
 </head>
 <body>
   <header>
-    <p>{html.escape(SCAFFOLD_NOTICE)}</p>
     <p>{html.escape(SAMPLE_DATA_NOTICE)}</p>
     <h1>Sample source-derived records</h1>
   </header>
   <nav aria-label="Local scaffold navigation">
     <ul>
-      <li><a href="/">Scaffold home</a></li>
+      <li><a href="/">Home</a></li>
       <li><a href="/health">Health check</a></li>
     </ul>
   </nav>
@@ -868,13 +884,12 @@ def render_source_record_detail(record: SampleSourceRecord) -> str:
 </head>
 <body>
   <header>
-    <p>{html.escape(SCAFFOLD_NOTICE)}</p>
     <p>{html.escape(SAMPLE_DATA_NOTICE)}</p>
     <h1>{html.escape(record.complaint_control_number)}</h1>
   </header>
   <nav aria-label="Local scaffold navigation">
     <ul>
-      <li><a href="/">Scaffold home</a></li>
+      <li><a href="/">Home</a></li>
       <li><a href="/source-records">Sample source-derived records</a></li>
       <li><a href="/health">Health check</a></li>
     </ul>
@@ -947,13 +962,12 @@ def render_facility_list() -> str:
 </head>
 <body>
   <header>
-    <p>{html.escape(SCAFFOLD_NOTICE)}</p>
     <p>{html.escape(SAMPLE_DATA_NOTICE)}</p>
     <h1>Sample facility master records</h1>
   </header>
   <nav aria-label="Local scaffold navigation">
     <ul>
-      <li><a href="/">Scaffold home</a></li>
+      <li><a href="/">Home</a></li>
       <li><a href="/source-records">Sample source-derived records</a></li>
       <li><a href="/health">Health check</a></li>
     </ul>
@@ -1001,13 +1015,12 @@ def render_facility_detail(record: SampleFacilityRecord) -> str:
 </head>
 <body>
   <header>
-    <p>{html.escape(SCAFFOLD_NOTICE)}</p>
     <p>{html.escape(SAMPLE_DATA_NOTICE)}</p>
     <h1>{html.escape(record.facility_number)}</h1>
   </header>
   <nav aria-label="Local scaffold navigation">
     <ul>
-      <li><a href="/">Scaffold home</a></li>
+      <li><a href="/">Home</a></li>
       <li><a href="/facilities">Sample facility master records</a></li>
       <li><a href="/source-records">Sample source-derived records</a></li>
       <li><a href="/health">Health check</a></li>
@@ -1286,10 +1299,14 @@ def _default_reviewer_context_for_mode(
 ) -> ReviewerUiContext | None:
     if explicit_context is not None:
         return explicit_context
-    if not auth_runtime_config.local_dev_actor_allowed:
-        return None
     if page_data_mode == FIXTURE_DEMO_PAGE_DATA_MODE:
+        # Fixture/demo mode is gated to local-dev auth only.
+        if not auth_runtime_config.local_dev_actor_allowed:
+            return None
         return default_local_test_reviewer_ui_context()
+    # Postgres mode: outer access control (e.g. Cloudflare Access) handles
+    # authentication. If a request reaches here, the caller is considered
+    # authorized. Full OIDC/session auth is a future milestone.
     return _default_postgres_reviewer_context()
 
 
@@ -1537,15 +1554,12 @@ def _auth_html_response(status: int, heading: str, message: str) -> tuple[int, s
         heading=heading,
         skip_label="Skip to main content",
         nav_label="Auth placeholder navigation",
-        eyebrow=SCAFFOLD_NOTICE,
         extra_nav_links=(
-            ("Open sign-in placeholder", AUTH_LOGIN_PATH),
             ("Health check", "/health"),
         ),
         main=f"""
     <p>{html.escape(message)}</p>
-    <p><a href="{AUTH_LOGIN_PATH}">Open sign-in placeholder</a></p>
-    <p><a href="/">Return to scaffold home</a></p>
+    <p><a href="/">Return to home</a></p>
 """,
     ).encode()
     return status, "text/html; charset=utf-8", body
