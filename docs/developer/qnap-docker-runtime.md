@@ -359,3 +359,81 @@ For migration planning beyond QNAP, see
 [cloud-portability-deployment.md](cloud-portability-deployment.md). That guide
 compares low-cost host options and keeps PostgreSQL, raw file storage, secrets,
 backups, and future retrieval jobs separated from provider-specific app code.
+
+## QNAP Deployment Notes
+
+These notes capture confirmed setup facts from the first successful LAN smoke
+test. They supplement the general instructions above and are operator reference
+only. Keep host-specific paths, share names, and snapshot schedules in local
+operations notes, not in committed files.
+
+### Confirmed Docker and Compose Versions
+
+Docker and Docker Compose were confirmed available on the QNAP host via
+Container Station. No additional installation was needed:
+
+- Docker Engine: `27.1.2-qnap8`
+- Docker Compose: `v2.29.1-qnap2`
+
+### File Transfer: git archive and scp
+
+Git is not available on QNAP. The working deployment method from a Windows
+workstation is:
+
+1. Create a clean archive from the repository checkout:
+
+   ```powershell
+   git archive --format=tar HEAD -o ccld-app.tar
+   ```
+
+2. Transfer the archive to the QNAP host (replace `<qnap-user>` and
+   `<qnap-host>` with your QNAP credentials and LAN address):
+
+   ```powershell
+   scp ccld-app.tar <qnap-user>@<qnap-host>:/share/Container/RecordsTracker/
+   ```
+
+3. On the QNAP host, create the deployment folder and extract:
+
+   ```bash
+   mkdir -p /share/Container/RecordsTracker/app
+   tar -xf /share/Container/RecordsTracker/ccld-app.tar \
+       -C /share/Container/RecordsTracker/app
+   ```
+
+The deployment folder used in the first LAN smoke test was
+`/share/Container/RecordsTracker/app`. Adjust the share path to match your
+QNAP share and Container Station layout. Do not commit the generated archive
+or any extracted artifacts.
+
+### Container Station Home Directory Permission Fix
+
+`docker compose up` may fail on the first attempt with a Container Station
+home directory permission error. The fix is to create and own the Container
+Station user home directory before starting the stack:
+
+```bash
+sudo mkdir -p /home/ContainerStation
+sudo chown $(id -u):$(id -g) /home/ContainerStation
+```
+
+Run this fix once if `docker compose up` reports a home directory permission
+error. The `$(id -u)` and `$(id -g)` substitutions use the current user's UID
+and GID, which avoids hard-coding a specific user number.
+
+### Confirmed LAN Smoke Test
+
+The first LAN smoke test passed. After starting the stack on the QNAP host:
+
+- Health route responded `200` at
+  `http://<qnap-lan-ip>:<CCLD_HOSTED_PORT>/health`
+- Landing page responded `200` at
+  `http://<qnap-lan-ip>:<CCLD_HOSTED_PORT>/`
+
+This confirms the app and PostgreSQL containers started, Alembic migrations
+ran, and the app serves the CCLD review shell on the configured LAN port.
+
+The app is LAN-only at this stage. No Cloudflare Tunnel, Cloudflare Access,
+DNS, reverse proxy, TLS certificate, or public internet exposure has been
+configured. The next access-layer milestone is Cloudflare Tunnel and
+Cloudflare Access.
