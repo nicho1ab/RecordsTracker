@@ -99,7 +99,7 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert '<main id="main-content" tabindex="-1">' in html
     assert "Retrieve complaint records for a facility" in html
     assert "Retrieval intake" in html
-    assert "Create the review request context" in html
+    assert "Confirm a CCLD facility/license number" in html
     assert "Keyboard flow: move from facility selection to date range" in html
     assert "Start review request context" in html
     assert "Facility/license number identifies the CCLD facility" in html

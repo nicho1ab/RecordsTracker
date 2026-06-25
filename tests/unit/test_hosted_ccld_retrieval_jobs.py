@@ -708,6 +708,116 @@ def test_retrieval_failure_is_safe_and_does_not_import(tmp_path: Path) -> None:
     assert_no_secret_html(html)
 
 
+_LIVE_MINIMAL_FIXTURE = Path(
+    "tests/fixtures/ccld/raw/157806098_inx78_live_minimal.html"
+)
+
+
+def test_minimal_live_fixture_imports_with_absolute_schema_dir(tmp_path: Path) -> None:
+    """Regression: schemas/ must be accessible regardless of process cwd.
+
+    The Docker image WORKDIR is /app. Before the fix the connector used a
+    relative schema_dir = Path("schemas") which resolves to /app/schemas.
+    When schemas/ was not copied into the image, validate_schema raised
+    FileNotFoundError caught as a "validate" stage failure, producing the
+    warning "Report X was fetched and extracted but could not be validated."
+    After the fix the default schema_dir is an absolute path derived from the
+    module file location, so it works regardless of cwd.
+    """
+    client = MockCcldRetrievalClient(
+        report_content_by_index={3: _LIVE_MINIMAL_FIXTURE.read_bytes()},
+    )
+    with _empty_connection() as connection:
+        context = _request_context(connection, tmp_path, client=client)
+        status, _content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_retrieval_form_bytes(
+                start_date="2022-08-01",
+                end_date="2022-08-31",
+            ),
+            ccld_record_request_ui_context=context,
+        )
+        counts = _table_counts(connection)
+        jobs = connection.execute(select(hosted_ccld_retrieval_jobs)).mappings().all()
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert counts["source_records"] > 0, "Minimal live fixture should import source records"
+    assert counts["retrieval_jobs"] == 1
+    assert jobs[0]["job_state"] in {"completed", "completed_with_warnings"}
+    imported = jobs[0]["result_counts"].get("imported_source_derived_records", 0)
+    assert imported > 0, "At least one record should import from the minimal live fixture"
+    assert_no_secret_html(html)
+
+
+def test_validate_failure_warning_is_precise_and_tester_safe(tmp_path: Path) -> None:
+    """Validate-stage failures produce a precise, tester-safe warning.
+
+    A validate failure (e.g. from missing schemas on the server) should tell
+    the tester that extraction succeeded but validation failed, and suggest
+    sending feedback - not imply a generic unsupported layout or unavailable
+    source.  The fetch-failure warning path is unchanged.
+    """
+    # A validate failure is produced by using a connector with a non-existent
+    # schema_dir so validate_schema raises FileNotFoundError.
+    from ccld_complaints.connectors.base import SourceDocumentCandidate
+    from ccld_complaints.connectors.ccld.facility_reports import (
+        CcldFacilityReportsConnector,
+        ingest_facility_reports_for_facility,
+    )
+
+    broken_schema_dir = tmp_path / "nonexistent_schemas"
+    connector = CcldFacilityReportsConnector(
+        facility_number="157806098",
+        raw_dir=tmp_path / "raw",
+        schema_dir=broken_schema_dir,
+    )
+
+    def _load_doc(candidate: SourceDocumentCandidate):  # type: ignore[no-untyped-def]
+        from ccld_complaints.connectors.base import SourceDocument
+        from ccld_complaints.utils.hash import sha256_bytes
+        content = _LIVE_MINIMAL_FIXTURE.read_bytes()
+        raw_path = tmp_path / "raw" / f"157806098_inx{candidate.report_index}.html"
+        raw_path.parent.mkdir(parents=True, exist_ok=True)
+        raw_path.write_bytes(content)
+        return SourceDocument(
+            source_url=candidate.source_url,
+            raw_path=raw_path,
+            raw_sha256=sha256_bytes(content),
+            retrieved_at="2022-08-15T00:00:00+00:00",
+            content_type="text/html",
+        )
+
+    detail_html = DETAIL_FIXTURE.read_text(encoding="utf-8")
+    result = ingest_facility_reports_for_facility(
+        "157806098",
+        connector=connector,
+        facility_detail_html=detail_html,
+        discovered_at="2022-08-15T00:00:00+00:00",
+        limit=1,
+        max_requests=1,
+        load_document=_load_doc,
+        report_section="complaints",
+    )
+
+    assert result.records == [], "Should produce no records when schema_dir is broken"
+    assert len(result.failures) == 1
+    assert result.failures[0].stage == "validate"
+
+    from ccld_complaints.hosted_app.ccld_retrieval_jobs import _failure_warnings
+    warnings = _failure_warnings(result.failures)
+    assert len(warnings) == 1
+    warning = warnings[0]
+    assert "fetched and extracted" in warning
+    assert "could not be validated" in warning
+    assert "source layout" not in warning
+    assert "unsupported" not in warning.casefold()
+    assert "token" not in warning.casefold()
+    assert "schema" not in warning.casefold()  # no server-side path detail
+
+
 def test_retrieval_rate_limit_blocks_without_network_call(tmp_path: Path) -> None:
     client = MockCcldRetrievalClient()
     with _empty_connection() as connection:

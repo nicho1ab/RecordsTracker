@@ -21,6 +21,10 @@ from ccld_complaints.utils.hash import sha256_bytes
 BASE_URL = "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports"
 FACILITY_DETAIL_URL = "https://www.ccld.dss.ca.gov/carefacilitysearch/FacDetail"
 SOURCE_ID = "ccld"
+# Absolute path to schema files so validate_schema works regardless of the
+# process working directory (e.g. inside a Docker container whose WORKDIR is
+# not the repo root).
+_SCHEMA_DIR = Path(__file__).resolve().parents[4] / "schemas"
 DETERMINISTIC_METHOD = "ccld_facility_report_html_labels"
 LIVE_REQUEST_TIMEOUT_SECONDS = 30
 LIVE_USER_AGENT = "ccld-complaints-poc/0.1 (explicit-user-invoked-public-data-fetch)"
@@ -192,7 +196,7 @@ class CcldFacilityReportsConnector:
         report_index: int = 3,
         raw_dir: Path = Path("data/raw/ccld"),
         db_path: Path | None = None,
-        schema_dir: Path = Path("schemas"),
+        schema_dir: Path = _SCHEMA_DIR,
     ) -> None:
         self.facility_number = facility_number
         self.report_index = report_index
