@@ -26,10 +26,13 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_REVIEW_HUB_PATH,
     CCLD_FACILITY_REVIEW_PRIORITY_PATH,
 )
+from ccld_complaints.hosted_app.ccld_import_reload import (
+    DEFAULT_LOCAL_VALIDATED_CCLD_ARTIFACT,
+    ccld_import_reload_context_for_connection,
+)
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     CCLD_RECORD_REQUEST_PATH,
     CcldRecordRequestUiContext,
-    ccld_record_request_context_for_reviewer_context,
 )
 from ccld_complaints.hosted_app.facility_review_signals import (
     FACILITY_REVIEW_SIGNALS_CSVS_ENV,
@@ -1166,12 +1169,89 @@ def test_ccld_record_request_local_validated_load_defers_when_dates_do_not_match
     assert_no_secret_html(html)
 
 
-def _context(connection: Connection) -> CcldRecordRequestUiContext:
-    return ccld_record_request_context_for_reviewer_context(
-        reviewer_ui_context_for_connection(
-            connection,
-            actor=_actor(roles=("tester_reviewer",)),
+def test_ccld_record_request_load_is_isolated_from_generated_corpus(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Load action uses the tracked fixture even when the generated corpus file exists locally.
+
+    Regression: _default_local_validated_ccld_artifact_paths() returns the
+    generated data/processed corpus when that file exists on disk.  This test
+    confirms that unit tests using _context() pin to the tracked fixture and
+    are unaffected, even with a generated corpus present at the CWD-relative
+    generated path.
+    """
+    from ccld_complaints.hosted_app import ccld_import_reload as _import_reload_mod
+    from ccld_complaints.hosted_app.ccld_import_reload import (
+        _default_local_validated_ccld_artifact_paths,
+    )
+
+    # Create a fake generated corpus at an absolute tmp path and patch the
+    # module-level constant so dynamic discovery treats it as if it existed
+    # at data/processed/hosted_seeded_corpus/validated_ccld_seeded_corpus.json.
+    fake_corpus = tmp_path / "validated_ccld_seeded_corpus.json"
+    fake_corpus.write_text(
+        '{"import_batch_id": "generated-batch-not-in-test-scope", "records": []}'
+    )
+    monkeypatch.setattr(_import_reload_mod, "DEFAULT_GENERATED_CCLD_HOSTED_ARTIFACT", fake_corpus)
+
+    # Confirm the bug pre-condition: dynamic discovery now finds the fake file.
+    discovered = _default_local_validated_ccld_artifact_paths()
+    assert fake_corpus in discovered, (
+        "pre-condition: dynamic discovery must find the patched fake generated corpus"
+    )
+
+    # Confirm the fix: _context() ignores the fake generated file.
+    with _empty_connection() as connection:
+        context = _context(connection)
+        assert context.import_reload_context is not None
+        assert fake_corpus not in context.import_reload_context.artifact_paths
+        assert DEFAULT_LOCAL_VALIDATED_CCLD_ARTIFACT in context.import_reload_context.artifact_paths
+
+        status, _content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "facility_number": "157806098",
+                    "start_date": "2022-08-01",
+                    "end_date": "2022-08-31",
+                    "ccld_import_reload_action": "load_local_validated_ccld_records",
+                }
+            ),
+            ccld_record_request_ui_context=context,
         )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    # Tracked fixture has exactly 6 records - not the large generated corpus count.
+    assert "- New source-derived rows staged: 6" in html
+    assert "validated_seeded_corpus.json" in html
+    assert_no_secret_html(html)
+
+
+def _context(connection: Connection) -> CcldRecordRequestUiContext:
+    """Build a test request context pinned to the tracked small fixture.
+
+    Explicitly passes artifact_paths so the context never falls back to
+    _default_local_validated_ccld_artifact_paths(), which would discover the
+    ignored generated data/processed corpus when it exists locally and cause
+    import counts to diverge from fixture expectations.
+    """
+    reviewer_context = reviewer_ui_context_for_connection(
+        connection,
+        actor=_actor(roles=("tester_reviewer",)),
+    )
+    source_context = reviewer_context.workflow_shell_context.source_derived_api_context
+    import_reload_context = ccld_import_reload_context_for_connection(
+        source_context.connection,
+        scope=source_context.scope,
+        artifact_paths=(DEFAULT_LOCAL_VALIDATED_CCLD_ARTIFACT,),
+    )
+    return CcldRecordRequestUiContext(
+        reviewer_ui_context=reviewer_context,
+        import_reload_context=import_reload_context,
     )
 
 
