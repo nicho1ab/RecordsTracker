@@ -780,18 +780,9 @@ def render_app_shell() -> str:
                 <a class="button button-secondary" href="/reviewer">Open review queue</a>
             </div>
         </section>
-        <section class="quiet-section" aria-labelledby="session-start-overview-heading">
-            <h2 id="session-start-overview-heading">How the review workflow works</h2>
-            <ol>
-                <li>Select a facility by lookup, or enter a facility/license number directly.</li>
-                <li>Choose a complaint date range to create the CCLD request context.</li>
-                <li>Load or retrieve complaint records.</li>
-                <li>Use the review queue to open the recommended record first.</li>
-                <li>Use reviewer detail to check source traceability and save reviewer-created status/note observations.</li>
-                <li>Use packet preview/draft to prepare after review.</li>
-                <li>Use feedback when records, wording, keyboard flow, or packet readiness is confusing.</li>
-            </ol>
-            <p>The public CCLD portal remains the source of record. Loaded records are review aids. Packet preview and draft are not legal reports, not final exports, and not source-completeness proof.</p>
+        <section class="quiet-section" aria-labelledby="home-next-heading">
+            <h2 id="home-next-heading">New to this tool?</h2>
+            <p>Loaded records are review aids. The public CCLD portal remains the source of record. <a href="{CCLD_HELP_PATH}#workflow">See Help for the review workflow, limitations, and source traceability guidance.</a></p>
         </section>"""
         )
 

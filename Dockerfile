@@ -14,6 +14,7 @@ RUN python -m pip install --no-cache-dir --upgrade pip \
 
 COPY alembic.ini ./
 COPY migrations ./migrations
+COPY schemas ./schemas
 COPY src ./src
 COPY tests/fixtures/hosted_seeded_corpus ./tests/fixtures/hosted_seeded_corpus
 COPY tests/fixtures/public_source_facilities ./tests/fixtures/public_source_facilities

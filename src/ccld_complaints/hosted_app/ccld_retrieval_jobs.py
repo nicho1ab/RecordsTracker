@@ -554,11 +554,24 @@ def _execute_job(
             "discovered report date inside the requested date range."
         )
     elif not result.records and result.failures:
-        warnings.append(
-            "Selected CCLD complaint report links were found, but no report bundles were "
-            "retrieved or validated; the live source may be unavailable or an unsupported "
-            "layout may have been encountered."
-        )
+        fetch_failures = [f for f in result.failures if f.stage == "fetch"]
+        validation_failures = [f for f in result.failures if f.stage == "validate"]
+        if fetch_failures and not validation_failures:
+            warnings.append(
+                "Selected CCLD complaint report links were found but could not be fetched; "
+                "the public source may be temporarily unavailable."
+            )
+        elif validation_failures:
+            warnings.append(
+                "Selected CCLD complaint report links were fetched but no records imported; "
+                "validation failed for at least one report. "
+                "If this persists, send feedback to an operator."
+            )
+        else:
+            warnings.append(
+                "Selected CCLD complaint report links were found, but no report bundles were "
+                "retrieved or imported; the report format may not be supported yet."
+            )
     elif not result.records:
         warnings.append(
             "Selected CCLD complaint report links produced no extracted complaint record bundles."
@@ -910,7 +923,13 @@ def _failure_warnings(failures: Sequence[Any]) -> list[str]:
                 f"Report {failure.candidate.report_index} failed during fetch; the public "
                 "source may be unavailable or returned an unsupported response."
             )
-        elif failure.stage in {"extract", "normalize", "validate", "emit"}:
+        elif failure.stage == "validate":
+            warnings.append(
+                f"Report {failure.candidate.report_index} was fetched and extracted but "
+                "could not be validated against the expected complaint record format. "
+                "If this persists, send feedback to an operator."
+            )
+        elif failure.stage in {"extract", "normalize", "emit"}:
             warnings.append(
                 f"Report {failure.candidate.report_index} failed during {failure.stage}; "
                 "the source layout or imported record shape may be unsupported."
