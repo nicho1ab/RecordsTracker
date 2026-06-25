@@ -556,11 +556,16 @@ def _render_request_form(
                 main=f"""    <section class="hero-card" aria-labelledby="request-hero-heading">
                     <p class="launch-kicker">Retrieval intake</p>
                     <h2 id="request-hero-heading">Retrieve complaint records for a facility</h2>
-                    <p class="launch-value">Create the review request context: confirm a CCLD facility/license number, choose a complaint date range, then retrieve or show loaded source-derived complaint records.</p>
+                    <p class="launch-value">Confirm a CCLD facility/license number and date range, then retrieve or show loaded source-derived complaint records.</p>
                     <p class="helper-text">Keyboard flow: move from facility selection to date range, then choose Retrieve complaint records or Show existing queue before opening the review queue.</p>
-            <p><span class="{mode_class}">{mode_label}</span></p>
+            <p><span class="{mode_class}">{mode_label}</span> <a class="helper-link" href="{CCLD_HELP_PATH}#limitations">Records are review aids. See Help for limitations.</a></p>
         </section>
-                {_render_request_start_orientation()}
+                <details class="quiet-section orientation-details">
+                    <summary id="request-start-orientation-heading">Start review request context</summary>
+                    <p>Facility/license number identifies the CCLD facility. Date range narrows complaint, visit, report, signed, or retrieval dates already represented in preloaded source-derived records.</p>
+                    <p>Retrieve records uses the configured controlled server-side retrieval path only when available. Show existing queue searches loaded source-derived records without proving public-source completeness.</p>
+                    <p>When records are found, continue to the review queue, open the recommended record, review source traceability on detail, then use packet preparation and feedback when needed.</p>
+                </details>
                 {workflow_state}""",
     )
 
@@ -776,34 +781,36 @@ def _render_help_page() -> str:
                 </section>
                 <section class="help-details" aria-labelledby="help-topics-heading">
                     <h2 id="help-topics-heading">Help topics</h2>
-                    <details open>
-                        <summary id="help-purpose-topic-heading">What this tool helps you do</summary>
-                        <p>Use RecordsTracker to select a facility, retrieve public CCLD complaint records,
-                        review key source-derived values, and identify records that need source-traceable
-                        attorney review.</p>
-                    </details>
-                    <details>
-                        <summary id="help-how-heading">How to review a facility</summary>
+                    <details open id="workflow">
+                        <summary id="help-how-heading">How to review a facility (workflow)</summary>
                         <p>Facility lookup or manual entry fills a CCLD facility/license number. The
                         request page uses that context and a date range to retrieve or show matching
                         complaint records. The review queue helps you open the recommended record,
                         reviewer detail is the complaint review workspace, reviewer-created status/note
                         cues update queue progress, packet preview/draft are preparation
                         checkpoints, and feedback carries safe context when something is confusing.</p>
+                        <ol>
+                            <li>Select a facility by lookup, or enter a facility/license number directly.</li>
+                            <li>Choose a complaint date range to create the CCLD request context.</li>
+                            <li>Load or retrieve complaint records.</li>
+                            <li>Use the review queue to open the recommended record first.</li>
+                            <li>Use reviewer detail to check source traceability and save reviewer-created status/note observations.</li>
+                            <li>Use packet preview/draft to prepare after review.</li>
+                            <li>Use feedback when records, wording, keyboard flow, or packet readiness is confusing.</li>
+                        </ol>
                     </details>
-                    <details>
-                        <summary id="help-flags-heading">What review flags mean</summary>
+                    <details id="limitations">
+                        <summary id="help-not-prove-heading">Limitations: What the app does not prove</summary>
+                        <p>Loaded records are review aids; the public CCLD portal remains the source of record.</p>
+                        <p>This tool does not prove no complaints exist, CCLD source coverage is complete, legal
+                        conclusions, facility-wide conclusions, verified harm, abuse, neglect, liability,
+                        or rights-deprivation. Packet preview and draft are not legal reports, not final
+                        exports, and not source-completeness proof.</p>
                         <p>Review flags are source-derived screening aids such as possible delay indicators,
                         missing date fields, proxy-date cues, or source-traceability cues. They
                         identify records needing attorney review; they are not legal conclusions.</p>
                     </details>
-                    <details>
-                        <summary id="help-not-prove-heading">What the app does not prove</summary>
-                        <p>It does not prove no complaints exist, CCLD source coverage is complete, legal
-                        conclusions, facility-wide conclusions, verified harm, abuse, neglect, liability,
-                        or rights-deprivation.</p>
-                    </details>
-                    <details>
+                    <details id="source-traceability">
                         <summary id="help-traceability-heading">How source traceability works</summary>
                         <p>Imported records retain safe source traceability values when available:
                         source URL, raw SHA-256 hash, raw artifact reference, connector metadata,
@@ -818,6 +825,47 @@ def _render_help_page() -> str:
                         when source URL, raw SHA-256 hash, connector metadata, retrieval timestamp,
                         source document/report marker, report index, or missing-value wording is
                         confusing.</p>
+                    </details>
+                    <details id="live-retrieval">
+                        <summary id="help-live-heading">Retrieval modes</summary>
+                        <p>When the mode badge says Live public CCLD, controlled server-side
+                        public CCLD HTTP requests occur only after browser submit. When the mode badge
+                        says Fixture/mock demo, committed fixtures are used and no live CCLD calls are made.</p>
+                        <p>Show existing queue means the page searched already-loaded source-derived
+                        rows only; it did not submit a controlled retrieval job. Retrieve
+                        complaint records means a configured controlled retrieval job was submitted, then
+                        status/progress pages show the current job state, records imported, warnings or
+                        errors, and the next safe action.</p>
+                        <p>Loaded source-derived records can be ready for review even when no retrieval job was
+                        submitted for the current request. Retrieval status/progress is operational
+                        metadata and is not production monitoring, source-completeness proof, or a legal
+                        conclusion.</p>
+                        <p>If the retrieval job completes with warnings and imported 0 records, review
+                        the job detail page for per-report warnings, then send feedback to an operator
+                        if warnings persist after resubmitting with the same facility/date context.</p>
+                    </details>
+                    <details id="operator-setup">
+                        <summary id="help-operator-heading">Operator setup: enabling live retrieval</summary>
+                        <p>Controlled retrieval requires all of the following on the server:</p>
+                        <ul>
+                            <li>PostgreSQL migrations applied, including the retrieval job metadata migration.</li>
+                            <li>PostgreSQL-backed page data mode configured.</li>
+                            <li>Retrieval enabled in host configuration (<code>CCLD_RETRIEVAL_ENABLED=enabled</code>).</li>
+                            <li>A server-side raw artifact directory on persistent storage (<code>CCLD_RETRIEVAL_RAW_DIR</code>).</li>
+                            <li>Schema files present in the container image.</li>
+                        </ul>
+                        <p>No connector credentials or server-side private values are shown to the browser.</p>
+                    </details>
+                    <details>
+                        <summary id="help-purpose-topic-heading">What this tool helps you do</summary>
+                        <p>Use RecordsTracker to select a facility, retrieve public CCLD complaint records,
+                        review key source-derived values, and identify records that need source-traceable
+                        attorney review.</p>
+                    </details>
+                    <details>
+                        <summary id="help-flags-heading">What review flags mean</summary>
+                        <p>Review flags are source-derived screening aids. They
+                        identify records needing attorney review; they are not legal conclusions.</p>
                     </details>
                     <details>
                         <summary id="help-source-confidence-heading">What to do with source-confidence cues</summary>
@@ -855,44 +903,29 @@ def _render_help_page() -> str:
                         <p>This CCLD-only review workflow does not change source-derived records, does not
                         submit correction decisions, and does not make reviewer-created observations into
                         official public-source facts. A future correction workflow would be reviewer-created
-                        state separate from source-derived records.</p>
-                        <p>Use feedback when the correction-readiness path is confusing, when a record
-                        appears unexpected for the facility/date request, or when you are unsure whether a
-                        concern belongs in a reviewer-created note or feedback. The public CCLD portal
-                        remains the source of record.</p>
+                        state separate from source-derived records. Use feedback when the correction-readiness
+                        path is confusing. The public CCLD portal remains the source of record.</p>
                     </details>
-                    <details>
-                        <summary id="help-live-heading">Retrieval modes</summary>
-                        <p>When the mode badge says live public retrieval, controlled server-side
-                        public CCLD HTTP requests occur only after browser submit. When the mode badge
-                        says fixture/mock demo, committed fixtures are used and no live CCLD calls are made.</p>
-                        <p>Show existing queue means the page searched already-loaded source-derived
-                        rows only; it did not submit a controlled retrieval job. Retrieve
-                        complaint records means a configured controlled retrieval job was submitted, then
-                        status/progress pages show the current job state, records imported, warnings or
-                        errors, and the next safe action.</p>
-                        <p>Loaded source-derived records can be ready for review even when no retrieval job was
-                        submitted for the current request. Retrieval status/progress is operational
-                        metadata and is not production monitoring, source-completeness proof, or a legal
-                        conclusion.</p>
-                    </details>
-                    <details>
+                    <details id="feedback">
                         <summary id="help-feedback-heading">How to send useful feedback</summary>
                         <p>Include the facility/license number, date range, visible job state, complaint
                         control number when relevant, and what action or wording felt confusing. Do not
                         include private facts, credentials, legal strategy, privileged work product,
                         private URLs, private values, or unrelated sensitive details.</p>
+                        <p><a href="{_FEEDBACK_PATH}">Open the feedback page</a></p>
                     </details>
                     <details>
                         <summary id="help-packet-heading">How packet preparation fits in</summary>
                         <p>Packet preview and packet draft summarize loaded source-derived complaint records,
                         source traceability cues, reviewer-created status/note cues, and review-readiness
-                        concerns. Packet readiness means review readiness for manual review,
-                        browser copy, or browser print after checking facility/date context, included records,
-                        source-derived values, source traceability, reviewer-created note/status cues, and
-                        possible correction-readiness concerns. They are not legal reports, final exports,
-                        certified reports, product-generated exports, packet lifecycle state, or
-                        source-completeness proof.</p>
+                        concerns. They are not legal reports, final exports, certified reports,
+                        product-generated exports, packet lifecycle state, or source-completeness proof.</p>
+                        <p>Packet readiness means review readiness for manual review, browser copy, or browser
+                        print after checking facility/date context, included records, source-derived values,
+                        source traceability, reviewer-created note/status cues, and possible
+                        correction-readiness concerns. Packet preview and draft are not legal reports, not
+                        final exports, and not source-completeness proof. Use feedback when packet readiness
+                        wording is confusing.</p>
                     </details>
                 </section>
                 <section aria-labelledby="help-next-action-heading">
