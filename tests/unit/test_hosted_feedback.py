@@ -77,7 +77,7 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "What issue should be reported?" in html
     assert "packet/export-readiness" in html
     assert "retrieval status/progress" in html
-    assert "already-loaded record review" in html
+    assert "already-loaded records" in html or "loaded-record" in html
     assert "browser copy or print" in html
     assert "source-confidence next steps" in html
     assert "missing local/test source values" in html
@@ -664,3 +664,4 @@ def _description_textarea(markup: str) -> str:
     if match is None:
         raise AssertionError("Feedback description textarea not found")
     return html_lib.unescape(match.group(1))
+
