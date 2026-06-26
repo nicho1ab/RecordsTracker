@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal, Protocol, cast
 from urllib.parse import parse_qs, urlparse
@@ -51,7 +51,7 @@ CCLD_RETRIEVAL_ENABLED_VALUE = "enabled"
 CCLD_RETRIEVAL_DEMO_MODE_MOCK_SUCCESS = "mock-success"
 RETRIEVAL_MODE_LIVE_PUBLIC = "live_public_ccld"
 RETRIEVAL_MODE_FIXTURE_MOCK = "fixture_mock_success"
-DEFAULT_MAX_DATE_RANGE_DAYS = 366
+DEFAULT_MAX_DATE_RANGE_DAYS = 90
 DEFAULT_PER_JOB_REQUEST_LIMIT = 5
 DEFAULT_RATE_LIMIT_PER_ACTOR = 3
 DEFAULT_RETRY_LIMIT = 1
@@ -551,7 +551,9 @@ def _execute_job(
     elif not result.candidates:
         warnings.append(
             "CCLD complaint report links were found for this facility, but none had a "
-            "discovered report date inside the requested date range."
+            "discovered report date within the requested range or its extended window. "
+            "Complaint investigation visits typically occur weeks to months after complaint "
+            "receipt; if records are expected, try a wider date range or send feedback."
         )
     elif not result.records and result.failures:
         fetch_failures = [f for f in result.failures if f.stage == "fetch"]
@@ -657,12 +659,24 @@ def _candidate_matches_request_date(
     candidate: Any,
     retrieval_request: CcldRetrievalRequest,
 ) -> bool:
+    """Include a candidate if its discovered visit date is plausibly related to the requested range.
+
+    CCLD complaint investigation visits occur weeks to months after the complaint is received.
+    A candidate whose facility-detail link date (the visit date) falls outside the user's
+    complaint-received-date range does not prove that the report has no matching complaints.
+    To avoid silently dropping relevant reports:
+    - Include candidates with no discovered date (unknown dates → let post-fetch filter decide).
+    - Extend the upper bound by 365 days to capture investigation visits for complaints received
+      during the requested range.  The lower bound is not expanded backwards because investigation
+      visits occur after complaint receipt, not before.
+    """
     candidate_date = _parse_iso_date(candidate.discovered_report_date)
     if candidate_date is None:
-        return False
+        return True  # unknown date: include and let post-fetch filtering decide
     start_date = cast(date, _parse_iso_date(retrieval_request.start_date))
     end_date = cast(date, _parse_iso_date(retrieval_request.end_date))
-    return start_date <= candidate_date <= end_date
+    expanded_end = end_date + timedelta(days=365)
+    return start_date <= candidate_date <= expanded_end
 
 
 def _retrieval_artifact(

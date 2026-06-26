@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!--
+  Sanitized fixture: live-like facility detail where complaint visit dates are
+  offset from complaint received dates. Represents the CCLD pattern where an
+  August 2022 complaint (complaint_received_date=2022-08-15) has an investigation
+  visit on 2022-10-03 (the date that appears in the Complaints section links).
+
+  This fixture is used to verify that candidate date filtering includes complaint
+  report candidates whose visit dates fall outside the strict requested range
+  (because visit dates can be 30-180+ days after complaint receipt).
+
+  Facility 157806098. All visit/date values are synthetic and sanitized.
+-->
+
+<head>
+    <meta charset="utf-8">
+    <title>Facility Detail</title>
+</head>
+
+<body>
+    <main id="main_content">
+        <h1>Facility Detail</h1>
+        <section aria-labelledby="facility-heading">
+            <h2 id="facility-heading">Test Care Facility</h2>
+            <p>Facility Number: 157806098</p>
+        </section>
+        <section aria-labelledby="visits-heading">
+            <h2 id="visits-heading">All Visits</h2>
+            <p>All Visit Dates:
+                <a
+                    href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&amp;inx=37">01/07/2026</a>,
+                <a
+                    href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&amp;inx=34">10/10/2022</a>,
+                <a
+                    href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&amp;inx=10">10/03/2022</a>,
+                <a
+                    href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&amp;inx=3">08/24/2022</a>,
+                <a
+                    href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&amp;inx=8">05/25/2022</a>
+            </p>
+        </section>
+        <section aria-labelledby="complaints-heading">
+            <h2 id="complaints-heading">Complaints</h2>
+            <p>Complaint Visit Dates:
+                <a
+                    href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&amp;inx=37">01/07/2026</a>,
+                <a
+                    href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&amp;inx=34">10/10/2022</a>,
+                <a
+                    href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&amp;inx=10">10/03/2022</a>
+            </p>
+        </section>
+    </main>
+</body>
+
+</html>
