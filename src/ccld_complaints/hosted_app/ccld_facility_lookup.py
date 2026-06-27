@@ -459,10 +459,13 @@ def render_ccld_facility_lookup_page(
     {_render_facility_combobox_section(reference_source, query, limited_note)}
     {_render_lookup_results(result)}
         <section class="quiet-section" aria-labelledby="facility-priority-link-heading">
-            <h2 id="facility-priority-link-heading">Review-priority list</h2>
-            <p>Use facility review priority to scan uploaded public summary fields across facilities before opening a facility hub.</p>
-            <p><a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}">Open facility review priority list</a></p>
-            <p><a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">Open facility review intelligence dashboard</a></p>
+            <h2 id="facility-priority-link-heading">Optional: review-priority and intelligence</h2>
+            <p>These views require uploaded public summary CSVs. They are not required for complaint retrieval and review.</p>
+            <details>
+                <summary>Open optional review-priority or intelligence views</summary>
+                <p><a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}">Facility review priority list</a></p>
+                <p><a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">Facility review intelligence dashboard</a></p>
+            </details>
         </section>
     {_render_reference_details_section(reference_source)}
     <details class="technical-details">
@@ -1529,7 +1532,9 @@ def _render_priority_empty_rows(cue_filter: str) -> str:
     return f"""          <tr>
             <td colspan="4">
               <p>No facility review priority rows are available{filter_text}.</p>
+              <p>This optional feature requires uploaded public summary CSVs to be configured. It is not required for complaint record retrieval or review.</p>
               <p>This does not mean facilities have no complaints, visits, citations, POC dates, or public-source records. It only means supported uploaded public summary fields did not produce a visible row for this view.</p>
+              <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Return to facility lookup to find a facility and retrieve complaint records.</a></p>
             </td>
           </tr>"""
 

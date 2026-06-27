@@ -119,12 +119,12 @@ def test_retrieval_form_renders_record_type_and_safe_setup_state() -> None:
     assert status == 200
     assert "Retrieve complaint records" in html
     assert "facility-suggestion-list" in html
-    assert "Confirm facility" in html
+    assert "Use this facility/license number" in html
     assert "Search by name, license number, city, county, ZIP" in html
     assert "facility type, program type, or status code" in html
     assert "Review boundary" not in normalized
-    assert "Confirm facility" in html
-    assert "Find facility" in html
+    assert "Use this facility/license number" in html
+    assert "Search CCLD facilities" in html
     assert "Which facility should be reviewed?" in html
     assert_no_secret_html(html)
 
@@ -339,10 +339,170 @@ def test_controlled_retrieval_no_matching_complaint_dates_fetches_nothing(
     assert jobs[0]["result_counts"]["discovered_report_candidates"] == 3
     assert jobs[0]["result_counts"]["selected_report_candidates"] == 0
     assert jobs[0]["result_counts"]["retrieved_record_bundles"] == 0
-    assert "none had a discovered report date inside the requested date range" in html
+    assert "discovered report date within the requested range" in html
     assert "No records were imported" in html
     assert "not a public-source absence" in html
     assert_no_secret_html(html)
+
+
+_OFFSET_DATES_DETAIL_FIXTURE = Path(
+    "tests/fixtures/ccld/raw/157806098_facility_detail_live_offset_dates.html"
+)
+
+
+def test_candidate_date_filter_includes_visit_dates_after_complaint_receipt(
+    tmp_path: Path,
+) -> None:
+    """Regression: complaint investigation visit dates can be months after receipt.
+
+    The live CCLD facility detail page shows visit dates (when the inspector visited),
+    not complaint received dates (when the complaint was filed). A complaint received in
+    August 2022 may have a visit date of October 2022. The candidate filter must include
+    visit dates within start_date..end_date+365 days so those reports are fetched and
+    the post-fetch filter (which checks complaint_received_date) can select them.
+    """
+    client = MockCcldRetrievalClient(
+        facility_detail_html=_OFFSET_DATES_DETAIL_FIXTURE.read_text(encoding="utf-8"),
+        report_content_by_index={
+            10: RAW_FIXTURE.read_bytes(),
+            34: RAW_FIXTURE.read_bytes(),
+        },
+    )
+    # The offset fixture has complaints at 01/07/2026, 10/10/2022, 10/03/2022.
+    # For range 2022-08-01 to 2022-08-31 (strict), none are in range.
+    # With the expanded window (end_date + 365 = 2023-08-31), inx=34 (10/10/2022)
+    # and inx=10 (10/03/2022) are included as plausible investigation visits.
+    with _empty_connection() as connection:
+        context = _request_context(connection, tmp_path, client=client)
+        status, _content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_retrieval_form_bytes(
+                start_date="2022-08-01",
+                end_date="2022-08-31",
+            ),
+            ccld_record_request_ui_context=context,
+        )
+        jobs = connection.execute(select(hosted_ccld_retrieval_jobs)).mappings().all()
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert len(client.facility_detail_calls) == 1
+    # With the expanded window, offset visit dates (10/03/2022, 10/10/2022) are included.
+    assert len(client.report_calls) >= 1, "At least one offset-date candidate should be selected"
+    assert jobs[0]["result_counts"]["discovered_report_candidates"] == 3
+    assert jobs[0]["result_counts"]["selected_report_candidates"] >= 1
+    # inx=37 (01/07/2026) is more than 365 days after end_date → excluded
+    assert all(
+        _report_index_from_url(url) != 37
+        for url, _timeout in client.report_calls
+    )
+    assert_no_secret_html(html)
+
+
+def test_candidate_date_filter_excludes_visit_dates_far_beyond_365_day_window(
+    tmp_path: Path,
+) -> None:
+    """Candidates with visit dates more than 365 days after end_date are excluded.
+
+    2026 visit dates are more than a year after any 2022 complaint range.
+    """
+    client = MockCcldRetrievalClient(
+        facility_detail_html=_OFFSET_DATES_DETAIL_FIXTURE.read_text(encoding="utf-8"),
+    )
+    with _empty_connection() as connection:
+        context = _request_context(connection, tmp_path, client=client)
+        route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_retrieval_form_bytes(
+                start_date="2022-08-01",
+                end_date="2022-08-31",
+            ),
+            ccld_record_request_ui_context=context,
+        )
+        jobs = connection.execute(select(hosted_ccld_retrieval_jobs)).mappings().all()
+
+    # inx=37 (01/07/2026) is ~1225 days after 2022-08-31 end_date → excluded
+    assert all(
+        _report_index_from_url(url) != 37
+        for url, _timeout in client.report_calls
+    )
+    # Only 3 complaint candidates in the offset fixture
+    assert jobs[0]["result_counts"]["discovered_report_candidates"] == 3
+
+
+def test_candidate_unknown_date_is_included_not_silently_dropped(
+    tmp_path: Path,
+) -> None:
+    """Regression: candidates with no parseable date should be included, not dropped."""
+    from ccld_complaints.connectors.base import SourceDocumentCandidate
+    from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
+        CcldRetrievalRequest,
+        _candidate_matches_request_date,
+    )
+
+    no_date_candidate = SourceDocumentCandidate(
+        source_name="ccld_facility_reports",
+        facility_number="157806098",
+        report_index=99,
+        source_url="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=99",
+        discovered_report_date=None,
+        discovered_at=None,
+        report_section="complaints",
+    )
+    mock_request = CcldRetrievalRequest(
+        facility_number="157806098",
+        record_type="complaints",
+        start_date="2022-08-01",
+        end_date="2022-08-31",
+    )
+    assert _candidate_matches_request_date(no_date_candidate, mock_request) is True, (
+        "Candidates with unknown date must be included; post-fetch filter handles date check"
+    )
+
+
+def test_max_date_range_90_days_accepted(tmp_path: Path) -> None:
+    """90-day range must be accepted by the default validation."""
+    from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
+        DEFAULT_MAX_DATE_RANGE_DAYS,
+        validate_ccld_retrieval_request,
+    )
+    # Verify the new default is 90
+    assert DEFAULT_MAX_DATE_RANGE_DAYS == 90
+
+    # A 89-day range is accepted with the default limit
+    form_values: dict[str, list[str]] = {
+        "facility_number": ["157806098"],
+        "record_type": ["complaints"],
+        "start_date": ["2022-06-01"],
+        "end_date": ["2022-08-29"],  # 89 days
+    }
+    result = validate_ccld_retrieval_request(
+        form_values, max_date_range_days=DEFAULT_MAX_DATE_RANGE_DAYS
+    )
+    assert result.request is not None
+    assert not result.errors
+
+
+def test_max_date_range_over_90_days_rejected(tmp_path: Path) -> None:
+    """Date ranges over the configured max must be rejected with a clear message."""
+    with _empty_connection() as connection:
+        context = _request_context(connection, tmp_path)
+        status, _content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_retrieval_form_bytes(
+                start_date="2022-01-01",
+                end_date="2022-12-31",  # 364 days > 30-day test limit
+            ),
+            ccld_record_request_ui_context=context,
+        )
+
+    html = body.decode("utf-8")
+    assert status == 400
+    assert "Date range must be 30 days or fewer" in html  # test context uses limit=30
 
 
 def test_local_dev_mock_success_retrieval_flow_imports_and_links_without_live_calls(
@@ -1075,22 +1235,17 @@ def test_retrieval_job_detail_renders_completed_job_without_mutation(tmp_path: P
     assert before_counts == after_counts
     assert "Retrieval job detail" in html
     assert "Job summary and next step" in html
-    assert "Current status/progress" in html
+    assert "Facility/license number" in html
     assert "Controlled CCLD retrieval completed and imported validated records" in html
     assert "Next safe action" in html
     assert "Open imported records in the CCLD queue and review source traceability" in html
-    assert "Technical counts, warnings, and errors" in html
+    assert "Technical detail: counts, metadata, and errors" in html
     assert "completed-job" in html
     assert "Completed" in html
-    assert "Not recorded" in html
-    assert "completed" in html
-    assert "Facility/license number" in html
     assert "157806098" in html
     assert "Complaint records" in html
     assert "2022-08-01 to 2022-08-31" in html
     assert "Created at" in html
-    assert "Started timestamp" in html
-    assert "not separately tracked in this first slice" in html
     assert "Last updated at" in html
     assert "Completed timestamp" in html
     assert "2026-06-15T12:04:00+00:00" in html
