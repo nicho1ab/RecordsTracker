@@ -889,6 +889,11 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "automatic record claim" in normalized_html
     assert "official workflow state" in html
     assert "Detail navigation" in html
+    assert "Use the same-queue link when you came from CCLD request results" in (
+        normalized_html
+    )
+    assert "carries the facility/license number, date range" in normalized_html
+    assert "lookup or manual-entry context back to the queue" in normalized_html
     assert "Return to same facility/date queue" in html
     assert "Open next recommended record from this context" in html
     assert "Download local/test complaint review matrix CSV" in html
@@ -3383,4 +3388,3 @@ def _case_brief_record_for_priority(
         report_date_used_as_proxy=False,
         order_index=order_index,
     )
-
