@@ -265,11 +265,10 @@ def render_feedback_page(
                 title="Send feedback",
                 heading="Send feedback",
         main=f"""
-    {_configuration_notice(context.github_config)}
         <section class="hero-card" aria-labelledby="feedback-purpose-heading">
             <p class="launch-kicker">Tester support</p>
             <h2 id="feedback-purpose-heading">What issue should be reported?</h2>
-            <p>Choose the feedback type and describe what blocked retrieval, retrieval status/progress, already-loaded record review, packet/export-readiness, browser copy or print, active status-filter counts, filtered-empty recovery, source traceability, source-confidence next steps, correction-readiness guidance, missing local/test traceability values, missing local/test source values, proxy-related cues, wording, or keyboard flow.</p>
+            <p>Choose the feedback type and describe what blocked retrieval, retrieval status/progress, record review, wording, or keyboard flow.</p>
             <p class="helper-text">Keyboard flow: choose a feedback type, Tab to Description, submit only safe details, and use the visible validation message if a required field is missing.</p>
         </section>
         {_feedback_context_panel(handoff_context)}
@@ -283,22 +282,23 @@ def render_feedback_page(
             private URLs, secrets, tokens, provider claims, raw source narrative, raw artifact material,
             server paths, connection details, or unrelated sensitive details.</p>
         </section>
+    {_configuration_notice(context.github_config)}
         <details class="technical-details">
             <summary>Useful examples</summary>
             <ul>
                 <li>A complaint record looked missing or unexpected.</li>
-                <li>It was unclear whether the page was showing already-loaded local/test records or a controlled retrieval job status.</li>
+                <li>It was unclear whether the page was showing already-loaded records or a controlled retrieval job status.</li>
                 <li>A retrieval job state, progress count, warning, or next safe action was unclear.</li>
                 <li>A date or finding looked confusing.</li>
                 <li>A review flag was unclear.</li>
                 <li>A source-confidence cue did not make the next safe action clear.</li>
                 <li>The source traceability summary was hard to use.</li>
-                <li>Packet readiness, browser copy or print preparation, or the boundary between local/test packet preparation and final export was unclear.</li>
+                <li>Packet readiness, browser copy or print preparation, or the boundary between packet preparation and final export was unclear.</li>
                 <li>A packet seemed to include a missing or unexpected record, confusing source traceability cue, reviewer-created note/status concern, or correction-readiness concern.</li>
                 <li>A source-derived value looked wrong or incomplete after checking source traceability.</li>
                 <li>The correction-readiness guidance did not make clear whether to use a reviewer-created note or feedback.</li>
                 <li>A source URL, raw SHA-256 hash, connector metadata, retrieval timestamp, or source document/report marker looked missing or confusing.</li>
-                <li>A missing local/test value or proxy-related cue made it unclear whether to add cautious reviewer-created state or use feedback.</li>
+                <li>A missing value or proxy-related cue made it unclear whether to add cautious reviewer-created state or use feedback.</li>
                 <li>The workflow did not help me decide what to review next.</li>
                 <li>The active reviewer-created status filter, shown count, total queue count, or filtered-empty recovery action was confusing.</li>
             </ul>
@@ -347,7 +347,7 @@ def _feedback_context_panel(context: FeedbackHandoffContext | None) -> str:
     )
     return f"""        <section class="summary-card" aria-labelledby="feedback-context-heading">
             <h2 id="feedback-context-heading">Feedback context from review workflow</h2>
-            <p>This context was carried from a local/test review page. It is a bounded helper for
+            <p>This context was carried from the review page you came from. It is a bounded helper for
             triage, not a source fact, not a legal conclusion, not a final export, and
             not a source-completeness proof.</p>
             <dl>
@@ -658,10 +658,11 @@ def _configuration_notice(config: GitHubFeedbackConfig) -> str:
       <h2 id="feedback-configured-heading">GitHub issue intake is configured</h2>
       <p>Submitting this form creates a server-side GitHub issue for triage.</p>
     </section>"""
-    return """    <section aria-labelledby="feedback-unconfigured-heading">
-      <h2 id="feedback-unconfigured-heading">GitHub issue intake is not configured</h2>
-            <p>You can preview the form, but submitting feedback will not create a GitHub issue
-            until server-side configuration is added.</p>
+    return """    <section class="helper-text" aria-labelledby="feedback-unconfigured-heading">
+      <h2 id="feedback-unconfigured-heading">How feedback is submitted</h2>
+      <p>Server-side GitHub issue intake is not configured on this deployment.
+      Fill in the form, then copy or forward the description to the agreed tester support channel.
+      Feedback is still useful for the operator to review.</p>
     </section>"""
 
 

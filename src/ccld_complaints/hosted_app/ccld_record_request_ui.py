@@ -627,7 +627,7 @@ def _render_facility_selection_state(reference_source: CcldFacilityReferenceSour
             <p>Search for a facility when you do not know the exact facility/license number, or type the digit facility/license number directly if you already have it.</p>
             <form action="{CCLD_RECORD_REQUEST_PATH}" method="get" id="facility-select-form">
                 <label for="facility-search-input">Facility</label>
-                <p id="facility-search-hint" class="helper-text">Search by name, license number, city, county, ZIP, facility type, program type, or status code. Keyboard flow: type a search or digit number, use arrow keys or Tab to review suggestions and actions, then confirm facility to continue to date range.</p>
+                <p id="facility-search-hint" class="helper-text">Search by name, license number, city, county, ZIP, facility type, program type, or status code. Keyboard flow: type a search or digit number, use arrow keys or Tab to review suggestions and actions, then use this facility/license number to continue to date range.</p>
                 <div class="facility-combobox-outer" id="facility-combobox-outer">
                     <input id="facility-search-input" name="facility_number" type="text"
                         inputmode="numeric"
@@ -640,8 +640,8 @@ def _render_facility_selection_state(reference_source: CcldFacilityReferenceSour
 {limited_note_markup}
 {selected_card}
                 <div class="form-actions">
-                    <button type="submit" id="facility-submit-btn">Confirm facility</button>
-                    <a class="button button-secondary" href="{CCLD_FACILITY_LOOKUP_PATH}">Find facility</a>
+                    <button type="submit" id="facility-submit-btn">Use this facility/license number</button>
+                    <a class="button button-secondary" href="{CCLD_FACILITY_LOOKUP_PATH}">Search CCLD facilities</a>
                 </div>
             </form>
             <script type="application/json" id="facility-reference-json">{json_data}</script>
@@ -2286,9 +2286,10 @@ def _render_retrieval_job_detail_not_found_page() -> str:
 
 def _render_retrieval_job_detail_page(job: CcldRetrievalJobHistoryEntry) -> str:
     imported_count = job.result_counts.get("imported_source_derived_records", 0)
+    discovered_count = job.result_counts.get("discovered_report_candidates", 0)
+    selected_count = job.result_counts.get("selected_report_candidates", 0)
     count_items = _render_detail_count_items(job.result_counts)
     count_cards = _render_retrieval_count_grid(job.result_counts, imported_count)
-    warning_items = _safe_list_items(job.warnings) or "        <li>none</li>"
     error_items = _safe_list_items(job.errors) or "        <li>none</li>"
     mode_label = _retrieval_mode_label_from_message(job.safe_message)
     return _page(
@@ -2302,46 +2303,42 @@ def _render_retrieval_job_detail_page(job: CcldRetrievalJobHistoryEntry) -> str:
     <h2 id="retrieval-detail-summary-heading">Job summary and next step</h2>
             <p><span class="{_status_badge_class(job.job_state)}">{_escape(_retrieval_state_label(job.job_state))}</span>
             <span class="{_mode_badge_class(mode_label)}">{_escape(mode_label)}</span></p>
-      <p>This read-only page shows one controlled CCLD retrieval job from existing
-      operational metadata. It is not an audit export, raw artifact viewer, scheduler,
-      or source-completeness report.</p>
       <p>{_escape(_retrieval_state_intro_for_history(job))}</p>
     <dl class="summary-list">
-        <dt>Job state</dt>
-        <dd>{_escape(_retrieval_state_label(job.job_state))}</dd>
-                <dt>Current status/progress</dt>
-                <dd>{_escape(_retrieval_state_intro_for_history(job))}</dd>
-                <dt>Next safe action</dt>
-                <dd>{_escape(_retrieval_detail_next_action_message(job, imported_count))}</dd>
-        <dt>Status message</dt>
-        <dd>{_escape(job.safe_message)}</dd>
-        <dt>Retrieval mode</dt>
-        <dd>{_escape(_retrieval_mode_label_from_message(job.safe_message))}</dd>
         <dt>Facility/license number</dt>
         <dd>{_escape(job.facility_number)}</dd>
-        <dt>Record type</dt>
-        <dd>{_escape(RECORD_TYPE_LABELS.get(job.record_type, job.record_type))}</dd>
         <dt>Date range</dt>
         <dd>{_escape(job.start_date)} to {_escape(job.end_date)}</dd>
         <dt>Records imported</dt>
         <dd>{imported_count}</dd>
+        <dt>Discovered report candidates</dt>
+        <dd>{discovered_count}</dd>
+        <dt>Selected report candidates</dt>
+        <dd>{selected_count}</dd>
+                <dt>Next safe action</dt>
+                <dd>{_escape(_retrieval_detail_next_action_message(job, imported_count))}</dd>
       </dl>
     </section>
+    {_render_retrieval_detail_warnings_section(job)}
         {_render_retrieval_detail_next_steps(job, imported_count)}
     <details class="technical-details">
-    <summary>Technical counts, warnings, and errors</summary>
+    <summary>Technical detail: counts, metadata, and errors</summary>
     <section aria-labelledby="retrieval-detail-counts-heading">
       <h2 id="retrieval-detail-counts-heading">Result counts</h2>
             {count_cards}
       <dl>
+      <dt>Job state</dt>
+      <dd>{_escape(job.job_state)}</dd>
+      <dt>Status message</dt>
+      <dd>{_escape(job.safe_message)}</dd>
+      <dt>Retrieval mode</dt>
+      <dd>{_escape(mode_label)}</dd>
+      <dt>Record type</dt>
+      <dd>{_escape(RECORD_TYPE_LABELS.get(job.record_type, job.record_type))}</dd>
       <dt>Retrieval job ID</dt>
       <dd>{_escape(job.retrieval_job_id)}</dd>
-      <dt>Machine-readable state</dt>
-      <dd>{_escape(job.job_state)}</dd>
       <dt>Created at</dt>
       <dd>{_escape(job.created_at)}</dd>
-      <dt>Started timestamp</dt>
-      <dd>not separately tracked in this first slice</dd>
       <dt>Last updated at</dt>
       <dd>{_escape(job.updated_at)}</dd>
       <dt>Completed timestamp</dt>
@@ -2350,12 +2347,6 @@ def _render_retrieval_job_detail_page(job: CcldRetrievalJobHistoryEntry) -> str:
       <dd>{_escape(_raw_artifact_status(job))}</dd>
 {count_items}
       </dl>
-    </section>
-    <section aria-labelledby="retrieval-detail-warning-heading">
-      <h2 id="retrieval-detail-warning-heading">Safe warnings</h2>
-      <ul>
-{warning_items}
-      </ul>
     </section>
     <section aria-labelledby="retrieval-detail-error-heading">
       <h2 id="retrieval-detail-error-heading">Safe errors</h2>
@@ -2371,6 +2362,18 @@ def _render_retrieval_job_detail_page(job: CcldRetrievalJobHistoryEntry) -> str:
         </section>
         </details>""",
     )
+
+
+def _render_retrieval_detail_warnings_section(job: CcldRetrievalJobHistoryEntry) -> str:
+    if not job.warnings:
+        return ""
+    warning_items = _safe_list_items(job.warnings) or "        <li>none</li>"
+    return f"""    <section aria-labelledby="retrieval-detail-warning-heading">
+      <h2 id="retrieval-detail-warning-heading">Warnings</h2>
+      <ul>
+{warning_items}
+      </ul>
+    </section>"""
 
 
 def _render_detail_count_items(counts: Mapping[str, int]) -> str:

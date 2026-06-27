@@ -999,6 +999,27 @@ def test_ccld_facility_review_priority_page_empty_state_is_safe() -> None:
     assert "not a complaint-coverage determination" in html
     assert "not a source-completeness proof" in html
     assert "missing signal is not complaint absence" in html
+    # Empty state must link back to facility lookup (clear next action)
+    assert "Return to facility lookup" in normalized_html
+    assert CCLD_FACILITY_LOOKUP_PATH in html
+    # Empty state must note it is optional
+    assert "optional feature" in normalized_html
+    assert_no_secret_html(html)
+
+
+def test_ccld_facility_lookup_page_review_priority_link_is_collapsed_not_primary() -> None:
+    """Review-priority link must be inside a <details> element, not a primary button."""
+    status, _content_type, body = route_response(
+        CCLD_FACILITY_LOOKUP_PATH,
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert "Optional: review-priority and intelligence" in html
+    assert "These views require uploaded public summary CSVs" in normalized_html
+    assert "not required for complaint retrieval and review" in normalized_html
     assert_no_secret_html(html)
 
 

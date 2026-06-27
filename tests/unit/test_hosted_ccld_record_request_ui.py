@@ -115,12 +115,12 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "facility-suggestion-list" in html
     assert "Which facility should be reviewed?" in html
     assert CCLD_FACILITY_LOOKUP_PATH in html
-    assert "Confirm facility" in html
+    assert "Use this facility/license number" in html
     assert "Search by name, license number, city, county, ZIP" in html
     assert "facility type, program type, or status code" in html
     assert "Keyboard flow: type a search or digit number" in html
     assert "Live retrieval off" in html
-    assert "Find facility" in html
+    assert "Search CCLD facilities" in html
     assert "Review boundary" not in html
     assert "provider" not in html.casefold()
     assert_no_secret_html(html)
