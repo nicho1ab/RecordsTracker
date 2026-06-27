@@ -1353,7 +1353,7 @@ def _render_no_match_result(
                 heading=headline,
                 step_id="review_results",
                 next_action="Adjust the request or view job details",
-                main=f"""    {_render_no_match_recovery_panel(request, headline, local_count, retrieval_result, primary_action, reference_source)}
+                main=f"""    {_render_no_match_recovery_panel(request, headline, local_count, retrieval_result, primary_action, reference_source, retrieval_available)}
         {_render_request_context_confirmation(
                 facility_number=request.facility_number,
                 start_date=request.start_date,
@@ -1396,6 +1396,7 @@ def _render_no_match_recovery_panel(
     retrieval_result: CcldRetrievalJobResult | None,
     primary_action: str,
     reference_source: CcldFacilityReferenceSource,
+    retrieval_available: bool,
 ) -> str:
     reason_bucket = _no_match_reason_bucket(retrieval_result, local_count)
     current_state = _request_result_current_state_text(
@@ -1421,7 +1422,7 @@ def _render_no_match_recovery_panel(
     return f"""<section class="hero-card recovery-panel" aria-labelledby="no-local-records-heading">
       <p class="stage-kicker">Recovery</p>
       <h2 id="no-local-records-heading">{_escape(headline)}</h2>
-            <p>No loaded source-derived records matched this request context. This is a data state for the current facility/date context, not a complaint-coverage determination.</p>
+            <p>No loaded source-derived records matched this request context. This is a local/test data state for the current facility/date context, not proof that no public complaints exist.</p>
       <dl>
         <dt>What happened</dt>
         <dd>{_escape(reason_bucket)}</dd>
@@ -1440,6 +1441,7 @@ def _render_no_match_recovery_panel(
                 <dt>What this does not prove</dt>
         <dd>This does not prove no complaints exist, source coverage is complete, or any legal or facility-wide conclusion.</dd>
       </dl>
+      {_render_no_match_next_step_choices(request, local_count, retrieval_result, retrieval_available)}
             <p><strong>Recommended next action:</strong> Confirm the facility/date context, then use the action below.</p>
       <p>{primary_action}</p>
     <ul>
@@ -1447,6 +1449,37 @@ def _render_no_match_recovery_panel(
     </ul>
     <p><a href="{_escape(feedback_href)}">Report unclear loaded-record versus retrieval-job state</a></p>
     </section>"""
+
+
+def _render_no_match_next_step_choices(
+    request: CcldRecordRequest,
+    local_count: int,
+    retrieval_result: CcldRetrievalJobResult | None,
+    retrieval_available: bool,
+) -> str:
+    retrieval_choice = (
+        "Check retrieval job details or configuration only if a controlled retrieval job "
+        "was submitted or this runtime says retrieval is configured."
+        if retrieval_result is not None or retrieval_available
+        else "Skip retrieval/job troubleshooting for this result because no controlled "
+        "retrieval job was submitted."
+    )
+    local_data_choice = (
+        "Use loaded local/test records by changing the date range if those rows are the "
+        "records you meant to review."
+        if local_count > 0
+        else "Load or refresh local/test records when the local validated CCLD load action is available."
+    )
+    return f"""      <section aria-labelledby="no-match-next-steps-heading">
+        <h3 id="no-match-next-steps-heading">Try one next step</h3>
+        <ol>
+          <li>Check or change the facility/license number if it is not the intended facility.</li>
+          <li>Adjust the complaint date range if the facility is right but the review period may be too narrow.</li>
+          <li>{_escape(local_data_choice)}</li>
+          <li>{_escape(retrieval_choice)}</li>
+          <li>Report confusion with the facility/license number, date range, loaded-row count, and retrieval state shown here.</li>
+        </ol>
+      </section>"""
 
 
 def _no_match_reason_bucket(
