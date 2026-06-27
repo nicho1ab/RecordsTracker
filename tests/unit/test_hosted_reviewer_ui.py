@@ -2536,7 +2536,22 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert "Source-derived complaint fields" in html
     assert "Source traceability" in html
     assert "Public-source records" in html
-    assert "Next" in html
+    assert "Do this next" in html
+    assert (
+        "The reviewer-created note/status was saved and appears in reviewer-created state below"
+        in normalized_html
+    )
+    assert (
+        "Source-derived complaint fields, source traceability, and public-source records were not changed"
+        in normalized_html
+    )
+    assert "Return to the same facility/date queue" in normalized_html
+    assert "Submit the same request again if you expect refreshed reviewer-created cues" in (
+        normalized_html
+    )
+    assert "Continue with the suggested next record from the refreshed queue" in (
+        normalized_html
+    )
     assert "Return to facility queue" in html
     assert "Open next priority record" in html
     assert "Report save or return-to-queue confusion" in html
@@ -2551,9 +2566,7 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert "filtered-empty queue state" in html
     assert "not public-source absence" in html
     assert "source-completeness proof" in html
-    assert "same facility/license number and date range" in normalized_html
     assert "submit the request again" in html
-    assert "continuing to the next record" in html
     assert "suggested next record is not a persisted assignment" in html
     assert "automatic record claim" in normalized_html
     assert "official workflow state" in html
@@ -2664,6 +2677,7 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
         [audit_event] = connection.execute(select(hosted_audit_events)).mappings().all()
 
     html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
@@ -2689,7 +2703,22 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "Source traceability" in html
     assert "Public-source records" in html
     assert "Correction workflow state" in html
-    assert "Next" in html
+    assert "Do this next" in html
+    assert (
+        "The reviewer-created note/status was saved and appears in reviewer-created state below"
+        in normalized_html
+    )
+    assert (
+        "Source-derived complaint fields, source traceability, and public-source records were not changed"
+        in normalized_html
+    )
+    assert "Return to the same facility/date queue" in normalized_html
+    assert "Submit the same request again if you expect refreshed reviewer-created cues" in (
+        normalized_html
+    )
+    assert "Continue with the suggested next record from the refreshed queue" in (
+        normalized_html
+    )
     assert "Return to facility queue" in html
     assert "Open next priority record" in html
     assert "Report save or return-to-queue confusion" in html
@@ -2703,19 +2732,16 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "filtered-empty queue state" in html
     assert "not public-source absence" in html
     assert "submit the request again" in html
-    assert "continuing to the next record" in html
     assert "suggested next record is not a persisted assignment" in html
-    assert "automatic record claim" in " ".join(html.split())
+    assert "automatic record claim" in normalized_html
     assert "official workflow state" in html
     assert "manual feedback checklist" in html
-    assert "not a legal report, not a final export, not a certified report" in " ".join(
-        html.split()
-    )
+    assert "not a legal report, not a final export, not a certified report" in normalized_html
     assert "record-specific observation" in html
     assert "existing manual feedback checklist" in html
     assert (
         "source traceability, source-confidence, field-note, or possible correction concern wording"
-        in " ".join(html.split())
+        in normalized_html
     )
     assert "return_facility_number=157806098" in html
     assert "Review saved notes and statuses below" in html
