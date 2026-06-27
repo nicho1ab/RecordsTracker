@@ -52,6 +52,16 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "accessibility",
         "diagnostics",
         "EVIDENCE_PACKET_PATH=",
+        "EVIDENCE_ZIP_PATH=",
+        "Compress-Archive",
+        "Invoke-NativeCaptureCommand",
+        "Test-HtmlScreenshotCandidate",
+        "native screenshot command timed out",
+        "screenshotFailures",
+        "route, assertion, or screenshot failures",
+        "$Route.Path -match",
+        "bytes written to file",
+        "do not commit them unless a specific repository workflow explicitly says to do so",
     ):
         assert expected in script
     for route in (
@@ -160,9 +170,13 @@ def test_capture_script_allow_unavailable_writes_manifest() -> None:
 
         assert result.returncode == 0, output
         assert "EVIDENCE_PACKET_PATH=" in output
+        assert "EVIDENCE_ZIP_PATH=" in output
+        assert "Output counts:" in output
         packets = sorted(output_dir.glob("*-fixture"))
         assert packets, output
         packet = packets[-1]
+        zips = sorted(output_dir.glob("*-fixture.zip"))
+        assert zips, output
         manifest = json.loads((packet / "manifest.json").read_text(encoding="utf-8-sig"))
 
         assert (packet / "route-status.csv").exists()
@@ -179,6 +193,12 @@ def test_capture_script_allow_unavailable_writes_manifest() -> None:
         assert manifest["safety"]["importsOrReloadsRun"] is False
         assert manifest["routeFailures"]
         assert "local UI review evidence only" in manifest["boundaryStatement"]
+        assert manifest["output"]["zipPacket"].endswith(".zip")
+        assert manifest["output"]["counts"]["html"] == 0
+        assert manifest["output"]["counts"]["text"] == 0
+        assert manifest["output"]["counts"]["diagnostics"] >= 3
+        assert manifest["output"]["counts"]["accessibility"] >= 4
+        assert zips[-1].exists()
     finally:
         shutil.rmtree(output_dir, ignore_errors=True)
 
@@ -291,6 +311,10 @@ def test_ui_evidence_documentation_links_commands_and_boundaries() -> None:
         "8003` = live public CCLD mode",
         "8010` = fixture/mock demo mode",
         "Upload or summarize the whole timestamped folder",
+        "Upload or summarize the sibling ZIP",
+        "actual rendered UI",
+        "Evidence is not useful if no one reviews it",
+        "Do not commit generated evidence folders or ZIP packets",
         "tester-readiness verifier",
         "keyboard-flow marker assertions",
         "sibling ZIP",
