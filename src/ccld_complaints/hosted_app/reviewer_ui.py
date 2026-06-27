@@ -5176,16 +5176,18 @@ def _render_notice(
                 </ul>
             </section>
             <section aria-labelledby="queue-return-progress-heading">
-                <h3 id="queue-return-progress-heading">Next</h3>
-                <p>Queue progress and note/status cues are derived from reviewer-created state.
-                Return to the same CCLD request context, use the same facility/license number
-                and date range, and submit the request again if the local/test queue page needs
-                to refresh its displayed cues.</p>
+                <h3 id="queue-return-progress-heading">Do this next</h3>
+                <ol>
+                    <li>The reviewer-created note/status was saved and appears in reviewer-created state below.</li>
+                    <li>Source-derived complaint fields, source traceability, and public-source records were not changed.</li>
+                    <li>Return to the same facility/date queue using the same facility/license number and date range.</li>
+                    <li>Submit the same request again if you expect refreshed reviewer-created cues.</li>
+                    <li>Continue with the suggested next record from the refreshed queue.</li>
+                </ol>
+                <p>Queue progress and note/status cues are derived from reviewer-created state.</p>
                 <p>Status filters are reviewer-created queue views. Showing no rows under a
                 status filter is a filtered-empty queue state, not public-source absence,
                 assignment state, record claiming, or source-completeness proof.</p>
-                <p>After the queue shows the updated cue, open the suggested next record or the
-                next not-started record before continuing to the next record.</p>
                 <p>The suggested next record is not a persisted assignment, automatic record
                 claim, or official workflow state. It is local/test navigation guidance based
                 on the same request context and existing reviewer-created note/status cues.</p>
