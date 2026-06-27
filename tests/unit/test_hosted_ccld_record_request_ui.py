@@ -25,6 +25,7 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_REFERENCE_CSV_ENV,
     CCLD_FACILITY_REVIEW_HUB_PATH,
     CCLD_FACILITY_REVIEW_PRIORITY_PATH,
+    no_reference_facility_source,
 )
 from ccld_complaints.hosted_app.ccld_import_reload import (
     DEFAULT_LOCAL_VALIDATED_CCLD_ARTIFACT,
@@ -33,6 +34,7 @@ from ccld_complaints.hosted_app.ccld_import_reload import (
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     CCLD_RECORD_REQUEST_PATH,
     CcldRecordRequestUiContext,
+    route_ccld_record_request_ui_response,
 )
 from ccld_complaints.hosted_app.facility_review_signals import (
     FACILITY_REVIEW_SIGNALS_CSVS_ENV,
@@ -1320,6 +1322,72 @@ def test_ccld_request_page_no_internal_path_labels_in_primary_ui() -> None:
     assert status == 200
     assert "Tiny committed CCLD facility fixture fallback" not in html
     assert "Full local/test CCLD facility reference CSV" not in html
+    assert_no_secret_html(html)
+
+
+def test_request_page_with_no_reference_source_shows_not_configured_and_no_synthetic_data() -> None:
+    """In live mode with no_reference, request page must not expose synthetic fixture data."""
+    with _seeded_connection() as connection:
+        status, content_type, body = route_ccld_record_request_ui_response(
+            CCLD_RECORD_REQUEST_PATH,
+            _context(connection),
+            facility_reference=no_reference_facility_source(),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    # Manual entry is still available as the primary path
+    assert "Which facility should be reviewed?" in html
+    assert 'id="facility-search-input"' in html
+    assert "Use this facility/license number" in html
+    # No synthetic fixture facility names in the HTML
+    assert "Synthetic Orchard" not in html
+    assert "Synthetic Valley" not in html
+    assert "900000001" not in html
+    assert "900000002" not in html
+    # "Facility directory lookup is not configured" notice is shown
+    assert "not configured" in html.lower() or "Facility directory lookup" in html
+    assert_no_secret_html(html)
+
+
+def test_live_postgres_mode_request_page_uses_source_derived_not_tiny_fixture() -> None:
+    """In live postgres mode, the request page must use source-derived facility data."""
+    with _seeded_connection() as connection:
+        status, content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            auth_runtime_config=_local_dev_auth_config(),
+            page_data_mode="postgres",
+            ccld_record_request_ui_context=_context(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    # No synthetic fixture facility names from the tiny fixture
+    assert "Synthetic Orchard Child Care" not in html
+    assert "Synthetic Valley Family Agency" not in html
+    # Synthetic fixture facility numbers must not be in the embedded typeahead JSON
+    assert '"900000001"' not in html
+    assert '"900000002"' not in html
+    assert_no_secret_html(html)
+
+
+def test_fixture_demo_mode_request_page_still_allows_tiny_fixture_suggestions() -> None:
+    """fixture-demo mode must continue to allow the tiny fixture for local/demo use."""
+    status, content_type, body = route_response(
+        CCLD_RECORD_REQUEST_PATH,
+        auth_runtime_config=_local_dev_auth_config(),
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    # In fixture-demo mode: tiny fixture is acceptable
+    assert "Which facility should be reviewed?" in html
+    assert "facility-reference-json" in html
     assert_no_secret_html(html)
 
 

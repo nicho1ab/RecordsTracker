@@ -28,8 +28,11 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_RECORD_REQUEST_PATH,
     PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER,
     CcldFacilityLookupRecord,
+    CcldFacilityReferenceSource,
     load_active_ccld_facility_reference,
     load_ccld_facility_reference,
+    no_reference_facility_source,
+    render_ccld_facility_lookup_page,
     search_ccld_facilities,
 )
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
@@ -1499,6 +1502,86 @@ def test_ccld_facility_lookup_result_card_review_action_has_descriptive_label() 
         'aria-label="Start complaint request for facility 900000001 (Synthetic Orchard Child Care)"'
         in html
     )
+    assert_no_secret_html(html)
+
+
+def test_live_mode_facility_lookup_page_no_reference_shows_not_configured_messaging() -> None:
+    """In live mode with no_reference, the page must clearly state lookup is not configured."""
+    html = render_ccld_facility_lookup_page(reference_source=no_reference_facility_source())
+
+    assert "Facility directory lookup is not configured" in html
+    assert "Enter a known CCLD facility/license number" in html
+    assert "Directory lookup is optional" in html
+    assert "does not affect controlled complaint retrieval" in html
+    # Manual entry is the primary path
+    assert "Enter a facility/license number directly" in html
+    assert "Open request form" in html
+    assert f'href="{CCLD_RECORD_REQUEST_PATH}"' in html
+    # No synthetic fixture facility names
+    assert "Synthetic Orchard" not in html
+    assert "Synthetic Valley" not in html
+    assert "900000001" not in html
+    assert "900000002" not in html
+    # No JS combobox with empty data (no facility-reference-json element)
+    assert "facility-reference-json" not in html
+    assert_no_secret_html(html)
+
+
+def test_live_mode_facility_lookup_page_empty_postgres_source_shows_not_configured_messaging(
+) -> None:
+    """Empty postgres_source_derived must also show not-configured messaging, not tiny fixture."""
+    empty_postgres_source = CcldFacilityReferenceSource(
+        source_kind="postgres_source_derived",
+        label="PostgreSQL source-derived facility records",
+        path_label="hosted_source_derived_records",
+        records=(),
+        warnings=(
+            "Facility lookup suggestions are not available. "
+            "Source-derived records may not include facility directory rows. "
+            "Enter a facility/license number directly if you know it.",
+        ),
+    )
+    html = render_ccld_facility_lookup_page(reference_source=empty_postgres_source)
+
+    assert "Facility directory lookup is not configured" in html
+    assert "Enter a known CCLD facility/license number" in html
+    # Manual entry is the primary path
+    assert "Enter a facility/license number directly" in html
+    assert "Open request form" in html
+    # No synthetic fixture facility names
+    assert "Synthetic Orchard" not in html
+    assert "Synthetic Valley" not in html
+    assert "900000001" not in html
+    # No JS combobox with empty data
+    assert "facility-reference-json" not in html
+    assert_no_secret_html(html)
+
+
+def test_live_mode_facility_lookup_page_does_not_imply_directory_lookup_is_working() -> None:
+    """In live mode with no_reference, page must not present lookup as a working primary path."""
+    html = render_ccld_facility_lookup_page(reference_source=no_reference_facility_source())
+
+    # Must NOT say directory is the primary/working path
+    assert "preloaded facility directory" not in html
+    # Must NOT prompt users to start by searching the directory
+    assert "Start review by finding the CCLD facility/license number in the preloaded" not in html
+    assert_no_secret_html(html)
+
+
+def test_fixture_demo_mode_facility_lookup_page_still_shows_tiny_fixture_suggestions() -> None:
+    """fixture-demo mode must continue to use the tiny fixture reference."""
+    status, content_type, body = route_response(
+        f"{CCLD_FACILITY_LOOKUP_PATH}?q=orchard",
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    # fixture-demo mode: tiny fixture suggestions still shown
+    assert "Synthetic Orchard Child Care" in html
+    assert "900000001" in html
+    # facility-reference-json is present in fixture-demo mode (has real fixture data)
+    assert "facility-reference-json" in html
     assert_no_secret_html(html)
 
 
