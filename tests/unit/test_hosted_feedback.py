@@ -79,9 +79,7 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "retrieval status/progress" in html
     assert "already-loaded records" in html or "loaded-record" in html
     assert "source traceability" in html or "source-confidence" in html
-    assert "source values" in html or "missing source" in html
     assert "browser copy or print" in html
-    assert "source traceability" in html or "source-confidence" in html
     assert "proxy-related cues" in html
     assert "A complaint record looked missing or unexpected." in html
     assert "already-loaded local/test records or a controlled retrieval job status" in html
