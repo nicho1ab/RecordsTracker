@@ -3901,6 +3901,9 @@ def _render_detail_navigation(
     )
     return f"""<section aria-labelledby="detail-navigation-heading">
       <h2 id="detail-navigation-heading">Detail navigation</h2>
+            <p>Use the same-queue link when you came from CCLD request results; it
+            carries the facility/license number, date range, and lookup or manual-entry
+            context back to the queue so refreshed reviewer-created cues appear there.</p>
             <ul>
                 <li><a href="{_escape(ccld_request_href)}">Return to same facility/date queue</a></li>
                 <li><a href="{_escape(next_record_href)}">Open next recommended record from this context</a></li>
