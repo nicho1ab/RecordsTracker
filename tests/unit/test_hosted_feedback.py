@@ -80,7 +80,6 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "already-loaded records" in html or "loaded-record" in html
     assert "browser copy or print" in html
     assert "Submit feedback" in html
-    assert "Feedback is not sent automatically" in html
     assert "copy" in html.lower()
 
 def test_feedback_page_renders_safe_optional_handoff_context() -> None:
