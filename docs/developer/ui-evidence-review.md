@@ -32,6 +32,9 @@ The capture command performs GET-only requests against an already-running local 
 	stable sample facility/date context.
 - `diagnostics/` git state, recent log, capture command, and non-secret capture settings.
 - `screenshots/` route screenshots when local screenshot tooling is available.
+- a sibling `.zip` packet after successful capture, suitable for local review
+  or upload after the generated files have been checked for unexpected private
+  values.
 
 The packet never submits forms, triggers controlled retrieval, loads or imports data, mutates reviewer-created state, runs reset/reload, calls GitHub, performs production authentication, captures cookies, prints response headers, or records environment variable values.
 
@@ -89,7 +92,9 @@ For local review, the wrapper can start one hosted mode and capture evidence aft
 .\scripts\run-and-capture-hosted-ui-evidence.ps1 -Mode fixture -Port 8010 -KillExistingPortProcess
 ```
 
-The wrapper prints the URL, process ID, stop command, and evidence packet path. Use `-KillExistingPortProcess` only when you intentionally want to stop the process currently listening on that port.
+The wrapper prints the URL, process ID, stop command, evidence packet path, and
+evidence ZIP path. Use `-KillExistingPortProcess` only when you intentionally
+want to stop the process currently listening on that port.
 
 ## Screenshot Support
 
@@ -99,7 +104,15 @@ Do not add CI requirements for screenshot capture. Visual comparison screenshots
 
 ## Uploading For Review
 
-Upload or summarize the whole timestamped folder under `data/processed/ui-evidence/`, not individual screenshots. At minimum, include:
+Upload or summarize the sibling ZIP created by the capture command, or the whole
+timestamped folder under `data/processed/ui-evidence/`, not individual
+screenshots. The point is to review the actual rendered UI, including labels,
+links, buttons, screenshots, page text, and HTML, so exact tester instructions
+can be written from what the site actually shows.
+
+Evidence is not useful if no one reviews it. At minimum, include:
+
+Upload or summarize the whole timestamped folder if you do not use the ZIP.
 
 - `manifest.json`
 - `route-status.csv`
@@ -111,7 +124,14 @@ Upload or summarize the whole timestamped folder under `data/processed/ui-eviden
 
 Generated evidence is ignored locally and should be reviewed before sharing. Do not share packets that contain unexpected private values, raw source narrative, cookies, provider claims, tokens, private URLs, stack traces, connection strings, or server-specific private paths.
 
-When the hosted tester-readiness verifier is run with `-IncludeCapture`, it packages the generated timestamped evidence folder into a sibling ZIP and prints both paths. The ZIP is a local review artifact only. It is not a product packet, not an audit export, not a legal report, not a final export, not a certified report, not production monitoring, and not a source-completeness proof. If the verifier printed a sibling evidence ZIP path, that ZIP can be shared as a convenience copy of the same local review artifact after the packet is reviewed for private values.
+The capture command creates a sibling ZIP for every successful run and prints
+both paths. When the hosted tester-readiness verifier is run with
+`-IncludeCapture`, it also packages the generated timestamped evidence folder
+into a sibling ZIP and prints both paths. The ZIP is a local review artifact
+only. It is not a product packet, not an audit export, not a legal report, not a final export, not a certified report, not production monitoring, and not a source-completeness proof. After the packet is reviewed for private values, the
+ZIP can be uploaded to ChatGPT or shared as a convenience copy of the same local
+review artifact. Do not commit generated evidence folders or ZIP packets unless
+a specific repository workflow explicitly says to do so.
 
 ## What It Does Not Prove
 
