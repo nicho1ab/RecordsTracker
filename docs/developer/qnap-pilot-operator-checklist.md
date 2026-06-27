@@ -23,6 +23,46 @@ before inviting testers. Use `scripts/build-qnap-pilot-evidence-packet.ps1` only
 as optional local operator convenience after separate readiness evidence and
 decisions are understood.
 
+## Command Boundary Quick Map
+
+Use this map before copying any command:
+
+| Lane | Who runs it | Examples | Boundary |
+|---|---|---|---|
+| Local PowerShell | Developer or Codex when the current task allows local validation | `.\scripts\docs.ps1`, `git diff --check`, `python scripts\check_no_secrets.py`, placeholder-only verifier checks | Must not contact QNAP, print secrets, create generated evidence for commit, or change deployment state. |
+| Human SSH session | Human operator only | `scp`, `tar`, `docker compose`, `docker compose cp`, `pg_dump`, `pg_restore`, QNAP `.env` editing, Cloudflare connector commands | Run outside Codex in a standalone terminal. Keep passwords, hostnames, `.env` values, and private paths out of repo docs and chat. |
+| Not for Codex | Not run by Codex in normal repo work | SSH to QNAP, QNAP Docker commands, Cloudflare setup, tester invitations, retrieval enablement, imports, reset/reload, deployment host changes | Stop unless a later task explicitly authorizes that exact action. |
+
+To avoid repeated password prompts, use operator-managed SSH keys or an
+operator-controlled SSH agent configured outside the repository. Do not commit
+private keys, SSH config containing private hosts, passwords, tokens, copied
+`.env` values, or QNAP host aliases. Password prompts belong only in the
+operator's standalone terminal, not in Codex chat, issues, docs, screenshots,
+or generated evidence.
+
+Before any human-operated QNAP step, run local readiness checks from the
+repository checkout:
+
+```powershell
+.\scripts\docs.ps1
+git diff --check
+python scripts\check_no_secrets.py
+```
+
+When a real host `.env` is not available locally, start with the placeholder
+verifier without Docker or QNAP contact:
+
+```powershell
+.\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env.example -SkipComposeConfig -SkipDockerCheck
+```
+
+Stop before touching QNAP if these checks fail, if the working tree contains
+secrets or generated evidence, if the operator has not assigned PostgreSQL and
+raw artifact backup ownership, if the access-method decision is missing before
+any tester-facing route, or if the next action would enable retrieval, run an
+import, perform reset/reload, configure Cloudflare, invite testers, or expose
+external services without explicit current-task approval.
+
 ## 1. Pilot Purpose And Scope
 
 - Confirm this is a public-interest hobby project for early ylc.org tester
