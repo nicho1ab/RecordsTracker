@@ -2,6 +2,13 @@
 
 You are assisting with a governed public-data ingestion and extraction project.
 
+## Agent precedence
+
+These Copilot-oriented PR, check, merge, and cleanup automation instructions do
+not override `AGENTS.md` or `docs/developer/codex-workflow.md` when the acting
+agent is Codex. Codex must follow the stricter local Codex boundaries unless the
+current task explicitly authorizes the exact GitHub action.
+
 ## Required context files
 
 Before making changes, read and follow:

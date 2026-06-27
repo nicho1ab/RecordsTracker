@@ -36,6 +36,12 @@ Do not enable these for normal RecordsTracker work unless explicitly required by
 - Automatic PR merge/delete-branch workflows.
 - Access to `.env`, deployment secrets, private keys, cookies, or tokens.
 
+Codex must not run `gh` automation that pushes branches, creates or updates pull
+requests, merges pull requests, deletes branches, or changes repository state
+unless the current task explicitly authorizes that exact GitHub action. Copilot-
+oriented handoff or automation guidance does not override this local Codex
+boundary.
+
 ## Safe first tasks
 
 Good early Codex tasks:
