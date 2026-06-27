@@ -532,6 +532,16 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Open the suggested complaint first" in normalized_html
     assert "check source traceability and source-confidence cues on detail" in normalized_html
     assert "cautious reviewer-created notes/status or feedback" in normalized_html
+    assert "Do this next" in html
+    assert "Start with the suggested next record for this facility/date queue" in (
+        normalized_html
+    )
+    assert "On detail, check source traceability and source-confidence cues" in (
+        normalized_html
+    )
+    assert "Save a reviewer-created note or status only if it helps" in normalized_html
+    assert "Return to this same queue, submit the same request again" in normalized_html
+    assert "not an assignment, record claim, persisted queue state" in normalized_html
     assert "Table view and queue guidance" in html
     assert "First-run queue steps" in html
     assert "Read the queue progress and triage summaries" in html

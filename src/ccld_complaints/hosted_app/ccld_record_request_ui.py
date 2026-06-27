@@ -1198,6 +1198,7 @@ def _render_matched_result(
         <section aria-labelledby="review-queue-heading">
             <h2 id="review-queue-heading">CCLD review queue</h2>
             <p>Open the suggested complaint first, then check source traceability and source-confidence cues on detail before adding cautious reviewer-created notes/status or feedback.</p>
+            {_render_queue_do_this_next_panel(request, decision_queue_items)}
             {_render_queue_progress_summary(decision_queue_items)}
             {_render_queue_triage_summary(request, decision_queue_items)}
             {_render_queue_filter_form(request)}
@@ -2720,6 +2721,25 @@ def _render_queue_first_run_steps() -> str:
                 <li>Copy the single manual feedback checklist for both queue and detail
                 observations.</li>
             </ol>
+        </section>"""
+
+
+def _render_queue_do_this_next_panel(
+        request: CcldRecordRequest,
+        items: tuple[CcldRequestQueueItem, ...],
+) -> str:
+        next_item = _next_queue_item(items)
+        next_record_markup = _next_record_markup(next_item, request)
+        return f"""<section class="summary-card" aria-labelledby="queue-do-this-next-heading">
+            <h3 id="queue-do-this-next-heading">Do this next</h3>
+            <p>Start with the suggested next record for this facility/date queue.</p>
+            <ol>
+                <li>{next_record_markup}</li>
+                <li>On detail, check source traceability and source-confidence cues before relying on source-derived values.</li>
+                <li>Save a reviewer-created note or status only if it helps explain what you checked or move the queue forward.</li>
+                <li>Return to this same queue, submit the same request again if cues need refreshing, then continue with the next suggested record.</li>
+            </ol>
+            <p>This is local/test navigation help, not an assignment, record claim, persisted queue state, or workflow-engine state.</p>
         </section>"""
 
 
