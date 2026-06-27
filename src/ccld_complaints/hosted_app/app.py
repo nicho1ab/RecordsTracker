@@ -1168,11 +1168,22 @@ def route_response(
                 "CCLD request, feedback, retrieval, and import actions require "
                 "an authenticated tester or operator in this runtime mode.",
             )
+        # In live/postgres mode, pass the source-derived facility reference to the request
+        # page so it never falls back to the tiny fixture with synthetic facility data.
+        request_facility_reference = None
+        if (
+            method == "GET"
+            and active_page_data_mode != FIXTURE_DEMO_PAGE_DATA_MODE
+            and active_ccld_context is not None
+            and parsed_path in {CCLD_UI_PREFIX, CCLD_RECORD_REQUEST_PATH}
+        ):
+            request_facility_reference = _facility_reference_from_context(active_ccld_context)
         return route_ccld_record_request_ui_response(
             path,
             active_ccld_context,
             method=method,
             request_body=request_body,
+            facility_reference=request_facility_reference,
         )
     if parsed_path.startswith(REVIEWER_UI_PREFIX):
         active_reviewer_ui_context = _default_reviewer_context_for_mode(

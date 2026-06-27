@@ -1048,3 +1048,28 @@ def test_tester_facing_pages_do_not_expose_developer_wording() -> None:
         or "loaded source-derived records" in retrieve_html
     ), "retrieve page must describe source-derived records in tester-safe language"
 
+
+def test_live_mode_facility_lookup_not_configured_shows_safe_fallback_messaging() -> None:
+    """When no real facility reference is available in live mode, the facility lookup page
+    must clearly state directory lookup is not configured and not expose synthetic data.
+    """
+    from ccld_complaints.hosted_app.ccld_facility_lookup import (
+        no_reference_facility_source,
+        render_ccld_facility_lookup_page,
+    )
+
+    html = render_ccld_facility_lookup_page(reference_source=no_reference_facility_source())
+    normalized_html = " ".join(html.split()).lower()
+
+    assert "Facility directory lookup is not configured" in html
+    assert "Enter a known CCLD facility/license number" in html
+    assert "Open request form" in html
+    # Synthetic fixture names must not appear
+    assert "Synthetic Orchard" not in html
+    assert "Synthetic Valley" not in html
+    # No JS combobox with empty data
+    assert "facility-reference-json" not in html
+    # Does not use fixture/mock/scaffold wording for live users
+    assert "scaffold" not in normalized_html
+    assert "mock" not in normalized_html
+

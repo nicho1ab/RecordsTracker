@@ -235,6 +235,7 @@ def route_ccld_record_request_ui_response(
     *,
     method: str = "GET",
     request_body: bytes | None = None,
+    facility_reference: CcldFacilityReferenceSource | None = None,
 ) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
     if parsed_url.path not in {
@@ -291,7 +292,7 @@ def route_ccld_record_request_ui_response(
                     has_prefilled_facility=bool(selected_facility_number),
                 ),
                 lookup_facility_name=_optional_lookup_facility_name(query_values),
-                reference_source=load_active_ccld_facility_reference(),
+                reference_source=facility_reference or load_active_ccld_facility_reference(),
             ),
         )
     if method == "POST":
@@ -4071,6 +4072,16 @@ def _render_request_context_confirmation(
 
 
 def _reference_limitation_text(source: CcldFacilityReferenceSource) -> str:
+    if source.source_kind == "no_reference":
+        return (
+            "Facility directory lookup is not configured for this hosted environment. "
+            "Enter a known CCLD facility/license number to continue."
+        )
+    if source.source_kind == "postgres_source_derived" and not source.records:
+        return (
+            "Facility directory lookup is not configured for this hosted environment. "
+            "Enter a known CCLD facility/license number to continue."
+        )
     if source.source_kind == "tiny_fixture_fallback" or len(source.records) <= 2:
         return "Limited reference list: suggestions may not include every CCLD facility."
     return ""

@@ -440,6 +440,42 @@ def render_ccld_facility_lookup_page(
         reference_source=reference_source,
     )
     limited_note = _limited_reference_note(reference_source)
+    lookup_unavailable = _is_lookup_unavailable(reference_source)
+    if lookup_unavailable:
+        hero_value = (
+            "Facility directory lookup is not configured for this hosted environment. "
+            "Enter a known CCLD facility/license number to continue. "
+            "Directory lookup is optional and does not affect controlled complaint retrieval."
+        )
+        primary_action_section = f"""    <section class="workflow-panel" aria-labelledby="facility-manual-entry-primary-heading">
+      <h2 id="facility-manual-entry-primary-heading">Enter a facility/license number directly</h2>
+      <p>Facility directory lookup is not configured. Enter a known CCLD facility/license number on the request form to retrieve complaint records.</p>
+      <p>Directory lookup unavailability does not imply any facility has no complaints, visits, citations, or records. Complaint records are retrieved separately from the live CCLD public source.</p>
+      <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Open request form</a></p>
+    </section>"""
+        lookup_section_label = "Facility directory search (not configured)"
+        lookup_section_intro = f"""    <section class="quiet-section" aria-labelledby="facility-start-guidance-heading">
+      <h2 id="facility-start-guidance-heading">{_escape(lookup_section_label)}</h2>
+      <p>Facility directory lookup is not configured for this hosted environment. Use the request form to enter a known facility/license number directly.</p>
+      <p>Lookup rows are public facility-directory data. Complaint records are retrieved separately, and directory rows are not complaint coverage, not source-completeness proof, not license-validity proof, and not legal or facility-wide conclusions.</p>
+    </section>"""
+    else:
+        hero_value = (
+            "Start review by finding the CCLD facility/license number in the preloaded facility directory, "
+            "then carry that selected facility into the request page to choose a complaint date range."
+        )
+        primary_action_section = ""
+        lookup_section_intro = f"""    <section class="quiet-section" aria-labelledby="facility-start-guidance-heading">
+      <h2 id="facility-start-guidance-heading">Lookup or manual entry?</h2>
+      <p>Use facility lookup when you know a facility name, city, county, ZIP, facility type, program type, or status code but not the exact facility/license number. Use manual entry when you already know the digit facility/license number.</p>
+      <p>Lookup rows are public facility-directory data for facility lookup assistance. Complaint records are retrieved separately, and directory rows are not complaint coverage, not source-completeness proof, not license-validity proof, and not legal or facility-wide conclusions.</p>
+            <p>Try a preloaded facility-directory example: <a href="{_escape(_facility_hub_href(PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER))}">open facility review hub for known loaded facility {PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER}</a>.</p>
+    </section>"""
+    manual_entry_section = "" if lookup_unavailable else f"""    <details class="technical-details">
+      <summary id="manual-entry-heading">Enter a facility/license number directly</summary>
+      <p>If you already know the CCLD facility/license number, type it on the request form.</p>
+      <p><a class="button-quiet" href="{CCLD_RECORD_REQUEST_PATH}">Open request form</a></p>
+    </details>"""
     return _page(
         title="Find CCLD facility",
         heading="Find a facility",
@@ -447,15 +483,11 @@ def render_ccld_facility_lookup_page(
       <div>
         <p class="launch-kicker">Facility intake</p>
         <h2 id="facility-lookup-scope-heading">Find a facility</h2>
-        <p class="launch-value">Start review by finding the CCLD facility/license number in the preloaded facility directory, then carry that selected facility into the request page to choose a complaint date range.</p>
+        <p class="launch-value">{_escape(hero_value)}</p>
       </div>
     </section>
-    <section class="quiet-section" aria-labelledby="facility-start-guidance-heading">
-      <h2 id="facility-start-guidance-heading">Lookup or manual entry?</h2>
-      <p>Use facility lookup when you know a facility name, city, county, ZIP, facility type, program type, or status code but not the exact facility/license number. Use manual entry when you already know the digit facility/license number.</p>
-      <p>Lookup rows are public facility-directory data for facility lookup assistance. Complaint records are retrieved separately, and directory rows are not complaint coverage, not source-completeness proof, not license-validity proof, and not legal or facility-wide conclusions.</p>
-            <p>Try a preloaded facility-directory example: <a href="{_escape(_facility_hub_href(PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER))}">open facility review hub for known loaded facility {PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER}</a>.</p>
-    </section>
+{primary_action_section}
+{lookup_section_intro}
     {_render_facility_combobox_section(reference_source, query, limited_note)}
     {_render_lookup_results(result)}
         <section class="quiet-section" aria-labelledby="facility-priority-link-heading">
@@ -468,11 +500,7 @@ def render_ccld_facility_lookup_page(
             </details>
         </section>
     {_render_reference_details_section(reference_source)}
-    <details class="technical-details">
-      <summary id="manual-entry-heading">Enter a facility/license number directly</summary>
-      <p>If you already know the CCLD facility/license number, type it on the request form.</p>
-      <p><a class="button-quiet" href="{CCLD_RECORD_REQUEST_PATH}">Open request form</a></p>
-    </details>""",
+{manual_entry_section}""",
     )
 
 
@@ -1096,6 +1124,57 @@ def _tiny_fixture_reference(
     )
 
 
+def _no_reference_source(
+    *,
+    warnings: tuple[str, ...] = (),
+) -> CcldFacilityReferenceSource:
+    """Return a reference source indicating no directory is configured for live mode."""
+    default_warnings = (
+        "Facility directory lookup is not configured for this hosted environment. "
+        "Enter a known CCLD facility/license number to continue. "
+        "Directory lookup is optional and does not affect controlled complaint retrieval.",
+    )
+    return CcldFacilityReferenceSource(
+        source_kind="no_reference",
+        label="Facility directory lookup not configured",
+        path_label="",
+        records=(),
+        warnings=warnings if warnings else default_warnings,
+    )
+
+
+def no_reference_facility_source() -> CcldFacilityReferenceSource:
+    """Return a facility reference source indicating no directory is configured.
+
+    Use in live/postgres mode when no real facility reference CSV is available
+    and synthetic fixture facility data must not appear in the UI.
+    """
+    return _no_reference_source()
+
+
+def load_active_ccld_facility_reference_live_safe(
+    *,
+    configured_path: str | None = None,
+) -> CcldFacilityReferenceSource:
+    """Load the active facility reference; return no_reference instead of tiny fixture fallback.
+
+    Use in live/postgres mode where synthetic fixture facility data must not appear.
+    When a real reference CSV is configured or available, that CSV is used as normal.
+    When no real reference is available, returns no_reference instead of the tiny fixture.
+    """
+    source = load_active_ccld_facility_reference(configured_path=configured_path)
+    if source.source_kind == "tiny_fixture_fallback":
+        return _no_reference_source()
+    return source
+
+
+def _is_lookup_unavailable(source: CcldFacilityReferenceSource) -> bool:
+    """True when no real facility directory data is loaded (no live suggestions available)."""
+    return source.source_kind == "no_reference" or (
+        source.source_kind == "postgres_source_derived" and not source.records
+    )
+
+
 def _record_matches_query(
     record: CcldFacilityLookupRecord,
     query_tokens: tuple[str, ...],
@@ -1143,6 +1222,8 @@ def _render_facility_combobox_section(
     current_query: str,
     limited_note: str,
 ) -> str:
+    if _is_lookup_unavailable(reference_source):
+        return _render_facility_combobox_section_unavailable(current_query, limited_note)
     json_data = _build_facility_json_data(reference_source)
     limited_note_markup = (
         f'<p class="helper-text limited-note">{_escape(limited_note)}</p>'
@@ -1169,6 +1250,38 @@ def _render_facility_combobox_section(
 {selected_card}
             <script type="application/json" id="facility-reference-json">{json_data}</script>
             <script>{_FACILITY_COMBOBOX_JS}</script>
+    </section>"""
+
+
+def _render_facility_combobox_section_unavailable(
+    current_query: str,
+    limited_note: str,
+) -> str:
+    """Render the facility search section when no real directory data is configured.
+
+    Does not embed JS combobox suggestions. Shows a plain search form with a
+    clear notice that directory lookup is not configured.
+    """
+    limited_note_markup = (
+        f'<p class="helper-text limited-note">{_escape(limited_note)}</p>'
+        if limited_note
+        else ""
+    )
+    return f"""    <section class="workflow-panel" aria-labelledby="facility-combobox-heading">
+            <label for="facility-search-input">Search facility directory (not configured)</label>
+            <p id="facility-search-hint" class="helper-text">Facility directory lookup is not configured for this hosted environment. Enter a known CCLD facility/license number on the request form instead. Directory lookup is optional and does not affect controlled complaint retrieval.</p>
+            <form action="{CCLD_FACILITY_LOOKUP_PATH}" method="get" class="facility-search-form">
+                <div>
+                    <input id="facility-search-input" name="q" type="search" autocomplete="off"
+                        placeholder="Facility name or number"
+                        aria-describedby="facility-search-hint"
+                        value="{_escape(current_query)}">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="button-secondary">Search facility directory</button>
+                </div>
+            </form>
+{limited_note_markup}
     </section>"""
 
 
@@ -1710,6 +1823,8 @@ def _display_joined_parts(values: tuple[str, ...]) -> str:
 
 def _user_facing_source_label(source: CcldFacilityReferenceSource) -> str:
     """Return a clean, user-facing label for the reference source (no internal paths/jargon)."""
+    if source.source_kind == "no_reference":
+        return "Facility directory lookup not configured"
     if source.source_kind == "tiny_fixture_fallback":
         return "Limited reference list"
     return "Facility reference list"
@@ -1717,6 +1832,16 @@ def _user_facing_source_label(source: CcldFacilityReferenceSource) -> str:
 
 def _limited_reference_note(source: CcldFacilityReferenceSource) -> str:
     """Return a concise limited-reference note when only the tiny fallback is loaded."""
+    if source.source_kind == "no_reference":
+        return (
+            "Facility directory lookup is not configured for this hosted environment. "
+            "Enter a known CCLD facility/license number to continue."
+        )
+    if source.source_kind == "postgres_source_derived" and not source.records:
+        return (
+            "Facility directory lookup is not configured for this hosted environment. "
+            "Enter a known CCLD facility/license number to continue."
+        )
     if source.source_kind == "tiny_fixture_fallback" or len(source.records) <= 2:
         return "Limited reference list: suggestions may not include every CCLD facility."
     return ""
