@@ -207,14 +207,65 @@ function Find-ScreenshotTool {
     return $null
 }
 
+function Join-NativeArgument {
+    param([string]$Value)
+    if ($Value -notmatch '[\s"]') { return $Value }
+    return '"' + $Value.Replace('"', '\"') + '"'
+}
+
+function Invoke-NativeCaptureCommand {
+    param([string]$Command, [string[]]$Arguments, [int]$Timeout)
+    $stdoutPath = [System.IO.Path]::GetTempFileName()
+    $stderrPath = [System.IO.Path]::GetTempFileName()
+    try {
+        # Edge and Chrome can write normal "bytes written to file" messages to
+        # stderr. Capture native output as text so successful screenshots do not
+        # become PowerShell NativeCommandError failures under Stop preference.
+        $argumentList = @($Arguments | ForEach-Object { Join-NativeArgument -Value ([string]$_) })
+        $process = Start-Process -FilePath $Command -ArgumentList $argumentList -NoNewWindow -PassThru -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+        if (-not $process.WaitForExit($Timeout * 1000)) {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            $output = "native screenshot command timed out after $Timeout seconds"
+            return [pscustomobject]@{ ExitCode = 124; Output = $output }
+        }
+        $stdout = if (Test-Path -LiteralPath $stdoutPath) { Get-Content -LiteralPath $stdoutPath -Raw -ErrorAction SilentlyContinue } else { "" }
+        $stderr = if (Test-Path -LiteralPath $stderrPath) { Get-Content -LiteralPath $stderrPath -Raw -ErrorAction SilentlyContinue } else { "" }
+        $output = @($stdout, $stderr) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        $output = $output -join "`n"
+        $exitCode = $process.ExitCode
+        return [pscustomobject]@{ ExitCode = [int]$exitCode; Output = $output }
+    }
+    catch {
+        return [pscustomobject]@{ ExitCode = 1; Output = $_.Exception.Message }
+    }
+    finally {
+        Remove-Item -LiteralPath $stdoutPath, $stderrPath -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Invoke-RouteScreenshot {
     param([object]$Tool, [string]$Url, [string]$ScreenshotPath)
     if ($null -eq $Tool) { return "screenshot tool unavailable" }
     if ($Tool.Name -like "playwright*") { $arguments = @("screenshot", "--full-page", "--viewport-size=${ViewportWidth},${ViewportHeight}", $Url, $ScreenshotPath) }
     else { $arguments = @("--headless=new", "--disable-gpu", "--hide-scrollbars", "--window-size=$ViewportWidth,$ViewportHeight", "--screenshot=$ScreenshotPath", $Url) }
-    $output = & $Tool.Command @arguments 2>&1 | Out-String
-    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $ScreenshotPath)) { return "screenshot failed with $($Tool.Name): $($output.Trim())" }
+    $screenshotTimeoutSeconds = [Math]::Max(30, [int]$TimeoutSeconds)
+    $result = Invoke-NativeCaptureCommand -Command $Tool.Command -Arguments $arguments -Timeout $screenshotTimeoutSeconds
+    if ($result.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $ScreenshotPath)) { return "screenshot failed with $($Tool.Name) exit code $($result.ExitCode): $($result.Output.Trim())" }
     return ""
+}
+
+function Test-HtmlScreenshotCandidate {
+    param([hashtable]$Route, [string]$Html)
+    if ($Route.Path -match "(?i)\.(csv|json|txt)(\?|$)") { return $false }
+    return ($Html -match "(?is)<!doctype\s+html|<html\b|<body\b")
+}
+
+function Get-EvidenceFileCount {
+    param([string]$Path, [string]$Filter = "*")
+    if (-not (Test-Path -LiteralPath $Path)) { return 0 }
+    return @(
+        Get-ChildItem -LiteralPath $Path -Filter $Filter -File -Recurse -ErrorAction SilentlyContinue
+    ).Count
 }
 
 function Add-AssertionResult {
@@ -321,6 +372,7 @@ try {
     $packetName = "$timestamp-$Mode"
     $outputRoot = Join-Path $PWD $OutputDir
     $packetDir = Join-Path $outputRoot $packetName
+    $zipPath = Join-Path $outputRoot "$packetName.zip"
     $htmlDir = Join-Path $packetDir "html"
     $textDir = Join-Path $packetDir "text"
     $screenshotDir = Join-Path $packetDir "screenshots"
@@ -376,7 +428,7 @@ try {
             $textFile = Join-Path $textDir "$($Route.Label).txt"
             Set-Content -LiteralPath $textFile -Value $plainText -Encoding UTF8
             $textPath = ConvertTo-RelativeEvidencePath -Path $textFile -Root $packetDir
-            if ($IncludeScreenshots -and $null -ne $screenshotTool -and $response.StatusCode -gt 0) {
+            if ($IncludeScreenshots -and $null -ne $screenshotTool -and $response.StatusCode -gt 0 -and (Test-HtmlScreenshotCandidate -Route $Route -Html $safeHtml)) {
                 $shotFile = Join-Path $screenshotDir "$($Route.Label).png"
                 $shotError = Invoke-RouteScreenshot -Tool $screenshotTool -Url $url -ScreenshotPath $shotFile
                 if ($shotError) { $script:screenshotWarnings += "$($Route.Name): $shotError" }
@@ -516,11 +568,25 @@ Review these files first:
 HTML files are sanitized route captures from GET requests only. Text files are
 plain-text summaries derived from those HTML captures. Screenshots are included
 only when a local screenshot tool is available.
+
+The generated folder and sibling ZIP are for local review or upload to ChatGPT
+so testing instructions can be written from the actual rendered UI labels,
+links, buttons, and page text. Review the packet before sharing it. Do not
+commit generated evidence or ZIP packets unless a specific repository workflow
+explicitly says to do so.
 "@
     Set-Content -LiteralPath (Join-Path $packetDir "README.txt") -Value $readmeText -Encoding UTF8
 
     $routeFailures = @($routeResults | Where-Object { $_.statusCode -eq 0 -or $_.statusCode -ge 400 -or $_.failure })
     $assertionFailures = @($assertions | Where-Object { $_.status -eq "FAIL" })
+    $screenshotFailures = @($screenshotWarnings | Where-Object { $_ -match "screenshot failed" })
+    $outputCounts = [ordered]@{
+        screenshots   = Get-EvidenceFileCount -Path $screenshotDir -Filter "*.png"
+        html          = Get-EvidenceFileCount -Path $htmlDir -Filter "*.html"
+        text          = Get-EvidenceFileCount -Path $textDir -Filter "*.txt"
+        diagnostics   = Get-EvidenceFileCount -Path $diagnosticsDir
+        accessibility = Get-EvidenceFileCount -Path $accessibilityDir
+    }
     $manifest = [ordered]@{
         generatedAt            = (Get-Date).ToUniversalTime().ToString("o")
         mode                   = $Mode
@@ -537,24 +603,32 @@ only when a local screenshot tool is available.
         screenshotsCaptured    = [bool](@($routeResults | Where-Object { $_.screenshotPath }).Count -gt 0)
         screenshotsFullPage    = [bool]($screenshotTool -and $screenshotTool.FullPage)
         screenshotWarnings     = $screenshotWarnings
+        screenshotFailures     = $screenshotFailures
         captureToolUsed        = if ($screenshotTool) { $screenshotTool.Name } else { "http-get-html-text-only" }
         git                    = [ordered]@{ branch = $gitBranch; commit = $gitCommit; workingTreeClean = [bool]$workingTreeClean; warning = if ($workingTreeClean) { "" } else { "Working tree was not clean when evidence was captured." } }
-        output                 = [ordered]@{ packetDirectory = ConvertTo-RelativeEvidencePath -Path $packetDir -Root $PWD; manifest = "manifest.json"; routeStatusCsv = "route-status.csv"; routeAssertionsCsv = "route-assertions.csv"; textMarkers = "route-text-markers.txt" }
+        output                 = [ordered]@{ packetDirectory = ConvertTo-RelativeEvidencePath -Path $packetDir -Root $PWD; zipPacket = ConvertTo-RelativeEvidencePath -Path $zipPath -Root $PWD; manifest = "manifest.json"; routeStatusCsv = "route-status.csv"; routeAssertionsCsv = "route-assertions.csv"; textMarkers = "route-text-markers.txt"; counts = $outputCounts }
         boundaryStatement      = $boundaryStatement
         safety                 = [ordered]@{ getOnly = $true; formsSubmitted = $false; retrievalSubmitted = $false; reviewerStateMutated = $false; importsOrReloadsRun = $false; productionAuthRequired = $false; responseHeadersCaptured = $false; cookiesCaptured = $false; environmentValuesCaptured = $false }
     }
     Set-Content -LiteralPath (Join-Path $packetDir "manifest.json") -Value ($manifest | ConvertTo-Json -Depth 8) -Encoding UTF8
 
-    if (($routeFailures.Count -gt 0 -or $assertionFailures.Count -gt 0) -and -not $AllowUnavailable) {
+    if (($routeFailures.Count -gt 0 -or $assertionFailures.Count -gt 0 -or $screenshotFailures.Count -gt 0) -and -not $AllowUnavailable) {
         Write-Host "Evidence packet path: $packetDir"
         Write-Host "EVIDENCE_PACKET_PATH=$packetDir"
-        Stop-CaptureFail "Evidence capture completed with route or assertion failures. Use -AllowUnavailable to keep packets for unavailable routes."
+        Stop-CaptureFail "Evidence capture completed with route, assertion, or screenshot failures. Use -AllowUnavailable to keep packets for unavailable routes."
     }
+
+    if (Test-Path -LiteralPath $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
+    Compress-Archive -LiteralPath $packetDir -DestinationPath $zipPath -Force
 
     Write-Host "Evidence packet path: $packetDir"
     Write-Host "EVIDENCE_PACKET_PATH=$packetDir"
+    Write-Host "Evidence zip path: $zipPath"
+    Write-Host "EVIDENCE_ZIP_PATH=$zipPath"
+    Write-Host "Output counts: screenshots=$($outputCounts.screenshots); html=$($outputCounts.html); text=$($outputCounts.text); diagnostics=$($outputCounts.diagnostics); accessibility=$($outputCounts.accessibility)"
     Write-Host "manifest.json: $(Join-Path $packetDir 'manifest.json')"
     Write-Host "route-status.csv: $(Join-Path $packetDir 'route-status.csv')"
+    Write-Host "Generated evidence and ZIP packets are local review/upload artifacts; do not commit them unless a specific repository workflow explicitly says to do so."
     if ($screenshotTool) { Write-Host "Screenshot support: $($screenshotTool.Name) (full page: $($screenshotTool.FullPage))" }
     else { Write-Host "Screenshot support: skipped; install Playwright locally or run with a local Edge/Chrome headless CLI to enable screenshots." }
     exit 0
