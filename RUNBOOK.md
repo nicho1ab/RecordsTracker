@@ -43,6 +43,54 @@ The first production-like runtime target is QNAP Docker with PostgreSQL in
 Docker. The configuration remains portable and must not hard-code QNAP paths in
 application code.
 
+### QNAP operator command boundaries
+
+Keep the QNAP workflow split across three lanes:
+
+1. **Local PowerShell on the workstation:** Codex may help improve and run
+   repository-local validation such as `.\scripts\docs.ps1`,
+   `git diff --check`, `python scripts\check_no_secrets.py`, and local
+   no-secret helper scripts when the current task allows it.
+2. **Standalone SSH session owned by the human operator:** QNAP host commands,
+   including `docker compose`, `scp`, `tar`, `mkdir`, `chown`, `pg_dump`,
+   `pg_restore`, Cloudflare connector setup, and QNAP `.env` edits, are copied
+   and run by the operator outside Codex.
+3. **Commands intentionally not run by Codex:** Codex must not SSH to QNAP, run
+   QNAP Docker commands, edit QNAP `.env`, configure Cloudflare, invite testers,
+   enable retrieval jobs, run imports, perform reset/reload actions, or touch
+   deployment hosts unless a later task explicitly authorizes that exact action.
+
+To avoid repeated password prompts, prefer operator-managed SSH keys or an
+operator-controlled SSH agent configured outside this repository. Do not commit
+private keys, passwords, host aliases, SSH config, tokens, private hostnames,
+or copied `.env` values. If a command still prompts for a password, the human
+operator should enter it only in their standalone terminal, never in Codex
+chat, docs, issues, logs, or generated evidence.
+
+Before any human-operated QNAP step, verify local readiness from the repository
+checkout:
+
+```powershell
+.\scripts\docs.ps1
+git diff --check
+python scripts\check_no_secrets.py
+```
+
+For QNAP environment-template checks that do not contact QNAP, start with the
+placeholder file and skip Docker checks when a real host `.env` is not
+available locally:
+
+```powershell
+.\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env.example -SkipComposeConfig -SkipDockerCheck
+```
+
+Stop before touching QNAP if local validation fails, a real secret or private
+host value appears in the working tree, `.env` would need to be committed or
+printed, the access-method decision is missing for any tester-facing route, the
+operator cannot explain backup/restore ownership, or the next step would enable
+retrieval, import, reset/reload, Cloudflare, tester invitations, or external
+services without an explicit current-task approval.
+
 On the Docker host, use this QNAP pilot setup path:
 
 Start with the ordered readiness index in
