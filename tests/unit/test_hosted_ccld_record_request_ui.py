@@ -861,7 +861,14 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     normalized_html = " ".join(html.split())
     assert "Confirm the facility/date context" in normalized_html
     assert "No loaded source-derived records matched this request context" in html
-    assert "not a complaint-coverage determination" in normalized_html.casefold()
+    assert "not proof that no public complaints exist" in normalized_html
+    assert "Try one next step" in html
+    assert "Check or change the facility/license number" in html
+    assert "Adjust the complaint date range" in html
+    assert "Use loaded local/test records by changing the date range" in normalized_html
+    assert "Skip retrieval/job troubleshooting for this result" in normalized_html
+    assert "no controlled retrieval job was submitted" in normalized_html
+    assert "Report confusion with the facility/license number, date range" in normalized_html
     assert "How to interpret this no-match result" in html
     assert "currently loaded source-derived rows only" in normalized_html
     assert "did not submit a controlled retrieval job for this request" in normalized_html
@@ -973,7 +980,15 @@ def test_ccld_record_request_empty_hosted_records_offers_local_validated_load() 
     assert "No loaded complaint records match this request yet" in html
     assert "Load local validated CCLD records" in html
     assert "How to interpret this no-match result" in html
-    assert "currently loaded source-derived rows only" in " ".join(html.split())
+    normalized_html = " ".join(html.split())
+    assert "currently loaded source-derived rows only" in normalized_html
+    assert "not proof that no public complaints exist" in normalized_html
+    assert "Try one next step" in html
+    assert "Check or change the facility/license number" in html
+    assert "Adjust the complaint date range" in html
+    assert "Load or refresh local/test records" in html
+    assert "Skip retrieval/job troubleshooting for this result" in normalized_html
+    assert "Report confusion with the facility/license number, date range" in normalized_html
     assert "no controlled retrieval job was submitted for this request" in html
     assert "no</dd>" in html
     assert "Change the facility/date criteria" in " ".join(html.split())
