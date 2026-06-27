@@ -72,6 +72,9 @@ Initial facility:
 
 - Do not build a production custom application before production-discovery ADRs
 	and architecture decisions define the product and stack direction.
+	This constraint does not prohibit the approved local/test hosted scaffold and
+	reviewer workflow work described in the ADRs and roadmap, and it does not
+	authorize production deployment.
 - Do not add new Datasette-primary UX as a substitute for production-discovery
 	requirements work.
 - Avoid project dependencies on optional paid platform features.
