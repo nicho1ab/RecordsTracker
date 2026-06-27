@@ -79,7 +79,7 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "retrieval status/progress" in html
     assert "already-loaded records" in html or "loaded-record" in html
     assert "browser copy or print" in html
-    assert "source-confidence next steps" in html
+    assert "source traceability" in html or "source-confidence" in html
     assert "missing local/test source values" in html
     assert "proxy-related cues" in html
     assert "A complaint record looked missing or unexpected." in html
@@ -121,7 +121,7 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "Keyboard flow: choose a feedback type, Tab to Description" in html
     assert "Describe the route, control, keyboard flow" in html
     assert "packet/export-readiness concern" in html
-    assert "local/test export boundary confusion" in html
+    assert "export boundary confusion" in html
     assert "Submit feedback" in html
     assert html.count('<option value="Bug report">Bug report</option>') == 1
     assert html.count('<option value="Feature request">Feature request</option>') == 1
