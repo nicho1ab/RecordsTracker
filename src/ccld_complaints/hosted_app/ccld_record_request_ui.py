@@ -558,7 +558,7 @@ def _render_request_form(
                     <p class="launch-value">Choose a facility and date range, then open the complaint queue.</p>
             <p><a class="helper-link" href="{CCLD_HELP_PATH}#limitations">Records are review aids. See Help for limitations.</a></p>
         </section>
-                <details class="quiet-section orientation-details">
+                <details class="quiet-section orientation-details" open>
                     <summary id="request-start-orientation-heading">Start review request context</summary>
                     <p>Facility/license number identifies the CCLD facility. Date range narrows the loaded complaint records.</p>
                     <p>When records are found, open the recommended record and return to the same queue when done.</p>
