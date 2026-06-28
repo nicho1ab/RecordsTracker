@@ -775,7 +775,7 @@ def render_app_shell() -> str:
             </div>
             <div class="attorney-hero-actions" aria-label="Primary actions">
                 <a class="button button-large" href="{CCLD_FACILITY_LOOKUP_PATH}">Start with facility lookup</a>
-                <a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Enter a facility/license number directly</a>
+                <a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Enter a license number</a>
                 <a class="button button-secondary" href="/reviewer">Open review queue</a>
             </div>
         </section>
