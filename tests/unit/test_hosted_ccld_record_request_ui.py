@@ -117,6 +117,7 @@ def test_ccld_record_request_page_renders_from_default_context(
     assert html.count('<span class="badge badge-demo">Fixture/mock demo</span>') == 1
     assert '<span class="badge badge-demo">Fixture/mock demo</span>' in mode_panel
     assert "Keyboard flow: move from facility selection to date range" not in html
+    assert '<details class="quiet-section orientation-details" open>' in html
     assert "Start review request context" in html
     assert "Facility/license number identifies the CCLD facility" in html
     assert "Date range narrows the loaded complaint records" in html
