@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, cast
 
@@ -60,6 +61,45 @@ from ccld_complaints.hosted_app.seeded_import import (
 
 FIXTURE = Path("tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json")
 TEST_SCOPE = LOCAL_REVIEWER_UI_SCOPE
+
+
+class _ButtonClassParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self._button_stack: list[dict[str, str]] = []
+        self._button_text: list[str] = []
+        self.buttons: list[tuple[str, str]] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "button":
+            self._button_stack.append({key: value or "" for key, value in attrs})
+            self._button_text.append("")
+
+    def handle_data(self, data: str) -> None:
+        if self._button_stack:
+            self._button_text[-1] += data
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "button" and self._button_stack:
+            attrs = self._button_stack.pop()
+            text = " ".join(self._button_text.pop().split())
+            self.buttons.append((text, attrs.get("class", "")))
+
+
+def _button_classes(html: str, text: str) -> list[str]:
+    parser = _ButtonClassParser()
+    parser.feed(html)
+    return [classes for button_text, classes in parser.buttons if button_text == text]
+
+
+def _assert_primary_button(html: str, text: str) -> None:
+    matching_classes = _button_classes(html, text)
+    assert matching_classes
+    for classes in matching_classes:
+        class_names = set(classes.split())
+        assert "secondary" not in class_names
+        assert "button-secondary" not in class_names
+        assert "button secondary" not in classes
 
 
 @pytest.fixture(autouse=True)
@@ -528,6 +568,11 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert 'for="facility-search-input"' in html
     assert "facility-suggestion-list" in html
     assert "Search CCLD facilities" in html
+    _assert_primary_button(html, "Search CCLD facilities")
+    assert any(
+        "button-secondary" in classes
+        for classes in _button_classes(html, "Change selected facility")
+    )
     assert "Search by name, license number, city, county, ZIP" in (
         normalized_html
     )
@@ -995,6 +1040,7 @@ def test_ccld_facility_review_priority_page_empty_state_is_safe() -> None:
     assert "Facility review priority" in html
     assert "uploaded public summary fields" in html
     assert "review cue" in html
+    _assert_primary_button(html, "Apply review cue filter")
     assert "No facility review priority rows are available" in html
     assert "complaint records are requested/reviewed separately" in normalized_html
     assert "not a legal finding" in html
@@ -1228,6 +1274,7 @@ def test_ccld_facility_review_intelligence_dashboard_filters_sorts_and_links(
     assert content_type == "text/html; charset=utf-8"
     assert "Facility Review Intelligence Dashboard" in html
     assert "Where should reviewers spend time first?" in html
+    _assert_primary_button(html, "Apply intelligence filters")
     assert "transparent review-priority indicators" in normalized_html
     assert "Facilities with complaint activity" in html
     assert "Facilities with citation activity" in html
