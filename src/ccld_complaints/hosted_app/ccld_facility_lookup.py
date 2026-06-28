@@ -90,6 +90,7 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
   var nf=document.getElementById('facility-number-field');
   var of_=document.getElementById('facility-origin-field');
   var lf=document.getElementById('facility-name-field');
+  var sb=document.getElementById('facility-submit-btn');
   var sl=document.getElementById('facility-suggestion-list');
   var sc=document.getElementById('facility-selected-card');
   var de=document.getElementById('facility-reference-json');
@@ -109,6 +110,9 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
   si.setAttribute('aria-controls','facility-suggestion-list');
   sl.setAttribute('role','listbox');
   function norm(s){return(s||'').toLowerCase().replace(/\s+/g,' ').trim();}
+  function updateSubmitState(){
+    if(sb)sb.disabled=!si.value.trim();
+  }
   function match(f,toks){
         var h=norm([f.num,f.n,f.city,f.state,f.co,f.zip,f.t,f.p,f.cap,f.s].join(' '));
     return toks.every(function(t){return h.indexOf(t)!==-1;});
@@ -173,6 +177,7 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
     si.value='';
     if(of_)of_.value='manual_entry';
     if(lf)lf.value='';
+    updateSubmitState();
     si.focus();
   }
   function selFac(btn){
@@ -190,6 +195,7 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
     }else{
       si.value=f.n;
     }
+    updateSubmitState();
     setCard(f);
     si.focus();
   }
@@ -199,6 +205,7 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
       if(lf)lf.value='';
       if(sc)sc.setAttribute('hidden','');
     }
+    updateSubmitState();
     showSugs(this.value);
   });
   si.addEventListener('keydown',function(e){
@@ -226,6 +233,7 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
   });
   var cb=document.getElementById('facility-change-btn');
   if(cb)cb.addEventListener('click',clearSel);
+  updateSubmitState();
   document.addEventListener('click',function(e){if(!wrap.contains(e.target))hideSugs();});
 }());"""
 
