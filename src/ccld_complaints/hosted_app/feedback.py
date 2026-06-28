@@ -269,7 +269,7 @@ def render_feedback_page(
             <p class="launch-kicker">Tester support</p>
             <h2 id="feedback-purpose-heading">What issue should be reported?</h2>
             <p>Choose the feedback type and describe what blocked retrieval, retrieval status/progress, record review, wording, or keyboard flow.</p>
-            <p class="helper-text">Keyboard flow: choose a feedback type, Tab to Description, submit only safe details, and use the visible validation message if a required field is missing.</p>
+            <p class="helper-text">Choose a feedback type, describe only safe details, and use the visible validation message if a required field is missing.</p>
         </section>
         {_feedback_context_panel(handoff_context)}
         <div class="support-layout">

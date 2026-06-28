@@ -12,10 +12,10 @@ BOUNDARY_TEXT = (
   "CCLD-only public-record review workspace."
 )
 FOOTER_NOTE = (
-  "CCLD public portal remains the source of record. Source-derived records stay "
-  "separate from reviewer-created notes/status. This pilot does not prove source "
-  "coverage, legal findings, facility-wide conclusions, harm, abuse, neglect, "
-  "liability, or rights-deprivation."
+  "The public CCLD portal remains the source of record. Public records stay "
+  "separate from saved notes/status. This pilot does not prove source "
+  "coverage, legal findings, facility-wide conclusions, harm, abuse, "
+  "neglect, liability, or rights-deprivation."
 )
 
 PRIMARY_NAV_LINKS: tuple[tuple[str, str], ...] = (
@@ -94,7 +94,7 @@ DEFAULT_NEXT_ACTIONS: Mapping[str, str] = {
 MODE_BADGE_CLASSES = {
   "Live public CCLD": "badge badge-live",
   "Fixture/mock demo": "badge badge-demo",
-  "Live retrieval off": "badge badge-muted",
+  "Review aids only": "badge badge-muted",
 }
 
 
@@ -112,7 +112,7 @@ def render_page_shell(
     mode_label: str | None = None,
     step_id: str | None = None,
     next_action: str | None = None,
-    show_workflow_indicator: bool = True,
+    show_workflow_indicator: bool = False,
 ) -> str:
     runtime_mode = mode_label or _runtime_mode_label()
     links = _nav_links(extra_nav_links, active_path=active_path)
@@ -290,7 +290,7 @@ def _runtime_mode_label() -> str:
     return "Fixture/mock demo"
   if retrieval_enabled == "enabled" and raw_dir:
     return "Live public CCLD"
-  return "Live retrieval off"
+  return "Review aids only"
 
 
 SHARED_CSS = r"""
@@ -806,6 +806,12 @@ SHARED_CSS = r"""
       background: var(--warning-bg);
       border-color: var(--warning-line);
     }
+    .next-action-panel {
+      background: var(--surface-alt);
+      border-color: #8ab9b4;
+      border-left: 5px solid var(--accent);
+      box-shadow: var(--shadow-strong);
+    }
     .empty-state-card {
       background: #f8fafb;
       border-style: dashed;
@@ -912,6 +918,11 @@ SHARED_CSS = r"""
       display: grid;
       gap: 1rem;
       grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.75fr);
+    }
+    .detail-signal-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
     }
     .fact-grid {
       display: grid;

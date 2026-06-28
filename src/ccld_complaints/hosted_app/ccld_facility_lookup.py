@@ -1233,7 +1233,7 @@ def _render_facility_combobox_section(
     selected_card = _render_facility_selected_card_html(mode="facility")
     return f"""    <section class="workflow-panel" aria-labelledby="facility-combobox-heading" id="facility-selector-wrap" data-facility-mode="facility">
             <label for="facility-search-input">Facility</label>
-            <p id="facility-search-hint" class="helper-text">Search by name, license number, city, county, ZIP, facility type, program type, or status code. Keyboard flow: type a search, use arrow keys or Tab to review suggestions and actions, then use the selected facility link to continue to the request page.</p>
+            <p id="facility-search-hint" class="helper-text">Search by name, license number, city, county, ZIP, facility type, program type, or status code.</p>
             <form action="{CCLD_FACILITY_LOOKUP_PATH}" method="get" class="facility-search-form">
                 <div class="facility-combobox-outer" id="facility-combobox-outer">
                     <input id="facility-search-input" name="q" type="search" autocomplete="off"
