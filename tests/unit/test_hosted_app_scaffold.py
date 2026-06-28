@@ -121,7 +121,7 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "Attorney-focused public CCLD complaint/facility record review" not in html
     assert "New to this tool?" not in html
     assert "See Help for the review workflow" not in html
-    assert "The public CCLD portal remains the source of record" in html
+    assert "The public CCLD portal remains the source of record" not in html
     assert "Open review queue" in html
     assert "Feedback" in html
     assert "Developer/operator commands" not in html
@@ -134,7 +134,7 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "Health check</a>" not in html
     assert "Review boundary" not in html
     assert "No non-CCLD sources" not in normalized_html
-    assert "Public records stay separate from saved notes/status" in html
+    assert "Public records stay separate from saved notes/status" not in html
     assert "/reviewer" in html
     assert "sr-only" in html
     assert "Keyboard flow: use the skip link, top navigation, and step links" not in html
@@ -198,12 +198,44 @@ def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None
         assert "Health check</a>" not in html
         assert "Auth status</a>" not in html
         assert "Help" in html
-        assert "The public CCLD portal remains the source of record" in normalized_html
-        assert "does not prove source coverage" in normalized_html
-        assert "legal findings" in normalized_html
+        if path != "/ccld/help":
+            assert "The public CCLD portal remains the source of record" not in normalized_html
+            assert "This pilot does not prove source coverage" not in normalized_html
+            assert "facility-wide conclusions, harm, abuse" not in normalized_html
+            assert "neglect, liability, or rights-deprivation" not in normalized_html
         assert "button:focus-visible" in html
         assert ".sr-only" in html
         assert "@media (max-width: 760px)" in html
+
+
+def test_representative_hosted_pages_do_not_render_shared_footer_disclaimer() -> None:
+    auth_config = load_hosted_auth_runtime_config(
+        environ={
+            "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
+            "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
+        }
+    )
+    removed_footer_phrases = (
+        "The public CCLD portal remains the source of record",
+        "Public records stay separate from saved notes/status",
+        "This pilot does not prove source coverage",
+        "facility-wide conclusions, harm, abuse",
+        "neglect, liability, or rights-deprivation",
+    )
+
+    for path in ("/", "/ccld/records/request", "/reviewer", "/feedback"):
+        status, _content_type, body = route_response(
+            path,
+            auth_runtime_config=auth_config,
+            page_data_mode="fixture-demo",
+        )
+        html = body.decode("utf-8")
+        normalized_html = " ".join(html.split())
+
+        assert status == 200
+        assert '<footer class="site-footer">' not in html
+        for phrase in removed_footer_phrases:
+            assert phrase not in normalized_html
 
 
 def test_final_product_shell_uses_compact_unboxed_workflow_design() -> None:
@@ -1076,7 +1108,7 @@ def test_tester_facing_pages_do_not_expose_developer_wording() -> None:
     # Positive check: tester-facing pages use review-aid language instead of developer jargon.
     retrieve_html = pages["retrieve"][2].decode("utf-8")
     assert "Records are review aids. See Help for limitations." in retrieve_html
-    assert "Public records stay separate from saved notes/status." in retrieve_html
+    assert "Public records stay separate from saved notes/status." not in retrieve_html
     assert (
         "Source-derived records stay separate from reviewer-created notes/status"
         not in retrieve_html
