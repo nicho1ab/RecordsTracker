@@ -962,6 +962,17 @@ SHARED_CSS = r"""
       gap: 1rem;
       grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
     }
+    .facility-intelligence-filter-grid {
+      display: grid;
+      gap: 0.85rem 1rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .facility-intelligence-filter-grid p {
+      margin: 0;
+    }
+    .facility-intelligence-filter-grid select {
+      width: 100%;
+    }
     .form-actions {
       align-items: center;
       display: flex;
@@ -1233,6 +1244,9 @@ SHARED_CSS = r"""
       table {
         display: block;
         overflow-x: auto;
+      }
+      .facility-intelligence-filter-grid {
+        grid-template-columns: minmax(0, 1fr);
       }
     }
 """.strip()
