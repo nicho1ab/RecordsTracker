@@ -797,22 +797,24 @@ def _render_intelligence_filters(
     return f"""    <section class="workflow-panel" aria-labelledby="facility-intelligence-filters-heading">
       <h2 id="facility-intelligence-filters-heading">Filter and sort review cues</h2>
       <form action="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}" method="get">
-        <p>
-          <label for="intelligence-cue-filter">Indicator</label>
-          <select id="intelligence-cue-filter" name="cue">{cue_markup}</select>
-        </p>
-        <p>
-          <label for="intelligence-county-filter">County</label>
-          <select id="intelligence-county-filter" name="county">{county_markup}</select>
-        </p>
-        <p>
-          <label for="intelligence-status-filter">Facility status</label>
-          <select id="intelligence-status-filter" name="status">{status_markup}</select>
-        </p>
-        <p>
-          <label for="intelligence-sort">Sort by</label>
-          <select id="intelligence-sort" name="sort">{sort_markup}</select>
-        </p>
+        <div class="facility-intelligence-filter-grid">
+          <p>
+            <label for="intelligence-cue-filter">Indicator</label>
+            <select id="intelligence-cue-filter" name="cue">{cue_markup}</select>
+          </p>
+          <p>
+            <label for="intelligence-county-filter">County</label>
+            <select id="intelligence-county-filter" name="county">{county_markup}</select>
+          </p>
+          <p>
+            <label for="intelligence-status-filter">Facility status</label>
+            <select id="intelligence-status-filter" name="status">{status_markup}</select>
+          </p>
+          <p>
+            <label for="intelligence-sort">Sort by</label>
+            <select id="intelligence-sort" name="sort">{sort_markup}</select>
+          </p>
+        </div>
         <p class="helper-text">Filters use existing public summary fields. They are transparent grouping controls, not scoring, assignment, claiming, source verification, complaint coverage, or legal findings.</p>
         <p><button type="submit">Apply intelligence filters</button></p>
       </form>
