@@ -1418,7 +1418,7 @@ def _render_no_match_recovery_panel(
     return f"""<section class="hero-card recovery-panel" aria-labelledby="no-local-records-heading">
       <p class="stage-kicker">Recovery</p>
       <h2 id="no-local-records-heading">{_escape(headline)}</h2>
-            <p>No loaded source-derived records matched this request context. This is a local/test data state for the current facility/date context, not proof that no public complaints exist.</p>
+            <p>No loaded source-derived records matched this request context. This is a data state for the current facility/date context, not proof that no public complaints exist.</p>
       <dl>
         <dt>What happened</dt>
         <dd>{_escape(reason_bucket)}</dd>
@@ -1461,10 +1461,10 @@ def _render_no_match_next_step_choices(
         "retrieval job was submitted."
     )
     local_data_choice = (
-        "Use loaded local/test records by changing the date range if those rows are the "
+        "Use loaded records by changing the date range if those rows are the "
         "records you meant to review."
         if local_count > 0
-        else "Load or refresh local/test records when the local validated CCLD load action is available."
+        else "Load or refresh records when the local validated CCLD load action is available."
     )
     return f"""      <section aria-labelledby="no-match-next-steps-heading">
         <h3 id="no-match-next-steps-heading">Try one next step</h3>
@@ -3005,7 +3005,7 @@ def _render_queue_continue_guidance(
         return f"""<section aria-labelledby="queue-continue-heading">
             <h3 id="queue-continue-heading">Continue review guidance</h3>
             <p>The suggested next record is derived from this facility/date request context and
-            existing reviewer-created note/status cues. It is local/test navigation help, not a
+            existing reviewer-created note/status cues. It is navigation help, not a
             persisted queue assignment, automatic record claim, official workflow state, or public-
             source conclusion.</p>
             <p>After reviewing detail or saving a note/status, return to this same CCLD request
@@ -3029,7 +3029,7 @@ def _render_filtered_empty_recovery(
             <h3 id="filtered-empty-recovery-heading">Filtered queue recovery</h3>
             <p>No records match this active reviewer-created status filter for the same
             facility/date request. This filtered-empty result does not mean records are missing,
-            deleted, absent from local/test data, absent from public source material, or complete
+            deleted, absent from data, absent from public source material, or complete
             in the public CCLD portal.</p>
             <dl>
                 <dt>Active request context</dt>
@@ -3305,7 +3305,7 @@ def _render_feedback_checklist_section(
       <p id="feedback-checklist-help">This app does not save or send this feedback.
             Select the checklist text, copy it, paste it into the agreed external feedback
             channel, and add any tester observations before sending. The checklist is generated
-            from this CCLD-only local/test request and queue state.</p>
+            from this CCLD-only request and queue state.</p>
         <p>Use this same manual checklist for queue observations, reviewer-detail
         observations, note/status confirmation behavior, return-to-queue refresh behavior,
         filtered-empty recovery, no-match/load guidance, and confusing wording or labels.</p>
@@ -3341,7 +3341,7 @@ def _feedback_checklist_text(
         "",
         "Request and lookup context",
         "- Source scope: CCLD public complaint records only",
-        "- Local/test app: yes",
+        "- RecordsTracker app: yes",
         "- Facility lookup used or skipped: "
         f"{_request_origin_label(request.request_context_origin)}",
         f"- Selected lookup facility name: {_display_value(request.lookup_facility_name)}",
@@ -3416,7 +3416,7 @@ def _feedback_checklist_text(
         "reviewer-created state, audit rows, import batches, or operational metadata.",
         "- Browser pages only trigger controlled server-side retrieval when the retrieval "
         "action is explicitly submitted.",
-        "- Missing local/test rows are not proof that CCLD has no public records.",
+        "- Missing rows are not proof that CCLD has no public records.",
         "- The CCLD public portal remains the source of record.",
     ]
     return "\n".join(lines)
@@ -3521,7 +3521,7 @@ def _render_queue_filter_summary(
                 <dt>Blocked</dt>
                 <dd>{counts['blocked']}</dd>
             </dl>
-            <p>These counts come from the loaded local/test queue plus existing reviewer-created
+            <p>These counts come from the loaded queue plus existing reviewer-created
             note/status reads. They are not source-derived facts, not record assignment, not
             record claiming, not persisted queue state, and not a source-completeness proof.</p>
         </section>"""
@@ -3876,7 +3876,7 @@ def _loaded_context_text(item: CcldRequestQueueItem) -> str:
 
 def _load_status_text(result: CcldImportReloadResult | None) -> str:
     if result is None:
-        return "These records are already staged in the local/test hosted seeded corpus."
+        return "These records are already staged in the hosted seeded corpus."
     if result.import_executed:
         return "These records were loaded or refreshed from local validated CCLD output."
     return "No local validated CCLD load was executed for this request."

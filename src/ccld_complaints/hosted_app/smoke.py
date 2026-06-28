@@ -381,7 +381,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold reviewer detail did not return usable guidance.")
     if (
         packet_preview_status != 200
-        or b"Local/test packet preparation preview" not in packet_preview_body
+        or b"Packet preparation preview" not in packet_preview_body
         or b"Traceability readiness" not in packet_preview_body
         or b"Reviewer-created state summary" not in packet_preview_body
         or b"Included complaint records" not in packet_preview_body
