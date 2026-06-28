@@ -86,10 +86,38 @@ class _ButtonClassParser(HTMLParser):
             self.buttons.append((text, attrs.get("class", "")))
 
 
+class _DefinitionTermParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self._in_dt = False
+        self._current_text = ""
+        self.terms: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "dt":
+            self._in_dt = True
+            self._current_text = ""
+
+    def handle_data(self, data: str) -> None:
+        if self._in_dt:
+            self._current_text += data
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "dt" and self._in_dt:
+            self.terms.append(" ".join(self._current_text.split()))
+            self._in_dt = False
+
+
 def _button_classes(html: str, text: str) -> list[str]:
     parser = _ButtonClassParser()
     parser.feed(html)
     return [classes for button_text, classes in parser.buttons if button_text == text]
+
+
+def _definition_terms(html: str) -> list[str]:
+    parser = _DefinitionTermParser()
+    parser.feed(html)
+    return parser.terms
 
 
 def _assert_primary_button(html: str, text: str) -> None:
@@ -663,18 +691,24 @@ def test_ccld_facility_review_hub_renders_safe_directory_context() -> None:
     assert "Facility-directory context" in html
     assert "Synthetic Orchard Child Care" in html
     assert "Facility-directory details" in html
-    assert "Facility number directory field" in html
+    terms = _definition_terms(html)
+    directory_label_start = terms.index("Facility number")
+    assert terms[directory_label_start : directory_label_start + 8] == [
+        "Facility number",
+        "Name",
+        "Program type",
+        "Facility type",
+        "City / State / ZIP",
+        "County",
+        "Capacity",
+        "Status code",
+    ]
+    assert "directory field" not in html
     assert "900000001" in html
-    assert "Program type directory field" in html
-    assert "Facility type directory field" in html
     assert "Child Care Center" in html
-    assert "City/state/ZIP directory field" in html
     assert "Sample City, CA 90001" in html
-    assert "County directory field" in html
     assert "Los Angeles" in html
-    assert "Capacity directory field" in html
     assert "24" in html
-    assert "Status code directory field" in html
     assert "Licensed" in html
     assert "Complaint records are requested and reviewed separately" in html
     assert "public CCLD portal remains the source of record" in html
