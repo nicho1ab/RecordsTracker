@@ -105,11 +105,15 @@ def test_health_response_marks_scaffold_only() -> None:
 def test_app_shell_labels_placeholder_boundaries() -> None:
     html = render_app_shell()
     normalized_html = " ".join(html.split())
+    parser = parse_html_structure(html)
 
     assert "Skip to main CCLD review content" in html
     assert '<main id="main-content" tabindex="-1">' in html
     assert "Attorney public-record review workspace." in html
     assert "CCLD RecordsTracker" in html
+    assert parser.tags.count("h1") == 1
+    assert parser.text_for("h1") == "Start a Facility Complaint Review"
+    assert parser.text_for("h1") != "CCLD RecordsTracker"
     assert "Review aids only" in html
     assert "Start a facility complaint review" in html
     assert "Start with facility lookup" in html
