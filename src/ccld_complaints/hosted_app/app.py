@@ -760,7 +760,7 @@ def render_related_facility_context(record: SampleSourceRecord) -> str:
 def render_app_shell() -> str:
         return render_page_shell(
                 title=APP_NAME,
-                                heading="CCLD RecordsTracker",
+                                heading="Start a Facility Complaint Review",
                 skip_label="Skip to main CCLD review content",
                 nav_label="CCLD records review navigation",
                 eyebrow="Attorney public-record review workspace.",
