@@ -1310,6 +1310,41 @@ def test_ccld_request_page_facility_selector_renders() -> None:
     assert_no_secret_html(html)
 
 
+def test_ccld_request_page_manual_facility_button_disabled_by_default() -> None:
+    """Manual facility submit starts disabled until a non-empty value is entered."""
+    status, content_type, body = route_response(
+        CCLD_RECORD_REQUEST_PATH,
+        auth_runtime_config=_local_dev_auth_config(),
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert (
+        '<button type="submit" id="facility-submit-btn" disabled>'
+        "Use this facility/license number</button>"
+    ) in html
+    assert html.count("Use this facility/license number") == 1
+    assert_no_secret_html(html)
+
+
+def test_ccld_request_page_manual_facility_button_uses_trimmed_input_state() -> None:
+    """Whitespace-only manual input must keep the submit button disabled."""
+    status, content_type, body = route_response(
+        CCLD_RECORD_REQUEST_PATH,
+        auth_runtime_config=_local_dev_auth_config(),
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert "function updateSubmitState()" in html
+    assert "if(sb)sb.disabled=!si.value.trim();" in html
+    assert "si.addEventListener('input',function()" in html
+    assert "updateSubmitState();" in html
+    assert_no_secret_html(html)
+
+
 def test_ccld_request_page_facility_selector_has_concise_placeholder() -> None:
     """Request page facility input placeholder must be short and not clipped."""
     status, content_type, body = route_response(
