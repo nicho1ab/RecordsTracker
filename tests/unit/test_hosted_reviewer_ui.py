@@ -129,7 +129,7 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert "Filter or search queue" in html
     assert "Keyboard flow: search filters this queue" not in html
     assert "Show table view" in html
-    assert "Public records stay separate from saved notes/status" in normalized_html
+    assert "Public records stay separate from saved notes/status" not in normalized_html
     assert "Worklist" in html
     assert "Queue status summary" not in html
     assert "Original CCLD source link saved" in html
@@ -152,10 +152,7 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert "32-CR-20220407124448" in html
     assert COMPLAINT_KEY in html
     assert "raw SHA-256" in html
-    assert (
-        "Public records stay separate from saved notes/status"
-        in normalized_html
-    )
+    assert "This pilot does not prove source coverage" not in normalized_html
     assert "This runtime does not add production sign-in" in normalized_html
     assert "Open record 32-CR-20220407124448" in html
     assert_no_secret_html(html)

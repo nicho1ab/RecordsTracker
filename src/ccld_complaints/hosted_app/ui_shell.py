@@ -11,13 +11,6 @@ APP_TITLE = "CCLD RecordsTracker"
 BOUNDARY_TEXT = (
   "CCLD-only public-record review workspace."
 )
-FOOTER_NOTE = (
-  "The public CCLD portal remains the source of record. Public records stay "
-  "separate from saved notes/status. This pilot does not prove source "
-  "coverage, legal findings, facility-wide conclusions, harm, abuse, "
-  "neglect, liability, or rights-deprivation."
-)
-
 PRIMARY_NAV_LINKS: tuple[tuple[str, str], ...] = (
     ("Home", "/"),
   ("Facility", "/ccld/facilities"),
@@ -163,11 +156,6 @@ def render_page_shell(
 {main}
     </div>
   </main>
-  <footer class="site-footer">
-    <div class="shell">
-      <p>{html.escape(FOOTER_NOTE)}</p>
-    </div>
-  </footer>
 </body>
 </html>
 """
