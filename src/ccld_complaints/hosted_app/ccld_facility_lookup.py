@@ -466,9 +466,7 @@ def render_ccld_facility_lookup_page(
         )
         primary_action_section = ""
         lookup_section_intro = f"""    <section class="quiet-section" aria-labelledby="facility-start-guidance-heading">
-      <h2 id="facility-start-guidance-heading">Lookup or manual entry?</h2>
-      <p>Use facility lookup when you know a facility name, city, county, ZIP, facility type, program type, or status code but not the exact facility/license number. Use manual entry when you already know the digit facility/license number.</p>
-      <p>Lookup rows are public facility-directory data for facility lookup assistance. Complaint records are retrieved separately, and directory rows are not complaint coverage, not source-completeness proof, not license-validity proof, and not legal or facility-wide conclusions.</p>
+      <h2 id="facility-start-guidance-heading">Facility lookup start</h2>
             <p>Try a preloaded facility-directory example: <a href="{_escape(_facility_hub_href(PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER))}">open facility review hub for known loaded facility {PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER}</a>.</p>
     </section>"""
     manual_entry_section = "" if lookup_unavailable else f"""    <details class="technical-details">
@@ -1245,6 +1243,11 @@ def _render_facility_combobox_section(
                     <button type="submit">Search CCLD facilities</button>
                 </div>
             </form>
+            <details class="technical-details">
+                <summary>When to use lookup vs. manual entry</summary>
+                <p>Use facility lookup when you know a facility name, city, county, ZIP, facility type, program type, or status code but not the exact facility/license number. Use manual entry when you already know the digit facility/license number.</p>
+                <p>Lookup rows are public facility-directory data for facility lookup assistance. Complaint records are retrieved separately, and directory rows are not complaint coverage, not source-completeness proof, not license-validity proof, and not legal or facility-wide conclusions.</p>
+            </details>
 {limited_note_markup}
 {selected_card}
             <script type="application/json" id="facility-reference-json">{json_data}</script>
