@@ -68,6 +68,16 @@ TEST_SCOPE = LOCAL_REVIEWER_UI_SCOPE
 OTHER_SCOPE = HostedAccessScope("seeded_corpus", "different-seeded-corpus")
 COMPLAINT_KEY = "complaint:ccld:complaint:32-CR-20220407124448"
 
+
+def _assert_collapsed_disclosure(html: str, label: str) -> None:
+    summary = f"<summary>{label}</summary>"
+    summary_index = html.index(summary)
+    details_start = html.rfind("<details", 0, summary_index)
+    assert details_start != -1
+    details_tag = html[details_start : html.index(">", details_start) + 1]
+    assert " open" not in details_tag
+
+
 def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -254,6 +264,13 @@ def test_reviewer_ui_substantiated_triage_lists_cross_facility_matches() -> None
         "reset_reload_planning_metadata": 0,
     }
     assert "Cross-facility substantiated complaint triage" in html
+    _assert_collapsed_disclosure(
+        html,
+        "About this triage view and its limitations",
+    )
+    assert html.index("Loaded substantiated/equivalent complaint records") < html.index(
+        "About this triage view and its limitations"
+    )
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
     assert "SECOND FIXTURE FACILITY" in html
     assert "Complaint received: 2022-04-07" in html
@@ -292,6 +309,13 @@ def test_reviewer_ui_substantiated_triage_empty_state_is_cautious() -> None:
         "reset_reload_planning_metadata": 0,
     }
     assert "No loaded substantiated/equivalent complaint records matched." in html
+    _assert_collapsed_disclosure(
+        html,
+        "About this triage view and its limitations",
+    )
+    assert html.index(
+        "No loaded substantiated/equivalent complaint records matched."
+    ) < html.index("About this triage view and its limitations")
     assert (
         "Empty state means no currently loaded records matched, not that no "
         "substantiated reports exist in the public source."
