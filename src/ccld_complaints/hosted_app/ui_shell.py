@@ -23,7 +23,7 @@ PRIMARY_NAV_LINKS: tuple[tuple[str, str], ...] = (
   ("Facility", "/ccld/facilities"),
   ("Retrieve", "/ccld/records/request"),
   ("Review", "/reviewer"),
-  ("Jobs", "/ccld/retrieval/jobs"),
+  ("Job Status", "/ccld/retrieval/jobs"),
     ("Feedback", "/feedback"),
   ("Help", "/ccld/help"),
 )
