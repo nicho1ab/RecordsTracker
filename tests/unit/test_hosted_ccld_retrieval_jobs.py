@@ -1086,7 +1086,8 @@ def test_retrieval_job_history_empty_state_renders_for_allowed_local_dev_actor()
     assert "facility/date context" in html
     assert "imported-record counts" in html
     assert "Submit or change retrieval request" in html
-    assert "Report confusing retrieval progress" in html
+    assert "Report an issue with this job" in html
+    assert "Report confusing retrieval progress" not in html
     assert "workflow_area=retrieval-job-history" in html
     assert "retrieval_context=no-jobs-yet" in html
     assert "retrieval_status=no_jobs_yet" in html
@@ -1194,7 +1195,8 @@ def test_retrieval_job_history_renders_recent_jobs_safely_without_mutation(
     assert "Rate limited" in html
     assert "Wait for an active retrieval job to finish" in normalized
     assert "raw artifact preserved; source artifact identity available; raw paths not shown" in html
-    assert "Report confusing retrieval progress" in html
+    assert "Report an issue with this job" in html
+    assert "Report confusing retrieval progress" not in html
     assert "workflow_area=retrieval-job-history" in html
     assert "retrieval_context=controlled-job-history" in html
     assert "retrieval_job_id=completed-job" in html
