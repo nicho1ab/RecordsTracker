@@ -110,13 +110,17 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert '<main id="main-content" tabindex="-1">' in html
     assert "Attorney public-record review workspace." in html
     assert "CCLD RecordsTracker" in html
-    assert "Live retrieval off" in html
+    assert "Review aids only" in html
     assert "Start a facility complaint review" in html
     assert "Start with facility lookup" in html
     assert "Enter a facility/license number directly" in html
-    assert "Attorney-focused public CCLD complaint/facility record review" in html
-    assert "New to this tool?" in html
-    assert "See Help for the review workflow" in html
+    assert (
+        "Find a facility, enter a facility/license number, or open the current review queue."
+        in html
+    )
+    assert "Attorney-focused public CCLD complaint/facility record review" not in html
+    assert "New to this tool?" not in html
+    assert "See Help for the review workflow" not in html
     assert "The public CCLD portal remains the source of record" in html
     assert "Open review queue" in html
     assert "Feedback" in html
@@ -130,14 +134,14 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "Health check</a>" not in html
     assert "Review boundary" not in html
     assert "No non-CCLD sources" not in normalized_html
-    assert "Source-derived records stay separate from reviewer-created notes/status" in html
+    assert "Public records stay separate from saved notes/status" in html
     assert "/reviewer" in html
     assert "sr-only" in html
-    assert "Keyboard flow: use the skip link, top navigation, and step links" in html
-    assert "current step and next action are stated in text" in html
-    assert "Start facility complaint review." in html
-    assert "Select the facility/license number." in html
-    assert "Choose the complaint date range." in html
+    assert "Keyboard flow: use the skip link, top navigation, and step links" not in html
+    assert "current step and next action are stated in text" not in html
+    assert "Start facility complaint review." not in html
+    assert "Select the facility/license number." not in html
+    assert "Choose the complaint date range." not in html
 
 
 def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None:
@@ -174,17 +178,14 @@ def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None
         assert 'class="shell page-main"' in html
         assert "CCLD RecordsTracker" in html
         if path != "/ccld/help":
-            assert "Attorney workflow" in html
-            assert "Current step" in html
-            assert "Next:" in html
-            assert "Keyboard flow:" in html
-            assert "Dates" in html
-            assert "Results" in html
+            assert "Attorney workflow" not in html
+            assert "Current step" not in html
+            assert "Next:" not in html
+            assert "Keyboard flow:" not in html
         else:
             assert "Attorney workflow" not in html
             assert "Current step" not in html
-        if path not in {"/feedback", "/ccld/help"}:
-            assert "Future step" in html
+        assert "Future step" not in html
         assert "Facility" in html
         assert "Retrieve" in html
         assert "Review" in html
@@ -195,7 +196,7 @@ def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None
         assert "Health check</a>" not in html
         assert "Auth status</a>" not in html
         assert "Help" in html
-        assert "CCLD public portal remains the source of record" in normalized_html
+        assert "The public CCLD portal remains the source of record" in normalized_html
         assert "does not prove source coverage" in normalized_html
         assert "legal findings" in normalized_html
         assert "button:focus-visible" in html
@@ -1040,13 +1041,14 @@ def test_tester_facing_pages_do_not_expose_developer_wording() -> None:
                 f"{page_name}: forbidden phrase found in rendered HTML: {phrase!r}"
             )
 
-    # Positive check: tester-facing pages say "loaded source-derived records" or "preloaded"
+    # Positive check: tester-facing pages use review-aid language instead of developer jargon.
     retrieve_html = pages["retrieve"][2].decode("utf-8")
+    assert "Records are review aids. See Help for limitations." in retrieve_html
+    assert "Public records stay separate from saved notes/status." in retrieve_html
     assert (
-        "loaded source-derived complaint records" in retrieve_html
-        or "preloaded source-derived records" in retrieve_html
-        or "loaded source-derived records" in retrieve_html
-    ), "retrieve page must describe source-derived records in tester-safe language"
+        "Source-derived records stay separate from reviewer-created notes/status"
+        not in retrieve_html
+    )
 
 
 def test_live_mode_facility_lookup_not_configured_shows_safe_fallback_messaging() -> None:
@@ -1072,4 +1074,3 @@ def test_live_mode_facility_lookup_not_configured_shows_safe_fallback_messaging(
     # Does not use fixture/mock/scaffold wording for live users
     assert "scaffold" not in normalized_html
     assert "mock" not in normalized_html
-

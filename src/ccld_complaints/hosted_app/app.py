@@ -766,23 +766,18 @@ def render_app_shell() -> str:
                 eyebrow="Attorney public-record review workspace.",
                                 active_path="/",
                 step_id="start",
-                next_action="Start facility review",
                 extra_nav_links=(),
                                 main=f"""    <section id="start" class="hero-card attorney-hero" aria-labelledby="start-heading">
             <div>
-                <p class="launch-kicker">Attorney review workspace</p>
+                <p class="launch-kicker">Start here</p>
                 <h2 id="start-heading">Start a facility complaint review</h2>
-                <p class="launch-value">Attorney-focused public CCLD complaint/facility record review: select a facility, set a date range, load complaint records, work the review queue, open detail, prepare a packet draft, and send feedback when something is confusing.</p>
+                <p class="launch-value">Find a facility, enter a facility/license number, or open the current review queue.</p>
             </div>
             <div class="attorney-hero-actions" aria-label="Primary actions">
                 <a class="button button-large" href="{CCLD_FACILITY_LOOKUP_PATH}">Start with facility lookup</a>
                 <a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Enter a facility/license number directly</a>
                 <a class="button button-secondary" href="/reviewer">Open review queue</a>
             </div>
-        </section>
-        <section class="quiet-section" aria-labelledby="home-next-heading">
-            <h2 id="home-next-heading">New to this tool?</h2>
-            <p>Loaded records are review aids. The public CCLD portal remains the source of record. <a href="{CCLD_HELP_PATH}#workflow">See Help for the review workflow, limitations, and source traceability guidance.</a></p>
         </section>"""
         )
 
