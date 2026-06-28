@@ -6,8 +6,10 @@ import csv
 import html
 import json
 import os
+import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -1535,7 +1537,7 @@ def _render_facility_review_signals_section(
             <p>Signals are review cues only: not a legal finding, not source verification, not a complaint-coverage determination, and not a source-completeness proof; check source traceability before relying on summary fields.</p>
             <dl class="summary-list">
                 <dt>Source dataset label</dt>
-                <dd>{_escape(_display_tuple(summary.source_dataset_labels))}</dd>
+                <dd>{_render_source_dataset_labels(summary.source_dataset_labels)}</dd>
                 <dt>Facility type in uploaded summary</dt>
                 <dd>{_escape(_display_tuple(summary.facility_types))}</dd>
                 <dt>Status in uploaded summary</dt>
@@ -1866,6 +1868,31 @@ def _display_value(value: str) -> str:
 
 def _display_tuple(values: tuple[str, ...]) -> str:
     return "; ".join(values) if values else "not listed"
+
+
+def _render_source_dataset_labels(values: tuple[str, ...]) -> str:
+    if not values:
+        return "not listed"
+    return "; ".join(_render_source_dataset_label(value) for value in values)
+
+
+def _render_source_dataset_label(value: str) -> str:
+    loaded_date_text = _loaded_date_text_from_filename(value)
+    if not loaded_date_text:
+        return f"<code>{_escape(value)}</code>"
+    return f"<code>{_escape(value)}</code> {_escape(loaded_date_text)}"
+
+
+def _loaded_date_text_from_filename(filename: str) -> str:
+    match = re.search(r"(?<!\d)(\d{2})(\d{2})(\d{4})(?!\d)", filename)
+    if match is None:
+        return ""
+    month, day, year = (int(part) for part in match.groups())
+    try:
+        loaded_date = date(year, month, day)
+    except ValueError:
+        return ""
+    return f"(loaded {loaded_date:%B} {loaded_date.day}, {loaded_date:%Y})"
 
 
 def _display_joined_parts(values: tuple[str, ...]) -> str:
