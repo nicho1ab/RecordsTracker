@@ -189,7 +189,8 @@ def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None
         assert "Facility" in html
         assert "Retrieve" in html
         assert "Review" in html
-        assert "Jobs" in html
+        assert 'href="/ccld/retrieval/jobs">Job Status</a>' in html
+        assert 'href="/ccld/retrieval/jobs">Jobs</a>' not in html
         assert "Feedback" in html
         assert "Feedbac k" not in html
         assert "Commands</a>" not in html
@@ -846,7 +847,7 @@ def test_route_active_nav_highlights_correct_item() -> None:
         ("/ccld/records/request", "/ccld/records/request", "Retrieve"),
         ("/ccld/help", "/ccld/help", "Help"),
         ("/reviewer", "/reviewer", "Review"),
-        ("/ccld/retrieval/jobs", "/ccld/retrieval/jobs", "Jobs"),
+        ("/ccld/retrieval/jobs", "/ccld/retrieval/jobs", "Job Status"),
         ("/feedback", "/feedback", "Feedback"),
     )
     for path, expected_href, expected_label in route_active_specs:
@@ -896,14 +897,14 @@ def test_help_route_does_not_activate_retrieve_nav() -> None:
 
 
 def test_retrieval_job_detail_route_highlights_jobs_nav() -> None:
-    """Job detail routes (both found and not-found) must highlight Jobs in the top nav."""
+    """Job detail routes must highlight Job Status in the top nav."""
     auth_config = load_hosted_auth_runtime_config(
         environ={
             "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
             "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
         }
     )
-    # A missing job_id returns 404, but the nav should still show Jobs as active
+    # A missing job_id returns 404, but the nav should still show Job Status as active
     status, _content_type, body = route_response(
         "/ccld/retrieval/jobs/detail?job_id=test-missing-job",
         auth_runtime_config=auth_config,
@@ -911,9 +912,10 @@ def test_retrieval_job_detail_route_highlights_jobs_nav() -> None:
     )
     html = body.decode("utf-8")
 
-    # 404 for missing job, but the nav must still show Jobs as active (not Retrieve)
+    # 404 for missing job, but the nav must still show Job Status as active (not Retrieve)
     assert status == 404
-    assert 'aria-current="page" href="/ccld/retrieval/jobs">Jobs' in html
+    assert 'aria-current="page" href="/ccld/retrieval/jobs">Job Status' in html
+    assert 'aria-current="page" href="/ccld/retrieval/jobs">Jobs' not in html
     assert 'aria-current="page" href="/ccld/records/request">Retrieve' not in html
 
 
