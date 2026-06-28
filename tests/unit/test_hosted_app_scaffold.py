@@ -187,7 +187,8 @@ def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None
             assert "Current step" not in html
         assert "Future step" not in html
         assert "Facility" in html
-        assert "Retrieve" in html
+        assert 'href="/ccld/records/request">Request Records</a>' in html
+        assert 'href="/ccld/records/request">Retrieve</a>' not in html
         assert "Review" in html
         assert 'href="/ccld/retrieval/jobs">Job Status</a>' in html
         assert 'href="/ccld/retrieval/jobs">Jobs</a>' not in html
@@ -844,7 +845,7 @@ def test_route_active_nav_highlights_correct_item() -> None:
     route_active_specs = (
         ("/", "/", "Home"),
         ("/ccld/facilities", "/ccld/facilities", "Facility"),
-        ("/ccld/records/request", "/ccld/records/request", "Retrieve"),
+        ("/ccld/records/request", "/ccld/records/request", "Request Records"),
         ("/ccld/help", "/ccld/help", "Help"),
         ("/reviewer", "/reviewer", "Review"),
         ("/ccld/retrieval/jobs", "/ccld/retrieval/jobs", "Job Status"),
@@ -872,7 +873,7 @@ def test_route_active_nav_highlights_correct_item() -> None:
 
 
 def test_help_route_does_not_activate_retrieve_nav() -> None:
-    """/ccld/help must highlight Help, not Retrieve, in the top nav."""
+    """/ccld/help must highlight Help, not Request Records, in the top nav."""
     auth_config = load_hosted_auth_runtime_config(
         environ={
             "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
@@ -889,10 +890,15 @@ def test_help_route_does_not_activate_retrieve_nav() -> None:
     assert status == 200
     # Help must be active
     assert 'aria-current="page" href="/ccld/help">Help' in html
-    # Retrieve must NOT be active
+    # Request Records must NOT be active
+    assert 'aria-current="page" href="/ccld/records/request">Request Records' not in html
     assert 'aria-current="page" href="/ccld/records/request">Retrieve' not in html
-    # is-active class on Help link, not Retrieve link
+    # is-active class on Help link, not Request Records link
     assert 'class="is-active" aria-current="page" href="/ccld/help">Help' in html
+    assert (
+        'class="is-active" aria-current="page" href="/ccld/records/request">Request Records'
+        not in html
+    )
     assert 'class="is-active" aria-current="page" href="/ccld/records/request">Retrieve' not in html
 
 
@@ -912,10 +918,11 @@ def test_retrieval_job_detail_route_highlights_jobs_nav() -> None:
     )
     html = body.decode("utf-8")
 
-    # 404 for missing job, but the nav must still show Job Status as active (not Retrieve)
+    # 404 for missing job, but the nav must still show Job Status as active (not Request Records)
     assert status == 404
     assert 'aria-current="page" href="/ccld/retrieval/jobs">Job Status' in html
     assert 'aria-current="page" href="/ccld/retrieval/jobs">Jobs' not in html
+    assert 'aria-current="page" href="/ccld/records/request">Request Records' not in html
     assert 'aria-current="page" href="/ccld/records/request">Retrieve' not in html
 
 
@@ -936,6 +943,7 @@ def test_reviewer_detail_route_highlights_review_nav() -> None:
 
     assert status == 200
     assert 'aria-current="page" href="/reviewer">Review' in html
+    assert 'aria-current="page" href="/ccld/records/request">Request Records' not in html
     assert 'aria-current="page" href="/ccld/records/request">Retrieve' not in html
 
 

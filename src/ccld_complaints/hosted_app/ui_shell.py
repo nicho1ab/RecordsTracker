@@ -21,7 +21,7 @@ FOOTER_NOTE = (
 PRIMARY_NAV_LINKS: tuple[tuple[str, str], ...] = (
     ("Home", "/"),
   ("Facility", "/ccld/facilities"),
-  ("Retrieve", "/ccld/records/request"),
+  ("Request Records", "/ccld/records/request"),
   ("Review", "/reviewer"),
   ("Job Status", "/ccld/retrieval/jobs"),
     ("Feedback", "/feedback"),
