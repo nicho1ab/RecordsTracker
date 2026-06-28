@@ -108,6 +108,53 @@ class _DefinitionTermParser(HTMLParser):
             self._in_dt = False
 
 
+class _FacilityIntelligenceFilterGridParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self._grid_depth: int | None = None
+        self._in_grid_label = False
+        self._in_grid_field = False
+        self._current_label = ""
+        self.labels: list[str] = []
+        self.field_count = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attrs_dict = {key: value or "" for key, value in attrs}
+        classes = set(attrs_dict.get("class", "").split())
+        if (
+            self._grid_depth is None
+            and tag == "div"
+            and "facility-intelligence-filter-grid" in classes
+        ):
+            self._grid_depth = 1
+            return
+        if self._grid_depth is None:
+            return
+        self._grid_depth += 1
+        if tag == "p":
+            self._in_grid_field = True
+            self.field_count += 1
+        if tag == "label":
+            self._in_grid_label = True
+            self._current_label = ""
+
+    def handle_data(self, data: str) -> None:
+        if self._in_grid_label:
+            self._current_label += data
+
+    def handle_endtag(self, tag: str) -> None:
+        if self._grid_depth is None:
+            return
+        if tag == "label" and self._in_grid_label:
+            self.labels.append(" ".join(self._current_label.split()))
+            self._in_grid_label = False
+        if tag == "p" and self._in_grid_field:
+            self._in_grid_field = False
+        self._grid_depth -= 1
+        if self._grid_depth == 0:
+            self._grid_depth = None
+
+
 def _button_classes(html: str, text: str) -> list[str]:
     parser = _ButtonClassParser()
     parser.feed(html)
@@ -118,6 +165,12 @@ def _definition_terms(html: str) -> list[str]:
     parser = _DefinitionTermParser()
     parser.feed(html)
     return parser.terms
+
+
+def _facility_intelligence_filter_grid(html: str) -> _FacilityIntelligenceFilterGridParser:
+    parser = _FacilityIntelligenceFilterGridParser()
+    parser.feed(html)
+    return parser
 
 
 def _assert_primary_button(html: str, text: str) -> None:
@@ -1423,6 +1476,9 @@ def test_ccld_facility_review_intelligence_dashboard_filters_sorts_and_links(
     assert content_type == "text/html; charset=utf-8"
     assert "Facility Review Intelligence Dashboard" in html
     assert "Where should reviewers spend time first?" in html
+    filter_grid = _facility_intelligence_filter_grid(html)
+    assert filter_grid.labels == ["Indicator", "County", "Facility status", "Sort by"]
+    assert filter_grid.field_count == 4
     _assert_primary_button(html, "Apply intelligence filters")
     _assert_collapsed_disclosure(
         html,
