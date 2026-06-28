@@ -2046,7 +2046,7 @@ def _render_retrieval_job_history_page(
                         yet. The request page can still show already-loaded source-derived records if
                         they exist for the facility/date context.</p>
                     </div>
-                    <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Submit retrieval request</a></p>
+                    <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Go to request page</a></p>
                     <p><a href="{_escape(empty_feedback_href)}">Report an issue with this job</a></p>
                 </article>"""
     setup_text = (
