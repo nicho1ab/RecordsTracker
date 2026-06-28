@@ -769,6 +769,9 @@ def test_ccld_facility_review_hub_known_loaded_preloaded_example_renders(
     assert "434417302" in html
     assert "DAY CARE CENTER" in html
     assert "Santa Clara" in html
+    assert "Status code</dt>" in html
+    assert "<dd>3 (Licensed)</dd>" in html
+    assert "<dd>3</dd>" not in html
     assert "Complaint records are requested and reviewed separately" in html
     assert_no_secret_html(html)
 
