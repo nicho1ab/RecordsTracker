@@ -529,8 +529,6 @@ def _render_request_form(
     reference_source: CcldFacilityReferenceSource | None = None,
 ) -> str:
     active_reference_source = reference_source or load_active_ccld_facility_reference()
-    mode_label = _runtime_mode_label()
-    mode_class = _mode_badge_class(mode_label)
     has_facility = bool(selected_facility_number.strip())
     has_date_range = bool(selected_start_date.strip() and selected_end_date.strip())
     workflow_state = _render_request_workflow_state(
@@ -558,7 +556,7 @@ def _render_request_form(
                     <p class="launch-kicker">Start review</p>
                     <h2 id="request-hero-heading">Retrieve complaint records for a facility</h2>
                     <p class="launch-value">Choose a facility and date range, then open the complaint queue.</p>
-            <p><span class="{mode_class}">{mode_label}</span> <a class="helper-link" href="{CCLD_HELP_PATH}#limitations">Records are review aids. See Help for limitations.</a></p>
+            <p><a class="helper-link" href="{CCLD_HELP_PATH}#limitations">Records are review aids. See Help for limitations.</a></p>
         </section>
                 <details class="quiet-section orientation-details">
                     <summary id="request-start-orientation-heading">Start review request context</summary>
