@@ -848,11 +848,16 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "workflow_area=reviewer-detail" in html
     assert "source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448" in html
     assert "Describe+what+was+confusing+about+this+reviewer+detail+step" in html
-    assert "If a displayed value looks wrong or incomplete, check the source link first" in normalized_html
+    assert (
+        "If a displayed value looks wrong or incomplete, check the source link first"
+        in normalized_html
+    )
     assert "Why this record is flagged" in html
     assert "Optional note/status" in html
     assert "Original source" in html
-    assert html.index("Complaint overview") < html.index("Check this complaint, then return to the queue")
+    assert html.index("Complaint overview") < html.index(
+        "Check this complaint, then return to the queue"
+    )
     assert html.index("Check this complaint, then return to the queue") < html.index(
         "Why this record is flagged"
     )
@@ -1095,7 +1100,10 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Next safe action" in html
     assert "If a source-derived value looks wrong or incomplete" in html
     assert "check source traceability first" in normalized_html
-    assert "use a reviewer-created note to describe the possible correction concern" in normalized_html
+    assert (
+        "use a reviewer-created note to describe the possible correction concern"
+        in normalized_html
+    )
     assert "source URL, raw SHA-256 hash, raw artifact reference" in normalized_html
     assert "Use these fields when checking the public source" in html
     assert "Missing local fields do not prove that no public record exists" in html
@@ -1180,11 +1188,17 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert_no_correction_workflow_html(html)
     assert "Feedback for this record" in html
     assert "use the tester feedback checklist on the CCLD request queue" in normalized_html
-    assert "Include the identifiers below and what looked missing, confusing, or unexpected" in normalized_html
+    assert (
+        "Include the identifiers below and what looked missing, confusing, or unexpected"
+        in normalized_html
+    )
     assert "Mention the original source link status or field label" in normalized_html
     assert "Missing local fields do not prove that CCLD has no public record" in normalized_html
     assert "Notes and statuses are optional" in html
-    assert "Use feedback instead when you are unsure what the next step should be" in normalized_html
+    assert (
+        "Use feedback instead when you are unsure what the next step should be"
+        in normalized_html
+    )
     assert "Return request context" in html
     assert "facility/license number 157806098; date range not provided" in html
     assert "What to include in feedback" in html

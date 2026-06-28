@@ -540,12 +540,24 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
         normalized_html
     )
     assert "Add a note or status only if it helps" in normalized_html
-    assert "Return to this queue and refresh the same request if the queue needs updated cues" in normalized_html
+    assert (
+        "Return to this queue and refresh the same request if the queue needs updated cues"
+        in normalized_html
+    )
     assert "Table view and queue guidance" in html
     assert "Queue review steps" in html
-    assert "Check the original CCLD source link, dates, finding, and reason it was flagged" in normalized_html
-    assert "Return to this same queue and continue with the next suggested record" in normalized_html
-    assert "Use the feedback checklist only when the queue or detail page is confusing" in normalized_html
+    assert (
+        "Check the original CCLD source link, dates, finding, and reason it was flagged"
+        in normalized_html
+    )
+    assert (
+        "Return to this same queue and continue with the next suggested record"
+        in normalized_html
+    )
+    assert (
+        "Use the feedback checklist only when the queue or detail page is confusing"
+        in normalized_html
+    )
     assert "Facility/date-scoped CCLD complaint records ready for review" in html
     assert "Queue progress summary" in html
     assert "Counts use existing reviewer-created status rows" in normalized_html

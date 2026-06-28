@@ -114,7 +114,10 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "Start a facility complaint review" in html
     assert "Start with facility lookup" in html
     assert "Enter a facility/license number directly" in html
-    assert "Find a facility, enter a facility/license number, or open the current review queue." in html
+    assert (
+        "Find a facility, enter a facility/license number, or open the current review queue."
+        in html
+    )
     assert "Attorney-focused public CCLD complaint/facility record review" not in html
     assert "New to this tool?" not in html
     assert "See Help for the review workflow" not in html
@@ -1042,7 +1045,10 @@ def test_tester_facing_pages_do_not_expose_developer_wording() -> None:
     retrieve_html = pages["retrieve"][2].decode("utf-8")
     assert "Records are review aids. See Help for limitations." in retrieve_html
     assert "Public records stay separate from saved notes/status." in retrieve_html
-    assert "Source-derived records stay separate from reviewer-created notes/status" not in retrieve_html
+    assert (
+        "Source-derived records stay separate from reviewer-created notes/status"
+        not in retrieve_html
+    )
 
 
 def test_live_mode_facility_lookup_not_configured_shows_safe_fallback_messaging() -> None:
