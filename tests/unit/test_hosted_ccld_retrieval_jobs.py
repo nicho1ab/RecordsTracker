@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import re
 from collections.abc import Mapping, Sequence
@@ -119,11 +119,11 @@ def test_retrieval_form_renders_record_type_and_safe_setup_state() -> None:
     assert status == 200
     assert "Retrieve complaint records" in html
     assert "facility-suggestion-list" in html
-    assert "Use this facility/license number" in html
+    assert "Use this number" in html
     assert "Search by name, license number, city, county, ZIP" in html
     assert "facility type, program type, or status code" in html
     assert "Review boundary" not in normalized
-    assert "Use this facility/license number" in html
+    assert "Use this number" in html
     assert "Search CCLD facilities" in html
     assert "Which facility should be reviewed?" in html
     assert_no_secret_html(html)

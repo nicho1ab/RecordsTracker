@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import json
@@ -232,7 +232,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b'for="facility-search-input"' not in ccld_body
         or b"facility-suggestion-list" not in ccld_body
         or b"Which facility should be reviewed?" not in ccld_body
-        or b"Use this facility/license number" not in ccld_body
+        or b"Use this number" not in ccld_body
         or b"Search by name, license number, city, county, ZIP" not in ccld_body
         or b"Review aids only" not in ccld_body
         or b"Skip to main CCLD request content" not in ccld_body
