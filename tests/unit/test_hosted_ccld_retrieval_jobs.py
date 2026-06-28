@@ -1085,6 +1085,18 @@ def test_retrieval_job_history_empty_state_renders_for_allowed_local_dev_actor()
     assert "Controlled retrieval setup is missing" in html
     assert "facility/date context" in html
     assert "imported-record counts" in html
+    empty_state_match = re.search(
+        r'<article class="empty-state-card result-card">(?P<card>.*?)</article>',
+        html,
+        flags=re.S,
+    )
+    assert empty_state_match is not None
+    empty_state_card = empty_state_match.group("card")
+    assert (
+        f'<a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Go to request page</a>'
+        in empty_state_card
+    )
+    assert "Submit retrieval request" not in empty_state_card
     assert "Submit or change retrieval request" in html
     assert "Report an issue with this job" in html
     assert "Report confusing retrieval progress" not in html
