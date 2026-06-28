@@ -127,7 +127,8 @@ def test_ccld_record_request_page_renders_from_default_context(
     assert "facility-suggestion-list" in html
     assert "Which facility should be reviewed?" in html
     assert CCLD_FACILITY_LOOKUP_PATH in html
-    assert "Use this facility/license number" in html
+    assert "Use this number" in html
+    assert "Use this facility/license number" not in html
     assert "Search by name, license number, city, county, ZIP" in html
     assert "facility type, program type, or status code" in html
     assert "Keyboard flow: type a search or digit number" not in html
@@ -1322,9 +1323,10 @@ def test_ccld_request_page_manual_facility_button_disabled_by_default() -> None:
     assert status == 200
     assert (
         '<button type="submit" id="facility-submit-btn" disabled>'
-        "Use this facility/license number</button>"
+        "Use this number</button>"
     ) in html
-    assert html.count("Use this facility/license number") == 1
+    assert html.count("Use this number") == 1
+    assert "Use this facility/license number" not in html
     assert_no_secret_html(html)
 
 
@@ -1413,7 +1415,8 @@ def test_request_page_with_no_reference_source_shows_not_configured_and_no_synth
     # Manual entry is still available as the primary path
     assert "Which facility should be reviewed?" in html
     assert 'id="facility-search-input"' in html
-    assert "Use this facility/license number" in html
+    assert "Use this number" in html
+    assert "Use this facility/license number" not in html
     # No synthetic fixture facility names in the HTML
     assert "Synthetic Orchard" not in html
     assert "Synthetic Valley" not in html
