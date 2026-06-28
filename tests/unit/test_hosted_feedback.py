@@ -125,13 +125,13 @@ def test_feedback_page_renders_safe_optional_handoff_context() -> None:
     assert "packet/export-readiness confusion" in normalized_html
     assert "browser copy or print confusion" in normalized_html
     assert "missing or unexpected records in packet content" in normalized_html
-    assert "local/test packet boundary" in normalized_html
+    assert "packet boundary" in normalized_html
     assert "not a source-completeness proof" in normalized_html
     assert (
         "possible correction concerns where a source-derived value looked wrong"
         in normalized_html
     )
-    assert "source-confidence next-step confusion for missing local/test source values" in (
+    assert "source-confidence next-step confusion for missing source values" in (
         normalized_html
     )
     assert "proxy-related cues, or cautious note/status wording" in normalized_html
@@ -616,4 +616,3 @@ def _description_textarea(markup: str) -> str:
     if match is None:
         raise AssertionError("Feedback description textarea not found")
     return html_lib.unescape(match.group(1))
-

@@ -101,14 +101,14 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert "Why open this first" in html
     assert "Open priority record" in html
     assert "Open full queue" in html
-    assert "Open local/test packet preview" in html
+    assert "Open packet preview" in html
     assert REVIEWER_UI_PACKET_PREVIEW_PATH in html
-    assert "Open local/test preparation draft for browser copy or print" in html
+    assert "Open print draft" in html
     assert REVIEWER_UI_PACKET_DRAFT_PATH in html
     assert "Skip to main reviewer content" in html
     assert '<main id="main-content" tabindex="-1">' in html
     assert "Technical runtime details" in html
-    assert "Local/test reviewer UI shell" not in html
+    assert "reviewer UI shell" not in html
     assert "fixture actor context" not in normalized_html
     assert "seeded corpus scope" not in normalized_html
     assert "review-chip" in html
@@ -163,8 +163,8 @@ def test_reviewer_ui_landing_shows_visible_complaint_export_controls() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert 'id="complaint-export-controls"' in html
-    assert "Local/test review matrix export" in html
-    assert "Download local/test complaint review matrix CSV" in html
+    assert "review matrix export" in html
+    assert "Download complaint review matrix CSV" in html
     assert "Global complaint exports" in html
     assert "Complaint export records (source-derived):" in html
     assert "Serious review cue records:" in html
@@ -192,10 +192,10 @@ def test_reviewer_ui_landing_shows_visible_complaint_export_controls() -> None:
     ) in html
     assert "Facility case brief" in html
     assert "Worklist" in html
-    assert html.index("Local/test review matrix export") < html.index(
-        "Download local/test complaint review matrix CSV"
+    assert html.index("review matrix export") < html.index(
+        "Download complaint review matrix CSV"
     )
-    assert html.index("Download local/test complaint review matrix CSV") < html.index(
+    assert html.index("Download complaint review matrix CSV") < html.index(
         "Global complaint exports"
     )
     assert html.index("Global complaint exports") < html.index(
@@ -419,15 +419,16 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
         "reset_reload_planning_metadata": 0,
     }
     assert "Review packet preview" in html
-    assert "Local/test packet preparation preview" in html
-    assert "Open local/test preparation draft for browser copy or print" in html
+    assert "Packet preparation preview" in html
+    assert "local/test" not in html.casefold()
+    assert "Open print draft" in html
     assert f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098" in html
     assert "Return to same facility/date queue" in html
     assert "/ccld/records/request?facility_number=157806098" in html
     assert "Report copy/print preparation concern" in html
     assert "workflow_area=packet-preview" in html
     assert "Describe+copy%2Fprint+preparation%2C+packet+readiness" in html
-    assert "Packet readiness means local/test review readiness only" in html
+    assert "Packet readiness means review readiness only" in html
     assert "ready for manual review, browser copy, or browser print" in normalized_html
     assert "active facility/date context, included record count" in normalized_html
     assert "Before copying or printing" in html
@@ -495,7 +496,7 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Review flags" in html
     assert "Open record 32-CR-20220407124448" in html
     assert "Review packet notes" in html
-    assert "This preview is a local/test preparation aid." in html
+    assert "This preview is a preparation aid." in html
     assert "use the feedback link with this packet context" in html
     assert "Source-derived fields remain separate from reviewer-created notes/status." in html
     assert "Possible correction concerns are reviewer-created observations" in html
@@ -560,18 +561,19 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> 
         "reset_reload_planning_metadata": 0,
     }
     assert "Attorney Review Packet Draft" in html
-    assert "Local/test preparation draft for browser copy or print" in html
+    assert "Preparation draft for browser copy or print" in html
+    assert "local/test" not in html.casefold()
     assert "Use browser copy or print only after review" in html
     assert "Copy/print preparation guidance" in html
     assert "manual browser copy or print" in normalized_html
-    assert "Packet readiness means local/test review readiness only" in html
+    assert "Packet readiness means review readiness only" in html
     assert "ready for manual review, browser copy, or browser print" in normalized_html
     assert "active facility/date context, included record count" in normalized_html
     assert "Review before copying or printing" in html
     assert "Source traceability available means visible source URL" in html
     assert "raw SHA-256 hash" in html
     assert "source document/report marker cues" in html
-    assert "missing local/test traceability values" in normalized_html
+    assert "missing traceability values" in normalized_html
     assert "Correction-readiness before copying or printing" in html
     assert "capture the possible correction concern in a reviewer-created note or feedback" in html
     assert "does not change source-derived records, alter source-derived values" in html
@@ -612,7 +614,7 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> 
     assert "Why included" in html
     assert "Source traceability summary" in html
     assert "Review-readiness cue" in html
-    assert "Missing local/test traceability values" in html
+    assert "Missing traceability values" in html
     assert "Original CCLD source link saved" in html
     assert "Needs source check before copy/print" in html
     assert "Reviewer-created status/note cue present" in html
@@ -628,12 +630,12 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> 
     assert "Reviewer-created state summary" in html
     assert "Records ready for preparation review" in html
     assert (
-        "Packet readiness means local/test review readiness for manual browser copy or print"
+        "Packet readiness means review readiness for manual browser copy or print"
         in html
     )
     assert "Review-readiness before copy/print" in html
     assert "Source traceability readiness" in html
-    assert "Back to local/test packet preview" in html
+    assert "Back to packet preview" in html
     assert "Back to review queue" in html
     assert "Report copy/print preparation concern" in html
     assert "workflow_area=packet-draft" in html
@@ -677,7 +679,7 @@ def test_reviewer_packet_draft_without_context_shows_context_needed_state() -> N
     }
     assert "Attorney Review Packet Draft" in html
     assert "No facility/date packet context was supplied." in html
-    assert "not a complete local/test preparation draft without a facility/date context" in html
+    assert "not a complete preparation draft without a facility/date context" in html
     assert "not a certified report" in html
     assert "Open Retrieve" in html
     assert "Open Review queue" in html
@@ -886,7 +888,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Use the same-queue link when you came from CCLD request results" in normalized_html
     assert "Return to same facility/date queue" in html
     assert "Open next recommended record from this context" in html
-    assert "Download local/test complaint review matrix CSV" in html
+    assert "Download complaint review matrix CSV" in html
     assert f"{REVIEWER_UI_MATRIX_EXPORT_PATH}?facility_number=157806098" in html
     assert "Find another CCLD facility" in html
     assert "Open CCLD workflow help" in html
@@ -936,9 +938,9 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert html.index("Serious review cue records: 0") < html.index(
         "Start with the substantiated complaint CSV"
     )
-    assert "Local/test review matrix export" in html
-    matrix_heading_index = html.index("Local/test review matrix export")
-    matrix_link_index = html.index("Download local/test complaint review matrix CSV")
+    assert "review matrix export" in html
+    matrix_heading_index = html.index("review matrix export")
+    matrix_link_index = html.index("Download complaint review matrix CSV")
     global_exports_index = html.index("Global complaint exports")
     cue_count_index = html.index("Serious review cue records: 0")
     download_hint_index = html.index("Start with the substantiated complaint CSV")
@@ -1048,7 +1050,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "automated source verification" in html
     assert "public-source absence finding" in html
     assert "record-completeness claim" in html
-    assert "Missing local/test values should be described" in normalized_html
+    assert "Missing values should be described" in normalized_html
     assert "not as source absence, record incompleteness, or data loss" in normalized_html
     assert "Next safe action: check source traceability" in normalized_html
     assert "use cautious reviewer-created note/status wording only when it helps" in (
@@ -1058,11 +1060,11 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "then return to the same queue for the suggested next record" in normalized_html
     assert "Complaint field" in html
     assert "Source-confidence cue" in html
-    assert "Present in this local/test source-derived record" in html
+    assert "Present in this source-derived record" in html
     assert "First investigation activity date" in html
-    assert "local/test missing-field flag is true" in normalized_html
+    assert "missing-field flag is true" in normalized_html
     assert "Report date proxy flag" in html
-    assert "Current local/test field does not mark report date as the delay-review proxy" in (
+    assert "Current field does not mark report date as the delay-review proxy" in (
         normalized_html
     )
     assert "Use fallback/proxy wording only when this cue says" in normalized_html
@@ -1074,12 +1076,12 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
         "For now, use a reviewer-created note to describe the possible correction concern"
         in html
     )
-    assert "The local/test workflow does not submit correction decisions" in normalized_html
+    assert "The workflow does not submit correction decisions" in normalized_html
     assert "For missing, confusing, or proxy-related source-derived values" in normalized_html
     assert "avoid source absence or verification claims" in normalized_html
     assert "continue review from the same queue context" in normalized_html
     assert "Field is present" in html
-    assert "local/test record shows complaint received date" in html
+    assert "record shows complaint received date" in html
     assert (
         "Do not say the value is legally verified or a public-source conclusion"
         in normalized_html
@@ -1089,7 +1091,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "the record is incomplete" in html
     assert "or data was lost" in html
     assert "Report-date proxy flag is shown" in html
-    assert "local/test cue marks report date as a proxy" in normalized_html
+    assert "cue marks report date as a proxy" in normalized_html
     assert "Do not use the proxy flag alone" in normalized_html
     assert "use feedback if proxy wording or next action remains confusing" in (
         normalized_html
@@ -1118,7 +1120,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "source URL, raw SHA-256 hash, raw artifact reference" in normalized_html
     assert "Use these fields when checking the public source" in html
     assert "Missing local fields do not prove that no public record exists" in html
-    assert "not available in this local/test record" in html
+    assert "not available in this record" in html
     assert "Selected source record key" in html
     assert "Stable source identity" in html
     assert "Visible source traceability summary" in html
@@ -1129,7 +1131,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Report index or source page marker" in html
     assert "Retrieved at capture time" in html
     assert "Raw hash validation status" in html
-    assert "Use this to report local/test artifact validation state" in html
+    assert "Use this to report artifact validation state" in html
     assert "Connector name" in html
     assert "Connector name and version" in html
     assert "ccld_facility_reports" in html
@@ -1155,7 +1157,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "document_type: complaint_investigation_report" in html
     assert "allegation_category: Staff conduct" in html
     assert "allegation_category: Inadequate supervision" in html
-    assert "allegation_text: hidden in this local/test UI" in html
+    assert "allegation_text: hidden in this UI" in html
     assert "field_name: facility_number" in html
     assert "extraction_method: ccld_facility_report_html_labels" in html
     assert "Facility clients are being mistreated" not in html
@@ -1378,8 +1380,8 @@ def test_reviewer_ui_matrix_export_returns_excel_ready_csv_without_mutation() ->
     }
     assert rows
     [row] = rows
-    assert row["matrix_status"] == "loaded local/test complaint record"
-    assert "local/test complaint review matrix" in row["export_boundary"]
+    assert row["matrix_status"] == "loaded complaint record"
+    assert "complaint review matrix" in row["export_boundary"]
     assert "CSV export" in row["export_boundary"]
     assert "Excel-ready" in row["export_boundary"]
     assert "not a certified report" in row["export_boundary"]
@@ -2043,7 +2045,7 @@ def test_reviewer_ui_matrix_export_empty_context_is_safe() -> None:
     assert len(rows) == 1
     row = rows[0]
     assert row["matrix_status"] == (
-        "No loaded local/test complaint records matched this facility/date context."
+        "No loaded complaint records matched this facility/date context."
     )
     assert row["facility_number"] == "157806098"
     assert row["request_start_date"] == "2026-01-01"
@@ -2077,13 +2079,13 @@ def test_reviewer_ui_detail_missing_traceability_uses_clear_non_conclusive_wordi
         "reset_reload_planning_metadata": 0,
     }
     assert "Raw artifact preservation" in html
-    assert "not available in this local/test record" in html
+    assert "not available in this record" in html
     assert "Missing: raw artifact reference" in html
     assert "Show source identifiers and preservation details" in html
     assert "Source-confidence cues" in html
     assert "Field-note guidance" in html
     assert "First investigation activity date" in html
-    assert "local/test missing-field flag is true" in normalized_html
+    assert "missing-field flag is true" in normalized_html
     assert "raw paths are not shown in the browser" in html
     assert "Missing local fields do not prove that no public record exists" in normalized_html
     assert_no_secret_html(html)
@@ -2117,7 +2119,7 @@ def test_reviewer_ui_detail_preserves_direct_queue_request_context() -> None:
     assert "return_start_date" in html
     assert "return_end_date" in html
     assert "Review packet readiness before copying or printing" in html
-    assert "Open local/test preparation draft for browser copy or print" in html
+    assert "Open print draft" in html
     assert "legally sufficient" not in normalized_html.casefold()
     assert "verified abuse" not in normalized_html.casefold()
     assert "complete source record" not in normalized_html.casefold()
@@ -2229,7 +2231,7 @@ def test_reviewer_ui_detail_links_signal_only_facility_context_without_mutation(
     assert "source-traceability cue" in normalized_html
     assert "source-derived value" in normalized_html
     assert "reviewer-created note/status" in normalized_html
-    assert "local/test review" in normalized_html
+    assert "review" in normalized_html
     assert "manual request context" in normalized_html
     assert "verified complaint" not in normalized_html
     assert "proven complaint" not in normalized_html
@@ -2357,10 +2359,10 @@ def test_reviewer_ui_detail_source_confidence_proxy_cues_are_non_mutating() -> N
     }
     assert "Source-confidence cues" in html
     assert "Visit date" in html
-    assert "Not available in this local/test record" in html
+    assert "Not available in this record" in html
     assert "Fallback/proxy-derived delay basis indicated" in normalized_html
     assert "Field-note guidance" in html
-    assert "local/test cue marks report date as a proxy" in normalized_html
+    assert "cue marks report date as a proxy" in normalized_html
     assert "Do not use the proxy flag alone" in normalized_html
     assert "Use fallback/proxy wording only when this cue says" in normalized_html
     assert "use feedback if proxy wording or next action remains confusing" in (
@@ -2462,7 +2464,7 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert "Describe+note%2Fstatus+save%2C+return-to-queue%2C+or+next-record+confusion" in html
     assert "Review packet readiness before copying or printing" in html
     assert f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?facility_number=157806098" in html
-    assert "Open local/test preparation draft for browser copy or print" in html
+    assert "Open print draft" in html
     assert f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098" in html
     assert "Queue progress and note/status cues are derived from reviewer-created state" in html
     assert "Status filters are reviewer-created queue views" in html
@@ -2614,7 +2616,7 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "workflow_area=save-confirmation" in html
     assert "Review packet readiness before copying or printing" in html
     assert f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?facility_number=157806098" in html
-    assert "Open local/test preparation draft for browser copy or print" in html
+    assert "Open print draft" in html
     assert f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098" in html
     assert "Queue progress and note/status cues are derived from reviewer-created state" in html
     assert "Status filters are reviewer-created queue views" in html

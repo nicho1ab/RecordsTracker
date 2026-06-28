@@ -179,7 +179,7 @@ _SOURCE_CONFIDENCE_COMPLAINT_FIELDS = (
     (
         "Complaint received date",
         "complaint_received_date",
-        "Check the source traceability fields before relying on this date in notes/status; if unclear, describe the local/test cue cautiously or use feedback.",
+        "Check the source traceability fields before relying on this date in notes/status; if unclear, describe the cue cautiously or use feedback.",
     ),
     (
         "Visit date",
@@ -199,12 +199,12 @@ _SOURCE_CONFIDENCE_COMPLAINT_FIELDS = (
     (
         "Finding",
         "finding",
-        "Treat this as a source-derived local/test value, not as a new reviewer finding; use feedback if the safe wording is unclear.",
+        "Treat this as a source-derived value, not as a new reviewer finding; use feedback if the safe wording is unclear.",
     ),
     (
         "Extraction confidence",
         "extraction_confidence",
-        "Treat this as local/test extraction metadata, not as reviewer verification; do not use it as a source-confidence score.",
+        "Treat this as extraction metadata, not as reviewer verification; do not use it as a source-confidence score.",
     ),
 )
 _SOURCE_CONTEXT_ENTITY_ORDER = {
@@ -348,7 +348,7 @@ def route_reviewer_ui_response(
             _render_blocked_page(
                 title="Reviewer UI unavailable",
                 heading="Reviewer UI unavailable",
-                message="Local/test reviewer UI context is not configured.",
+                message="Reviewer UI context is not configured.",
             ),
         )
     try:
@@ -372,7 +372,7 @@ def route_reviewer_ui_response(
                 title="Reviewer UI method unavailable",
                 heading="Reviewer UI method unavailable",
                 message=(
-                    "This local/test reviewer page supports browser GET pages "
+                    "This reviewer page supports browser GET pages "
                     "and form POST actions only."
                 ),
             ),
@@ -396,7 +396,7 @@ def route_reviewer_ui_response(
         _render_blocked_page(
             title="Reviewer UI page not found",
             heading="Reviewer UI page not found",
-            message="The requested local/test reviewer UI page was not found.",
+            message="The requested reviewer UI page was not found.",
         ),
     )
 
@@ -1173,7 +1173,7 @@ def _matrix_fieldnames() -> list[str]:
 
 def _matrix_boundary_text() -> str:
     return (
-        "local/test complaint review matrix; CSV export; Excel-ready; not a certified report; "
+        "complaint review matrix; CSV export; Excel-ready; not a certified report; "
         "not source verification; not a complaint-coverage determination; not a source-completeness proof; "
         "not a legal finding; complaint records are requested/reviewed separately"
     )
@@ -1184,7 +1184,7 @@ def _empty_matrix_row(return_context: CcldQueueReturnContext) -> dict[str, str]:
         key: ""
         for key in _matrix_fieldnames()
     } | {
-        "matrix_status": "No loaded local/test complaint records matched this facility/date context.",
+        "matrix_status": "No loaded complaint records matched this facility/date context.",
         "export_boundary": _matrix_boundary_text(),
         "facility_number": return_context.facility_number or "",
         "request_start_date": return_context.start_date or "",
@@ -1208,7 +1208,7 @@ def _matrix_row_for_record(
     related_records = _related_source_records(source_record, all_source_records)
     facility = _facility_context(related_records)
     return {
-        "matrix_status": "loaded local/test complaint record",
+        "matrix_status": "loaded complaint record",
         "export_boundary": _matrix_boundary_text(),
         "facility_number": return_context.facility_number or _optional_string(identity, "facility_id"),
         "facility_name": _facility_context_value(facility, "facility_name"),
@@ -1269,8 +1269,8 @@ def _matrix_missing_field_cues(
         cues.append("report date proxy cue")
     missing_traceability = _missing_traceability_values_text(source_document)
     if missing_traceability != "none":
-        cues.append(f"missing local/test traceability values: {missing_traceability}")
-    return "; ".join(cues) if cues else "none visible from loaded local/test fields"
+        cues.append(f"missing traceability values: {missing_traceability}")
+    return "; ".join(cues) if cues else "none visible from loaded fields"
 
 
 def _packet_draft_response(
@@ -1322,11 +1322,11 @@ def _render_packet_draft_context_needed(*, actor_label: str | None) -> str:
                 main=f"""
                 <section class="packet-draft" aria-labelledby="packet-context-needed-heading">
                     <div class="packet-draft-header">
-                        <p class="launch-kicker">Local/test preparation draft for browser copy or print</p>
+                        <p class="launch-kicker">Preparation draft for browser copy or print</p>
                         <h2 id="packet-context-needed-heading">No facility/date packet context was supplied.</h2>
                     </div>
-                    <p>Open this draft from a CCLD retrieval result, the local/test packet preview, or a reviewer detail confirmation so the facility/date context can be carried into the draft for browser copy or print preparation.</p>
-                    <p>This page is not a complete local/test preparation draft without a facility/date context, and it is not a legal report, not a final export, not a certified report, and not a source-completeness proof.</p>
+                    <p>Open this draft from a CCLD retrieval result, the packet preview, or a reviewer detail confirmation so the facility/date context can be carried into the draft for browser copy or print preparation.</p>
+                    <p>This page is not a complete preparation draft without a facility/date context, and it is not a legal report, not a final export, not a certified report, and not a source-completeness proof.</p>
                     <div class="form-actions packet-draft-actions">
                         <a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Open Retrieve</a>
                         <a class="button button-secondary" href="{REVIEWER_UI_RECORDS_PATH}">Open Review queue</a>
@@ -1362,7 +1362,7 @@ def _render_packet_draft(
     if not record_sections:
         record_sections = """        <section class="packet-draft-record" aria-labelledby="draft-no-records-heading">
                     <h3 id="draft-no-records-heading">No included complaint records</h3>
-                    <p>No loaded local/test complaint records match this packet draft context.</p>
+                    <p>No loaded complaint records match this packet draft context.</p>
                 </section>"""
     copy_summary = _packet_copy_summary(
         records,
@@ -1382,14 +1382,14 @@ def _render_packet_draft(
                 <article class="packet-draft" aria-labelledby="packet-draft-title">
                     <header class="packet-draft-header">
                         <p class="launch-kicker">Attorney Review Packet Draft</p>
-                        <h2 id="packet-draft-title">Local/test preparation draft for browser copy or print</h2>
+                        <h2 id="packet-draft-title">Preparation draft for browser copy or print</h2>
                         <p><strong>Use browser copy or print only after review.</strong> This page keeps the intentional print/copy layout, but it does not generate a server-side PDF, Word file, ZIP, CSV, or downloadable final export.</p>
                     </header>
                     <section aria-labelledby="draft-copy-print-guidance-heading">
                         <h3 id="draft-copy-print-guidance-heading">Copy/print preparation guidance</h3>
-                        <p>This local/test preparation draft gathers the included complaint-record summaries, review-readiness counts, source-traceability cues, reviewer-created status/note cues, limitations, and a static copyable packet summary for manual browser copy or print.</p>
-                        <p><strong>Packet readiness means local/test review readiness only.</strong> The draft can be ready for manual review, browser copy, or browser print after the tester confirms the active facility/date context, included record count, important source-derived values, visible source traceability, reviewer-created status/note cues, and possible correction-readiness concerns.</p>
-                        <p><strong>Review before copying or printing:</strong> check records flagged for source check, records missing reviewer-created status/note cues, important source-derived values, missing local/test traceability values, and any wording that seems wrong, incomplete, confusing, or risky.</p>
+                        <p>This preparation draft gathers the included complaint-record summaries, review-readiness counts, source-traceability cues, reviewer-created status/note cues, limitations, and a static copyable packet summary for manual browser copy or print.</p>
+                        <p><strong>Packet readiness means review readiness only.</strong> The draft can be ready for manual review, browser copy, or browser print after the tester confirms the active facility/date context, included record count, important source-derived values, visible source traceability, reviewer-created status/note cues, and possible correction-readiness concerns.</p>
+                        <p><strong>Review before copying or printing:</strong> check records flagged for source check, records missing reviewer-created status/note cues, important source-derived values, missing traceability values, and any wording that seems wrong, incomplete, confusing, or risky.</p>
                         <p>Source traceability available means visible source URL, raw SHA-256 hash, raw artifact reference, connector metadata, retrieval timestamp, or source document/report marker cues are available to help check important source-derived values. It is not a source-completeness proof.</p>
                         <p><strong>Correction-readiness before copying or printing:</strong> if a source-derived value looks wrong or incomplete, check source traceability first and capture the possible correction concern in a reviewer-created note or feedback for now. This draft does not change source-derived records, alter source-derived values, or submit correction decisions.</p>
                         <p>If copy/print preparation content seems wrong, incomplete, confusing, or risky, use the feedback link before using this draft.</p>
@@ -1410,7 +1410,7 @@ def _render_packet_draft(
                             <dt>Records included</dt>
                             <dd>{len(records)}</dd>
                         </dl>
-                        <p><strong>Important limitation:</strong> This is a local/test preparation draft. It is not a legal report, not a final export, not a certified report, not a production packet, not a source-completeness proof, and not a facility-wide conclusion.</p>
+                        <p><strong>Important limitation:</strong> This is a preparation draft. It is not a legal report, not a final export, not a certified report, not a production packet, not a source-completeness proof, and not a facility-wide conclusion.</p>
                     </section>
                     <section aria-labelledby="draft-summary-heading">
                         <h3 id="draft-summary-heading">Summary of included records</h3>
@@ -1437,7 +1437,7 @@ def _render_packet_draft(
                     </section>
                     <section aria-labelledby="draft-review-readiness-heading">
                         <h3 id="draft-review-readiness-heading">Review-readiness before copying or printing</h3>
-                        <p>Review before copying or printing: this local/test packet draft is a preparation draft.
+                        <p>Review before copying or printing: this packet draft is a preparation draft.
                         Check source traceability, review flags, and reviewer-created status/note cues
                         before relying on any source-derived value in a handoff.</p>
                         <p>Review before relying on this packet also means confirming the facility/date context and the included complaint records match the queue you intended to prepare. If the packet content looks incomplete, risky, or not ready, return to the queue, open reviewer detail, or use feedback before copying or printing.</p>
@@ -1445,7 +1445,7 @@ def _render_packet_draft(
                         feedback for now. The future correction workflow is not implemented here, and this
                         draft does not submit correction decisions.</p>
                         <ul>
-                            <li>{readiness_counts['needs_source_check']} record(s) may still need source check based on visible review flags, missing local/test dates, proxy cues, or missing traceability.</li>
+                            <li>{readiness_counts['needs_source_check']} record(s) may still need source check based on visible review flags, missing dates, proxy cues, or missing traceability.</li>
                             <li>{readiness_counts['needs_reviewer_attention']} record(s) may still need reviewer-created status/note attention before packet preparation.</li>
                             <li>{readiness_counts['ready']} record(s) have source traceability available and at least one reviewer-created status/note cue.</li>
                         </ul>
@@ -1494,7 +1494,7 @@ def _render_packet_draft(
                     </section>
                     <nav class="packet-draft-actions" aria-label="Packet draft navigation">
                         <ul>
-                            <li><a href="{_escape(_packet_preview_href(return_context))}">Back to local/test packet preview</a></li>
+                            <li><a href="{_escape(_packet_preview_href(return_context))}">Back to packet preview</a></li>
                             <li><a href="{_escape(_ccld_request_href([], return_context))}">Back to review queue</a></li>
                             <li><a href="{_escape(feedback_href)}">Report copy/print preparation concern</a></li>
                         </ul>
@@ -1641,7 +1641,7 @@ def _status_form_response(
             title="Reviewer status was not saved",
             heading="Reviewer status was not saved",
             guidance=(
-                "Return to the detail page and choose one of the listed local/test "
+                "Return to the detail page and choose one of the listed "
                 "reviewer statuses. Status values update queue cues but do not change "
                 "source-derived records."
             ),
@@ -1839,8 +1839,8 @@ def _render_no_results_notice(
         </section>"""
         return f"""<section aria-labelledby="no-results-heading">
             <h2 id="no-results-heading">No seeded reviewer records are available</h2>
-            <p>The local/test seeded corpus did not return reviewer records.</p>
-            <p>Return to the reviewer home page and retry the local/test scaffold.</p>
+            <p>The seeded corpus did not return reviewer records.</p>
+            <p>Return to the reviewer home page and retry the scaffold.</p>
             <ul>
                 <li><a href="{REVIEWER_UI_PREFIX}">Return to reviewer home</a></li>
             </ul>
@@ -1959,7 +1959,7 @@ def _render_packet_preview(
     if not record_cards:
         record_cards = """        <article class="empty-state-card result-card">
           <h3>No complaint records included</h3>
-          <p>No loaded local/test complaint records match this packet preview context.</p>
+          <p>No loaded complaint records match this packet preview context.</p>
         </article>"""
     return _page(
                 title="Review packet preview",
@@ -1967,10 +1967,10 @@ def _render_packet_preview(
         actor_label=actor_label,
         main=f"""
         <section class="hero-card" aria-labelledby="packet-preview-heading">
-          <p class="launch-kicker">Local/test preparation preview</p>
-                    <h2 id="packet-preview-heading">Local/test packet preparation preview</h2>
-                    <p>This preview helps identify which loaded local/test complaint records, readiness cues, source traceability cues, and reviewer-created status/note cues are included for the current facility/date context before browser copy or print preparation. It is not a legal report, not a final export, not a certified report, not a production packet, and not a source-completeness proof.</p>
-                    <p><strong>Packet readiness means local/test review readiness only.</strong> A packet may be ready for manual review, browser copy, or browser print after the tester confirms the active facility/date context, included record count, important source-derived values, visible source traceability, reviewer-created status/note cues, and possible correction-readiness concerns.</p>
+          <p class="launch-kicker">Preparation preview</p>
+                    <h2 id="packet-preview-heading">Packet preparation preview</h2>
+                    <p>This preview helps identify which loaded complaint records, readiness cues, source traceability cues, and reviewer-created status/note cues are included for the current facility/date context before browser copy or print preparation. It is not a legal report, not a final export, not a certified report, not a production packet, and not a source-completeness proof.</p>
+                    <p><strong>Packet readiness means review readiness only.</strong> A packet may be ready for manual review, browser copy, or browser print after the tester confirms the active facility/date context, included record count, important source-derived values, visible source traceability, reviewer-created status/note cues, and possible correction-readiness concerns.</p>
           <dl class="summary-list">
             <dt>Facility / license</dt>
             <dd>{_escape(_packet_facility_label(records, return_context))}</dd>
@@ -1990,14 +1990,14 @@ def _render_packet_preview(
                         <dd>{readiness_counts['ready']} ready for preparation review; {readiness_counts['needs_source_check']} need source check; {readiness_counts['needs_reviewer_attention']} need reviewer-created status/note attention</dd>
           </dl>
                     <div class="form-actions">
-                                                <a class="button" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a>
+                                                <a class="button" href="{_escape(_packet_draft_href(return_context))}">Open print draft</a>
                                                 <a class="button button-secondary" href="{_escape(_ccld_request_href([], return_context))}">Return to same facility/date queue</a>
                                                 <a class="button button-secondary" href="{_escape(feedback_href)}">Report copy/print preparation concern</a>
                     </div>
         </section>
                 <section aria-labelledby="before-copying-printing-heading">
                     <h2 id="before-copying-printing-heading">Before copying or printing</h2>
-                    <p>Use this checklist before using browser copy or print from the local/test preparation draft.</p>
+                    <p>Use this checklist before using browser copy or print from the preparation draft.</p>
                     <ul>
                         <li>Confirm the active facility/date context and included complaint-record count match the queue you intended to prepare.</li>
                         <li>Review records flagged for source check before relying on important source-derived values.</li>
@@ -2009,7 +2009,7 @@ def _render_packet_preview(
                 </section>
                 <section aria-labelledby="packet-readiness-heading">
                     <h2 id="packet-readiness-heading">Review-readiness summary</h2>
-                    <p>This local/test packet preview is a preparation checkpoint. Use it to decide what still needs source check or reviewer-created status/note attention before browser copy or print.</p>
+                    <p>This packet preview is a preparation checkpoint. Use it to decide what still needs source check or reviewer-created status/note attention before browser copy or print.</p>
                     <p>Review before relying on this packet means using reviewer detail and source traceability to resolve confusing, incomplete, risky, or not-ready records before copying, printing, or sharing a local handoff draft.</p>
                     <dl class="summary-list">
                         <dt>Records ready for preparation review</dt>
@@ -2067,9 +2067,9 @@ def _render_packet_preview(
         <section aria-labelledby="packet-notes-heading">
           <h2 id="packet-notes-heading">Review packet notes</h2>
           <ul>
-            <li>This preview is a local/test preparation aid.</li>
+            <li>This preview is a preparation aid.</li>
             <li>Source-derived fields remain separate from reviewer-created notes/status.</li>
-            <li>Possible correction concerns are reviewer-created observations for notes or feedback in this local/test workflow.</li>
+            <li>Possible correction concerns are reviewer-created observations for notes or feedback in this workflow.</li>
             <li>Review flags are screening aids, not legal conclusions.</li>
             <li>The CCLD public portal remains the source of record.</li>
             <li>This preview is not a legal report, not a final export, not a certified report, not a production packet, and not a source-completeness proof.</li>
@@ -2122,7 +2122,7 @@ def _render_packet_preview_record(
               <dd>{_escape(_card_note_presence_text(state_summary))}</dd>
               <dt>Source traceability</dt>
               <dd>{_escape(_source_traceability_cue(source_document))}</dd>
-              <dt>Missing local/test traceability values</dt>
+              <dt>Missing traceability values</dt>
               <dd>{_escape(_missing_traceability_values_text(source_document))}</dd>
                             <dt>Review-readiness cue</dt>
                             <dd>{_escape(readiness_cue)}</dd>
@@ -2179,7 +2179,7 @@ def _render_packet_draft_record(
                 <dd>{_escape(why)}</dd>
                 <dt>Source traceability summary</dt>
                 <dd>{_escape(_source_traceability_cue(source_document))}</dd>
-                <dt>Missing local/test traceability values</dt>
+                <dt>Missing traceability values</dt>
                 <dd>{_escape(_missing_traceability_values_text(source_document))}</dd>
                                 <dt>Review-readiness cue</dt>
                                 <dd>{_escape(readiness_cue)}</dd>
@@ -2212,12 +2212,12 @@ def _packet_copy_summary(
         f"- Records without reviewer-created state: {state_counts['without_state']}",
         "",
         "Review-readiness before copy/print",
-        "- Packet readiness means local/test review readiness for manual browser copy or print after checking facility/date context, included records, source traceability, reviewer-created status/note cues, and possible correction-readiness concerns.",
+        "- Packet readiness means review readiness for manual browser copy or print after checking facility/date context, included records, source traceability, reviewer-created status/note cues, and possible correction-readiness concerns.",
         f"- Records ready for preparation review: {readiness_counts['ready']}",
         f"- Records needing source check: {readiness_counts['needs_source_check']}",
         "- Records needing reviewer-created status/note attention: "
         f"{readiness_counts['needs_reviewer_attention']}",
-        "- Review before copy/print; this is local/test preparation only.",
+        "- Review before copy/print; this is preparation only.",
         "",
         "Source traceability readiness",
         f"- Source URL available: {traceability_counts['source_url']}",
@@ -2246,13 +2246,13 @@ def _packet_copy_summary(
             + f"; reviewer status: {_latest_status_label_text(state_summary)}"
             + f"; reviewer note: {_card_note_presence_text(state_summary)}"
             + f"; source traceability: {_source_traceability_cue(source_document)}"
-            + f"; missing local/test traceability values: {_missing_traceability_values_text(source_document)}"
+            + f"; missing traceability values: {_missing_traceability_values_text(source_document)}"
         )
     lines.extend(
         [
             "",
             "Limitations",
-            "- This is a local/test preparation draft, not a legal report, not a final export, not a certified report, not a source-completeness proof, and not a facility-wide conclusion.",
+            "- This is a preparation draft, not a legal report, not a final export, not a certified report, not a source-completeness proof, and not a facility-wide conclusion.",
             "- Source-derived fields remain separate from reviewer-created notes/status.",
             "- Review flags are screening aids, not legal conclusions.",
             "- The CCLD public portal remains the source of record.",
@@ -2364,7 +2364,7 @@ def _latest_status_label_text(summary: Mapping[str, Any]) -> str:
 def _packet_draft_date_scope(return_context: CcldQueueReturnContext) -> str:
     if return_context.start_date or return_context.end_date:
         return _return_context_date_range(return_context)
-    return "All loaded local/test records for this facility"
+    return "All loaded records for this facility"
 
 
 def _render_packet_preview_context_needed(*, actor_label: str | None) -> str:
@@ -2374,7 +2374,7 @@ def _render_packet_preview_context_needed(*, actor_label: str | None) -> str:
                 actor_label=actor_label,
                 main=f"""
                 <section class="hero-card" aria-labelledby="packet-context-needed-heading">
-                    <p class="launch-kicker">Local/test preparation preview</p>
+                    <p class="launch-kicker">Preparation preview</p>
                     <h2 id="packet-context-needed-heading">No facility/date packet context was supplied.</h2>
                     <p>Start from Retrieve or the Review queue to build a packet for a specific facility/date range.</p>
                     <div class="form-actions">
@@ -2419,7 +2419,7 @@ def _packet_inclusion_reasons(
     if _has_visible_traceability_document(source_document):
         reasons.append("Source traceability available.")
     else:
-        reasons.append("Local/test traceability value missing; needs source check.")
+        reasons.append("traceability value missing; needs source check.")
     finding = _optional_string(original_values, "finding")
     if finding and finding != "unknown":
         reasons.append(f"Finding value shown: {finding}.")
@@ -2766,7 +2766,7 @@ def _packet_preview_confirmation_link(return_context: CcldQueueReturnContext) ->
 def _packet_draft_confirmation_link(return_context: CcldQueueReturnContext) -> str:
     if return_context.facility_number is None:
         return ""
-    return f'<a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a>'
+    return f'<a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open print draft</a>'
 
 
 def _case_brief_record_from_review_item(
@@ -3035,7 +3035,7 @@ def _traceability_value_labels(source_document: Mapping[str, Any]) -> tuple[list
 def _available_traceability_values_text(source_document: Mapping[str, Any]) -> str:
     available, _missing = _traceability_value_labels(source_document)
     if not available:
-        return "none visible in this local/test record"
+        return "none visible in this record"
     return ", ".join(available)
 
 
@@ -3541,7 +3541,7 @@ def _render_detail_facility_context_cues(
     )
     return f"""          <section aria-labelledby="detail-facility-context-heading">
             <h3 id="detail-facility-context-heading">Facility context cues</h3>
-                        <p>{_escape(context_guidance)} This local/test review cue and source-traceability cue helps choose the next safe navigation step without changing source-derived values.</p>
+                        <p>{_escape(context_guidance)} This review cue and source-traceability cue helps choose the next safe navigation step without changing source-derived values.</p>
             <dl>
               <dt>Facility context type</dt>
               <dd>{_escape(context_label)}</dd>
@@ -3566,24 +3566,24 @@ def _detail_facility_context_status(
     if not facility_number:
         return (
             "manual request context",
-            "No facility/license number is available for a facility hub cue on this local/test detail page. Use the same queue or start a complaint request when a facility/license number is needed.",
+            "No facility/license number is available for a facility hub cue on this detail page. Use the same queue or start a complaint request when a facility/license number is needed.",
             None,
         )
     if _active_directory_has_facility(facility_number):
         return (
             "facility hub",
-            "This record has a directory-backed facility hub cue from the active local/test facility-directory context. Use it to return to facility context before continuing review.",
+            "This record has a directory-backed facility hub cue from the active facility-directory context. Use it to return to facility context before continuing review.",
             _facility_hub_href(facility_number),
         )
     if load_active_facility_review_signals().summary_for_facility(facility_number) is not None:
         return (
             "signal-only facility hub",
-            "This record has a signal-only facility hub cue because uploaded public summary signals are available but the active local/test directory row is not available here.",
+            "This record has a signal-only facility hub cue because uploaded public summary signals are available but the active directory row is not available here.",
             _facility_hub_href(facility_number),
         )
     return (
         "manual request context",
-        "This record is tied to a manual request context in local/test review. A facility hub cue is not available from the active directory or uploaded summary signals, so return to the same queue or start a complaint request if more context is needed.",
+        "This record is tied to a manual request context in review. A facility hub cue is not available from the active directory or uploaded summary signals, so return to the same queue or start a complaint request if more context is needed.",
         None,
     )
 
@@ -3640,7 +3640,7 @@ def _detail_packet_links(
         return ""
     return f"""              <a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Review packet readiness before copying or printing</a>
               {_render_complaint_export_controls(return_context, related_records)}
-              <a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a>"""
+              <a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open print draft</a>"""
 
 
 def _render_complaint_export_controls(
@@ -3670,8 +3670,8 @@ def _render_complaint_export_controls(
               <a class="button button-secondary" href="{_escape(_facility_last_30_days_complaint_export_href(return_context.facility_number, now))}">Download this facility's last 30 days complaint CSV</a>
               <a class="button button-secondary" href="{_escape(_facility_last_90_days_complaint_export_href(return_context.facility_number, now))}">Download this facility's last 90 days complaint CSV</a>"""
     return f"""<section id="complaint-export-controls" aria-labelledby="complaint-export-controls-heading">
-              <p class="helper-text" id="review-matrix-export-heading">Local/test review matrix export</p>
-              <a class="button button-secondary" href="{_escape(_matrix_export_href(return_context))}">Download local/test complaint review matrix CSV</a>
+              <p class="helper-text" id="review-matrix-export-heading">review matrix export</p>
+              <a class="button button-secondary" href="{_escape(_matrix_export_href(return_context))}">Download complaint review matrix CSV</a>
               <p class="helper-text" id="complaint-export-controls-heading">Global complaint exports</p>
               <p class="helper-text">Complaint export records (source-derived): {complaint_counts['all']} all, {complaint_counts['substantiated']} substantiated, {complaint_counts['unsubstantiated']} unsubstantiated</p>
               <p class="helper-text">Serious review cue records: {serious_review_cue_count}</p>
@@ -3837,13 +3837,13 @@ def _render_detail_first_run_steps(
                 reviewer-created notes or status.</li>
                 <li>Check whether reviewer notes or statuses already exist.</li>
                 <li>Add a note or status only after checking the source context and only if it
-                helps the local/test review queue.</li>
+                helps the review queue.</li>
                 <li><a href="{_escape(ccld_request_href)}">Return to the CCLD request queue</a>
                 with the same request context, resubmit when needed, and use the refreshed
                 queue's suggested next record to continue.</li>
                 <li>Copy the tester feedback checklist when ready.</li>
             </ol>
-            <p>Next-record guidance is local/test navigation help derived from existing
+            <p>Next-record guidance is navigation help derived from existing
             reviewer-created note/status cues. It is not a persisted assignment, automatic
             record claim, or official workflow state.</p>
             <p>Selected source record key: {_escape(source_record_key)}.</p>
@@ -3897,11 +3897,11 @@ def _detail_navigation_packet_items(return_context: CcldQueueReturnContext) -> s
     if return_context.facility_number is None:
         return ""
     return f"""                <li><a href="{_escape(_packet_preview_href(return_context))}">Review packet readiness before copying or printing</a></li>
-                <li><a href="{_escape(_matrix_export_href(return_context))}">Download local/test complaint review matrix CSV</a></li>
+                <li><a href="{_escape(_matrix_export_href(return_context))}">Download complaint review matrix CSV</a></li>
                 <li><a href="{_escape(_substantiated_export_href(return_context))}">Download substantiated complaint CSV</a></li>
                 <li><a href="{_escape(_unsubstantiated_export_href(return_context))}">Download unsubstantiated complaint CSV</a></li>
                 <li><a href="{_escape(_all_complaints_export_href(return_context))}">Download all complaint CSV</a></li>
-                <li><a href="{_escape(_packet_draft_href(return_context))}">Open local/test preparation draft for browser copy or print</a></li>"""
+                <li><a href="{_escape(_packet_draft_href(return_context))}">Open print draft</a></li>"""
 
 
 def _feedback_href(
@@ -3997,17 +3997,17 @@ def _render_source_confidence_cues_section(
     return f"""<section id="source-confidence-heading" aria-labelledby="source-confidence-title">
             <h2 id="source-confidence-title">Legal-review flags and source checks</h2>
             <p>These cues summarize visible source-derived complaint fields already loaded in
-            this local/test record. They help testers see which values are present, which
+            this record. They help testers see which values are present, which
             expected values are not available locally, and which fields need source traceability
             review before a reviewer-created note or status observation relies on them.</p>
             <p>This section is not a source-confidence score, automated source verification,
             public-source absence finding, record-completeness claim, legal conclusion, or
             facility-wide conclusion.</p>
-            <p>Missing local/test values should be described in reviewer-created notes/status or
-            manual feedback as <q>not available in this local/test record</q>, not as source
+            <p>Missing values should be described in reviewer-created notes/status or
+            manual feedback as <q>not available in this record</q>, not as source
             absence, record incompleteness, or data loss.</p>
             <p>Next safe action: check source traceability, use cautious reviewer-created
-            note/status wording only when it helps the local/test queue, use feedback when
+            note/status wording only when it helps the queue, use feedback when
             the cue or wording remains confusing, then return to the same queue for the
             suggested next record.</p>
             <table>
@@ -4046,7 +4046,7 @@ def _render_first_activity_confidence_row(values: Mapping[str, Any]) -> str:
     cue = _source_confidence_cue(value)
     if not _has_display_value(value) and missing_flag is True:
         cue = (
-            "Not available in this local/test record. The local/test missing-field "
+            "Not available in this record. The missing-field "
             "flag is true."
         )
     return f"""          <tr>
@@ -4062,30 +4062,30 @@ def _render_first_activity_confidence_row(values: Mapping[str, Any]) -> str:
 def _render_report_date_proxy_confidence_row(values: Mapping[str, Any]) -> str:
     value = values.get("report_date_used_as_proxy")
     if value is True:
-        cue = "Fallback/proxy-derived delay basis indicated by current local/test field."
+        cue = "Fallback/proxy-derived delay basis indicated by current field."
     elif value is False:
-        cue = "Current local/test field does not mark report date as the delay-review proxy."
+        cue = "Current field does not mark report date as the delay-review proxy."
     else:
-        cue = "Not available in this local/test record."
+        cue = "Not available in this record."
     return f"""          <tr>
                         <th scope="row">Report date proxy flag</th>
                         <td>{_escape(cue)}</td>
                         <td>{_escape(_source_confidence_value(value))}</td>
                         <td>Use fallback/proxy wording only when this cue says the current
-                        local/test field identifies a proxy-derived delay basis; use feedback
+                        field identifies a proxy-derived delay basis; use feedback
                         if proxy wording or next action remains confusing.</td>
                     </tr>"""
 
 
 def _source_confidence_cue(value: object) -> str:
     if _has_display_value(value):
-        return "Present in this local/test source-derived record."
-    return "Not available in this local/test record."
+        return "Present in this source-derived record."
+    return "Not available in this record."
 
 
 def _source_confidence_value(value: object) -> str:
     if not _has_display_value(value):
-        return "not available in this local/test record"
+        return "not available in this record"
     if isinstance(value, bool):
         return "yes" if value else "no"
     return _display_value(value)
@@ -4118,7 +4118,7 @@ def _render_source_traceability_section(
           <tr>
             <th scope="col">Traceability cue</th>
             <th scope="col">Value shown for this selected record</th>
-            <th scope="col">How to use it during local/test review</th>
+            <th scope="col">How to use it during review</th>
           </tr>
         </thead>
         <tbody>
@@ -4132,7 +4132,7 @@ def _render_source_traceability_section(
 def _availability_label(value: object) -> str:
     if _has_display_value(value):
         return "available"
-    return "missing in this local/test record"
+    return "missing in this record"
 
 
 def _connector_retrieval_availability(source_document: Mapping[str, Any]) -> str:
@@ -4141,10 +4141,10 @@ def _connector_retrieval_availability(source_document: Mapping[str, Any]) -> str
     if connector_available and retrieved_available:
         return "connector available; retrieval time available"
     if connector_available:
-        return "connector available; retrieval time missing in this local/test record"
+        return "connector available; retrieval time missing in this record"
     if retrieved_available:
-        return "connector missing in this local/test record; retrieval time available"
-    return "connector and retrieval time missing in this local/test record"
+        return "connector missing in this record; retrieval time available"
+    return "connector and retrieval time missing in this record"
 
 
 def _render_field_note_guidance_section() -> str:
@@ -4152,18 +4152,18 @@ def _render_field_note_guidance_section() -> str:
             aria-labelledby="field-note-guidance-title">
             <h2 id="field-note-guidance-title">Field-note guidance</h2>
             <p>Use this guidance after checking source traceability and the source-confidence
-            cues. Reviewer notes/status are reviewer-created observations for this local/test
+            cues. Reviewer notes/status are reviewer-created observations for this
             queue; they do not edit source-derived fields.</p>
             <p>If a source-derived value looks wrong or incomplete, check source traceability first.
             For now, use a reviewer-created note to describe the possible correction concern or use
-            feedback if the correction path is confusing. The local/test workflow does not submit
+            feedback if the correction path is confusing. The workflow does not submit
             correction decisions.</p>
             <p>For missing, confusing, or proxy-related source-derived values, the safe next
-            action is to name the local/test cue, avoid source absence or verification claims,
+            action is to name the cue, avoid source absence or verification claims,
             use feedback when the note/status wording is unclear, and continue review from the
             same queue context.</p>
             <p>Keep notes short and cautious. When a value is unclear, describe what the
-            local/test page showed and what still needs checking rather than making a source,
+            page showed and what still needs checking rather than making a source,
             legal, facility-wide, or public-source conclusion.</p>
             <table>
                 <caption>Cautious wording for reviewer-created notes/status</caption>
@@ -4177,19 +4177,19 @@ def _render_field_note_guidance_section() -> str:
                 <tbody>
                     <tr>
                         <th scope="row">Field is present</th>
-                        <td>Say the local/test record shows the value and name the field you
-                        checked. Example: local/test record shows complaint received date.</td>
+                        <td>Say the record shows the value and name the field you
+                        checked. Example: record shows complaint received date.</td>
                         <td>Do not say the value is legally verified or a public-source conclusion.</td>
                     </tr>
                     <tr>
                         <th scope="row">Field is not available locally</th>
-                        <td>Say the field is not available in this local/test record.</td>
+                        <td>Say the field is not available in this record.</td>
                         <td>Do not say the source does not contain this, the record is incomplete,
                         or data was lost.</td>
                     </tr>
                     <tr>
                         <th scope="row">Report-date proxy flag is shown</th>
-                        <td>Say the local/test cue marks report date as a proxy before using delay
+                        <td>Say the cue marks report date as a proxy before using delay
                         wording.</td>
                         <td>Do not use the proxy flag alone to say an investigation did or did not
                         happen, or that a delay is proven.</td>
@@ -4204,7 +4204,7 @@ def _render_field_note_guidance_section() -> str:
                     <tr>
                         <th scope="row">Value looks like a UI or data issue</th>
                         <td>Use the manual feedback checklist for suspected wording, display, or
-                        local/test data issues instead of treating the note as a source-derived
+                        data issues instead of treating the note as a source-derived
                         edit.</td>
                         <td>Do not imply the app corrected, edited, or replaced the source-derived
                         record.</td>
@@ -4236,7 +4236,7 @@ def _render_traceability_field_rows(
         (
             "Stable source identity",
             identity.get("stable_source_id"),
-            "Use this to distinguish the selected complaint from related local/test rows.",
+            "Use this to distinguish the selected complaint from related rows.",
         ),
         (
             "Source document ID",
@@ -4251,7 +4251,7 @@ def _render_traceability_field_rows(
         (
             "Raw SHA-256",
             source_document.get("raw_sha256"),
-            "Use this to identify the preserved raw source bytes in local/test evidence.",
+            "Use this to identify the preserved raw source bytes in evidence.",
         ),
         (
             "Raw artifact preservation",
@@ -4261,7 +4261,7 @@ def _render_traceability_field_rows(
         (
             "Source artifact identity",
             source_traceability.get("source_artifact_identity"),
-            "Use this to identify the local/test seeded-corpus artifact used for this page.",
+            "Use this to identify the seeded-corpus artifact used for this page.",
         ),
         (
             "Report index or source page marker",
@@ -4272,28 +4272,28 @@ def _render_traceability_field_rows(
         (
             "Connector name and version",
             _connector_label(source_document),
-            "Use this to report which deterministic local/test connector produced the row.",
+            "Use this to report which deterministic connector produced the row.",
         ),
         (
             "Retrieved at capture time",
             source_document.get("retrieved_at"),
-            "Use this as the local/test capture timestamp, not as a public-source "
+            "Use this as the capture timestamp, not as a public-source "
             "completeness claim.",
         ),
         (
             "Import batch ID",
             import_batch.get("import_batch_id"),
-            "Use this to identify the local/test seeded import batch.",
+            "Use this to identify the seeded import batch.",
         ),
         (
             "Import validation status",
             import_batch.get("validation_status"),
-            "Use this to report local/test artifact validation state without changing source data.",
+            "Use this to report artifact validation state without changing source data.",
         ),
         (
             "Raw hash validation status",
             import_batch.get("raw_hash_validation_status"),
-            "Use this to report local/test hash validation state.",
+            "Use this to report hash validation state.",
         ),
     )
     return "\n".join(
@@ -4325,12 +4325,12 @@ def _connector_label(source_document: Mapping[str, Any]) -> str:
 def _raw_artifact_display(value: object) -> str:
     if _has_display_value(value):
         return "available server-side; raw path not shown"
-    return "not available in this local/test record"
+    return "not available in this record"
 
 
 def _traceability_value(value: object) -> str:
     if not _has_display_value(value):
-        return "not available in this local/test record"
+        return "not available in this record"
     return _display_value(value)
 
 
@@ -4371,7 +4371,7 @@ def _render_traceability_summary(
 
 def _render_traceability_summary_row(label: str, value: object) -> str:
     visibility = (
-        "available" if _has_display_value(value) else "not available in this local/test record"
+        "available" if _has_display_value(value) else "not available in this record"
     )
     return f"""          <tr>
                         <th scope="row">{_escape(label)}</th>
@@ -4393,7 +4393,7 @@ def _render_source_context_section(
                 </tr>"""
         return f"""<section id="source-context-heading" aria-labelledby="source-context-title">
             <h2 id="source-context-title">Related seeded source-derived context</h2>
-            <p>This context comes from the same authenticated local/test source-derived
+            <p>This context comes from the same authenticated source-derived
             read seam as the selected record. Narrative fields are not shown in this
             browser shell.</p>
             <p>Use this section to distinguish the selected complaint from related facility,
@@ -4532,7 +4532,7 @@ def _safe_context_summary(record: Mapping[str, Any]) -> str:
         if field in original_values and _has_display_value(original_values[field])
     ]
     if entity_type == "allegation":
-        values.append("allegation_text: hidden in this local/test UI")
+        values.append("allegation_text: hidden in this UI")
     if not values:
         return "No safe scalar context fields available"
     return "; ".join(values)
@@ -4634,7 +4634,7 @@ def _return_context_hidden_summary(return_context: CcldQueueReturnContext) -> st
         return ""
     return f"""<section aria-labelledby="return-context-heading">
             <h3 id="return-context-heading">Return to the same CCLD queue</h3>
-            <p>After saving a note or status, return to this same local/test CCLD request
+            <p>After saving a note or status, return to this same CCLD request
             context and submit the request again to see queue progress and note/status cues
             derived from reviewer-created state.</p>
             <p>Status filters are reviewer-created queue views selected on the request queue;
@@ -4840,7 +4840,7 @@ def _reviewer_state_value(state_payload: Mapping[str, Any]) -> str:
     reviewer_status = state_payload.get("reviewer_status")
     if isinstance(reviewer_status, str):
         return reviewer_status
-    return "Local/test scaffold row"
+    return "scaffold row"
 
 
 def _actor_label(created_by: Mapping[str, Any]) -> str:
@@ -5029,7 +5029,7 @@ def _render_notice(
             <p class="launch-kicker">Reviewer-created state saved</p>
             <h2 id="form-result-heading">Reviewer-created state saved</h2>
             <p>{_escape(_saved_action_sentence(saved_action))}</p>
-            <p>This confirmation is reviewer-created local/test state. Source-derived fields remain unchanged, and no correction decision was submitted.</p>
+            <p>This confirmation is reviewer-created state. Source-derived fields remain unchanged, and no correction decision was submitted.</p>
             <section aria-labelledby="saved-changed-heading">
                 <h3 id="saved-changed-heading">What changed</h3>
                 <ul>
@@ -5049,7 +5049,7 @@ def _render_notice(
                 <h3 id="queue-return-progress-heading">Next</h3>
                 <p>Queue progress and note/status cues are derived from reviewer-created state.
                 Return to the same CCLD request context, use the same facility/license number
-                and date range, and submit the request again if the local/test queue page needs
+                and date range, and submit the request again if the queue page needs
                 to refresh its displayed cues.</p>
                 <p>Status filters are reviewer-created queue views. Showing no rows under a
                 status filter is a filtered-empty queue state, not public-source absence,
@@ -5057,14 +5057,14 @@ def _render_notice(
                 <p>After the queue shows the updated cue, open the suggested next record or the
                 next not-started record before continuing to the next record.</p>
                 <p>The suggested next record is not a persisted assignment, automatic record
-                claim, or official workflow state. It is local/test navigation guidance based
+                claim, or official workflow state. It is navigation guidance based
                 on the same request context and existing reviewer-created note/status cues.</p>
                 <p>If the saved confirmation, same-context return link, or refreshed queue cue
                 did not behave as expected, include that record-specific observation in the
                 existing manual feedback checklist. Also carry forward any source traceability,
                 source-confidence, field-note, or possible correction concern wording that was
                 confusing for this record.</p>
-                <p>Use packet preview or draft only when you are ready for local/test preparation;
+                <p>Use packet preview or draft only when you are ready for preparation;
                 they are not a legal report, not a final export, not a certified report, and not a source-completeness proof.</p>
                 <dl>
                     <dt>Same facility/license number</dt>
@@ -5180,7 +5180,7 @@ def _render_blocked_page(*, title: str, heading: str, message: str) -> str:
         heading=heading,
         message=message,
         guidance=(
-            "Use the local/test reviewer list, or retry with an actor that has "
+            "Use the reviewer list, or retry with an actor that has "
             "the required role and seeded corpus scope."
         ),
         links=(("Return to reviewer records", REVIEWER_UI_RECORDS_PATH),),
@@ -5209,7 +5209,7 @@ def _workflow_error_page(
                 heading=missing_record_heading,
                 message=(
                     "The selected seeded record is not available in this "
-                    "local/test seeded corpus."
+                    "seeded corpus."
                 ),
                 guidance="Return to the reviewer list and select a seeded record.",
                 links=(("Return to reviewer records", REVIEWER_UI_RECORDS_PATH),),
@@ -5222,7 +5222,7 @@ def _workflow_error_page(
             heading="Reviewer request blocked" if heading is None else heading,
             message=message,
             guidance=(
-                "Use the local/test reviewer list, or retry with valid values "
+                "Use the reviewer list, or retry with valid values "
                 "and an actor that has the required permission."
                 if guidance is None
                 else guidance

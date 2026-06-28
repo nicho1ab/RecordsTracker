@@ -356,13 +356,13 @@ def _feedback_context_panel(context: FeedbackHandoffContext | None) -> str:
             <p>Describe what was confusing, missing, unexpected, or hard to use, including active
             reviewer-created status filter confusion, shown-count or total-count confusion,
             filtered-empty recovery problems, source traceability concerns such as source URL, raw SHA-256 hash, connector metadata,
-            retrieval timestamp, retrieval job history/detail context, source document/report marker, or local/test traceability value
-            missing; source-confidence next-step confusion for missing local/test source values,
+            retrieval timestamp, retrieval job history/detail context, source document/report marker, or traceability value
+            missing; source-confidence next-step confusion for missing source values,
             proxy-related cues, or cautious note/status wording; possible correction concerns where a source-derived value looked wrong or
             incomplete after checking traceability; or uncertainty about whether to use a
             reviewer-created note or feedback; packet/export-readiness confusion, browser copy or
             print confusion, missing or unexpected records in packet content, or uncertainty about
-            the local/test packet boundary. Do not include
+            the packet boundary. Do not include
             raw source narrative, secrets, provider claims, private URLs, stack traces, server
             paths, environment values, or legal conclusions.</p>
         </section>"""
@@ -694,7 +694,7 @@ def _feedback_form(form_values: Mapping[str, list[str]]) -> str:
         <p>
           <label for="description">Description</label>
                     {textarea}
-                    <span id="description-help">Describe the route, control, keyboard flow, source traceability cue, packet/export-readiness concern, browser copy or print issue, or local/test export boundary confusion without private material.</span>
+                    <span id="description-help">Describe the route, control, keyboard flow, source traceability cue, packet/export-readiness concern, browser copy or print issue, or export boundary confusion without private material.</span>
         </p>
         <input type="hidden" name="page_path" value="{html.escape(page_path)}">
         <p><button type="submit">Submit feedback</button></p>
