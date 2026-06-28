@@ -68,7 +68,11 @@ TEST_SCOPE = LOCAL_REVIEWER_UI_SCOPE
 OTHER_SCOPE = HostedAccessScope("seeded_corpus", "different-seeded-corpus")
 COMPLAINT_KEY = "complaint:ccld:complaint:32-CR-20220407124448"
 
-def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
+def test_reviewer_ui_landing_lists_seeded_source_derived_records(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CCLD_RETRIEVAL_DEMO_MODE", "mock-success")
+
     with _seeded_connection() as connection:
         status, content_type, body = route_response(
             "/reviewer",
@@ -83,6 +87,13 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records() -> None:
     assert "Complaint records ready for review" in html
     assert "Facility case brief" in html
     assert "Complaint records visible" in html
+    mode_panel = html.split('<div class="mode-panel" aria-label="Retrieval mode">', 1)[1].split(
+        "</div>",
+        1,
+    )[0]
+    assert html.count("Fixture/mock demo") == 1
+    assert html.count('<span class="badge badge-demo">Fixture/mock demo</span>') == 1
+    assert '<span class="badge badge-demo">Fixture/mock demo</span>' in mode_panel
     assert "Records with review flags" in html
     assert "Reviewer-created notes/statuses" in html
     assert "Findings represented" in html
