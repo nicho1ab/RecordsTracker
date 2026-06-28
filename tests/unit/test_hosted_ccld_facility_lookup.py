@@ -1054,6 +1054,25 @@ def test_ccld_facility_review_hub_renders_uploaded_public_summary_signals(
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Facility review signals" in html
+    _assert_collapsed_disclosure(
+        html,
+        "About these signals and their limitations",
+    )
+    assert html.count("About these signals and their limitations") == 1
+    assert html.count(
+        "These facility review signals come from uploaded public summary fields"
+    ) == 1
+    assert html.count("Signals are review cues only") == 1
+    signals_heading_index = html.index("Facility review signals")
+    first_signal_data_index = html.index("Source dataset label")
+    disclosure_index = html.index("About these signals and their limitations")
+    first_disclaimer_index = html.index(
+        "These facility review signals come from uploaded public summary fields"
+    )
+    second_disclaimer_index = html.index("Signals are review cues only")
+    assert signals_heading_index < first_signal_data_index
+    assert first_signal_data_index < disclosure_index
+    assert disclosure_index < first_disclaimer_index < second_disclaimer_index
     assert "uploaded public summary fields" in html
     assert "public licensing/visit/citation summary" in html
     assert "complaint records are requested/reviewed separately" in normalized_html
