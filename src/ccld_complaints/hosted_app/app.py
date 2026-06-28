@@ -778,6 +778,24 @@ def render_app_shell() -> str:
                 <a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Enter a facility/license number directly</a>
                 <a class="button button-secondary" href="/reviewer">Open review queue</a>
             </div>
+        </section>
+        <section aria-labelledby="how-it-works-heading">
+            <h2 id="how-it-works-heading">How it works</h2>
+            <p>Use this page to start the current CCLD review path in order.</p>
+            <ol class="card-grid">
+                <li class="summary-card">
+                    <h3>Find a facility</h3>
+                    <p>Search by facility name or location when you do not already have the facility/license number.</p>
+                </li>
+                <li class="summary-card">
+                    <h3>Request complaint records</h3>
+                    <p>Enter the facility/license number and date range to load matching CCLD records.</p>
+                </li>
+                <li class="summary-card">
+                    <h3>Review and prepare</h3>
+                    <p>Open the review queue to check source traceability, add reviewer-created notes or status, and prepare next steps.</p>
+                </li>
+            </ol>
         </section>"""
         )
 
