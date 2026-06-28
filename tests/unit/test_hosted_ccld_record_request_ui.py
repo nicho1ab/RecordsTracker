@@ -876,7 +876,7 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert "Try one next step" in html
     assert "Check or change the facility/license number" in html
     assert "Adjust the complaint date range" in html
-    assert "Use loaded local/test records by changing the date range" in normalized_html
+    assert "Use loaded records by changing the date range" in normalized_html
     assert "Skip retrieval/job troubleshooting for this result" in normalized_html
     assert "no controlled retrieval job was submitted" in normalized_html
     assert "Report confusion with the facility/license number, date range" in normalized_html
@@ -997,7 +997,7 @@ def test_ccld_record_request_empty_hosted_records_offers_local_validated_load() 
     assert "Try one next step" in html
     assert "Check or change the facility/license number" in html
     assert "Adjust the complaint date range" in html
-    assert "Load or refresh local/test records" in html
+    assert "Load or refresh records" in html
     assert "Skip retrieval/job troubleshooting for this result" in normalized_html
     assert "Report confusion with the facility/license number, date range" in normalized_html
     assert "no controlled retrieval job was submitted for this request" in html
@@ -1166,7 +1166,7 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     )
     assert "Rendering this checklist does not change source-derived records" in first_checklist
     assert "Browser pages only trigger controlled server-side retrieval" in first_checklist
-    assert "Missing local/test rows are not proof" in first_checklist
+    assert "Missing rows are not proof" in first_checklist
     assert "Select the checklist text, copy it, paste it" in " ".join(first_html.split())
     assert "CCLD public portal remains the source of record" in first_checklist
     assert "provider" not in first_checklist.casefold()
@@ -1357,7 +1357,7 @@ def test_ccld_request_page_no_internal_path_labels_in_primary_ui() -> None:
 
     assert status == 200
     assert "Tiny committed CCLD facility fixture fallback" not in html
-    assert "Full local/test CCLD facility reference CSV" not in html
+    assert "Full CCLD facility reference CSV" not in html
     assert_no_secret_html(html)
 
 

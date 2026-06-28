@@ -1004,7 +1004,7 @@ def test_sample_pages_do_not_expose_scaffold_notice() -> None:
     src_html = src_body.decode("utf-8")
     fac_html = fac_body.decode("utf-8")
 
-    scaffold_notice_text = "Local/test scaffold only: not a production reviewer workflow."
+    scaffold_notice_text = "scaffold only: not a production reviewer workflow."
     assert src_status == 200
     assert scaffold_notice_text not in src_html
     assert "Local sample source-derived data only" in src_html
