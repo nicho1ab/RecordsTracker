@@ -548,7 +548,7 @@ def render_ccld_facility_review_hub_page(
       <h2 id="facility-directory-details-heading">Facility-directory details</h2>
       <p>These fields come from the active preloaded facility directory. Complaint records are requested and reviewed separately. The public CCLD portal remains the source of record.</p>
 {duplicate_note}
-      {_render_facility_directory_details(record)}
+      {_render_facility_directory_details(record, concise_labels=True)}
     </section>
     {_render_facility_review_signals_section(record, signals_summary)}
     {_render_facility_hub_review_context(record, review_context)}
@@ -1410,23 +1410,50 @@ def _render_result_card(record: CcldFacilityLookupRecord, *, index: int) -> str:
                 </article>"""
 
 
-def _render_facility_directory_details(record: CcldFacilityLookupRecord) -> str:
+def _render_facility_directory_details(
+        record: CcldFacilityLookupRecord,
+        *,
+        concise_labels: bool = False,
+) -> str:
+        labels = (
+                (
+                        "Facility number",
+                        "Name",
+                        "Program type",
+                        "Facility type",
+                        "City / State / ZIP",
+                        "County",
+                        "Capacity",
+                        "Status code",
+                )
+                if concise_labels
+                else (
+                        "Facility number directory field",
+                        "Name directory field",
+                        "Program type directory field",
+                        "Facility type directory field",
+                        "City/state/ZIP directory field",
+                        "County directory field",
+                        "Capacity directory field",
+                        "Status code directory field",
+                )
+        )
         return f"""<dl class="summary-list">
-                <dt>Facility number directory field</dt>
+                <dt>{labels[0]}</dt>
                 <dd>{_escape(record.facility_number)}</dd>
-                <dt>Name directory field</dt>
+                <dt>{labels[1]}</dt>
                 <dd>{_escape(_display_value(record.facility_name))}</dd>
-                <dt>Program type directory field</dt>
+                <dt>{labels[2]}</dt>
                 <dd>{_escape(_display_value(record.program_type))}</dd>
-                <dt>Facility type directory field</dt>
+                <dt>{labels[3]}</dt>
                 <dd>{_escape(_display_value(record.facility_type))}</dd>
-                <dt>City/state/ZIP directory field</dt>
+                <dt>{labels[4]}</dt>
                 <dd>{_escape(_display_value(_display_location(record)))}</dd>
-                <dt>County directory field</dt>
+                <dt>{labels[5]}</dt>
                 <dd>{_escape(_display_value(record.county))}</dd>
-                <dt>Capacity directory field</dt>
+                <dt>{labels[6]}</dt>
                 <dd>{_escape(_display_value(record.capacity))}</dd>
-                <dt>Status code directory field</dt>
+                <dt>{labels[7]}</dt>
                 <dd>{_escape(_display_value(record.status))}</dd>
             </dl>"""
 
