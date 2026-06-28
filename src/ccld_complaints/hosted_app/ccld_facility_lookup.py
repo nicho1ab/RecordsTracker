@@ -75,6 +75,9 @@ _SECRET_HTML_MARKERS = (
     "secret",
     "token",
 )
+_FACILITY_STATUS_CODE_LABELS = {
+    "3": "Licensed",
+}
 
 _FACILITY_COMBOBOX_JS = r"""(function(){
   'use strict';
@@ -1454,8 +1457,19 @@ def _render_facility_directory_details(
                 <dt>{labels[6]}</dt>
                 <dd>{_escape(_display_value(record.capacity))}</dd>
                 <dt>{labels[7]}</dt>
-                <dd>{_escape(_display_value(record.status))}</dd>
+                <dd>{_escape(_display_value(_display_facility_status_code(record.status)))}</dd>
             </dl>"""
+
+
+def _display_facility_status_code(status: str) -> str:
+        if not status:
+                return ""
+        if not status.isdigit():
+                return status
+        label = _FACILITY_STATUS_CODE_LABELS.get(status)
+        if not label:
+                return status
+        return f"{status} ({label})"
 
 
 def _render_facility_hub_not_found(facility_number: str) -> str:
