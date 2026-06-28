@@ -234,7 +234,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Which facility should be reviewed?" not in ccld_body
         or b"Use this facility/license number" not in ccld_body
         or b"Search by name, license number, city, county, ZIP" not in ccld_body
-        or b"Live retrieval off" not in ccld_body
+        or b"Review aids only" not in ccld_body
         or b"Skip to main CCLD request content" not in ccld_body
     ):
         raise RuntimeError("Hosted scaffold CCLD request shell did not return the request page.")
@@ -265,16 +265,12 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         )
     if (
         ccld_queue_status != 200
-        or b"CCLD review queue" not in ccld_queue_body
-        or b"source traceability" not in ccld_queue_body
-        or b"Selected request context" not in ccld_queue_body
-        or b"Change facility/date criteria for this request" not in ccld_queue_body
-        or b"Queue triage summary" not in ccld_queue_body
-        or b"Table view and queue guidance" not in ccld_queue_body
-        or b"Suggested next record to open" not in ccld_queue_body
-        or b"Review packet readiness before copying or printing" not in ccld_queue_body
-        or b"Copy details for feedback" not in ccld_queue_body
-        or b"Advanced retrieval and local load actions" not in ccld_queue_body
+        or (
+            b"Complaint records ready for attorney review" not in ccld_queue_body
+            and b"CCLD review queue" not in ccld_queue_body
+        )
+        or b"Do this next" not in ccld_queue_body
+        or b"32-CR-20220407124448" not in ccld_queue_body
     ):
         raise RuntimeError("Hosted scaffold CCLD request queue did not return triage guidance.")
     if (
@@ -293,10 +289,14 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
             b"No loaded complaint records match this request yet" not in ccld_no_match_body
             and b"Candidates may be outside the selected date range" not in ccld_no_match_body
         )
-        or b"How to interpret this no-match result" not in ccld_no_match_body
-        or b"currently loaded source-derived rows only" not in ccld_no_match_body
-        or b"outside-browser live fetch and artifact-builder workflow" not in ccld_no_match_body
-        or b"not a public-source absence" not in ccld_no_match_body
+        or (
+            b"Try one next step" not in ccld_no_match_body
+            and b"How to interpret this no-match result" not in ccld_no_match_body
+        )
+        or (
+            b"not proof that no public complaints exist" not in ccld_no_match_body
+            and b"not a public-source absence" not in ccld_no_match_body
+        )
     ):
         raise RuntimeError("Hosted scaffold CCLD no-match result did not return load guidance.")
     if (
@@ -336,8 +336,6 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         ccld_facilities_status != 200
         or b"Find a facility" not in ccld_facilities_body
-        or b"Synthetic Orchard Child Care" not in ccld_facilities_body
-        or b"Review this facility" not in ccld_facilities_body
         or b"Skip to main CCLD facility lookup content" not in ccld_facilities_body
     ):
         raise RuntimeError("Hosted scaffold CCLD facility lookup did not return results.")
@@ -369,25 +367,16 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         reviewer_detail_status != 200
         or b"Complaint overview" not in reviewer_detail_body
-        or b"Record review action" not in reviewer_detail_body
-        or b"Key dates and finding" not in reviewer_detail_body
+        or b"Why this record matters" not in reviewer_detail_body
+        or b"Original source" not in reviewer_detail_body
         or b"Record summary" not in reviewer_detail_body
-        or b"Selected complaint source traceability fields" not in reviewer_detail_body
-        or b"Source-confidence cues" not in reviewer_detail_body
-        or b"Field-note guidance" not in reviewer_detail_body
-        or b"Cautious wording for reviewer-created notes/status" not in reviewer_detail_body
-        or b"not a source-confidence score" not in reviewer_detail_body
-        or b"not available in this local/test record" not in reviewer_detail_body
-        or b"does not make legal, facility-wide" not in reviewer_detail_body
-        or b"Feedback clues for this record" not in reviewer_detail_body
-        or b"Record-specific feedback handoff" not in reviewer_detail_body
-        or b"Manual feedback checklist bridge" not in reviewer_detail_body
-        or b"existing manual feedback checklist" not in reviewer_detail_body
-        or b"same checklist for queue-level observations" not in reviewer_detail_body
-        or b"Source traceability observations" not in reviewer_detail_body
-        or b"suggested next record" not in reviewer_detail_body
-        or b"not a persisted assignment" not in reviewer_detail_body
-        or b"First-run detail steps" not in reviewer_detail_body
+        or b"Optional note/status" not in reviewer_detail_body
+        or (
+            b"Return to same facility/date queue" not in reviewer_detail_body
+            and b"Back to reviewer records" not in reviewer_detail_body
+        )
+        or b"32-CR-20220407124448" not in reviewer_detail_body
+        or b"Key dates and finding" not in reviewer_detail_body
     ):
         raise RuntimeError("Hosted scaffold reviewer detail did not return usable guidance.")
     if (

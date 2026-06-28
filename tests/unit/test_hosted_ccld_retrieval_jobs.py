@@ -251,7 +251,7 @@ def test_controlled_retrieval_imports_records_and_links_queue(tmp_path: Path) ->
     assert "Controlled CCLD retrieval completed and imported validated records" in html
     assert "What to do next" in html
     assert "Open the imported records in the queue" in html
-    assert "Review imported records" in html
+    assert "Review imported records" not in html
     assert "View retrieval job history" in html
     assert "View job details" in html
     assert "Report retrieval status confusion" in html
@@ -301,7 +301,7 @@ def test_controlled_retrieval_fetches_only_complaint_links_in_requested_date_ran
     assert jobs[0]["result_counts"]["selected_report_candidates"] == 1
     assert jobs[0]["result_counts"]["retrieved_record_bundles"] == 1
     assert "Controlled CCLD retrieval imported source-derived records" in html
-    assert "Review imported records" in html
+    assert "Open the imported records in the queue" in html
     assert "32-CR-20220407124448" in html
     assert "public-source completeness" not in html.casefold()
     assert_no_secret_html(html)
@@ -535,7 +535,7 @@ def test_local_dev_mock_success_retrieval_flow_imports_and_links_without_live_ca
     assert "Completed" in html
     assert "Records imported" in html
     assert "Imported source derived records" in normalized
-    assert "Review imported records" in html
+    assert "Open the imported records in the queue" in html
     assert "View retrieval job history" in html
     assert "View job details" in html
     assert "Complaint records ready for attorney review" in html

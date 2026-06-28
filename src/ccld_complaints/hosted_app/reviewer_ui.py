@@ -1782,9 +1782,7 @@ def _render_record_list(
                     <input id="q" name="q" type="search" value="{_escape(search_query)}"
                         aria-describedby="reviewer-search-help">
                     <span id="reviewer-search-help">Search by complaint control number,
-                    finding, facility/license number, source document ID, or loaded record key.
-                    Keyboard flow: search filters this queue, and each Open record link includes
-                    the complaint identifier before opening reviewer detail.</span>
+                    finding, facility/license number, source document ID, or loaded record key.</span>
         </p>
         <p>
           <button type="submit">Search</button>
@@ -2998,22 +2996,22 @@ def _source_traceability_cue(source_document: Mapping[str, Any]) -> str:
     available, missing = _traceability_value_labels(source_document)
     if available and not missing:
         return (
-            "Source traceability available: "
+            "Original CCLD source link saved: "
             + ", ".join(available)
-            + ". Missing local/test traceability values: none. Check source traceability before relying on source-derived values."
+            + "."
         )
     if available:
         return (
-            "Source traceability available for: "
+            "Source record saved for checking: "
             + ", ".join(available)
-            + ". Local/test traceability value missing: "
+            + ". Missing: "
             + ", ".join(missing)
-            + ". Check source traceability before relying on source-derived values."
+            + "."
         )
     return (
-        "No source traceability values are visible in this local/test row. Local/test traceability value missing: "
+        "No original source link is visible in this record. Missing: "
         + ", ".join(missing)
-        + ". This is not proof of public-source absence and not a source-completeness proof."
+        + "."
     )
 
 
@@ -3112,7 +3110,7 @@ def _review_flag_labels(
     if original_values.get("report_date_used_as_proxy") is True:
         flags.append("Review flag: report date used as proxy")
     if _has_visible_traceability_document(source_document):
-        flags.append("Source traceability available")
+        flags.append("Original CCLD source link saved")
     return tuple(flags)
 
 
@@ -3357,12 +3355,11 @@ def _render_detail(
                         </aside>
                     </div>
         {_render_review_actions(source_record_key, detail, return_context)}
-        <section aria-labelledby="source-derived-heading">
-                        <h2 id="source-derived-heading">Source-derived full field details</h2>
-            <p>These are safe scalar fields from the selected source-derived row. Narrative
-            source text is hidden in this local/test browser UI.</p>
-            <details>
-                <summary>Show source-derived fields</summary>
+        <details class="technical-details">
+          <summary>Show full complaint fields</summary>
+          <section aria-labelledby="source-derived-heading">
+                        <h2 id="source-derived-heading">Full complaint fields</h2>
+            <p>These are safe scalar fields for the selected complaint. Narrative source text is hidden.</p>
       <dl>
         <dt>Source record key</dt>
         <dd>{_escape(source_record_key)}</dd>
@@ -3385,8 +3382,8 @@ def _render_detail(
 {_render_original_value_rows(original_values)}
         </tbody>
       </table>
-            </details>
-    </section>
+          </section>
+        </details>
                 <details class="technical-details">
                     <summary>Source-confidence cues</summary>
         {_render_source_confidence_cues_section(source_record, related_records)}
@@ -3471,15 +3468,29 @@ def _render_detail_decision_continuity(
         complaint_control_number=control_number,
         prompt="Describe what was confusing about this reviewer detail step.",
     )
-    return f"""<section class="summary-card" aria-labelledby="detail-decision-continuity-heading">
-          <p class="launch-kicker">Queue-to-detail continuity</p>
-          <h2 id="detail-decision-continuity-heading">Complaint review workspace decision flow</h2>
-          <p>This detail page continues the review-priority queue decision flow. Use it to confirm
-          why the record was opened, check source-derived values, record a cautious
-          reviewer-created status/note when appropriate, and return to the same CCLD request
-          context.</p>
-          <section aria-labelledby="detail-active-context-heading">
-            <h3 id="detail-active-context-heading">Active CCLD request context</h3>
+    return f"""<section class="next-action-panel action-card" aria-labelledby="detail-decision-continuity-heading">
+          <p class="launch-kicker">Recommended action</p>
+          <h2 id="detail-decision-continuity-heading">Check this complaint, then return to the queue</h2>
+          <div class="detail-signal-grid">
+            <section aria-labelledby="detail-priority-rationale-heading">
+              <h3 id="detail-priority-rationale-heading">Why this record matters</h3>
+              <ul>
+{reason_items}
+              </ul>
+            </section>
+            <section aria-labelledby="check-first-heading">
+              <h3 id="check-first-heading">Check first</h3>
+              <ul>
+{check_items}
+              </ul>
+            </section>
+          </div>
+          <div class="form-actions">
+            <a class="button" href="{_escape(ccld_request_href)}">Return to same facility/date queue</a>
+            <a class="button button-secondary" href="{_escape(next_record_href)}">{_escape(next_record_text)}</a>
+          </div>
+          <details class="technical-details">
+            <summary>More actions and request context</summary>
             <dl>
               <dt>Facility/license number</dt>
               <dd>{_escape(_display_value(return_context.facility_number))}</dd>
@@ -3487,67 +3498,23 @@ def _render_detail_decision_continuity(
               <dd>{_escape(_return_context_date_range(return_context))}</dd>
               <dt>Request origin</dt>
               <dd>{_escape(_request_origin_label(return_context.context_origin))}</dd>
-            </dl>
-          </section>
-                      {_render_detail_facility_context_cues(related_records, return_context)}
-          <section aria-labelledby="selected-record-identity-heading">
-            <h3 id="selected-record-identity-heading">Selected record identity</h3>
-            <dl>
               <dt>Complaint/control identifier</dt>
               <dd>{_escape(control_number)}</dd>
-              <dt>Source record key</dt>
-              <dd>{_escape(source_record_key)}</dd>
-              <dt>Source-derived finding value</dt>
+              <dt>Finding</dt>
               <dd>{_escape(finding)}</dd>
-              <dt>Source-derived date/flag summary</dt>
-              <dd>{_escape(_detail_date_flag_summary(original_values))}</dd>
             </dl>
-          </section>
-          <section aria-labelledby="detail-priority-rationale-heading">
-            <h3 id="detail-priority-rationale-heading">Why this record is prioritized from the worklist</h3>
-            <p>These are existing source-derived and reviewer-created cues. They are review flags,
-            not legal conclusions or source-completeness proof.</p>
-            <ul>
-{reason_items}
-            </ul>
-          </section>
-          <section aria-labelledby="check-first-heading">
-            <h3 id="check-first-heading">What to check first</h3>
-            <p>Check these source-derived values before saving a reviewer-created observation.</p>
-            <ul>
-{check_items}
-            </ul>
-          </section>
-                    <section aria-labelledby="detail-correction-readiness-heading">
-                        <h3 id="detail-correction-readiness-heading">Correction-readiness cue</h3>
-                        <p>If a source-derived value looks wrong or incomplete, check source traceability first.
-                        Use a reviewer-created note to describe the possible correction concern for now, including
-                        the field label, the local/test value shown, and what still needs source review.</p>
-                        <p>Use feedback if the correction path itself is confusing, if the record appears
-                        unexpected for this facility/date request, or if you are unsure whether to use a note
-                        or feedback. This local/test workflow does not change source-derived records or submit
-                        correction decisions. A future correction workflow would be reviewer-created state, not
-                        a source-derived public-source fact.</p>
-                    </section>
-          <section aria-labelledby="detail-next-steps-heading">
-            <h3 id="detail-next-steps-heading">After this detail</h3>
-            <p>Save only cautious reviewer-created status/note observations. GET rendering does not
-            write reviewer-created state and does not mutate source-derived records.</p>
-                        <p>Return links preserve the same facility/date request context. Reviewer-created
-                        status filters are chosen on the queue view and do not assign, claim, or persist a
-                        record-specific workflow state.</p>
+            {_render_detail_facility_context_cues(related_records, return_context)}
+            <p>If a displayed value looks wrong or incomplete, check the source link first.
+            Add a note only when it helps explain what still needs review, or use feedback
+            when the page itself is confusing.</p>
             <div class="form-actions">
-              <a class="button" href="{_escape(ccld_request_href)}">Return to same facility/date queue</a>
-              <a class="button button-secondary" href="{_escape(next_record_href)}">{_escape(next_record_text)}</a>
-                              {_detail_facility_hub_action(return_context)}
-                              <a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}">Return to facility review priority list</a>
-                              <a class="button button-secondary" href="{_escape(_ccld_request_href(related_records, return_context))}">Start complaint request if needed</a>
+              {_detail_facility_hub_action(return_context)}
+              <a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}">Return to facility review priority list</a>
+              <a class="button button-secondary" href="{_escape(_ccld_request_href(related_records, return_context))}">Start complaint request if needed</a>
 {packet_links}
               <a class="button button-secondary" href="{_escape(feedback_href)}">Report confusion about this reviewer detail</a>
             </div>
-            <p class="helper-text">Packet links are local/test copy/print preparation aids, not a legal report,
-            not a final export, not a certified report, and not a source-completeness proof.</p>
-          </section>
+          </details>
         </section>"""
 
 
@@ -4131,65 +4098,20 @@ def _render_source_traceability_section(
     import_batch: Mapping[str, Any],
 ) -> str:
         return f"""<section id="traceability-heading" aria-labelledby="traceability-title">
-            <h2 id="traceability-title">Source traceability summary</h2>
-            <p>This summary names which traceability cues are visible and which are locally
-            missing in this local/test detail view so reviewers can decide what to check before
-            reviewer-created notes/status, packet preparation, or feedback.</p>
-        <p><strong>Traceability values available means</strong> this page has visible local/test
-        identifiers or source-document cues that help identify and check the selected
-        source-derived record. It does not verify the source record or make a completeness
-        claim.</p>
-        <p><strong>Missing local/test traceability values means</strong> this local/test display
-        does not have that cue. It is not public-source absence, not proof that the source
-        lacks a record/event, and not source-completeness proof.</p>
-        <p><strong>Check first:</strong> confirm available and missing traceability cues before
-        relying on source-derived values in reviewer-created notes/status, packet preview, or
-        packet draft. If traceability looks confusing or incomplete, use feedback with the
-        selected record identifiers below.</p>
-        <p><strong>Next safe actions:</strong> continue review, add cautious reviewer-created
-        note/status wording only when it helps the local/test queue, use feedback when
-        traceability is confusing, or return to the queue.</p>
-        <p><strong>Correction-readiness cue:</strong> if a source-derived value looks wrong or
-        incomplete, check source traceability first, then document the possible correction concern
-        in a reviewer-created note for now. Use feedback when the correction-readiness path is
-        confusing or the record appears unexpected.</p>
-      <p>Missing values are shown as <q>not available in this local/test record</q>. A missing
-      local/test value is not proof that the public source lacks a record or that any event did
-      or did not happen.</p>
-      <p>This page is a local/test review aid. It does not make legal, facility-wide,
-      completeness, harm, abuse, neglect, liability, or automated complaint-finding
-            conclusions. It does not change source-derived records or submit correction decisions.</p>
+            <h2 id="traceability-title">Original source</h2>
+            <p>{_escape(_source_traceability_cue(source_document))}</p>
             <dl class="summary-list">
-                <dt>Record-level source traceability status</dt>
-                <dd>{_escape(_source_traceability_cue(source_document))}</dd>
-                <dt>Traceability values available</dt>
-                <dd>{_escape(_available_traceability_values_text(source_document))}</dd>
-                <dt>What available means</dt>
-                <dd>Visible local/test identifiers or source-document cues can help identify and
-                check the selected source-derived record; they are not source verification or a
-                source-completeness claim.</dd>
-                <dt>Missing local/test traceability values</dt>
-                <dd>{_escape(_missing_traceability_values_text(source_document))}</dd>
-                <dt>What missing locally means</dt>
-                <dd>This local/test detail view does not have that cue; it is not public-source
-                absence, not proof that an event did or did not happen, and not source-completeness
-                proof.</dd>
                 <dt>Source URL</dt>
                 <dd>{_escape(_availability_label(source_document.get('source_url')))}</dd>
                 <dt>Raw SHA-256</dt>
                 <dd>{_escape(_availability_label(source_document.get('raw_sha256')))}</dd>
                 <dt>Connector and retrieval time</dt>
                 <dd>{_escape(_connector_retrieval_availability(source_document))}</dd>
-                <dt>Reviewer-created separation</dt>
-                <dd>Source-derived values remain separate from reviewer-created notes/status.</dd>
-                <dt>Next safe action</dt>
-                <dd>Check traceability first, use cautious reviewer-created note/status wording
-                only when it helps, use feedback for confusing traceability, or return to the
-                queue.</dd>
             </dl>
-            {_render_traceability_summary(source_document, source_traceability, import_batch)}
             <details class="technical-details">
-                <summary>Show selected source traceability fields</summary>
+                <summary>Show source identifiers and preservation details</summary>
+      <p>Use these fields when checking the public source or reporting a confusing record. Missing local fields do not prove that no public record exists.</p>
+            {_render_traceability_summary(source_document, source_traceability, import_batch)}
       <table>
         <caption>Selected complaint source traceability fields</caption>
         <thead>
@@ -4800,40 +4722,37 @@ def _render_reviewer_state_section(detail: Mapping[str, Any]) -> str:
     latest_display = (
         latest_created_at if isinstance(latest_created_at, str) else "None recorded"
     )
-    return f"""<section aria-labelledby="reviewer-state-heading">
-      <h2 id="reviewer-state-heading">Reviewer-created state</h2>
-      <p>Reviewer-created state is stored separately from the selected source-derived record.</p>
-      <p>UI actions add reviewer-created rows and audit rows; they do not edit
-      source-derived fields.</p>
-    <p>Use this section to see whether another local/test reviewer has already left a
-    note or status for the selected record.</p>
+    return f"""<details class="technical-details" id="reviewer-state-heading">
+      <summary>Notes/status history</summary>
+      <section aria-labelledby="reviewer-state-title">
+      <h2 id="reviewer-state-title">Notes/status history</h2>
+      <p>Notes and statuses are optional review aids; they do not change the complaint record.</p>
       <dl>
-        <dt>Total associated rows</dt>
-        <dd>{_escape(str(_int_value(summary, 'total_associated_rows')))}</dd>
-        <dt>Reviewer-created statuses present</dt>
+        <dt>Status recorded</dt>
         <dd>{_escape(statuses)}</dd>
-                <dt>Reviewer-created payload kinds present</dt>
-                <dd>{_escape(payload_kinds)}</dd>
-                <dt>Latest reviewer-created row</dt>
-                <dd>{_escape(latest_display)}</dd>
+        <dt>Latest note/status</dt>
+        <dd>{_escape(latest_display)}</dd>
       </dl>
-      <table>
-        <caption>Reviewer-created notes and statuses for this source-derived record</caption>
-        <thead>
-          <tr>
-            <th scope="col">Kind</th>
-            <th scope="col">Value</th>
-            <th scope="col">Created at</th>
-            <th scope="col">Created by</th>
-            <th scope="col">Boundary</th>
-          </tr>
-        </thead>
-        <tbody>
+      <details>
+        <summary>Show full note/status table</summary>
+        <table>
+          <caption>Reviewer notes and statuses for this complaint</caption>
+          <thead>
+            <tr>
+              <th scope="col">Kind</th>
+              <th scope="col">Value</th>
+              <th scope="col">Created at</th>
+              <th scope="col">Created by</th>
+              <th scope="col">Boundary</th>
+            </tr>
+          </thead>
+          <tbody>
 {rows}
-        </tbody>
-      </table>
-    </section>"""
-
+          </tbody>
+        </table>
+      </details>
+      </section>
+    </details>"""
 
 def _render_review_actions(
     source_record_key: str,
@@ -4844,42 +4763,31 @@ def _render_review_actions(
     current_status = _current_reviewer_status_text(summary)
     note_presence = _detail_note_presence_text(summary)
     next_action = _recommended_review_action(summary)
-    return f"""<section class="action-card reviewer-action-panel" id="review-actions-heading" aria-labelledby="review-actions-title">
-            <p class="launch-kicker">Guided reviewer-created action</p>
-            <h2 id="review-actions-title">Record review action</h2>
-            <p>Use this panel after reading the complaint overview and review flags. The controls
-            below save reviewer-created state through the existing note/status workflow actions;
-            Source-derived fields remain unchanged.</p>
+    return f"""<details class="technical-details reviewer-action-panel" id="review-actions-heading">
+            <summary>Add a note or status if useful</summary>
+            <section aria-labelledby="review-actions-title">
+            <h2 id="review-actions-title">Optional note/status</h2>
+            <p>Use these controls only when a note or status helps the review queue.</p>
             <dl class="summary-list">
-                <dt>Current reviewer-created status</dt>
+                <dt>Current status</dt>
                 <dd>{_escape(current_status)}</dd>
-                <dt>Reviewer-created note</dt>
+                <dt>Note</dt>
                 <dd>{_escape(note_presence)}</dd>
-                <dt>Recommended next action</dt>
+                <dt>Suggested use</dt>
                 <dd>{_escape(next_action)}</dd>
             </dl>
-            <p>After saving, the confirmation shows what changed, states that it is reviewer-created
-            state, confirms source-derived fields remain unchanged, and offers Return to facility
-            queue plus Open next priority record guidance.</p>
-            <p class="helper-text">Keyboard flow: Tab to the reviewer-created note field or status selector, save one action, then use the confirmation links to return to the same queue or open the next priority record.</p>
             <section aria-labelledby="cautious-action-guidance-heading">
-                <h3 id="cautious-action-guidance-heading">Cautious note/status guidance</h3>
-                <p>Use note text to record what you checked, not to create legal conclusions.
-                Helpful local/test wording can mention a review flag, possible delay indicator,
-                missing local/test value, source traceability available, or needs source check cue.
-                Check source traceability before relying on this value in a note or status.</p>
-                <p>When a source-derived value may need correction review, describe the possible
-                correction concern in a reviewer-created note for now. Status values can help the
-                queue reflect review progress, but status does not correct, verify, or replace
-                source-derived data, and correction decisions are not implemented in this local/test
-                workflow.</p>
+                <h3 id="cautious-action-guidance-heading">Keep it cautious</h3>
+                <p>Record what you checked. Do not turn the page display into a legal conclusion.
+                If a value looks wrong or incomplete, check the original source link first.</p>
                 <p>Do not write that abuse, neglect, harm, liability, rights deprivation, or source
                 completeness has been verified by this page.</p>
             </section>
             {_return_context_hidden_summary(return_context)}
             {_render_note_form(source_record_key, return_context)}
             {_render_status_form(source_record_key, return_context)}
-        </section>"""
+            </section>
+        </details>"""
 
 
 def _current_reviewer_status_text(summary: Mapping[str, Any]) -> str:
@@ -4902,11 +4810,11 @@ def _recommended_review_action(summary: Mapping[str, Any]) -> str:
         _string_items(summary.get("payload_kinds_present", []))
     )
     if not has_status and not has_note:
-        return "Add a review status or note."
+        return "Skip unless it helps."
     if has_status and not has_note:
-        return "Add a note if source-traceability or missing-field context needs explanation."
+        return "Add a note only if source-link or missing-field context needs explanation."
     if has_note and not has_status:
-        return "Set a review status so the queue can reflect progress."
+        return "Set a status only if queue progress needs it."
     return "Return to the queue or open the next record."
 
 
@@ -4948,23 +4856,19 @@ def _render_note_form(
     return_context: CcldQueueReturnContext,
 ) -> str:
     return f"""<section aria-labelledby="note-form-heading">
-        <h3 id="note-form-heading">Reviewer-created note</h3>
+        <h3 id="note-form-heading">Review note</h3>
       <form action="{REVIEWER_UI_NOTE_PATH}" method="post">
         <input type="hidden" name="source_record_key" value="{_escape(source_record_key)}">
                 {_return_context_hidden_inputs(return_context)}
         <p>
-                    <label for="note_text">Reviewer-created note for this record</label>
+                    <label for="note_text">Note for this record</label>
                     <textarea id="note_text" name="note_text" rows="4" required
                         aria-describedby="note-text-help"></textarea>
                                             <span id="note-text-help">
                                         Use safe plain text. Notes appear below after saving.
-                                        They can document a possible correction concern after source
-                                        traceability review, but they do not change the source-derived
-                                        record or submit a correction decision. Keyboard flow after saving:
-                                        use the confirmation links to return to the same queue or open the
-                                        next priority record.</span>
+                                        They do not change the complaint record.</span>
         </p>
-                                <p><button type="submit">Save reviewer-created note for this record</button></p>
+                                <p><button type="submit">Save note for this record</button></p>
       </form>
     </section>"""
 
@@ -4978,23 +4882,19 @@ def _render_status_form(
         for status in REVIEWER_STATUS_VALUES
     )
     return f"""<section aria-labelledby="status-form-heading">
-            <h3 id="status-form-heading">Reviewer-created status</h3>
+            <h3 id="status-form-heading">Review status</h3>
       <form action="{REVIEWER_UI_STATUS_PATH}" method="post">
         <input type="hidden" name="source_record_key" value="{_escape(source_record_key)}">
                 {_return_context_hidden_inputs(return_context)}
         <p>
-          <label for="reviewer_status">Reviewer-created status for this record</label>
+          <label for="reviewer_status">Status for this record</label>
                     <select id="reviewer_status" name="reviewer_status" required
                         aria-describedby="reviewer-status-help">
 {options}
           </select>
-                    <span id="reviewer-status-help">Status is reviewer-created local/test state for
-                    queue progress, appears below after saving, and is not a public-source
-                    finding. It does not correct or verify source-derived data. Keyboard flow after
-                    saving: use the confirmation links to return to the same queue or open the next
-                    priority record.</span>
+                    <span id="reviewer-status-help">Status helps the queue show progress. It does not correct or verify the complaint record.</span>
         </p>
-                                <p><button type="submit">Save reviewer-created status for this record</button></p>
+                                <p><button type="submit">Save status for this record</button></p>
       </form>
     </section>"""
 
@@ -5019,22 +4919,14 @@ def _render_detail_feedback_guidance(
         prompt="Describe source traceability, wording, keyboard flow, or next-step confusion.",
     )
     return f"""<section id="detail-feedback-heading" aria-labelledby="detail-feedback-title">
-            <h2 id="detail-feedback-title">Feedback clues for this record</h2>
-            <p>If this detail looks wrong or incomplete, return to the CCLD request page and copy
-            the tester feedback checklist. Include the record identifiers below and describe what
-            looked missing, confusing, or unexpected.</p>
-            <p>If source traceability fields are confusing or missing, report the field label and
-            the wording shown on this page, such as source URL, raw SHA-256 hash, connector
-            metadata, retrieval timestamp, source document/report marker, or local/test
-            traceability value missing. Do not treat missing local/test traceability display as
-            proof of public-source completeness or absence.</p>
-            <p>If a source-derived value appears wrong or incomplete after checking traceability,
-            include it as a possible correction concern in a reviewer-created note. Use feedback
-            instead when the correction-readiness guidance is confusing, the record appears
-            unexpected, or you are unsure whether the issue belongs in a note or feedback.</p>
-            <p>Feedback remains manual-copy only. Return to the same CCLD request queue,
-            resubmit the request when needed, and use the existing manual feedback checklist;
-            this detail page does not create a second checklist or save feedback.</p>
+            <h2 id="detail-feedback-title">Feedback for this record</h2>
+            <p>If this detail looks wrong or incomplete, use the tester feedback checklist on
+            the CCLD request queue. Include the identifiers below and what looked missing,
+            confusing, or unexpected.</p>
+            <p>Mention the original source link status or field label when source information is
+            hard to check. Missing local fields do not prove that CCLD has no public record.</p>
+            <p>Notes and statuses are optional. Use feedback instead when you are unsure what
+            the next step should be.</p>
             <dl>
                 <dt>Facility/license number</dt>
                 <dd>{_escape(_facility_context_value(facility, 'external_facility_number'))}</dd>
@@ -5047,55 +4939,33 @@ def _render_detail_feedback_guidance(
                 <dt>Return request context</dt>
                 <dd>{_escape(_detail_feedback_request_context(return_context))}</dd>
             </dl>
+            <details class="technical-details">
+                <summary>What to include in feedback</summary>
             <section aria-labelledby="record-feedback-handoff-heading">
-                <h3 id="record-feedback-handoff-heading">Record-specific feedback handoff</h3>
-                <p>Carry these observations into the existing manual feedback checklist when
-                they apply. This page does not save, send, export, or persist feedback.</p>
+                <h3 id="record-feedback-handoff-heading">Record feedback notes</h3>
+                <p>This page does not save, send, export, or persist feedback.</p>
                 <ul>
-                    <li>Source traceability observations: fields that were easy to confirm,
-                    missing, or confusing.</li>
-                    <li>Source-confidence next-step confusion: missing local/test values,
-                    proxy-related cues, or wording that made it unclear whether to add a
-                    cautious reviewer-created note/status or use feedback.</li>
-                    <li>Source context confusion: unclear related source rows, hidden narrative
-                    expectations, or labels that made this complaint hard to identify.</li>
-                    <li>Request-context fit: whether this complaint seemed unexpected for the
-                    facility/date request you used to open it.</li>
-                    <li>Note/status behavior: whether the save confirmation appeared, the saved
-                    reviewer-created state was visible, and the return-to-queue link worked.</li>
-                    <li>Queue refresh behavior: whether returning to the same CCLD request
-                    context and resubmitting showed understandable progress and status cues.</li>
-                    <li>Friction: confusing labels, wording, keyboard flow, or next steps that
-                    slowed record review.</li>
+                    <li>Source link or source field that was missing or confusing.</li>
+                    <li>Record value, date, finding, or flag that looked wrong or incomplete.</li>
+                    <li>Whether this complaint seemed unexpected for the facility/date request.</li>
+                    <li>Whether note/status save confirmation or return-to-queue behavior was unclear.</li>
+                    <li>Any label, wording, keyboard flow, or next step that slowed review.</li>
                 </ul>
             </section>
             <section aria-labelledby="feedback-checklist-bridge-heading">
                 <h3 id="feedback-checklist-bridge-heading">Manual feedback checklist bridge</h3>
                 <p>Use the existing manual feedback checklist on the CCLD request queue for
-                record-specific observations from this detail. Do not create a separate
-                checklist from this page.</p>
-                <p>Use that same checklist for queue-level observations and detail-level
-                observations so request context, queue filters, source traceability,
-                source-confidence cues, field-note uncertainty, note/status confirmation,
-                return-to-queue refresh, and suggested-next-record confusion stay together.</p>
+                both queue observations and record-specific observations from this detail.
+                Do not create a separate checklist from this page.</p>
                 <ul>
-                    <li>Source traceability: note fields that were easy to confirm, missing, or
-                    confusing.</li>
-                    <li>Source-confidence cues: note present values, values not available in the
-                    local/test record, proxy-flag context that affected review, and whether
-                    the next safe action was clear.</li>
-                    <li>Field-note uncertainty: note wording you were unsure how to phrase after
-                    checking source traceability.</li>
-                    <li>Possible correction concern: note which source-derived value looked wrong
-                    or incomplete, what traceability you checked first, and whether feedback was
-                    needed because the future correction workflow path was unclear.</li>
-                    <li>Note/status confirmation: note whether the saved reviewer-created state
-                    appeared and stayed separate from source-derived fields.</li>
-                    <li>Return-to-queue flow: note whether returning to the same request context,
-                    refreshing queue progress, or choosing the suggested next record was
-                    confusing.</li>
+                    <li>Original source: note fields that were easy to confirm, missing, or confusing.</li>
+                    <li>Complaint values: note dates, findings, flags, or values that were hard to trust.</li>
+                    <li>Note/status: note whether save confirmation or queue progress was unclear.</li>
+                    <li>Return-to-queue flow: note whether returning, refreshing, or choosing the next
+                    record was confusing.</li>
                 </ul>
             </section>
+            </details>
             <ul>
                 <li><a href="{_escape(ccld_request_href)}">Return to CCLD request or queue</a></li>
                 <li><a href="{CCLD_HELP_PATH}">Open CCLD workflow help</a></li>
@@ -5277,7 +5147,7 @@ def _page(
     heading: str,
     main: str,
     actor_label: str | None = None,
-    show_workflow_indicator: bool = True,
+    show_workflow_indicator: bool = False,
 ) -> str:
         return render_page_shell(
                 title=title,

@@ -555,17 +555,15 @@ def _render_request_form(
                         else "Select a facility"
                 ),
                 main=f"""    <section class="hero-card" aria-labelledby="request-hero-heading">
-                    <p class="launch-kicker">Retrieval intake</p>
+                    <p class="launch-kicker">Start review</p>
                     <h2 id="request-hero-heading">Retrieve complaint records for a facility</h2>
-                    <p class="launch-value">Confirm a CCLD facility/license number and date range, then retrieve or show loaded source-derived complaint records.</p>
-                    <p class="helper-text">Keyboard flow: move from facility selection to date range, then choose Retrieve complaint records or Show existing queue before opening the review queue.</p>
+                    <p class="launch-value">Choose a facility and date range, then open the complaint queue.</p>
             <p><span class="{mode_class}">{mode_label}</span> <a class="helper-link" href="{CCLD_HELP_PATH}#limitations">Records are review aids. See Help for limitations.</a></p>
         </section>
                 <details class="quiet-section orientation-details">
                     <summary id="request-start-orientation-heading">Start review request context</summary>
-                    <p>Facility/license number identifies the CCLD facility. Date range narrows complaint, visit, report, signed, or retrieval dates already represented in preloaded source-derived records.</p>
-                    <p>Retrieve records uses the configured controlled server-side retrieval path only when available. Show existing queue searches loaded source-derived records without proving public-source completeness.</p>
-                    <p>When records are found, continue to the review queue, open the recommended record, review source traceability on detail, then use packet preparation and feedback when needed.</p>
+                    <p>Facility/license number identifies the CCLD facility. Date range narrows the loaded complaint records.</p>
+                    <p>When records are found, open the recommended record and return to the same queue when done.</p>
                 </details>
                 {workflow_state}""",
     )
@@ -628,7 +626,7 @@ def _render_facility_selection_state(reference_source: CcldFacilityReferenceSour
             <p>Search for a facility when you do not know the exact facility/license number, or type the digit facility/license number directly if you already have it.</p>
             <form action="{CCLD_RECORD_REQUEST_PATH}" method="get" id="facility-select-form">
                 <label for="facility-search-input">Facility</label>
-                <p id="facility-search-hint" class="helper-text">Search by name, license number, city, county, ZIP, facility type, program type, or status code. Keyboard flow: type a search or digit number, use arrow keys or Tab to review suggestions and actions, then use this facility/license number to continue to date range.</p>
+                <p id="facility-search-hint" class="helper-text">Search by name, license number, city, county, ZIP, facility type, program type, or status code.</p>
                 <div class="facility-combobox-outer" id="facility-combobox-outer">
                     <input id="facility-search-input" name="facility_number" type="text"
                         inputmode="numeric"
@@ -680,7 +678,7 @@ def _render_date_range_state(
                         <input id="end_date" name="end_date" type="date" value="{_escape(selected_end_date)}" aria-describedby="date-range-help" required>
                     </p>
                 </div>
-                <p id="date-range-help" class="helper-text">Use the date range to narrow complaint, visit, report, signed, or retrieval dates represented in the source-derived records. Keyboard flow: Tab through Start date, End date, Confirm date range, or Change facility.</p>
+                <p id="date-range-help" class="helper-text">Use the date range to narrow complaint, visit, report, signed, or retrieval dates in loaded records.</p>
                 <div class="form-actions">
                     <button type="submit">Confirm date range</button>
                     <a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Change facility</a>
@@ -699,7 +697,7 @@ def _render_date_ready_state(
         return f"""<section class="workflow-panel workflow-panel-primary" aria-labelledby="retrieve-ready-heading">
             <p class="stage-kicker">Retrieve records</p>
             <h2 id="retrieve-ready-heading">Ready to retrieve complaint records</h2>
-            <p>Review this facility/date context before retrieving or showing loaded source-derived complaint records. After records are found, open the review queue and start with the recommended record.</p>
+            <p>Review this facility/date context before retrieving records or showing the existing queue. Start with the recommended record.</p>
             <dl>
                 <dt>Facility/license number</dt>
                 <dd>{_escape(facility_number)}</dd>
@@ -721,7 +719,7 @@ def _render_date_ready_state(
                     <button class="secondary" type="submit">Show existing queue</button>
                     <a class="button button-quiet" href="{CCLD_RECORD_REQUEST_PATH}?{_escape(urlencode({'facility_number': facility_number, _REQUEST_CONTEXT_ORIGIN_FIELD: request_context_origin, _LOOKUP_FACILITY_NAME_FIELD: lookup_facility_name or ''}))}">Change date range</a>
                 </div>
-                <p id="retrieve-actions-help" class="helper-text">Keyboard flow: Retrieve complaint records creates a controlled retrieval job only when configured; Show existing queue reviews loaded source-derived records; Change date range returns to the date step.</p>
+                <p id="retrieve-actions-help" class="helper-text">Retrieve complaint records creates a controlled job only when configured. Show existing queue reviews already loaded records.</p>
             </form>
         </section>"""
 
@@ -757,7 +755,7 @@ def _runtime_mode_label() -> str:
         return "Fixture/mock demo"
     if retrieval_enabled == "enabled" and raw_dir:
         return "Live public CCLD"
-    return "Live retrieval off"
+    return "Review aids only"
 
 def _mode_badge_class(label: str) -> str:
     if label == "Live public CCLD":
@@ -1197,7 +1195,7 @@ def _render_matched_result(
     {_render_retrieval_job_summary(retrieval_result)}
         <section aria-labelledby="review-queue-heading">
             <h2 id="review-queue-heading">CCLD review queue</h2>
-            <p>Open the suggested complaint first, then check source traceability and source-confidence cues on detail before adding cautious reviewer-created notes/status or feedback.</p>
+            <p>Open the suggested complaint first. On detail, check the original CCLD source link and key dates/finding before adding an optional note or status.</p>
             {_render_queue_do_this_next_panel(request, decision_queue_items)}
             {_render_queue_progress_summary(decision_queue_items)}
             {_render_queue_triage_summary(request, decision_queue_items)}
@@ -1219,9 +1217,9 @@ def _render_matched_result(
                         <th scope="col">Request date range</th>
                         <th scope="col">Complaint and report dates</th>
                         <th scope="col">Source document/report</th>
-                        <th scope="col">Source traceability summary</th>
-                        <th scope="col">Reviewer-created note/status cue</th>
-                        <th scope="col">Loaded record/source-confidence context</th>
+                        <th scope="col">Original source link status</th>
+                        <th scope="col">Note/status cue</th>
+                        <th scope="col">Loaded record context</th>
           </tr>
         </thead>
         <tbody>
@@ -2743,16 +2741,13 @@ def _render_queue_navigation() -> str:
 
 def _render_queue_first_run_steps() -> str:
         return """<section aria-labelledby="queue-first-run-heading">
-            <h3 id="queue-first-run-heading">First-run queue steps</h3>
+            <h3 id="queue-first-run-heading">Queue review steps</h3>
             <ol>
-                <li>Read the queue progress and triage summaries.</li>
-                <li>Open the suggested next complaint record in reviewer detail.</li>
-                <li>On detail, check source traceability, source-confidence cues, and
-                field-note guidance before saving reviewer notes/status.</li>
-                <li>Return to this same request page, resubmit when needed to refresh queue
-                progress, and continue with the next suggested record.</li>
-                <li>Copy the single manual feedback checklist for both queue and detail
-                observations.</li>
+                <li>Open the suggested next complaint record.</li>
+                <li>Check the original CCLD source link, dates, finding, and reason it was flagged.</li>
+                <li>Add a note or status only when it helps the review.</li>
+                <li>Return to this same queue and continue with the next suggested record.</li>
+                <li>Use the feedback checklist only when the queue or detail page is confusing.</li>
             </ol>
         </section>"""
 
@@ -2763,16 +2758,16 @@ def _render_queue_do_this_next_panel(
 ) -> str:
         next_item = _next_queue_item(items)
         next_record_markup = _next_record_markup(next_item, request)
-        return f"""<section class="summary-card" aria-labelledby="queue-do-this-next-heading">
+        return f"""<section class="action-card next-action-panel" aria-labelledby="queue-do-this-next-heading">
+            <p class="launch-kicker">Recommended action</p>
             <h3 id="queue-do-this-next-heading">Do this next</h3>
-            <p>Start with the suggested next record for this facility/date queue.</p>
+            <p>Start with the suggested next record.</p>
             <ol>
                 <li>{next_record_markup}</li>
-                <li>On detail, check source traceability and source-confidence cues before relying on source-derived values.</li>
-                <li>Save a reviewer-created note or status only if it helps explain what you checked or move the queue forward.</li>
-                <li>Return to this same queue, submit the same request again if cues need refreshing, then continue with the next suggested record.</li>
+                <li>On detail, check the original CCLD source link and key dates/finding.</li>
+                <li>Add a note or status only if it helps.</li>
+                <li>Return to this queue and refresh the same request if the queue needs updated cues.</li>
             </ol>
-            <p>This is local/test navigation help, not an assignment, record claim, persisted queue state, or workflow-engine state.</p>
         </section>"""
 
 
@@ -2791,35 +2786,26 @@ def _render_queue_triage_summary(
     date_scope = _date_scope_text(request)
     return f"""<section aria-labelledby="queue-triage-heading">
       <h3 id="queue-triage-heading">Queue triage summary</h3>
-      <p>Use this summary to decide what to open first. It is derived from the current
-      request, existing source-derived traceability fields, and existing
-      reviewer-created notes/statuses.</p>
-    <p>Queue summaries do not prove record completeness. Open reviewer detail for
-    source traceability and source-confidence cues before relying on a summary value that
-    looks missing, confusing, proxy-related, or missing traceability values.</p>
-    <p>Next safe action: check the detail traceability first, write only cautious
-    reviewer-created note/status wording when needed, use feedback if the source-confidence
-    cue or next step remains confusing, then return to this queue and continue with the
-    suggested next record.</p>
+      <p>Use this summary to decide what to open first. Counts come from the current request,
+      saved source-link fields, and any existing notes or statuses.</p>
+    <p>Queue summaries do not prove every public record is present. Open detail before relying
+    on a missing or confusing value.</p>
+    <p>Next safe action: check the detail page, add a note or status only when it helps, then
+    return to this queue and continue with the suggested next record.</p>
       <dl>
         <dt>Request scope</dt>
                 <dd>{_escape(request_scope)}; date range {_escape(date_scope)}</dd>
-        <dt>Records with reviewer-created notes</dt>
+        <dt>Records with notes</dt>
         <dd>{note_count}</dd>
-        <dt>Records with reviewer-created status</dt>
+        <dt>Records with status</dt>
         <dd>{status_count}</dd>
-        <dt>Records with source traceability available</dt>
+        <dt>Records with original source links saved</dt>
         <dd>{traceability_count}</dd>
         <dt>Suggested next record to open</dt>
         <dd>{next_record_markup}</dd>
       </dl>
-    <p>The manual feedback checklist below uses these queue counts and reviewer-created
-        note/status cues so testers can report missing records, record-specific
-        reviewer-detail observations, missing or confusing source traceability, confusing
-        wording, or unexpected filter behavior.</p>
-    <p>Carry both queue-level observations and reviewer-detail observations into that same
-        manual feedback checklist; this queue does not create a second checklist or persist
-        feedback.</p>
+    <p>Use the feedback checklist below only for missing records, confusing record details,
+    confusing wording, or unexpected filters.</p>
     </section>"""
 
 
@@ -2856,16 +2842,11 @@ def _render_worklist_decision_flow(
         lookup_facility_name=request.lookup_facility_name,
     )
     return f"""<section aria-labelledby="worklist-decision-flow-heading">
-      <h3 id="worklist-decision-flow-heading">Review-priority decision flow</h3>
-      <p>Use this worklist as a decision screen: confirm the CCLD request
-      context, open the suggested next record, then continue to packet preparation only
-      after checking source traceability on reviewer detail.</p>
-    <p>Record cards name source traceability values that are available or missing in the
-    loaded source-derived record. Missing traceability values are review cues, not
-    proof of public-source absence or a source-completeness proof.</p>
-    <p>If a card shows a missing, confusing, or proxy-related value, the next step is
-    reviewer detail: check source traceability, use cautious reviewer-created note/status
-    wording only when helpful, and use feedback when the cue or safe wording is unclear.</p>
+      <h3 id="worklist-decision-flow-heading">Complaint worklist</h3>
+      <p>Open the recommended record first. Use the remaining cards to scan dates, findings,
+      flags, source-link status, and note/status progress for this facility/date request.</p>
+    <p>Missing values on a card are review cues, not proof that CCLD has no public record.
+    Check the detail page before relying on a missing or confusing value.</p>
       <dl>
         <dt>Active CCLD request context</dt>
         <dd>{_escape(_facility_scope_for_summary(request))}; date range {_escape(_date_scope_text(request))}</dd>
@@ -2873,13 +2854,13 @@ def _render_worklist_decision_flow(
         <dd>{_escape(_request_origin_label(request.request_context_origin))}</dd>
         <dt>Active facility reference source</dt>
         <dd>{_escape(_user_facing_source_label(reference_source))}</dd>
-        <dt>Loaded source-derived complaint records</dt>
+        <dt>Loaded complaint records</dt>
         <dd>{len(queue_items)}</dd>
-        <dt>Records with reviewer-created status/note cues</dt>
+        <dt>Records with status or notes</dt>
         <dd>{note_or_status_count}</dd>
         <dt>Records with review flags or possible delay indicators</dt>
         <dd>{review_flag_count}</dd>
-        <dt>Records with source traceability available</dt>
+        <dt>Records with original source links saved</dt>
         <dd>{traceability_count}</dd>
       </dl>
       {next_card}
@@ -2887,6 +2868,10 @@ def _render_worklist_decision_flow(
                 {_request_context_facility_hub_button(request, reference_source)}
                 <a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}">Open facility review priority list</a>
         <a class="button button-secondary" href="{_escape(change_href)}">Return to change facility/date criteria</a>
+      </div>
+      <details class="technical-details">
+        <summary>More queue and export actions</summary>
+        <div class="form-actions" aria-label="Optional queue export actions">
         <a class="button button-secondary" href="{_escape(_packet_preview_href_for_request(request))}">Review packet readiness before copying or printing</a>
         <a class="button button-secondary" href="{_escape(_matrix_export_href_for_request(request))}">Download complaint review matrix CSV</a>
         <a class="button button-secondary" href="{_escape(_substantiated_export_href_for_request(request))}">Download substantiated complaint CSV</a>
@@ -2897,15 +2882,14 @@ def _render_worklist_decision_flow(
       </div>
     <p class="helper-text">Packet preview and draft links are copy/print preparation aids,
     not a legal report, not a final export, not a certified report, and not a source-completeness proof.</p>
+      </details>
       <section aria-labelledby="priority-record-cards-heading">
         <h4 id="priority-record-cards-heading">Prioritized worklist records</h4>
-        <p>These record cards use existing source-derived values and existing reviewer-created
-        note/status reads only. They do not assign, claim, or mutate records.</p>
+        <p>These record cards use already loaded complaint values and existing notes/statuses.
+        They do not assign, claim, or change records.</p>
 {cards}
       </section>
-    <p>If the queue order, a missing local/test record, an unexpected record,
-    source-traceability cue, source-confidence cue, missing local/test value,
-    proxy-related value, reviewer-created status/note cue, wording, keyboard flow,
+    <p>If the queue order, a missing or unexpected record, a confusing value, wording, filter,
     or next step is confusing, open <a href="{_escape(_feedback_href_for_queue(request))}">tester
     feedback for this queue context</a>.</p>
     </section>"""
@@ -2918,7 +2902,7 @@ def _render_recommended_next_record(
     if item is None:
         return """      <section class="summary-card" aria-labelledby="recommended-next-record-heading">
         <h4 id="recommended-next-record-heading">Recommended next record action</h4>
-        <p>No source-derived complaint record is visible for this filter.</p>
+        <p>No complaint record is visible for this filter.</p>
       </section>"""
     source_record_key = _string(item.complaint_record, "source_record_key")
     detail_href = _reviewer_detail_href_for_request(source_record_key, request=request)
@@ -2950,22 +2934,22 @@ def _render_worklist_decision_card(
           <h5 id="worklist-record-{index + 1}-heading">{_escape(heading_prefix)}: {_escape(label)}</h5>
           <p>{_escape(_record_review_need_label(request, item, index))}</p>
           <dl>
-            <dt>Complaint/control/source-record identifier</dt>
+            <dt>Complaint/control identifier</dt>
             <dd>{_escape(label)}; source record key {_escape(source_record_key)}</dd>
-            <dt>Source-derived date/finding/flag summary</dt>
+            <dt>Date/finding/flag summary</dt>
             <dd>{_escape(_record_source_summary(request, item, index))}</dd>
-            <dt>Reviewer-created status/note cue</dt>
+            <dt>Note/status cue</dt>
             <dd>{_escape(_reviewer_state_text(item.reviewer_state))}</dd>
-            <dt>Source traceability availability cue</dt>
+            <dt>Original source link status</dt>
             <dd>{_escape(_traceability_summary(item.complaint_record))}</dd>
-            <dt>Loaded local/test bundle context</dt>
+            <dt>Loaded record context</dt>
             <dd>{_escape(_loaded_context_text(item))}</dd>
           </dl>
           <p>Why this record is prioritized:</p>
           <ul>
 {reasons}
           </ul>
-          <p><a href="{_escape(detail_href)}">Open review workspace for {_escape(label)}</a></p>
+          <p><a href="{_escape(detail_href)}">Open complaint detail for {_escape(label)}</a></p>
         </article>"""
 
 
@@ -2988,10 +2972,10 @@ def _record_review_need_label(
 ) -> str:
     record = _case_brief_record_from_queue_item(index, request, item)
     if has_review_flag(record):
-        return "Review need: flagged for review from source-derived cues; check detail before relying on the summary, then use cautious note/status wording or feedback if the cue remains confusing."
+        return "Review need: flagged for review. Check the detail page before relying on this summary."
     if _summary_int(item.reviewer_state, "total_rows") == 0:
-        return "Review need: no reviewer-created status/note recorded yet; check detail before adding one."
-    return "Review need: reviewer-created status/note cue exists; continue from detail if follow-up or feedback is needed."
+        return "Review need: no status or note recorded yet; check detail before adding one."
+    return "Review need: status or note exists; continue from detail if follow-up is needed."
 
 
 def _record_source_summary(
@@ -3403,9 +3387,9 @@ def _feedback_checklist_text(
         "Reviewer detail and note/status confirmation",
         "- Review session path was clear from home/request/help:",
         "- Reviewer detail record opened:",
-        "- Source traceability cues were easy to find:",
-        "- Source-confidence cues or missing local/test fields to mention:",
-        "- Next safe action was clear for missing, confusing, or proxy-related values:",
+        "- Original CCLD source link was easy to find:",
+        "- Missing or confusing values to mention:",
+        "- Next action was clear for missing or confusing values:",
         "- Reviewer note/status action used:",
         "- Saved confirmation appeared as expected:",
         "- Saved note/status was visible after save:",
@@ -3842,22 +3826,22 @@ def _traceability_summary(record: Mapping[str, Any]) -> str:
     available, missing = _traceability_value_labels(record)
     if available and not missing:
         return (
-            "Source traceability available: "
+            "Original CCLD source link saved: "
             + ", ".join(available)
-            + ". Missing local/test traceability values: none. Check source traceability before relying on source-derived values."
+            + "."
         )
     if available:
         return (
-            "Source traceability available for: "
+            "Source record saved for checking: "
             + ", ".join(available)
-            + ". Local/test traceability value missing: "
+            + ". Missing: "
             + ", ".join(missing)
-            + ". Check source traceability before relying on source-derived values."
+            + "."
         )
     return (
-        "No source traceability values are visible in this local/test row. Local/test traceability value missing: "
+        "No original source link is visible in this record. Missing: "
         + ", ".join(missing)
-        + ". This is not proof of public-source absence or a source-completeness proof."
+        + "."
     )
 
 
@@ -3885,10 +3869,10 @@ def _connector_label(record: Mapping[str, Any]) -> str | None:
 
 def _loaded_context_text(item: CcldRequestQueueItem) -> str:
     return (
-        f"{item.related_record_count} loaded source-derived records in bundle; "
+        f"{item.related_record_count} loaded complaint records in bundle; "
         f"{item.allegation_count} allegation rows; "
         f"{item.extraction_audit_count} extraction audit rows. "
-        "Open detail for source-confidence cues before relying on missing or confusing fields."
+        "Open detail before relying on missing or confusing fields."
     )
 
 
@@ -4474,7 +4458,7 @@ def _page(
     active_path: str = CCLD_RECORD_REQUEST_PATH,
     step_id: str = "retrieve",
     next_action: str | None = None,
-    show_workflow_indicator: bool = True,
+    show_workflow_indicator: bool = False,
 ) -> str:
     return render_page_shell(
         title=title,

@@ -64,7 +64,7 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
         (
             (brief.record_count_label, len(brief.records), True),
             ("Records with review flags", flag_count, True),
-            ("Source traceability available", source_traceability_count, True),
+            ("Original source links saved", source_traceability_count, True),
             ("Reviewer-created notes/statuses", reviewer_state_count, True),
         )
     )
@@ -138,7 +138,7 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
     {packet_draft_action}
         </div>
       </section>
-      <p class="helper-text">Use this summary to prioritize source-traceable review. Review flags are screening aids, not legal conclusions.</p>
+      <p class="helper-text">Use this summary to decide what to review first. Review flags are screening aids, not legal conclusions.</p>
     </section>"""
 
 
@@ -181,7 +181,7 @@ def priority_reason_labels(record: FacilityCaseBriefRecord) -> tuple[str, ...]:
     if record.report_date_used_as_proxy:
         reasons.append("Review flag: report date used as proxy")
     if record.has_source_traceability:
-        reasons.append("Source traceability available")
+        reasons.append("Original CCLD source link saved")
     if record.finding and record.finding != "unknown":
         reasons.append(f"Finding value: {record.finding}")
     if record.reviewer_status_label:

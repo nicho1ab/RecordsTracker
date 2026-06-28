@@ -103,15 +103,13 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "Skip to main CCLD request content" in html
     assert '<main id="main-content" tabindex="-1">' in html
     assert "Retrieve complaint records for a facility" in html
-    assert "Retrieval intake" in html
-    assert "Confirm a CCLD facility/license number" in html
-    assert "Keyboard flow: move from facility selection to date range" in html
+    assert "Start review" in html
+    assert "Choose a facility and date range, then open the complaint queue." in html
+    assert "Keyboard flow: move from facility selection to date range" not in html
     assert "Start review request context" in html
     assert "Facility/license number identifies the CCLD facility" in html
-    assert "Date range narrows complaint, visit, report, signed, or retrieval dates" in html
-    assert "Show existing queue searches loaded source-derived records" in html
-    assert "without proving public-source completeness" in html
-    assert "continue to the review queue" in html
+    assert "Date range narrows the loaded complaint records" in html
+    assert "When records are found, open the recommended record" in html
     assert "Choose complaint date range" in html or "Which facility should be reviewed?" in html
     assert 'for="facility-search-input"' in html
     assert "facility-suggestion-list" in html
@@ -120,8 +118,11 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "Use this facility/license number" in html
     assert "Search by name, license number, city, county, ZIP" in html
     assert "facility type, program type, or status code" in html
-    assert "Keyboard flow: type a search or digit number" in html
-    assert "Live retrieval off" in html
+    assert "Keyboard flow: type a search or digit number" not in html
+    assert "Attorney workflow" not in html
+    assert "Current step:" not in html
+    assert "Records are review aids. See Help for limitations." in html
+    assert "Live retrieval off" not in html
     assert "Search CCLD facilities" in html
     assert "Review boundary" not in html
     assert "provider" not in html.casefold()
@@ -249,7 +250,7 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
         "packet lifecycle state, or source-completeness proof"
         in normalized_html
     )
-    assert "Source-derived records" in html
+    assert "source-derived records" in normalized_html.casefold()
     assert "reviewer-created notes/status" in normalized_html
     assert "How reviewer-created status filters work" in html
     assert "active reviewer-created status filter" in normalized_html
@@ -361,7 +362,8 @@ def test_ccld_record_request_manual_entry_shows_context_confirmation() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Which facility should be reviewed?" in html
     assert "type the digit facility/license number directly" in html
-    assert "Live retrieval off" in html
+    assert "Records are review aids. See Help for limitations." in html
+    assert "Live retrieval off" not in html
     assert "Search by name, license number, city, county, ZIP" in normalized_html
     assert "facility type, program type, or status code" in normalized_html
     assert "name=\"request_context_origin\"" in html
@@ -503,7 +505,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Why open this first" in html
     assert "No reviewer-created status recorded yet" in html
     assert "Needs source check: first activity date missing locally" in html
-    assert "Source traceability available" in html
+    assert "Original CCLD source link saved" in html
     assert "Open priority record" in html
     assert "Open full queue" in html
     assert "Review packet readiness before copying or printing" in html
@@ -530,24 +532,32 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Start over with a different CCLD facility" in html
     assert "CCLD review queue" in html
     assert "Open the suggested complaint first" in normalized_html
-    assert "check source traceability and source-confidence cues on detail" in normalized_html
-    assert "cautious reviewer-created notes/status or feedback" in normalized_html
+    assert "check the original CCLD source link and key dates/finding" in normalized_html
+    assert "adding an optional note or status" in normalized_html
     assert "Do this next" in html
-    assert "Start with the suggested next record for this facility/date queue" in (
+    assert "Start with the suggested next record." in normalized_html
+    assert "On detail, check the original CCLD source link and key dates/finding" in (
         normalized_html
     )
-    assert "On detail, check source traceability and source-confidence cues" in (
-        normalized_html
+    assert "Add a note or status only if it helps" in normalized_html
+    assert (
+        "Return to this queue and refresh the same request if the queue needs updated cues"
+        in normalized_html
     )
-    assert "Save a reviewer-created note or status only if it helps" in normalized_html
-    assert "Return to this same queue, submit the same request again" in normalized_html
-    assert "not an assignment, record claim, persisted queue state" in normalized_html
     assert "Table view and queue guidance" in html
-    assert "First-run queue steps" in html
-    assert "Read the queue progress and triage summaries" in html
-    assert "check source traceability, source-confidence cues" in normalized_html
-    assert "Return to this same request page, resubmit when needed" in normalized_html
-    assert "Copy the single manual feedback checklist" in normalized_html
+    assert "Queue review steps" in html
+    assert (
+        "Check the original CCLD source link, dates, finding, and reason it was flagged"
+        in normalized_html
+    )
+    assert (
+        "Return to this same queue and continue with the next suggested record"
+        in normalized_html
+    )
+    assert (
+        "Use the feedback checklist only when the queue or detail page is confusing"
+        in normalized_html
+    )
     assert "Facility/date-scoped CCLD complaint records ready for review" in html
     assert "Queue progress summary" in html
     assert "Counts use existing reviewer-created status rows" in normalized_html
@@ -555,17 +565,10 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "<dt>Not started</dt>" in html
     assert "<dd>1</dd>" in html
     assert "Queue triage summary" in html
-    assert "Queue summaries do not prove record completeness" in normalized_html
-    assert "source-confidence cues before relying on a summary value" in normalized_html
-    assert "Next safe action: check the detail traceability first" in normalized_html
-    assert "use feedback if the source-confidence cue or next step remains confusing" in (
-        normalized_html
-    )
-    assert "record-specific reviewer-detail observations" in normalized_html
-    assert "Carry both queue-level observations and reviewer-detail observations" in (
-        normalized_html
-    )
-    assert "does not create a second checklist or persist feedback" in normalized_html
+    assert "Queue summaries do not prove every public record is present" in normalized_html
+    assert "Open detail before relying on a missing or confusing value" in normalized_html
+    assert "Next safe action: check the detail page" in normalized_html
+    assert "Use the feedback checklist below only for missing records" in normalized_html
     assert "Continue review guidance" in html
     assert "derived from this facility/date request context" in normalized_html
     assert "not a persisted queue assignment" in normalized_html
@@ -573,41 +576,39 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "official workflow state" in html
     assert "After reviewing detail or saving a note/status" in normalized_html
     assert "Next record guidance" in html
-    assert "Records with reviewer-created notes" in html
-    assert "Records with reviewer-created status" in html
-    assert "Records with source traceability available" in html
+    assert "Records with notes" in html
+    assert "Records with status" in html
+    assert "Records with original source links saved" in html
     assert "Suggested next record to open" in html
-    assert "Open reviewer detail for 32-CR-20220407124448" in html
-    assert "Review-priority decision flow" in html
-    assert "Use this worklist as a decision screen" in normalized_html
-    assert "If a card shows a missing, confusing, or proxy-related value" in normalized_html
-    assert "use cautious reviewer-created note/status wording only when helpful" in (
+    assert "Open complaint detail for 32-CR-20220407124448" in html
+    assert "Complaint worklist" in html
+    assert "Open the recommended record first" in normalized_html
+    assert "Missing values on a card are review cues" in normalized_html
+    assert "Check the detail page before relying on a missing or confusing value" in (
         normalized_html
     )
     assert "Active CCLD request context" in html
     assert "Request origin" in html
     assert "Active facility reference source" in html
-    assert "Loaded source-derived complaint records" in html
-    assert "Records with reviewer-created status/note cues" in html
+    assert "Loaded complaint records" in html
+    assert "Records with status or notes" in html
     assert "Records with review flags or possible delay indicators" in html
     assert "Recommended next record action" in html
     assert "Open next priority record: 32-CR-20220407124448" in html
     assert "Why this record is prioritized" in html
     assert "Prioritized worklist records" in html
     assert "Recommended next record: 32-CR-20220407124448" in html
-    assert "Review need: flagged for review from source-derived cues" in html
-    assert "use cautious note/status wording or feedback if the cue remains confusing" in (
-        normalized_html
-    )
-    assert "Complaint/control/source-record identifier" in html
-    assert "Source-derived date/finding/flag summary" in html
-    assert "Reviewer-created status/note cue" in html
-    assert "Source traceability availability cue" in html
-    assert "Open review workspace for 32-CR-20220407124448" in html
+    assert "Review need: flagged for review. Check the detail page" in html
+    assert "Complaint/control identifier" in html
+    assert "Date/finding/flag summary" in html
+    assert "Note/status cue" in html
+    assert "Original source link status" in html
+    assert "Open complaint detail for 32-CR-20220407124448" in html
+    assert "More queue and export actions" in html
     assert "Review packet readiness before copying or printing" in html
     assert "Open packet preparation draft for browser copy or print" in html
     assert "not a legal report, not a final export, not a certified report" in normalized_html
-    assert "do not assign, claim, or mutate records" in normalized_html
+    assert "do not assign, claim, or change records" in normalized_html
     assert "Queue decision actions" in html
     assert "Open facility review priority list" in html
     assert "tester feedback for this queue context" in normalized_html
@@ -615,8 +616,8 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "workflow_area=request-result" in html
     assert "retrieval_context=already-loaded-records" in html
     assert "retrieval_status=not_submitted" in html
-    assert "source-confidence cue, missing local/test value" in normalized_html
-    assert "proxy-related value" in normalized_html
+    assert "a missing or unexpected record" in normalized_html
+    assert "a confusing value, wording, filter" in normalized_html
     assert "/feedback?feedback_type=Bug+report" in html
     assert "workflow_area=queue" in html
     assert "facility_number=157806098" in html
@@ -645,15 +646,14 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "return_facility_number=157806098" in html
     assert "return_start_date=2022-08-01" in html
     assert "return_end_date=2022-08-31" in html
-    assert "Source traceability available" in html
-    assert "Missing local/test traceability values: none" in html
-    assert "Check source traceability before relying on source-derived values" in html
-    assert "Records with source traceability available</dt>" in html
-    assert "Loaded record/source-confidence context" in html
+    assert "Original CCLD source link saved" in html
+    assert "Original CCLD source link saved" in html
+    assert "Records with original source links saved</dt>" in html
+    assert "Loaded record context" in html
     assert "No reviewer-created notes/status yet" in html
-    assert "1 loaded source-derived records in bundle" not in html
-    assert "6 loaded source-derived records in bundle" in html
-    assert "Open detail for source-confidence cues before relying" in html
+    assert "1 loaded complaint records in bundle" not in html
+    assert "6 loaded complaint records in bundle" in html
+    assert "Open detail before relying on missing or confusing fields" in html
     assert "Copyable tester feedback checklist" in html
     assert "Copy details for feedback" in html
     assert "Structured CCLD feedback checklist" in html
@@ -670,9 +670,9 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "- Facility lookup used or skipped:" in html
     assert "- Facility lookup used or skipped: Manual facility/license entry" in html
     assert "- Active facility reference source:" in html
-    assert "- Source traceability cues were easy to find:" in html
-    assert "- Source-confidence cues or missing local/test fields to mention:" in html
-    assert "- Next safe action was clear for missing, confusing, or proxy-related values:" in html
+    assert "- Original CCLD source link was easy to find:" in html
+    assert "- Missing or confusing values to mention:" in html
+    assert "- Next action was clear for missing or confusing values:" in html
     assert "- Saved confirmation appeared as expected:" in html
     assert "- Queue showed updated note/status after returning" in html
     assert "- Records that seemed missing:" in html
@@ -771,12 +771,12 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
     assert reviewed_status == 200
     assert "Latest reviewer-created status: Reviewed" in reviewed_html
     assert "1 reviewer-created note(s)" in reviewed_html
-    assert "Review-priority decision flow" in reviewed_html
-    assert "Records with reviewer-created status/note cues" in reviewed_html
-    assert "Reviewer-created status/note cue" in reviewed_html
-    assert "Open review workspace for 32-CR-20220407124448" in reviewed_html
-    assert "Records with reviewer-created notes" in reviewed_html
-    assert "Records with reviewer-created status" in reviewed_html
+    assert "Complaint worklist" in reviewed_html
+    assert "Records with status or notes" in reviewed_html
+    assert "Note/status cue" in reviewed_html
+    assert "Open complaint detail for 32-CR-20220407124448" in reviewed_html
+    assert "Records with notes" in reviewed_html
+    assert "Records with status" in reviewed_html
     assert "Suggested next record to open" in reviewed_html
     assert "Continue review guidance" in reviewed_html
     assert "not a persisted queue assignment" in reviewed_normalized
@@ -1111,17 +1111,17 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     assert "- Local validated records loaded or refreshed: no" in first_checklist
     assert "- Reviewer-created rows read for this queue: 0" in first_checklist
     assert "Queue records to spot-check" in first_checklist
-    assert "source traceability cue: Source traceability available" in first_checklist
-    assert "Missing local/test traceability values: none" in first_checklist
-    assert "Check source traceability before relying on source-derived values" in first_checklist
+    assert "source traceability cue: Original CCLD source link saved" in first_checklist
+    assert "source URL, raw SHA-256 hash" in first_checklist
+    assert "Original CCLD source link saved" in first_checklist
     assert "reviewer note/status cue: No reviewer-created notes/status yet" in first_checklist
     assert "Reviewer detail and note/status confirmation" in first_checklist
     assert "- Review session path was clear from home/request/help:" in first_checklist
-    assert "- Source traceability cues were easy to find:" in first_checklist
-    assert "- Source-confidence cues or missing local/test fields to mention:" in (
+    assert "- Original CCLD source link was easy to find:" in first_checklist
+    assert "- Missing or confusing values to mention:" in (
         first_checklist
     )
-    assert "- Next safe action was clear for missing, confusing, or proxy-related values:" in (
+    assert "- Next action was clear for missing or confusing values:" in (
         first_checklist
     )
     assert "- Saved confirmation appeared as expected:" in first_checklist
