@@ -2047,7 +2047,7 @@ def _render_retrieval_job_history_page(
                         they exist for the facility/date context.</p>
                     </div>
                     <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Submit retrieval request</a></p>
-                    <p><a href="{_escape(empty_feedback_href)}">Report confusing retrieval progress</a></p>
+                    <p><a href="{_escape(empty_feedback_href)}">Report an issue with this job</a></p>
                 </article>"""
     setup_text = (
         "Controlled retrieval is configured for this runtime."
@@ -2122,7 +2122,7 @@ def _render_retrieval_job_history_page(
       message shown here first. Operators can check server logs without sharing private
       values. Testers can send feedback with the facility/date/type request and the visible
       job state.</p>
-      <p><a href="{_escape(history_feedback_href)}">Report confusing retrieval progress</a></p>
+      <p><a href="{_escape(history_feedback_href)}">Report an issue with this job</a></p>
       <p><a href="{CCLD_HELP_PATH}">Read CCLD workflow help</a></p>
         </details>""",
     )
@@ -2186,7 +2186,7 @@ def _render_retrieval_history_card(job: CcldRetrievalJobHistoryEntry) -> str:
                     </div>
                       <div>{_render_history_next_step(job, imported_count)}</div>
                     <p><a class="button button-secondary" href="{_escape(detail_href)}">View job details</a></p>
-                                        <p><a href="{_escape(feedback_href)}">Report confusing retrieval progress</a></p>
+                                        <p><a href="{_escape(feedback_href)}">Report an issue with this job</a></p>
                 </article>"""
 
 
@@ -2518,7 +2518,7 @@ def _render_history_next_step(job: CcldRetrievalJobHistoryEntry, imported_count:
         prompt="Describe what was confusing about this retrieval job state.",
     )
     feedback_link = (
-        f'<p><a href="{_escape(feedback_href)}">Report confusing retrieval progress</a></p>'
+        f'<p><a href="{_escape(feedback_href)}">Report an issue with this job</a></p>'
     )
     if job.job_state == "completed" and imported_count > 0:
         return queue_link
