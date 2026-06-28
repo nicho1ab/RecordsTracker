@@ -106,7 +106,6 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
           <h2 id="facility-case-brief-heading">{_escape(facility_label)}</h2>
           <p class="helper-text">Facility/license number: {_escape(brief.facility_number or 'unknown')}{_date_range_fragment(brief.date_range)}</p>
         </div>
-        <p><span class="{_escape(brief.mode_badge_class)}">{_escape(brief.mode_label)}</span></p>
       </div>
       <div class="metric-strip" aria-label="Facility review summary">
 {metric_cards}

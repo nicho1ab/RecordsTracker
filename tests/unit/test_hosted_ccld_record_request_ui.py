@@ -89,7 +89,11 @@ def _local_dev_auth_config() -> Any:
     )
 
 
-def test_ccld_record_request_page_renders_from_default_context() -> None:
+def test_ccld_record_request_page_renders_from_default_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CCLD_RETRIEVAL_DEMO_MODE", "mock-success")
+
     status, content_type, body = route_response(
         "/ccld",
         auth_runtime_config=_local_dev_auth_config(),
@@ -105,6 +109,13 @@ def test_ccld_record_request_page_renders_from_default_context() -> None:
     assert "Retrieve complaint records for a facility" in html
     assert "Start review" in html
     assert "Choose a facility and date range, then open the complaint queue." in html
+    mode_panel = html.split('<div class="mode-panel" aria-label="Retrieval mode">', 1)[1].split(
+        "</div>",
+        1,
+    )[0]
+    assert html.count("Fixture/mock demo") == 1
+    assert html.count('<span class="badge badge-demo">Fixture/mock demo</span>') == 1
+    assert '<span class="badge badge-demo">Fixture/mock demo</span>' in mode_panel
     assert "Keyboard flow: move from facility selection to date range" not in html
     assert "Start review request context" in html
     assert "Facility/license number identifies the CCLD facility" in html
