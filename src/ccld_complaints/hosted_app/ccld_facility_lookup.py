@@ -820,7 +820,7 @@ def _render_intelligence_filters(
           <select id="intelligence-sort" name="sort">{sort_markup}</select>
         </p>
         <p class="helper-text">Filters use existing public summary fields. They are transparent grouping controls, not scoring, assignment, claiming, source verification, complaint coverage, or legal findings.</p>
-        <p><button type="submit" class="button-secondary">Apply intelligence filters</button></p>
+        <p><button type="submit">Apply intelligence filters</button></p>
       </form>
     </section>"""
 
@@ -1212,7 +1212,7 @@ def _render_lookup_form(query: str) -> str:
           <input id="facility_lookup_query" name="q" type="search"
             value="{_escape(query)}" aria-describedby="facility-search-help">
         </p>
-        <p><button type="submit" class="button-secondary">Search CCLD facilities</button></p>
+        <p><button type="submit">Search CCLD facilities</button></p>
       </form>
     </section>"""
 
@@ -1243,7 +1243,7 @@ def _render_facility_combobox_section(
                     <ul id="facility-suggestion-list" class="facility-suggestions" aria-label="Facility suggestions" hidden></ul>
                 </div>
                 <div class="form-actions">
-                    <button type="submit" class="button-secondary">Search CCLD facilities</button>
+                    <button type="submit">Search CCLD facilities</button>
                 </div>
             </form>
 {limited_note_markup}
@@ -1589,7 +1589,7 @@ def _render_priority_filter(active_cue: str) -> str:
           </select>
         </p>
         <p id="priority-cue-filter-help" class="helper-text">Filter by transparent review cue. This is grouping over uploaded public summary fields, not scoring and not a legal conclusion.</p>
-        <p><button type="submit" class="button-secondary">Apply review cue filter</button></p>
+        <p><button type="submit">Apply review cue filter</button></p>
       </form>
     </section>"""
 
