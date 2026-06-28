@@ -117,7 +117,11 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "Review aids only" in html
     assert "Start a facility complaint review" in html
     assert "Start with facility lookup" in html
-    assert "Enter a facility/license number directly" in html
+    assert (
+        '<a class="button button-secondary" href="/ccld/records/request">'
+        "Enter a license number</a>"
+    ) in html
+    assert "Enter a facility/license number directly" not in html
     assert (
         "Find a facility, enter a facility/license number, or open the current review queue."
         in html
