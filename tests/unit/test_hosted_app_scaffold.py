@@ -122,6 +122,10 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
         "Find a facility, enter a facility/license number, or open the current review queue."
         in html
     )
+    assert "How it works" in html
+    assert "Find a facility" in html
+    assert "Request complaint records" in html
+    assert "Review and prepare" in html
     assert "Attorney-focused public CCLD complaint/facility record review" not in html
     assert "New to this tool?" not in html
     assert "See Help for the review workflow" not in html
