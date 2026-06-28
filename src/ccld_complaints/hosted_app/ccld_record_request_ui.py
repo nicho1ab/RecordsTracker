@@ -637,7 +637,7 @@ def _render_facility_selection_state(reference_source: CcldFacilityReferenceSour
 {limited_note_markup}
 {selected_card}
                 <div class="form-actions">
-                    <button type="submit" id="facility-submit-btn" disabled>Use this facility/license number</button>
+                    <button type="submit" id="facility-submit-btn" disabled>Use this number</button>
                     <a class="button button-secondary" href="{CCLD_FACILITY_LOOKUP_PATH}">Search CCLD facilities</a>
                 </div>
             </form>
