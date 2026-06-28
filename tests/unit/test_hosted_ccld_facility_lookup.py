@@ -102,6 +102,15 @@ def _assert_primary_button(html: str, text: str) -> None:
         assert "button secondary" not in classes
 
 
+def _assert_collapsed_disclosure(html: str, label: str) -> None:
+    summary = f"<summary>{label}</summary>"
+    summary_index = html.index(summary)
+    details_start = html.rfind("<details", 0, summary_index)
+    assert details_start != -1
+    details_tag = html[details_start : html.index(">", details_start) + 1]
+    assert " open" not in details_tag
+
+
 @pytest.fixture(autouse=True)
 def _ignore_local_default_full_facility_reference(
     monkeypatch: pytest.MonkeyPatch,
@@ -1041,6 +1050,16 @@ def test_ccld_facility_review_priority_page_empty_state_is_safe() -> None:
     assert "uploaded public summary fields" in html
     assert "review cue" in html
     _assert_primary_button(html, "Apply review cue filter")
+    _assert_collapsed_disclosure(
+        html,
+        "About these review cues and their limitations",
+    )
+    assert html.index("Apply review cue filter") < html.index(
+        "About these review cues and their limitations"
+    )
+    assert html.index("No facility review priority rows are available") < html.index(
+        "About these review cues and their limitations"
+    )
     assert "No facility review priority rows are available" in html
     assert "complaint records are requested/reviewed separately" in normalized_html
     assert "not a legal finding" in html
@@ -1133,6 +1152,16 @@ def test_ccld_facility_review_priority_page_orders_filters_and_links_to_hubs(
     assert html.index("Single Cue Facility") < html.index("Long Gap Facility")
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=900000002" in html
     assert "Open facility review hub for 900000002" in html
+    _assert_collapsed_disclosure(
+        html,
+        "About these review cues and their limitations",
+    )
+    assert html.index("Apply review cue filter") < html.index(
+        "About these review cues and their limitations"
+    )
+    assert html.index("Facilities grouped by review cue priority") < html.index(
+        "About these review cues and their limitations"
+    )
     assert "review label hidden" in html
     assert "Secret Garden Fixture" not in html
     assert "3 total visits; 2 complaint visits" in html
@@ -1275,6 +1304,16 @@ def test_ccld_facility_review_intelligence_dashboard_filters_sorts_and_links(
     assert "Facility Review Intelligence Dashboard" in html
     assert "Where should reviewers spend time first?" in html
     _assert_primary_button(html, "Apply intelligence filters")
+    _assert_collapsed_disclosure(
+        html,
+        "About these indicators and their limitations",
+    )
+    assert html.index("Apply intelligence filters") < html.index(
+        "About these indicators and their limitations"
+    )
+    assert html.index("Facilities by review-priority indicator") < html.index(
+        "About these indicators and their limitations"
+    )
     assert "transparent review-priority indicators" in normalized_html
     assert "Facilities with complaint activity" in html
     assert "Facilities with citation activity" in html

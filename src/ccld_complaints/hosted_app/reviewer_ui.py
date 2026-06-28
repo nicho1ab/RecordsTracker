@@ -703,16 +703,8 @@ def _render_substantiated_triage(
         heading="Cross-facility substantiated complaint triage",
         actor_label=actor_label,
         main=f"""
-        <section class=\"quiet-section\" aria-labelledby=\"substantiated-caution-heading\">
-          <h2 id=\"substantiated-caution-heading\">Use this view carefully</h2>
-          <ul>
-            <li>This is a review triage aid.</li>
-            <li>Source-derived finding/resolution/status values are not independently verified by RecordsTracker.</li>
-            <li>This view is based only on currently loaded records.</li>
-            <li>Empty state means no currently loaded records matched, not that no substantiated reports exist in the public source.</li>
-          </ul>
-        </section>
 {list_markup}
+        {_render_substantiated_triage_limitations_disclosure()}
         <section class=\"quiet-section\" aria-labelledby=\"substantiated-next-heading\">
           <h2 id=\"substantiated-next-heading\">Next steps</h2>
           <ul>
@@ -722,6 +714,18 @@ def _render_substantiated_triage(
         </section>
 """,
     )
+
+
+def _render_substantiated_triage_limitations_disclosure() -> str:
+    return """        <details class=\"technical-details\">
+          <summary>About this triage view and its limitations</summary>
+          <ul>
+            <li>This is a review triage aid.</li>
+            <li>Source-derived finding/resolution/status values are not independently verified by RecordsTracker.</li>
+            <li>This view is based only on currently loaded records.</li>
+            <li>Empty state means no currently loaded records matched, not that no substantiated reports exist in the public source.</li>
+          </ul>
+        </details>"""
 
 
 def _substantiated_source_link(source_url_href: str) -> str:

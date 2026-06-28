@@ -635,12 +635,6 @@ def render_ccld_facility_review_priority_page(
                 <p class="launch-value">Use transparent review cue groups from uploaded public summary fields to choose which facility review hub to open next.</p>
             </div>
         </section>
-        <section aria-labelledby="facility-priority-boundary-heading">
-            <h2 id="facility-priority-boundary-heading">Public summary review cues</h2>
-            <p>This facility review priority list is derived from uploaded public summary fields in supported public licensing/visit/citation summary CSVs; complaint records are requested/reviewed separately.</p>
-            <p>These review cues are not a legal finding, not source verification, not a complaint-coverage determination, and not a source-completeness proof. A complaint visit signal is only a review cue, and a missing signal is not complaint absence.</p>
-            <p>Open facility review hub links continue into existing request, queue, packet preview, and source-traceability review paths without creating assignments, claims, corrections, exports, or reviewer-created state.</p>
-        </section>
         {_render_priority_filter(cue_filter)}
         {_render_priority_summary(signal_result, summaries, returned_summaries)}
         <section aria-labelledby="facility-priority-list-heading">
@@ -659,7 +653,8 @@ def render_ccld_facility_review_priority_page(
 {rows}
                 </tbody>
             </table>
-        </section>""",
+        </section>
+        {_render_priority_limitations_disclosure()}""",
         )
 
 
@@ -697,11 +692,6 @@ def render_ccld_facility_review_intelligence_page(
         <p class="launch-value">Use transparent review-priority indicators from existing public facility-directory and uploaded public summary fields to choose a facility hub, complaint request, or review queue.</p>
       </div>
     </section>
-    <section aria-labelledby="facility-intelligence-boundaries-heading">
-      <h2 id="facility-intelligence-boundaries-heading">Transparent review-priority indicators</h2>
-      <p>This dashboard uses existing public facility-directory fields and supported uploaded public licensing/visit/citation summary fields only. It does not run retrieval, crawl sources, extract new fields, write reviewer-created state, create packets, export records, or change schemas.</p>
-    <p>Indicators are review cues, not risk scores, not wrongdoing determinations, not source verification, not a complaint-coverage determination, not a source-completeness proof, and not a legal finding. Complaint records are requested/reviewed separately.</p>
-    </section>
     {_render_intelligence_filters(signal_result.summaries, cue_filter, county_filter, status_filter, sort_value)}
     {_render_intelligence_summary(signal_result, summaries)}
     <section aria-labelledby="facility-intelligence-table-heading">
@@ -720,7 +710,8 @@ def render_ccld_facility_review_intelligence_page(
 {rows}
         </tbody>
       </table>
-    </section>""",
+    </section>
+    {_render_intelligence_limitations_disclosure()}""",
     )
 
 
@@ -823,6 +814,14 @@ def _render_intelligence_filters(
         <p><button type="submit">Apply intelligence filters</button></p>
       </form>
     </section>"""
+
+
+def _render_intelligence_limitations_disclosure() -> str:
+    return """    <details class="technical-details">
+      <summary>About these indicators and their limitations</summary>
+      <p>This dashboard uses existing public facility-directory fields and supported uploaded public licensing/visit/citation summary fields only. It does not run retrieval, crawl sources, extract new fields, write reviewer-created state, create packets, export records, or change schemas.</p>
+      <p>Indicators are review cues, not risk scores, not wrongdoing determinations, not source verification, not a complaint-coverage determination, not a source-completeness proof, and not a legal finding. Complaint records are requested/reviewed separately.</p>
+    </details>"""
 
 
 def _select_options(
@@ -1592,6 +1591,15 @@ def _render_priority_filter(active_cue: str) -> str:
         <p><button type="submit">Apply review cue filter</button></p>
       </form>
     </section>"""
+
+
+def _render_priority_limitations_disclosure() -> str:
+    return """        <details class="technical-details">
+            <summary>About these review cues and their limitations</summary>
+            <p>This facility review priority list is derived from uploaded public summary fields in supported public licensing/visit/citation summary CSVs; complaint records are requested/reviewed separately.</p>
+            <p>These review cues are not a legal finding, not source verification, not a complaint-coverage determination, and not a source-completeness proof. A complaint visit signal is only a review cue, and a missing signal is not complaint absence.</p>
+            <p>Open facility review hub links continue into existing request, queue, packet preview, and source-traceability review paths without creating assignments, claims, corrections, exports, or reviewer-created state.</p>
+        </details>"""
 
 
 def _priority_filter_label(value: str) -> str:
