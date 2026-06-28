@@ -989,7 +989,7 @@ def test_ccld_facility_review_hub_renders_uploaded_public_summary_signals(
     tmp_path: Path,
 ) -> None:
     facility_csv = tmp_path / "facility-reference.csv"
-    signals_csv = tmp_path / "24HourResidentialCareforChildren06072026.csv"
+    signals_csv = tmp_path / "ChildCareCenters06072026.csv"
     _write_chhs_facility_directory_csv(
         facility_csv,
         rows=(
@@ -1062,7 +1062,8 @@ def test_ccld_facility_review_hub_renders_uploaded_public_summary_signals(
     assert "not a complaint-coverage determination" in html
     assert "not a source-completeness proof" in html
     assert "check source traceability before relying on summary fields" in normalized_html
-    assert "24HourResidentialCareforChildren06072026.csv" in html
+    assert "<code>ChildCareCenters06072026.csv</code>" in html
+    assert "(loaded June 7, 2026)" in html
     assert "DAY CARE CENTER" in html
     assert "LICENSED" in html
     assert "48" in html
@@ -1085,6 +1086,54 @@ def test_ccld_facility_review_hub_renders_uploaded_public_summary_signals(
     assert "Do Not Display" not in html
     assert "555-0199" not in html
     assert "1 Private Fixture Way" not in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_facility_review_hub_source_dataset_without_date_stays_filename_only(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    facility_csv = tmp_path / "facility-reference.csv"
+    signals_csv = tmp_path / "ChildCareCentersCurrent.csv"
+    _write_chhs_facility_directory_csv(
+        facility_csv,
+        rows=(
+            {
+                "FAC_NBR": "434417302",
+                "NAME": "7 MAGIC FLOWERS BILINGUAL MONTESSORI PRESCHOOL",
+                "PROGRAM_TYPE": "CHILD CARE",
+                "STATUS": "3",
+                "CAPACITY": "48",
+                "RES_CITY": "SAN JOSE",
+                "RES_STATE": "CA",
+                "RES_ZIP_CODE": "95112",
+                "COUNTY": "Santa Clara",
+                "FAC_TYPE_DESC": "DAY CARE CENTER",
+            },
+        ),
+    )
+    _write_program_summary_signals_csv(
+        signals_csv,
+        rows=(
+            _program_summary_signal_row(
+                facility_number="434417302",
+                facility_name="7 MAGIC FLOWERS BILINGUAL MONTESSORI PRESCHOOL",
+            ),
+        ),
+    )
+    monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(facility_csv))
+    monkeypatch.setenv(FACILITY_REVIEW_SIGNALS_CSVS_ENV, str(signals_csv))
+
+    status, content_type, body = route_response(
+        f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=434417302",
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "<code>ChildCareCentersCurrent.csv</code>" in html
+    assert "(loaded " not in html
     assert_no_secret_html(html)
 
 
