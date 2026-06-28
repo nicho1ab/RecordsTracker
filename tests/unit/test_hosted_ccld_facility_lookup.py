@@ -561,7 +561,8 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert "Find a facility" in html
     assert "Start review by finding the CCLD facility/license number" in html
     assert "preloaded facility directory" in html
-    assert "Lookup or manual entry?" in html
+    assert "Lookup or manual entry?" not in html
+    assert "<summary>When to use lookup vs. manual entry</summary>" in html
     assert "Use facility lookup when you know a facility name" in html
     assert "facility type, program type, or status code" in html
     assert "Use manual entry when you already know the digit facility/license number" in html
@@ -575,6 +576,20 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert "not source-completeness proof" in html
     assert "not license-validity proof" in html
     assert 'for="facility-search-input"' in html
+    example_index = html.index("Try a preloaded facility-directory example")
+    form_index = html.index(
+        f'<form action="{CCLD_FACILITY_LOOKUP_PATH}" method="get" class="facility-search-form">'
+    )
+    disclosure_index = html.index("<summary>When to use lookup vs. manual entry</summary>")
+    pre_form_html = html[:form_index]
+    assert example_index < form_index < disclosure_index
+    assert "Use facility lookup when you know a facility name" not in pre_form_html
+    assert (
+        "Use manual entry when you already know the digit facility/license number"
+        not in pre_form_html
+    )
+    assert "Lookup rows are public facility-directory data" not in pre_form_html
+    _assert_collapsed_disclosure(html, "When to use lookup vs. manual entry")
     assert "facility-suggestion-list" in html
     assert "Search CCLD facilities" in html
     _assert_primary_button(html, "Search CCLD facilities")
