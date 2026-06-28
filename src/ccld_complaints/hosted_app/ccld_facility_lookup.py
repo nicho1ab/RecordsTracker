@@ -1533,8 +1533,6 @@ def _render_facility_review_signals_section(
                 cues = "        <li>No supported uploaded public summary review cue is present for this facility.</li>"
         return f"""    <section aria-labelledby="facility-review-signals-heading">
             <h2 id="facility-review-signals-heading">Facility review signals</h2>
-            <p>These facility review signals come from uploaded public summary fields in supported public licensing/visit/citation summary CSVs; complaint records are requested/reviewed separately.</p>
-            <p>Signals are review cues only: not a legal finding, not source verification, not a complaint-coverage determination, and not a source-completeness proof; check source traceability before relying on summary fields.</p>
             <dl class="summary-list">
                 <dt>Source dataset label</dt>
                 <dd>{_render_source_dataset_labels(summary.source_dataset_labels)}</dd>
@@ -1566,6 +1564,11 @@ def _render_facility_review_signals_section(
                 </ul>
                 <p>Use these cues to decide whether to start a complaint request, review loaded records where available, or return to facility lookup. Review source traceability before relying on summary fields.</p>
             </section>
+            <details class="technical-details">
+                <summary>About these signals and their limitations</summary>
+                <p>These facility review signals come from uploaded public summary fields in supported public licensing/visit/citation summary CSVs; complaint records are requested/reviewed separately.</p>
+                <p>Signals are review cues only: not a legal finding, not source verification, not a complaint-coverage determination, and not a source-completeness proof; check source traceability before relying on summary fields.</p>
+            </details>
         </section>"""
 
 
