@@ -532,8 +532,8 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
         normalized_html
     )
     assert "facility type, program type, or status code" in normalized_html
-    assert "Keyboard flow: type a search, use arrow keys or Tab" in html
-    assert "selected facility link to continue to the request page" in html
+    assert "Keyboard flow: type a search, use arrow keys or Tab" not in html
+    assert "selected facility link to continue to the request page" not in html
     assert "Enter a facility/license number directly" in html
     assert "Open request form" in html
     assert "CCLD public portal remains" in html
