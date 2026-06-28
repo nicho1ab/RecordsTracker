@@ -448,10 +448,11 @@ SHARED_CSS = r"""
       padding: 0 0 0 0.75rem;
     }
     .stepper-eyebrow {
-      color: var(--accent-strong);
+      color: var(--muted);
       font-size: 0.74rem;
       font-weight: 800;
       margin-bottom: 0.25rem;
+      pointer-events: none;
       text-transform: uppercase;
     }
     .stepper-summary h2 {
@@ -700,10 +701,11 @@ SHARED_CSS = r"""
       max-width: 54rem;
     }
     .launch-kicker {
-      color: var(--accent-strong);
+      color: var(--muted);
       font-size: 0.88rem;
       font-weight: 800;
       margin-bottom: 0.35rem;
+      pointer-events: none;
       text-transform: uppercase;
     }
     .launch-value {
@@ -1012,10 +1014,11 @@ SHARED_CSS = r"""
       box-shadow: 0 14px 34px rgb(18 103 95 / 16%);
     }
     .stage-kicker {
-      color: var(--accent-strong);
+      color: var(--muted);
       font-size: 0.82rem;
       font-weight: 800;
       margin-bottom: 0.25rem;
+      pointer-events: none;
       text-transform: uppercase;
     }
     .compact-list {

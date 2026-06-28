@@ -224,6 +224,28 @@ def test_final_product_shell_uses_compact_unboxed_workflow_design() -> None:
     assert "Commands</a>" not in html
 
 
+def test_decorative_kickers_are_muted_without_changing_interactive_accent_styles() -> None:
+    html = render_app_shell()
+
+    for selector in (".stepper-eyebrow", ".launch-kicker", ".stage-kicker"):
+        selector_start = html.index(f"    {selector} {{")
+        selector_end = html.index("    }", selector_start)
+        selector_css = html[selector_start:selector_end]
+
+        assert "color: var(--muted);" in selector_css
+        assert "pointer-events: none;" in selector_css
+        assert "color: var(--accent-strong);" not in selector_css
+
+    assert "a {\n      color: var(--accent-strong);" in html
+    nav_accent_css = (
+        ".site-nav a:hover, .site-nav a.is-active {\n"
+        "      background: var(--accent-soft);\n"
+        "      border-color: var(--accent);"
+    )
+    assert nav_accent_css in html
+    assert "button, input[type=\"submit\"], .button {\n      background: var(--accent);" in html
+
+
 def test_routes_return_shell_health_and_not_found() -> None:
     root_status, root_content_type, root_body = route_response("/")
     health_status, health_content_type, health_body = route_response("/health")
