@@ -552,10 +552,13 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Packet preparation preview" in html
     assert "local/test" not in html.casefold()
     assert "Open print draft" in html
+    assert "Open local/test preparation draft for browser copy or print" not in html
     assert f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098" in html
-    assert "Return to same facility/date queue" in html
+    assert "Back to review queue" in html
+    assert "Return to same facility/date queue" not in html
     assert "/ccld/records/request?facility_number=157806098" in html
-    assert "Report copy/print preparation concern" in html
+    assert "Report an issue" in html
+    assert "Report copy/print preparation concern" not in html
     assert "workflow_area=packet-preview" in html
     assert "Describe+copy%2Fprint+preparation%2C+packet+readiness" in html
     assert "Packet readiness means review readiness only" in html

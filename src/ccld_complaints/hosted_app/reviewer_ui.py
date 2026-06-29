@@ -2000,8 +2000,8 @@ def _render_packet_preview(
           </dl>
                     <div class="form-actions">
                                                 <a class="button" href="{_escape(_packet_draft_href(return_context))}">Open print draft</a>
-                                                <a class="button button-secondary" href="{_escape(_ccld_request_href([], return_context))}">Return to same facility/date queue</a>
-                                                <a class="button button-secondary" href="{_escape(feedback_href)}">Report copy/print preparation concern</a>
+                                                <a class="button button-secondary" href="{_escape(_ccld_request_href([], return_context))}">Back to review queue</a>
+                                                <a class="button button-secondary" href="{_escape(feedback_href)}">Report an issue</a>
                     </div>
         </section>
                 <section aria-labelledby="before-copying-printing-heading">
