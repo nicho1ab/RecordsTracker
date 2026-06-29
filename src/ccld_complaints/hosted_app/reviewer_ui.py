@@ -1770,7 +1770,7 @@ def _render_record_list(
                 heading="Complaint records ready for review",
         actor_label=actor_label,
         main=f"""
-        {_render_reviewer_case_brief(records, state_summaries)}
+        {_render_reviewer_case_brief(records, state_summaries, export_records)}
         {_render_complaint_export_controls(export_context, export_records)}
                 {no_results_notice}
         <section aria-labelledby="reviewer-list-heading">
@@ -1911,9 +1911,15 @@ def _render_reviewer_queue_summary(
 def _render_reviewer_case_brief(
     records: list[Mapping[str, Any]],
     state_summaries: Mapping[str, Mapping[str, Any]],
+    all_source_records: list[Mapping[str, Any]],
 ) -> str:
     case_records = tuple(
-        _case_brief_record_from_review_item(index, record, state_summaries)
+        _case_brief_record_from_review_item(
+            index,
+            record,
+            state_summaries,
+            all_source_records,
+        )
         for index, record in enumerate(records)
     )
     if not case_records:
@@ -2777,6 +2783,7 @@ def _case_brief_record_from_review_item(
     index: int,
     item: Mapping[str, Any],
     state_summaries: Mapping[str, Mapping[str, Any]],
+    all_source_records: list[Mapping[str, Any]],
 ) -> FacilityCaseBriefRecord:
     source_record = _mapping(item, "source_record")
     identity = _mapping(source_record, "identity")
@@ -2786,8 +2793,18 @@ def _case_brief_record_from_review_item(
     state_summary = state_summaries.get(source_record_key, _empty_state_summary())
     latest_status = _summary_optional_string(state_summary, "latest_status")
     detail_href = f"{REVIEWER_UI_DETAIL_PATH}?{urlencode({'source_record_key': source_record_key})}"
-    facility_number = _optional_string(identity, "facility_id")
+    facility_number = _complaint_export_row_facility_number(
+        source_record,
+        CcldQueueReturnContext(),
+    )
     facility_name = _optional_string(original_values, "facility_name")
+    if facility_number == "unknown" or facility_name == "unknown":
+        related_records = _related_source_records(source_record, all_source_records)
+        facility = _facility_context(related_records)
+        if facility_number == "unknown":
+            facility_number = _facility_context_value(facility, "external_facility_number")
+        if facility_name == "unknown":
+            facility_name = _facility_context_value(facility, "facility_name")
     if facility_name == "unknown":
         facility_name = ""
     return FacilityCaseBriefRecord(
