@@ -677,14 +677,14 @@ def _feedback_form(form_values: Mapping[str, list[str]]) -> str:
     return f"""    <section aria-labelledby="feedback-form-heading">
       <h2 id="feedback-form-heading">Send tester feedback</h2>
       <form action="{FEEDBACK_PATH}" method="post">
-        <p>
+        <div>
           <label for="feedback_type">Feedback type</label>
                     <select id="feedback_type" name="feedback_type" required aria-describedby="feedback-type-help">
             <option value="">Choose feedback type</option>
 {options}
           </select>
-                    <span id="feedback-type-help">Choose the category that best fits the route or action that was confusing.</span>
-        </p>
+          <p id="feedback-type-help" class="helper-text">Choose the category that best fits the route or action that was confusing.</p>
+        </div>
         <section class="warning-card" aria-labelledby="feedback-safety-heading">
           <h3 id="feedback-safety-heading">Do not include private material</h3>
           <p>Do not include private facts, credentials, legal strategy, privileged work product,
