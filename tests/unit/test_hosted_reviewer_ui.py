@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, cast
 from urllib.parse import quote, urlencode
@@ -69,6 +70,45 @@ OTHER_SCOPE = HostedAccessScope("seeded_corpus", "different-seeded-corpus")
 COMPLAINT_KEY = "complaint:ccld:complaint:32-CR-20220407124448"
 
 
+class ElementTextByIdParser(HTMLParser):
+    def __init__(self, element_id: str) -> None:
+        super().__init__()
+        self._element_id = element_id
+        self._target_tag: str | None = None
+        self._capture_depth = 0
+        self._text: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attr_values = dict(attrs)
+        if self._target_tag is None and attr_values.get("id") == self._element_id:
+            self._target_tag = tag
+            self._capture_depth = 1
+            return
+        if self._capture_depth:
+            self._capture_depth += 1
+
+    def handle_endtag(self, tag: str) -> None:
+        if not self._capture_depth:
+            return
+        self._capture_depth -= 1
+        if self._capture_depth == 0 and tag == self._target_tag:
+            self._target_tag = None
+
+    def handle_data(self, data: str) -> None:
+        if self._capture_depth:
+            self._text.append(data)
+
+    @property
+    def text(self) -> str:
+        return " ".join("".join(self._text).split())
+
+
+def _text_for_id(html: str, element_id: str) -> str:
+    parser = ElementTextByIdParser(element_id)
+    parser.feed(html)
+    return parser.text
+
+
 def _assert_collapsed_disclosure(html: str, label: str) -> None:
     summary = f"<summary>{label}</summary>"
     summary_index = html.index(summary)
@@ -96,6 +136,12 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert content_type == "text/html; charset=utf-8"
     assert "Complaint records ready for review" in html
     assert "Facility case brief" in html
+    assert (
+        _text_for_id(html, "facility-case-brief-heading")
+        == "A. MIRIAM JAMISON CHILDREN'S CENTER"
+    )
+    assert _text_for_id(html, "facility-case-brief-heading") != "Facility"
+    assert "Facility/license number: 157806098" in html
     assert "Complaint records visible" in html
     mode_panel = html.split('<div class="mode-panel" aria-label="Retrieval mode">', 1)[1].split(
         "</div>",
