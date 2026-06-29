@@ -294,12 +294,9 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
             b"Try one next step" not in ccld_no_match_body
             and b"How to interpret this no-match result" not in ccld_no_match_body
         )
-        or (
-            b"not proof that no public complaints exist" not in ccld_no_match_body
-            and b"not a public-source absence" not in ccld_no_match_body
-        )
-    ):
-        raise RuntimeError("Hosted scaffold CCLD no-match result did not return load guidance.")
+            or b"Use the no-match result to confirm criteria" not in ccld_no_match_body
+        ):
+            raise RuntimeError("Hosted scaffold CCLD no-match result did not return load guidance.")
     if (
         ccld_retrieval_setup_status != 503
         or b"Controlled CCLD retrieval setup required" not in ccld_retrieval_setup_body
@@ -346,7 +343,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
             or b"How to review a facility" not in help_body
         or b"What review flags mean" not in help_body
         or b"How source traceability works" not in help_body
-            or b"What the app does not prove" not in help_body
+            or b"Review guidance and next steps" not in help_body
     ):
         raise RuntimeError("Hosted scaffold CCLD help page did not return guided help.")
     if (
@@ -387,7 +384,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Reviewer-created state summary" not in packet_preview_body
         or b"Included complaint records" not in packet_preview_body
         or b"Why included" not in packet_preview_body
-        or b"not a legal report" not in packet_preview_body
+        or b"Before copying or printing" not in packet_preview_body
         or b"No export file is generated" not in packet_preview_body
     ):
         raise RuntimeError("Hosted scaffold review packet preview did not return safe guidance.")
@@ -396,7 +393,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Attorney Review Packet Draft" not in packet_draft_body
         or b"Use browser copy or print only after review" not in packet_draft_body
         or b"Copyable packet summary" not in packet_draft_body
-        or b"What this draft does not prove" not in packet_draft_body
+        or b"Before using this draft" not in packet_draft_body
         or b"No export file is generated" not in packet_draft_body
     ):
         raise RuntimeError("Hosted scaffold review packet draft did not return safe guidance.")
@@ -418,8 +415,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Return to facility queue" not in reviewer_note_body
         or b"Open next priority record" not in reviewer_note_body
         or b"Queue progress and note/status cues are derived" not in reviewer_note_body
-        or b"suggested next record is not a persisted assignment" not in reviewer_note_body
-        or b"possible correction concern wording" not in reviewer_note_body
+        or b"Use the show-all status view" not in reviewer_note_body
+        or b"The suggested next record is navigation guidance" not in reviewer_note_body
         or b"manual feedback checklist" not in reviewer_note_body
     ):
         raise RuntimeError("Hosted scaffold reviewer note did not return confirmation.")
@@ -432,8 +429,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Return to facility queue" not in reviewer_saved_status_body
         or b"Open next priority record" not in reviewer_saved_status_body
         or b"Queue progress and note/status cues are derived" not in reviewer_saved_status_body
-        or b"suggested next record is not a persisted assignment" not in reviewer_saved_status_body
-        or b"possible correction concern wording" not in reviewer_saved_status_body
+        or b"Use the show-all status view" not in reviewer_saved_status_body
+        or b"The suggested next record is navigation guidance" not in reviewer_saved_status_body
         or b"manual feedback checklist" not in reviewer_saved_status_body
     ):
         raise RuntimeError("Hosted scaffold reviewer status did not return confirmation.")

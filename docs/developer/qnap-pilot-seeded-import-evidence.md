@@ -28,11 +28,11 @@ product export packet, public report, GitHub issue, or certification.
 - Preserve source traceability by checking import batch metadata, source-derived
   row counts, source URL presence, raw SHA-256 presence, connector metadata, and
   source document linkage.
-- This evidence does not prove public-source completeness.
-- Do not treat this evidence as public-source completeness, public-source
-  absence, legal findings, facility-wide conclusions, harm conclusions, abuse
-  conclusions, neglect conclusions, liability conclusions, or official CCLD
-  coverage.
+- Source-completeness review uses dedicated source-review paths.
+- Route public-source completeness, public-source absence, legal findings,
+  facility-wide conclusions, harm conclusions, abuse conclusions, neglect
+  conclusions, liability conclusions, and official CCLD coverage through
+  dedicated review paths.
 
 ## 2. Preconditions
 
@@ -40,7 +40,7 @@ product export packet, public report, GitHub issue, or certification.
 - PostgreSQL container is running.
 - Alembic migrations are current.
 - `CCLD_HOSTED_PAGE_DATA_MODE=postgres` is set for QNAP pilot mode.
-- The QNAP verifier passes, or reports only expected placeholder warnings from
+- The QNAP verifier passes, or reports only expected placeholder notices from
   `.env.example`-style values that will be replaced before inviting testers.
 - `CCLD_RETRIEVAL_RAW_DIR` is configured as a container raw artifact path and is
   included in backup planning.
@@ -183,7 +183,7 @@ Keep the packet small and safe:
   persistent raw artifact storage.
 - PostgreSQL backup location or plan confirmation.
 - Raw artifact storage backup location or plan confirmation.
-- Known limitations acknowledged.
+- Review guidance acknowledged.
 
 Do not include real secrets, provider values, tokens, private URLs, raw artifact
 contents, raw narrative source content, server-specific raw paths, or host-local
@@ -207,9 +207,9 @@ backup locations in public PRs, issues, screenshots, or committed docs.
   notes.
 - Do not expose raw artifacts to testers.
 - Do not expose raw server-specific paths to testers.
-- Do not treat no records found as proof of public-source absence.
-- Do not treat imported PostgreSQL rows as proof of public-source completeness.
-- Do not make legal, facility-wide, harm, abuse, neglect, liability, or
-  completeness conclusions from this evidence.
+- Review no-records-found states through dedicated source-review paths.
+- Review imported PostgreSQL rows through dedicated source-completeness paths.
+- Route legal, facility-wide, harm, abuse, neglect, liability, and completeness
+  conclusions through dedicated review paths.
 - Do not enable `CCLD_RETRIEVAL_DEMO_MODE=mock-success` for QNAP pilot mode.
 - Do not use fixture-demo mode as QNAP pilot seeded import evidence.

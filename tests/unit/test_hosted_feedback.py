@@ -70,23 +70,25 @@ class MockGitHubIssueClient:
 def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     status, content_type, body = route_response(FEEDBACK_PATH)
     html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Send feedback" in html
     assert "What issue should be reported?" in html
-    assert "packet/export-readiness" in html
+    assert "packet/readiness" in html
     assert "retrieval status/progress" in html
     assert "already-loaded records" in html or "loaded-record" in html
-    assert "browser copy or print" in html
+    assert "browser copy issue" in normalized_html
+    assert "print issue" in normalized_html
     assert "Submit feedback" in html
     assert "copy" in html.lower()
     assert (
-        '<section class="warning-card" aria-labelledby="feedback-safety-heading">'
+        '<section class="notice-card" aria-labelledby="feedback-safety-heading">'
         in html
     )
     assert (
-        '<section class="warning-card" aria-labelledby="feedback-unconfigured-heading">'
+        '<section class="notice-card" aria-labelledby="feedback-unconfigured-heading">'
         in html
     )
     assert (
@@ -162,11 +164,10 @@ def test_feedback_page_renders_safe_optional_handoff_context() -> None:
     assert "complaint:ccld:complaint:32-CR-20220407124448" in html
     assert "32-CR-20220407124448" in html
     assert "Describe packet readiness confusion." in html
-    assert "packet/export-readiness confusion" in normalized_html
+    assert "packet/readiness confusion" in normalized_html
     assert "browser copy or print confusion" in normalized_html
     assert "missing or unexpected records in packet content" in normalized_html
-    assert "packet boundary" in normalized_html
-    assert "not a source-completeness proof" in normalized_html
+    assert "missing or unexpected records in packet content" in normalized_html
     assert (
         "possible correction concerns where a source-derived value looked wrong"
         in normalized_html

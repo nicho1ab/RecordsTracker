@@ -105,7 +105,7 @@ def test_ccld_record_request_page_renders_from_default_context(
     assert content_type == "text/html; charset=utf-8"
     assert "Retrieve complaint records" in html
     assert "Skip to main CCLD request content" in html
-    assert '<main id="main-content" tabindex="-1">' in html
+    assert '<main id="main-content" class="ds-page-main" tabindex="-1">' in html
     assert "Retrieve complaint records for a facility" in html
     assert "Start review" in html
     assert "Choose a facility and date range, then open the complaint queue." in html
@@ -114,8 +114,8 @@ def test_ccld_record_request_page_renders_from_default_context(
         1,
     )[0]
     assert html.count("Fixture/mock demo") == 1
-    assert html.count('<span class="badge badge-demo">Fixture/mock demo</span>') == 1
-    assert '<span class="badge badge-demo">Fixture/mock demo</span>' in mode_panel
+    assert html.count('<span class="ds-badge ds-badge--info">Fixture/mock demo</span>') == 1
+    assert '<span class="ds-badge ds-badge--info">Fixture/mock demo</span>' in mode_panel
     assert "Keyboard flow: move from facility selection to date range" not in html
     assert '<details class="quiet-section orientation-details" open>' in html
     assert "Start review request context" in html
@@ -134,10 +134,9 @@ def test_ccld_record_request_page_renders_from_default_context(
     assert "Keyboard flow: type a search or digit number" not in html
     assert "Attorney workflow" not in html
     assert "Current step:" not in html
-    assert "Records are review aids. See Help for limitations." in html
+    assert "See review guidance and next steps." in html
     assert "Live retrieval off" not in html
     assert "Search CCLD facilities" in html
-    assert "Review boundary" not in html
     assert "provider" not in html.casefold()
     assert_no_secret_html(html)
 
@@ -218,14 +217,14 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "How source traceability works" in html
     assert "What to do with source-confidence cues" in html
     assert "Source-confidence cues are review prompts" in normalized_html
-    assert "not source verification, source absence, source completeness" in normalized_html
+    assert "Source-confidence cues are review prompts" in normalized_html
     assert "describe only what the page showed" in normalized_html
     assert "return to the same queue and continue with the suggested next record" in (
         normalized_html
     )
     assert "source URL, raw SHA-256 hash" in html
-    assert "traceability value missing" in normalized_html
-    assert "not proof that the public CCLD portal lacks a value" in normalized_html
+    assert "traceability value is missing" in normalized_html
+    assert "present, not available locally, confusing, or proxy-related" in normalized_html
     assert "Before relying on a source-derived value" in html
     assert "source document/report marker" in normalized_html
     assert "How reviewer-created notes/status work" in html
@@ -233,10 +232,9 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "Correction-readiness means a tester has noticed" in html
     assert "Check source traceability first" in html
     assert "possible correction concern in a reviewer-created note or feedback" in html
-    assert "does not change source-derived records" in html
-    assert "does not submit correction decisions" in normalized_html
-    assert "A future correction workflow would be reviewer-created state" in normalized_html
-    assert "public CCLD portal remains the source of record" in normalized_html
+    assert "do not edit source-derived fields" in html
+    assert "correction concern in a reviewer-created note or feedback" in normalized_html
+    assert "Open source links from the detail page when a source check is needed" in html
     assert "Retrieval modes" in html
     assert "Show existing queue means the page searched already-loaded source-derived" in (
         normalized_html
@@ -248,8 +246,8 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "status/progress pages show the current job state" in normalized_html
     assert "Loaded source-derived records can be ready for review" in normalized_html
     assert "Retrieval status/progress is operational metadata" in normalized_html
-    assert "not production monitoring, source-completeness proof" in normalized_html
-    assert "What the app does not prove" in html
+    assert "metadata for the current review workflow" in normalized_html
+    assert "Review guidance and next steps" in html
     assert "How to send useful feedback" in html
     assert "How packet preparation fits in" in html
     assert "packet preview/draft are preparation" in normalized_html
@@ -259,24 +257,20 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "source-derived values, source traceability" in normalized_html
     assert "possible correction-readiness concerns" in normalized_html
     assert (
-        "not legal reports, final exports, certified reports, product-generated exports, "
-        "packet lifecycle state, or source-completeness proof"
-        in normalized_html
+        "Packet preview and packet draft summarize loaded source-derived complaint records"
+        in html
     )
+    assert "Use feedback when packet readiness wording is confusing" in normalized_html
     assert "source-derived records" in normalized_html.casefold()
     assert "reviewer-created notes/status" in normalized_html
     assert "How reviewer-created status filters work" in html
     assert "active reviewer-created status filter" in normalized_html
     assert "records shown under that filter" in normalized_html
     assert "total records in the same facility/date queue" in normalized_html
-    assert "not source-derived facts, assignments, record claims" in normalized_html
+    assert "filtered-empty result can mean the filter is hiding records" in normalized_html
     assert "filtered-empty result can mean the filter is hiding records" in normalized_html
     assert "Correction-readiness" in html
-    assert (
-        "does not make reviewer-created observations into official public-source facts"
-        in normalized_html
-    )
-    assert "no complaints exist" in normalized_html
+    assert "possible correction concern in a reviewer-created note or feedback" in html
     assert 'action="/ccld/correction' not in normalized_html
     assert 'name="correction_status"' not in normalized_html
     assert "correction approved" not in normalized_html
@@ -354,11 +348,8 @@ def test_ccld_record_request_prefill_links_signal_only_facility_hub(
     assert "Open facility review priority list" in html
     assert "Start a new complaint request flow" in html
     assert "manual request context" in normalized_html
-    assert "complaint records are requested/reviewed separately" in normalized_html
-    assert "not source verification" in normalized_html
-    assert "not a complaint-coverage determination" in normalized_html
-    assert "not a source-completeness proof" in normalized_html
-    assert "not a legal finding" in normalized_html
+    assert "use this request context to decide whether to retrieve records" in normalized_html
+    assert "return to the facility hub, or change criteria" in normalized_html
     assert_no_secret_html(html)
 
 
@@ -375,7 +366,7 @@ def test_ccld_record_request_manual_entry_shows_context_confirmation() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Which facility should be reviewed?" in html
     assert "type the digit facility/license number directly" in html
-    assert "Records are review aids. See Help for limitations." in html
+    assert "See review guidance and next steps." in html
     assert "Live retrieval off" not in html
     assert "Search by name, license number, city, county, ZIP" in normalized_html
     assert "facility type, program type, or status code" in normalized_html
@@ -578,15 +569,16 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "<dt>Not started</dt>" in html
     assert "<dd>1</dd>" in html
     assert "Queue triage summary" in html
-    assert "Queue summaries do not prove every public record is present" in normalized_html
+    assert (
+        "Queue summaries highlight loaded records for this facility/date context"
+        in normalized_html
+    )
     assert "Open detail before relying on a missing or confusing value" in normalized_html
-    assert "Next safe action: check the detail page" in normalized_html
+    assert "Next action: check the detail page" in normalized_html
     assert "Use the feedback checklist below only for missing records" in normalized_html
     assert "Continue review guidance" in html
     assert "derived from this facility/date request context" in normalized_html
-    assert "not a persisted queue assignment" in normalized_html
-    assert "automatic record claim" in html
-    assert "official workflow state" in html
+    assert "Use it as navigation help for choosing" in html
     assert "After reviewing detail or saving a note/status" in normalized_html
     assert "Next record guidance" in html
     assert "Records with notes" in html
@@ -620,7 +612,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "More queue and export actions" in html
     assert "Review packet readiness before copying or printing" in html
     assert "Open packet preparation draft for browser copy or print" in html
-    assert "not a legal report, not a final export, not a certified report" in normalized_html
+    assert "prepared for review before browser copy or print" in normalized_html
     assert "do not assign, claim, or change records" in normalized_html
     assert "Queue decision actions" in html
     assert "Open facility review priority list" in html
@@ -650,9 +642,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Records shown under active filter" in html
     assert "Total records in this same facility/date queue" in html
     assert "Available reviewer-created status filters" in html
-    assert "not record assignment" in html
-    assert "not record claiming" in normalized_html
-    assert "not persisted queue state" in html
+    assert "Records shown under active filter" in html
     assert "A. MIRIAM JAMISON" in html
     assert "32-CR-20220407124448" in html
     assert detail_href in html
@@ -792,7 +782,7 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
     assert "Records with status" in reviewed_html
     assert "Suggested next record to open" in reviewed_html
     assert "Continue review guidance" in reviewed_html
-    assert "not a persisted queue assignment" in reviewed_normalized
+    assert "Use it as navigation help for choosing" in reviewed_normalized
     assert "- Reviewer-created rows read for this queue: 2" in reviewed_html
     assert "- Reviewer-created notes present: yes" in reviewed_html
     assert "- Reviewer-created statuses present: yes" in reviewed_html
@@ -874,7 +864,7 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     normalized_html = " ".join(html.split())
     assert "Confirm the facility/date context" in normalized_html
     assert "No loaded source-derived records matched this request context" in html
-    assert "not proof that no public complaints exist" in normalized_html
+    assert "Use the no-match result to confirm criteria" in normalized_html
     assert "Try one next step" in html
     assert "Check or change the facility/license number" in html
     assert "Adjust the complaint date range" in html
@@ -897,7 +887,7 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert "use the local validated CCLD load action" in html
     assert "outside-browser live fetch and artifact-builder workflow" in normalized_html
     assert "copy the feedback checklist" in html
-    assert "not a public-source absence" in html
+    assert "Use the no-match result to confirm criteria" in html
     assert "Selected request context" in html
     assert "Change facility/date criteria for this request" in html
     assert "Copyable tester feedback checklist" in html
@@ -995,7 +985,7 @@ def test_ccld_record_request_empty_hosted_records_offers_local_validated_load() 
     assert "How to interpret this no-match result" in html
     normalized_html = " ".join(html.split())
     assert "currently loaded source-derived rows only" in normalized_html
-    assert "not proof that no public complaints exist" in normalized_html
+    assert "Use the no-match result to confirm criteria" in normalized_html
     assert "Try one next step" in html
     assert "Check or change the facility/license number" in html
     assert "Adjust the complaint date range" in html
@@ -1149,7 +1139,7 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
         in first_checklist
     )
     assert "- Retrieval job/status/progress wording that was confusing:" in first_checklist
-    assert "- Next safe action after retrieval status was clear:" in first_checklist
+    assert "- Next action after retrieval status was clear:" in first_checklist
     assert "Missing, unexpected, or confusing results" in first_checklist
     assert "- Records that seemed missing:" in first_checklist
     assert "- Records that seemed unexpected:" in first_checklist
@@ -1168,9 +1158,11 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     )
     assert "Rendering this checklist does not change source-derived records" in first_checklist
     assert "Browser pages only trigger controlled server-side retrieval" in first_checklist
-    assert "Missing rows are not proof" in first_checklist
+    assert "Include any records that seemed missing, unexpected, or confusing" in first_checklist
     assert "Select the checklist text, copy it, paste it" in " ".join(first_html.split())
-    assert "CCLD public portal remains the source of record" in first_checklist
+    assert "Open source links from the detail page when a source check is needed" in (
+        first_checklist
+    )
     assert "provider" not in first_checklist.casefold()
     assert_no_secret_html(first_html)
     assert_no_secret_html(second_html)

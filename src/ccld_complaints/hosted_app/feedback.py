@@ -282,12 +282,12 @@ def render_feedback_page(
             <ul>
                 <li>A complaint record looked missing or unexpected.</li>
                 <li>It was unclear whether the page was showing already-loaded records or a controlled retrieval job status.</li>
-                <li>A retrieval job state, progress count, warning, or next safe action was unclear.</li>
+                <li>A retrieval job state, progress count, notice, or next action was unclear.</li>
                 <li>A date or finding looked confusing.</li>
                 <li>A review flag was unclear.</li>
-                <li>A source-confidence cue did not make the next safe action clear.</li>
+                <li>A source-confidence cue did not make the next action clear.</li>
                 <li>The source traceability summary was hard to use.</li>
-                <li>Packet readiness, browser copy or print preparation, or the boundary between packet preparation and final export was unclear.</li>
+                <li>Packet readiness, browser copy, or print preparation was unclear.</li>
                 <li>A packet seemed to include a missing or unexpected record, confusing source traceability cue, reviewer-created note/status concern, or correction-readiness concern.</li>
                 <li>A source-derived value looked wrong or incomplete after checking source traceability.</li>
                 <li>The correction-readiness guidance did not make clear whether to use a reviewer-created note or feedback.</li>
@@ -341,9 +341,7 @@ def _feedback_context_panel(context: FeedbackHandoffContext | None) -> str:
     )
     return f"""        <section class="summary-card" aria-labelledby="feedback-context-heading">
             <h2 id="feedback-context-heading">Feedback context from review workflow</h2>
-            <p>This context was carried from the review page you came from. It is a bounded helper for
-            triage, not a source fact, not a legal conclusion, not a final export, and
-            not a source-completeness proof.</p>
+            <p>This context was carried from the review page you came from as a triage helper.</p>
             <dl>
 {row_markup}
             </dl>
@@ -354,9 +352,8 @@ def _feedback_context_panel(context: FeedbackHandoffContext | None) -> str:
             missing; source-confidence next-step confusion for missing source values,
             proxy-related cues, or cautious note/status wording; possible correction concerns where a source-derived value looked wrong or
             incomplete after checking traceability; or uncertainty about whether to use a
-            reviewer-created note or feedback; packet/export-readiness confusion, browser copy or
-            print confusion, missing or unexpected records in packet content, or uncertainty about
-            the packet boundary. Do not include
+            reviewer-created note or feedback; packet/readiness confusion, browser copy or
+            print confusion, or missing or unexpected records in packet content. Do not include
             raw source narrative, secrets, provider claims, private URLs, stack traces, server
             paths, environment values, or legal conclusions.</p>
         </section>"""
@@ -652,7 +649,7 @@ def _configuration_notice(config: GitHubFeedbackConfig) -> str:
       <h2 id="feedback-configured-heading">GitHub issue intake is configured</h2>
       <p>Submitting this form creates a server-side GitHub issue for triage.</p>
     </section>"""
-    return """    <section class="warning-card" aria-labelledby="feedback-unconfigured-heading">
+    return """    <section class="notice-card" aria-labelledby="feedback-unconfigured-heading">
       <h2 id="feedback-unconfigured-heading">How feedback is submitted</h2>
       <p>Note: Server-side GitHub issue intake is not configured on this deployment.
       Fill in the form, then copy or forward the description to the agreed tester support channel.
@@ -685,7 +682,7 @@ def _feedback_form(form_values: Mapping[str, list[str]]) -> str:
           </select>
           <p id="feedback-type-help" class="helper-text">Choose the category that best fits the route or action that was confusing.</p>
         </div>
-        <section class="warning-card" aria-labelledby="feedback-safety-heading">
+        <section class="notice-card" aria-labelledby="feedback-safety-heading">
           <h3 id="feedback-safety-heading">Do not include private material</h3>
           <p>Do not include private facts, credentials, legal strategy, privileged work product,
           private URLs, secrets, tokens, provider claims, raw source narrative, raw artifact material,
@@ -694,7 +691,7 @@ def _feedback_form(form_values: Mapping[str, list[str]]) -> str:
         <p>
           <label for="description">Description</label>
                     {textarea}
-                    <span id="description-help">Describe the route, control, keyboard flow, source traceability cue, packet/export-readiness concern, browser copy or print issue, or export boundary confusion without private material.</span>
+                    <span id="description-help">Describe the route, control, keyboard flow, source traceability cue, packet/readiness concern, browser copy issue, or print issue without private material.</span>
         </p>
         <input type="hidden" name="page_path" value="{html.escape(page_path)}">
         <p><button type="submit">Submit feedback</button></p>

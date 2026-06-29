@@ -259,7 +259,7 @@ class CcldFacilityReferenceSource:
     label: str
     path_label: str
     records: tuple[CcldFacilityLookupRecord, ...]
-    warnings: tuple[str, ...] = ()
+    notices: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -325,13 +325,13 @@ def load_active_ccld_facility_reference(
                 )
             except ValueError as error:
                 return _tiny_fixture_reference(
-                    warnings=(
+                    notices=(
                         "Configured full CCLD facility reference CSV "
                         f"could not be loaded: {error}. Using tiny fixture fallback.",
                     )
                 )
         return _tiny_fixture_reference(
-            warnings=(
+            notices=(
                 "Configured full CCLD facility reference CSV was not found. "
                 "Using tiny fixture fallback.",
             )
@@ -348,13 +348,13 @@ def load_active_ccld_facility_reference(
             )
         except ValueError as error:
             return _tiny_fixture_reference(
-                warnings=(
+                notices=(
                     "Default full CCLD facility reference CSV could not be "
                     f"loaded: {error}. Using tiny fixture fallback.",
                 )
             )
     return _tiny_fixture_reference(
-        warnings=(
+        notices=(
             "No full CCLD facility reference CSV is configured or available. "
             "Using tiny fixture fallback.",
         )
@@ -463,14 +463,14 @@ def render_ccld_facility_lookup_page(
         primary_action_section = f"""    <section class="workflow-panel" aria-labelledby="facility-manual-entry-primary-heading">
       <h2 id="facility-manual-entry-primary-heading">Enter a facility/license number directly</h2>
       <p>Facility directory lookup is not configured. Enter a known CCLD facility/license number on the request form to retrieve complaint records.</p>
-      <p>Directory lookup unavailability does not imply any facility has no complaints, visits, citations, or records. Complaint records are retrieved separately from the live CCLD public source.</p>
+      <p>Use manual entry when lookup is unavailable; complaint retrieval still starts from the request form.</p>
       <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Open request form</a></p>
     </section>"""
         lookup_section_label = "Facility directory search (not configured)"
         lookup_section_intro = f"""    <section class="quiet-section" aria-labelledby="facility-start-guidance-heading">
       <h2 id="facility-start-guidance-heading">{_escape(lookup_section_label)}</h2>
       <p>Facility directory lookup is not configured for this hosted environment. Use the request form to enter a known facility/license number directly.</p>
-      <p>Lookup rows are public facility-directory data. Complaint records are retrieved separately, and directory rows are not complaint coverage, not source-completeness proof, not license-validity proof, and not legal or facility-wide conclusions.</p>
+      <p>Lookup rows are public facility-directory data for finding the facility/license number before complaint retrieval.</p>
     </section>"""
     else:
         hero_value = (
@@ -559,17 +559,17 @@ def render_ccld_facility_review_hub_page(
     </section>
     <section aria-labelledby="facility-directory-details-heading">
       <h2 id="facility-directory-details-heading">Facility-directory details</h2>
-      <p>These fields come from the active preloaded facility directory. Complaint records are requested and reviewed separately. The public CCLD portal remains the source of record.</p>
+      <p>These fields come from the active preloaded facility directory. Complaint records are requested and reviewed separately. Open source links from record detail when a source check is needed.</p>
 {duplicate_note}
       {_render_facility_directory_details(record, concise_labels=True)}
     </section>
     {_render_facility_review_signals_section(record, signals_summary)}
     {_render_facility_hub_review_context(record, review_context)}
     {_render_facility_hub_actions(record, review_context)}
-    <section aria-labelledby="facility-hub-boundaries-heading">
-      <h2 id="facility-hub-boundaries-heading">Facility hub boundaries</h2>
-      <p>This hub does not check all complaints for this facility and does not prove complaint coverage, source completeness, license validity, official findings, legal conclusions, assignment, claiming, correction application, export approval, certified report status, or packet lifecycle state.</p>
-      <p>Opening this page does not auto-submit retrieval, create complaint records from facility-directory data, mutate source-derived records, or create reviewer-created notes/statuses.</p>
+    <section aria-labelledby="facility-hub-review-actions-heading">
+      <h2 id="facility-hub-review-actions-heading">Facility hub review actions</h2>
+      <p>Use this hub to start a complaint request, open loaded review records, prepare a packet, or return to lookup.</p>
+      <p>Opening this page leaves source-derived records and reviewer-created notes/statuses unchanged.</p>
     </section>""",
     )
 
@@ -594,15 +594,15 @@ def _render_signal_only_facility_hub_page(
         <section aria-labelledby="signal-only-context-heading">
             <h2 id="signal-only-context-heading">Facility-directory record not available</h2>
             <p>Showing uploaded public summary fields because the active preloaded facility-directory data does not currently include this facility number.</p>
-            <p>This signal-only facility hub is not a facility-directory record, not source verification, not a complaint-coverage determination, not a source-completeness proof, and not a legal finding; complaint records are requested/reviewed separately.</p>
+            <p>Use the uploaded summary fields to decide whether to start a complaint request, then review complaint records separately.</p>
         </section>
         {_render_facility_review_signals_section(record, summary)}
         {_render_facility_hub_review_context(record, review_context)}
         {_render_facility_hub_actions(record, review_context)}
-        <section aria-labelledby="signal-only-boundaries-heading">
-            <h2 id="signal-only-boundaries-heading">Signal-only hub boundaries</h2>
-            <p>Opening this page does not auto-submit retrieval, create complaint records from signal data, mutate source-derived records, or create reviewer-created notes/statuses.</p>
-            <p>Missing local directory context means only that a local preloaded directory row is not available here. It is not complaint absence.</p>
+        <section aria-labelledby="signal-only-actions-heading">
+            <h2 id="signal-only-actions-heading">Signal-only hub actions</h2>
+            <p>Opening this page keeps source-derived records and reviewer-created notes/statuses unchanged.</p>
+            <p>Use the request links when this facility/date context is ready for complaint review.</p>
         </section>""",
     )
 
@@ -665,7 +665,7 @@ def render_ccld_facility_review_priority_page(
                 </tbody>
             </table>
         </section>
-        {_render_priority_limitations_disclosure()}""",
+        {_render_priority_guidance_disclosure()}""",
         )
 
 
@@ -722,7 +722,7 @@ def render_ccld_facility_review_intelligence_page(
         </tbody>
       </table>
     </section>
-    {_render_intelligence_limitations_disclosure()}""",
+    {_render_intelligence_guidance_disclosure()}""",
     )
 
 
@@ -823,17 +823,17 @@ def _render_intelligence_filters(
             <select id="intelligence-sort" name="sort">{sort_markup}</select>
           </p>
         </div>
-        <p class="helper-text">Filters use existing public summary fields. They are transparent grouping controls, not scoring, assignment, claiming, source verification, complaint coverage, or legal findings.</p>
+        <p class="helper-text">Filters use existing public summary fields as transparent grouping controls for review planning.</p>
         <p><button type="submit">Apply intelligence filters</button></p>
       </form>
     </section>"""
 
 
-def _render_intelligence_limitations_disclosure() -> str:
+def _render_intelligence_guidance_disclosure() -> str:
     return """    <details class="technical-details">
-      <summary>About these indicators and their limitations</summary>
-      <p>This dashboard uses existing public facility-directory fields and supported uploaded public licensing/visit/citation summary fields only. It does not run retrieval, crawl sources, extract new fields, write reviewer-created state, create packets, export records, or change schemas.</p>
-      <p>Indicators are review cues, not risk scores, not wrongdoing determinations, not source verification, not a complaint-coverage determination, not a source-completeness proof, and not a legal finding. Complaint records are requested/reviewed separately.</p>
+      <summary>How to use these indicators</summary>
+      <p>This dashboard uses existing public facility-directory fields and supported uploaded public licensing/visit/citation summary fields for review planning.</p>
+      <p>Use indicators to choose a facility hub, start a complaint request, inspect loaded records, and decide what feedback or packet preparation may be useful.</p>
     </details>"""
 
 
@@ -977,7 +977,7 @@ def _safe_int(value: str) -> int:
 def facility_reference_from_source_derived_records(
     records: Iterable[Mapping[str, Any]],
     *,
-    warning: str | None = None,
+    notice: str | None = None,
 ) -> CcldFacilityReferenceSource:
     facility_records = tuple(
         sorted(
@@ -989,9 +989,9 @@ def facility_reference_from_source_derived_records(
             key=lambda record: (record.facility_name, record.facility_number),
         )
     )
-    warnings = () if warning is None else (warning,)
-    if not facility_records and warning is None:
-        warnings = (
+    notices = () if notice is None else (notice,)
+    if not facility_records and notice is None:
+        notices = (
             "Facility lookup suggestions are not available. Source-derived records may not include "
             "facility directory rows. Enter a facility/license number directly if you know it.",
         )
@@ -1000,7 +1000,7 @@ def facility_reference_from_source_derived_records(
         label="PostgreSQL source-derived facility records",
         path_label="hosted_source_derived_records",
         records=facility_records,
-        warnings=warnings,
+        notices=notices,
     )
 
 
@@ -1125,23 +1125,23 @@ def _deduplicate_facility_records(
 
 def _tiny_fixture_reference(
     *,
-    warnings: tuple[str, ...] = (),
+    notices: tuple[str, ...] = (),
 ) -> CcldFacilityReferenceSource:
     return CcldFacilityReferenceSource(
         source_kind="tiny_fixture_fallback",
         label="Tiny committed CCLD facility fixture fallback",
         path_label=DEFAULT_CCLD_FACILITY_REFERENCE_PATH.as_posix(),
         records=load_ccld_facility_reference(DEFAULT_CCLD_FACILITY_REFERENCE_PATH),
-        warnings=warnings,
+        notices=notices,
     )
 
 
 def _no_reference_source(
     *,
-    warnings: tuple[str, ...] = (),
+    notices: tuple[str, ...] = (),
 ) -> CcldFacilityReferenceSource:
     """Return a reference source indicating no directory is configured for live mode."""
-    default_warnings = (
+    default_notices = (
         "Facility directory lookup is not configured for this hosted environment. "
         "Enter a known CCLD facility/license number to continue. "
         "Directory lookup is optional and does not affect controlled complaint retrieval.",
@@ -1151,7 +1151,7 @@ def _no_reference_source(
         label="Facility directory lookup not configured",
         path_label="",
         records=(),
-        warnings=warnings if warnings else default_warnings,
+        notices=notices if notices else default_notices,
     )
 
 
@@ -1261,7 +1261,7 @@ def _render_facility_combobox_section(
             <details class="technical-details">
                 <summary>When to use lookup vs. manual entry</summary>
                 <p>Use facility lookup when you know a facility name, city, county, ZIP, facility type, program type, or status code but not the exact facility/license number. Use manual entry when you already know the digit facility/license number.</p>
-                <p>Lookup rows are public facility-directory data for facility lookup assistance. Complaint records are retrieved separately, and directory rows are not complaint coverage, not source-completeness proof, not license-validity proof, and not legal or facility-wide conclusions.</p>
+                <p>Lookup rows are public facility-directory data for facility lookup assistance before complaint retrieval.</p>
             </details>
 {limited_note_markup}
 {selected_card}
@@ -1327,15 +1327,15 @@ def _render_facility_selected_card_html(*, mode: str = "facility") -> str:
 
 def _render_reference_source_section(source: CcldFacilityReferenceSource) -> str:
     """Legacy - renders the reference source section (now only used as a visible panel when there is a problem)."""
-    warning_markup = ""
-    if source.warnings:
-        warning_items = "\n".join(
-            f"        <li>{_escape(warning)}</li>" for warning in source.warnings
+    notice_markup = ""
+    if source.notices:
+        notice_items = "\n".join(
+            f"        <li>{_escape(notice)}</li>" for notice in source.notices
         )
-        warning_markup = f"""      <ul>
-{warning_items}
+        notice_markup = f"""      <ul>
+{notice_items}
       </ul>"""
-    card_class = "warning-card" if source.source_kind == "tiny_fixture_fallback" else "summary-card"
+    card_class = "notice-card" if source.source_kind == "tiny_fixture_fallback" else "summary-card"
     return f"""    <section class="{card_class}" aria-labelledby="reference-source-heading">
       <h2 id="reference-source-heading">Facility reference source</h2>
             <p id="reference-source-help">Active source: {_escape(source.label)}.</p>
@@ -1343,8 +1343,8 @@ def _render_reference_source_section(source: CcldFacilityReferenceSource) -> str
         <dt>Rows loaded for lookup</dt>
         <dd>{len(source.records)}</dd>
       </dl>
-{warning_markup}
-        <p>Reference data is lookup assistance only. It is not imported, persisted, or source-completeness proof.</p>
+{notice_markup}
+        <p>Reference data is lookup assistance only; use it to find a facility/license number before complaint retrieval.</p>
         <details>
             <summary>Developer reference setup</summary>
             <p>Full facility CSV support is read-only. Full facility CSV files must stay outside
@@ -1357,21 +1357,21 @@ def _render_reference_source_section(source: CcldFacilityReferenceSource) -> str
 
 def _render_reference_details_section(source: CcldFacilityReferenceSource) -> str:
     """Collapsed reference data details section for developer/operator reference."""
-    warning_markup = ""
-    if source.warnings:
-        warning_items = "\n".join(
-            f"            <li>{_escape(warning)}</li>" for warning in source.warnings
+    notice_markup = ""
+    if source.notices:
+        notice_items = "\n".join(
+            f"            <li>{_escape(notice)}</li>" for notice in source.notices
         )
-        warning_markup = f"""          <ul>
-{warning_items}
+        notice_markup = f"""          <ul>
+{notice_items}
           </ul>"""
     user_label = _user_facing_source_label(source)
     return f"""    <details class="reference-details-section">
             <summary>Reference data details</summary>
             <p>{_escape(user_label)} &mdash; {len(source.records)} record(s) loaded.</p>
-            <p>Reference data is lookup assistance only. It is not imported, persisted, or
-            source-completeness proof. CCLD public portal remains the source of record.</p>
-{warning_markup}
+            <p>Reference data is lookup assistance only; use it to find a facility/license
+            number before complaint retrieval. Open source links from record detail when a source check is needed.</p>
+{notice_markup}
             <p>To use a full facility reference CSV, set
             <code>{CCLD_FACILITY_REFERENCE_CSV_ENV}</code> or place the file at the documented
             local reference location. Local paths are not shown here.</p>
@@ -1492,7 +1492,7 @@ def _render_facility_hub_not_found(facility_number: str) -> str:
         return f"""    <section class="empty-state-card" aria-labelledby="facility-hub-not-found-heading">
             <h2 id="facility-hub-not-found-heading">Facility-directory result not found</h2>
             <p>No active preloaded facility-directory row matched facility number <strong>{_escape(searched)}</strong>.</p>
-            <p>This does not prove the facility is absent from public sources, does not prove complaint availability, and does not validate or invalidate a license.</p>
+            <p>Try a different search, enter the facility/license number directly, or send feedback if the lookup result is confusing.</p>
             <nav aria-label="Facility hub recovery actions">
                 <ul>
                     <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Return to facility lookup</a></li>
@@ -1522,7 +1522,7 @@ def _render_facility_hub_review_context(
                 <dt>Known date context</dt>
                 <dd>{_escape(date_text)}</dd>
             </dl>
-            <p>This context is a navigation aid only. It is not complaint coverage, not public-source absence proof, and not a source-completeness proof.</p>
+            <p>Use this navigation context to open the complaint request, loaded records, packet preview, or feedback route that matches this facility/date review.</p>
         </section>"""
 
 
@@ -1575,9 +1575,9 @@ def _render_facility_review_signals_section(
                 <p>Use these cues to decide whether to start a complaint request, review loaded records where available, or return to facility lookup. Review source traceability before relying on summary fields.</p>
             </section>
             <details class="technical-details">
-                <summary>About these signals and their limitations</summary>
+                <summary>How to use these signals</summary>
                 <p>These facility review signals come from uploaded public summary fields in supported public licensing/visit/citation summary CSVs; complaint records are requested/reviewed separately.</p>
-                <p>Signals are review cues only: not a legal finding, not source verification, not a complaint-coverage determination, and not a source-completeness proof; check source traceability before relying on summary fields.</p>
+                <p>Use signals to choose the next review route, then check source traceability before relying on summary fields.</p>
             </details>
         </section>"""
 
@@ -1646,18 +1646,18 @@ def _render_priority_filter(active_cue: str) -> str:
 {option_markup}
           </select>
         </p>
-        <p id="priority-cue-filter-help" class="helper-text">Filter by transparent review cue. This is grouping over uploaded public summary fields, not scoring and not a legal conclusion.</p>
+        <p id="priority-cue-filter-help" class="helper-text">Filter by transparent review cue over uploaded public summary fields.</p>
         <p><button type="submit">Apply review cue filter</button></p>
       </form>
     </section>"""
 
 
-def _render_priority_limitations_disclosure() -> str:
+def _render_priority_guidance_disclosure() -> str:
     return """        <details class="technical-details">
-            <summary>About these review cues and their limitations</summary>
+            <summary>How to use these review cues</summary>
             <p>This facility review priority list is derived from uploaded public summary fields in supported public licensing/visit/citation summary CSVs; complaint records are requested/reviewed separately.</p>
-            <p>These review cues are not a legal finding, not source verification, not a complaint-coverage determination, and not a source-completeness proof. A complaint visit signal is only a review cue, and a missing signal is not complaint absence.</p>
-            <p>Open facility review hub links continue into existing request, queue, packet preview, and source-traceability review paths without creating assignments, claims, corrections, exports, or reviewer-created state.</p>
+            <p>Use these cues to choose facility hubs, start complaint requests, open loaded records, and decide where source-traceability review should happen next.</p>
+            <p>Open facility review hub links continue into existing request, queue, packet preview, and source-traceability review paths.</p>
         </details>"""
 
 

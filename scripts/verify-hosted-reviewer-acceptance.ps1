@@ -113,24 +113,24 @@ $encodedSourceRecordKey = [System.Uri]::EscapeDataString('complaint:ccld:complai
 $contextQuery = "facility_number=$ContextFacilityNumber&start_date=$ContextStartDate&end_date=$ContextEndDate&request_context_origin=manual_entry"
 
 $checks = @(
-    @{ Name = "home-start"; Path = "/"; Required = @("Start a facility complaint review", "How the local/test review loop works", "Keyboard flow:", "public CCLD portal remains the source of record") },
+    @{ Name = "home-start"; Path = "/"; Required = @("Start a facility complaint review", "Find a facility", "Request complaint records", "Review and prepare") },
     @{ Name = "ccld-start"; Path = "/ccld/"; Required = @("Retrieve complaint records", "Start review request context", "Which facility should be reviewed?", "Keyboard flow:") },
     @{ Name = "facility-lookup"; Path = "/ccld/facilities"; Required = @("Find a facility", "Lookup or manual entry?", "Search by name, license number, city, county, ZIP", "Keyboard flow:") },
     @{ Name = "facility-priority"; Path = "/ccld/facilities/review-priority"; Required = @("Facility review priority", "review cue", "uploaded public summary fields") },
-    @{ Name = "facility-intelligence"; Path = "/ccld/facilities/intelligence"; Required = @("Facility Review Intelligence Dashboard", "review cue", "not source verification", "Complaint records are requested/reviewed separately") },
+    @{ Name = "facility-intelligence"; Path = "/ccld/facilities/intelligence"; Required = @("Facility Review Intelligence Dashboard", "review cue", "How to use these indicators") },
     @{ Name = "facility-hub"; Path = "/ccld/facilities/detail?facility_number=$PreloadedFacilityNumber"; Required = @("Facility review hub", "Facility-directory details", "Return to facility lookup") },
     @{ Name = "record-request"; Path = "/ccld/records/request"; Required = @("Which facility should be reviewed?", "Confirm facility", "Start review request context", "Keyboard flow:") },
     @{ Name = "record-request-context"; Path = "/ccld/records/request?$contextQuery"; Required = @($ContextFacilityNumber, "Ready to retrieve complaint records", "Show existing queue", "Date range", "Keyboard flow:") },
     @{ Name = "reviewer"; Path = "/reviewer"; Required = @("Worklist", "Open packet preview", "Open print draft", "Keyboard flow:"); Forbidden = @("Open local/test packet preview", "Open local/test preparation draft for browser copy or print") },
     @{ Name = "reviewer-records"; Path = "/reviewer/records"; Required = @("Worklist", "Open record", "Source traceability available", "Keyboard flow:") },
-    @{ Name = "matrix-export"; Path = "/reviewer/records/matrix.csv?$contextQuery"; Required = @("local/test complaint review matrix", "CSV export", "source_record_key", "not source verification") },
+    @{ Name = "matrix-export"; Path = "/reviewer/records/matrix.csv?$contextQuery"; Required = @("local/test complaint review matrix", "CSV export", "source_record_key", "review_guidance") },
     @{ Name = "reviewer-detail"; Path = "/reviewer/records/detail?source_record_key=$encodedSourceRecordKey&$contextQuery"; Required = @("Complaint overview", "Record review action", "Source traceability", "Reviewer-created", "Keyboard flow:") },
     @{ Name = "packet-preview-empty"; Path = "/reviewer/packet/preview"; Required = @("No facility/date packet context was supplied."); Forbidden = @("Date range: not provided") },
-    @{ Name = "packet-preview-context"; Path = "/reviewer/packet/preview?$contextQuery"; Required = @($ContextFacilityNumber, "Before copying or printing", "browser copy or print", "not a certified report", "Open print draft", "Report an issue", "Back to review queue") ; Forbidden = @("Date range: not provided", "Open local/test preparation draft for browser copy or print", "Report copy/print preparation concern", "Return to same facility/date queue") },
+    @{ Name = "packet-preview-context"; Path = "/reviewer/packet/preview?$contextQuery"; Required = @($ContextFacilityNumber, "Before copying or printing", "browser copy or print", "Open print draft", "Report an issue", "Back to review queue") ; Forbidden = @("Date range: not provided", "Open local/test preparation draft for browser copy or print", "Report copy/print preparation concern", "Return to same facility/date queue") },
     @{ Name = "packet-draft-empty"; Path = "/reviewer/packet/draft"; Required = @("No facility/date packet context was supplied."); Forbidden = @("Date range: not provided") },
-    @{ Name = "packet-draft-context"; Path = "/reviewer/packet/draft?$contextQuery"; Required = @("Attorney Review Packet Draft", "Local/test preparation draft for browser copy or print", "Review before copying or printing", "not a certified report", "Report copy/print preparation concern", $ContextFacilityNumber); Forbidden = @("Date range: not provided") },
+    @{ Name = "packet-draft-context"; Path = "/reviewer/packet/draft?$contextQuery"; Required = @("Attorney Review Packet Draft", "Local/test preparation draft for browser copy or print", "Review before copying or printing", "Before using this draft", "Report copy/print preparation concern", $ContextFacilityNumber); Forbidden = @("Date range: not provided") },
     @{ Name = "feedback"; Path = "/feedback"; Required = @("Send feedback", "Do not include private material", "Feedback type", "Description", "Keyboard flow:") },
-    @{ Name = "help"; Path = "/ccld/help"; Required = @("How to review a facility", "How source traceability works", "What the app does not prove", "How packet preparation fits in") }
+    @{ Name = "help"; Path = "/ccld/help"; Required = @("How to review a facility", "How source traceability works", "Review guidance and next steps", "How packet preparation fits in") }
 )
 
 $forbiddenMarkers = @(
@@ -225,7 +225,7 @@ if ($IncludeCapture) {
                 Write-Host "EVIDENCE_PACKET_ZIP_PATH=$evidenceZipPath"
             }
             catch {
-                Write-Warning "Evidence ZIP creation failed: $($_.Exception.Message)"
+                Write-Host "[NOTICE] Evidence ZIP creation failed: $($_.Exception.Message)"
                 $failCount++
             }
             $routeStatusCsv = Join-Path $evidencePath 'route-status.csv'
@@ -233,25 +233,25 @@ if ($IncludeCapture) {
                 $routeStatusRows = Import-Csv -Path $routeStatusCsv
                 foreach ($routeName in @('home', 'facility', 'facility-priority', 'facility-intelligence', 'facility-hub', 'retrieve', 'reviewer', 'matrix-export', 'packet-preview-empty', 'packet-preview-context', 'packet-draft-empty', 'packet-draft-context', 'feedback', 'help')) {
                     if (-not ($routeStatusRows | Where-Object { $_.route -eq $routeName -or $_.name -eq $routeName })) {
-                        Write-Warning "Evidence route-status.csv is missing route: $routeName"
+                        Write-Host "[NOTICE] Evidence route-status.csv is missing route: $routeName"
                         $failCount++
                     }
                 }
             }
-            else { Write-Warning "Evidence route status CSV not found at $routeStatusCsv"; $failCount++ }
+            else { Write-Host "[NOTICE] Evidence route status CSV not found at $routeStatusCsv"; $failCount++ }
             $assertionsCsv = Join-Path $evidencePath 'route-assertions.csv'
             if (Test-Path -LiteralPath $assertionsCsv) {
                 $assertions = Import-Csv -Path $assertionsCsv
                 foreach ($routeName in @('packet-preview-empty', 'packet-preview-context', 'packet-draft-empty', 'packet-draft-context')) {
                     if (-not ($assertions | Where-Object { $_.route -eq $routeName })) {
-                        Write-Warning "No assertion rows found for $routeName in $assertionsCsv"
+                        Write-Host "[NOTICE] No assertion rows found for $routeName in $assertionsCsv"
                         $failCount++
                     }
                 }
                 foreach ($routeName in @('packet-draft-empty', 'packet-draft-context')) {
                     $rows = $assertions | Where-Object { $_.route -eq $routeName -and $_.check -eq 'workflow step' }
                     if (-not $rows) {
-                        Write-Warning "No workflow-step assertion found for $routeName in $assertionsCsv"
+                        Write-Host "[NOTICE] No workflow-step assertion found for $routeName in $assertionsCsv"
                         $failCount++
                     }
                     else {
@@ -265,7 +265,7 @@ if ($IncludeCapture) {
                                 $rMessage = $r.message
                                 Write-Host "Workflow-step assertion for ${routeName}: PASS - ${rMessage}"
                                 if ($rMessage -notmatch "(?i)packet draft intentionally hides workflow indicator") {
-                                    Write-Warning "Workflow-step assertion for ${routeName} did not describe the intentional packet draft workflow-indicator skip."
+                                    Write-Host "[NOTICE] Workflow-step assertion for ${routeName} did not describe the intentional packet draft workflow-indicator skip."
                                     $failCount++
                                 }
                             }
@@ -273,12 +273,12 @@ if ($IncludeCapture) {
                     }
                 }
             }
-            else { Write-Warning "Evidence assertions CSV not found at $assertionsCsv"; $failCount++ }
+            else { Write-Host "[NOTICE] Evidence assertions CSV not found at $assertionsCsv"; $failCount++ }
         }
-        else { Write-Warning "Could not locate evidence packet path from capture output."; $failCount++ }
+        else { Write-Host "[NOTICE] Could not locate evidence packet path from capture output."; $failCount++ }
     }
     catch {
-        Write-Warning "Capture script failed: $($_.Exception.Message)"
+        Write-Host "[NOTICE] Capture script failed: $($_.Exception.Message)"
         $failCount++
     }
 }

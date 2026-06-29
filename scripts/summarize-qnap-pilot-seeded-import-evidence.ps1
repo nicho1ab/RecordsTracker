@@ -31,7 +31,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $failureCount = 0
-$warningCount = 0
+$noticeCount = 0
 
 function Write-EvidenceInfo {
     param([string]$Message)
@@ -43,10 +43,10 @@ function Write-EvidencePass {
     Write-Host "[PASS] $Message"
 }
 
-function Write-EvidenceWarn {
+function Write-EvidenceNotice {
     param([string]$Message)
-    $script:warningCount += 1
-    Write-Warning $Message
+    $script:noticeCount += 1
+    Write-Host "[NOTICE] $Message"
 }
 
 function Write-EvidenceFail {
@@ -58,7 +58,7 @@ function Write-EvidenceFail {
 function Read-EnvValues {
     param([string]$Path)
     if (-not (Test-Path -LiteralPath $Path)) {
-        Write-EvidenceWarn "Env file '$Path' was not found. Copy .env.example to .env and keep .env untracked before QNAP pilot evidence capture."
+        Write-EvidenceNotice "Env file '$Path' was not found. Copy .env.example to .env and keep .env untracked before QNAP pilot evidence capture."
         return @{}
     }
     $values = @{}
@@ -114,7 +114,7 @@ function Invoke-PostgresScalar {
 
 function Invoke-ReadOnlyDatabaseEvidence {
     if (-not (Test-Path -LiteralPath $ComposeFile)) {
-        Write-EvidenceWarn "Compose file '$ComposeFile' was not found. Skipping PostgreSQL evidence queries."
+        Write-EvidenceNotice "Compose file '$ComposeFile' was not found. Skipping PostgreSQL evidence queries."
         return
     }
 
@@ -129,11 +129,11 @@ function Invoke-ReadOnlyDatabaseEvidence {
             }
         }
         else {
-            Write-EvidenceWarn "Alembic current check could not be completed. Confirm migrations before inviting testers."
+            Write-EvidenceNotice "Alembic current check could not be completed. Confirm migrations before inviting testers."
         }
     }
     catch {
-        Write-EvidenceWarn "Alembic current check could not be completed. Confirm migrations before inviting testers."
+        Write-EvidenceNotice "Alembic current check could not be completed. Confirm migrations before inviting testers."
     }
 
     try {
@@ -143,11 +143,11 @@ function Invoke-ReadOnlyDatabaseEvidence {
             Write-EvidencePass "Hosted seeded import tables are present."
         }
         else {
-            Write-EvidenceWarn "Hosted seeded import tables are missing or incomplete."
+            Write-EvidenceNotice "Hosted seeded import tables are missing or incomplete."
         }
     }
     catch {
-        Write-EvidenceWarn "PostgreSQL evidence queries could not connect. Confirm containers and database readiness."
+        Write-EvidenceNotice "PostgreSQL evidence queries could not connect. Confirm containers and database readiness."
         return
     }
 
@@ -193,7 +193,7 @@ function Invoke-ReadOnlyDatabaseEvidence {
         Write-Host "Rows with source artifact identity: $artifactIdentityCount"
         if ($sourceCount -gt 0) {
             if ($sourceUrlCount -lt $sourceCount -or $rawHashCount -lt $sourceCount -or $connectorCount -lt $sourceCount -or $artifactIdentityCount -lt $sourceCount) {
-                Write-EvidenceWarn "Some source-derived linkage counts are incomplete. Review import traceability before inviting testers."
+                Write-EvidenceNotice "Some source-derived linkage counts are incomplete. Review import traceability before inviting testers."
             }
             else {
                 Write-EvidencePass "Source-derived linkage counts are complete for the imported rows."
@@ -201,14 +201,14 @@ function Invoke-ReadOnlyDatabaseEvidence {
         }
     }
     catch {
-        Write-EvidenceWarn "PostgreSQL evidence queries were interrupted. Confirm containers, migrations, and table availability."
+        Write-EvidenceNotice "PostgreSQL evidence queries were interrupted. Confirm containers, migrations, and table availability."
     }
 }
 
 Write-Host "QNAP pilot seeded import evidence summary"
 Write-Host "Read-only: does not mutate data, run imports, run retrieval, call live CCLD, or call GitHub."
 Write-Host "Safe output: does not print secrets, raw artifact contents, raw source narrative, or raw server paths."
-Write-Host "Conclusion boundary: no public-source completeness, legal, facility-wide, harm, abuse, neglect, or liability conclusion."
+Write-Host "Review context: use dedicated source, legal, facility-wide, harm, abuse, neglect, and liability review paths for those conclusions."
 
 $envValues = Read-EnvValues -Path $EnvFile
 $envPresent = $envValues.Count -gt 0
@@ -234,7 +234,7 @@ if ($envPresent) {
     }
 
     if ($authMode -ne "production" -or $localDevAuth -ne "disabled") {
-        Write-EvidenceWarn "QNAP pilot should use production auth mode with local-dev auth disabled."
+        Write-EvidenceNotice "QNAP pilot should use production auth mode with local-dev auth disabled."
     }
 
     if ($retrievalDemoMode -eq "mock-success") {
@@ -272,7 +272,7 @@ if ($envPresent) {
     foreach ($key in @("CCLD_POSTGRES_PASSWORD", "CCLD_HOSTED_TESTER_OIDC_ISSUER", "CCLD_HOSTED_TESTER_OIDC_CLIENT_ID")) {
         $value = Get-EnvValue -Values $envValues -Key $key
         if (Test-PlaceholderValue -Value $value) {
-            Write-EvidenceWarn "$key still looks like a placeholder. Replace host-local readiness values before inviting testers."
+            Write-EvidenceNotice "$key still looks like a placeholder. Replace host-local readiness values before inviting testers."
         }
     }
 }
@@ -292,9 +292,9 @@ Write-Host "Raw server-specific paths printed: no."
 Write-Host "Secrets printed: no."
 
 if ($failureCount -gt 0) {
-    Write-Host "Evidence summary completed with $failureCount readiness failure(s) and $warningCount warning(s)."
+    Write-Host "Evidence summary completed with $failureCount readiness failure(s) and $noticeCount notice(s)."
     exit 1
 }
 
-Write-Host "Evidence summary completed with $warningCount warning(s) and no readiness failures."
+Write-Host "Evidence summary completed with $noticeCount notice(s) and no readiness failures."
 exit 0

@@ -296,7 +296,7 @@ def test_active_ccld_facility_reference_uses_tiny_fallback_when_full_csv_unset(
         "tests/fixtures/public_source_facilities/ccld_program_facilities_tiny.csv"
     )
     assert len(source.records) == 2
-    assert source.warnings == (
+    assert source.notices == (
         "No full CCLD facility reference CSV is configured or available. "
         "Using tiny fixture fallback.",
     )
@@ -338,7 +338,7 @@ def test_active_ccld_facility_reference_uses_configured_full_local_csv(
     assert source.source_kind == "full_local_test_csv"
     assert source.label == "Full CCLD facility reference CSV"
     assert source.path_label == full_csv.name
-    assert source.warnings == ()
+    assert source.notices == ()
     assert [record.facility_number for record in result.returned_records] == ["910000001"]
     assert result.reference_source == source
 
@@ -638,7 +638,7 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Find CCLD facility" in html
     assert "Skip to main CCLD facility lookup content" in html
-    assert '<main id="main-content" tabindex="-1">' in html
+    assert '<main id="main-content" class="ds-page-main" tabindex="-1">' in html
     assert "Find a facility" in html
     assert "Start review by finding the CCLD facility/license number" in html
     assert "preloaded facility directory" in html
@@ -652,10 +652,7 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=434417302" in html
     assert PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER == "434417302"
     assert "Lookup rows are public facility-directory data" in html
-    assert "Complaint records are retrieved separately" in html
-    assert "not complaint coverage" in html
-    assert "not source-completeness proof" in html
-    assert "not license-validity proof" in html
+    assert "for facility lookup assistance before complaint retrieval" in html
     assert 'for="facility-search-input"' in html
     example_index = html.index("Try a preloaded facility-directory example")
     form_index = html.index(
@@ -686,7 +683,7 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert "selected facility link to continue to the request page" not in html
     assert "Enter a facility/license number directly" in html
     assert "Open request form" in html
-    assert "CCLD public portal remains" in html
+    assert "Lookup rows are public facility-directory data" in html
     assert_no_secret_html(html)
 
 
@@ -764,20 +761,15 @@ def test_ccld_facility_review_hub_renders_safe_directory_context() -> None:
     assert "24" in html
     assert "Licensed" in html
     assert "Complaint records are requested and reviewed separately" in html
-    assert "public CCLD portal remains the source of record" in html
+    assert "Open source links from record detail when a source check is needed" in html
     assert "No complaint context is currently available" in html
     assert "Date range is needed before the review queue" in html
     assert "Start complaint request for this facility" in html
     assert "Return to facility lookup" in html
     assert f"{CCLD_RECORD_REQUEST_PATH}?facility_number=900000001" in html
-    assert "does not check all complaints" in normalized_html
-    assert "does not prove complaint coverage" in normalized_html
-    assert (
-        "does not prove complaint coverage, source completeness, license validity"
-        in normalized_html
-    )
-    assert "Opening this page does not auto-submit retrieval" in normalized_html
-    assert "create reviewer-created notes/statuses" in normalized_html
+    assert "Facility hub review actions" in html
+    assert "Use this hub to start a complaint request" in normalized_html
+    assert "Opening this page leaves source-derived records" in normalized_html
     assert "Example Licensee" not in html
     assert "555-0101" not in html
     assert "100 Example Way" not in html
@@ -841,9 +833,8 @@ def test_ccld_facility_review_hub_not_found_state_is_safe() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Facility-directory result not found" in html
     assert "999999999" in html
-    assert "does not prove the facility is absent from public sources" in normalized_html
-    assert "does not prove complaint availability" in normalized_html
-    assert "does not validate or invalidate a license" in normalized_html
+    assert "Try a different search, enter the facility/license number directly" in normalized_html
+    assert "send feedback if the lookup result is confusing" in normalized_html
     assert "Return to facility lookup" in html
     assert "Start complaint request for facility 999999999" in html
     assert_no_secret_html(html)
@@ -952,12 +943,11 @@ def test_ccld_facility_review_hub_renders_signal_only_context_without_mutation(
     assert "Return to facility lookup" in html
     assert "1 loaded complaint record(s)" in html
     assert "/reviewer/packet/preview?facility_number=157806098" in html
-    assert "not a facility-directory record" in normalized_html
-    assert "not source verification" in normalized_html
-    assert "not a complaint-coverage determination" in normalized_html
-    assert "not a source-completeness proof" in normalized_html
-    assert "not a legal finding" in normalized_html
-    assert "complaint records are requested/reviewed separately" in normalized_html
+    assert (
+        "use the uploaded summary fields to decide whether to start a complaint request"
+        in normalized_html
+    )
+    assert "Signal-only hub actions" in html
     assert "verified complaint" not in normalized_html
     assert "facility has no complaints" not in normalized_html
     assert "source complete" not in normalized_html
@@ -1031,9 +1021,8 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
     assert "start_date=2022-04-07" in html
     assert "end_date=2022-08-26" in html
     assert "Open packet draft for this facility/date context" in html
-    assert "not complaint coverage" in normalized_html
-    assert "not public-source absence proof" in normalized_html
-    assert "not a source-completeness proof" in normalized_html
+    assert "Use this navigation context to open the complaint request" in normalized_html
+    assert "packet preview, or feedback route" in normalized_html
     assert_no_secret_html(html)
 
 
@@ -1109,30 +1098,25 @@ def test_ccld_facility_review_hub_renders_uploaded_public_summary_signals(
     assert "Facility review signals" in html
     _assert_collapsed_disclosure(
         html,
-        "About these signals and their limitations",
+        "How to use these signals",
     )
-    assert html.count("About these signals and their limitations") == 1
+    assert html.count("How to use these signals") == 1
     assert html.count(
         "These facility review signals come from uploaded public summary fields"
     ) == 1
-    assert html.count("Signals are review cues only") == 1
+    assert html.count("Use signals to choose the next review route") == 1
     signals_heading_index = html.index("Facility review signals")
     first_signal_data_index = html.index("Source dataset label")
-    disclosure_index = html.index("About these signals and their limitations")
-    first_disclaimer_index = html.index(
+    disclosure_index = html.index("How to use these signals")
+    first_guidance_index = html.index(
         "These facility review signals come from uploaded public summary fields"
     )
-    second_disclaimer_index = html.index("Signals are review cues only")
+    second_guidance_index = html.index("Use signals to choose the next review route")
     assert signals_heading_index < first_signal_data_index
     assert first_signal_data_index < disclosure_index
-    assert disclosure_index < first_disclaimer_index < second_disclaimer_index
+    assert disclosure_index < first_guidance_index < second_guidance_index
     assert "uploaded public summary fields" in html
     assert "public licensing/visit/citation summary" in html
-    assert "complaint records are requested/reviewed separately" in normalized_html
-    assert "not a legal finding" in html
-    assert "not source verification" in html
-    assert "not a complaint-coverage determination" in html
-    assert "not a source-completeness proof" in html
     assert "check source traceability before relying on summary fields" in normalized_html
     assert "<code>ChildCareCenters06072026.csv</code>" in html
     assert "(loaded June 7, 2026)" in html
@@ -1225,21 +1209,16 @@ def test_ccld_facility_review_priority_page_empty_state_is_safe() -> None:
     _assert_primary_button(html, "Apply review cue filter")
     _assert_collapsed_disclosure(
         html,
-        "About these review cues and their limitations",
+        "How to use these review cues",
     )
     assert html.index("Apply review cue filter") < html.index(
-        "About these review cues and their limitations"
+        "How to use these review cues"
     )
     assert html.index("No facility review priority rows are available") < html.index(
-        "About these review cues and their limitations"
+        "How to use these review cues"
     )
     assert "No facility review priority rows are available" in html
-    assert "complaint records are requested/reviewed separately" in normalized_html
-    assert "not a legal finding" in html
-    assert "not source verification" in html
-    assert "not a complaint-coverage determination" in html
-    assert "not a source-completeness proof" in html
-    assert "missing signal is not complaint absence" in html
+    assert "Use these cues to choose facility hubs" in normalized_html
     # Empty state must link back to facility lookup (clear next action)
     assert "Return to facility lookup" in normalized_html
     assert CCLD_FACILITY_LOOKUP_PATH in html
@@ -1327,22 +1306,19 @@ def test_ccld_facility_review_priority_page_orders_filters_and_links_to_hubs(
     assert "Open facility review hub for 900000002" in html
     _assert_collapsed_disclosure(
         html,
-        "About these review cues and their limitations",
+        "How to use these review cues",
     )
     assert html.index("Apply review cue filter") < html.index(
-        "About these review cues and their limitations"
+        "How to use these review cues"
     )
     assert html.index("Facilities grouped by review cue priority") < html.index(
-        "About these review cues and their limitations"
+        "How to use these review cues"
     )
     assert "review label hidden" in html
     assert "Secret Garden Fixture" not in html
     assert "3 total visits; 2 complaint visits" in html
     assert "2 citation value(s); 1 POC date(s)" in html
-    assert "not a legal finding" in html
-    assert "not source verification" in html
-    assert "not a complaint-coverage determination" in html
-    assert "not a source-completeness proof" in html
+    assert "Use these cues to choose facility hubs" in normalized_html
     assert "verified complaint" not in normalized_html.casefold()
     assert "risk score" not in normalized_html.casefold()
     assert "facility has no complaints" not in normalized_html.casefold()
@@ -1482,13 +1458,13 @@ def test_ccld_facility_review_intelligence_dashboard_filters_sorts_and_links(
     _assert_primary_button(html, "Apply intelligence filters")
     _assert_collapsed_disclosure(
         html,
-        "About these indicators and their limitations",
+        "How to use these indicators",
     )
     assert html.index("Apply intelligence filters") < html.index(
-        "About these indicators and their limitations"
+        "How to use these indicators"
     )
     assert html.index("Facilities by review-priority indicator") < html.index(
-        "About these indicators and their limitations"
+        "How to use these indicators"
     )
     assert "transparent review-priority indicators" in normalized_html
     assert "Facilities with complaint activity" in html
@@ -1511,12 +1487,7 @@ def test_ccld_facility_review_intelligence_dashboard_filters_sorts_and_links(
     assert "Start Complaint Request for 900000001" in html
     assert f"{CCLD_RECORD_REQUEST_PATH}?facility_number=900000001" in html
     assert "Open Review Queue filtered to 900000001" in html
-    assert "not risk scores" in normalized_html
-    assert "not wrongdoing determinations" in normalized_html
-    assert "not source verification" in normalized_html
-    assert "not a complaint-coverage determination" in normalized_html
-    assert "not a source-completeness proof" in normalized_html
-    assert "not a legal finding" in normalized_html
+    assert "use indicators to choose a facility hub" in normalized_html
     assert "verified complaint" not in normalized_html
     assert "risk score:" not in normalized_html
     assert "wrongdoing determination:" not in normalized_html
@@ -1797,7 +1768,7 @@ def test_live_mode_facility_lookup_page_empty_postgres_source_shows_not_configur
         label="PostgreSQL source-derived facility records",
         path_label="hosted_source_derived_records",
         records=(),
-        warnings=(
+        notices=(
             "Facility lookup suggestions are not available. "
             "Source-derived records may not include facility directory rows. "
             "Enter a facility/license number directly if you know it.",

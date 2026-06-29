@@ -21,8 +21,8 @@ ImplementationStatus = Literal["scaffold-only"]
 
 
 @dataclass(frozen=True)
-class HostedApiBoundary:
-    boundary_id: str
+class HostedApiScope:
+    scope_id: str
     label: str
     domain: ApiDomain
     implementation_status: ImplementationStatus
@@ -36,9 +36,9 @@ class HostedApiBoundary:
 class HostedSchemaApiScaffold:
     database_config: HostedDatabaseConfig
     persistence_boundaries: tuple[PersistenceBoundary, ...]
-    api_boundaries: tuple[HostedApiBoundary, ...]
+    api_scopes: tuple[HostedApiScope, ...]
     domain_tables_created: bool = True
-    auth_boundary_scaffold_implemented: bool = True
+    auth_scope_scaffold_implemented: bool = True
     auth_provider_integration_plan_implemented: bool = True
     source_derived_read_service_implemented: bool = True
     source_derived_read_api_routes_implemented: bool = True
@@ -71,16 +71,16 @@ class HostedSchemaApiScaffold:
     reset_reload_implemented: bool = False
 
 
-HOSTED_API_BOUNDARIES = (
-    HostedApiBoundary(
-        boundary_id="auth_provider_integration_plan_api",
-        label="Auth provider integration planning API boundary",
+HOSTED_API_SCOPES = (
+    HostedApiScope(
+        scope_id="auth_provider_integration_plan_api",
+        label="Auth provider integration planning API scope",
         domain="auth",
         implementation_status="scaffold-only",
         intended_future_use=(
             "Plan future managed OpenID Connect/OAuth 2.0 provider integration "
             "through a local/test non-persistent route seam that validates the "
-            "accepted provider class, summarizes auth boundary models, and "
+            "accepted provider class, summarizes auth scope models, and "
             "returns bounded non-secret readiness steps without implementing login."
         ),
         requires_authenticated_actor_before_write=True,
@@ -101,9 +101,9 @@ HOSTED_API_BOUNDARIES = (
             "hosted URLs or deployment configuration",
         ),
     ),
-    HostedApiBoundary(
-        boundary_id="source_derived_records_api",
-        label="Seeded source-derived records API boundary",
+    HostedApiScope(
+        scope_id="source_derived_records_api",
+        label="Seeded source-derived records API scope",
         domain="source-derived",
         implementation_status="scaffold-only",
         intended_future_use=(
@@ -113,7 +113,7 @@ HOSTED_API_BOUNDARIES = (
         ),
         requires_authenticated_actor_before_write=True,
         preserves=(
-            "public portal as source of record",
+            "public source document reference",
             "raw source traceability",
             "original extracted values",
             "SQLite/Datasette validation and transition comparison role",
@@ -125,16 +125,16 @@ HOSTED_API_BOUNDARIES = (
             "reset/reload behavior",
         ),
     ),
-    HostedApiBoundary(
-        boundary_id="reviewer_created_state_api",
-        label="Reviewer-created state API boundary",
+    HostedApiScope(
+        scope_id="reviewer_created_state_api",
+        label="Reviewer-created state API scope",
         domain="reviewer-created",
         implementation_status="scaffold-only",
         intended_future_use=(
             "Persist review status, notes, annotations, correction proposals, feedback, "
             "and export packet decisions after future focused branches define each layer. "
             "The current implementation adds only a local/test reviewer-created state "
-            "persistence scaffold table and service boundary, a narrow local/test "
+            "persistence scaffold table and service scope, a narrow local/test "
             "authenticated read route seam for listing or fetching those rows, a narrow "
             "local/test reviewer note creation route over the existing state scaffold, plus "
             "a narrow local/test reviewer status creation route over the existing state "
@@ -165,9 +165,9 @@ HOSTED_API_BOUNDARIES = (
             "export builder behavior",
         ),
     ),
-    HostedApiBoundary(
-        boundary_id="audit_events_api",
-        label="Audit events API boundary",
+    HostedApiScope(
+        scope_id="audit_events_api",
+        label="Audit events API scope",
         domain="audit",
         implementation_status="scaffold-only",
         intended_future_use=(
@@ -191,9 +191,9 @@ HOSTED_API_BOUNDARIES = (
             "retention automation",
         ),
     ),
-    HostedApiBoundary(
-        boundary_id="audit_coverage_plan_api",
-        label="Audit coverage planning API boundary",
+    HostedApiScope(
+        scope_id="audit_coverage_plan_api",
+        label="Audit coverage planning API scope",
         domain="audit",
         implementation_status="scaffold-only",
         intended_future_use=(
@@ -220,9 +220,9 @@ HOSTED_API_BOUNDARIES = (
             "audit schema changes or migrations",
         ),
     ),
-    HostedApiBoundary(
-        boundary_id="seeded_corpus_reset_reload_operations_api",
-        label="Seeded corpus reset/reload operations API boundary",
+    HostedApiScope(
+        scope_id="seeded_corpus_reset_reload_operations_api",
+        label="Seeded corpus reset/reload operations API scope",
         domain="operational",
         implementation_status="scaffold-only",
         intended_future_use=(
@@ -256,13 +256,13 @@ HOSTED_API_BOUNDARIES = (
 )
 
 
-def hosted_api_boundaries() -> tuple[HostedApiBoundary, ...]:
-    return HOSTED_API_BOUNDARIES
+def hosted_api_scopes() -> tuple[HostedApiScope, ...]:
+    return HOSTED_API_SCOPES
 
 
 def build_hosted_schema_api_scaffold() -> HostedSchemaApiScaffold:
     return HostedSchemaApiScaffold(
         database_config=load_hosted_database_config(),
         persistence_boundaries=hosted_persistence_boundaries(),
-        api_boundaries=hosted_api_boundaries(),
+        api_scopes=hosted_api_scopes(),
     )

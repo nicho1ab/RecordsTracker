@@ -95,8 +95,7 @@ The packet empty/context checks remain part of acceptance. Empty packet routes
 must show explicit missing-context guidance and must not show the passive label
 `Date range: not provided`. Context packet routes must keep browser copy or
 print preparation guidance, review-readiness wording, feedback handoff, and the
-not-legal-report, not-final-export, not-certified-report, and not-source-
-completeness-proof boundaries.
+source/legal/export review routing.
 
 When `-IncludeCapture` is supplied, the verifier runs
 `capture-hosted-ui-evidence.ps1`, confirms packet preview/draft route assertion
@@ -106,8 +105,8 @@ intentional print/copy layout skip, and prints both:
 - Evidence folder path
 - Evidence ZIP path
 
-The ZIP is a local review artifact only under ignored `data/processed/ui-evidence/`.
-It is not product packet generation, not a legal report, not a final export, not a certified report, not an audit export, not production monitoring, and not a source-completeness proof.
+The ZIP is a local UI review artifact under ignored `data/processed/ui-evidence/`
+for route, screenshot, text, and accessibility review.
 
 ## What This Proves
 
@@ -117,7 +116,7 @@ Facility Review Priority, Facility Review Intelligence, Request, Queue, Matrix
 CSV Export, Detail, Packet Preview, Packet Draft, Feedback, Help, and evidence capture. It also
 proves that the checked pages expose key visible markers for route reachability,
 review queue continuity, complaint review workspace access, packet preparation,
-feedback, help, local/test boundaries, and source traceability availability.
+feedback, help, local/test context, and source traceability availability.
 
 The run also proves that default checks avoid persistent writes: no forms are
 submitted, no retrieval job is submitted, no import/reload is run, no feedback is
@@ -128,13 +127,11 @@ The route marker checks also look for visible keyboard-flow guidance on the
 main hosted workflow pages so keyboard-only testers can confirm where the
 current route sits and which existing control or link moves the review forward.
 
-## What This Does Not Prove
+## Review Routing
 
-The acceptance path does not prove source completeness, public CCLD portal
-coverage, legal sufficiency, legal findings, facility-wide conclusions, verified
-harm, abuse, neglect, liability, rights-deprivation, production monitoring,
-production authentication, export persistence, audit export behavior, or final
-packet lifecycle behavior.
+Use dedicated source, legal, production monitoring, production authentication,
+export persistence, audit export, and final packet lifecycle paths for those
+reviews.
 
 The public CCLD portal remains the source of record. Source-derived values are
 review aids. Reviewer-created status/note cues remain separate from
