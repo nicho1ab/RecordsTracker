@@ -86,6 +86,22 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
         in html
     )
     assert (
+        '<section class="warning-card" aria-labelledby="feedback-unconfigured-heading">'
+        in html
+    )
+    assert (
+        '<h2 id="feedback-unconfigured-heading">How feedback is submitted</h2>'
+        in html
+    )
+    assert (
+        "<p>Note: Server-side GitHub issue intake is not configured on this deployment."
+        in html
+    )
+    assert (
+        '<section class="helper-text" aria-labelledby="feedback-unconfigured-heading">'
+        not in html
+    )
+    assert (
         '<p id="feedback-type-help" class="helper-text">Choose the category that best fits '
         "the route or action that was confusing.</p>"
     ) in html
@@ -100,6 +116,8 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
             '<h3 id="feedback-safety-heading">Do not include private material</h3>',
             '<label for="description">Description</label>',
             '<button type="submit">Submit feedback</button>',
+            '<h2 id="feedback-unconfigured-heading">How feedback is submitted</h2>',
+            "<p>Note: Server-side GitHub issue intake is not configured on this deployment.",
         ),
     )
 

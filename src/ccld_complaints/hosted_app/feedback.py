@@ -652,9 +652,9 @@ def _configuration_notice(config: GitHubFeedbackConfig) -> str:
       <h2 id="feedback-configured-heading">GitHub issue intake is configured</h2>
       <p>Submitting this form creates a server-side GitHub issue for triage.</p>
     </section>"""
-    return """    <section class="helper-text" aria-labelledby="feedback-unconfigured-heading">
+    return """    <section class="warning-card" aria-labelledby="feedback-unconfigured-heading">
       <h2 id="feedback-unconfigured-heading">How feedback is submitted</h2>
-      <p>Server-side GitHub issue intake is not configured on this deployment.
+      <p>Note: Server-side GitHub issue intake is not configured on this deployment.
       Fill in the form, then copy or forward the description to the agreed tester support channel.
       Feedback is still useful for the operator to review.</p>
     </section>"""
