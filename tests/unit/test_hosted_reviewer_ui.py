@@ -1061,7 +1061,10 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "More actions and request context" in html
     assert "Why this record matters" in html
     assert "Check first" in html
-    assert "Return to same facility/date queue" in html
+    assert "← Back to queue" in parser.text_for("a")
+    assert "Next record →" in parser.text_for("a")
+    assert "Return to same facility/date queue" not in html
+    assert "Return to the same facility/date queue to choose the next record" not in html
     assert "Open next recommended record from this context" in html
     assert "Report confusion about this reviewer detail" in html
     assert "workflow_area=reviewer-detail" in html
@@ -1092,7 +1095,9 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "First-run detail steps" in html
     assert "Detail navigation" in html
     assert "Use the same-queue link when you came from CCLD request results" in normalized_html
-    assert "Return to same facility/date queue" in html
+    assert "← Back to queue" in parser.text_for("a")
+    assert "Return to same facility/date queue" not in html
+    assert "Return to the same facility/date queue to choose the next record" not in html
     assert "Open next recommended record from this context" in html
     assert "Download complaint review matrix CSV" in html
     assert f"{REVIEWER_UI_MATRIX_EXPORT_PATH}?facility_number=157806098" in html
@@ -2425,7 +2430,7 @@ def test_reviewer_ui_detail_links_signal_only_facility_context_without_mutation(
     assert "Return to facility review priority list" in html
     assert "Start complaint request if needed" in html
     assert "/ccld/records/request?facility_number=157806098" in html
-    assert "Return to same facility/date queue" in html
+    assert "&larr; Back to queue" in html
     assert f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?facility_number=157806098" in html
     assert f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098" in html
     assert "complaint records are requested/reviewed separately" in normalized_html
