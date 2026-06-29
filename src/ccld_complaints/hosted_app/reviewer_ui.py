@@ -1390,15 +1390,15 @@ def _render_packet_draft(
                         <h2 id="packet-draft-title">Preparation draft for browser copy or print</h2>
                         <p><strong>Use browser copy or print only after review.</strong> This page keeps the intentional print/copy layout, but it does not generate a server-side PDF, Word file, ZIP, CSV, or downloadable final export.</p>
                     </header>
-                    <section aria-labelledby="draft-copy-print-guidance-heading">
-                        <h3 id="draft-copy-print-guidance-heading">Copy/print preparation guidance</h3>
+                    <details class="packet-draft-guidance">
+                        <summary>Copy/print preparation guidance</summary>
                         <p>This preparation draft gathers the included complaint-record summaries, review-readiness counts, source-traceability cues, reviewer-created status/note cues, limitations, and a static copyable packet summary for manual browser copy or print.</p>
                         <p><strong>Packet readiness means review readiness only.</strong> The draft can be ready for manual review, browser copy, or browser print after the tester confirms the active facility/date context, included record count, important source-derived values, visible source traceability, reviewer-created status/note cues, and possible correction-readiness concerns.</p>
                         <p><strong>Review before copying or printing:</strong> check records flagged for source check, records missing reviewer-created status/note cues, important source-derived values, missing traceability values, and any wording that seems wrong, incomplete, confusing, or risky.</p>
                         <p>Source traceability available means visible source URL, raw SHA-256 hash, raw artifact reference, connector metadata, retrieval timestamp, or source document/report marker cues are available to help check important source-derived values. It is not a source-completeness proof.</p>
                         <p><strong>Correction-readiness before copying or printing:</strong> if a source-derived value looks wrong or incomplete, check source traceability first and capture the possible correction concern in a reviewer-created note or feedback for now. This draft does not change source-derived records, alter source-derived values, or submit correction decisions.</p>
                         <p>If copy/print preparation content seems wrong, incomplete, confusing, or risky, use the feedback link before using this draft.</p>
-                    </section>
+                    </details>
                     <section aria-labelledby="draft-scope-heading">
                         <h3 id="draft-scope-heading">Packet scope</h3>
                         <dl class="summary-list">

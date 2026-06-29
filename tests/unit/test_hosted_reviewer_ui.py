@@ -713,31 +713,56 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     assert "Preparation draft for browser copy or print" in html
     assert "local/test" not in html.casefold()
     assert "Use browser copy or print only after review" in html
+    assert '<details class="packet-draft-guidance">' in html
+    assert "<summary>Copy/print preparation guidance</summary>" in html
+    _assert_collapsed_disclosure(html, "Copy/print preparation guidance")
+    guidance_start = html.index('<details class="packet-draft-guidance">')
+    guidance_end = html.index("</details>", guidance_start) + len("</details>")
+    guidance_html = html[guidance_start:guidance_end]
+    packet_scope_start = html.index('<section aria-labelledby="draft-scope-heading">')
+    packet_scope_html = html[
+        packet_scope_start : html.index("</section>", packet_scope_start)
+    ]
+    between_guidance_and_scope = html[guidance_end:packet_scope_start]
+    assert guidance_start < guidance_end < packet_scope_start
+    assert between_guidance_and_scope.strip() == ""
     assert "Copy/print preparation guidance" in html
-    assert "manual browser copy or print" in normalized_html
-    assert "Packet readiness means review readiness only" in html
-    assert "ready for manual review, browser copy, or browser print" in normalized_html
-    assert "active facility/date context, included record count" in normalized_html
-    assert "Review before copying or printing" in html
-    assert "Source traceability available means visible source URL" in html
-    assert "raw SHA-256 hash" in html
-    assert "source document/report marker cues" in html
-    assert "missing traceability values" in normalized_html
-    assert "Correction-readiness before copying or printing" in html
-    assert "capture the possible correction concern in a reviewer-created note or feedback" in html
-    assert "does not change source-derived records, alter source-derived values" in html
-    assert "If copy/print preparation content seems wrong" in html
-    assert "Facility / license" in html
-    assert "157806098" in html
-    assert "Date range" in html
-    assert "2022-08-01 to 2022-08-31" in html
-    assert "Prepared from" in html
-    assert "Generated" in html
-    assert "Jun 27, 2026, 9:08 PM CT" in html
+    normalized_guidance_html = " ".join(guidance_html.split())
+    assert "manual browser copy or print" in normalized_guidance_html
+    assert "Packet readiness means review readiness only" in guidance_html
+    assert (
+        "ready for manual review, browser copy, or browser print"
+        in normalized_guidance_html
+    )
+    assert "active facility/date context, included record count" in normalized_guidance_html
+    assert "Review before copying or printing" in guidance_html
+    assert "Source traceability available means visible source URL" in guidance_html
+    assert "raw SHA-256 hash" in guidance_html
+    assert "source document/report marker cues" in guidance_html
+    assert "missing traceability values" in normalized_guidance_html
+    assert "Correction-readiness before copying or printing" in guidance_html
+    assert (
+        "capture the possible correction concern in a reviewer-created note or feedback"
+        in guidance_html
+    )
+    assert (
+        "does not change source-derived records, alter source-derived values"
+        in guidance_html
+    )
+    assert "If copy/print preparation content seems wrong" in guidance_html
+    assert "Packet scope" not in guidance_html
+    assert "Facility / license" in packet_scope_html
+    assert "157806098" in packet_scope_html
+    assert "Date range" in packet_scope_html
+    assert "2022-08-01 to 2022-08-31" in packet_scope_html
+    assert "Prepared from" in packet_scope_html
+    assert "Generated" in packet_scope_html
+    assert "Jun 27, 2026, 9:08 PM CT" in packet_scope_html
     assert "Generated: Jun 27, 2026, 9:08 PM CT" in html
     assert raw_generated_at not in html
-    assert "Records included" in html
-    assert "Important limitation" in html
+    assert raw_generated_at not in packet_scope_html
+    assert "Records included" in packet_scope_html
+    assert "Important limitation" in packet_scope_html
     assert "Summary of included records" in html
     assert "Records ready for preparation review" in html
     assert "Records needing source check" in html
