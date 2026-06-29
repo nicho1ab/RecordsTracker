@@ -27,18 +27,28 @@ class HtmlStructureParser(HTMLParser):
         super().__init__()
         self.tags: list[str] = []
         self.links: list[str] = []
+        self.summary_texts: list[str] = []
+        self.start_attrs_by_tag: dict[str, list[dict[str, str]]] = {}
         self.text_by_tag: dict[str, list[str]] = {}
         self._stack: list[str] = []
+        self._current_summary_parts: list[str] | None = None
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         self.tags.append(tag)
         self._stack.append(tag)
+        if tag == "summary":
+            self._current_summary_parts = []
+        attr_dict = {name: value for name, value in attrs if value is not None}
+        self.start_attrs_by_tag.setdefault(tag, []).append(attr_dict)
         if tag == "a":
             for name, value in attrs:
                 if name == "href" and value is not None:
                     self.links.append(value)
 
     def handle_endtag(self, tag: str) -> None:
+        if tag == "summary" and self._current_summary_parts is not None:
+            self.summary_texts.append(" ".join(self._current_summary_parts).strip())
+            self._current_summary_parts = None
         if tag in self._stack:
             while self._stack:
                 open_tag = self._stack.pop()
@@ -49,6 +59,8 @@ class HtmlStructureParser(HTMLParser):
         text = data.strip()
         if not text:
             return
+        if self._current_summary_parts is not None and "summary" in self._stack:
+            self._current_summary_parts.append(text)
         for tag in self._stack:
             self.text_by_tag.setdefault(tag, []).append(text)
 
@@ -966,6 +978,59 @@ def test_help_route_does_not_activate_retrieve_nav() -> None:
         not in html
     )
     assert 'class="is-active" aria-current="page" href="/ccld/records/request">Retrieve' not in html
+
+
+def test_help_page_topics_toc_links_to_every_help_section_in_order() -> None:
+    auth_config = load_hosted_auth_runtime_config(
+        environ={
+            "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
+            "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
+        }
+    )
+    status, _content_type, body = route_response(
+        "/ccld/help",
+        auth_runtime_config=auth_config,
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+    parser = parse_html_structure(html)
+
+    expected_topics = [
+        ("workflow", "How to review a facility (workflow)"),
+        ("limitations", "Limitations: What the app does not prove"),
+        ("source-traceability", "How source traceability works"),
+        ("live-retrieval", "Retrieval modes"),
+        ("operator-setup", "Operator setup: enabling live retrieval"),
+        ("tool-purpose", "What this tool helps you do"),
+        ("review-flags", "What review flags mean"),
+        ("source-confidence", "What to do with source-confidence cues"),
+        ("reviewer-created-notes-status", "How reviewer-created notes/status work"),
+        ("reviewer-status-filters", "How reviewer-created status filters work"),
+        ("correction-readiness", "How correction-readiness works"),
+        ("feedback", "How to send useful feedback"),
+        ("packet-preparation", "How packet preparation fits in"),
+    ]
+    expected_hrefs = [f"#{topic_id}" for topic_id, _label in expected_topics]
+    toc_start = html.index('<h2 id="help-topics-heading">Help topics</h2>')
+    details_start = html.index('<section class="help-details"', toc_start)
+    toc_html = html[toc_start:details_start]
+
+    assert status == 200
+    assert "Help topics" in parser.text_for("h2")
+    assert "<details" not in toc_html
+    assert toc_html.count('href="#') == len(expected_topics)
+    assert [toc_html.index(f'href="{href}"') for href in expected_hrefs] == sorted(
+        toc_html.index(f'href="{href}"') for href in expected_hrefs
+    )
+    for topic_id, label in expected_topics:
+        assert f'<a href="#{topic_id}">{label}</a>' in toc_html
+
+    details_attrs = parser.start_attrs_by_tag["details"]
+    detail_ids = [attrs.get("id", "") for attrs in details_attrs]
+    assert detail_ids == [topic_id for topic_id, _label in expected_topics]
+    assert len(detail_ids) == len(set(detail_ids))
+    assert all(detail_ids)
+    assert parser.summary_texts == [label for _topic_id, label in expected_topics]
 
 
 def test_retrieval_job_detail_route_highlights_jobs_nav() -> None:
