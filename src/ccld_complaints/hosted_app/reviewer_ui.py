@@ -666,7 +666,6 @@ def _render_substantiated_triage(
     if not items:
         list_markup = """        <section class=\"hero-card\" aria-labelledby=\"substantiated-empty-heading\">
           <h2 id=\"substantiated-empty-heading\">No loaded substantiated/equivalent complaint records matched.</h2>
-          <p>Empty state means no currently loaded records matched, not that no substantiated reports exist in the public source.</p>
         </section>"""
     else:
         rows = "\n".join(

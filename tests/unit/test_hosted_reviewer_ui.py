@@ -405,6 +405,8 @@ def test_reviewer_ui_substantiated_triage_empty_state_is_cautious() -> None:
         "reset_reload_planning_metadata": 0,
     }
     assert "No loaded substantiated/equivalent complaint records matched." in html
+    assert '<details class="technical-details warning-card">' in html
+    assert '<details class="technical-details">' not in html
     _assert_collapsed_disclosure(
         html,
         "About this triage view and its limitations",
@@ -412,11 +414,19 @@ def test_reviewer_ui_substantiated_triage_empty_state_is_cautious() -> None:
     assert html.index(
         "No loaded substantiated/equivalent complaint records matched."
     ) < html.index("About this triage view and its limitations")
+    assert html.index("About this triage view and its limitations") < html.index(
+        "Next steps"
+    )
+    assert "Return to review queue" in html
+    assert "Return to CCLD request queue" in html
     assert (
         "Empty state means no currently loaded records matched, not that no "
         "substantiated reports exist in the public source."
-        in html
-    )
+    ) in html
+    assert html.count(
+        "Empty state means no currently loaded records matched, not that no "
+        "substantiated reports exist in the public source."
+    ) == 1
     assert "not independently verified by RecordsTracker" in html
     assert_no_secret_html(html)
 
