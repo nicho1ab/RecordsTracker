@@ -124,7 +124,7 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
     {packet_draft_action}
         </div>
       </section>
-      <section class="quiet-section" aria-labelledby="case-brief-flags-heading">
+      <section class="quiet-section case-brief-section-break" aria-labelledby="case-brief-flags-heading">
         <h3 id="case-brief-flags-heading">Review flags</h3>
         <div class="metric-strip" aria-label="Review flag summary">
 {flag_cards}
