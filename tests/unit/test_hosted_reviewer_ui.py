@@ -161,6 +161,8 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert REVIEWER_UI_PACKET_PREVIEW_PATH in html
     assert "Open print draft" in html
     assert REVIEWER_UI_PACKET_DRAFT_PATH in html
+    assert "Open local/test packet preview" not in html
+    assert "Open local/test preparation draft for browser copy or print" not in html
     assert "Skip to main reviewer content" in html
     assert '<main id="main-content" tabindex="-1">' in html
     assert "Technical runtime details" in html
