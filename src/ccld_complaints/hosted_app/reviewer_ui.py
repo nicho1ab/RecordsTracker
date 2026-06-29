@@ -717,7 +717,7 @@ def _render_substantiated_triage(
 
 
 def _render_substantiated_triage_limitations_disclosure() -> str:
-    return """        <details class=\"technical-details\">
+    return """        <details class=\"technical-details warning-card\">
           <summary>About this triage view and its limitations</summary>
           <ul>
             <li>This is a review triage aid.</li>
