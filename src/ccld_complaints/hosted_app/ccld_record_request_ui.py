@@ -1208,8 +1208,14 @@ def _render_matched_result(
     {_render_import_reload_summary(import_reload_result)}
     {_render_retrieval_job_summary(retrieval_result)}
         <section aria-labelledby="review-queue-heading">
-            <h2 id="review-queue-heading">CCLD review queue</h2>
-            <p>Open the suggested complaint first. On detail, check the original CCLD source link and key dates/finding before adding an optional note or status.</p>
+            <div class="dense-section-header">
+              <div>
+                <p class="stage-kicker">Facility/date queue</p>
+                <h2 id="review-queue-heading">CCLD review queue</h2>
+              </div>
+              <p class="helper-text">Open the suggested complaint first, then return to this same facility/date queue.</p>
+            </div>
+            <p>On detail, check the original CCLD source link and key dates/finding before adding an optional note or status.</p>
             {_render_queue_do_this_next_panel(request, decision_queue_items)}
             {_render_queue_progress_summary(decision_queue_items)}
             {_render_queue_triage_summary(request, decision_queue_items)}
@@ -1217,7 +1223,7 @@ def _render_matched_result(
             {_render_queue_filter_summary(request, decision_queue_items, filtered_queue_items)}
             {_render_filtered_empty_recovery(request, decision_queue_items, filtered_queue_items)}
             {_render_worklist_decision_flow(request, decision_queue_items, filtered_queue_items, reference_source)}
-            <details class="technical-details">
+            <details class="technical-details dense-table-details">
             <summary>Table view and queue guidance</summary>
             {_render_queue_first_run_steps()}
             {_render_queue_navigation()}
@@ -1243,7 +1249,7 @@ def _render_matched_result(
       <p><a href="{REVIEWER_UI_RECORDS_PATH}">Open reviewer records</a></p>
             </details>
     </section>
-                <details class="technical-details">
+                <details class="technical-details dense-table-details">
                     <summary>Copy details for feedback</summary>
                 {_render_feedback_checklist_section(
                         request,
@@ -1255,7 +1261,7 @@ def _render_matched_result(
                 )}
         {_render_feedback_guidance_section()}
                 </details>
-                <details class="technical-details">
+                <details class="technical-details diagnostic-details">
                     <summary>Advanced retrieval and local load actions</summary>
         {_render_retrieval_action(request, retrieval_available)}
         {_render_import_reload_action(request, import_reload_available, refresh=True)}
@@ -1338,7 +1344,7 @@ def _render_result_focus_panel(
                 <dt>Next action</dt>
                 <dd>{_escape(next_action)}</dd>
             </dl>
-            <details class="technical-details secondary-actions">
+            <details class="technical-details secondary-actions dense-table-details">
                 <summary>Other result actions</summary>
                 {detail_link}
                 <p><a href="{CCLD_RECORD_REQUEST_PATH}">Run another retrieval</a></p>
@@ -1375,13 +1381,13 @@ def _render_no_match_result(
                 reference_source=reference_source,
                 include_change_links=True,
             )}
-        <details class="technical-details">
+        <details class="technical-details diagnostic-details">
             <summary>Technical retrieval details</summary>
         {_render_no_match_guidance(request, local_count, import_reload_result, retrieval_result)}
         {_render_import_reload_summary(import_reload_result)}
         {_render_retrieval_job_summary(retrieval_result)}
         </details>
-        <details class="technical-details">
+        <details class="technical-details dense-table-details">
             <summary>Copy details for feedback</summary>
                 {_render_feedback_checklist_section(
                         request,
@@ -1392,7 +1398,7 @@ def _render_no_match_result(
                 reference_source=reference_source,
                 )}
         </details>
-        <details class="technical-details">
+        <details class="technical-details diagnostic-details">
             <summary>Advanced local/operator actions</summary>
         {_render_import_reload_action(request, import_reload_available, refresh=False)}
         {_render_retrieval_action(request, retrieval_available)}
@@ -1435,7 +1441,7 @@ def _render_no_match_recovery_panel(
       <p class="stage-kicker">Recovery</p>
       <h2 id="no-local-records-heading">{_escape(headline)}</h2>
             <p>No loaded source-derived records matched this request context. Review the facility/date context and retrieval state before choosing the next step.</p>
-      <dl>
+      <dl class="summary-list">
         <dt>What happened</dt>
         <dd>{_escape(reason_bucket)}</dd>
         <dt>Facility/license number</dt>
@@ -1825,7 +1831,7 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
                     <dd>{_escape(next_action)}</dd>
                 </dl>
             </section>
-                        <details class="technical-details">
+                        <details class="technical-details diagnostic-details">
                             <summary>Technical job details</summary>
             {stat_grid}
                         <dl>
@@ -1865,8 +1871,10 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
             are shown.</p>
             </details>
             {_render_retrieval_next_steps(result, imported_count, feedback_href)}
-                <p><a class="button button-secondary" href="{_escape(detail_href)}">View job details</a></p>
-                <p><a href="{CCLD_RETRIEVAL_JOBS_PATH}">View retrieval job history</a></p>
+                <div class="form-actions dense-page-actions">
+                    <a class="button button-secondary" href="{_escape(detail_href)}">View job details</a>
+                    <a class="button button-secondary" href="{CCLD_RETRIEVAL_JOBS_PATH}">View retrieval job history</a>
+                </div>
 {queue_link}
         </section>"""
 
@@ -2096,7 +2104,7 @@ def _render_retrieval_job_history_page(
     already loaded without submitting a job, return to the request page and choose Show
     existing queue.</p>
             <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Submit or change retrieval request</a></p>
-            <details class="technical-details">
+            <details class="technical-details diagnostic-details">
                 <summary>Runtime details</summary>
                 <p>{_escape(setup_text)}</p>
                 <p>Job states describe retrieval workflow progress for the current request.</p>
@@ -2105,10 +2113,10 @@ def _render_retrieval_job_history_page(
         {_render_retrieval_history_summary(jobs)}
     <section aria-labelledby="retrieval-history-table-heading">
         <h2 id="retrieval-history-table-heading">Job list</h2>
-            <div class="result-list" aria-label="Retrieval jobs">
+            <div class="result-list dense-card-grid" aria-label="Retrieval jobs">
 {job_cards}
             </div>
-            <details class="technical-details">
+            <details class="technical-details dense-table-details">
                 <summary>Table view</summary>
       <table>
         <caption>Recent controlled CCLD retrieval jobs and safe status summaries</caption>
@@ -2131,7 +2139,7 @@ def _render_retrieval_job_history_page(
       </table>
             </details>
     </section>
-        <details class="technical-details">
+        <details class="technical-details diagnostic-details">
             <summary id="retrieval-history-help-heading">What to do if a job looks wrong</summary>
       <p>For failed, blocked, notice, or confusing jobs, use the visible state, count, and
       message shown here first. Operators can check server logs without sharing private
@@ -2367,7 +2375,7 @@ def _render_retrieval_job_detail_page(job: CcldRetrievalJobHistoryEntry) -> str:
     </section>
     {_render_retrieval_detail_warnings_section(job)}
         {_render_retrieval_detail_next_steps(job, imported_count)}
-    <details class="technical-details">
+    <details class="technical-details diagnostic-details">
     <summary>Technical detail: counts, metadata, and errors</summary>
     <section aria-labelledby="retrieval-detail-counts-heading">
       <h2 id="retrieval-detail-counts-heading">Result counts</h2>

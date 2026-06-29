@@ -200,6 +200,10 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert "Attorney workflow" not in html
     assert "Current step:" not in html
     assert "Worklist" in html
+    assert '<div class="dense-section-header">' in html
+    assert 'class="result-list dense-card-grid"' in html
+    assert 'class="technical-details dense-table-details"' in html
+    assert 'class="technical-details diagnostic-details"' in html
     assert "Filter or search queue" in html
     assert "Keyboard flow: search filters this queue" not in html
     assert "Show table view" in html

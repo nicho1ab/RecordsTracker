@@ -772,6 +772,9 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
         status_html
     )
     assert reviewed_status == 200
+    assert '<div class="dense-section-header">' in reviewed_html
+    assert 'class="technical-details dense-table-details"' in reviewed_html
+    assert 'class="technical-details diagnostic-details"' in reviewed_html
     assert "Latest reviewer-created status: Reviewed" in reviewed_html
     assert "1 reviewer-created note(s)" in reviewed_html
     assert "Complaint worklist" in reviewed_html
@@ -893,6 +896,8 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert "Copyable tester feedback checklist" in html
     assert "Technical retrieval details" in html
     assert "Copy details for feedback" in html
+    assert 'class="technical-details diagnostic-details"' in html
+    assert 'class="technical-details dense-table-details"' in html
     assert "Report unclear loaded-record versus retrieval-job state" in html
     assert "Open facility review priority list" in html
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098" in html
