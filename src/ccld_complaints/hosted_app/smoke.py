@@ -373,7 +373,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Record summary" not in reviewer_detail_body
         or b"Optional note/status" not in reviewer_detail_body
         or (
-            b"Return to same facility/date queue" not in reviewer_detail_body
+            b"&larr; Back to queue" not in reviewer_detail_body
             and b"Back to reviewer records" not in reviewer_detail_body
         )
         or b"32-CR-20220407124448" not in reviewer_detail_body
