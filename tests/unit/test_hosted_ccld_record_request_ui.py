@@ -105,7 +105,7 @@ def test_ccld_record_request_page_renders_from_default_context(
     assert content_type == "text/html; charset=utf-8"
     assert "Retrieve complaint records" in html
     assert "Skip to main CCLD request content" in html
-    assert '<main id="main-content" class="ds-page-main" tabindex="-1">' in html
+    assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
     assert "Retrieve complaint records for a facility" in html
     assert "Start review" in html
     assert "Choose a facility and date range, then open the complaint queue." in html

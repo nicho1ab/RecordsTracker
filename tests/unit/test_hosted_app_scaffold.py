@@ -120,7 +120,7 @@ def test_app_shell_labels_placeholder_scope() -> None:
     parser = parse_html_structure(html)
 
     assert "Skip to main CCLD review content" in html
-    assert '<main id="main-content" class="ds-page-main" tabindex="-1">' in html
+    assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
     assert "Attorney public-record review workspace." in html
     assert "CCLD RecordsTracker" in html
     assert parser.tags.count("h1") == 1
@@ -195,9 +195,10 @@ def test_polished_shared_layout_navigation_on_key_pages() -> None:
         assert content_type == "text/html; charset=utf-8"
         assert skip_text in html
         assert '<a class="skip-link" href="#main-content">' in html
-        assert '<nav class="site-nav"' in html
-        assert '<main id="main-content" class="ds-page-main" tabindex="-1">' in html
-        assert 'class="shell page-main"' in html
+        assert '<header class="app-shell-header site-header ds-surface">' in html
+        assert '<nav class="primary-nav site-nav"' in html
+        assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
+        assert 'class="shell page-main app-page-main"' in html
         assert "CCLD RecordsTracker" in html
         if path != "/ccld/help":
             assert "Attorney workflow" not in html
@@ -264,6 +265,11 @@ def test_final_product_shell_uses_compact_unboxed_workflow_design() -> None:
     assert "--ds-text: #17212B" in html
     assert "--ds-primary: #006B5F" in html
     assert "--ds-link: #2457A6" in html
+    assert "--ds-nav-active-bg: #EEF3FA" in html
+    assert "--ds-nav-active-border: #9DB4D6" in html
+    assert ".app-shell" in html
+    assert ".brand-title-block" in html
+    assert ".app-page-main" in html
     assert ".ds-card--neutral" in html
     assert ".ds-card--info" in html
     assert ".ds-card--success" in html
@@ -277,12 +283,12 @@ def test_final_product_shell_uses_compact_unboxed_workflow_design() -> None:
     assert "border-bottom: 3px solid var(--blue)" in html
     assert ".step-index" in html
     assert "display: none;" in html
-    assert '<nav class="site-nav"' in html
+    assert '<nav class="primary-nav site-nav"' in html
     assert "Health check</a>" not in html
     assert "Commands</a>" not in html
 
 
-def test_decorative_kickers_are_muted_without_changing_interactive_accent_styles() -> None:
+def test_decorative_kickers_are_muted_and_navigation_uses_blue_neutral_states() -> None:
     html = render_app_shell()
 
     for selector in (".stepper-eyebrow", ".launch-kicker", ".stage-kicker"):
@@ -295,12 +301,22 @@ def test_decorative_kickers_are_muted_without_changing_interactive_accent_styles
         assert "color: var(--accent-strong);" not in selector_css
 
     assert "a {\n      color: var(--ds-link);" in html
-    nav_accent_css = (
-        ".site-nav a:hover, .site-nav a.is-active {\n"
-        "      background: var(--accent-soft);\n"
-        "      border-color: var(--accent);"
+    nav_active_css = (
+        ".site-nav a.is-active {\n"
+        "      background: var(--ds-nav-active-bg);\n"
+        "      border-color: var(--ds-nav-active-border);\n"
+        "      box-shadow: inset 0 -3px 0 var(--ds-link);"
     )
-    assert nav_accent_css in html
+    assert nav_active_css in html
+    assert ".site-nav a:hover, .site-nav a.is-active" not in html
+    assert "background: var(--accent-soft);\n      border-color: var(--accent);" not in html
+    button_secondary_css = (
+        ".button-secondary, button.secondary {\n"
+        "      background: #fff;\n"
+        "      border-color: var(--ds-border);\n"
+        "      color: var(--ds-link);"
+    )
+    assert button_secondary_css in html
     assert "button, input[type=\"submit\"], .button {\n      background: var(--accent);" in html
 
 

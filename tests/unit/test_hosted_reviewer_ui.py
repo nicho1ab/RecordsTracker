@@ -190,7 +190,7 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert "Open local/test packet preview" not in html
     assert "Open local/test preparation draft for browser copy or print" not in html
     assert "Skip to main reviewer content" in html
-    assert '<main id="main-content" class="ds-page-main" tabindex="-1">' in html
+    assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
     assert "Technical runtime details" in html
     assert "reviewer UI shell" not in html
     assert "fixture actor context" not in normalized_html
@@ -1087,7 +1087,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Original CCLD source link saved" in html
     assert "Key dates and finding" in html
     assert "Skip to main reviewer content" in html
-    assert '<main id="main-content" class="ds-page-main" tabindex="-1">' in html
+    assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
     assert "First-run detail steps" in html
     assert "Detail navigation" in html
     assert "Use the same-queue link when you came from CCLD request results" in normalized_html
