@@ -831,6 +831,11 @@ SHARED_CSS = r"""
       box-shadow: none;
       padding: 0.25rem 0;
     }
+    .case-brief-section-break {
+      border-top: 1px solid var(--line);
+      margin-top: 1.35rem;
+      padding-top: 1rem;
+    }
     .quiet-section > h2 {
       font-size: 1rem;
     }

@@ -191,8 +191,18 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
         )
     ]
     suggested_record_index = html.index("Suggested first record for review")
+    review_flags_section_index = html.index(
+        '<section class="quiet-section case-brief-section-break" '
+        'aria-labelledby="case-brief-flags-heading">'
+    )
+    review_flags_heading_index = html.index(
+        '<h3 id="case-brief-flags-heading">Review flags</h3>'
+    )
+    review_flags_strip_index = html.index(
+        '<div class="metric-strip" aria-label="Review flag summary">'
+    )
     review_flag_metric_indexes = [
-        html.index(label)
+        html.index(label, review_flags_strip_index)
         for label in (
             "Possible delay indicators",
             "Over 30 days",
@@ -205,7 +215,10 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     ]
     findings_index = html.index("Findings represented")
     assert max(summary_metric_indexes) < suggested_record_index
-    assert suggested_record_index < min(review_flag_metric_indexes)
+    assert suggested_record_index < review_flags_section_index
+    assert review_flags_section_index < review_flags_heading_index
+    assert review_flags_heading_index < review_flags_strip_index
+    assert review_flags_strip_index < min(review_flag_metric_indexes)
     assert max(review_flag_metric_indexes) < findings_index
     assert "Reviewer-created notes/statuses" in html
     assert "Original CCLD source link saved" in html
