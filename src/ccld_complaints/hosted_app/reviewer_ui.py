@@ -3504,11 +3504,7 @@ def _render_detail_decision_continuity(
     )
     ccld_request_href = _ccld_request_href(related_records, return_context)
     next_record_href = _next_priority_record_href(source_record_key, related_records, return_context)
-    next_record_text = (
-        "Open next recommended record from this same facility/date context"
-        if next_record_href != ccld_request_href
-        else "Return to the same facility/date queue to choose the next record"
-    )
+    next_record_text = "Next record →"
     packet_links = _detail_packet_links(return_context, related_records)
     feedback_href = _feedback_href(
         workflow_area="reviewer-detail",
@@ -3536,7 +3532,7 @@ def _render_detail_decision_continuity(
             </section>
           </div>
           <div class="form-actions">
-            <a class="button" href="{_escape(ccld_request_href)}">Return to same facility/date queue</a>
+            <a class="button" href="{_escape(ccld_request_href)}">&larr; Back to queue</a>
             <a class="button button-secondary" href="{_escape(next_record_href)}">{_escape(next_record_text)}</a>
           </div>
           <details class="technical-details">
@@ -3922,7 +3918,7 @@ def _render_detail_navigation(
             carries the facility/license number, date range, and lookup or manual-entry
             context back to the queue so refreshed reviewer-created cues appear there.</p>
             <ul>
-                <li><a href="{_escape(ccld_request_href)}">Return to same facility/date queue</a></li>
+                <li><a href="{_escape(ccld_request_href)}">&larr; Back to queue</a></li>
                 <li><a href="{_escape(next_record_href)}">Open next recommended record from this context</a></li>
 {packet_links}
                 <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find another CCLD facility</a></li>
