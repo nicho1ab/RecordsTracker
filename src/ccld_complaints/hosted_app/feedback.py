@@ -276,12 +276,6 @@ def render_feedback_page(
             {_feedback_issue_starter_panel(issue_starter)}
             {_feedback_form(form_values)}
         </div>
-        <section class="quiet-section" aria-labelledby="feedback-safety-heading">
-            <h2 id="feedback-safety-heading">Do not include private material</h2>
-            <p>Do not include private facts, credentials, legal strategy, privileged work product,
-            private URLs, secrets, tokens, provider claims, raw source narrative, raw artifact material,
-            server paths, connection details, or unrelated sensitive details.</p>
-        </section>
     {_configuration_notice(context.github_config)}
         <details class="technical-details">
             <summary>Useful examples</summary>
@@ -691,6 +685,12 @@ def _feedback_form(form_values: Mapping[str, list[str]]) -> str:
           </select>
                     <span id="feedback-type-help">Choose the category that best fits the route or action that was confusing.</span>
         </p>
+        <section class="warning-card" aria-labelledby="feedback-safety-heading">
+          <h3 id="feedback-safety-heading">Do not include private material</h3>
+          <p>Do not include private facts, credentials, legal strategy, privileged work product,
+          private URLs, secrets, tokens, provider claims, raw source narrative, raw artifact material,
+          server paths, connection details, or unrelated sensitive details.</p>
+        </section>
         <p>
           <label for="description">Description</label>
                     {textarea}
