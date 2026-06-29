@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 from urllib.parse import parse_qs, urlencode, urlparse
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Connection, Engine
@@ -76,6 +77,7 @@ REVIEWER_UI_PACKET_PREVIEW_PATH = f"{REVIEWER_UI_PREFIX}/packet/preview"
 REVIEWER_UI_PACKET_DRAFT_PATH = f"{REVIEWER_UI_PREFIX}/packet/draft"
 CCLD_HELP_PATH = "/ccld/help"
 FEEDBACK_PATH = "/feedback"
+CENTRAL_TIME = ZoneInfo("America/Chicago")
 LOCAL_REVIEWER_UI_SCOPE = HostedAccessScope(
     "seeded_corpus",
     "seeded-ccld-fixture-2026-06-13",
@@ -1351,7 +1353,7 @@ def _render_packet_draft(
     state_counts = _packet_reviewer_state_counts(records, state_summaries)
     readiness_counts = _packet_readiness_counts(records, state_summaries)
     findings = _packet_finding_counts(records)
-    generated_at = datetime.now(UTC).isoformat(timespec="seconds")
+    generated_at = _format_packet_generated_at(datetime.now(UTC))
     feedback_href = _feedback_href(
         workflow_area="packet-draft",
         page_path=REVIEWER_UI_PACKET_DRAFT_PATH,
@@ -1510,6 +1512,18 @@ def _render_packet_draft(
                 </article>
                 """,
             )
+
+
+def _format_packet_generated_at(value: datetime) -> str:
+    central_value = value.astimezone(CENTRAL_TIME)
+    month = central_value.strftime("%b")
+    hour = central_value.hour % 12 or 12
+    minute = f"{central_value.minute:02d}"
+    am_pm = "AM" if central_value.hour < 12 else "PM"
+    return (
+        f"{month} {central_value.day}, {central_value.year}, "
+        f"{hour}:{minute} {am_pm} CT"
+    )
 
 
 def _reviewer_created_state_records(
