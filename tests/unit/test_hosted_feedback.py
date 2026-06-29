@@ -81,6 +81,20 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "browser copy or print" in html
     assert "Submit feedback" in html
     assert "copy" in html.lower()
+    assert (
+        '<section class="warning-card" aria-labelledby="feedback-safety-heading">'
+        in html
+    )
+    assert_ordered(
+        html,
+        (
+            '<label for="feedback_type">Feedback type</label>',
+            '<h3 id="feedback-safety-heading">Do not include private material</h3>',
+            '<label for="description">Description</label>',
+            '<button type="submit">Submit feedback</button>',
+        ),
+    )
+
 
 def test_feedback_page_renders_safe_optional_handoff_context() -> None:
     query = urlencode(
@@ -616,3 +630,14 @@ def _description_textarea(markup: str) -> str:
     if match is None:
         raise AssertionError("Feedback description textarea not found")
     return html_lib.unescape(match.group(1))
+
+
+def assert_ordered(markup: str, fragments: Sequence[str]) -> None:
+    cursor = -1
+    for fragment in fragments:
+        index = markup.find(fragment)
+        if index == -1:
+            raise AssertionError(f"Fragment not found: {fragment}")
+        if index <= cursor:
+            raise AssertionError(f"Fragment appeared out of order: {fragment}")
+        cursor = index
