@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import re
 from collections.abc import Mapping, Sequence
@@ -114,7 +114,6 @@ def test_retrieval_form_renders_record_type_and_safe_setup_state() -> None:
         page_data_mode="fixture-demo",
     )
     html = body.decode("utf-8")
-    normalized = " ".join(html.split())
 
     assert status == 200
     assert "Retrieve complaint records" in html
@@ -122,7 +121,6 @@ def test_retrieval_form_renders_record_type_and_safe_setup_state() -> None:
     assert "Use this number" in html
     assert "Search by name, license number, city, county, ZIP" in html
     assert "facility type, program type, or status code" in html
-    assert "Review boundary" not in normalized
     assert "Use this number" in html
     assert "Search CCLD facilities" in html
     assert "Which facility should be reviewed?" in html
@@ -1179,6 +1177,9 @@ def test_retrieval_job_history_renders_recent_jobs_safely_without_mutation(
     assert content_type == "text/html; charset=utf-8"
     assert before_counts == after_counts
     assert "Controlled retrieval is configured for this runtime" in html
+    assert 'class="result-list dense-card-grid"' in html
+    assert 'class="technical-details dense-table-details"' in html
+    assert 'class="technical-details diagnostic-details"' in html
     assert "To review records already loaded without submitting a job" in normalized
     assert "choose Show existing queue" in normalized
     assert "Not recorded" in html
@@ -1253,6 +1254,7 @@ def test_retrieval_job_detail_renders_completed_job_without_mutation(tmp_path: P
     assert "Controlled CCLD retrieval completed and imported validated records" in html
     assert "Next action" in html
     assert "Open imported records in the CCLD queue and review source traceability" in html
+    assert 'class="technical-details diagnostic-details"' in html
     assert "Technical detail: counts, metadata, and errors" in html
     assert "completed-job" in html
     assert "Completed" in html

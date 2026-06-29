@@ -1128,6 +1128,62 @@ SHARED_CSS = r"""
     .result-card h3, .result-card p {
       margin-bottom: 0.25rem;
     }
+    .dense-page-header {
+      align-items: start;
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .dense-page-header .form-actions,
+    .dense-page-actions {
+      justify-content: flex-end;
+    }
+    .dense-section-header {
+      align-items: end;
+      border-bottom: 1px solid var(--line-soft);
+      display: flex;
+      gap: 0.75rem;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.55rem;
+    }
+    .dense-section-header h2,
+    .dense-section-header h3,
+    .dense-section-header p {
+      margin-bottom: 0;
+    }
+    .dense-card-grid {
+      display: grid;
+      gap: 0.85rem;
+      grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    }
+    .dense-card-grid .result-card,
+    .dense-card-grid .work-item {
+      min-height: 100%;
+    }
+    .dense-table-details,
+    .diagnostic-details {
+      background: transparent;
+      border-top: 1px solid var(--line-soft);
+      box-shadow: none;
+      margin-top: 1rem;
+      padding-top: 0.75rem;
+    }
+    .diagnostic-details > summary::before {
+      color: var(--muted);
+      content: "Operator/runtime ";
+      font-weight: 700;
+    }
+    .dense-fact-row {
+      display: grid;
+      gap: 0.65rem;
+      grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+      margin: 0.75rem 0;
+    }
+    .dense-fact-row .fixed-field,
+    .dense-fact-row .stat-card {
+      min-height: 100%;
+    }
     .stat-card strong {
       display: block;
       font-size: 1.7rem;
@@ -1385,8 +1441,14 @@ SHARED_CSS = r"""
       .site-title-row, .two-column, .request-layout {
         display: block;
       }
-      .attorney-hero, .legal-summary-grid, .detail-top-grid, .support-layout {
+      .attorney-hero, .legal-summary-grid, .detail-top-grid, .support-layout,
+      .dense-page-header, .dense-section-header {
         display: block;
+      }
+      .dense-page-header .form-actions,
+      .dense-page-actions {
+        justify-content: flex-start;
+        margin-top: 0.75rem;
       }
       .attorney-hero-actions {
         margin-top: 1rem;

@@ -1784,11 +1784,17 @@ def _render_record_list(
         {_render_complaint_export_controls(export_context, export_records)}
                 {no_results_notice}
         <section aria-labelledby="reviewer-list-heading">
-                        <h2 id="reviewer-list-heading">Worklist</h2>
-                <div class="result-list" aria-label="Complaint records ready for review">
+                        <div class="dense-section-header">
+                          <div>
+                            <p class="stage-kicker">Review queue</p>
+                            <h2 id="reviewer-list-heading">Worklist</h2>
+                          </div>
+                          <p class="helper-text">Primary action: open a record, check source traceability, then add reviewer-created notes/status when useful.</p>
+                        </div>
+                <div class="result-list dense-card-grid" aria-label="Complaint records ready for review">
         {cards}
                 </div>
-                <details>
+                <details class="dense-table-details">
                     <summary>Filter or search queue</summary>
             <form action="{REVIEWER_UI_RECORDS_PATH}" method="get">
         <p>
@@ -1805,7 +1811,7 @@ def _render_record_list(
       </form>
             <p class="helper-text">Showing {len(records)} of {returned_count} complaint records.</p>
                 </details>
-        <details>
+        <details class="technical-details dense-table-details">
           <summary>Show table view</summary>
       <table>
                                 <caption>Complaint records ready for review with source-derived fields and
@@ -3371,11 +3377,15 @@ def _render_detail(
     {_render_notice(saved_action, saved_value, source_record_key, related_records, return_context)}
                 <div class="detail-shell">
                 <section class="hero-card" aria-labelledby="detail-hero-heading">
-                    <p class="launch-kicker">Complaint review workspace</p>
-                    <h2 id="detail-hero-heading">Complaint overview</h2>
-                    <p class="muted">{_escape(complaint_label)}</p>
-                    <p>{_escape(_detail_summary_sentence(source_record, related_records))}</p>
-                    <p><span class="badge badge-muted">Finding: {_escape(_optional_string(original_values, 'finding'))}</span></p>
+                    <div class="dense-page-header">
+                      <div>
+                        <p class="launch-kicker">Complaint review workspace</p>
+                        <h2 id="detail-hero-heading">Complaint overview</h2>
+                        <p class="muted">{_escape(complaint_label)}</p>
+                        <p>{_escape(_detail_summary_sentence(source_record, related_records))}</p>
+                      </div>
+                      <p><span class="badge badge-muted">Finding: {_escape(_optional_string(original_values, 'finding'))}</span></p>
+                    </div>
                     {_render_review_flag_chips(original_values, source_document)}
                 </section>
             {_render_detail_decision_continuity(source_record, detail, related_records, return_context)}
@@ -3396,7 +3406,7 @@ def _render_detail(
                         </aside>
                     </div>
         {_render_review_actions(source_record_key, detail, return_context)}
-        <details class="technical-details">
+        <details class="technical-details dense-table-details">
           <summary>Show full complaint fields</summary>
           <section aria-labelledby="source-derived-heading">
                         <h2 id="source-derived-heading">Full complaint fields</h2>
@@ -3425,25 +3435,25 @@ def _render_detail(
       </table>
           </section>
         </details>
-                <details class="technical-details">
+                <details class="technical-details dense-table-details">
                     <summary>Source-confidence cues</summary>
         {_render_source_confidence_cues_section(source_record, related_records)}
                 </details>
-                <details class="technical-details">
+                <details class="technical-details diagnostic-details">
                     <summary>Field-note and technical context</summary>
         {_render_field_note_guidance_section()}
         {_render_source_context_section(related_records, source_record_key)}
                 </details>
-        <details class="technical-details">
+        <details class="technical-details dense-table-details">
         <summary>Detail navigation</summary>
         {_render_detail_navigation(source_record_key, related_records, return_context)}
         </details>
     {_render_scope_notice(_mapping(payload, 'workflow_shell'))}
-        <details class="technical-details">
+        <details class="technical-details dense-table-details">
         <summary>First-run detail steps</summary>
         {_render_detail_first_run_steps(source_record_key, related_records, return_context)}
         </details>
-        <details class="technical-details">
+        <details class="technical-details dense-table-details">
         <summary>Feedback handoff details</summary>
             {_render_detail_feedback_guidance(source_record, related_records, return_context)}
         </details>
@@ -5041,7 +5051,7 @@ def _render_scope_notice(workflow: Mapping[str, Any]) -> str:
     scope = _mapping(workflow, "scope")
     scope_type = _escape(_string(scope, "scope_type"))
     scope_id = _escape(_string(scope, "scope_id"))
-    return f"""<details class="technical-details">
+    return f"""<details class="technical-details diagnostic-details">
             <summary>Technical runtime details</summary>
             <p>This pilot environment uses an authorized local runtime context for reviewer actions.</p>
             <p>Current review scope: {scope_type} / {scope_id}.</p>
