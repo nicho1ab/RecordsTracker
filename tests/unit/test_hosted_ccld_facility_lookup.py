@@ -638,7 +638,7 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Find CCLD facility" in html
     assert "Skip to main CCLD facility lookup content" in html
-    assert '<main id="main-content" class="ds-page-main" tabindex="-1">' in html
+    assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
     assert "Find a facility" in html
     assert "Start review by finding the CCLD facility/license number" in html
     assert "preloaded facility directory" in html
