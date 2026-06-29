@@ -82,14 +82,14 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     assert "BaseUrl must be localhost or a private test IP address" in script
     assert "OutputDir must be inside the ignored data/processed folder" in script
     assert "screenshot tool" in script.lower()
-    assert "This evidence packet is local UI review evidence only" in script
+    assert "Local hosted UI review evidence" in script
     assert "05-reviewer-complaint-exports.png" in script
     assert 'Join-RouteUrl -Base $normalizedBaseUrl -Path "/reviewer"' in script
     assert "#complaint-export-controls" in script
     assert "complaint export" in script.lower()
 
 
-def test_capture_script_boundaries_are_get_only_and_non_mutating() -> None:
+def test_capture_script_review_context_is_get_only_and_non_mutating() -> None:
     script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
     lowered = script.casefold()
 
@@ -192,7 +192,7 @@ def test_capture_script_allow_unavailable_writes_manifest() -> None:
         assert manifest["safety"]["reviewerStateMutated"] is False
         assert manifest["safety"]["importsOrReloadsRun"] is False
         assert manifest["routeFailures"]
-        assert "local UI review evidence only" in manifest["boundaryStatement"]
+        assert "Local hosted UI review evidence" in manifest["evidencePurpose"]
         assert manifest["output"]["zipPacket"].endswith(".zip")
         assert manifest["output"]["counts"]["html"] == 0
         assert manifest["output"]["counts"]["text"] == 0
@@ -294,7 +294,7 @@ def test_capture_script_restores_local_dev_auth_env_after_capture() -> None:
         shutil.rmtree(output_dir, ignore_errors=True)
 
 
-def test_ui_evidence_documentation_links_commands_and_boundaries() -> None:
+def test_ui_evidence_documentation_links_commands_and_review_context() -> None:
     guide = GUIDE.read_text(encoding="utf-8")
     testing_doc = read_repo_text("docs/developer/testing.md")
     runbook = read_repo_text("RUNBOOK.md")
@@ -314,15 +314,12 @@ def test_ui_evidence_documentation_links_commands_and_boundaries() -> None:
         "Upload or summarize the sibling ZIP",
         "actual rendered UI",
         "Evidence is not useful if no one reviews it",
-        "Do not commit generated evidence folders or ZIP packets",
+        "Do not commit generated",
         "tester-readiness verifier",
         "keyboard-flow marker assertions",
         "sibling ZIP",
-        "local review artifact only",
-        "not a product packet",
-        "not a final export",
-        "not a certified report",
-        "not an audit export, legal report, source-completeness report",
+        "local UI review artifact",
+        "route, screenshot, text, and accessibility review",
         "data/processed/ui-evidence",
     ):
         assert expected in guide

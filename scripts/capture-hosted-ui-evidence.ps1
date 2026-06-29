@@ -30,9 +30,8 @@ When set, route failures are recorded in the manifest instead of failing the scr
 .EXAMPLE
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture
 .NOTES
-Run from the repository root. Generated packets are local review evidence only;
-they are not audit exports, legal reports, source-completeness reports, or proof
-of public-source coverage.
+Run from the repository root. Generated packets capture local hosted UI route,
+text, assertion, accessibility, and screenshot evidence for reviewer inspection.
 #>
 param(
     [Parameter(Mandatory = $true)]
@@ -61,7 +60,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$boundaryStatement = "This evidence packet is local UI review evidence only. It is not an audit export, legal report, source-completeness report, production monitoring artifact, or proof of public-source coverage."
+$evidencePurpose = "Local hosted UI review evidence for route status, text markers, assertions, accessibility snapshots, and screenshots."
 $forbiddenMarkers = @(
     "provider_subject", "provider-subject", "provider_issuer", "provider-issuer",
     "raw_provider_claims", "raw provider claims", "client_secret", "client-secret",
@@ -541,7 +540,7 @@ try {
         "screenshotsRequested=$IncludeScreenshots",
         "screenshotTool=$(if ($screenshotTool) { $screenshotTool.Name } else { 'none' })",
         "fullPageScreenshots=$(if ($screenshotTool) { $screenshotTool.FullPage } else { $false })",
-        "boundary=$boundaryStatement"
+        "evidencePurpose=$evidencePurpose"
     ) -Encoding UTF8
 
     $readmeText = @"
@@ -551,9 +550,8 @@ Mode: $Mode
 Base URL: $normalizedBaseUrl
 Generated: $((Get-Date).ToUniversalTime().ToString("o"))
 
-This packet is local UI review evidence only. It is not an audit export,
-legal report, source-completeness report, production monitoring artifact, or
-proof of public-source coverage.
+This packet captures local hosted UI route status, text markers, assertions,
+accessibility snapshots, and screenshots for reviewer inspection.
 
 Review these files first:
 - manifest.json
@@ -605,9 +603,9 @@ explicitly says to do so.
         screenshotWarnings     = $screenshotWarnings
         screenshotFailures     = $screenshotFailures
         captureToolUsed        = if ($screenshotTool) { $screenshotTool.Name } else { "http-get-html-text-only" }
-        git                    = [ordered]@{ branch = $gitBranch; commit = $gitCommit; workingTreeClean = [bool]$workingTreeClean; warning = if ($workingTreeClean) { "" } else { "Working tree was not clean when evidence was captured." } }
+        git                    = [ordered]@{ branch = $gitBranch; commit = $gitCommit; workingTreeClean = [bool]$workingTreeClean; notice = if ($workingTreeClean) { "" } else { "Working tree was not clean when evidence was captured." } }
         output                 = [ordered]@{ packetDirectory = ConvertTo-RelativeEvidencePath -Path $packetDir -Root $PWD; zipPacket = ConvertTo-RelativeEvidencePath -Path $zipPath -Root $PWD; manifest = "manifest.json"; routeStatusCsv = "route-status.csv"; routeAssertionsCsv = "route-assertions.csv"; textMarkers = "route-text-markers.txt"; counts = $outputCounts }
-        boundaryStatement      = $boundaryStatement
+        evidencePurpose        = $evidencePurpose
         safety                 = [ordered]@{ getOnly = $true; formsSubmitted = $false; retrievalSubmitted = $false; reviewerStateMutated = $false; importsOrReloadsRun = $false; productionAuthRequired = $false; responseHeadersCaptured = $false; cookiesCaptured = $false; environmentValuesCaptured = $false }
     }
     Set-Content -LiteralPath (Join-Path $packetDir "manifest.json") -Value ($manifest | ConvertTo-Json -Depth 8) -Encoding UTF8

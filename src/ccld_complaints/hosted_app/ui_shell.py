@@ -8,7 +8,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 APP_TITLE = "CCLD RecordsTracker"
-BOUNDARY_TEXT = (
+EYEBROW_TEXT = (
   "CCLD-only public-record review workspace."
 )
 PRIMARY_NAV_LINKS: tuple[tuple[str, str], ...] = (
@@ -85,9 +85,9 @@ DEFAULT_NEXT_ACTIONS: Mapping[str, str] = {
 }
 
 MODE_BADGE_CLASSES = {
-  "Live public CCLD": "badge badge-live",
-  "Fixture/mock demo": "badge badge-demo",
-  "Review aids only": "badge badge-muted",
+  "Live public CCLD": "ds-badge ds-badge--success",
+  "Fixture/mock demo": "ds-badge ds-badge--info",
+  "Review aids only": "ds-badge ds-badge--muted",
 }
 
 
@@ -98,7 +98,7 @@ def render_page_shell(
     main: str,
     skip_label: str,
     nav_label: str,
-    eyebrow: str | None = BOUNDARY_TEXT,
+    eyebrow: str | None = EYEBROW_TEXT,
     actor_label: str | None = None,
     extra_nav_links: Sequence[tuple[str, str]] = (),
     active_path: str | None = None,
@@ -117,7 +117,7 @@ def render_page_shell(
       else ""
     )
     eyebrow_markup = f'<p class="pilot-eyebrow">{html.escape(eyebrow)}</p>' if eyebrow else ""
-    badge_class = MODE_BADGE_CLASSES.get(runtime_mode, "badge badge-muted")
+    badge_class = MODE_BADGE_CLASSES.get(runtime_mode, "ds-badge ds-badge--muted")
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -128,9 +128,9 @@ def render_page_shell(
 {SHARED_CSS}
   </style>
 </head>
-<body>
+<body class="ds-page-bg">
   <a class="skip-link" href="#main-content">{html.escape(skip_label)}</a>
-  <header class="site-header">
+  <header class="site-header ds-surface">
     <div class="shell">
       <div class="site-title-row">
         <div class="brand-block">
@@ -150,7 +150,7 @@ def render_page_shell(
       </nav>
     </div>
   </header>
-  <main id="main-content" tabindex="-1">
+  <main id="main-content" class="ds-page-main" tabindex="-1">
     <div class="shell page-main">
 {stepper}
 {main}
@@ -284,33 +284,67 @@ def _runtime_mode_label() -> str:
 SHARED_CSS = r"""
     :root {
       color-scheme: light;
-      --bg: #F5F7FA;
-      --surface: #ffffff;
-      --surface-alt: #EEF7F6;
-      --surface-strong: #17212b;
-      --ink: #17212b;
-      --muted: #5B6775;
-      --muted-2: #6B7785;
-      --line: #D8E0E7;
-      --line-soft: #E6EBF0;
-      --accent: #006b5f;
-      --accent-strong: #00564D;
-      --accent-soft: #EEF7F6;
-      --blue: #2457a6;
-      --blue-soft: #e6eef9;
-      --amber: #8a5a00;
-      --amber-soft: #fff5db;
-      --rose: #9b2c3a;
-      --rose-soft: #fff0f2;
-      --warning-bg: #FFF7E0;
-      --warning-line: #D89B00;
+      --ds-page-bg: #F5F7FA;
+      --ds-surface: #ffffff;
+      --ds-surface-muted: #F8FAFB;
+      --ds-surface-info: #EAF2FB;
+      --ds-surface-success: #EAF7EF;
+      --ds-surface-attention: #FFF7E0;
+      --ds-text: #17212B;
+      --ds-text-muted: #5B6775;
+      --ds-text-subtle: #6B7785;
+      --ds-border: #D8E0E7;
+      --ds-border-soft: #E6EBF0;
+      --ds-primary: #006B5F;
+      --ds-primary-hover: #00564D;
+      --ds-primary-soft: #EEF7F6;
+      --ds-link: #2457A6;
+      --ds-link-hover: #173F78;
+      --ds-info: #2457A6;
+      --ds-info-soft: #E6EEF9;
+      --ds-attention: #8A5A00;
+      --ds-attention-soft: #FFF5DB;
+      --ds-danger: #9B2C3A;
+      --ds-danger-soft: #FFF0F2;
+      --ds-success: #2E7D4F;
+      --ds-focus: #2457A6;
+      --ds-radius-sm: 4px;
+      --ds-radius-md: 6px;
+      --ds-radius-lg: 8px;
+      --ds-shadow-card: 0 1px 2px rgb(23 33 43 / 6%), 0 10px 24px rgb(23 33 43 / 7%);
+      --ds-shadow-raised: 0 18px 42px rgb(23 33 43 / 12%);
+      --ds-space-1: 0.25rem;
+      --ds-space-2: 0.5rem;
+      --ds-space-3: 0.75rem;
+      --ds-space-4: 1rem;
+      --ds-space-5: 1.25rem;
+      --bg: var(--ds-page-bg);
+      --surface: var(--ds-surface);
+      --surface-alt: var(--ds-surface-info);
+      --surface-strong: var(--ds-text);
+      --ink: var(--ds-text);
+      --muted: var(--ds-text-muted);
+      --muted-2: var(--ds-text-subtle);
+      --line: var(--ds-border);
+      --line-soft: var(--ds-border-soft);
+      --accent: var(--ds-primary);
+      --accent-strong: var(--ds-primary-hover);
+      --accent-soft: var(--ds-primary-soft);
+      --blue: var(--ds-link);
+      --blue-soft: var(--ds-info-soft);
+      --amber: var(--ds-attention);
+      --amber-soft: var(--ds-attention-soft);
+      --rose: var(--ds-danger);
+      --rose-soft: var(--ds-danger-soft);
+      --status-attention-bg: var(--ds-surface-attention);
+      --status-attention-line: #D89B00;
       --danger-bg: #FFF0F0;
       --danger-line: #B42318;
-      --success-bg: #EAF7EF;
-      --success-line: #2E7D4F;
-      --focus: #2457a6;
-      --shadow: 0 1px 2px rgb(23 33 43 / 6%), 0 10px 24px rgb(23 33 43 / 7%);
-      --shadow-strong: 0 18px 42px rgb(23 33 43 / 12%);
+      --success-bg: var(--ds-surface-success);
+      --success-line: var(--ds-success);
+      --focus: var(--ds-focus);
+      --shadow: var(--ds-shadow-card);
+      --shadow-strong: var(--ds-shadow-raised);
     }
     * {
       box-sizing: border-box;
@@ -327,6 +361,123 @@ SHARED_CSS = r"""
       margin: 0 auto;
       max-width: 80rem;
       padding: 0 1.25rem;
+    }
+    .ds-page-bg {
+      background: var(--ds-page-bg);
+      color: var(--ds-text);
+    }
+    .ds-page-main {
+      display: block;
+    }
+    .ds-surface {
+      background: var(--ds-surface);
+      border-color: var(--ds-border-soft);
+    }
+    .ds-text-muted {
+      color: var(--ds-text-muted);
+    }
+    .ds-link {
+      color: var(--ds-link);
+      font-weight: 650;
+    }
+    .ds-link:hover {
+      color: var(--ds-link-hover);
+    }
+    .ds-card,
+    .ds-card--neutral,
+    .ds-card--info,
+    .ds-card--success {
+      border: 1px solid var(--ds-border-soft);
+      border-radius: var(--ds-radius-lg);
+      box-shadow: var(--ds-shadow-card);
+      padding: var(--ds-space-4);
+    }
+    .ds-card,
+    .ds-card--neutral {
+      background: var(--ds-surface);
+    }
+    .ds-card--info {
+      background: var(--ds-surface-info);
+      border-color: #B8CAE3;
+    }
+    .ds-card--success {
+      background: var(--ds-surface-success);
+      border-color: #94C3A9;
+    }
+    .ds-action-primary,
+    .ds-action-secondary {
+      border-radius: var(--ds-radius-md);
+      display: inline-block;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .ds-action-primary {
+      background: var(--ds-primary);
+      border: 1px solid var(--ds-primary-hover);
+      color: #fff;
+    }
+    .ds-action-secondary {
+      background: var(--ds-surface);
+      border: 1px solid var(--ds-border);
+      color: var(--ds-link);
+    }
+    .ds-badge,
+    .ds-chip {
+      border: 1px solid var(--ds-border);
+      border-radius: 999px;
+      display: inline-flex;
+      font-weight: 800;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    .ds-badge {
+      font-size: 0.88rem;
+      gap: 0.35rem;
+      padding: 0.35rem 0.65rem;
+    }
+    .ds-chip {
+      font-size: 0.82rem;
+      padding: 0.22rem 0.55rem;
+    }
+    .ds-badge--success,
+    .ds-chip--success {
+      background: var(--ds-surface-success);
+      border-color: #94C3A9;
+      color: #1E5D3B;
+    }
+    .ds-badge--info,
+    .ds-chip--info {
+      background: var(--ds-info-soft);
+      border-color: #83A2D3;
+      color: var(--ds-info);
+    }
+    .ds-badge--muted,
+    .ds-chip--muted {
+      background: #EEF1F3;
+      color: #495661;
+    }
+    .ds-badge--attention,
+    .ds-chip--attention {
+      background: var(--ds-attention-soft);
+      border-color: #D7A529;
+      color: var(--ds-attention);
+    }
+    .ds-badge--danger,
+    .ds-chip--danger {
+      background: var(--ds-danger-soft);
+      border-color: #D88992;
+      color: var(--ds-danger);
+    }
+    .ds-form-control {
+      border: 1px solid #9AA6AC;
+      border-radius: var(--ds-radius-md);
+      color: var(--ds-text);
+      font: inherit;
+      padding: 0.55rem 0.65rem;
+    }
+    .ds-table {
+      border-collapse: collapse;
+      width: 100%;
     }
     .site-header {
       background: rgba(255, 255, 255, 0.98);
@@ -371,12 +522,12 @@ SHARED_CSS = r"""
       margin-top: 0;
     }
     a {
-      color: var(--accent-strong);
+      color: var(--ds-link);
       font-weight: 650;
       text-underline-offset: 0.16em;
     }
     a:hover {
-      color: #083b36;
+      color: var(--ds-link-hover);
     }
     a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
     textarea:focus-visible, main:focus-visible, summary:focus-visible {
@@ -653,9 +804,9 @@ SHARED_CSS = r"""
       white-space: nowrap;
     }
     .badge-live {
-      background: #e6f6ef;
-      border-color: #4aa37f;
-      color: #0d5138;
+      background: var(--ds-surface-success);
+      border-color: #94C3A9;
+      color: #1E5D3B;
     }
     .badge-demo {
       background: var(--blue-soft);
@@ -666,7 +817,7 @@ SHARED_CSS = r"""
       background: #eef1f3;
       color: #495661;
     }
-    .badge-warning {
+    .badge-attention {
       background: var(--amber-soft);
       border-color: #d7a529;
       color: var(--amber);
@@ -717,9 +868,9 @@ SHARED_CSS = r"""
       gap: 1rem;
       justify-content: space-between;
     }
-    .boundary-note {
-      background: var(--surface-alt);
-      border-left: 4px solid var(--accent);
+    .support-note {
+      background: var(--ds-surface-info);
+      border-left: 4px solid var(--ds-info);
       color: var(--muted);
       margin-bottom: 0;
       max-width: 62rem;
@@ -761,7 +912,7 @@ SHARED_CSS = r"""
     }
     .review-chip {
       background: var(--amber-soft);
-      border: 1px solid var(--warning-line);
+      border: 1px solid var(--status-attention-line);
       border-radius: 999px;
       color: var(--amber);
       display: inline-flex;
@@ -782,7 +933,7 @@ SHARED_CSS = r"""
     .workflow-cards .action-card p:last-child {
       margin-bottom: 0;
     }
-    .action-card, .summary-card, .detail-card, .empty-state-card, .warning-card {
+    .action-card, .summary-card, .detail-card, .empty-state-card, .notice-card {
       background: var(--surface);
       border: 1px solid var(--line-soft);
       border-radius: 8px;
@@ -792,9 +943,9 @@ SHARED_CSS = r"""
     .action-card {
       min-height: 100%;
     }
-    .warning-card {
-      background: var(--warning-bg);
-      border-color: var(--warning-line);
+    .notice-card {
+      background: var(--ds-surface-info);
+      border-color: #B8CAE3;
     }
     .next-action-panel {
       background: var(--surface-alt);
@@ -945,7 +1096,7 @@ SHARED_CSS = r"""
       grid-template-columns: minmax(0, 0.9fr) minmax(20rem, 1.1fr);
     }
     .recovery-panel {
-      border-left: 5px solid var(--warning-line);
+      border-left: 5px solid var(--status-attention-line);
     }
     .source-separation-note {
       background: #f8fbfb;

@@ -114,13 +114,13 @@ def test_health_response_marks_scaffold_only() -> None:
     assert "source_data_loaded" in payload
 
 
-def test_app_shell_labels_placeholder_boundaries() -> None:
+def test_app_shell_labels_placeholder_scope() -> None:
     html = render_app_shell()
     normalized_html = " ".join(html.split())
     parser = parse_html_structure(html)
 
     assert "Skip to main CCLD review content" in html
-    assert '<main id="main-content" tabindex="-1">' in html
+    assert '<main id="main-content" class="ds-page-main" tabindex="-1">' in html
     assert "Attorney public-record review workspace." in html
     assert "CCLD RecordsTracker" in html
     assert parser.tags.count("h1") == 1
@@ -145,7 +145,6 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "Attorney-focused public CCLD complaint/facility record review" not in html
     assert "New to this tool?" not in html
     assert "See Help for the review workflow" not in html
-    assert "The public CCLD portal remains the source of record" not in html
     assert "Open review queue" in html
     assert "Feedback" in html
     assert "Developer/operator commands" not in html
@@ -156,7 +155,6 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert '<section class="action-card"' not in html
     assert "Commands</a>" not in html
     assert "Health check</a>" not in html
-    assert "Review boundary" not in html
     assert "No non-CCLD sources" not in normalized_html
     assert "Public records stay separate from saved notes/status" not in html
     assert "/reviewer" in html
@@ -168,7 +166,7 @@ def test_app_shell_labels_placeholder_boundaries() -> None:
     assert "Choose the complaint date range." not in html
 
 
-def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None:
+def test_polished_shared_layout_navigation_on_key_pages() -> None:
     auth_config = load_hosted_auth_runtime_config(
         environ={
             "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
@@ -198,7 +196,7 @@ def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None
         assert skip_text in html
         assert '<a class="skip-link" href="#main-content">' in html
         assert '<nav class="site-nav"' in html
-        assert '<main id="main-content" tabindex="-1">' in html
+        assert '<main id="main-content" class="ds-page-main" tabindex="-1">' in html
         assert 'class="shell page-main"' in html
         assert "CCLD RecordsTracker" in html
         if path != "/ccld/help":
@@ -223,8 +221,6 @@ def test_polished_shared_layout_navigation_and_boundaries_on_key_pages() -> None
         assert "Auth status</a>" not in html
         assert "Help" in html
         if path != "/ccld/help":
-            assert "The public CCLD portal remains the source of record" not in normalized_html
-            assert "This pilot does not prove source coverage" not in normalized_html
             assert "facility-wide conclusions, harm, abuse" not in normalized_html
             assert "neglect, liability, or rights-deprivation" not in normalized_html
         assert "button:focus-visible" in html
@@ -240,9 +236,7 @@ def test_representative_hosted_pages_do_not_render_shared_footer_disclaimer() ->
         }
     )
     removed_footer_phrases = (
-        "The public CCLD portal remains the source of record",
         "Public records stay separate from saved notes/status",
-        "This pilot does not prove source coverage",
         "facility-wide conclusions, harm, abuse",
         "neglect, liability, or rights-deprivation",
     )
@@ -265,8 +259,16 @@ def test_representative_hosted_pages_do_not_render_shared_footer_disclaimer() ->
 def test_final_product_shell_uses_compact_unboxed_workflow_design() -> None:
     html = render_app_shell()
 
-    assert "--bg: #F5F7FA" in html
-    assert "--line-soft: #E6EBF0" in html
+    assert "--ds-page-bg: #F5F7FA" in html
+    assert "--ds-surface: #ffffff" in html
+    assert "--ds-text: #17212B" in html
+    assert "--ds-primary: #006B5F" in html
+    assert "--ds-link: #2457A6" in html
+    assert ".ds-card--neutral" in html
+    assert ".ds-card--info" in html
+    assert ".ds-card--success" in html
+    assert ".ds-form-control" in html
+    assert ".ds-table" in html
     assert "section {" in html
     assert "box-shadow: var(--shadow);\n      margin: 0 0 1rem;\n      padding: 1rem;" not in html
     assert ".guided-stepper" in html
@@ -292,7 +294,7 @@ def test_decorative_kickers_are_muted_without_changing_interactive_accent_styles
         assert "pointer-events: none;" in selector_css
         assert "color: var(--accent-strong);" not in selector_css
 
-    assert "a {\n      color: var(--accent-strong);" in html
+    assert "a {\n      color: var(--ds-link);" in html
     nav_accent_css = (
         ".site-nav a:hover, .site-nav a.is-active {\n"
         "      background: var(--accent-soft);\n"
@@ -527,8 +529,8 @@ def test_facility_detail_route_displays_manifest_traceability_metadata() -> None
     assert "unknown/not implemented; not live data" in html
     assert "not imported data and not database-backed" in html
     assert "not assessed; no completeness conclusion" in html
-    assert "do not prove public-source completeness" in normalized_html
-    assert "legal, facility-wide, delay, harm, abuse, neglect, liability" in normalized_html
+    assert "Use the sample indicators to inspect fixture relationships" in normalized_html
+    assert "related sample source-record pages" in normalized_html
     assert "Related fixture/sample source-record context" in html
     assert "/source-records/sample-complaint-001" in html
     assert "SAMPLE-CC-001 for Synthetic Orchard Child Care" in normalized_html
@@ -548,7 +550,7 @@ def test_facility_detail_route_shows_unmapped_fixture_sample_coverage_state() ->
     assert "No related fixture/sample source-record context" in normalized_html
     assert "/source-records/sample-complaint-001" not in html
     assert "not a public-source completeness conclusion" not in normalized_html
-    assert "do not prove public-source completeness" in normalized_html
+    assert "Use the sample indicators to inspect fixture relationships" in normalized_html
 
 
 def test_unknown_facility_detail_returns_not_found() -> None:
@@ -575,7 +577,7 @@ def test_source_traceability_summary_uses_filtered_sample_records() -> None:
         "Connector name": 1,
         "Retrieved at": 1,
         "Report index": 1,
-        "Extraction warning": 1,
+        "Extraction note": 1,
         "Jurisdiction": 1,
         "Source family": 1,
     }
@@ -631,7 +633,7 @@ def test_source_record_detail_route_displays_traceability_fields() -> None:
     assert "Raw SHA-256" in html
     assert "Connector name" in html
     assert "Retrieved at" in html
-    assert "Extraction warning" in html
+    assert "Extraction note" in html
     assert "Sample-only value; not extracted from live public-source data." in html
     assert "Source-derived sample records and future reviewer-created state remain separate" in (
         normalized_html
@@ -719,7 +721,7 @@ def test_source_record_detail_has_accessible_semantic_structure() -> None:
         "Connector name",
         "Retrieved at",
         "Report index",
-        "Extraction warning",
+        "Extraction note",
     ]:
         assert label in parser.text_for("dt")
     assert "https://example.invalid/sample-ccld-source-document-001" in parser.text_for("dd")
@@ -797,7 +799,7 @@ def test_facility_detail_has_accessible_semantic_structure() -> None:
     assert "Fixture/sample status" in parser.text_for("th")
     assert "not represented in this fixture/sample mapping" in normalized_main
     assert "No related fixture/sample source-record context" in normalized_main
-    assert "do not prove public-source completeness" in normalized_main
+    assert "Use the sample indicators to inspect fixture relationships" in normalized_main
     for label in [
         "Facility name",
         "Facility number",
@@ -887,8 +889,8 @@ def test_complaint_retrieval_live_script_sets_live_public_config() -> None:
     assert 'CCLD_RETRIEVAL_DEMO_MODE = "mock-success"' not in script
     assert "Live public CCLD retrieval mode" in script
     assert "Public CCLD HTTP requests will be made only after" in script
-    assert "CCLD public portal remains the source of record" in script
-    assert "Absence of imported records is not proof" in script
+    assert "Open public CCLD pages from record detail when a source check is needed" in script
+    assert "When results look incomplete, check criteria, job details, and loaded data" in script
     assert "Open: $baseUrl/" in script
     assert "Open: $baseUrl/ccld/records/request" in script
     assert "Open: $baseUrl/ccld/retrieval/jobs" in script
@@ -997,7 +999,7 @@ def test_help_page_topics_toc_links_to_every_help_section_in_order() -> None:
 
     expected_topics = [
         ("workflow", "How to review a facility (workflow)"),
-        ("limitations", "Limitations: What the app does not prove"),
+        ("review-guidance", "Review guidance and next steps"),
         ("source-traceability", "How source traceability works"),
         ("live-retrieval", "Retrieval modes"),
         ("operator-setup", "Operator setup: enabling live retrieval"),
@@ -1184,7 +1186,7 @@ def test_tester_facing_pages_do_not_expose_developer_wording() -> None:
 
     # Positive check: tester-facing pages use review-aid language instead of developer jargon.
     retrieve_html = pages["retrieve"][2].decode("utf-8")
-    assert "Records are review aids. See Help for limitations." in retrieve_html
+    assert "See review guidance and next steps." in retrieve_html
     assert "Public records stay separate from saved notes/status." not in retrieve_html
     assert (
         "Source-derived records stay separate from reviewer-created notes/status"

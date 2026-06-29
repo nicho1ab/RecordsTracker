@@ -23,7 +23,7 @@ tester authentication is not implemented yet.
   users are invited.
 - Confirm that the pilot remains a public-interest hobby project, not a DSCC
   project.
-- Confirm that the current runtime has a production-mode auth boundary, but no
+- Confirm that the current runtime has production-mode auth readiness, but no
   real login, OIDC/OAuth2 callback handling, sessions, cookies, user tables, or
   invitation workflow.
 - Confirm that this guide does not implement identity provider integration,
@@ -44,7 +44,7 @@ Minimum role categories are the ADR-0011 and ADR-0014 categories:
   reviewer-created observations only when the approved access method and current
   implementation allow it.
 - Read-only tester: views assigned source-derived records, source traceability,
-  visible limitations, and safe review context only.
+  visible review guidance, and safe review context only.
 - Developer/operator: performs approved operational checks such as verifier,
   route evidence, seeded import evidence, troubleshooting, and backup readiness.
 - System/process identity: used only for approved automated or scripted work
@@ -86,7 +86,7 @@ If real external authentication is not ready, the decision record should say so
 plainly and should not substitute local-dev fixture auth, shared credentials, or
 manual route obscurity for production authentication.
 
-## 5. Current Auth Limitation
+## 5. Current Auth Readiness
 
 The current scaffold does not implement:
 
@@ -121,10 +121,9 @@ Before sending invitations, confirm the evidence packet contains:
   with persistent raw artifact storage.
 - PostgreSQL backup plan.
 - Raw artifact backup plan.
-- Known limitations acknowledged.
-- A statement that no public-source completeness, legal, facility-wide, harm,
-  abuse, neglect, liability, or rights-deprivation conclusions are made from the
-  pilot evidence.
+- Review guidance acknowledged.
+- A statement that source, legal, facility-wide, harm, abuse, neglect,
+  liability, and rights-deprivation conclusions use dedicated review paths.
 
 ## 7. Do-Not-Do List
 
@@ -137,5 +136,5 @@ Before sending invitations, confirm the evidence packet contains:
 - Do not give testers broad admin/operator access by default.
 - Do not treat tester feedback, review notes, route evidence, retrieval status,
   or seeded import evidence as official public-source facts.
-- Do not make public-source completeness, legal, facility-wide, harm, abuse,
-  neglect, liability, or rights-deprivation conclusions.
+- Route public-source completeness, legal, facility-wide, harm, abuse, neglect,
+  liability, and rights-deprivation conclusions through dedicated review paths.

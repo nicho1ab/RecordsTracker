@@ -29,9 +29,8 @@ active server.
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture
 ```
 
-Generated packets are ignored under `data/processed/ui-evidence/` and are local
-review evidence only, not audit exports, legal reports, source-completeness
-reports, or production monitoring artifacts.
+Generated packets are ignored under `data/processed/ui-evidence/` and capture
+local UI route, screenshot, text, and accessibility evidence for review.
 
 For changes to Docker runtime files, validate the static Docker/env tests and,
 when Docker is available, run a bounded Compose configuration check against the
@@ -43,7 +42,7 @@ The first production-like runtime target is QNAP Docker with PostgreSQL in
 Docker. The configuration remains portable and must not hard-code QNAP paths in
 application code.
 
-### QNAP operator command boundaries
+### QNAP Operator Command Scope
 
 Keep the QNAP workflow split across three lanes:
 
@@ -100,7 +99,7 @@ Use the full operator checklist in
 before inviting early testers.
 Use
 [docs/developer/qnap-pilot-auth-readiness.md](docs/developer/qnap-pilot-auth-readiness.md)
-to capture the current production-mode auth boundary, deferred login/OIDC work,
+to capture the current production-mode auth readiness, deferred login/OIDC work,
 and no-secret host-local provider settings before inviting testers.
 Use
 [docs/developer/qnap-pilot-access-method-decision.md](docs/developer/qnap-pilot-access-method-decision.md)
@@ -117,7 +116,7 @@ to capture proof that validated CCLD source-derived rows are imported into
 PostgreSQL before treating the pilot as tester-ready.
 Use the optional local evidence packet command only after the separate verifier,
 seeded evidence, route evidence, auth readiness, tester invitation, feedback,
-retrieval, backup, and known-limitation decisions are understood. It assembles a
+retrieval, backup, and review-guidance decisions are understood. It assembles a
 redacted Markdown packet under ignored `data/processed/qnap-pilot-evidence/` for
 operator review; generated packets must not be committed.
 
@@ -138,7 +137,7 @@ operator review; generated packets must not be committed.
 ```
 
 The pilot check validates the required untracked environment shape, PostgreSQL
-page-data mode, production auth boundary defaults, retrieval raw artifact path,
+page-data mode, production auth readiness defaults, retrieval raw artifact path,
 GitHub feedback configuration state, and Docker Compose configuration before
 containers are started. It warns about placeholder values that must be replaced
 before inviting testers.
@@ -204,7 +203,7 @@ sign-in-required states until production auth and imported data are configured.
 Optional local redacted evidence packet assembly:
 
 ```powershell
-.\scripts\build-qnap-pilot-evidence-packet.ps1 -EnvFile .env -BaseUrl http://<host-name-or-ip>:<CCLD_HOSTED_PORT> -KnownLimitationsAcknowledged
+.\scripts\build-qnap-pilot-evidence-packet.ps1 -EnvFile .env -BaseUrl http://<host-name-or-ip>:<CCLD_HOSTED_PORT> -ReviewGuidanceAcknowledged
 ```
 
 For placeholder/template validation without Docker/PostgreSQL checks or a
@@ -245,34 +244,34 @@ run, and logs/status output are secret-safe.
 
 During operation, treat job states such as queued, running, completed,
 completed_with_warnings, failed, blocked_by_validation, and rate_limited as
-workflow states only. They are not public-source completeness, legal, harm,
-abuse, neglect, liability, or facility-wide conclusions. For failed jobs, check
+workflow states only. Route public-source completeness, legal, harm, abuse,
+neglect, liability, and facility-wide conclusions through dedicated review paths. For failed jobs, check
 safe job status first, then operator logs. Do not expose raw stack traces,
 tokens, cookies, private headers, connection strings, provider claims, GitHub
 tokens, private URLs, or unnecessary narrative content in support notes.
 
 Use `/ccld/retrieval/jobs` for a small browser-visible history/status view over
 existing retrieval job metadata. It shows recent job request context, state,
-timestamps, imported-record counts, safe warnings/errors, status messages, and
-review links when records were imported. It is not an audit export, CSV export,
-scheduler, worker console, or source-completeness report. If the history page is
+timestamps, imported-record counts, safe notices/errors, status messages, and
+review links when records were imported. Use audit, CSV, scheduler, worker
+console, and source-review paths for those checks. If the history page is
 empty, confirm retrieval is configured and that jobs were submitted in the same
 authorized scope.
 
 Use `/ccld/retrieval/jobs/detail?job_id=<job-id>` from a history-row detail link
 when a tester or operator needs one-job context. The detail page repeats safe
 request context, state, created/updated/completed timing, imported counts,
-warnings/errors, raw-artifact-preserved status, and next-step links without
+notices/errors, raw-artifact-preserved status, and next-step links without
 showing raw artifact contents, raw server paths, stack traces, or private values.
 
 For local scaffold validation only, developers can set
 `CCLD_RETRIEVAL_DEMO_MODE=mock-success` together with explicit local-dev auth,
 `CCLD_RETRIEVAL_ENABLED=enabled`, and `CCLD_RETRIEVAL_RAW_DIR` to run a
 fixture-backed successful retrieval from the browser. This mode uses committed
-fixtures, does not make live CCLD calls, does not call GitHub, and must not be
-enabled in production or QNAP/pilot-like runtime. It proves the local-dev
-successful job/import/history/detail/queue path only; it does not prove public-
-source completeness.
+fixtures, skips live CCLD and GitHub calls, and must not be enabled in production
+or QNAP/pilot-like runtime. Use it for the local-dev successful
+job/import/history/detail/queue path only, with source-completeness review routed
+through dedicated source-review paths.
 
 Backups for retrieval-enabled deployments must cover both PostgreSQL and raw
 source artifacts. A database backup alone is not enough when source-derived rows

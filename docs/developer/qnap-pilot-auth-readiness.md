@@ -1,7 +1,7 @@
 # QNAP Pilot Auth Readiness
 
 Use this guide before inviting early ylc.org testers to a QNAP-hosted pilot. It
-explains the current hosted auth boundary, what is intentionally not implemented
+explains the current hosted auth readiness path, what is intentionally not implemented
 yet, which host-local settings must stay safe, and what auth evidence operators
 should capture.
 
@@ -12,7 +12,7 @@ This guide complements the [QNAP pilot operator checklist](qnap-pilot-operator-c
 [QNAP pilot tester invitation decision](qnap-pilot-tester-invitation-decision.md),
 ADR-0011, and ADR-0014.
 
-## 1. Current Auth Boundary
+## 1. Current Auth Readiness
 
 - QNAP pilot mode should use `CCLD_HOSTED_TESTER_AUTH_MODE=production`.
 - QNAP pilot mode should keep `CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH=disabled`.
@@ -40,7 +40,7 @@ ADR-0011, and ADR-0014.
 - No production password login.
 - No managed identity or provider token exchange.
 - No tester invitation workflow.
-- No production auth middleware beyond the current runtime boundary and existing
+- No production auth middleware beyond the current runtime path and existing
   local/test role/scope guard helpers.
 
 Do not invite real testers until there is a deliberate access-control decision
@@ -59,7 +59,7 @@ limited, reviewed, and revoked. Record that decision in
 - `.env.example` should contain blanks or neutral placeholders only.
 - QNAP verifier remains the main local readiness check for auth mode and local-
   dev auth configuration.
-- Treat placeholder warnings as readiness prompts, not permission to commit real
+- Treat placeholder notices as readiness prompts, not permission to commit real
   values.
 
 ## 4. Evidence Before Inviting Testers
@@ -82,10 +82,11 @@ Capture a small auth readiness packet:
   authenticated actor, while unconfigured feedback does not call GitHub.
 - Decision record that real OIDC/login remains deferred or planned, including
   who owns the next access-control decision.
+- Review guidance acknowledgement.
 - Access-method decision record showing the temporary access method, scope,
   expiration, revocation method, and that it is not production auth unless real
   OIDC/session implementation exists.
-- Known limitation acknowledgement that the scaffold does not implement real
+- Review guidance acknowledgement that the scaffold does not implement real
   login, sessions, cookies, token validation, user tables, self-service signup,
   or tester invitations.
 

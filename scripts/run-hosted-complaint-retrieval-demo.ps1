@@ -5,7 +5,7 @@ Runs the local hosted complaint retrieval demo.
 Starts the Python standard-library hosted scaffold with explicit local-dev auth,
 fixture/demo page data, controlled retrieval enabled, fixture-backed mock-success
 retrieval, and ignored local raw source storage. This command is for local demo
-validation only and does not prove CCLD public-source completeness.
+validation with committed fixtures.
 .PARAMETER HostName
 Local bind host. Defaults to 127.0.0.1.
 .PARAMETER Port
@@ -50,7 +50,6 @@ Write-Host "Open: $baseUrl/reviewer"
 Write-Host "Open: $baseUrl/ccld/help"
 Write-Host "Open: $baseUrl/feedback"
 Write-Host "Fixture/mock demo mode uses committed fixtures and does not make live CCLD calls."
-Write-Host "CCLD public portal remains the source of record for real public records."
 Write-Host "Server-side demo raw source storage is configured under an ignored local data/raw path."
 
 & $python -m ccld_complaints.hosted_app --host $HostName --port $Port

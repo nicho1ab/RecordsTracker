@@ -30,8 +30,8 @@ Operator decision for tester invitation/access control. Keep it short and non-se
 Operator PostgreSQL backup plan summary. Do not include host paths or private URLs.
 .PARAMETER RawArtifactBackupPlan
 Operator raw artifact backup plan summary. Do not include host paths or private URLs.
-.PARAMETER KnownLimitationsAcknowledged
-Record that known limitations were reviewed and acknowledged by the operator.
+.PARAMETER ReviewGuidanceAcknowledged
+Record that pilot review guidance was reviewed and acknowledged by the operator.
 .EXAMPLE
 .\scripts\build-qnap-pilot-evidence-packet.ps1 -EnvFile .env
 .EXAMPLE
@@ -51,7 +51,7 @@ param(
     [string]$TesterInvitationDecision = "not recorded",
     [string]$PostgresBackupPlan = "not recorded",
     [string]$RawArtifactBackupPlan = "not recorded",
-    [switch]$KnownLimitationsAcknowledged
+    [switch]$ReviewGuidanceAcknowledged
 )
 
 $ErrorActionPreference = "Stop"
@@ -257,7 +257,7 @@ $verifierResult = Invoke-PacketCommand -Label "QNAP Verifier Summary" -ScriptPat
 $seededResult = Invoke-PacketCommand -Label "Seeded Import Evidence Summary" -ScriptPath $seededEvidenceScript -CommandArguments $seededArgs
 $routeResult = Invoke-PacketCommand -Label "Route Evidence Summary" -ScriptPath $routeEvidenceScript -CommandArguments $routeArgs
 
-$knownLimitationsValue = if ($KnownLimitationsAcknowledged) { "acknowledged" } else { "not recorded" }
+$reviewGuidanceValue = if ($ReviewGuidanceAcknowledged) { "acknowledged" } else { "not recorded" }
 $decisionSections = @"
 ## Operator Decisions
 
@@ -267,7 +267,7 @@ $decisionSections = @"
 - Retrieval configuration decision: $(Redact-EvidenceText -Text $RetrievalDecision)
 - PostgreSQL backup plan: $(Redact-EvidenceText -Text $PostgresBackupPlan)
 - Raw artifact backup plan: $(Redact-EvidenceText -Text $RawArtifactBackupPlan)
-- Known limitations acknowledgement: $knownLimitationsValue
+- Review guidance acknowledgement: $reviewGuidanceValue
 
 ## Deferred Items
 
@@ -286,13 +286,12 @@ $decisionSections = @"
 - Raw artifact viewer.
 - Broader UI redesign.
 
-## Conclusion Boundary
+## Review Context
 
-This packet is local operator readiness evidence only. It is not an audit export,
-legal report, product export packet, public report, official certification, or
-public-source completeness proof. It makes no public-source completeness,
-public-source absence, legal, facility-wide, harm, abuse, neglect, liability, or
-rights-deprivation conclusions.
+This packet is local operator readiness evidence for verifier output, seeded
+import evidence, route evidence, and operator decisions. Route public-source
+completeness, public-source absence, legal, facility-wide, harm, abuse, neglect,
+liability, and rights-deprivation conclusions through dedicated review paths.
 "@
 
 $packet = @"

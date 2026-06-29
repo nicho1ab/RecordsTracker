@@ -663,8 +663,7 @@ def _candidate_matches_request_date(
 
     CCLD complaint investigation visits occur weeks to months after the complaint is received.
     A candidate whose facility-detail link date (the visit date) falls outside the user's
-    complaint-received-date range does not prove that the report has no matching complaints.
-    To avoid silently dropping relevant reports:
+    complaint-received-date range can still be relevant. To avoid silently dropping reports:
     - Include candidates with no discovered date (unknown dates → let post-fetch filter decide).
     - Extend the upper bound by 365 days to capture investigation visits for complaints received
       during the requested range.  The lower bound is not expanded backwards because investigation
