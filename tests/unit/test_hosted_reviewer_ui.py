@@ -1087,6 +1087,22 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert html.index("Original source") < html.index("Record summary")
     assert html.index("Notes/status history") < html.index("Optional note/status")
     assert "screening aids, not legal conclusions" in normalized_html
+    assert (
+        '<span class="review-chip">Possible delay indicator: over 120 days</span>'
+        in html
+    )
+    assert (
+        '<span class="review-chip badge-danger">'
+        "Needs source check: first activity date missing locally</span>"
+        in html
+    )
+    assert '<span class="review-chip source-chip">Original CCLD source link saved</span>' in html
+    assert html.index("Possible delay indicator: over 120 days") < html.index(
+        "Needs source check: first activity date missing locally"
+    )
+    assert html.index("Needs source check: first activity date missing locally") < html.index(
+        "Original CCLD source link saved"
+    )
     assert "Needs source check: first activity date missing locally" in html
     assert "Original CCLD source link saved" in html
     assert "Key dates and finding" in html
