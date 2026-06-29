@@ -135,6 +135,32 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert "Original CCLD source link saved" in html
     assert "Open record" in html
     assert "No reviewer-created status recorded yet" in html
+    summary_metric_indexes = [
+        html.index(label)
+        for label in (
+            "Complaint records visible",
+            "Records with review flags",
+            "Original source links saved",
+            "Reviewer-created notes/statuses",
+        )
+    ]
+    suggested_record_index = html.index("Suggested first record for review")
+    review_flag_metric_indexes = [
+        html.index(label)
+        for label in (
+            "Possible delay indicators",
+            "Over 30 days",
+            "Over 60 days",
+            "Over 90 days",
+            "Over 120 days",
+            "Missing first activity date",
+            "Needs source check",
+        )
+    ]
+    findings_index = html.index("Findings represented")
+    assert max(summary_metric_indexes) < suggested_record_index
+    assert suggested_record_index < min(review_flag_metric_indexes)
+    assert max(review_flag_metric_indexes) < findings_index
     assert "Reviewer-created notes/statuses" in html
     assert "Original CCLD source link saved" in html
     assert "Reviewer status" in html

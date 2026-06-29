@@ -110,19 +110,6 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
       <div class="metric-strip" aria-label="Facility review summary">
 {metric_cards}
       </div>
-      <section class="quiet-section" aria-labelledby="case-brief-flags-heading">
-        <h3 id="case-brief-flags-heading">Review flags</h3>
-        <div class="metric-strip" aria-label="Review flag summary">
-{flag_cards}
-        </div>
-      </section>
-      <section class="quiet-section" aria-labelledby="case-brief-findings-heading">
-        <h3 id="case-brief-findings-heading">Findings represented</h3>
-        <ul class="flag-list" aria-label="Source-derived findings represented">
-{finding_items}
-        </ul>
-        <p class="helper-text">Findings are source-derived categories, not legal conclusions.</p>
-      </section>
       <section class="summary-card" aria-labelledby="priority-record-heading">
         <h3 id="priority-record-heading">Suggested first record for review</h3>
         <p><strong>{_escape(priority_label)}</strong></p>
@@ -136,6 +123,19 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
 {packet_preview_action}
     {packet_draft_action}
         </div>
+      </section>
+      <section class="quiet-section" aria-labelledby="case-brief-flags-heading">
+        <h3 id="case-brief-flags-heading">Review flags</h3>
+        <div class="metric-strip" aria-label="Review flag summary">
+{flag_cards}
+        </div>
+      </section>
+      <section class="quiet-section" aria-labelledby="case-brief-findings-heading">
+        <h3 id="case-brief-findings-heading">Findings represented</h3>
+        <ul class="flag-list" aria-label="Source-derived findings represented">
+{finding_items}
+        </ul>
+        <p class="helper-text">Findings are source-derived categories, not legal conclusions.</p>
       </section>
       <p class="helper-text">Use this summary to decide what to review first. Review flags are screening aids, not legal conclusions.</p>
     </section>"""
