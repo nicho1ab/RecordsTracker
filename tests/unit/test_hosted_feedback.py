@@ -85,10 +85,18 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
         '<section class="warning-card" aria-labelledby="feedback-safety-heading">'
         in html
     )
+    assert (
+        '<p id="feedback-type-help" class="helper-text">Choose the category that best fits '
+        "the route or action that was confusing.</p>"
+    ) in html
     assert_ordered(
         html,
         (
             '<label for="feedback_type">Feedback type</label>',
+            '<select id="feedback_type" name="feedback_type" required '
+            'aria-describedby="feedback-type-help">',
+            '<p id="feedback-type-help" class="helper-text">Choose the category that best fits '
+            "the route or action that was confusing.</p>",
             '<h3 id="feedback-safety-heading">Do not include private material</h3>',
             '<label for="description">Description</label>',
             '<button type="submit">Submit feedback</button>',
