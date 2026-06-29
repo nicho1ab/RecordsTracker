@@ -1543,6 +1543,14 @@ def _render_facility_review_signals_section(
                 cues = "        <li>No supported uploaded public summary review cue is present for this facility.</li>"
         return f"""    <section aria-labelledby="facility-review-signals-heading">
             <h2 id="facility-review-signals-heading">Facility review signals</h2>
+            <div class="dense-fact-row" aria-label="Facility signal highlights">
+                <div class="stat-card"><strong>{summary.complaint_visit_count}</strong><span>Complaint visits</span></div>
+                <div class="stat-card"><strong>{summary.citation_count}</strong><span>Citation values</span></div>
+                <div class="stat-card"><strong>{summary.poc_date_count}</strong><span>POC dates</span></div>
+                <div class="stat-card"><strong>{_escape(_display_value(summary.last_visit_date))}</strong><span>Last visit date</span></div>
+            </div>
+            <details class="technical-details dense-table-details">
+                <summary>Uploaded summary field details</summary>
             <dl class="summary-list">
                 <dt>Source dataset label</dt>
                 <dd>{_render_source_dataset_labels(summary.source_dataset_labels)}</dd>
@@ -1567,6 +1575,7 @@ def _render_facility_review_signals_section(
                 <dt>POC date indicators in uploaded summary</dt>
                 <dd>{summary.poc_date_count}</dd>
             </dl>
+            </details>
             <section aria-labelledby="facility-review-cues-heading">
                 <h3 id="facility-review-cues-heading">What to review next</h3>
                 <ul>
@@ -1574,7 +1583,7 @@ def _render_facility_review_signals_section(
                 </ul>
                 <p>Use these cues to decide whether to start a complaint request, review loaded records where available, or return to facility lookup. Review source traceability before relying on summary fields.</p>
             </section>
-            <details class="technical-details">
+            <details class="technical-details diagnostic-details">
                 <summary>How to use these signals</summary>
                 <p>These facility review signals come from uploaded public summary fields in supported public licensing/visit/citation summary CSVs; complaint records are requested/reviewed separately.</p>
                 <p>Use signals to choose the next review route, then check source traceability before relying on summary fields.</p>
@@ -1686,7 +1695,13 @@ def _render_priority_summary(
     if not cue_rows:
         cue_rows = "        <dt>Review cue groups</dt><dd>No uploaded summary review cues available</dd>"
     return f"""    <section aria-labelledby="facility-priority-summary-heading">
-      <h2 id="facility-priority-summary-heading">Priority list summary</h2>
+      <div class="dense-section-header">
+        <div>
+          <p class="stage-kicker">Facility review priority</p>
+          <h2 id="facility-priority-summary-heading">Priority list summary</h2>
+        </div>
+        <p class="helper-text">Use the cue counts to pick a facility hub, then request complaint records for the intended date range.</p>
+      </div>
       <dl class="summary-list">
         <dt>Facilities with supported uploaded summary signals</dt>
         <dd>{len(signal_result.summaries)}</dd>

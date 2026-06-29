@@ -1096,6 +1096,10 @@ def test_ccld_facility_review_hub_renders_uploaded_public_summary_signals(
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Facility review signals" in html
+    assert "Facility signal highlights" in html
+    assert "Uploaded summary field details" in html
+    assert 'class="technical-details dense-table-details"' in html
+    assert 'class="technical-details diagnostic-details"' in html
     _assert_collapsed_disclosure(
         html,
         "How to use these signals",
@@ -1294,6 +1298,7 @@ def test_ccld_facility_review_priority_page_orders_filters_and_links_to_hubs(
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Multiple signal types present review cue" in html
+    assert '<div class="dense-section-header">' in html
     assert "Complaint visit activity present review cue" in html
     assert "Citation indicator present review cue" in html
     assert "POC indicator present review cue" in html
