@@ -111,6 +111,30 @@ def _text_for_id(html: str, element_id: str) -> str:
     return parser.text
 
 
+class ElementTextByTagParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.tags: list[str] = []
+        self._capture_stack: list[str] = []
+        self._text_by_tag: dict[str, list[str]] = {}
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.tags.append(tag)
+        self._capture_stack.append(tag)
+        self._text_by_tag.setdefault(tag, [])
+
+    def handle_endtag(self, tag: str) -> None:
+        if self._capture_stack and self._capture_stack[-1] == tag:
+            self._capture_stack.pop()
+
+    def handle_data(self, data: str) -> None:
+        for tag in self._capture_stack:
+            self._text_by_tag.setdefault(tag, []).append(data)
+
+    def text_for(self, tag: str) -> str:
+        return " ".join("".join(self._text_by_tag.get(tag, [])).split())
+
+
 def _assert_collapsed_disclosure(html: str, label: str) -> None:
     summary = f"<summary>{label}</summary>"
     summary_index = html.index(summary)
@@ -1022,10 +1046,15 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
 
     html = body.decode("utf-8")
     normalized_html = " ".join(html.split())
+    parser = ElementTextByTagParser()
+    parser.feed(html)
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "32-CR-20220407124448" in html
+    assert parser.tags.count("h1") == 1
+    assert parser.text_for("h1") == "A. MIRIAM JAMISON CHILDREN'S CENTER"
+    assert "32-CR-20220407124448" not in parser.text_for("h1")
+    assert "Complaint: 32-CR-20220407124448" in parser.text_for("main")
     assert "Complaint overview" in html
     assert "Check this complaint, then return to the queue" in html
     assert "Recommended action" in html

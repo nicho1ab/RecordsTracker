@@ -3356,10 +3356,11 @@ def _render_detail(
     original_values = _mapping(source_record, "original_values")
     import_batch = _mapping(source_record, "import_batch")
     source_record_key = _string(identity, "source_record_key")
-    complaint_heading = _detail_heading(original_values)
+    complaint_heading = _detail_heading(original_values, related_records)
+    complaint_label = _detail_complaint_label(original_values)
     return _page(
-                title=complaint_heading,
-                heading=complaint_heading,
+        title=complaint_heading,
+        heading=complaint_heading,
         actor_label=actor_label,
         main=f"""
     {_render_notice(saved_action, saved_value, source_record_key, related_records, return_context)}
@@ -3367,6 +3368,7 @@ def _render_detail(
                 <section class="hero-card" aria-labelledby="detail-hero-heading">
                     <p class="launch-kicker">Complaint review workspace</p>
                     <h2 id="detail-hero-heading">Complaint overview</h2>
+                    <p class="muted">{_escape(complaint_label)}</p>
                     <p>{_escape(_detail_summary_sentence(source_record, related_records))}</p>
                     <p><span class="badge badge-muted">Finding: {_escape(_optional_string(original_values, 'finding'))}</span></p>
                     {_render_review_flag_chips(original_values, source_document)}
@@ -3444,11 +3446,25 @@ def _render_detail(
     )
 
 
-def _detail_heading(original_values: Mapping[str, Any]) -> str:
+def _detail_heading(
+    original_values: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> str:
+    facility_name = _optional_string(original_values, "facility_name")
+    if facility_name != "unknown":
+        return facility_name
+    facility = _facility_context(related_records)
+    facility_name = _facility_context_value(facility, "facility_name")
+    if facility_name != "unknown":
+        return facility_name
+    return "Complaint record detail"
+
+
+def _detail_complaint_label(original_values: Mapping[str, Any]) -> str:
     complaint_control_number = _optional_string(original_values, "complaint_control_number")
     if complaint_control_number != "unknown":
-        return complaint_control_number
-    return "Complaint record detail"
+        return f"Complaint: {complaint_control_number}"
+    return "Complaint: unknown"
 
 
 def _detail_summary_sentence(
