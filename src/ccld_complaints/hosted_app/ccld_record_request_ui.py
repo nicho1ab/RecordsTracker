@@ -142,6 +142,21 @@ _SECRET_HTML_MARKERS = (
     "secret",
     "token",
 )
+_HELP_TOPICS: tuple[tuple[str, str], ...] = (
+    ("workflow", "How to review a facility (workflow)"),
+    ("limitations", "Limitations: What the app does not prove"),
+    ("source-traceability", "How source traceability works"),
+    ("live-retrieval", "Retrieval modes"),
+    ("operator-setup", "Operator setup: enabling live retrieval"),
+    ("tool-purpose", "What this tool helps you do"),
+    ("review-flags", "What review flags mean"),
+    ("source-confidence", "What to do with source-confidence cues"),
+    ("reviewer-created-notes-status", "How reviewer-created notes/status work"),
+    ("reviewer-status-filters", "How reviewer-created status filters work"),
+    ("correction-readiness", "How correction-readiness works"),
+    ("feedback", "How to send useful feedback"),
+    ("packet-preparation", "How packet preparation fits in"),
+)
 
 
 @dataclass(frozen=True)
@@ -776,8 +791,8 @@ def _render_help_page() -> str:
                             <h2 id="help-purpose-heading">Use RecordsTracker for facility complaint review</h2>
                             <p>Learn how to retrieve complaint records, review source-derived values, and add reviewer-created notes/status safely.</p>
                 </section>
-                <section class="help-details" aria-labelledby="help-topics-heading">
-                    <h2 id="help-topics-heading">Help topics</h2>
+                {_render_help_topics_toc()}
+                <section class="help-details" aria-label="Help topic details">
                     <details open id="workflow">
                         <summary id="help-how-heading">How to review a facility (workflow)</summary>
                         <p>Facility lookup or manual entry fills a CCLD facility/license number. The
@@ -853,18 +868,18 @@ def _render_help_page() -> str:
                         </ul>
                         <p>No connector credentials or server-side private values are shown to the browser.</p>
                     </details>
-                    <details>
+                    <details id="tool-purpose">
                         <summary id="help-purpose-topic-heading">What this tool helps you do</summary>
                         <p>Use RecordsTracker to select a facility, retrieve public CCLD complaint records,
                         review key source-derived values, and identify records that need source-traceable
                         attorney review.</p>
                     </details>
-                    <details>
+                    <details id="review-flags">
                         <summary id="help-flags-heading">What review flags mean</summary>
                         <p>Review flags are source-derived screening aids. They
                         identify records needing attorney review; they are not legal conclusions.</p>
                     </details>
-                    <details>
+                    <details id="source-confidence">
                         <summary id="help-source-confidence-heading">What to do with source-confidence cues</summary>
                         <p>Source-confidence cues are review prompts for values that are
                         present, not available locally, confusing, or proxy-related. They are not
@@ -876,12 +891,12 @@ def _render_help_page() -> str:
                         confusing. Then return to the same queue and continue with the suggested next
                         record.</p>
                     </details>
-                    <details>
+                    <details id="reviewer-created-notes-status">
                         <summary id="help-separation-heading">How reviewer-created notes/status work</summary>
                         <p>Imported public-source-derived values remain source-derived records. Notes and
                         status are reviewer-created state and do not edit source-derived fields.</p>
                     </details>
-                    <details>
+                    <details id="reviewer-status-filters">
                         <summary id="help-status-filter-heading">How reviewer-created status filters work</summary>
                         <p>The CCLD review queue can show an active reviewer-created status filter,
                         records shown under that filter, total records in the same facility/date
@@ -892,7 +907,7 @@ def _render_help_page() -> str:
                         hiding records; use the show-all recovery action before treating the queue as
                         complete.</p>
                     </details>
-                    <details>
+                    <details id="correction-readiness">
                         <summary id="help-correction-readiness-heading">How correction-readiness works</summary>
                         <p>Correction-readiness means a tester has noticed that a source-derived value
                         may need correction review later. Check source traceability first, then capture
@@ -911,7 +926,7 @@ def _render_help_page() -> str:
                         private URLs, private values, or unrelated sensitive details.</p>
                         <p><a href="{_FEEDBACK_PATH}">Open the feedback page</a></p>
                     </details>
-                    <details>
+                    <details id="packet-preparation">
                         <summary id="help-packet-heading">How packet preparation fits in</summary>
                         <p>Packet preview and packet draft summarize loaded source-derived complaint records,
                         source traceability cues, reviewer-created status/note cues, and review-readiness
@@ -932,6 +947,19 @@ def _render_help_page() -> str:
                         <p><a href="{CCLD_RETRIEVAL_JOBS_PATH}">View retrieval jobs</a></p>
                 </section>""",
         )
+
+
+def _render_help_topics_toc() -> str:
+    links = "\n".join(
+        f'                        <li><a href="#{_escape(topic_id)}">{_escape(label)}</a></li>'
+        for topic_id, label in _HELP_TOPICS
+    )
+    return f"""                <nav class="summary-card" aria-labelledby="help-topics-heading">
+                    <h2 id="help-topics-heading">Help topics</h2>
+                    <ol>
+{links}
+                    </ol>
+                </nav>"""
 
 
 def _render_workflow_overview() -> str:
