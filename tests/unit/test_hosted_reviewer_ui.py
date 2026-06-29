@@ -348,6 +348,8 @@ def test_reviewer_ui_substantiated_triage_lists_cross_facility_matches() -> None
         "reset_reload_planning_metadata": 0,
     }
     assert "Cross-facility substantiated complaint triage" in html
+    assert '<details class="technical-details warning-card">' in html
+    assert '<details class="technical-details">' not in html
     _assert_collapsed_disclosure(
         html,
         "About this triage view and its limitations",
@@ -361,6 +363,16 @@ def test_reviewer_ui_substantiated_triage_lists_cross_facility_matches() -> None
     assert "Report date: 2022-06-14" in html
     assert "finding: Substantiated" in html
     assert "status: Founded" in html
+    assert "This is a review triage aid." in html
+    assert (
+        "Source-derived finding/resolution/status values are not independently "
+        "verified by RecordsTracker."
+    ) in html
+    assert "This view is based only on currently loaded records." in html
+    assert (
+        "Empty state means no currently loaded records matched, not that no "
+        "substantiated reports exist in the public source."
+    ) in html
     assert f"source_record_key={quote(COMPLAINT_KEY)}" in html
     assert f"source_record_key={quote(second_key)}" in html
     assert "Open source report" in html
