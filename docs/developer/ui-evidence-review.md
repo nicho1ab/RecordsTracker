@@ -4,13 +4,13 @@
 
 The hosted CCLD RecordsTracker UI changes quickly. Evidence packets give reviewers a repeatable way to inspect the same route set without relying on ad hoc screenshots, stale ports, or manually copied browser state.
 
-Use an evidence packet after each hosted UI branch and before asking another reviewer or ChatGPT to evaluate the UI. The packet is a local review artifact only. It is not an audit export, legal report, source-completeness report, production monitoring artifact, product export, or proof of public-source coverage.
+Use an evidence packet after each hosted UI branch and before asking another reviewer or ChatGPT to evaluate the UI. The packet captures local UI route, screenshot, text, and accessibility evidence for review.
 
 ## What The Packet Captures
 
 The capture command performs GET-only requests against an already-running local hosted app URL. It writes a timestamped folder under ignored `data/processed/ui-evidence/` with:
 
-- `manifest.json` with mode, base URL, viewport, route status, discovered detail links, git state, screenshot status, warnings, and the local-review boundary statement.
+- `manifest.json` with mode, base URL, viewport, route status, discovered detail links, git state, screenshot status, diagnostic notices, and evidence purpose.
 - `route-status.csv` with route status, title, first H1, and generated file paths.
 - `route-assertions.csv` with pass/warn/fail checks for common UI review problems.
 - `route-text-markers.txt` with titles, headings, buttons, and disclosure summaries.
@@ -127,13 +127,14 @@ Generated evidence is ignored locally and should be reviewed before sharing. Do 
 The capture command creates a sibling ZIP for every successful run and prints
 both paths. When the hosted tester-readiness verifier is run with
 `-IncludeCapture`, it also packages the generated timestamped evidence folder
-into a sibling ZIP and prints both paths. The ZIP is a local review artifact
-only. It is not a product packet, not an audit export, not a legal report, not a final export, not a certified report, not production monitoring, and not a source-completeness proof. After the packet is reviewed for private values, the
-ZIP can be uploaded to ChatGPT or shared as a convenience copy of the same local
-review artifact. Do not commit generated evidence folders or ZIP packets unless
-a specific repository workflow explicitly says to do so.
+into a sibling ZIP and prints both paths. The ZIP is a local UI review artifact
+for route, screenshot, text, and accessibility review. After the packet is
+reviewed for private values, the ZIP can be uploaded to ChatGPT or shared as a
+convenience copy of the same local review artifact. Do not commit generated
+evidence folders or ZIP packets unless a specific repository workflow explicitly
+says to do so.
 
-## What It Does Not Prove
+## Review Scope
 
 The evidence packet is a lightweight UI review aid. It does not replace:
 
@@ -157,4 +158,4 @@ Evidence captures include explicit route labels for packet preview and draft var
 - `packet-draft-empty`: A draft route capture made without facility/date query context. The UI must present explicit guidance and must not show "Date range: not provided".
 - `packet-draft-context`: A draft route capture made with facility/date query context. Drafts intentionally hide the workflow rail for print/copy; evidence assertions should mark the draft workflow-step check as `PASS` with a message describing the intentional skip.
 
-These route captures are route-level evidence only; they do not prove source completeness, successful background retrievals, or export persistence. When reviewing packets, treat context routes as indicators of UI behavior and not as evidence of backend retrieval success.
+These route captures are route-level UI evidence for reviewing screen content, route behavior, and packet-preparation context. Review backend retrieval status and export persistence through the dedicated job, database, and operator evidence paths.

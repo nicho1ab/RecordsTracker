@@ -135,7 +135,7 @@ def test_env_example_uses_placeholders_only() -> None:
         "QNAP pilot environment template",
         "Required: PostgreSQL container and app port",
         "Required for QNAP pilot: PostgreSQL-backed hosted pages",
-        "Required for QNAP pilot: production auth boundary defaults",
+        "Required for QNAP pilot: production auth readiness defaults",
         "Optional server-side GitHub Issues feedback intake",
         "Optional controlled server-side CCLD retrieval jobs",
         "Local-dev scaffold validation only",
@@ -149,7 +149,7 @@ def test_env_example_uses_placeholders_only() -> None:
     assert "OneDrive" not in env_text
 
 
-def test_qnap_verifier_passes_env_example_with_placeholder_warnings() -> None:
+def test_qnap_verifier_passes_env_example_with_placeholder_notices() -> None:
     result = run_verifier("-EnvFile", ".env.example")
 
     assert result.returncode == 0
@@ -366,8 +366,8 @@ def test_qnap_seeded_import_evidence_script_checks_safe_read_only_summary() -> N
 
     for required_text in (
         "does not mutate data, run imports, run retrieval, call live CCLD, or call GitHub",
-        "no public-source completeness, legal, facility-wide, harm, abuse, neglect, "
-        "or liability conclusion",
+        "Review context: use dedicated source, legal, facility-wide, harm, abuse, "
+        "neglect, and liability review paths",
     ):
         assert required_text in normalized_script
 
@@ -476,8 +476,8 @@ def test_qnap_route_evidence_script_checks_safe_get_only_routes() -> None:
         "Raw artifact contents printed: no",
         "Raw server-specific paths printed: no",
         "Secrets printed: no",
-        "no public-source completeness, legal, facility-wide, harm, abuse, neglect, "
-        "or liability conclusion",
+        "Review context: use dedicated source, legal, facility-wide, harm, abuse, "
+        "neglect, and liability review paths",
         "provider_subject",
         "provider_issuer",
         "client_secret",
@@ -593,7 +593,7 @@ def test_qnap_evidence_packet_script_parses_and_declares_safe_contract() -> None
         "TesterInvitationDecision",
         "PostgresBackupPlan",
         "RawArtifactBackupPlan",
-        "KnownLimitationsAcknowledged",
+        "ReviewGuidanceAcknowledged",
         "verify-qnap-pilot-workflow.ps1",
         "summarize-qnap-pilot-seeded-import-evidence.ps1",
         "summarize-qnap-pilot-route-evidence.ps1",
@@ -603,16 +603,16 @@ def test_qnap_evidence_packet_script_parses_and_declares_safe_contract() -> None
         "Set-Content -LiteralPath $outputFile -Value $packet -Encoding UTF8",
         "qnap-pilot-evidence-packet-$timestamp.md",
         "Template validation only",
-        "Known limitations acknowledgement",
-        "This packet is local operator readiness evidence only",
+        "Review guidance acknowledgement",
+        "This packet is local operator readiness evidence for verifier output",
     ):
         assert required_text in script
 
     for required_text in (
         "does not mutate the app database, run imports, run retrieval, send feedback, "
         "call GitHub, call live CCLD, or execute POST requests",
-        "not an audit export, legal report, product export packet, public report, "
-        "official certification",
+        "Route public-source completeness, public-source absence, legal, facility-wide, "
+        "harm, abuse, neglect",
     ):
         assert required_text in normalized_script
 
@@ -653,14 +653,14 @@ def test_qnap_evidence_packet_script_builds_redacted_placeholder_packet() -> Non
             "-RetrievalDecision",
             "disabled intentionally",
             "-AuthDecision",
-            "production boundary reviewed",
+            "production auth reviewed",
             "-TesterInvitationDecision",
             "not approved for external testers",
             "-PostgresBackupPlan",
             "operator will capture pg_dump before invitation",
             "-RawArtifactBackupPlan",
             "operator will back up raw artifact volume before invitation",
-            "-KnownLimitationsAcknowledged",
+            "-ReviewGuidanceAcknowledged",
         )
 
         output = result.stdout + result.stderr
@@ -687,21 +687,21 @@ def test_qnap_evidence_packet_script_builds_redacted_placeholder_packet() -> Non
             "Seeded Import Evidence Summary",
             "Route Evidence Summary",
             "Operator Decisions",
-            "Auth readiness decision: production boundary reviewed",
+            "Auth readiness decision: production auth reviewed",
             "Tester invitation/access-control decision: not approved for external testers",
             "Feedback configuration decision: disabled intentionally",
             "Retrieval configuration decision: disabled intentionally",
             "PostgreSQL backup plan: operator will capture pg_dump before invitation",
             "Raw artifact backup plan: operator will back up raw artifact volume before invitation",
-            "Known limitations acknowledgement: acknowledged",
+            "Review guidance acknowledgement: acknowledged",
             "Deferred Items",
             "Real OIDC/login",
             "Invitation workflow implementation",
             "Non-CCLD sources",
             "Broader UI redesign",
-            "Conclusion Boundary",
-            "not an audit export, legal report, product export packet, public report",
-            "makes no public-source completeness",
+            "Review Context",
+            "local operator readiness evidence for verifier output",
+            "Route public-source completeness, public-source absence",
         ):
             assert required_text in normalized_packet
 
@@ -818,7 +818,7 @@ def test_qnap_pilot_operator_checklist_exists_and_covers_required_steps() -> Non
     for required_text in (
         "QNAP Docker is the first pilot runtime, not a permanent platform lock-in",
         "early external stakeholder organization tester validation",
-        "does not prove public-source completeness",
+        "source-completeness review uses dedicated source-review paths",
         "legal, facility-wide, harm, abuse, neglect, liability",
         "Confirm the repository checkout is current",
         "Docker and Docker Compose",
@@ -902,7 +902,7 @@ def test_qnap_pilot_auth_readiness_doc_exists_and_covers_required_steps() -> Non
         "QNAP verifier output showing production auth mode and local-dev auth disabled",
         "Route behavior showing protected workflow routes are blocked",
         "Decision record that real OIDC/login remains deferred or planned",
-        "Known limitation acknowledgement",
+        "Review guidance acknowledgement",
         "Do not enable local-dev auth for QNAP pilot mode",
         "Do not set `CCLD_RETRIEVAL_DEMO_MODE=mock-success` in QNAP pilot mode",
         "Do not paste tokens, callback secrets",
@@ -980,8 +980,8 @@ def test_qnap_pilot_tester_invitation_decision_doc_covers_required_steps() -> No
         "Retrieval configuration decision",
         "PostgreSQL backup plan",
         "Raw artifact backup plan",
-        "Known limitations acknowledged",
-        "no public-source completeness, legal, facility-wide, harm",
+        "Review guidance acknowledged",
+        "Route public-source completeness, legal, facility-wide, harm",
         "Do not invite testers until the access method is deliberately approved",
         "Do not use local-dev fixture auth as production authentication",
         "Do not share `.env` or secrets",
@@ -1054,7 +1054,7 @@ def test_qnap_pilot_access_method_decision_doc_covers_required_steps() -> None:
         "Revocation method",
         "Feedback triage owner",
         "Backup and evidence packet confirmation",
-        "Known limitations acknowledgement",
+        "Review guidance acknowledgement",
         "Reason the selected method is acceptable for this pilot stage",
         "not production auth unless real OIDC/session implementation exists",
         "No anonymous public URL",
@@ -1075,7 +1075,7 @@ def test_qnap_pilot_access_method_decision_doc_covers_required_steps() -> None:
         "Retrieval decision",
         "PostgreSQL backup plan",
         "Raw artifact backup plan",
-        "Known limitations acknowledgement",
+        "Review guidance acknowledgement",
         "Real OIDC/login implementation",
         "OAuth2 callback handling",
         "Sessions or cookies",
@@ -1092,7 +1092,7 @@ def test_qnap_pilot_access_method_decision_doc_covers_required_steps() -> None:
         "Do not commit or paste secrets",
         "Do not treat a temporary network or access workaround as production auth",
         "Do not invite testers without a revocation plan",
-        "Do not make public-source completeness, legal, facility-wide, harm",
+        "Route public-source completeness, legal, facility-wide, harm",
     ):
         assert required_text in searchable_text
 
@@ -1145,7 +1145,7 @@ def test_qnap_pilot_readiness_index_exists_and_covers_ordered_path() -> None:
         "external stakeholder organization-oriented pilot validation",
         "CCLD-only",
         "PostgreSQL-backed hosted page data",
-        "does not prove public-source completeness",
+        "Route source-completeness, public-source absence",
         "QNAP Docker runtime guide",
         ".env.example",
         "QNAP pilot operator checklist",
@@ -1163,7 +1163,7 @@ def test_qnap_pilot_readiness_index_exists_and_covers_ordered_path() -> None:
         "-SkipDatabaseCheck -AllowRouteUnavailable -BaseUrl http://127.0.0.1:9",
         "data/processed/qnap-pilot-evidence/",
         "optional, local, read-only operator convenience",
-        "not an audit export, legal report, product export packet, public report",
+        "Use dedicated audit, legal, product export, public reporting",
         "QNAP pilot auth readiness",
         "QNAP pilot access-method decision",
         "ADR-0011",
@@ -1185,7 +1185,7 @@ def test_qnap_pilot_readiness_index_exists_and_covers_ordered_path() -> None:
         "Retrieval configuration decision",
         "PostgreSQL backup plan",
         "Raw artifact backup plan",
-        "Known limitations acknowledged",
+        "Review guidance acknowledged",
         "Completion Marker",
         "After the access-method decision is recorded and the evidence packet is "
         "generated from real pilot inputs",
@@ -1249,7 +1249,7 @@ def test_qnap_pilot_seeded_import_evidence_doc_exists_and_covers_required_steps(
     for required_text in (
         "early QNAP hosted tester readiness evidence",
         "PostgreSQL-backed CCLD source-derived records",
-        "does not prove public-source completeness",
+        "Source-completeness review uses dedicated source-review paths",
         "legal findings, facility-wide conclusions",
         "`.env` exists on the deployment host and remains untracked",
         "Alembic migrations are current",
@@ -1275,7 +1275,7 @@ def test_qnap_pilot_seeded_import_evidence_doc_exists_and_covers_required_steps(
         "/feedback",
         "GitHub feedback decision",
         "Controlled retrieval decision",
-        "Known limitations acknowledged",
+        "Review guidance acknowledged",
         "PostgreSQL volume",
         "Back up raw artifact storage",
         "Do not commit `.env`",

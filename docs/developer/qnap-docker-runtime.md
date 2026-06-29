@@ -9,7 +9,7 @@ container settings, named volumes, and environment variables so the same model
 can move later to AWS, Azure, DigitalOcean, Render, Fly.io, or another host
 without hard-coding QNAP paths into application code.
 
-This runtime includes the first provider-agnostic auth boundary for the external stakeholder organization pilot
+This runtime includes the first provider-agnostic auth readiness path for the external stakeholder organization pilot
 direction: production mode blocks anonymous workflow routes unless an
 authenticated route context exists, and explicit local-dev mode is available only
 for local scaffold validation. It does not add a real OIDC login flow, token
@@ -81,7 +81,7 @@ Optional value:
 Optional controlled CCLD retrieval job values:
 
 - `CCLD_RETRIEVAL_ENABLED`: set to `enabled` only when server-side raw storage,
-  PostgreSQL, and access boundaries are ready.
+  PostgreSQL, and access controls are ready.
 - `CCLD_RETRIEVAL_RAW_DIR`: container path for preserved raw CCLD retrieval
   artifacts, such as `/app/data/raw/ccld/retrieval`.
 - `CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS`: maximum request date span.
@@ -94,7 +94,7 @@ Optional controlled CCLD retrieval job values:
 Do not set `CCLD_RETRIEVAL_DEMO_MODE=mock-success` in QNAP, pilot-like, or
 production runtime. That value is reserved for explicit local-dev scaffold
 validation with fixture-demo data and local-dev auth enabled; it uses committed
-fixtures and does not prove public-source completeness.
+fixtures and routes source-completeness review through dedicated source-review paths.
 
 The app receives `CCLD_HOSTED_TESTER_DATABASE_URL` from Compose. Do not commit a
 database connection string. Do not print the connection string in logs, docs,
@@ -149,7 +149,7 @@ environment file:
 ```
 
 That check verifies required deployment files, required `.env` keys,
-PostgreSQL-backed page mode, production auth boundary defaults, retrieval raw
+PostgreSQL-backed page mode, production auth readiness defaults, retrieval raw
 artifact storage path, and Docker Compose configuration. It warns when
 deployment values still look like placeholders. Default mode does not start
 or stop any containers.
@@ -212,14 +212,14 @@ read-only imported-data summary:
 .\scripts\summarize-qnap-pilot-seeded-import-evidence.ps1 -EnvFile .env
 ```
 
-The route checks are bounded and read-only. They do not run live CCLD retrieval,
-do not call GitHub, and do not prove public-source completeness.
+The route checks are bounded and read-only. They skip live CCLD retrieval and
+GitHub calls, and route public-source completeness through dedicated source-review paths.
 
 To assemble those existing checks and operator decisions into one local redacted
 Markdown packet, run:
 
 ```powershell
-.\scripts\build-qnap-pilot-evidence-packet.ps1 -EnvFile .env -BaseUrl http://<host-name-or-ip>:<CCLD_HOSTED_PORT> -KnownLimitationsAcknowledged
+.\scripts\build-qnap-pilot-evidence-packet.ps1 -EnvFile .env -BaseUrl http://<host-name-or-ip>:<CCLD_HOSTED_PORT> -ReviewGuidanceAcknowledged
 ```
 
 Review the generated packet before sharing it. Generated packet files are local
@@ -263,7 +263,7 @@ docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic u
 
 Migrations must remain reviewable repository files under `migrations/versions/`
 and must preserve the source-derived, reviewer-created, audit, import, feedback,
-auth/access, export, and operational data boundaries defined by the ADRs.
+auth/access, export, and operational data areas defined by the ADRs.
 
 ## Volumes
 
@@ -327,8 +327,8 @@ claim real OIDC login, token handling, sessions, cookies, public launch, or
 source completeness. Retrieval job pages should show safe setup-required state
 unless retrieval is explicitly enabled with server-side storage. The retrieval
 history page should show safe empty-history or recent-job status over existing
-operational metadata only; it is not an audit export or source-completeness
-report. Retrieval job detail pages should show one safe job status view without
+operational metadata only; use audit/export and source-review paths for audit,
+export, and source-completeness review. Retrieval job detail pages should show one safe job status view without
 raw artifact contents, raw server paths, stack traces, or private values.
 
 In production auth mode, protected workflow routes such as `/ccld/records/request`

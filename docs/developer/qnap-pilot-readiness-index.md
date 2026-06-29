@@ -2,8 +2,8 @@
 
 Use this index as the ordered pre-invite path for the QNAP hosted CCLD pilot.
 It ties together the operator checklist, runtime guide, auth readiness notes,
-tester invitation decision, seeded import evidence, route evidence, and known
-limitations.
+tester invitation decision, seeded import evidence, route evidence, and pilot
+review guidance.
 
 This is a documentation index only. It does not change app behavior, scripts,
 routes, auth, retrieval, imports, database schema, or deployment.
@@ -15,13 +15,12 @@ routes, auth, retrieval, imports, database schema, or deployment.
   hobby project, not a the user's employer project.
 - The pilot is CCLD-only and uses a seeded or imported test corpus with
   PostgreSQL-backed hosted page data.
-- The pilot does not prove public-source completeness, public-source absence,
-  legal findings, facility-wide conclusions, harm, abuse, neglect, liability, or
-  rights-deprivation conclusions.
+- Route source-completeness, public-source absence, legal findings,
+  facility-wide conclusions, harm, abuse, neglect, liability, and
+  rights-deprivation conclusions through dedicated review paths.
 
 Start with the [QNAP pilot operator checklist](qnap-pilot-operator-checklist.md)
-and keep [known limitations](../user/known-limitations.md) visible throughout
-the readiness review.
+and keep pilot review guidance visible throughout the readiness review.
 
 ## 2. Prepare Environment
 
@@ -43,7 +42,7 @@ Run:
 ```
 
 Do not continue toward invitations until the verifier passes or only reports
-expected placeholder warnings that are resolved before external tester use.
+expected placeholder notices that are resolved before external tester use.
 
 ## 3. Confirm Data Readiness
 
@@ -71,8 +70,7 @@ For placeholder or template validation without Docker/PostgreSQL checks, run:
 
 The evidence should show PostgreSQL-backed page-data expectations, migrated
 database readiness, imported source-derived row counts, safe source traceability
-linkage, raw artifact backup acknowledgement, and no source-completeness or
-legal conclusions.
+linkage, raw artifact backup acknowledgement, and source/legal review routing.
 
 ## 4. Confirm Route Readiness
 
@@ -123,7 +121,7 @@ Do not share any external tester link, credential, network rule, VPN rule, or
 reverse proxy route until the access-method decision is recorded. The decision
 must state the selected temporary access method, named testers or approved group,
 role/scope, environment/host scope, start and expiration dates, revocation
-method, feedback triage owner, backup/evidence confirmation, known-limitations
+method, feedback triage owner, backup/evidence confirmation, review-guidance
 acknowledgement, and that the method is not production auth unless real OIDC and
 session implementation exists.
 
@@ -140,7 +138,7 @@ Before invitations, the operator must decide and record:
 - Who can perform revocation.
 - How tester feedback and GitHub Issues will be triaged.
 - Whether the evidence packet is complete.
-- That known limitations have been acknowledged.
+- That pilot review guidance has been acknowledged.
 
 Do not invite testers until there is a deliberate access-control decision for
 how they will authenticate, what they can access, and how access can be revoked.
@@ -150,7 +148,7 @@ how they will authenticate, what they can access, and how access can be revoked.
 Optional local command:
 
 ```powershell
-.\scripts\build-qnap-pilot-evidence-packet.ps1 -EnvFile .env -BaseUrl http://<host-name-or-ip>:<CCLD_HOSTED_PORT> -KnownLimitationsAcknowledged
+.\scripts\build-qnap-pilot-evidence-packet.ps1 -EnvFile .env -BaseUrl http://<host-name-or-ip>:<CCLD_HOSTED_PORT> -ReviewGuidanceAcknowledged
 ```
 
 For placeholder/template validation without Docker/PostgreSQL checks or a
@@ -163,9 +161,9 @@ running server:
 The packet command is optional, local, read-only operator convenience. It uses
 the existing verifier, seeded import evidence, and route evidence scripts, then
 writes redacted Markdown under ignored `data/processed/qnap-pilot-evidence/`.
-It is not an audit export, legal report, product export packet, public report,
-GitHub issue, or official certification. Operators must review generated packets
-before sharing them, and generated evidence files must not be committed.
+Use dedicated audit, legal, product export, public reporting, GitHub, and
+certification paths for those deliverables. Operators must review generated
+packets before sharing them, and generated evidence files must not be committed.
 
 The evidence packet should include:
 
@@ -180,10 +178,9 @@ The evidence packet should include:
   with persistent raw artifact storage.
 - PostgreSQL backup plan.
 - Raw artifact backup plan.
-- Known limitations acknowledged.
-- A statement that no public-source completeness, legal, facility-wide, harm,
-  abuse, neglect, liability, or rights-deprivation conclusions are made from the
-  evidence.
+- Review guidance acknowledged.
+- A statement that source, legal, facility-wide, harm, abuse, neglect,
+  liability, and rights-deprivation conclusions use dedicated review paths.
 
 Keep the evidence packet free of `.env` values, secrets, tokens, callback URLs,
 tenant IDs, private URLs, hosted URLs, raw artifact contents, raw source
@@ -206,9 +203,9 @@ Do not invite early testers until all of these are true:
 - Access method, role/scope, approval, and revocation are deliberately decided.
 - Feedback and retrieval configuration decisions are documented.
 - PostgreSQL and raw artifact backup plans are documented.
-- Known limitations are acknowledged.
-- No public-source completeness, legal, facility-wide, harm, abuse, neglect,
-  liability, or rights-deprivation conclusions are made from pilot evidence.
+- Review guidance is acknowledged.
+- Source, legal, facility-wide, harm, abuse, neglect, liability, and
+  rights-deprivation conclusions use dedicated review paths.
 
 ## 9. Completion Marker
 

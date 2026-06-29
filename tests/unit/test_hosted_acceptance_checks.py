@@ -151,7 +151,7 @@ def test_acceptance_doc_contains_commands_and_cleanup() -> None:
     assert "2026-01-31" in doc
 
 
-def test_acceptance_doc_covers_full_route_set_and_boundaries() -> None:
+def test_acceptance_doc_covers_full_route_set_and_review_context() -> None:
     doc = _acceptance_doc()
 
     for expected in (
@@ -172,11 +172,8 @@ def test_acceptance_doc_covers_full_route_set_and_boundaries() -> None:
         "help",
         "Evidence folder path",
         "Evidence ZIP path",
-        "local review artifact only",
-        "not a legal report",
-        "not a final export",
-        "not a certified report",
-        "not a source-completeness proof",
+        "local UI review artifact",
+        "route, screenshot, text, and accessibility review",
         "public CCLD portal remains the source of record",
         "Reviewer-created status/note cues remain separate",
         "visible keyboard-flow guidance",
@@ -193,11 +190,5 @@ def test_ui_evidence_doc_describes_zip_as_local_review_artifact_only() -> None:
 
     assert "tester-readiness verifier" in guide
     assert "sibling ZIP" in guide
-    assert "local review artifact only" in guide
-    assert "not a product packet" in guide
-    assert "not an audit export" in guide
-    assert "not a legal report" in guide
-    assert "not a final export" in guide
-    assert "not a certified report" in guide
-    assert "not production monitoring" in guide
-    assert "not a source-completeness proof" in guide
+    assert "local UI review artifact" in guide
+    assert "route, screenshot, text, and accessibility review" in guide

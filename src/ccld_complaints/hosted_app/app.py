@@ -148,7 +148,7 @@ class SampleSourceRecord:
     connector_name: str
     retrieved_at: str
     report_index: str
-    extraction_warning: str
+    extraction_note: str
 
 
 @dataclass(frozen=True)
@@ -199,7 +199,7 @@ TRACEABILITY_FIELDS = (
     ("connector_name", "Connector name"),
     ("retrieved_at", "Retrieved at"),
     ("report_index", "Report index"),
-    ("extraction_warning", "Extraction warning"),
+    ("extraction_note", "Extraction note"),
     ("jurisdiction", "Jurisdiction"),
     ("source_family", "Source family"),
 )
@@ -221,7 +221,7 @@ SAMPLE_SOURCE_RECORDS = [
         connector_name="sample-ccld-fixture",
         retrieved_at="2026-01-01T00:00:00+00:00",
         report_index="sample-1",
-        extraction_warning="Sample-only value; not extracted from live public-source data.",
+        extraction_note="Sample-only value; not extracted from live public-source data.",
     ),
     SampleSourceRecord(
         record_id="sample-complaint-002",
@@ -238,7 +238,7 @@ SAMPLE_SOURCE_RECORDS = [
         connector_name="sample-ccld-fixture",
         retrieved_at="2026-01-02T00:00:00+00:00",
         report_index="sample-2",
-        extraction_warning="Sample-only value; not extracted from live public-source data.",
+        extraction_note="Sample-only value; not extracted from live public-source data.",
     ),
 ]
 
@@ -665,10 +665,8 @@ def render_facility_source_coverage_panel(record: SampleFacilityRecord) -> str:
       fixture/sample source-record context when a local sample relationship is
       available. It is local-only, fixture-backed, sample-only, and not live
       public-source coverage.</p>
-      <p>Coverage indicators do not prove public-source completeness, statewide
-      coverage, official facility status, import status, database state,
-      reviewer-created state, or any legal, facility-wide, delay, harm, abuse,
-      neglect, liability, or rights-deprivation conclusion.</p>
+      <p>Use the sample indicators to inspect fixture relationships and open the
+      related sample source-record pages when available.</p>
       <table>
         <caption>Fixture source coverage indicators for this sample facility</caption>
         <thead>
@@ -929,8 +927,8 @@ def render_source_record_detail(record: SampleSourceRecord) -> str:
         <dd>{html.escape(record.retrieved_at)}</dd>
         <dt>Report index</dt>
         <dd>{html.escape(record.report_index)}</dd>
-        <dt>Extraction warning</dt>
-        <dd>{html.escape(record.extraction_warning)}</dd>
+        <dt>Extraction note</dt>
+        <dd>{html.escape(record.extraction_note)}</dd>
       </dl>
     </section>
   </main>
@@ -1424,7 +1422,7 @@ def _facility_reference_from_context(
     if status != 200:
         return facility_reference_from_source_derived_records(
             (),
-            warning=(
+            notice=(
                 "PostgreSQL-backed source-derived facility rows could not be read. "
                 "Confirm the database is migrated, imported, and accessible to this actor."
             ),

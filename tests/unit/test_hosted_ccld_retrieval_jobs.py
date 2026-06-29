@@ -245,7 +245,7 @@ def test_controlled_retrieval_imports_records_and_links_queue(tmp_path: Path) ->
     assert "1 complaint queue record(s) are ready for review" in html
     assert "Complaint records ready" in html
     assert "Retrieval status/progress summary" in html
-    assert "Next safe action" in html
+    assert "Next action" in html
     assert "Records imported" in html
     assert "Imported source derived records" in normalized
     assert "Controlled CCLD retrieval completed and imported validated records" in html
@@ -341,7 +341,7 @@ def test_controlled_retrieval_no_matching_complaint_dates_fetches_nothing(
     assert jobs[0]["result_counts"]["retrieved_record_bundles"] == 0
     assert "discovered report date within the requested range" in html
     assert "No records were imported" in html
-    assert "not a public-source absence" in html
+    assert "check notices and adjust the request if needed" in html
     assert_no_secret_html(html)
 
 
@@ -854,7 +854,7 @@ def test_retrieval_failure_is_safe_and_does_not_import(tmp_path: Path) -> None:
     assert counts["source_records"] == 0
     assert counts["retrieval_jobs"] == 1
     assert jobs[0]["job_state"] == "completed_with_warnings"
-    assert "Completed with warnings" in html
+    assert "Completed with notices" in html
     assert "No records were imported" in html
     assert (
         "Controlled CCLD retrieval (live public CCLD mode): Controlled CCLD "
@@ -862,8 +862,8 @@ def test_retrieval_failure_is_safe_and_does_not_import(tmp_path: Path) -> None:
     ) in html
     assert "Report 3 failed during fetch; the public source may be unavailable" in html
     assert "Live public CCLD" in html
-    assert "Safe warnings" in html
-    assert "Safe errors" in html
+    assert "Status notices" in html
+    assert "Error summaries" in html
     assert "traceback" not in html.casefold()
     assert_no_secret_html(html)
 
@@ -1200,8 +1200,8 @@ def test_retrieval_job_history_renders_recent_jobs_safely_without_mutation(
     assert "These counts summarize controlled retrieval job metadata only" in html
     assert "Review imported records in the CCLD queue" in html
     assert "Report 39 failed during fetch." in html
-    assert "Completed with warnings" in html
-    assert "No records were imported. Review warnings" in normalized
+    assert "Completed with notices" in html
+    assert "No records were imported. Review notices" in normalized
     assert "Failed" in html
     assert "Retry later or ask an operator to inspect server logs" in normalized
     assert "Rate limited" in html
@@ -1251,7 +1251,7 @@ def test_retrieval_job_detail_renders_completed_job_without_mutation(tmp_path: P
     assert "Job summary and next step" in html
     assert "Facility/license number" in html
     assert "Controlled CCLD retrieval completed and imported validated records" in html
-    assert "Next safe action" in html
+    assert "Next action" in html
     assert "Open imported records in the CCLD queue and review source traceability" in html
     assert "Technical detail: counts, metadata, and errors" in html
     assert "completed-job" in html
@@ -1371,9 +1371,9 @@ def test_retrieval_job_detail_distinguishes_warning_failed_and_rate_limited_stat
     rate_html = rate_body.decode("utf-8")
 
     assert warning_status == 200
-    assert "Completed with warnings" in warning_html
+    assert "Completed with notices" in warning_html
     assert "Report 39 failed during fetch." in warning_html
-    assert "No records were imported. Review warnings" in " ".join(warning_html.split())
+    assert "No records were imported. Review notices" in " ".join(warning_html.split())
     assert failed_status == 200
     assert "Failed" in failed_html
     assert "Retry later or ask an operator to inspect server logs" in " ".join(

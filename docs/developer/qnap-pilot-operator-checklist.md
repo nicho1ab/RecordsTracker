@@ -9,7 +9,7 @@ tester pilot. It complements `.env.example`,
 capturing proof that PostgreSQL-backed source-derived CCLD records are loaded
 before testers begin review. Use
 [QNAP pilot auth readiness](qnap-pilot-auth-readiness.md) when capturing the
-current production-mode auth boundary and deferred real-login work. Use
+current production-mode auth readiness and deferred real-login work. Use
 [QNAP pilot access-method decision](qnap-pilot-access-method-decision.md) before
 sharing any external tester link, credential, network rule, VPN rule, or reverse
 proxy route. Use
@@ -23,11 +23,11 @@ before inviting testers. Use `scripts/build-qnap-pilot-evidence-packet.ps1` only
 as optional local operator convenience after separate readiness evidence and
 decisions are understood.
 
-## Command Boundary Quick Map
+## Command Scope Quick Map
 
 Use this map before copying any command:
 
-| Lane | Who runs it | Examples | Boundary |
+| Lane | Who runs it | Examples | Command Scope |
 |---|---|---|---|
 | Local PowerShell | Developer or Codex when the current task allows local validation | `.\scripts\docs.ps1`, `git diff --check`, `python scripts\check_no_secrets.py`, placeholder-only verifier checks | Must not contact QNAP, print secrets, create generated evidence for commit, or change deployment state. |
 | Human SSH session | Human operator only | `scp`, `tar`, `docker compose`, `docker compose cp`, `pg_dump`, `pg_restore`, QNAP `.env` editing, Cloudflare connector commands | Run outside Codex in a standalone terminal. Keep passwords, hostnames, `.env` values, and private paths out of repo docs and chat. |
@@ -71,9 +71,9 @@ external services without explicit current-task approval.
   lock-in. Keep app runtime, PostgreSQL, raw files, processed files, logs,
   secrets, and backups separable for later AWS, Azure, DigitalOcean, Render,
   Fly.io, Railway, Supabase/Neon, or other host moves.
-- Confirm the pilot does not prove public-source completeness.
-- Confirm the pilot does not make legal, facility-wide, harm, abuse, neglect,
-  liability, or other unsupported conclusions.
+- Confirm source-completeness review uses dedicated source-review paths.
+- Route legal, facility-wide, harm, abuse, neglect, liability, and related
+  conclusions through dedicated review paths.
 
 ## 2. Preflight
 
@@ -93,8 +93,8 @@ external services without explicit current-task approval.
   is shared.
 - Confirm the tester invitation/access-control decision is recorded before
   inviting testers.
-- Confirm the operator has a plan for collecting route-check evidence and known
-  limitation acknowledgements before inviting testers.
+- Confirm the operator has a plan for collecting route-check evidence and
+  review-guidance acknowledgements before inviting testers.
 
 ## 3. Environment Setup
 
@@ -133,7 +133,7 @@ external services without explicit current-task approval.
 docker compose -f docker-compose.qnap.yml --env-file .env config
 ```
 
-- Confirm verifier warnings are expected. Placeholder warnings are readiness
+- Confirm verifier notices are expected. Placeholder notices are readiness
   prompts, not permission to commit real values.
 - Resolve any failure for missing `.env`, unsafe local-dev auth, nonblank
   `CCLD_RETRIEVAL_DEMO_MODE` in QNAP pilot mode, retrieval enabled without raw
@@ -221,7 +221,7 @@ docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic u
   the QNAP verifier passes. Expected protected, setup-required, safe-empty, and
   missing-job states are acceptable route evidence; route evidence must not show
   secrets, raw artifacts, raw server paths, cookies, provider subjects, provider
-  issuers, source-completeness claims, or legal conclusions.
+  issuers, source-review conclusions, or legal conclusions.
 - Verify seeded reviewer detail routes only when fixture/demo data is explicitly
   being used for local workstation validation.
 - Verify reviewer note/status paths only when the pilot mode intentionally
@@ -252,8 +252,8 @@ docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic u
   work remains deferred.
 - Capture the access-method decision: selected method, named testers or approved
   group, role/scope, environment/host scope, start and expiration dates,
-  revocation method, feedback triage owner, backup/evidence confirmation, known
-  limitations acknowledgement, and explicit non-production-auth statement.
+  revocation method, feedback triage owner, backup/evidence confirmation,
+  review-guidance acknowledgement, and explicit non-production-auth statement.
 - Capture the tester invitation/access-control decision: who is invited, role,
   scope, approval, revocation plan, and feedback triage owner.
 - Capture seeded import evidence that `hosted_import_batches` and
@@ -273,7 +273,7 @@ docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic u
   configured with raw artifact storage.
 - Record the PostgreSQL backup location and restore plan.
 - Record the raw artifact backup location and restore plan.
-- Record that known limitations were reviewed and acknowledged.
+- Record that pilot review guidance was reviewed and acknowledged.
 
 ## 11. Cloudflare Tunnel and Access Setup
 

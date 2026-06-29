@@ -30,7 +30,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $failureCount = 0
-$warningCount = 0
+$noticeCount = 0
 
 $forbiddenMarkers = @(
     "provider_subject",
@@ -69,10 +69,10 @@ function Write-EvidencePass {
     Write-Host "[PASS] $Message"
 }
 
-function Write-EvidenceWarn {
+function Write-EvidenceNotice {
     param([string]$Message)
-    $script:warningCount += 1
-    Write-Warning $Message
+    $script:noticeCount += 1
+    Write-Host "[NOTICE] $Message"
 }
 
 function Write-EvidenceFail {
@@ -111,7 +111,7 @@ function Invoke-RouteEvidenceCheck {
         }
         else {
             if ($AllowUnavailable) {
-                Write-EvidenceWarn "Route $($Route.Path) unavailable at $base; no response body printed."
+                Write-EvidenceNotice "Route $($Route.Path) unavailable at $base; no response body printed."
                 return
             }
             Write-EvidenceFail "Route $($Route.Path) could not be reached at $base."
@@ -147,7 +147,7 @@ Write-Host "Base URL: $($BaseUrl.TrimEnd('/'))"
 Write-Host "GET-only: yes. POSTs, imports, retrieval execution, reviewer-created writes, and feedback submission are not performed."
 Write-Host "External calls: no live CCLD calls and no GitHub calls are made by this evidence command."
 Write-Host "Safe output: response bodies, secrets, raw artifacts, raw source narrative, raw server paths, cookies, provider subjects, provider issuers, and connection strings are not printed."
-Write-Host "Conclusion boundary: no public-source completeness, legal, facility-wide, harm, abuse, neglect, or liability conclusion."
+Write-Host "Review context: use dedicated source, legal, facility-wide, harm, abuse, neglect, and liability review paths for those conclusions."
 
 foreach ($route in $routes) {
     Invoke-RouteEvidenceCheck -Route $route
@@ -159,9 +159,9 @@ Write-Host "Raw server-specific paths printed: no."
 Write-Host "Secrets printed: no."
 
 if ($failureCount -gt 0) {
-    Write-Host "Route evidence completed with $failureCount readiness failure(s) and $warningCount warning(s)."
+    Write-Host "Route evidence completed with $failureCount readiness failure(s) and $noticeCount notice(s)."
     exit 1
 }
 
-Write-Host "Route evidence completed with $warningCount warning(s) and no readiness failures."
+Write-Host "Route evidence completed with $noticeCount notice(s) and no readiness failures."
 exit 0

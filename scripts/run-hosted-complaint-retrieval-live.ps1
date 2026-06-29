@@ -16,8 +16,9 @@ Ignored local raw storage path for live retrieval artifacts. Defaults to
 .EXAMPLE
 .\scripts\run-hosted-complaint-retrieval-live.ps1 -Port 8000
 .NOTES
-Run from the repository root. The CCLD public portal remains the source of record.
-Absence of imported records is not proof that no complaints exist.
+Run from the repository root. Open public CCLD pages from record detail when a
+source check is needed. When results look incomplete, check criteria, job details,
+and loaded data before continuing.
 #>
 param(
     [string]$HostName = "127.0.0.1",
@@ -51,8 +52,8 @@ Write-Host "Open: $baseUrl/reviewer"
 Write-Host "Open: $baseUrl/ccld/help"
 Write-Host "Open: $baseUrl/feedback"
 Write-Host "Public CCLD HTTP requests will be made only after a browser submits a controlled retrieval job."
-Write-Host "CCLD public portal remains the source of record."
-Write-Host "Absence of imported records is not proof that no complaints exist."
+Write-Host "Open public CCLD pages from record detail when a source check is needed."
+Write-Host "When results look incomplete, check criteria, job details, and loaded data before continuing."
 Write-Host "Server-side live raw source storage is configured under an ignored local data/raw path."
 
 & $python -m ccld_complaints.hosted_app --host $HostName --port $Port

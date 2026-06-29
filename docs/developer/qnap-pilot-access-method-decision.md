@@ -53,7 +53,7 @@ Choose one category and record why it fits the current pilot stage:
   or production authentication.
 - Temporary restricted network/VPN access, if separately approved outside the
   repo: allows access only for named testers or an approved small group within a
-  separately managed restricted network boundary. Does not implement app auth,
+  separately managed restricted network scope. Does not implement app auth,
   OIDC, sessions, user tables, invitations, reverse proxy configuration, VPN
   configuration, or deployment in this repository.
 - Future managed OIDC/OAuth2 access after implementation: allows authenticated,
@@ -65,7 +65,7 @@ Choose one category and record why it fits the current pilot stage:
   exposes only the app HTTP service through a Cloudflare Tunnel (no router port
   forwarding). Cloudflare Access enforces email-based identity checks before any
   tester-facing URL can be reached. Does not replace the app's own hosted auth
-  boundary. Does not expose QNAP admin UI, Container Station UI, SSH, SMB, or
+  readiness path. Does not expose QNAP admin UI, Container Station UI, SSH, SMB, or
   NAS management services through the tunnel. Does not configure Dream Machine
   Pro port forwarding. Requires recording the selected identity provider approach,
   the named testers or approved group, and who owns ongoing Access policy
@@ -73,7 +73,7 @@ Choose one category and record why it fits the current pilot stage:
   not be committed to the repository.
 
 Do not invent another access method without recording the same owner, scope,
-expiration, revocation, no-secret, and no-conclusion boundaries.
+expiration, revocation, no-secret, and review-routing decisions.
 
 ## 4. Required Decision Fields
 
@@ -91,7 +91,7 @@ decision from the evidence packet:
 - Revocation method.
 - Feedback triage owner.
 - Backup and evidence packet confirmation.
-- Known limitations acknowledgement.
+- Review guidance acknowledgement.
 - Reason the selected method is acceptable for this pilot stage.
 - Explicit statement that this is not production auth unless real OIDC/session
   implementation exists.
@@ -131,12 +131,12 @@ Reference the access-method decision in the QNAP pilot evidence packet after:
 - Retrieval decision.
 - PostgreSQL backup plan.
 - Raw artifact backup plan.
-- Known limitations acknowledgement.
+- Review guidance acknowledgement.
 
 The access-method decision is evidence that the operator deliberately chose how
-access will be limited and revoked. It is not evidence of production auth,
-public-source completeness, legal findings, facility-wide conclusions, harm,
-abuse, neglect, liability, or rights-deprivation.
+access will be limited and revoked. Use separate production auth, source, legal,
+facility-wide, harm, abuse, neglect, liability, and rights-deprivation review
+paths for those conclusions.
 
 ## 7. Deferred Items
 
@@ -161,8 +161,8 @@ These remain deferred and must not be implied by an access-method decision:
 - Do not commit or paste secrets.
 - Do not treat a temporary network or access workaround as production auth.
 - Do not invite testers without a revocation plan.
-- Do not make public-source completeness, legal, facility-wide, harm, abuse,
-  neglect, liability, or rights-deprivation conclusions.
+- Route public-source completeness, legal, facility-wide, harm, abuse, neglect,
+  liability, and rights-deprivation conclusions through dedicated review paths.
 
 ## 9. Cloudflare Access Identity Decision
 
@@ -193,7 +193,7 @@ The selected access method for the QNAP pilot is:
   must stay `production` and `CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH` must stay
   `disabled`. Cloudflare Access is a network-layer access control that sits in
   front of the app; it is not the app's authentication layer.
-- Cloudflare Access does not replace the app's hosted auth boundary, session
+- Cloudflare Access does not replace the app's hosted auth path, session
   handling, user tables, OIDC callback, or role enforcement. Those remain
   deferred.
 - This is not a permanent deployment decision. The pilot remains portable and
