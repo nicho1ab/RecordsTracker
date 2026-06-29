@@ -130,10 +130,10 @@ def render_page_shell(
 </head>
 <body class="ds-page-bg">
   <a class="skip-link" href="#main-content">{html.escape(skip_label)}</a>
-  <header class="site-header ds-surface">
-    <div class="shell">
-      <div class="site-title-row">
-        <div class="brand-block">
+  <header class="app-shell-header site-header ds-surface">
+    <div class="shell app-shell">
+      <div class="brand-title-row site-title-row">
+        <div class="brand-title-block brand-block">
           <p class="product-name">{APP_TITLE}</p>
           {eyebrow_markup}
           <h1>{html.escape(heading)}</h1>
@@ -143,15 +143,15 @@ def render_page_shell(
           <span class="{badge_class}">{html.escape(runtime_mode)}</span>
         </div>
       </div>
-      <nav class="site-nav" aria-label="{html.escape(nav_label)}">
+      <nav class="primary-nav site-nav" aria-label="{html.escape(nav_label)}">
         <ul>
 {links}
         </ul>
       </nav>
     </div>
   </header>
-  <main id="main-content" class="ds-page-main" tabindex="-1">
-    <div class="shell page-main">
+  <main id="main-content" class="ds-page-main app-page" tabindex="-1">
+    <div class="shell page-main app-page-main">
 {stepper}
 {main}
     </div>
@@ -302,6 +302,8 @@ SHARED_CSS = r"""
       --ds-link-hover: #173F78;
       --ds-info: #2457A6;
       --ds-info-soft: #E6EEF9;
+      --ds-nav-active-bg: #EEF3FA;
+      --ds-nav-active-border: #9DB4D6;
       --ds-attention: #8A5A00;
       --ds-attention-soft: #FFF5DB;
       --ds-danger: #9B2C3A;
@@ -361,6 +363,9 @@ SHARED_CSS = r"""
       margin: 0 auto;
       max-width: 80rem;
       padding: 0 1.25rem;
+    }
+    .app-shell {
+      max-width: 82rem;
     }
     .ds-page-bg {
       background: var(--ds-page-bg);
@@ -482,18 +487,22 @@ SHARED_CSS = r"""
     .site-header {
       background: rgba(255, 255, 255, 0.98);
       border-bottom: 1px solid var(--line-soft);
-      box-shadow: 0 1px 8px rgb(23 33 43 / 5%);
+      border-top: 4px solid var(--ds-primary);
+      box-shadow: 0 1px 10px rgb(23 33 43 / 6%);
     }
     .site-title-row {
       align-items: flex-start;
       display: flex;
-      gap: 1rem;
+      gap: 1.4rem;
       justify-content: space-between;
-      padding: 1rem 0 0.7rem;
+      padding: 1.15rem 0 0.85rem;
+    }
+    .brand-title-block {
+      max-width: 52rem;
     }
     .product-name {
-      color: var(--accent-strong);
-      font-size: 0.9rem;
+      color: var(--ink);
+      font-size: 0.82rem;
       font-weight: 800;
       letter-spacing: 0;
       margin: 0 0 0.2rem;
@@ -504,9 +513,10 @@ SHARED_CSS = r"""
       margin: 0 0 0.4rem;
     }
     h1 {
-      font-size: 2.05rem;
+      font-size: 2rem;
       line-height: 1.15;
       margin: 0 0 0.25rem;
+      max-width: 58rem;
     }
     h2 {
       font-size: 1.35rem;
@@ -550,25 +560,31 @@ SHARED_CSS = r"""
     .site-nav ul {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.45rem;
+      gap: 0.35rem;
       list-style: none;
       margin: 0;
-      padding: 0 0 1rem;
+      padding: 0 0 0.95rem;
     }
     .site-nav a {
       border: 1px solid transparent;
       border-radius: 6px;
       display: inline-block;
-      padding: 0.38rem 0.55rem;
+      color: var(--ds-link);
+      line-height: 1.2;
+      padding: 0.48rem 0.66rem;
       text-decoration: none;
       white-space: nowrap;
     }
-    .site-nav a:hover, .site-nav a.is-active {
-      background: var(--accent-soft);
-      border-color: var(--accent);
+    .site-nav a:hover {
+      background: var(--ds-surface-muted);
+      border-color: var(--ds-border);
+      color: var(--ds-link-hover);
     }
     .site-nav a.is-active {
-      box-shadow: inset 0 -3px 0 var(--accent);
+      background: var(--ds-nav-active-bg);
+      border-color: var(--ds-nav-active-border);
+      box-shadow: inset 0 -3px 0 var(--ds-link);
+      color: var(--ds-link-hover);
     }
     .guided-stepper {
       align-items: center;
@@ -660,11 +676,14 @@ SHARED_CSS = r"""
       width: 1px;
     }
     .page-main {
-      padding-bottom: 2.5rem;
-      padding-top: 1.15rem;
+      padding-bottom: 3rem;
+      padding-top: 1.35rem;
+    }
+    .app-page-main {
+      max-width: 82rem;
     }
     section {
-      margin: 0 0 1.35rem;
+      margin: 0 0 1.5rem;
     }
     section section, .nested-card {
       margin-top: 1rem;
@@ -722,23 +741,24 @@ SHARED_CSS = r"""
     }
     .button-secondary, button.secondary {
       background: #fff;
-      border-color: var(--accent);
-      color: var(--accent-strong);
+      border-color: var(--ds-border);
+      color: var(--ds-link);
     }
     .button-secondary:hover, button.secondary:hover {
-      background: var(--accent-soft);
-      color: var(--accent-strong);
+      background: var(--ds-info-soft);
+      border-color: var(--ds-nav-active-border);
+      color: var(--ds-link-hover);
     }
     .button-quiet {
       background: transparent;
       border-color: transparent;
-      color: var(--accent-strong);
+      color: var(--ds-link);
       padding-left: 0;
       padding-right: 0;
     }
     .button-quiet:hover {
       background: transparent;
-      color: #083b36;
+      color: var(--ds-link-hover);
     }
     table {
       border-collapse: collapse;
@@ -762,7 +782,7 @@ SHARED_CSS = r"""
       background: #fbfcfb;
     }
     tbody tr:hover {
-      background: #f4faf9;
+      background: var(--ds-surface-muted);
     }
     dl {
       display: grid;
@@ -830,7 +850,7 @@ SHARED_CSS = r"""
     .hero-card {
       background: #ffffff;
       border: 1px solid var(--line-soft);
-      border-left: 5px solid var(--accent);
+      border-left: 5px solid var(--ds-link);
       border-radius: 10px;
       box-shadow: var(--shadow-strong);
       padding: 1.4rem;
@@ -949,8 +969,8 @@ SHARED_CSS = r"""
     }
     .next-action-panel {
       background: var(--surface-alt);
-      border-color: #8ab9b4;
-      border-left: 5px solid var(--accent);
+      border-color: var(--ds-nav-active-border);
+      border-left: 5px solid var(--ds-link);
       box-shadow: var(--shadow-strong);
     }
     .empty-state-card {
@@ -1053,7 +1073,7 @@ SHARED_CSS = r"""
       padding: 0;
     }
     .technical-details > summary {
-      color: var(--accent-strong);
+      color: var(--ds-link);
       font-size: 0.92rem;
     }
     .detail-shell {
@@ -1154,7 +1174,7 @@ SHARED_CSS = r"""
       padding: 1rem;
     }
     .wizard-stage-primary {
-      border-color: #8ab9b4;
+      border-color: var(--ds-nav-active-border);
       box-shadow: var(--shadow);
     }
     .workflow-panel {
@@ -1165,8 +1185,8 @@ SHARED_CSS = r"""
       padding: 1.25rem;
     }
     .workflow-panel-primary {
-      border-color: var(--accent);
-      box-shadow: 0 14px 34px rgb(18 103 95 / 16%);
+      border-color: var(--ds-nav-active-border);
+      box-shadow: 0 14px 34px rgb(36 87 166 / 14%);
     }
     .stage-kicker {
       color: var(--muted);
@@ -1217,7 +1237,7 @@ SHARED_CSS = r"""
     }
     .facility-suggestions {
       background: var(--surface);
-      border: 1px solid var(--accent);
+      border: 1px solid var(--ds-nav-active-border);
       border-radius: 8px;
       box-shadow: 0 8px 24px rgb(19 32 43 / 14%);
       left: 0;
@@ -1245,7 +1265,7 @@ SHARED_CSS = r"""
       width: 100%;
     }
     .suggestion-btn:hover, .suggestion-btn:focus {
-      background: var(--accent-soft);
+      background: var(--ds-info-soft);
       color: var(--ink);
     }
     .suggestion-name {
@@ -1274,8 +1294,8 @@ SHARED_CSS = r"""
       padding: 0.5rem 0.6rem;
     }
     .facility-selected-card {
-      background: var(--accent-soft);
-      border: 2px solid var(--accent);
+      background: var(--ds-info-soft);
+      border: 2px solid var(--ds-nav-active-border);
       border-radius: 8px;
       margin-top: 0.75rem;
       padding: 0.85rem;
@@ -1377,6 +1397,10 @@ SHARED_CSS = r"""
       }
       .site-nav ul {
         display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+      }
+      .site-nav a {
+        width: 100%;
       }
       .guided-stepper {
         display: block;
