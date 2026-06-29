@@ -3111,13 +3111,21 @@ def _render_review_flag_chips(
     if not flags:
         return '<p class="sr-note">No review flags are visible from loaded source-derived fields.</p>'
     items = "\n".join(
-        f'                            <li><span class="review-chip">{_escape(label)}</span></li>'
+        f'                            <li><span class="{_review_flag_chip_class(label)}">{_escape(label)}</span></li>'
         for label in flags
     )
     return f"""                        <p class="sr-note">Review flags</p>
                         <ul class="flag-list" aria-label="Review flags">
 {items}
                         </ul>"""
+
+
+def _review_flag_chip_class(label: str) -> str:
+    if label.startswith("Needs source check:"):
+        return "review-chip badge-danger"
+    if label == "Original CCLD source link saved":
+        return "review-chip source-chip"
+    return "review-chip"
 
 
 def _review_flag_labels(
