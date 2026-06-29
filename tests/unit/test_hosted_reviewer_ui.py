@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
+from datetime import UTC, datetime
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, cast
@@ -11,6 +12,7 @@ import pytest
 from sqlalchemy import create_engine, func, select, update
 from sqlalchemy.engine import Connection
 
+from ccld_complaints.hosted_app import reviewer_ui
 from ccld_complaints.hosted_app.app import route_response
 from ccld_complaints.hosted_app.audit_events import hosted_audit_events
 from ccld_complaints.hosted_app.auth import (
@@ -651,7 +653,21 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert_no_correction_workflow_html(html)
     assert_no_secret_html(html)
 
-def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> None:
+def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    raw_generated_at = "2026-06-28T02:08:48+00:00"
+
+    class FixedDateTime(datetime):
+        @classmethod
+        def now(cls, tz: Any = None) -> datetime:
+            value = datetime(2026, 6, 28, 2, 8, 48, tzinfo=UTC)
+            if tz is None:
+                return value.replace(tzinfo=None)
+            return value.astimezone(tz)
+
+    monkeypatch.setattr(reviewer_ui, "datetime", FixedDateTime)
+
     with _seeded_connection() as connection:
         create_reviewer_note_scaffold(
             connection,
@@ -717,6 +733,9 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation() -> 
     assert "2022-08-01 to 2022-08-31" in html
     assert "Prepared from" in html
     assert "Generated" in html
+    assert "Jun 27, 2026, 9:08 PM CT" in html
+    assert "Generated: Jun 27, 2026, 9:08 PM CT" in html
+    assert raw_generated_at not in html
     assert "Records included" in html
     assert "Important limitation" in html
     assert "Summary of included records" in html
