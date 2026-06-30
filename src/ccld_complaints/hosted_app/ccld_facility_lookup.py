@@ -285,6 +285,14 @@ class CcldFacilityReviewContext:
     start_date: str = ""
     end_date: str = ""
     source_label: str = "Loaded source-derived complaint records"
+    finding_counts: tuple[tuple[str, int], ...] = ()
+    source_traceability_count: int = 0
+    delay_review_record_count: int = 0
+    missing_date_record_count: int = 0
+    recent_activity_date: str = ""
+    reviewer_status_counts: tuple[tuple[str, int], ...] = ()
+    reviewer_note_record_count: int = 0
+    review_next_label: str = ""
 
     @property
     def has_loaded_context(self) -> bool:
@@ -567,6 +575,7 @@ def render_ccld_facility_review_hub_page(
         </dl>
       </div>
     </section>
+    {_render_facility_pattern_review_summary(record, review_context, signals_summary)}
     <section aria-labelledby="facility-directory-details-heading">
       <h2 id="facility-directory-details-heading">Facility-directory details</h2>
       <p>These fields come from the active preloaded facility directory. Complaint records are requested and reviewed separately. Open source links from record detail when a source check is needed.</p>
@@ -606,6 +615,7 @@ def _render_signal_only_facility_hub_page(
             <p>Showing uploaded public summary fields because the active preloaded facility-directory data does not currently include this facility number.</p>
             <p>Use the uploaded summary fields to decide whether to start a complaint request, then review complaint records separately.</p>
         </section>
+        {_render_facility_pattern_review_summary(record, review_context, summary)}
         {_render_facility_review_signals_section(record, summary)}
         {_render_facility_hub_review_context(record, review_context)}
         {_render_facility_hub_actions(record, review_context)}
@@ -1540,6 +1550,69 @@ def _render_facility_hub_review_context(
         </section>"""
 
 
+def _render_facility_pattern_review_summary(
+        record: CcldFacilityLookupRecord,
+        review_context: CcldFacilityReviewContext,
+        signals_summary: FacilityReviewSignalsSummary | None,
+) -> str:
+        request_href = _facility_request_href(record)
+        queue_href = f"{REVIEWER_UI_RECORDS_PATH}?{urlencode({'q': record.facility_number})}"
+        if not review_context.has_loaded_context:
+                signals_text = _pattern_summary_signal_text(signals_summary)
+                return f"""    <section class="summary-card" aria-labelledby="facility-pattern-summary-heading">
+            <h2 id="facility-pattern-summary-heading">Facility pattern review summary</h2>
+            <p>No loaded complaint records are currently available for this facility in the review context. This is not a public-source completeness conclusion.</p>
+            {signals_text}
+            <ul>
+                <li>Request or load records for this facility before drawing review conclusions from complaint activity.</li>
+                <li>Review available source traceability when records become available.</li>
+                <li>Use uploaded public summary review signals only as planning cues, not legal findings.</li>
+            </ul>
+            <p><a class="button" href="{_escape(request_href)}">Request or load records for this facility</a></p>
+        </section>"""
+        finding_items = _render_pattern_summary_finding_items(review_context)
+        status_items = _render_pattern_summary_status_items(review_context)
+        review_next_text = _display_value(review_context.review_next_label)
+        signal_metrics = _pattern_summary_signal_metrics(signals_summary)
+        return f"""    <section class="summary-card" aria-labelledby="facility-pattern-summary-heading">
+            <h2 id="facility-pattern-summary-heading">Facility pattern review summary</h2>
+            <p>Review signals below use source-derived loaded records and available uploaded public summary fields for facility {_escape(record.facility_number)}. They may deserve closer review; they are not legal conclusions or source-completeness findings.</p>
+            <div class="dense-fact-row" aria-label="Facility pattern review signals">
+                <div class="stat-card"><strong>{review_context.loaded_complaint_record_count}</strong><span>Loaded complaint records</span></div>
+                <div class="stat-card"><strong>{review_context.delay_review_record_count}</strong><span>Delay-review records</span></div>
+                <div class="stat-card"><strong>{review_context.missing_date_record_count}</strong><span>Missing-date records</span></div>
+                <div class="stat-card"><strong>{review_context.source_traceability_count}</strong><span>Records with source traceability</span></div>
+            </div>
+            <dl class="summary-list">
+                <dt>Recent complaint/report/visit activity in loaded records</dt>
+                <dd>{_escape(_display_value(review_context.recent_activity_date))}</dd>
+                <dt>Finding counts in loaded records</dt>
+                <dd>
+                    <ul class="flag-list">
+{finding_items}
+                    </ul>
+                </dd>
+                <dt>Reviewer-created status summary</dt>
+                <dd>
+                    <ul class="flag-list">
+{status_items}
+                    </ul>
+                </dd>
+                <dt>Reviewer-created note cue</dt>
+                <dd>{review_context.reviewer_note_record_count} loaded record(s) have reviewer-created note rows.</dd>
+                <dt>Suggested next loaded complaint</dt>
+                <dd>{_escape(review_next_text)}</dd>
+{signal_metrics}
+            </dl>
+            <nav aria-label="Facility pattern review next actions">
+                <ul>
+                    <li><a href="{_escape(queue_href)}">Open reviewer queue filtered to this facility</a></li>
+                    <li><a href="{_escape(request_href)}">Request or load records for this facility</a></li>
+                </ul>
+            </nav>
+        </section>"""
+
+
 def _render_facility_review_signals_section(
         record: CcldFacilityLookupRecord,
         summary: FacilityReviewSignalsSummary | None,
@@ -1603,6 +1676,64 @@ def _render_facility_review_signals_section(
                 <p>Use signals to choose the next review route, then check source traceability before relying on summary fields.</p>
             </details>
         </section>"""
+
+
+def _pattern_summary_signal_text(
+        signals_summary: FacilityReviewSignalsSummary | None,
+) -> str:
+        if signals_summary is None:
+                return "<p>No uploaded public summary review signals are available for this facility.</p>"
+        return (
+                "<p>Uploaded public summary fields are available as planning cues: "
+                f"{signals_summary.complaint_visit_count} complaint visit(s), "
+                f"{signals_summary.citation_count} citation value(s), "
+                f"{signals_summary.poc_date_count} POC date(s), and last visit "
+                f"{_escape(_display_value(signals_summary.last_visit_date))}.</p>"
+        )
+
+
+def _pattern_summary_signal_metrics(
+        signals_summary: FacilityReviewSignalsSummary | None,
+) -> str:
+        if signals_summary is None:
+                return ""
+        return f"""                <dt>Uploaded public summary citation/POC indicators</dt>
+                <dd>{signals_summary.type_a_citation_count} Type A value(s); {signals_summary.type_b_citation_count} Type B value(s); {signals_summary.poc_date_count} POC date(s)</dd>
+                <dt>Uploaded public summary visit activity</dt>
+                <dd>{signals_summary.complaint_visit_count} complaint visit(s); last visit {_escape(_display_value(signals_summary.last_visit_date))}</dd>"""
+
+
+def _render_pattern_summary_finding_items(
+        review_context: CcldFacilityReviewContext,
+) -> str:
+        if not review_context.finding_counts:
+                return "                        <li>Finding values not available in loaded records.</li>"
+        return "\n".join(
+                f"                        <li>{_escape(_display_value(label))}: {count}</li>"
+                for label, count in review_context.finding_counts
+        )
+
+
+def _render_pattern_summary_status_items(
+        review_context: CcldFacilityReviewContext,
+) -> str:
+        if not review_context.reviewer_status_counts:
+                return "                        <li>No reviewer-created status rows are available for loaded records.</li>"
+        return "\n".join(
+                f"                        <li>{_escape(_reviewer_status_label(label))}: {count}</li>"
+                for label, count in review_context.reviewer_status_counts
+        )
+
+
+def _reviewer_status_label(value: str) -> str:
+        labels = {
+                "not_started": "Not started",
+                "in_review": "In review",
+                "needs_follow_up": "Needs follow-up",
+                "reviewed": "Reviewed",
+                "blocked": "Blocked",
+        }
+        return labels.get(value, value.replace("_", " "))
 
 
 _PRIORITY_CUE_ORDER = (
