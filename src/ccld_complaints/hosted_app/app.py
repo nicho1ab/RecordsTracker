@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from sqlalchemy import create_engine, text
 
@@ -41,8 +41,10 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_REVIEW_HUB_PATH,
     CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
     CCLD_FACILITY_REVIEW_PRIORITY_PATH,
+    REVIEWER_UI_DETAIL_PATH,
     CcldFacilityReferenceSource,
     CcldFacilityReviewContext,
+    CcldReviewNextRecommendation,
     facility_reference_from_source_derived_records,
     route_ccld_facility_lookup_response,
     route_ccld_facility_lookup_response_with_source,
@@ -1513,6 +1515,10 @@ def _facility_review_context_from_context(
         for record in complaint_records
     )
     review_next_record = _facility_review_next_record(complaint_records, state_summaries)
+    review_next_recommendations = _facility_review_next_recommendations(
+        complaint_records,
+        state_summaries,
+    )
     return CcldFacilityReviewContext(
         loaded_complaint_record_count=len(complaint_records),
         start_date=dates[0] if dates else "",
@@ -1551,6 +1557,7 @@ def _facility_review_context_from_context(
         )
         if review_next_record is not None
         else "",
+        review_next_recommendations=review_next_recommendations,
     )
 
 
@@ -1715,6 +1722,181 @@ def _facility_review_next_record(
             _source_record_key(record),
         ),
     )[0]
+
+
+def _facility_review_next_recommendations(
+    complaint_records: tuple[object, ...],
+    state_summaries: dict[str, dict[str, Any]],
+) -> tuple[CcldReviewNextRecommendation, ...]:
+    recommendations = tuple(
+        recommendation
+        for record in sorted(
+            complaint_records,
+            key=lambda item: _facility_review_next_sort_key(item, state_summaries),
+        )
+        if (recommendation := _facility_review_next_recommendation(record, state_summaries))
+        is not None
+    )
+    return recommendations[:3]
+
+
+def _facility_review_next_recommendation(
+    record: object,
+    state_summaries: dict[str, dict[str, Any]],
+) -> CcldReviewNextRecommendation | None:
+    source_record_key = _source_record_key(record)
+    if not source_record_key:
+        return None
+    reasons = _facility_review_next_reasons(record, state_summaries)
+    if not reasons:
+        return None
+    label = _source_original_value(record, "complaint_control_number") or "Complaint record"
+    latest_status = _facility_reviewer_status_for_record(record, state_summaries)
+    finding = _source_original_value(record, "finding") or "not listed"
+    date_label = _facility_review_next_date_label(record)
+    return CcldReviewNextRecommendation(
+        label=label,
+        finding_status_cue=(
+            f"Finding: {finding}; reviewer status: "
+            f"{_facility_reviewer_status_label(latest_status)}"
+        ),
+        date_label=date_label,
+        detail_href=_reviewer_detail_href_for_source_record(source_record_key),
+        reasons=reasons,
+    )
+
+
+def _facility_review_next_reasons(
+    record: object,
+    state_summaries: dict[str, dict[str, Any]],
+) -> tuple[str, ...]:
+    reasons: list[str] = []
+    latest_status = _facility_reviewer_status_for_record(record, state_summaries)
+    if latest_status == "not_started":
+        reasons.append("No reviewer-created status recorded yet.")
+    elif latest_status != "reviewed":
+        reasons.append(
+            "Reviewer-created status is "
+            f"{_facility_reviewer_status_label(latest_status)}, not reviewed."
+        )
+    finding = _source_original_value(record, "finding")
+    if finding.casefold() == "substantiated":
+        reasons.append("Source-derived finding is substantiated.")
+    citation_poc_cues = _facility_citation_poc_cues(record)
+    reasons.extend(citation_poc_cues)
+    strongest_delay = _source_strongest_delay_threshold(record)
+    if strongest_delay:
+        reasons.append(f"Possible delay indicator: over {strongest_delay} days.")
+    missing_date_text = _source_missing_date_reason(record)
+    if missing_date_text:
+        reasons.append(missing_date_text)
+    if _source_traceability_available(record):
+        reasons.append("Source traceability available for detail review.")
+    recent_date = _source_recent_activity_date(record)
+    if recent_date:
+        reasons.append(f"Recent loaded activity date: {recent_date}.")
+    return tuple(dict.fromkeys(reasons))[:6]
+
+
+def _facility_review_next_sort_key(
+    record: object,
+    state_summaries: dict[str, dict[str, Any]],
+) -> tuple[int, int, int, int, int, int, str, str]:
+    latest_status = _facility_reviewer_status_for_record(record, state_summaries)
+    strongest_delay = _source_strongest_delay_threshold(record)
+    return (
+        1 if latest_status == "reviewed" else 0,
+        -int(_source_original_value(record, "finding").casefold() == "substantiated"),
+        -int(bool(_facility_citation_poc_cues(record))),
+        -strongest_delay,
+        -int(_source_missing_date_flagged(record)),
+        -int(_source_traceability_available(record)),
+        _reverse_date_key(_source_recent_activity_date(record)),
+        _source_record_key(record),
+    )
+
+
+def _reviewer_detail_href_for_source_record(source_record_key: str) -> str:
+    query = urlencode({"source_record_key": source_record_key}).replace(
+        "source_record_key",
+        "source%5Frecord%5Fkey",
+    )
+    return f"{REVIEWER_UI_DETAIL_PATH}?{query}"
+
+
+def _facility_reviewer_status_label(value: str) -> str:
+    labels = {
+        "not_started": "Not started",
+        "in_review": "In review",
+        "needs_follow_up": "Needs follow-up",
+        "reviewed": "Reviewed",
+        "blocked": "Blocked",
+    }
+    return labels.get(value, value.replace("_", " "))
+
+
+def _source_strongest_delay_threshold(record: object) -> int:
+    thresholds = [
+        days
+        for days in (30, 60, 90, 120)
+        if _source_original_bool(record, f"review_delay_over_{days}_days")
+    ]
+    return max(thresholds) if thresholds else 0
+
+
+def _source_missing_date_reason(record: object) -> str:
+    missing: list[str] = []
+    if _source_original_bool(record, "missing_first_activity_date"):
+        missing.append("first activity date")
+    if not _source_original_value(record, "visit_date"):
+        missing.append("visit date")
+    if not _source_original_value(record, "report_date"):
+        missing.append("report date")
+    if not _source_original_value(record, "date_signed"):
+        missing.append("signed date")
+    if not missing:
+        return ""
+    return "Needs source check: " + ", ".join(missing) + " not available locally."
+
+
+def _facility_citation_poc_cues(record: object) -> tuple[str, ...]:
+    joined = " ".join(_source_original_string_values(record)).casefold()
+    cues: list[str] = []
+    if "typea" in joined or "type a" in joined or "a citation" in joined:
+        cues.append("Type A citation cue loaded; verify wording in the source record.")
+    elif "citation" in joined or "deficien" in joined:
+        cues.append("Citation or deficiency cue loaded; verify wording in the source record.")
+    if "poc" in joined or "plan of correction" in joined:
+        cues.append("POC cue loaded; verify completion wording in the source record.")
+    return tuple(cues)
+
+
+def _source_original_string_values(record: object) -> tuple[str, ...]:
+    if not isinstance(record, dict):
+        return ()
+    original_values = record.get("original_values")
+    if not isinstance(original_values, dict):
+        return ()
+    return tuple(value.strip() for value in original_values.values() if isinstance(value, str) and value.strip())
+
+
+def _source_recent_activity_date(record: object) -> str:
+    dates = sorted(
+        value
+        for value in (
+            _source_original_value(record, "complaint_received_date"),
+            _source_original_value(record, "visit_date"),
+            _source_original_value(record, "report_date"),
+            _source_original_value(record, "date_signed"),
+        )
+        if _looks_like_iso_date(value)
+    )
+    return dates[-1] if dates else ""
+
+
+def _facility_review_next_date_label(record: object) -> str:
+    recent_date = _source_recent_activity_date(record)
+    return f"Recent activity {recent_date}" if recent_date else "not listed"
 
 
 def _reverse_date_key(value: str) -> str:

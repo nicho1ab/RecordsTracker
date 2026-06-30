@@ -26,6 +26,7 @@ CCLD_FACILITY_REVIEW_PRIORITY_PATH = f"{CCLD_FACILITY_LOOKUP_PATH}/review-priori
 CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH = f"{CCLD_FACILITY_LOOKUP_PATH}/intelligence"
 CCLD_RECORD_REQUEST_PATH = "/ccld/records/request"
 REVIEWER_UI_RECORDS_PATH = "/reviewer/records"
+REVIEWER_UI_DETAIL_PATH = f"{REVIEWER_UI_RECORDS_PATH}/detail"
 REVIEWER_UI_MATRIX_EXPORT_PATH = "/reviewer/records/matrix.csv"
 REVIEWER_UI_PACKET_PREVIEW_PATH = "/reviewer/packet/preview"
 REVIEWER_UI_PACKET_DRAFT_PATH = "/reviewer/packet/draft"
@@ -280,6 +281,15 @@ class CcldFacilityLookupResult:
 
 
 @dataclass(frozen=True)
+class CcldReviewNextRecommendation:
+    label: str
+    finding_status_cue: str
+    date_label: str
+    detail_href: str
+    reasons: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class CcldFacilityReviewContext:
     loaded_complaint_record_count: int = 0
     start_date: str = ""
@@ -293,6 +303,7 @@ class CcldFacilityReviewContext:
     reviewer_status_counts: tuple[tuple[str, int], ...] = ()
     reviewer_note_record_count: int = 0
     review_next_label: str = ""
+    review_next_recommendations: tuple[CcldReviewNextRecommendation, ...] = ()
 
     @property
     def has_loaded_context(self) -> bool:
@@ -576,6 +587,7 @@ def render_ccld_facility_review_hub_page(
       </div>
     </section>
     {_render_facility_pattern_review_summary(record, review_context, signals_summary)}
+    {_render_review_next_section(review_context)}
     <section aria-labelledby="facility-directory-details-heading">
       <h2 id="facility-directory-details-heading">Facility-directory details</h2>
       <p>These fields come from the active preloaded facility directory. Complaint records are requested and reviewed separately. Open source links from record detail when a source check is needed.</p>
@@ -616,6 +628,7 @@ def _render_signal_only_facility_hub_page(
             <p>Use the uploaded summary fields to decide whether to start a complaint request, then review complaint records separately.</p>
         </section>
         {_render_facility_pattern_review_summary(record, review_context, summary)}
+        {_render_review_next_section(review_context)}
         {_render_facility_review_signals_section(record, summary)}
         {_render_facility_hub_review_context(record, review_context)}
         {_render_facility_hub_actions(record, review_context)}
@@ -1572,7 +1585,7 @@ def _render_facility_pattern_review_summary(
         </section>"""
         finding_items = _render_pattern_summary_finding_items(review_context)
         status_items = _render_pattern_summary_status_items(review_context)
-        review_next_text = _display_value(review_context.review_next_label)
+        review_next_text = _review_next_summary_label(review_context)
         signal_metrics = _pattern_summary_signal_metrics(signals_summary)
         return f"""    <section class="summary-card" aria-labelledby="facility-pattern-summary-heading">
             <h2 id="facility-pattern-summary-heading">Facility pattern review summary</h2>
@@ -1611,6 +1624,59 @@ def _render_facility_pattern_review_summary(
                 </ul>
             </nav>
         </section>"""
+
+
+def _render_review_next_section(
+        review_context: CcldFacilityReviewContext,
+) -> str:
+        if not review_context.has_loaded_context or not review_context.review_next_recommendations:
+                return """    <section class="empty-state-card" aria-labelledby="review-next-heading">
+            <h2 id="review-next-heading">Review next</h2>
+            <p>No loaded records have review-next signals in this context.</p>
+            <p>This only reflects the currently loaded local/test records and does not imply source completeness or absence of problems.</p>
+        </section>"""
+        items = "\n".join(
+                _render_review_next_item(item, index)
+                for index, item in enumerate(review_context.review_next_recommendations, start=1)
+        )
+        return f"""    <section class="summary-card" aria-labelledby="review-next-heading">
+            <h2 id="review-next-heading">Review next</h2>
+            <p>Open loaded records in this suggested order when deciding what needs attorney review first. Reasons use existing source-derived values and existing reviewer-created status cues only.</p>
+            <ol class="review-next-list">
+{items}
+            </ol>
+        </section>"""
+
+
+def _render_review_next_item(
+        item: CcldReviewNextRecommendation,
+        index: int,
+) -> str:
+        reasons = "\n".join(
+                f"                    <li>{_escape(reason)}</li>" for reason in item.reasons
+        )
+        return f"""                <li class="review-next-item">
+                    <p><strong>{index}. {_escape(item.label)}</strong></p>
+                    <dl class="summary-list">
+                        <dt>Finding/status cue</dt>
+                        <dd>{_escape(_display_value(item.finding_status_cue))}</dd>
+                        <dt>Date shown</dt>
+                        <dd>{_escape(_display_value(item.date_label))}</dd>
+                        <dt>Why suggested</dt>
+                        <dd>
+                            <ul class="flag-list">
+{reasons}
+                            </ul>
+                        </dd>
+                    </dl>
+                    <p><a href="{_escape(item.detail_href)}">Open reviewer detail for {_escape(item.label)}</a></p>
+                </li>"""
+
+
+def _review_next_summary_label(review_context: CcldFacilityReviewContext) -> str:
+        if review_context.review_next_recommendations:
+                return review_context.review_next_recommendations[0].label
+        return _display_value(review_context.review_next_label)
 
 
 def _render_facility_review_signals_section(

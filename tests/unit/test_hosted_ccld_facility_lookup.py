@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from html.parser import HTMLParser
 from pathlib import Path
@@ -30,10 +30,13 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER,
     CcldFacilityLookupRecord,
     CcldFacilityReferenceSource,
+    CcldFacilityReviewContext,
+    CcldReviewNextRecommendation,
     load_active_ccld_facility_reference,
     load_ccld_facility_reference,
     no_reference_facility_source,
     render_ccld_facility_lookup_page,
+    render_ccld_facility_review_hub_page,
     search_ccld_facilities,
 )
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
@@ -766,6 +769,9 @@ def test_ccld_facility_review_hub_renders_safe_directory_context() -> None:
     assert "No loaded complaint records are currently available" in html
     assert "not a public-source completeness conclusion" in normalized_html
     assert "Request or load records for this facility" in html
+    assert "Review next" in html
+    assert "No loaded records have review-next signals in this context." in html
+    assert "does not imply source completeness or absence of problems" in normalized_html
     assert "No complaint context is currently available" in html
     assert "Date range is needed before the review queue" in html
     assert "Start complaint request for this facility" in html
@@ -950,6 +956,16 @@ def test_ccld_facility_review_hub_renders_signal_only_context_without_mutation(
     assert "Unsubstantiated: 1" in html
     assert "Not started: 1" in html
     assert "0 loaded record(s) have reviewer-created note rows" in html
+    assert "Review next" in html
+    assert "Open loaded records in this suggested order" in html
+    assert "Finding: Unsubstantiated; reviewer status: Not started" in html
+    assert "Recent activity 2022-08-26" in html
+    assert "No reviewer-created status recorded yet." in html
+    assert "Possible delay indicator: over 120 days." in html
+    assert "Needs source check: first activity date not available locally." in html
+    assert "Source traceability available for detail review." in html
+    assert "Open reviewer detail for 32-CR-20220407124448" in html
+    assert "/reviewer/records/detail?source%5Frecord%5Fkey=" in html
     assert "1 Type A value(s); 1 Type B value(s); 2 POC date(s)" in html
     assert "Open reviewer queue filtered to this facility" in html
     assert "Start complaint request for this facility" in html
@@ -1041,6 +1057,20 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
     assert "Not started: 1" in html
     assert "Suggested next loaded complaint" in html
     assert "32-CR-20220407124448" in html
+    assert "Review next" in html
+    assert (
+        "Reasons use existing source-derived values and existing reviewer-created "
+        "status cues only"
+        in html
+    )
+    assert "Finding: Unsubstantiated; reviewer status: Not started" in html
+    assert "Recent activity 2022-08-26" in html
+    assert "No reviewer-created status recorded yet." in html
+    assert "Possible delay indicator: over 120 days." in html
+    assert "Needs source check: first activity date not available locally." in html
+    assert "Source traceability available for detail review." in html
+    assert "Open reviewer detail for 32-CR-20220407124448" in html
+    assert "/reviewer/records/detail?source%5Frecord%5Fkey=" in html
     assert "2022-04-07 to 2022-08-26" in html
     assert "Review loaded records for this facility/date context" in html
     assert "Open reviewer queue filtered to this facility" in html
@@ -1058,6 +1088,84 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
     assert "source_document_id" not in html
     assert "import_batch" not in html
     assert "audit_id" not in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_facility_review_hub_review_next_cautious_reason_rows() -> None:
+    source = CcldFacilityReferenceSource(
+        source_kind="test_reference",
+        label="Test facility reference",
+        path_label="test-reference.csv",
+        records=(
+            CcldFacilityLookupRecord(
+                facility_number="900000001",
+                facility_name="Synthetic Orchard Child Care",
+                city="Sample City",
+                state="CA",
+                county="Los Angeles",
+                zip_code="90001",
+                facility_type="Child Care Center",
+                program_type="",
+                capacity="24",
+                status="Licensed",
+                closed_date="",
+            ),
+        ),
+    )
+    review_context = CcldFacilityReviewContext(
+        loaded_complaint_record_count=2,
+        start_date="2026-01-01",
+        end_date="2026-01-31",
+        finding_counts=(("Substantiated", 1), ("Unsubstantiated", 1)),
+        source_traceability_count=2,
+        delay_review_record_count=1,
+        missing_date_record_count=1,
+        recent_activity_date="2026-01-31",
+        reviewer_status_counts=(("needs_follow_up", 1), ("reviewed", 1)),
+        reviewer_note_record_count=1,
+        review_next_recommendations=(
+            CcldReviewNextRecommendation(
+                label="32-CR-REVIEW-NEXT",
+                finding_status_cue="Finding: Substantiated; reviewer status: Needs follow-up",
+                date_label="Recent activity 2026-01-31",
+                detail_href="/reviewer/records/detail?source%5Frecord%5Fkey=encoded-record",
+                reasons=(
+                    "Reviewer-created status is Needs follow-up, not reviewed.",
+                    "Source-derived finding is substantiated.",
+                    "Type A citation cue loaded; verify wording in the source record.",
+                    "POC cue loaded; verify completion wording in the source record.",
+                    "Source traceability available for detail review.",
+                ),
+            ),
+        ),
+    )
+
+    html = render_ccld_facility_review_hub_page(
+        "900000001",
+        source,
+        review_context=review_context,
+    )
+    normalized_html = " ".join(html.split()).casefold()
+
+    assert "Review next" in html
+    assert "32-CR-REVIEW-NEXT" in html
+    assert "Finding: Substantiated; reviewer status: Needs follow-up" in html
+    assert "Recent activity 2026-01-31" in html
+    assert "Reviewer-created status is Needs follow-up, not reviewed." in html
+    assert "Source-derived finding is substantiated." in html
+    assert "Type A citation cue loaded; verify wording in the source record." in html
+    assert "POC cue loaded; verify completion wording in the source record." in html
+    assert "Source traceability available for detail review." in html
+    assert (
+        'href="/reviewer/records/detail?source%5Frecord%5Fkey=encoded-record"'
+        in html
+    )
+    assert "source_record_key" not in html
+    assert "source_document_id" not in html
+    assert "import_batch" not in html
+    assert "audit_id" not in html
+    assert "verified complaint" not in normalized_html
+    assert "source completeness" not in normalized_html
     assert_no_secret_html(html)
 
 
@@ -2131,3 +2239,4 @@ def _empty_reviewer_counts() -> dict[str, int]:
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
     }
+
