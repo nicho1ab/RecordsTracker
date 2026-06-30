@@ -76,6 +76,23 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Send feedback" in html
     assert "Send safe review feedback" in html
+    assert "What makes feedback actionable" in html
+    assert (
+        "Actionable tester feedback names the page or route, what you tried first, "
+        "what you expected, what happened instead, and whether the issue blocked review."
+        in html
+    )
+    assert (
+        "facility lookup, Request Records, loaded queue, reviewer detail, packet/brief, "
+        "readiness checklist, or feedback"
+        in html
+    )
+    assert (
+        "confusing loaded-context cue, source traceability cue, record order, "
+        "note/status action, packet/readiness item, label, or keyboard step"
+        in html
+    )
+    assert "Say what would have helped you continue review." in html
     assert "packet/readiness" in html
     assert "Job Status" in html
     assert "already-loaded records" in html or "loaded-record" in html
@@ -105,16 +122,30 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     )
     assert (
         '<p id="feedback-type-help" class="helper-text">Choose the category that best fits '
-        "the route or action that was confusing.</p>"
+        "the route, action, loaded-context cue, packet/readiness cue, or keyboard step "
+        "that was confusing.</p>"
     ) in html
+    assert (
+        "Describe the page, action, expected result, actual result, loaded-context cue, "
+        "source traceability cue, packet/readiness concern, browser copy issue, or print issue "
+        "without private material."
+        in normalized_html
+    )
+    assert (
+        "The first-time tester orientation did not make facility lookup, Request Records, "
+        "loaded context, prioritized records, packet/brief, readiness checklist, or feedback clear."
+        in html
+    )
     assert_ordered(
         html,
         (
+            '<h2 id="actionable-feedback-heading">What makes feedback actionable</h2>',
             '<label for="feedback_type">Feedback type</label>',
             '<select id="feedback_type" name="feedback_type" required '
             'aria-describedby="feedback-type-help">',
             '<p id="feedback-type-help" class="helper-text">Choose the category that best fits '
-            "the route or action that was confusing.</p>",
+            "the route, action, loaded-context cue, packet/readiness cue, or keyboard step "
+            "that was confusing.</p>",
             '<h3 id="feedback-safety-heading">Do not include private material</h3>',
             '<label for="description">Description</label>',
             '<button type="submit">Submit feedback</button>',

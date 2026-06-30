@@ -268,8 +268,17 @@ def render_feedback_page(
         <section class="hero-card" aria-labelledby="feedback-purpose-heading">
             <p class="launch-kicker">Tester feedback</p>
             <h2 id="feedback-purpose-heading">Send safe review feedback</h2>
-            <p>Choose the feedback type and describe what blocked Request Records, Job Status, record review, wording, or keyboard flow.</p>
-            <p class="helper-text">Choose a feedback type, describe only safe details, and use the visible validation message if a required field is missing.</p>
+            <p>Choose the feedback type and describe what blocked Request Records, Job Status, record review, packet/readiness review, wording, or keyboard flow.</p>
+            <p class="helper-text">Actionable tester feedback names the page or route, what you tried first, what you expected, what happened instead, and whether the issue blocked review.</p>
+        </section>
+        <section class="notice-card" aria-labelledby="actionable-feedback-heading">
+            <h2 id="actionable-feedback-heading">What makes feedback actionable</h2>
+            <ul>
+                <li>Name the workflow area: facility lookup, Request Records, loaded queue, reviewer detail, packet/brief, readiness checklist, or feedback.</li>
+                <li>Describe the confusing loaded-context cue, source traceability cue, record order, note/status action, packet/readiness item, label, or keyboard step.</li>
+                <li>Say what would have helped you continue review.</li>
+            </ul>
+            <p>Do not include raw source narrative, secrets, private URLs, provider claims, stack traces, server paths, legal conclusions, or source-completeness claims.</p>
         </section>
         {_feedback_context_panel(handoff_context)}
         <div class="support-layout">
@@ -295,6 +304,7 @@ def render_feedback_page(
                 <li>A missing value or proxy-related cue made it unclear whether to add cautious reviewer-created state or use feedback.</li>
                 <li>The workflow did not help me decide what to review next.</li>
                 <li>The active reviewer-created status filter, shown count, total queue count, or filtered-empty recovery action was confusing.</li>
+                <li>The first-time tester orientation did not make facility lookup, Request Records, loaded context, prioritized records, packet/brief, readiness checklist, or feedback clear.</li>
             </ul>
         </details>
 """,
@@ -680,7 +690,7 @@ def _feedback_form(form_values: Mapping[str, list[str]]) -> str:
             <option value="">Choose feedback type</option>
 {options}
           </select>
-          <p id="feedback-type-help" class="helper-text">Choose the category that best fits the route or action that was confusing.</p>
+          <p id="feedback-type-help" class="helper-text">Choose the category that best fits the route, action, loaded-context cue, packet/readiness cue, or keyboard step that was confusing.</p>
         </div>
         <section class="notice-card" aria-labelledby="feedback-safety-heading">
           <h3 id="feedback-safety-heading">Do not include private material</h3>
@@ -691,7 +701,7 @@ def _feedback_form(form_values: Mapping[str, list[str]]) -> str:
         <p>
           <label for="description">Description</label>
                     {textarea}
-                    <span id="description-help">Describe the route, control, keyboard flow, source traceability cue, packet/readiness concern, browser copy issue, or print issue without private material.</span>
+                    <span id="description-help">Describe the page, action, expected result, actual result, loaded-context cue, source traceability cue, packet/readiness concern, browser copy issue, or print issue without private material.</span>
         </p>
         <input type="hidden" name="page_path" value="{html.escape(page_path)}">
         <p><button type="submit">Submit feedback</button></p>

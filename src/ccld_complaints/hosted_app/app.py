@@ -819,6 +819,27 @@ def render_app_shell() -> str:
                 </li>
             </ol>
         </section>
+        <section aria-labelledby="tester-orientation-heading">
+            <h2 id="tester-orientation-heading">First-time tester orientation</h2>
+            <p>Try this first: open facility lookup if you know a facility name,
+            location, or other directory detail. Use Request Records when you already
+            have the digit facility/license number, then choose the complaint date
+            range and review the loaded queue.</p>
+            <p>Loaded context means records and facility cues already available in this
+            review workspace for the current facility/date request. It is a review aid
+            for the current loaded data, not a statement that the public source is
+            complete.</p>
+            <ol class="compact-list">
+                <li>Facility lookup helps fill the facility/license number for Request Records.</li>
+                <li>Prioritized records show which loaded complaint records to open first.</li>
+                <li>Reviewer detail is where you check source traceability before adding reviewer-created notes/status.</li>
+                <li>Packet preview and draft collect the current facility/date review context into a copy-ready brief.</li>
+                <li>The readiness checklist helps decide whether the loaded context is ready for attorney review handoff.</li>
+            </ol>
+            <p>When a start path, loaded-context cue, record order, source traceability
+            cue, packet/brief cue, readiness item, wording, or keyboard flow is
+            confusing, <a href="{FEEDBACK_PATH}">send tester feedback</a>.</p>
+        </section>
         <section aria-labelledby="ready-paths-heading">
             <h2 id="ready-paths-heading">Ready paths</h2>
             <div class="card-grid">
@@ -841,6 +862,11 @@ def render_app_shell() -> str:
                     <h3>Packet and readiness</h3>
                     <p>Prepare the packet/brief and check readiness from the existing packet pages.</p>
                     <p><a class="button button-secondary" href="{REVIEWER_UI_PACKET_PREVIEW_PATH}">Open packet preview</a></p>
+                </article>
+                <article class="summary-card">
+                    <h3>Tester feedback</h3>
+                    <p>Report what you tried, what loaded context or route was confusing, and what blocked review.</p>
+                    <p><a class="button button-secondary" href="{FEEDBACK_PATH}">Open feedback</a></p>
                 </article>
             </div>
         </section>"""

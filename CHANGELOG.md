@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Added a concise first-time tester orientation on the hosted entry page that
+  explains the start path, loaded context, facility lookup, prioritized records,
+  packet/brief, readiness checklist, and `/feedback` handoff. The existing
+  feedback route now includes more actionable tester-feedback guidance without
+  adding a second feedback workflow or changing feedback persistence.
 - Added acceptance guardrails for the guided attorney review workflow across
   the hosted entry point, facility pattern review hub, prioritized record
   queue, packet preview/draft brief, and attorney readiness checklist using the
