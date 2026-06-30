@@ -7,6 +7,7 @@ import csv
 import html
 import json
 import os
+from collections import Counter
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -1506,10 +1507,50 @@ def _facility_review_context_from_context(
             if _looks_like_iso_date(value)
         }
     )
+    state_summaries = _facility_reviewer_state_summaries(context)
+    status_counts = Counter(
+        _facility_reviewer_status_for_record(record, state_summaries)
+        for record in complaint_records
+    )
+    review_next_record = _facility_review_next_record(complaint_records, state_summaries)
     return CcldFacilityReviewContext(
         loaded_complaint_record_count=len(complaint_records),
         start_date=dates[0] if dates else "",
         end_date=dates[-1] if dates else "",
+        finding_counts=tuple(
+            sorted(
+                Counter(
+                    _source_original_value(record, "finding") or "not listed"
+                    for record in complaint_records
+                ).items(),
+                key=lambda item: (item[0] == "not listed", item[0]),
+            )
+        ),
+        source_traceability_count=sum(
+            1 for record in complaint_records if _source_traceability_available(record)
+        ),
+        delay_review_record_count=sum(
+            1 for record in complaint_records if _source_delay_review_flagged(record)
+        ),
+        missing_date_record_count=sum(
+            1 for record in complaint_records if _source_missing_date_flagged(record)
+        ),
+        recent_activity_date=dates[-1] if dates else "",
+        reviewer_status_counts=tuple(sorted(status_counts.items())),
+        reviewer_note_record_count=sum(
+            1
+            for record in complaint_records
+            if _facility_state_summary_note_count(
+                state_summaries.get(_source_record_key(record), {})
+            )
+            > 0
+        ),
+        review_next_label=_source_original_value(
+            review_next_record,
+            "complaint_control_number",
+        )
+        if review_next_record is not None
+        else "",
     )
 
 
@@ -1517,6 +1558,13 @@ def _source_record_entity_type(record: object) -> str:
     if isinstance(record, dict):
         value = record.get("entity_type")
         return value if isinstance(value, str) else ""
+    return ""
+
+
+def _source_record_key(record: object | None) -> str:
+    if isinstance(record, dict):
+        value = record.get("source_record_key")
+        return value.strip() if isinstance(value, str) else ""
     return ""
 
 
@@ -1528,6 +1576,151 @@ def _source_original_value(record: object, key: str) -> str:
         return ""
     value = original_values.get(key)
     return value.strip() if isinstance(value, str) else ""
+
+
+def _source_original_bool(record: object, key: str) -> bool:
+    if not isinstance(record, dict):
+        return False
+    original_values = record.get("original_values")
+    if not isinstance(original_values, dict):
+        return False
+    return original_values.get(key) is True
+
+
+def _source_delay_review_flagged(record: object) -> bool:
+    return any(
+        _source_original_bool(record, f"review_delay_over_{days}_days")
+        for days in (30, 60, 90, 120)
+    )
+
+
+def _source_missing_date_flagged(record: object) -> bool:
+    return (
+        _source_original_bool(record, "missing_first_activity_date")
+        or not _source_original_value(record, "visit_date")
+        or not _source_original_value(record, "report_date")
+        or not _source_original_value(record, "date_signed")
+    )
+
+
+def _source_traceability_available(record: object) -> bool:
+    if not isinstance(record, dict):
+        return False
+    return bool(
+        record.get("source_url")
+        or record.get("raw_sha256")
+        or record.get("retrieved_at")
+        or record.get("connector_name")
+    )
+
+
+def _facility_reviewer_state_summaries(
+    context: CcldRecordRequestUiContext,
+) -> dict[str, dict[str, Any]]:
+    status, _content_type, body = route_reviewer_created_state_api_response(
+        REVIEWER_CREATED_STATE_API_PREFIX,
+        context.reviewer_ui_context.workflow_shell_context.reviewer_created_state_api_context,
+    )
+    if status != 200:
+        return {}
+    payload = json.loads(body.decode())
+    records = payload.get("reviewer_created_state", [])
+    if not isinstance(records, list):
+        return {}
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        source_record_key = _source_record_key(record)
+        grouped.setdefault(source_record_key, []).append(record)
+    return {
+        source_record_key: _facility_state_summary_for_records(group_records)
+        for source_record_key, group_records in grouped.items()
+    }
+
+
+def _facility_state_summary_for_records(
+    records: list[dict[str, Any]],
+) -> dict[str, Any]:
+    note_count = 0
+    latest_status: str | None = None
+    latest_created_at: str | None = None
+    for record in records:
+        created_at = record.get("created_at")
+        created_at_text = created_at if isinstance(created_at, str) else ""
+        state_payload = record.get("state_payload")
+        if not isinstance(state_payload, dict):
+            continue
+        if state_payload.get("payload_kind") == "reviewer_note_scaffold":
+            note_count += 1
+        reviewer_status = state_payload.get("reviewer_status")
+        if isinstance(reviewer_status, str) and reviewer_status.strip():
+            if latest_created_at is None or created_at_text >= latest_created_at:
+                latest_status = reviewer_status.strip()
+        if latest_created_at is None or created_at_text >= latest_created_at:
+            latest_created_at = created_at_text
+    return {
+        "note_count": note_count,
+        "latest_status": latest_status,
+    }
+
+
+def _facility_state_summary_note_count(summary: object) -> int:
+    if not isinstance(summary, dict):
+        return 0
+    value = summary.get("note_count")
+    return value if isinstance(value, int) else 0
+
+
+def _facility_state_summary_latest_status(summary: object) -> str | None:
+    if not isinstance(summary, dict):
+        return None
+    value = summary.get("latest_status")
+    return value if isinstance(value, str) and value else None
+
+
+def _facility_reviewer_status_for_record(
+    record: object,
+    state_summaries: dict[str, dict[str, Any]],
+) -> str:
+    return (
+        _facility_state_summary_latest_status(
+            state_summaries.get(_source_record_key(record), {})
+        )
+        or "not_started"
+    )
+
+
+def _facility_review_next_record(
+    complaint_records: tuple[object, ...],
+    state_summaries: dict[str, dict[str, Any]],
+) -> object | None:
+    if not complaint_records:
+        return None
+    return sorted(
+        complaint_records,
+        key=lambda record: (
+            1
+            if _facility_state_summary_latest_status(
+                state_summaries.get(_source_record_key(record), {})
+            )
+            else 0,
+            -int(_source_delay_review_flagged(record)),
+            -int(_source_missing_date_flagged(record)),
+            _reverse_date_key(
+                _source_original_value(record, "complaint_received_date")
+                or _source_original_value(record, "report_date")
+                or _source_original_value(record, "visit_date")
+            ),
+            _source_record_key(record),
+        ),
+    )[0]
+
+
+def _reverse_date_key(value: str) -> str:
+    if not value:
+        return "9999-99-99"
+    return "".join(str(9 - int(ch)) if ch.isdigit() else ch for ch in value)
 
 
 def _looks_like_iso_date(value: str) -> bool:
