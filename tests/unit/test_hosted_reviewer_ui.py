@@ -657,6 +657,35 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "source_document_id" not in prioritized_html
     assert "import_batch" not in prioritized_html
     assert "audit_id" not in prioritized_html
+    assert "Attorney review readiness checklist" in html
+    checklist_start = html.index("Attorney review readiness checklist")
+    checklist_end = html.index("Copy-ready attorney review brief", checklist_start)
+    checklist_html = html[checklist_start:checklist_end]
+    normalized_checklist_html = " ".join(checklist_html.split())
+    assert "existing loaded context only" in checklist_html
+    assert "not a legal sufficiency decision" in checklist_html
+    assert "Loaded complaint records" in checklist_html
+    assert "Prioritized records" in checklist_html
+    assert "Source traceability cues" in checklist_html
+    assert "Reviewer-created note/status presence" in checklist_html
+    assert "Follow-up questions" in checklist_html
+    assert "Ready" in checklist_html
+    assert "Needs review" in checklist_html
+    assert "Back to review queue" in checklist_html
+    assert "report packet readiness concern" in checklist_html
+    assert "Use the suggested follow-up questions in the copy-ready brief" in checklist_html
+    assert "No limited-data warning is visible" in checklist_html
+    assert "source-completeness proof" in checklist_html
+    assert COMPLAINT_KEY not in checklist_html
+    assert "source_record_key" not in checklist_html
+    assert "source_document_id" not in checklist_html
+    assert "import_batch" not in checklist_html
+    assert "audit_id" not in checklist_html
+    assert (
+        "review readiness guidance for packet preparation, not a legal sufficiency "
+        "decision"
+        in normalized_checklist_html
+    )
     assert "Copy-ready attorney review brief" in html
     assert "manual copy into an attorney review note or handoff draft" in html
     brief_start = html.index("Copy-ready attorney review brief")
@@ -877,6 +906,31 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     assert "source_document_id" not in prioritized_html
     assert "import_batch" not in prioritized_html
     assert "audit_id" not in prioritized_html
+    assert "Attorney review readiness checklist" in html
+    checklist_start = html.index("Attorney review readiness checklist")
+    checklist_end = html.index("Copy-ready attorney review brief", checklist_start)
+    checklist_html = html[checklist_start:checklist_end]
+    normalized_checklist_html = " ".join(checklist_html.split())
+    assert "existing loaded context only" in checklist_html
+    assert "Loaded complaint records" in checklist_html
+    assert "Prioritized records" in checklist_html
+    assert "Source traceability cues" in checklist_html
+    assert "Reviewer-created note/status presence" in checklist_html
+    assert "Follow-up questions" in checklist_html
+    assert "Ready" in checklist_html
+    assert "Needs review" in checklist_html
+    assert "Use the suggested follow-up questions in the copy-ready brief" in checklist_html
+    assert "No limited-data warning is visible" in checklist_html
+    assert COMPLAINT_KEY not in checklist_html
+    assert "source_record_key" not in checklist_html
+    assert "source_document_id" not in checklist_html
+    assert "import_batch" not in checklist_html
+    assert "audit_id" not in checklist_html
+    assert (
+        "review readiness guidance for packet preparation, not a legal sufficiency "
+        "decision"
+        in normalized_checklist_html
+    )
     assert "Copy-ready attorney review brief" in html
     assert "manual copy into an attorney review note or handoff draft" in html
     brief_start = html.index("Copy-ready attorney review brief")
@@ -1038,6 +1092,32 @@ def test_reviewer_packet_preview_empty_context_has_limited_data_attorney_brief()
         "reset_reload_planning_metadata": 0,
     }
     assert "Copy-ready attorney review brief" in html
+    assert "Attorney review readiness checklist" in html
+    checklist_start = html.index("Attorney review readiness checklist")
+    checklist_end = html.index("Copy-ready attorney review brief", checklist_start)
+    checklist_html = html[checklist_start:checklist_end]
+    assert "Not available in loaded context" in checklist_html
+    assert "Loaded complaint records" in checklist_html
+    assert "Prioritized records" in checklist_html
+    assert "Source traceability cues" in checklist_html
+    assert "Reviewer-created note/status presence" in checklist_html
+    assert "Follow-up questions" in checklist_html
+    assert (
+        "Limited-data warning: no loaded complaint records match this "
+        "packet context"
+        in checklist_html
+    )
+    assert (
+        "Limited-data warning: no prioritized record cues are available from the loaded context."
+        in checklist_html
+    )
+    assert "Back to review queue" in checklist_html
+    assert "report packet readiness concern" in checklist_html
+    assert COMPLAINT_KEY not in checklist_html
+    assert "source_record_key" not in checklist_html
+    assert "source_document_id" not in checklist_html
+    assert "import_batch" not in checklist_html
+    assert "audit_id" not in checklist_html
     brief_start = html.index("Copy-ready attorney review brief")
     brief_end = html.index("Included complaint records", brief_start)
     brief_html = html[brief_start:brief_end]
