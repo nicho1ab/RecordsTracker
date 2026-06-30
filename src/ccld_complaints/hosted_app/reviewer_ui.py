@@ -1368,6 +1368,13 @@ def _render_packet_draft(
         heading_level=3,
         section_id="draft-prioritized-records",
     )
+    attorney_review_brief = _render_copy_ready_attorney_review_brief_section(
+        records,
+        state_summaries,
+        return_context,
+        heading_level=3,
+        section_id="draft-attorney-review-brief",
+    )
     feedback_href = _feedback_href(
         workflow_area="packet-draft",
         page_path=REVIEWER_UI_PACKET_DRAFT_PATH,
@@ -1497,6 +1504,7 @@ def _render_packet_draft(
                         </ul>
                     </section>
 {prioritized_record_context}
+{attorney_review_brief}
                     <section aria-labelledby="draft-next-review-heading">
                         <h3 id="draft-next-review-heading">Before using this draft</h3>
                         <ul>
@@ -1996,6 +2004,13 @@ def _render_packet_preview(
         heading_level=2,
         section_id="packet-prioritized-records",
     )
+    attorney_review_brief = _render_copy_ready_attorney_review_brief_section(
+        records,
+        state_summaries,
+        return_context,
+        heading_level=2,
+        section_id="packet-attorney-review-brief",
+    )
     feedback_href = _feedback_href(
         workflow_area="packet-preview",
         page_path=REVIEWER_UI_PACKET_PREVIEW_PATH,
@@ -2109,6 +2124,7 @@ def _render_packet_preview(
           </dl>
         </section>
 {prioritized_record_context}
+{attorney_review_brief}
         <section aria-labelledby="packet-records-heading">
           <h2 id="packet-records-heading">Included complaint records</h2>
           <div class="result-list" aria-label="Included complaint records">
@@ -2308,6 +2324,125 @@ def _render_packet_prioritized_record_item(
                                 </dl>
                                 <p><a href="{_escape(record.detail_href)}">Open reviewer detail for {_escape(display_record_label(record))}</a></p>
                             </li>"""
+
+
+def _render_copy_ready_attorney_review_brief_section(
+    records: list[Mapping[str, Any]],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+    *,
+    heading_level: int,
+    section_id: str,
+) -> str:
+    heading_tag = f"h{heading_level}"
+    brief_text = _copy_ready_attorney_review_brief(
+        records,
+        state_summaries,
+        return_context,
+    )
+    return f"""                    <section aria-labelledby="{section_id}-heading">
+                        <{heading_tag} id="{section_id}-heading">Copy-ready attorney review brief</{heading_tag}>
+                        <p>This plain-text brief is for manual copy into an attorney review note or handoff draft. It uses the loaded facility/date context, prioritized records, packet readiness cues, source traceability cues, and reviewer-created status/note presence already visible on this page.</p>
+                        <p>It avoids raw source record keys, source document identifiers, import or audit details, internal diagnostics, legal conclusions, and source-completeness claims.</p>
+                        <pre class="copyable-packet-summary attorney-review-brief">{_escape(brief_text)}</pre>
+                    </section>"""
+
+
+def _copy_ready_attorney_review_brief(
+    records: list[Mapping[str, Any]],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> str:
+    traceability_counts = _packet_traceability_counts(records)
+    state_counts = _packet_reviewer_state_counts(records, state_summaries)
+    readiness_counts = _packet_readiness_counts(records, state_summaries)
+    prioritized = _packet_prioritized_case_records(records, state_summaries, return_context)
+    lines = [
+        "Copy-ready attorney review brief",
+        "",
+        "Facility",
+        f"- Facility/license: {_packet_facility_label(records, return_context)}",
+        f"- Date range: {_packet_draft_date_scope(return_context)}",
+        f"- Loaded record context: {len(records)} complaint record(s) in the current packet context.",
+        "- Limited-data note: this brief reflects only records loaded in this current page context.",
+        "",
+        "Packet readiness cues",
+        f"- Records ready for preparation review: {readiness_counts['ready']}",
+        f"- Records needing source check: {readiness_counts['needs_source_check']}",
+        "- Records needing reviewer-created status/note attention: "
+        f"{readiness_counts['needs_reviewer_attention']}",
+        f"- Records with reviewer-created status: {state_counts['with_status']}",
+        f"- Records with reviewer-created notes: {state_counts['with_notes']}",
+        "",
+        "Source traceability cues",
+        f"- Records with source URL available: {traceability_counts['source_url']}",
+        f"- Records with raw SHA-256 available: {traceability_counts['raw_sha256']}",
+        f"- Records with connector/retrieval metadata available: {traceability_counts['connector_retrieval']}",
+        f"- Records missing one or more visible traceability cues: {traceability_counts['missing_any']}",
+        "- Missing local traceability values are not source-completeness proof.",
+        "",
+        "Prioritized records",
+    ]
+    if not prioritized:
+        lines.extend(
+            [
+                "- No prioritized records are available from the loaded packet context.",
+                "- Limited-data note: request or load matching records before using this brief for record-by-record review.",
+            ]
+        )
+    for index, record in enumerate(prioritized[:3], start=1):
+        label = _attorney_brief_record_label(record, index)
+        lines.append(f"- {index}. {label}")
+        lines.append(f"  - Finding/status cue: {_packet_prioritized_finding_status_text(record)}")
+        lines.append(f"  - Date context: {_packet_prioritized_date_text(record)}")
+        lines.append(f"  - Source traceability cue: {_attorney_brief_traceability_text(record)}")
+        lines.append(f"  - Reviewer-created cue: {_attorney_brief_reviewer_state_text(record)}")
+        lines.append("  - Review reasons: " + _attorney_brief_reason_text(record))
+    lines.extend(
+        [
+            "",
+            "Suggested follow-up review questions",
+            "- Does the facility/date context match the records intended for attorney review?",
+            "- Which prioritized records need source traceability checked before relying on dates, finding, or review flags?",
+            "- Which records still need reviewer-created status or note attention before copy/print preparation?",
+            "- Do any source-derived values appear confusing or incomplete enough to capture as a cautious reviewer-created note or feedback item?",
+            "- Are any missing local values or proxy-date cues being described only as review cues, not conclusions?",
+            "",
+            "Boundaries",
+            "- This brief is a preparation aid, not a legal report, certified export, source-completeness finding, or legal conclusion.",
+            "- Source-derived records are unchanged; reviewer-created status/note cues remain separate.",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _attorney_brief_record_label(record: FacilityCaseBriefRecord, index: int) -> str:
+    if record.complaint_control_number:
+        return record.complaint_control_number
+    return f"Complaint record {index}"
+
+
+def _attorney_brief_traceability_text(record: FacilityCaseBriefRecord) -> str:
+    if record.has_source_traceability:
+        return "Source traceability cue available on reviewer detail."
+    return "Source traceability cue not visible in this loaded record."
+
+
+def _attorney_brief_reviewer_state_text(record: FacilityCaseBriefRecord) -> str:
+    status = record.reviewer_status_label or "No reviewer-created status"
+    notes = (
+        f"{record.reviewer_note_count} reviewer-created note(s)"
+        if record.reviewer_note_count
+        else "No reviewer-created notes"
+    )
+    return f"{status}; {notes}"
+
+
+def _attorney_brief_reason_text(record: FacilityCaseBriefRecord) -> str:
+    reasons = priority_reason_labels(record)
+    if not reasons:
+        return "No prioritized review reasons are visible from loaded context."
+    return "; ".join(reasons)
 
 
 def _packet_prioritized_case_records(

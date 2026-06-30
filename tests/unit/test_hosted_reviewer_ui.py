@@ -657,6 +657,34 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "source_document_id" not in prioritized_html
     assert "import_batch" not in prioritized_html
     assert "audit_id" not in prioritized_html
+    assert "Copy-ready attorney review brief" in html
+    assert "manual copy into an attorney review note or handoff draft" in html
+    brief_start = html.index("Copy-ready attorney review brief")
+    brief_end = html.index("Included complaint records", brief_start)
+    brief_html = html[brief_start:brief_end]
+    normalized_brief_html = " ".join(brief_html.split())
+    assert "Facility/license: 157806098" in brief_html
+    assert "Date range: 2022-08-01 to 2022-08-31" in brief_html
+    assert "Loaded record context: 1 complaint record(s)" in brief_html
+    assert "Packet readiness cues" in brief_html
+    assert "Source traceability cues" in brief_html
+    assert "Prioritized records" in brief_html
+    assert "Review reasons:" in brief_html
+    assert "Suggested follow-up review questions" in brief_html
+    assert "reviewer-created status or note attention" in brief_html
+    assert "Limited-data note: this brief reflects only records loaded" in brief_html
+    assert "Missing local traceability values are not source-completeness proof." in brief_html
+    assert "Reviewer-created cue: In review; 1 reviewer-created note(s)" in brief_html
+    assert (
+        "legal report, certified export, source-completeness finding, "
+        "or legal conclusion"
+        in normalized_brief_html
+    )
+    assert COMPLAINT_KEY not in brief_html
+    assert "source_record_key" not in brief_html
+    assert "source_document_id" not in brief_html
+    assert "import_batch" not in brief_html
+    assert "audit_id" not in brief_html
     assert "Included complaint records" in html
     assert "32-CR-20220407124448" in html
     assert "Finding" in html
@@ -849,6 +877,33 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     assert "source_document_id" not in prioritized_html
     assert "import_batch" not in prioritized_html
     assert "audit_id" not in prioritized_html
+    assert "Copy-ready attorney review brief" in html
+    assert "manual copy into an attorney review note or handoff draft" in html
+    brief_start = html.index("Copy-ready attorney review brief")
+    brief_end = html.index("Before using this draft", brief_start)
+    brief_html = html[brief_start:brief_end]
+    normalized_brief_html = " ".join(brief_html.split())
+    assert "Facility/license: 157806098" in brief_html
+    assert "Date range: 2022-08-01 to 2022-08-31" in brief_html
+    assert "Loaded record context: 1 complaint record(s)" in brief_html
+    assert "Packet readiness cues" in brief_html
+    assert "Source traceability cues" in brief_html
+    assert "Prioritized records" in brief_html
+    assert "Review reasons:" in brief_html
+    assert "Suggested follow-up review questions" in brief_html
+    assert "Which prioritized records need source traceability checked" in brief_html
+    assert "Limited-data note: this brief reflects only records loaded" in brief_html
+    assert "Reviewer-created cue: Needs follow-up; 1 reviewer-created note(s)" in brief_html
+    assert (
+        "legal report, certified export, source-completeness finding, "
+        "or legal conclusion"
+        in normalized_brief_html
+    )
+    assert COMPLAINT_KEY not in brief_html
+    assert "source_record_key" not in brief_html
+    assert "source_document_id" not in brief_html
+    assert "import_batch" not in brief_html
+    assert "audit_id" not in brief_html
     assert "Included complaint records" in html
     assert "32-CR-20220407124448" in html
     assert "Complaint control number" in html
@@ -956,6 +1011,45 @@ def test_reviewer_packet_preview_without_context_shows_context_needed() -> None:
     assert "build a packet for a specific facility/date range." in html
     assert "Supply a facility/date context to show included records" in html
     assert "Date range: not provided" not in html
+    assert_no_secret_html(html)
+
+def test_reviewer_packet_preview_empty_context_has_limited_data_attorney_brief() -> None:
+    with _seeded_connection() as connection:
+        before_counts = _table_counts(connection)
+
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?"
+            "facility_number=000000000&start_date=2022-08-01&end_date=2022-08-31"
+            "&request_context_origin=manual_entry",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_counts == after_counts == {
+        "import_batches": 1,
+        "source_records": 6,
+        "reviewer_created_state": 0,
+        "audit_events": 0,
+        "reset_reload_planning_metadata": 0,
+    }
+    assert "Copy-ready attorney review brief" in html
+    brief_start = html.index("Copy-ready attorney review brief")
+    brief_end = html.index("Included complaint records", brief_start)
+    brief_html = html[brief_start:brief_end]
+    assert "Loaded record context: 0 complaint record(s)" in brief_html
+    assert "No prioritized records are available from the loaded packet context." in brief_html
+    assert "Limited-data note: request or load matching records" in brief_html
+    assert "Suggested follow-up review questions" in brief_html
+    assert COMPLAINT_KEY not in brief_html
+    assert "source_record_key" not in brief_html
+    assert "source_document_id" not in brief_html
+    assert "import_batch" not in brief_html
+    assert "audit_id" not in brief_html
     assert_no_secret_html(html)
 
 def test_reviewer_ui_landing_shows_reviewer_created_state_indicators() -> None:

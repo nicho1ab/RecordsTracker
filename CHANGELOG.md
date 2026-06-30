@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Added a copy-ready attorney review brief to packet preview and draft pages.
+  The brief uses the active facility/date context, loaded record counts,
+  prioritized records, packet readiness cues, source-traceability cue counts,
+  reviewer-created status/note presence, review reasons, and follow-up review
+  questions while avoiding raw source keys, source document identifiers, import
+  or audit details, durable packet state, exports, source-derived mutation,
+  legal conclusions, and source-completeness claims.
 - Added packet readiness from prioritized facility records. Facility hubs now
   summarize selected facility identity, loaded complaint context, Review next
   prioritized-record availability, source-traceability availability, and
