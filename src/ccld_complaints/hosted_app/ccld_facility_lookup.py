@@ -588,6 +588,7 @@ def render_ccld_facility_review_hub_page(
     </section>
     {_render_facility_pattern_review_summary(record, review_context, signals_summary)}
     {_render_review_next_section(review_context)}
+    {_render_packet_readiness_section(record, review_context)}
     <section aria-labelledby="facility-directory-details-heading">
       <h2 id="facility-directory-details-heading">Facility-directory details</h2>
       <p>These fields come from the active preloaded facility directory. Complaint records are requested and reviewed separately. Open source links from record detail when a source check is needed.</p>
@@ -629,6 +630,7 @@ def _render_signal_only_facility_hub_page(
         </section>
         {_render_facility_pattern_review_summary(record, review_context, summary)}
         {_render_review_next_section(review_context)}
+        {_render_packet_readiness_section(record, review_context)}
         {_render_facility_review_signals_section(record, summary)}
         {_render_facility_hub_review_context(record, review_context)}
         {_render_facility_hub_actions(record, review_context)}
@@ -1671,6 +1673,96 @@ def _render_review_next_item(
                     </dl>
                     <p><a href="{_escape(item.detail_href)}">Open reviewer detail for {_escape(item.label)}</a></p>
                 </li>"""
+
+
+def _render_packet_readiness_section(
+        record: CcldFacilityLookupRecord,
+        review_context: CcldFacilityReviewContext,
+) -> str:
+        request_href = _facility_request_href(record)
+        priority_href = CCLD_FACILITY_REVIEW_PRIORITY_PATH
+        if not review_context.has_loaded_context:
+                return f"""    <section class="empty-state-card" aria-labelledby="packet-readiness-heading">
+            <h2 id="packet-readiness-heading">Packet readiness</h2>
+            <p>No loaded complaint records are available in this facility context. This is not a public-source completeness conclusion.</p>
+            <ul>
+                <li>Request records for this facility before preparing packet content.</li>
+                <li>Review prioritized records first after loaded records and review-next signals are available.</li>
+                <li>No packet preview/draft content is implied until loaded records match this context.</li>
+            </ul>
+            <p><a class="button" href="{_escape(request_href)}">Request records for this facility</a></p>
+            <p><a href="{_escape(priority_href)}">Open facility review priority list</a></p>
+        </section>"""
+        packet_query = _packet_readiness_query(record, review_context)
+        packet_query_text = urlencode(packet_query)
+        preview_href = f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?{packet_query_text}"
+        draft_href = f"{REVIEWER_UI_PACKET_DRAFT_PATH}?{packet_query_text}"
+        prioritized_count = len(review_context.review_next_recommendations)
+        prioritized_text = (
+                f"{prioritized_count} prioritized loaded record(s) available from Review next."
+                if prioritized_count
+                else "No prioritized loaded records are available from Review next in this context."
+        )
+        status_text = _packet_readiness_reviewer_status_text(review_context)
+        return f"""    <section class="summary-card" aria-labelledby="packet-readiness-heading">
+            <h2 id="packet-readiness-heading">Packet readiness</h2>
+            <p>Prepare a review packet from this selected facility context using the existing packet preview or draft routes. This is a local/test review-readiness step, not a legal report, final export, certified record, source-verification result, or source-completeness finding.</p>
+            <dl class="summary-list">
+                <dt>Selected facility identity</dt>
+                <dd>{_escape(record.facility_number)}; {_escape(_display_value(record.facility_name))}</dd>
+                <dt>Loaded complaint/review context</dt>
+                <dd>{review_context.loaded_complaint_record_count} loaded complaint record(s){_escape(_packet_readiness_date_text(review_context))}</dd>
+                <dt>Prioritized records available</dt>
+                <dd>{_escape(prioritized_text)}</dd>
+                <dt>Source traceability availability</dt>
+                <dd>{review_context.source_traceability_count} of {review_context.loaded_complaint_record_count} loaded record(s) have visible source traceability cues.</dd>
+                <dt>Reviewer-created status/note presence</dt>
+                <dd>{_escape(status_text)} {review_context.reviewer_note_record_count} loaded record(s) have reviewer-created note rows.</dd>
+            </dl>
+            <ul>
+                <li>Review prioritized records first when the readiness summary shows source-check or reviewer-created status/note attention.</li>
+                <li>Use packet preview to inspect included records before browser copy or print.</li>
+                <li>Use packet draft only for manual review preparation; no packet lifecycle state is saved.</li>
+            </ul>
+            <nav aria-label="Packet readiness actions">
+                <ul>
+                    <li><a class="button" href="{_escape(preview_href)}">Open packet preview for this facility/date context</a></li>
+                    <li><a class="button button-secondary" href="{_escape(draft_href)}">Open packet draft for this facility/date context</a></li>
+                    <li><a href="{_escape(request_href)}">Request or refresh records for this facility</a></li>
+                </ul>
+            </nav>
+        </section>"""
+
+
+def _packet_readiness_query(
+        record: CcldFacilityLookupRecord,
+        review_context: CcldFacilityReviewContext,
+) -> dict[str, str]:
+        return {
+                "facility_number": record.facility_number,
+                "start_date": review_context.start_date,
+                "end_date": review_context.end_date,
+                "request_context_origin": "facility_lookup",
+                "lookup_facility_name": record.facility_name,
+        }
+
+
+def _packet_readiness_date_text(review_context: CcldFacilityReviewContext) -> str:
+        if review_context.has_date_context:
+                return f" from {review_context.start_date} to {review_context.end_date}"
+        return " without a bounded date range"
+
+
+def _packet_readiness_reviewer_status_text(
+        review_context: CcldFacilityReviewContext,
+) -> str:
+        if not review_context.reviewer_status_counts:
+                return "No reviewer-created status summary is available."
+        status_text = "; ".join(
+                f"{_reviewer_status_label(status)}: {count}"
+                for status, count in review_context.reviewer_status_counts
+        )
+        return f"Reviewer-created status summary: {status_text}."
 
 
 def _review_next_summary_label(review_context: CcldFacilityReviewContext) -> str:

@@ -159,6 +159,12 @@ def select_priority_record(records: tuple[FacilityCaseBriefRecord, ...]) -> Faci
     return sorted(records, key=_priority_sort_key)[0]
 
 
+def prioritized_records(
+    records: tuple[FacilityCaseBriefRecord, ...],
+) -> tuple[FacilityCaseBriefRecord, ...]:
+    return tuple(sorted(records, key=_priority_sort_key))
+
+
 def priority_reason_labels(record: FacilityCaseBriefRecord) -> tuple[str, ...]:
     reasons: list[str] = []
     if record.reviewer_status is None:

@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Added packet readiness from prioritized facility records. Facility hubs now
+  summarize selected facility identity, loaded complaint context, Review next
+  prioritized-record availability, source-traceability availability, and
+  reviewer-created status/note cues before linking to the existing packet
+  preview/draft routes. Packet preview and draft pages now include a
+  print/copy-friendly "Prioritized records for review" summary based on existing
+  review-next ordering and cautious source-derived/reviewer-created reasons,
+  without adding packet lifecycle state, retrieval, schemas, persistence, exports,
+  source-derived mutation, or reviewer-created write behavior.
 - Added a compact default-visible Review next section to facility review hubs.
   The section recommends loaded complaint records using existing source-derived
   and reviewer-created cues, shows cautious reasons, and links to existing

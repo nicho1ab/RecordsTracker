@@ -772,6 +772,11 @@ def test_ccld_facility_review_hub_renders_safe_directory_context() -> None:
     assert "Review next" in html
     assert "No loaded records have review-next signals in this context." in html
     assert "does not imply source completeness or absence of problems" in normalized_html
+    assert "Packet readiness" in html
+    assert "No loaded complaint records are available in this facility context" in html
+    assert "Request records for this facility before preparing packet content." in html
+    assert "Review prioritized records first after loaded records" in html
+    assert "No packet preview/draft content is implied" in html
     assert "No complaint context is currently available" in html
     assert "Date range is needed before the review queue" in html
     assert "Start complaint request for this facility" in html
@@ -1057,6 +1062,20 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
     assert "Not started: 1" in html
     assert "Suggested next loaded complaint" in html
     assert "32-CR-20220407124448" in html
+    assert "Packet readiness" in html
+    assert "Prepare a review packet from this selected facility context" in html
+    assert "Selected facility identity" in html
+    assert "Loaded complaint/review context" in html
+    assert "1 loaded complaint record(s) from 2022-04-07 to 2022-08-26" in html
+    assert "Prioritized records available" in html
+    assert "1 prioritized loaded record(s) available from Review next." in html
+    assert "Source traceability availability" in html
+    assert "1 of 1 loaded record(s) have visible source traceability cues." in html
+    assert "Reviewer-created status/note presence" in html
+    assert "Reviewer-created status summary: Not started: 1." in html
+    assert "0 loaded record(s) have reviewer-created note rows." in html
+    assert "not a legal report, final export, certified record" in html
+    assert "no packet lifecycle state is saved" in html
     assert "Review next" in html
     assert (
         "Reasons use existing source-derived values and existing reviewer-created "
@@ -2239,4 +2258,3 @@ def _empty_reviewer_counts() -> dict[str, int]:
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
     }
-
