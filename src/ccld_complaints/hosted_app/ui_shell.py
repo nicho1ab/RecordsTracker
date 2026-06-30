@@ -50,15 +50,15 @@ GUIDED_STEPS: tuple[GuidedStep, ...] = (
   ),
   GuidedStep(
     "retrieve",
-    "Retrieve",
+    "Request",
     "/ccld/records/request",
-    "Retrieve complaint records.",
+    "Request complaint records.",
   ),
   GuidedStep(
     "review_results",
-    "Results",
+    "Status",
     "/ccld/retrieval/jobs",
-    "Review retrieval outcome.",
+    "Review Request Records job status.",
   ),
   GuidedStep(
     "review_records",
@@ -75,11 +75,11 @@ GUIDED_STEPS: tuple[GuidedStep, ...] = (
 )
 
 DEFAULT_NEXT_ACTIONS: Mapping[str, str] = {
-  "start": "Start retrieval",
+  "start": "Start facility complaint review",
   "facility": "Confirm a facility, then choose a date range",
-  "date_range": "Choose dates, then retrieve complaint records",
-  "retrieve": "Retrieve complaint records",
-  "review_results": "Review imported records",
+  "date_range": "Choose dates, then request complaint records",
+  "retrieve": "Request complaint records",
+  "review_results": "Review imported records or job status",
   "review_records": "Open next record or send feedback",
   "feedback": "Submit feedback when useful",
 }

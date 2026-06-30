@@ -116,7 +116,7 @@ def test_retrieval_form_renders_record_type_and_safe_setup_state() -> None:
     html = body.decode("utf-8")
 
     assert status == 200
-    assert "Retrieve complaint records" in html
+    assert "Request Records" in html
     assert "facility-suggestion-list" in html
     assert "Use this number" in html
     assert "Search by name, license number, city, county, ZIP" in html
@@ -137,16 +137,16 @@ def test_retrieval_form_renders_record_type_and_safe_setup_state() -> None:
     blocked_normalized = " ".join(blocked_html.split())
 
     assert blocked_status == 503
-    assert "Controlled CCLD retrieval setup required" in blocked_html
-    assert "No retrieval job was created" in blocked_html
-    assert "No controlled retrieval job exists for this request" in blocked_html
+    assert "Request Records setup required" in blocked_html
+    assert "No Request Records job was created" in blocked_html
+    assert "No controlled Request Records job exists for this request" in blocked_html
     assert "Return to the request page to review already-loaded source-derived records" in (
         blocked_normalized
     )
     assert "Operator setup checklist" in blocked_html
     assert "retrieval enablement" in blocked_normalized
     assert "server-side raw source storage" in blocked_normalized
-    assert "Report retrieval setup confusion" in blocked_html
+    assert "Report Request Records setup confusion" in blocked_html
     assert "workflow_area=retrieval-setup-required" in blocked_html
     assert "retrieval_context=setup-required" in blocked_html
     assert "retrieval_status=setup_required" in blocked_html
@@ -236,23 +236,23 @@ def test_controlled_retrieval_imports_records_and_links_queue(tmp_path: Path) ->
     assert "Job state" in html
     assert "Completed" in html
     assert "Retrieval job created" in html
-    assert "Retrieval job submitted" in html
-    assert "Controlled retrieval job submitted and completed" in html
+    assert "Request job submitted" in html
+    assert "Controlled Request Records job submitted and completed" in html
     assert "1 loaded local/test queue row(s) are visible now" not in html
     assert "1 complaint queue record(s) are visible now" in html
     assert "1 complaint queue record(s) are ready for review" in html
     assert "Complaint records ready" in html
-    assert "Retrieval status/progress summary" in html
+    assert "Job Status summary" in html
     assert "Next action" in html
     assert "Records imported" in html
     assert "Imported source derived records" in normalized
-    assert "Controlled CCLD retrieval completed and imported validated records" in html
+    assert "Request Records completed and imported validated records" in html
     assert "What to do next" in html
     assert "Open the imported records in the queue" in html
     assert "Review imported records" not in html
-    assert "View retrieval job history" in html
+    assert "View Job Status" in html
     assert "View job details" in html
-    assert "Report retrieval status confusion" in html
+    assert "Report Job Status confusion" in html
     assert "workflow_area=retrieval-job-summary" in html
     assert "retrieval_context=controlled-job-submitted" in html
     assert "retrieval_status=completed" in html
@@ -534,7 +534,7 @@ def test_local_dev_mock_success_retrieval_flow_imports_and_links_without_live_ca
     assert "Records imported" in html
     assert "Imported source derived records" in normalized
     assert "Open the imported records in the queue" in html
-    assert "View retrieval job history" in html
+    assert "View Job Status" in html
     assert "View job details" in html
     assert "Complaint records ready for attorney review" in html
     assert "Open reviewer detail" in html
@@ -553,7 +553,7 @@ def test_local_dev_mock_success_retrieval_flow_imports_and_links_without_live_ca
     assert "Fixture/mock demo" in history_html
     assert "Completed" in history_html
     assert "Review imported records in the CCLD queue" in history_html
-    assert "View retrieval job details" in history_html
+    assert "View job details" in history_html
     assert_no_secret_html(history_html)
 
     detail_status, _content_type, detail_body = route_response(
@@ -564,14 +564,14 @@ def test_local_dev_mock_success_retrieval_flow_imports_and_links_without_live_ca
     detail_html = detail_body.decode("utf-8")
 
     assert detail_status == 200
-    assert "Retrieval job detail" in detail_html
+    assert "Job Status detail" in detail_html
     assert job_id in detail_html
     assert "Fixture/mock demo" in detail_html
     assert "Completed" in detail_html
     assert "Records imported" in detail_html
     assert "raw artifact preserved" in detail_html
     assert "Review imported records in the CCLD queue" in detail_html
-    assert "Return to retrieval job history" in detail_html
+    assert "Return to Job Status" in detail_html
     assert_no_secret_html(detail_html)
 
 
@@ -608,7 +608,7 @@ def test_demo_startup_env_creates_retrieval_job_from_default_request_context(
     job_id = _retrieval_job_id_from_html(html)
 
     assert status == 200
-    assert "Controlled CCLD retrieval setup required" not in html
+    assert "Request Records setup required" not in html
     assert "Complaint records ready for attorney review" in html
     assert "Fixture/mock demo" in html
     assert "Completed" in html
@@ -616,7 +616,7 @@ def test_demo_startup_env_creates_retrieval_job_from_default_request_context(
     assert sorted((tmp_path / "raw").glob("*.html"))
     assert history_status == 200
     assert job_id in history_html
-    assert "Retrieval status center" in history_html
+    assert "Job Status" in history_html
     assert "Fixture/mock demo" in history_html
     assert "Completed" in history_html
     assert "local-test-managed-identity" not in html
@@ -1026,7 +1026,7 @@ def test_retrieval_rate_limit_blocks_without_network_call(tmp_path: Path) -> Non
     assert "rate_limited" in html
     assert "rate-limited" in html
     assert "Rate limited" in html
-    assert "Wait for an active retrieval job to finish" in html
+    assert "Wait for an active Request Records job to finish" in html
     assert_no_secret_html(html)
 
 
@@ -1038,7 +1038,7 @@ def test_retrieval_status_summary_explains_queued_running_and_failed_states() ->
     )
 
     assert "Queued" in queued_html
-    assert "Retrieval status/progress summary" in queued_html
+    assert "Job Status summary" in queued_html
     assert "Current state" in queued_html
     assert "Records ready" in queued_html
     assert "0 imported source-derived record(s) are available from this job" in queued_html
@@ -1047,7 +1047,7 @@ def test_retrieval_status_summary_explains_queued_running_and_failed_states() ->
     assert "Refresh the request status later" in running_html
     assert "Failed" in failed_html
     assert "Retry later or ask an operator" in failed_html
-    assert "Report retrieval status confusion" in queued_html
+    assert "Report Job Status confusion" in queued_html
     assert "workflow_area=retrieval-job-summary" in queued_html
     assert "retrieval_context=controlled-job-submitted" in queued_html
     assert "retrieval_status=queued" in queued_html
@@ -1072,11 +1072,11 @@ def test_retrieval_job_history_empty_state_renders_for_allowed_local_dev_actor()
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Retrieval status center" in html
-    assert "Job list" in html
+    assert "Job Status" in html
+    assert "Request job list" in html
     assert "Table view" in html
-    assert "No retrieval jobs have been submitted" in html
-    assert "no controlled retrieval status/progress to wait on yet" in " ".join(
+    assert "No Request Records jobs have been submitted" in html
+    assert "no Job Status update to wait on yet" in " ".join(
         html.split()
     )
     assert "already-loaded source-derived records" in html
@@ -1091,11 +1091,11 @@ def test_retrieval_job_history_empty_state_renders_for_allowed_local_dev_actor()
     assert empty_state_match is not None
     empty_state_card = empty_state_match.group("card")
     assert (
-        f'<a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Go to request page</a>'
+        f'<a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Go to Request Records</a>'
         in empty_state_card
     )
     assert "Submit retrieval request" not in empty_state_card
-    assert "Submit or change retrieval request" in html
+    assert "Submit or change Request Records" in html
     assert "Report an issue with this job" in html
     assert "Report confusing retrieval progress" not in html
     assert "workflow_area=retrieval-job-history" in html
@@ -1188,7 +1188,7 @@ def test_retrieval_job_history_renders_recent_jobs_safely_without_mutation(
     assert "failed-job" in html
     assert "rate-limited-job" in html
     assert f"{CCLD_RETRIEVAL_JOB_DETAIL_PATH}?job_id=completed-job" in html
-    assert "View retrieval job details" in html
+    assert "View job details" in html
     assert "Facility/license number" in html
     assert "157806098" in html
     assert "Complaint records" in html
@@ -1206,7 +1206,7 @@ def test_retrieval_job_history_renders_recent_jobs_safely_without_mutation(
     assert "Failed" in html
     assert "Retry later or ask an operator to inspect server logs" in normalized
     assert "Rate limited" in html
-    assert "Wait for an active retrieval job to finish" in normalized
+    assert "Wait for an active Request Records job to finish" in normalized
     assert "raw artifact preserved; source artifact identity available; raw paths not shown" in html
     assert "Report an issue with this job" in html
     assert "Report confusing retrieval progress" not in html
@@ -1248,10 +1248,10 @@ def test_retrieval_job_detail_renders_completed_job_without_mutation(tmp_path: P
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert before_counts == after_counts
-    assert "Retrieval job detail" in html
-    assert "Job summary and next step" in html
+    assert "Job Status detail" in html
+    assert "Request job summary and next step" in html
     assert "Facility/license number" in html
-    assert "Controlled CCLD retrieval completed and imported validated records" in html
+    assert "Request Records completed and imported validated records" in html
     assert "Next action" in html
     assert "Open imported records in the CCLD queue and review source traceability" in html
     assert 'class="technical-details diagnostic-details"' in html
@@ -1270,10 +1270,10 @@ def test_retrieval_job_detail_renders_completed_job_without_mutation(tmp_path: P
     assert "Imported source derived records" in html
     assert "raw artifact preserved; source artifact identity available; raw paths not shown" in html
     assert "Review imported records in the CCLD queue" in html
-    assert "Return to retrieval job history" in html
+    assert "Return to Job Status" in html
     assert "Submit or change a CCLD record request" in html
     assert "Read CCLD workflow help" in html
-    assert "Report retrieval status confusion" in html
+    assert "Report Job Status confusion" in html
     assert "workflow_area=retrieval-job-detail" in html
     assert "retrieval_context=controlled-job-detail" in html
     assert "retrieval_status=completed" in html
@@ -1305,14 +1305,14 @@ def test_retrieval_job_detail_safe_missing_and_invalid_job_ids(tmp_path: Path) -
     blank_html = blank_body.decode("utf-8")
 
     assert missing_status == 404
-    assert "Retrieval job detail not found" in missing_html
+    assert "Job Status detail not found" in missing_html
     assert "No retrieval job metadata matched" in missing_html
-    assert "Return to retrieval job history" in missing_html
+    assert "Return to Job Status" in missing_html
     assert invalid_status == 400
     assert blank_status == 400
-    assert "Retrieval job detail needs a valid job ID" in invalid_html
-    assert "Retrieval job detail needs a valid job ID" in blank_html
-    assert "Report confusing retrieval job detail" in missing_html
+    assert "Job Status detail needs a valid job ID" in invalid_html
+    assert "Job Status detail needs a valid job ID" in blank_html
+    assert "Report confusing Job Status detail" in missing_html
     assert "workflow_area=retrieval-job-detail" in missing_html
     assert "retrieval_context=controlled-job-detail" in invalid_html
     assert "token-value" not in invalid_html
@@ -1386,7 +1386,7 @@ def test_retrieval_job_detail_distinguishes_warning_failed_and_rate_limited_stat
     assert "provider_subject" not in failed_html
     assert rate_status == 200
     assert "Rate limited" in rate_html
-    assert "Wait for an active retrieval job to finish" in " ".join(rate_html.split())
+    assert "Wait for an active Request Records job to finish" in " ".join(rate_html.split())
     assert counts["source_records"] == 0
     assert counts["reviewer_created_state"] == 0
     assert counts["audit_events"] == 0

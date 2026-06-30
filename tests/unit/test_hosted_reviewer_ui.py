@@ -866,7 +866,7 @@ def test_reviewer_packet_draft_without_context_shows_context_needed_state() -> N
     assert "Attorney Review Packet Draft" in html
     assert "No facility/date packet context was supplied." in html
     assert "Use a facility/date context so the draft can include" in html
-    assert "Open Retrieve" in html
+    assert "Open Request Records" in html
     assert "Open Review queue" in html
     assert "Date range: not provided" not in html
     assert_no_secret_html(html)
@@ -895,7 +895,7 @@ def test_reviewer_packet_preview_without_context_shows_context_needed() -> None:
     }
     assert "Review packet preview" in html
     assert "No facility/date packet context was supplied." in html
-    assert "Start from Retrieve or the Review queue" in html
+    assert "Start from Request Records or the Review queue" in html
     assert "build a packet for a specific facility/date range." in html
     assert "Supply a facility/date context to show included records" in html
     assert "Date range: not provided" not in html
@@ -958,10 +958,10 @@ def test_reviewer_ui_landing_supports_simple_search() -> None:
     assert "value=\"32-CR\"" in matched_html
     assert "32-CR-20220407124448" in matched_html
     assert empty_status == 200
-    assert "No seeded source-derived review records match the current search." in (
+    assert "No loaded complaint records match the current search." in (
         " ".join(empty_html.split())
     )
-    assert "No matching seeded reviewer records" in empty_html
+    assert "No matching complaint records" in empty_html
     assert "Clear search" in empty_html
     assert "Return to reviewer home" in empty_html
 
@@ -1009,14 +1009,14 @@ def test_reviewer_ui_missing_detail_record_has_clear_next_step() -> None:
     invalid_key_html = invalid_key_body.decode("utf-8")
 
     assert missing_key_status == 400
-    assert "Select a seeded record" in missing_key_html
-    assert "Choose a seeded source-derived record before opening reviewer detail." in (
+    assert "Select a complaint record" in missing_key_html
+    assert "Choose a loaded source-derived complaint record before opening reviewer detail." in (
         missing_key_html
     )
     assert "Return to reviewer records" in missing_key_html
     assert invalid_key_status == 404
-    assert "Selected seeded record was not found" in invalid_key_html
-    assert "The selected seeded record is not available" in invalid_key_html
+    assert "Selected complaint record was not found" in invalid_key_html
+    assert "The selected complaint record is not available" in invalid_key_html
     assert "Return to reviewer records" in invalid_key_html
     assert_no_secret_html(missing_key_html)
     assert_no_secret_html(invalid_key_html)

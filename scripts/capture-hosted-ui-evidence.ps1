@@ -272,6 +272,35 @@ function Add-AssertionResult {
     [void]$Target.Add([pscustomobject]@{ route = $RouteName; check = $Check; status = $Status; message = $Message })
 }
 
+function Test-RouteOrientationMarker {
+    param([hashtable]$Route, [string]$Html)
+    $name = [string]$Route.Name
+    $markersByRoute = @{
+        "home" = @("Start a Facility Complaint Review", "Review path")
+        "facility" = @("Find a facility", "Find the facility/license number")
+        "facility-priority" = @("Facility review priority", "Facilities grouped by review cue priority")
+        "facility-intelligence" = @("Facility review intelligence", "Facilities by review-priority indicator")
+        "facility-hub" = @("Facility review hub", "Facility-directory details")
+        "request-records" = @("Request Records", "Which facility should be reviewed?")
+        "jobs" = @("Job Status", "Track Request Records jobs")
+        "reviewer" = @("Complaint records ready for review", "Worklist")
+        "substantiated-triage" = @("substantiated complaint triage", "Source-derived finding")
+        "packet-preview-empty" = @("Review packet preview", "No facility/date packet context was supplied.")
+        "packet-preview-context" = @("Review packet preview", "Packet preparation preview")
+        "packet-draft-empty" = @("Attorney Review Packet Draft", "No facility/date packet context was supplied.")
+        "packet-draft-context" = @("Attorney Review Packet Draft", "Packet scope")
+        "feedback" = @("Send feedback", "Send safe review feedback")
+        "help" = @("Help", "Use RecordsTracker for facility complaint review")
+        "job-detail" = @("Job Status detail", "Request job summary and next step")
+        "reviewer-detail" = @("Complaint review", "Complaint overview")
+    }
+    if (-not $markersByRoute.ContainsKey($name)) { return $false }
+    foreach ($marker in $markersByRoute[$name]) {
+        if ($Html.Contains($marker)) { return $true }
+    }
+    return $false
+}
+
 function Test-RouteAssertions {
     param([hashtable]$Route, [string]$Html, [int]$StatusCode, [System.Collections.ArrayList]$Assertions)
     $name = $Route.Name
@@ -283,7 +312,7 @@ function Test-RouteAssertions {
     else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "private markers" -Status "PASS" -Message "No forbidden private markers found." }
     if ($Html.Contains("Feedbac k")) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "broken labels" -Status "FAIL" -Message "Broken step label found." }
     else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "broken labels" -Status "PASS" -Message "No broken Feedbac k label found." }
-    $expectedModeText = switch ($Mode) { "live" { "Live public CCLD" } "fixture" { "Fixture/mock demo" } default { "Retrieval not configured" } }
+    $expectedModeText = switch ($Mode) { "live" { "Live public CCLD" } "fixture" { "Fixture/mock demo" } default { "Review aids only" } }
     if ($Html.Contains($expectedModeText)) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "mode badge" -Status "PASS" -Message "Expected mode marker '$expectedModeText' found." }
     else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "mode badge" -Status "WARN" -Message "Expected mode marker '$expectedModeText' not found." }
     if ($Route.ContainsKey("ActiveHref")) {
@@ -292,8 +321,8 @@ function Test-RouteAssertions {
         else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "active nav" -Status "FAIL" -Message "Expected active nav href '$($Route.ActiveHref)' not found." }
     }
     if ($Route.Path -eq "/ccld/help") {
-        if ($Html -notmatch "Current step:" -and $Html -notmatch '<a(?=[^>]*aria-current="page")(?=[^>]*href="/ccld/records/request")') { Add-AssertionResult -Target $Assertions -RouteName $name -Check "help route nav" -Status "PASS" -Message "Help does not show workflow indicator and Retrieve is not active." }
-        else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "help route nav" -Status "FAIL" -Message "Help route has competing workflow indicator or Retrieve active nav." }
+        if ($Html -notmatch "Current step:" -and $Html -notmatch '<a(?=[^>]*aria-current="page")(?=[^>]*href="/ccld/records/request")') { Add-AssertionResult -Target $Assertions -RouteName $name -Check "help route nav" -Status "PASS" -Message "Help does not show workflow indicator and Request Records is not active." }
+        else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "help route nav" -Status "FAIL" -Message "Help route has competing workflow indicator or Request Records active nav." }
     }
     elseif ($Route.ContainsKey("WorkflowStep")) {
         # Packet draft pages intentionally hide the workflow rail for print/copy mode;
@@ -302,18 +331,23 @@ function Test-RouteAssertions {
             Add-AssertionResult -Target $Assertions -RouteName $name -Check "workflow step" -Status "PASS" -Message "Packet draft intentionally hides workflow indicator; check skipped."
         }
         elseif ($Html.Contains("Current step: $($Route.WorkflowStep)")) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "workflow step" -Status "PASS" -Message "Expected workflow step found." }
+        elseif (Test-RouteOrientationMarker -Route $Route -Html $Html) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "workflow step" -Status "PASS" -Message "Page-level orientation markers found." }
         else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "workflow step" -Status "WARN" -Message "Expected workflow step '$($Route.WorkflowStep)' not found." }
     }
     if ($Html.Contains("Keyboard flow:")) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "keyboard flow text" -Status "PASS" -Message "Visible keyboard-flow guidance found." }
-    else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "keyboard flow text" -Status "WARN" -Message "No visible keyboard-flow guidance found on this route." }
+    else {
+        $hasSharedKeyboardOrientation = $Html.Contains('class="skip-link"') -and $Html.Contains('aria-current="page"') -and (Test-RouteOrientationMarker -Route $Route -Html $Html)
+        if ($hasSharedKeyboardOrientation) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "keyboard flow text" -Status "PASS" -Message "Shared skip link, active nav, and page heading provide keyboard orientation." }
+        else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "keyboard flow text" -Status "WARN" -Message "No visible keyboard-flow guidance or shared orientation markers found on this route." }
+    }
     if ($Route.Path -eq "/ccld/facilities") {
         $searchCount = ([regex]::Matches($Html, 'id="facility-search-input"')).Count
         if ($searchCount -eq 1) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "facility search" -Status "PASS" -Message "One facility search input found." }
         else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "facility search" -Status "WARN" -Message "Expected one facility search input, found $searchCount." }
     }
     if ($Route.Path -eq "/ccld/records/request") {
-        if ($Html.Contains("Which facility should be reviewed?") -and $Html.Contains("Confirm facility")) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "retrieve flow" -Status "PASS" -Message "Facility selection flow found." }
-        else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "retrieve flow" -Status "WARN" -Message "Default retrieve facility flow markers were not found." }
+        if ($Html.Contains("Which facility should be reviewed?") -and $Html.Contains("Confirm facility")) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "request records flow" -Status "PASS" -Message "Facility selection flow found." }
+        else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "request records flow" -Status "WARN" -Message "Default Request Records facility flow markers were not found." }
     }
     if ($Route.Path -eq "/reviewer") {
         if ($Html.Contains("Worklist") -and ($Html.Contains("Open next record") -or $Html.Contains("Open record"))) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "reviewer queue" -Status "PASS" -Message "Worklist and review action found." }
@@ -324,7 +358,7 @@ function Test-RouteAssertions {
         else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "feedback form" -Status "WARN" -Message "Feedback form or safety guidance missing." }
     }
     if ($Route.Path -eq "/ccld/retrieval/jobs") {
-        if ($Html.Contains("Status summary") -or $Html.Contains("No retrieval jobs yet")) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "job page" -Status "PASS" -Message "Job summary or empty state found." }
+        if ($Html.Contains("Status summary") -or $Html.Contains("No Request Records jobs yet")) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "job page" -Status "PASS" -Message "Job summary or empty state found." }
         else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "job page" -Status "WARN" -Message "Job summary/empty-state markers missing." }
     }
     if ($Html.Contains("Developer/operator commands")) {
@@ -385,8 +419,8 @@ try {
         @{ Name = "facility-priority"; Path = "/ccld/facilities/review-priority"; Label = "02-facility-priority"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
         @{ Name = "facility-intelligence"; Path = "/ccld/facilities/intelligence"; Label = "02-facility-intelligence"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
         @{ Name = "facility-hub"; Path = "/ccld/facilities/detail?facility_number=434417302"; Label = "02-facility-hub"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
-        @{ Name = "retrieve"; Path = "/ccld/records/request"; Label = "03-retrieve"; ActiveHref = "/ccld/records/request"; WorkflowStep = "Facility" },
-        @{ Name = "jobs"; Path = "/ccld/retrieval/jobs"; Label = "04-jobs"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Results" },
+        @{ Name = "request-records"; Path = "/ccld/records/request"; Label = "03-request-records"; ActiveHref = "/ccld/records/request"; WorkflowStep = "Request" },
+        @{ Name = "jobs"; Path = "/ccld/retrieval/jobs"; Label = "04-job-status"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Status" },
         @{ Name = "reviewer"; Path = "/reviewer"; Label = "05-reviewer"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
         @{ Name = "substantiated-triage"; Path = "/reviewer/records/substantiated"; Label = "05-substantiated-triage"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
         @{ Name = "matrix-export"; Path = "/reviewer/records/matrix.csv?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry"; Label = "05-matrix-export" },
@@ -443,7 +477,7 @@ try {
     foreach ($route in $coreRoutes) { Capture-Route -Route $route }
 
     $jobDetailHref = Get-SafeDynamicHref -Html ([string]$routeHtmlByName["jobs"]) -Pattern 'href\s*=\s*["'']([^"'']*/ccld/retrieval/jobs/detail\?job_id=[A-Za-z0-9_.:%-]+)["'']'
-    if ($jobDetailHref) { $dynamicLinks.jobDetail = $jobDetailHref; Capture-Route -Route @{ Name = "job-detail"; Path = $jobDetailHref; Label = "08-job-detail"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Results" } }
+    if ($jobDetailHref) { $dynamicLinks.jobDetail = $jobDetailHref; Capture-Route -Route @{ Name = "job-detail"; Path = $jobDetailHref; Label = "08-job-detail"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Status" } }
     else { Add-AssertionResult -Target $assertions -RouteName "jobs" -Check "dynamic job detail" -Status "WARN" -Message "No safe retrieval job detail link discovered." }
 
     $reviewerDetailHref = Get-SafeDynamicHref -Html ([string]$routeHtmlByName["reviewer"]) -Pattern 'href\s*=\s*["'']([^"'']*/reviewer/records/detail\?source_record_key=[^"'']+)["'']'

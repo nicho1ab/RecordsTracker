@@ -146,8 +146,8 @@ _HELP_TOPICS: tuple[tuple[str, str], ...] = (
     ("workflow", "How to review a facility (workflow)"),
     ("review-guidance", "Review guidance and next steps"),
     ("source-traceability", "How source traceability works"),
-    ("live-retrieval", "Retrieval modes"),
-    ("operator-setup", "Operator setup: enabling live retrieval"),
+    ("live-retrieval", "Request Records and Job Status"),
+    ("operator-setup", "Operator setup: enabling live Request Records"),
     ("tool-purpose", "What this tool helps you do"),
     ("review-flags", "What review flags mean"),
     ("source-confidence", "What to do with source-confidence cues"),
@@ -557,11 +557,11 @@ def _render_request_form(
         has_date_range=has_date_range,
     )
     return _page(
-                                title="Retrieve complaint records",
-                                heading="Retrieve complaint records",
+                                title="Request Records",
+                                heading="Request Records",
                 step_id="retrieve" if has_date_range else "date_range" if has_facility else "facility",
                 next_action=(
-                        "Retrieve complaint records"
+                        "Request complaint records"
                         if has_date_range
                         else "Set the date range"
                         if has_facility
@@ -569,8 +569,8 @@ def _render_request_form(
                 ),
                 main=f"""    <section class="hero-card" aria-labelledby="request-hero-heading">
                     <p class="launch-kicker">Start review</p>
-                    <h2 id="request-hero-heading">Retrieve complaint records for a facility</h2>
-                    <p class="launch-value">Choose a facility and date range, then open the complaint queue.</p>
+                    <h2 id="request-hero-heading">Request complaint records for a facility</h2>
+                    <p class="launch-value">Choose a facility and date range, then request CCLD complaint records or open the current complaint queue.</p>
             <p><a class="helper-link" href="{CCLD_HELP_PATH}#review-guidance">See review guidance and next steps.</a></p>
         </section>
                 <details class="quiet-section orientation-details" open>
@@ -586,7 +586,7 @@ def _render_request_start_orientation() -> str:
         return """<section class="quiet-section" aria-labelledby="request-start-orientation-heading">
             <h2 id="request-start-orientation-heading">Start review request context</h2>
             <p>Facility/license number identifies the CCLD facility. Date range narrows complaint, visit, report, signed, or retrieval dates already represented in preloaded source-derived records.</p>
-            <p>Retrieve records uses the configured controlled server-side retrieval path only when available. Show existing queue searches loaded source-derived records for the selected facility/date context.</p>
+            <p>Request Records uses the configured controlled server-side request path only when available. Show existing queue searches loaded source-derived records for the selected facility/date context.</p>
             <p>When records are found, continue to the review queue, open the recommended record, review source traceability on detail, then use packet preparation and feedback when needed.</p>
         </section>"""
 
@@ -708,9 +708,9 @@ def _render_date_ready_state(
         selected_end_date: str,
 ) -> str:
         return f"""<section class="workflow-panel workflow-panel-primary" aria-labelledby="retrieve-ready-heading">
-            <p class="stage-kicker">Retrieve records</p>
-            <h2 id="retrieve-ready-heading">Ready to retrieve complaint records</h2>
-            <p>Review this facility/date context before retrieving records or showing the existing queue. Start with the recommended record.</p>
+            <p class="stage-kicker">Request Records</p>
+            <h2 id="retrieve-ready-heading">Ready to request complaint records</h2>
+            <p>Review this facility/date context before requesting records or showing the existing queue. Start with the recommended record.</p>
             <dl>
                 <dt>Facility/license number</dt>
                 <dd>{_escape(facility_number)}</dd>
@@ -728,11 +728,11 @@ def _render_date_ready_state(
                 <input type="hidden" name="end_date" value="{_escape(selected_end_date)}">
                 <input type="hidden" name="reviewer_status_filter" value="all">
                 <div class="form-actions">
-                    <button type="submit" name="{_RETRIEVAL_ACTION_FIELD}" value="{_RETRIEVAL_ACTION_VALUE}">Retrieve complaint records</button>
+                    <button type="submit" name="{_RETRIEVAL_ACTION_FIELD}" value="{_RETRIEVAL_ACTION_VALUE}">Request Records</button>
                     <button class="secondary" type="submit">Show existing queue</button>
                     <a class="button button-quiet" href="{CCLD_RECORD_REQUEST_PATH}?{_escape(urlencode({'facility_number': facility_number, _REQUEST_CONTEXT_ORIGIN_FIELD: request_context_origin, _LOOKUP_FACILITY_NAME_FIELD: lookup_facility_name or ''}))}">Change date range</a>
                 </div>
-                <p id="retrieve-actions-help" class="helper-text">Retrieve complaint records creates a controlled job only when configured. Show existing queue reviews already loaded records.</p>
+                <p id="retrieve-actions-help" class="helper-text">Request Records creates a controlled server-side job only when configured. Show existing queue reviews already-loaded records.</p>
             </form>
         </section>"""
 
@@ -796,7 +796,7 @@ def _render_help_page() -> str:
                     <details open id="workflow">
                         <summary id="help-how-heading">How to review a facility (workflow)</summary>
                         <p>Facility lookup or manual entry fills a CCLD facility/license number. The
-                        request page uses that context and a date range to retrieve or show matching
+                        Request Records page uses that context and a date range to request or show matching
                         complaint records. The review queue helps you open the recommended record,
                         reviewer detail is the complaint review workspace, reviewer-created status/note
                         cues update queue progress, packet preview/draft are preparation
@@ -804,7 +804,7 @@ def _render_help_page() -> str:
                         <ol>
                             <li>Select a facility by lookup, or enter a facility/license number directly.</li>
                             <li>Choose a complaint date range to create the CCLD request context.</li>
-                            <li>Load or retrieve complaint records.</li>
+                            <li>Request complaint records or show the existing queue.</li>
                             <li>Use the review queue to open the recommended record first.</li>
                             <li>Use reviewer detail to check source traceability and save reviewer-created status/note observations.</li>
                             <li>Use packet preview/draft to prepare after review.</li>
@@ -838,29 +838,29 @@ def _render_help_page() -> str:
                         confusing.</p>
                     </details>
                     <details id="live-retrieval">
-                        <summary id="help-live-heading">Retrieval modes</summary>
+                        <summary id="help-live-heading">Request Records and Job Status</summary>
                         <p>When the mode badge says Live public CCLD, controlled server-side
                         public CCLD HTTP requests occur only after browser submit. When the mode badge
                         says Fixture/mock demo, committed fixtures are used and no live CCLD calls are made.</p>
                         <p>Show existing queue means the page searched already-loaded source-derived
-                        rows only; it did not submit a controlled retrieval job. Retrieve
-                        complaint records means a configured controlled retrieval job was submitted, then
-                        status/progress pages show the current job state, records imported, notices or
+                        rows only; it did not submit a controlled job. Request Records means a configured
+                        controlled server-side job was submitted, then
+                        Job Status pages show the current job state, records imported, notices or
                         errors, and the next action.</p>
                         <p>Loaded source-derived records can be ready for review even when no retrieval job was
-                        submitted for the current request. Retrieval status/progress is operational
+                        submitted for the current request. Job Status is operational
                         metadata for the current review workflow.</p>
                         <p>If the retrieval job completes with notices and imported 0 records, review
                         the job detail page for per-report notices, then send feedback to an operator
                         if the notices persist after resubmitting with the same facility/date context.</p>
                     </details>
                     <details id="operator-setup">
-                        <summary id="help-operator-heading">Operator setup: enabling live retrieval</summary>
-                        <p>Controlled retrieval requires all of the following on the server:</p>
+                        <summary id="help-operator-heading">Operator setup: enabling live Request Records</summary>
+                        <p>Controlled Request Records requires all of the following on the server:</p>
                         <ul>
                             <li>PostgreSQL migrations applied, including the retrieval job metadata migration.</li>
                             <li>PostgreSQL-backed page data mode configured.</li>
-                            <li>Retrieval enabled in host configuration (<code>CCLD_RETRIEVAL_ENABLED=enabled</code>).</li>
+                            <li>Request Records enabled in host configuration (<code>CCLD_RETRIEVAL_ENABLED=enabled</code>).</li>
                             <li>A server-side raw artifact directory on persistent storage (<code>CCLD_RETRIEVAL_RAW_DIR</code>).</li>
                             <li>Schema files present in the container image.</li>
                         </ul>
@@ -868,7 +868,7 @@ def _render_help_page() -> str:
                     </details>
                     <details id="tool-purpose">
                         <summary id="help-purpose-topic-heading">What this tool helps you do</summary>
-                        <p>Use RecordsTracker to select a facility, retrieve public CCLD complaint records,
+                        <p>Use RecordsTracker to select a facility, request public CCLD complaint records,
                         review key source-derived values, and identify records that need source-traceable
                         attorney review.</p>
                     </details>
@@ -932,9 +932,9 @@ def _render_help_page() -> str:
                 </section>
                 <section aria-labelledby="help-next-action-heading">
                         <h2 id="help-next-action-heading">Next action</h2>
-                        <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Retrieve complaint records</a></p>
+                        <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Open Request Records</a></p>
                         <p><a class="button button-secondary" href="{CCLD_FACILITY_LOOKUP_PATH}">Find a facility</a></p>
-                        <p><a href="{CCLD_RETRIEVAL_JOBS_PATH}">View retrieval jobs</a></p>
+                        <p><a href="{CCLD_RETRIEVAL_JOBS_PATH}">View Job Status</a></p>
                 </section>""",
         )
 
@@ -1050,28 +1050,28 @@ def _render_feedback_guidance_section() -> str:
 def _render_retrieval_setup_required_page(values: Mapping[str, list[str]]) -> str:
     feedback_href = _feedback_href_for_retrieval_setup_values(values)
     return _page(
-                title="Controlled CCLD retrieval setup required",
-                heading="Controlled CCLD retrieval setup required",
+                title="Request Records setup required",
+                heading="Request Records setup required",
             step_id="retrieve",
-            next_action="Configure retrieval or show the current queue",
+            next_action="Configure Request Records or show the current queue",
                 main=f"""    <section aria-labelledby="retrieval-setup-heading">
-            <h2 id="retrieval-setup-heading">No retrieval job was created</h2>
-            <p>Controlled CCLD retrieval needs a database-backed request context, retrieval
+            <h2 id="retrieval-setup-heading">No Request Records job was created</h2>
+            <p>Request Records needs a database-backed request context, retrieval
             enablement, and configured server-side raw source storage before the browser can
             trigger a job.</p>
             <dl>
                 <dt>What you entered</dt>
                 <dd>The browser submitted a CCLD facility/date/type request.</dd>
                 <dt>What happened</dt>
-                <dd>The server blocked retrieval before creating a job because setup is
+                <dd>The server blocked the request before creating a job because setup is
                 incomplete.</dd>
                 <dt>Current state</dt>
-                <dd>No controlled retrieval job exists for this request.</dd>
+                <dd>No controlled Request Records job exists for this request.</dd>
                 <dt>Records imported</dt>
                 <dd>none</dd>
                 <dt>Next action</dt>
                 <dd>Return to the request page to review already-loaded source-derived records, or
-                ask an operator to configure controlled retrieval before submitting a job.</dd>
+                ask an operator to configure Request Records before submitting a job.</dd>
             </dl>
         </section>
         <details class="technical-details">
@@ -1079,19 +1079,19 @@ def _render_retrieval_setup_required_page(values: Mapping[str, list[str]]) -> st
             <ul>
                 <li>Run PostgreSQL migrations, including the retrieval job metadata migration.</li>
                 <li>Use PostgreSQL-backed page data for the hosted runtime.</li>
-                <li>Enable controlled retrieval in host configuration.</li>
+                <li>Enable controlled Request Records in host configuration.</li>
                 <li>Configure a server-side raw artifact directory on persistent storage.</li>
-                <li>Keep retrieval CCLD-only, complaint-only for now, and server-executed.</li>
+                <li>Keep Request Records CCLD-only, complaint-only for now, and server-executed.</li>
             </ul>
             <p>No connector credentials or server-side private values are shown to the browser.</p>
         </details>
         <section aria-labelledby="retrieval-setup-next-heading">
             <h2 id="retrieval-setup-next-heading">What to do next</h2>
             <p>Return to the request page to review records that are already loaded, or ask an
-            operator to configure controlled retrieval. If this message is confusing, send a bug
+            operator to configure Request Records. If this message is confusing, send a bug
             report from the feedback page and include the facility/date/type request.</p>
             <p><a href="{CCLD_RECORD_REQUEST_PATH}">Return to CCLD request</a></p>
-            <p><a href="{_escape(feedback_href)}">Report retrieval setup confusion</a></p>
+            <p><a href="{_escape(feedback_href)}">Report Request Records setup confusion</a></p>
         </section>""",
         )
 
@@ -1191,7 +1191,7 @@ def _render_matched_result(
     load_text = _load_status_text(import_reload_result)
     return _page(
         title="CCLD request results",
-                heading="Retrieval result",
+                heading="Request Records result",
         step_id="review_results",
         next_action="Review imported records",
             main=f"""    {_render_result_focus_panel(request, result, retrieval_result, load_text)}
@@ -1325,7 +1325,7 @@ def _render_result_focus_panel(
       <h2 id="request-result-heading">{_escape(headline)}</h2>
       <p><span class="{_mode_badge_class(mode_label)}">{_escape(mode_label)}</span></p>
       <p>{_escape(_request_execution_summary_text(retrieval_result))}</p>
-            <div class="metric-strip" aria-label="Retrieval result summary">
+            <div class="metric-strip" aria-label="Request Records result summary">
                 <div class="metric-card"><strong>{imported_count}</strong><span>{_escape(imported_label)}</span></div>
                 <div class="metric-card"><strong>{queue_count}</strong><span>Complaint records ready</span></div>
                 <div class="metric-card"><strong>{_escape(_date_scope_text(request))}</strong><span>Complaint date range</span></div>
@@ -1335,7 +1335,7 @@ def _render_result_focus_panel(
                 <dd>{_escape(request.facility_number)}</dd>
                 <dt>Load state</dt>
                 <dd>{_escape(load_text)}</dd>
-                <dt>Retrieval job submitted</dt>
+                <dt>Request job submitted</dt>
                 <dd>{_yes_no(retrieval_result is not None)}</dd>
                 <dt>Current state</dt>
                 <dd>{_escape(current_state)}</dd>
@@ -1347,8 +1347,8 @@ def _render_result_focus_panel(
             <details class="technical-details secondary-actions dense-table-details">
                 <summary>Other result actions</summary>
                 {detail_link}
-                <p><a href="{CCLD_RECORD_REQUEST_PATH}">Run another retrieval</a></p>
-                <p><a href="{_escape(feedback_href)}">Report unclear loaded-record versus retrieval-job state</a></p>
+                <p><a href="{CCLD_RECORD_REQUEST_PATH}">Run another Request Records search</a></p>
+                <p><a href="{_escape(feedback_href)}">Report unclear loaded-record versus job-state wording</a></p>
             </details>
     </section>"""
 
@@ -1382,7 +1382,7 @@ def _render_no_match_result(
                 include_change_links=True,
             )}
         <details class="technical-details diagnostic-details">
-            <summary>Technical retrieval details</summary>
+            <summary>Technical job details</summary>
         {_render_no_match_guidance(request, local_count, import_reload_result, retrieval_result)}
         {_render_import_reload_summary(import_reload_result)}
         {_render_retrieval_job_summary(retrieval_result)}
@@ -1440,7 +1440,7 @@ def _render_no_match_recovery_panel(
     return f"""<section class="hero-card recovery-panel" aria-labelledby="no-local-records-heading">
       <p class="stage-kicker">Recovery</p>
       <h2 id="no-local-records-heading">{_escape(headline)}</h2>
-            <p>No loaded source-derived records matched this request context. Review the facility/date context and retrieval state before choosing the next step.</p>
+            <p>No loaded source-derived records matched this request context. Review the facility/date context and job state before choosing the next step.</p>
       <dl class="summary-list">
         <dt>What happened</dt>
         <dd>{_escape(reason_bucket)}</dd>
@@ -1450,14 +1450,14 @@ def _render_no_match_recovery_panel(
         <dd>{_escape(_date_scope_text(request))}</dd>
         <dt>Rows available before date filtering</dt>
         <dd>{local_count}</dd>
-        <dt>Retrieval job submitted</dt>
+        <dt>Request job submitted</dt>
         <dd>{_yes_no(retrieval_result is not None)}</dd>
         <dt>Current state</dt>
         <dd>{_escape(current_state)}</dd>
         <dt>Next action</dt>
         <dd>{_escape(next_action)}</dd>
                 <dt>Review context</dt>
-        <dd>Use the loaded-record count, date range, and retrieval state to decide whether to adjust criteria, load records, view job details, or send feedback.</dd>
+        <dd>Use the loaded-record count, date range, and job state to decide whether to adjust criteria, load records, view job details, or send feedback.</dd>
       </dl>
       {_render_no_match_next_step_choices(request, local_count, retrieval_result, retrieval_available)}
             <p><strong>Recommended next action:</strong> Confirm the facility/date context, then use the action below.</p>
@@ -1465,7 +1465,7 @@ def _render_no_match_recovery_panel(
     <ul>
 {_request_context_navigation_items(request, reference_source)}
     </ul>
-    <p><a href="{_escape(feedback_href)}">Report unclear loaded-record versus retrieval-job state</a></p>
+    <p><a href="{_escape(feedback_href)}">Report unclear loaded-record versus job-state wording</a></p>
     </section>"""
 
 
@@ -1476,11 +1476,11 @@ def _render_no_match_next_step_choices(
     retrieval_available: bool,
 ) -> str:
     retrieval_choice = (
-        "Check retrieval job details or configuration only if a controlled retrieval job "
+        "Check Job Status details or configuration only if a controlled server-side job "
         "was submitted or this runtime says retrieval is configured."
         if retrieval_result is not None or retrieval_available
-        else "Skip retrieval/job troubleshooting for this result because no controlled "
-        "retrieval job was submitted."
+        else "Skip Job Status troubleshooting for this result because no controlled "
+        "server-side job was submitted."
     )
     local_data_choice = (
         "Use loaded records by changing the date range if those rows are the "
@@ -1495,7 +1495,7 @@ def _render_no_match_next_step_choices(
           <li>Adjust the complaint date range if the facility is right but the review period may be too narrow.</li>
           <li>{_escape(local_data_choice)}</li>
           <li>{_escape(retrieval_choice)}</li>
-          <li>Report confusion with the facility/license number, date range, loaded-row count, and retrieval state shown here.</li>
+          <li>Report confusion with the facility/license number, date range, loaded-row count, and job state shown here.</li>
         </ol>
       </section>"""
 
@@ -1509,16 +1509,16 @@ def _no_match_reason_bucket(
             return "Loaded records exist for this facility, but none matched the selected date range."
         return "No loaded records are available for this facility/date request yet."
     if retrieval_result.job_state == "blocked_by_validation":
-        return "The request was blocked by validation before retrieval."
+        return "The request was blocked by validation before a server-side job started."
     if retrieval_result.job_state == "failed":
-        return "Retrieval stopped safely because a source, network, or server-side issue occurred."
+        return "The server-side job stopped safely because a source, network, or server-side issue occurred."
     if retrieval_result.job_state == "rate_limited":
-        return "Retrieval is temporarily rate-limited for this tester."
+        return "Request Records is temporarily rate-limited for this tester."
     if retrieval_result.result_counts.get("selected_report_candidates", 0) == 0:
         return "No complaint candidates matched the selected date range."
     if retrieval_result.result_counts.get("retrieved_record_bundles", 0) > 0:
         return "CCLD records were fetched, but no imported complaint rows matched this request after validation."
-    return "The retrieval completed without importing matching complaint records."
+    return "The server-side job completed without importing matching complaint records."
 
 
 def _no_match_headline(
@@ -1620,10 +1620,10 @@ def _request_execution_summary_text(
     if retrieval_result is None:
         return (
             "This page searched currently loaded source-derived rows only. It did not "
-            "submit a controlled retrieval job for this request."
+            "submit a controlled server-side job for this request."
         )
     return (
-        "The browser triggered a controlled server-side CCLD retrieval job. The browser did "
+        "The browser triggered a controlled server-side CCLD record request job. The browser did "
         "not scrape, fetch source pages directly, run SQLite conversion, receive connector "
         "credentials, or receive raw artifact paths."
     )
@@ -1638,21 +1638,21 @@ def _request_result_current_state_text(
     if retrieval_result is None:
         return (
             "Already-loaded source-derived rows were searched; no controlled "
-            "retrieval job was submitted for this request."
+            "server-side job was submitted for this request."
         )
     state_label = _retrieval_state_label(retrieval_result.job_state)
     if queue_count > 0:
         return (
-            f"Controlled retrieval job submitted and {state_label.lower()}; "
+            f"Controlled Request Records job submitted and {state_label.lower()}; "
             f"{queue_count} complaint queue record(s) are visible now."
         )
     if imported_count > 0:
         return (
-            f"Controlled retrieval job submitted and {state_label.lower()}; imported records "
+            f"Controlled Request Records job submitted and {state_label.lower()}; imported records "
             "may need the request queue to be opened or refreshed."
         )
     return (
-        f"Controlled retrieval job submitted and {state_label.lower()}; no queue rows are "
+        f"Controlled Request Records job submitted and {state_label.lower()}; no queue rows are "
         "ready for this request yet."
     )
 
@@ -1666,11 +1666,11 @@ def _request_result_next_action_text(
         if queue_count > 0:
             return (
                 "Review the already-loaded source-derived records in the queue, or change the "
-                "facility/date criteria before submitting a controlled retrieval job."
+                "facility/date criteria before submitting a controlled Request Records job."
             )
         return (
             "Change the facility/date criteria, load validated source-derived records when available, "
-            "or submit controlled retrieval only after confirming the request context."
+            "or submit Request Records only after confirming the request context."
         )
     if queue_count > 0:
         return (
@@ -1801,7 +1801,7 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
         workflow_area="retrieval-job-summary",
         page_path=CCLD_RECORD_REQUEST_PATH,
         retrieval_context="controlled-job-submitted",
-        prompt="Describe what was confusing about this retrieval status/progress summary.",
+        prompt="Describe what was confusing about this Job Status summary.",
     )
     if result.job_state in {"completed", "completed_with_warnings"} and imported_count > 0:
         queue_link = (
@@ -1819,7 +1819,7 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
             <span class="{mode_class}">{_escape(mode_label)}</span></p>
             <p>{_escape(_retrieval_state_intro(result))}</p>
             <section aria-labelledby="retrieval-progress-summary-heading">
-                <h3 id="retrieval-progress-summary-heading">Retrieval status/progress summary</h3>
+                <h3 id="retrieval-progress-summary-heading">Job Status summary</h3>
                 <dl class="summary-list">
                     <dt>Current state</dt>
                     <dd>{_escape(_retrieval_state_label(result.job_state))}</dd>
@@ -1873,7 +1873,7 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
             {_render_retrieval_next_steps(result, imported_count, feedback_href)}
                 <div class="form-actions dense-page-actions">
                     <a class="button button-secondary" href="{_escape(detail_href)}">View job details</a>
-                    <a class="button button-secondary" href="{CCLD_RETRIEVAL_JOBS_PATH}">View retrieval job history</a>
+                    <a class="button button-secondary" href="{CCLD_RETRIEVAL_JOBS_PATH}">View Job Status</a>
                 </div>
 {queue_link}
         </section>"""
@@ -1892,9 +1892,9 @@ def _retrieval_result_headline(result: CcldRetrievalJobResult, imported_count: i
             return "Fetched records did not produce matching imported rows"
         return "No records imported; review notices for the next step"
     if result.job_state == "failed":
-        return "Source or network issue stopped retrieval safely"
+        return "Source or network issue stopped Request Records safely"
     if result.job_state == "blocked_by_validation":
-        return "Request needs changes before retrieval"
+        return "Request needs changes before a job can start"
     if result.job_state == "rate_limited":
         return "Retrieval is temporarily rate limited"
     if result.job_state in {"queued", "running"}:
@@ -1933,19 +1933,19 @@ def _status_badge_class(state: str) -> str:
 
 def _retrieval_state_intro(result: CcldRetrievalJobResult) -> str:
     if result.job_state == "completed":
-        return "Controlled CCLD retrieval completed and imported validated records."
+        return "Request Records completed and imported validated records."
     if result.job_state == "completed_with_warnings":
-        return "Controlled CCLD retrieval completed with notices; review the counts below."
+        return "Request Records completed with notices; review the counts below."
     if result.job_state == "failed":
-        return "Controlled CCLD retrieval failed safely; no raw details are shown here."
+        return "Request Records failed safely; no raw details are shown here."
     if result.job_state == "blocked_by_validation":
-        return "Controlled CCLD retrieval was blocked by validation before import."
+        return "Request Records was blocked by validation before import."
     if result.job_state == "rate_limited":
-        return "Controlled CCLD retrieval was rate-limited for this tester."
+        return "Request Records is rate-limited for this tester."
     if result.job_state == "running":
-        return "Controlled CCLD retrieval is running on the server."
+        return "Request Records is running on the server."
     if result.job_state == "queued":
-        return "Controlled CCLD retrieval is queued for server-side work."
+        return "Request Records is queued for server-side work."
     return result.safe_message
 
 
@@ -1983,7 +1983,7 @@ def _render_retrieval_next_steps(
               <p>If the status, counts, or next step is confusing, use the feedback page for a
               bug report or feature request. For a new source request, use the new data source
               feedback type; do not put source credentials or private values in feedback.</p>
-                            <p><a href="{_escape(feedback_href)}">Report retrieval status confusion</a></p>
+                            <p><a href="{_escape(feedback_href)}">Report Job Status confusion</a></p>
             </section>"""
 
 
@@ -2003,9 +2003,9 @@ def _retrieval_next_action_message(
             "private values."
         )
     if result.job_state == "blocked_by_validation":
-        return "Change the facility/date/type request before retrying retrieval."
+        return "Change the facility/date/type request before trying again."
     if result.job_state == "rate_limited":
-        return "Wait for an active retrieval job to finish before trying again."
+        return "Wait for an active Request Records job to finish before trying again."
     if result.job_state == "running":
         return "Refresh the request status later; do not resubmit repeatedly."
     return "Wait for the server-side job to start, then refresh status later."
@@ -2033,12 +2033,12 @@ def _retrieval_job_history_response(
 
 def _render_retrieval_history_blocked_page(message: str) -> str:
     return _render_message_page(
-        title="Retrieval job history requires access",
-        heading="Retrieval job history requires access",
+        title="Job Status requires access",
+        heading="Job Status requires access",
         message=message,
         guidance=(
             "Sign in with an allowed tester or operator account before viewing controlled "
-            "CCLD retrieval job history."
+            "CCLD Job Status."
         ),
         links=(("Return to CCLD request", CCLD_RECORD_REQUEST_PATH),),
     )
@@ -2060,17 +2060,17 @@ def _render_retrieval_job_history_page(
             prompt="Describe what was confusing about retrieval history with no jobs yet.",
         )
         rows = """        <tr>
-          <td colspan="9">No retrieval jobs have been submitted for this authorized scope.</td>
+          <td colspan="9">No Request Records jobs have been submitted for this authorized scope.</td>
         </tr>"""
         job_cards = f"""        <article class="empty-state-card result-card">
                     <div>
-                        <h3>No retrieval jobs yet</h3>
-                        <p>No retrieval jobs have been submitted for this authorized scope.</p>
-                        <p>This means there is no controlled retrieval status/progress to wait on
+                        <h3>No Request Records jobs yet</h3>
+                        <p>No Request Records jobs have been submitted for this authorized scope.</p>
+                        <p>This means there is no Job Status update to wait on
                         yet. The request page can still show already-loaded source-derived records if
                         they exist for the facility/date context.</p>
                     </div>
-                    <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Go to request page</a></p>
+                    <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Go to Request Records</a></p>
                     <p><a href="{_escape(empty_feedback_href)}">Report an issue with this job</a></p>
                 </article>"""
     setup_text = (
@@ -2087,33 +2087,33 @@ def _render_retrieval_job_history_page(
         page_path=CCLD_RETRIEVAL_JOBS_PATH,
         retrieval_context="controlled-job-history",
         retrieval_status="no_jobs_yet" if not jobs else "completed",
-        prompt="Describe what was confusing about retrieval job history.",
+        prompt="Describe what was confusing about Job Status.",
     )
     return _page(
-        title="Retrieval status center",
-        heading="Retrieval status center",
+        title="Job Status",
+        heading="Job Status",
         active_path=CCLD_RETRIEVAL_JOBS_PATH,
         step_id="review_results",
         next_action="Open a job, review records, or adjust the request",
                 main=f"""    <section class="hero-card" aria-labelledby="retrieval-history-purpose-heading">
-      <p class="launch-kicker">Retrieval status center</p>
-      <h2 id="retrieval-history-purpose-heading">Track complaint retrieval jobs</h2>
-      <p>This page shows recent controlled CCLD retrieval jobs with facility/date context,
+      <p class="launch-kicker">Job Status</p>
+      <h2 id="retrieval-history-purpose-heading">Track Request Records jobs</h2>
+      <p>This page shows recent controlled CCLD record request jobs with facility/date context,
       imported-record counts, notices/errors, and the next action for review.</p>
-    <p>Use this status center after submitting controlled retrieval. To review records
+    <p>Use Job Status after submitting Request Records. To review records
     already loaded without submitting a job, return to the request page and choose Show
     existing queue.</p>
-            <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Submit or change retrieval request</a></p>
+            <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Submit or change Request Records</a></p>
             <details class="technical-details diagnostic-details">
                 <summary>Runtime details</summary>
                 <p>{_escape(setup_text)}</p>
-                <p>Job states describe retrieval workflow progress for the current request.</p>
+                <p>Job states describe server-side Request Records progress for the current request.</p>
             </details>
     </section>
         {_render_retrieval_history_summary(jobs)}
     <section aria-labelledby="retrieval-history-table-heading">
-        <h2 id="retrieval-history-table-heading">Job list</h2>
-            <div class="result-list dense-card-grid" aria-label="Retrieval jobs">
+        <h2 id="retrieval-history-table-heading">Request job list</h2>
+            <div class="result-list dense-card-grid" aria-label="Request Records jobs">
 {job_cards}
             </div>
             <details class="technical-details dense-table-details">
@@ -2186,14 +2186,14 @@ def _render_retrieval_history_card(job: CcldRetrievalJobHistoryEntry) -> str:
         workflow_area="retrieval-job-history",
         page_path=CCLD_RETRIEVAL_JOBS_PATH,
         retrieval_context="controlled-job-history",
-        prompt="Describe what was confusing about this retrieval job history row.",
+        prompt="Describe what was confusing about this Job Status row.",
     )
     mode_label = _retrieval_mode_label_from_message(job.safe_message)
     return f"""        <article class="result-card work-item" aria-labelledby="job-{_escape(job.retrieval_job_id)}-heading">
                     <div>
                         <p><span class="{_status_badge_class(job.job_state)}">{_escape(_retrieval_state_label(job.job_state))}</span>
                         <span class="{_mode_badge_class(mode_label)}">{_escape(mode_label)}</span></p>
-                        <h3 id="job-{_escape(job.retrieval_job_id)}-heading">Facility {_escape(job.facility_number)} retrieval</h3>
+                        <h3 id="job-{_escape(job.retrieval_job_id)}-heading">Facility {_escape(job.facility_number)} request</h3>
                         <dl>
                             <dt>Current state</dt>
                             <dd>{_escape(_retrieval_state_label(job.job_state))}</dd>
@@ -2218,7 +2218,7 @@ def _render_retrieval_history_row(job: CcldRetrievalJobHistoryEntry) -> str:
     detail_href = _retrieval_job_detail_href(job.retrieval_job_id)
     return f"""        <tr>
           <td>
-            <p><a href="{_escape(detail_href)}">View retrieval job details</a></p>
+            <p><a href="{_escape(detail_href)}">View job details</a></p>
             <p>{_escape(job.retrieval_job_id)}</p>
             <dl>
               <dt>Job state</dt>
@@ -2297,17 +2297,17 @@ def _render_retrieval_job_detail_invalid_page() -> str:
         page_path=CCLD_RETRIEVAL_JOB_DETAIL_PATH,
         retrieval_context="controlled-job-detail",
         retrieval_status="not_submitted",
-        prompt="Describe what was confusing about retrieval job detail lookup.",
+        prompt="Describe what was confusing about Job Status detail lookup.",
     )
     return _render_message_page(
-        title="Retrieval job detail needs a valid job ID",
-        heading="Retrieval job detail needs a valid job ID",
-        message="The retrieval job detail page needs a valid job ID from the history page.",
-        guidance="Open retrieval job history and choose a job detail link.",
+        title="Job Status detail needs a valid job ID",
+        heading="Job Status detail needs a valid job ID",
+        message="The Job Status detail page needs a valid job ID from the history page.",
+        guidance="Open Job Status and choose a job detail link.",
         links=(
-            ("Return to retrieval job history", CCLD_RETRIEVAL_JOBS_PATH),
+            ("Return to Job Status", CCLD_RETRIEVAL_JOBS_PATH),
             ("Return to CCLD request", CCLD_RECORD_REQUEST_PATH),
-            ("Report confusing retrieval job detail", feedback_href),
+            ("Report confusing Job Status detail", feedback_href),
         ),
         active_path=CCLD_RETRIEVAL_JOBS_PATH,
     )
@@ -2319,20 +2319,20 @@ def _render_retrieval_job_detail_not_found_page() -> str:
         page_path=CCLD_RETRIEVAL_JOB_DETAIL_PATH,
         retrieval_context="controlled-job-detail",
         retrieval_status="not_submitted",
-        prompt="Describe what was confusing about missing retrieval job detail.",
+        prompt="Describe what was confusing about missing Job Status detail.",
     )
     return _render_message_page(
-        title="Retrieval job detail not found",
-        heading="Retrieval job detail not found",
+        title="Job Status detail not found",
+        heading="Job Status detail not found",
         message="No retrieval job metadata matched that job ID in this authorized scope.",
         guidance=(
-            "Return to retrieval job history to choose a recent job. This is a metadata "
+            "Return to Job Status to choose a recent job. This is a metadata "
             "lookup state, not a public-source conclusion."
         ),
         links=(
-            ("Return to retrieval job history", CCLD_RETRIEVAL_JOBS_PATH),
+            ("Return to Job Status", CCLD_RETRIEVAL_JOBS_PATH),
             ("Submit or change a CCLD request", CCLD_RECORD_REQUEST_PATH),
-            ("Report confusing retrieval job detail", feedback_href),
+            ("Report confusing Job Status detail", feedback_href),
         ),
         active_path=CCLD_RETRIEVAL_JOBS_PATH,
     )
@@ -2347,14 +2347,14 @@ def _render_retrieval_job_detail_page(job: CcldRetrievalJobHistoryEntry) -> str:
     error_items = _safe_list_items(job.errors) or "        <li>none</li>"
     mode_label = _retrieval_mode_label_from_message(job.safe_message)
     return _page(
-        title="Retrieval job detail",
-        heading="Retrieval job detail",
+        title="Job Status detail",
+        heading="Job Status detail",
         active_path=CCLD_RETRIEVAL_JOBS_PATH,
         step_id="review_results",
         next_action="Review imported records or adjust the request",
                 main=f"""    <section class="hero-card" aria-labelledby="retrieval-detail-summary-heading">
-    <p class="launch-kicker">Retrieval job</p>
-    <h2 id="retrieval-detail-summary-heading">Job summary and next step</h2>
+    <p class="launch-kicker">Job Status</p>
+    <h2 id="retrieval-detail-summary-heading">Request job summary and next step</h2>
             <p><span class="{_status_badge_class(job.job_state)}">{_escape(_retrieval_state_label(job.job_state))}</span>
             <span class="{_mode_badge_class(mode_label)}">{_escape(mode_label)}</span></p>
       <p>{_escape(_retrieval_state_intro_for_history(job))}</p>
@@ -2472,17 +2472,17 @@ def _render_retrieval_detail_next_steps(
         workflow_area="retrieval-job-detail",
         page_path=CCLD_RETRIEVAL_JOB_DETAIL_PATH,
         retrieval_context="controlled-job-detail",
-        prompt="Describe what was confusing about this retrieval job detail.",
+        prompt="Describe what was confusing about this Job Status detail.",
     )
     return f"""    <section aria-labelledby="retrieval-detail-next-heading">
       <h2 id="retrieval-detail-next-heading">What to do next</h2>
       <p>{_escape(message)}</p>
       {queue_link}
       <ul>
-        <li><a href="{CCLD_RETRIEVAL_JOBS_PATH}">Return to retrieval job history</a></li>
+        <li><a href="{CCLD_RETRIEVAL_JOBS_PATH}">Return to Job Status</a></li>
         <li><a href="{CCLD_RECORD_REQUEST_PATH}">Submit or change a CCLD record request</a></li>
         <li><a href="{CCLD_HELP_PATH}">Read CCLD workflow help</a></li>
-                <li><a href="{_escape(feedback_href)}">Report retrieval status confusion</a></li>
+                <li><a href="{_escape(feedback_href)}">Report Job Status confusion</a></li>
       </ul>
     </section>"""
 
@@ -2503,9 +2503,9 @@ def _retrieval_detail_next_action_message(
             "private values."
         )
     if job.job_state == "blocked_by_validation":
-        return "Change the facility/date/type request before retrying retrieval."
+        return "Change the facility/date/type request before trying again."
     if job.job_state == "rate_limited":
-        return "Wait for an active retrieval job to finish before trying again."
+        return "Wait for an active Request Records job to finish before trying again."
     if job.job_state == "running":
         return "Refresh job history later; do not resubmit repeatedly."
     return "Wait for the server-side job to start, then refresh job history later."
@@ -2560,7 +2560,7 @@ def _render_history_next_step(job: CcldRetrievalJobHistoryEntry, imported_count:
         return f"<p>Change the facility/date/type request before retrying.</p>{feedback_link}"
     if job.job_state == "rate_limited":
         return (
-            "<p>Wait for an active retrieval job to finish before trying again.</p>"
+            "<p>Wait for an active Request Records job to finish before trying again.</p>"
             f"{feedback_link}"
         )
     if job.job_state == "running":
@@ -2600,17 +2600,17 @@ def _render_retrieval_action(
             prompt="Describe what was confusing about unavailable controlled retrieval setup.",
         )
         return f"""    <section aria-labelledby="retrieval-action-heading">
-            <h2 id="retrieval-action-heading">Controlled CCLD retrieval setup required</h2>
-            <p>Server-side retrieval is not configured with database context and raw source
+            <h2 id="retrieval-action-heading">Controlled Request Records setup required</h2>
+            <p>Server-side Request Records is not configured with database context and raw source
             storage in this runtime. No retrieval job will be created from this browser page.</p>
-            <p>Operators should enable retrieval only after PostgreSQL migrations, raw artifact
+            <p>Operators should enable Request Records only after PostgreSQL migrations, raw artifact
             storage, auth configuration, rate limits, and CCLD source allowlists are ready.</p>
             <p>If this setup state is confusing, use the feedback page to send a bug report.</p>
-            <p><a href="{_escape(feedback_href)}">Report retrieval setup confusion</a></p>
+            <p><a href="{_escape(feedback_href)}">Report Request Records setup confusion</a></p>
         </section>"""
     return f"""    <section aria-labelledby="retrieval-action-heading">
-            <h2 id="retrieval-action-heading">Controlled CCLD retrieval</h2>
-            <p>This server-side action can retrieve CCLD complaint records for the bounded
+            <h2 id="retrieval-action-heading">Controlled Request Records</h2>
+            <p>This server-side action can request CCLD complaint records for the bounded
             facility/date/type request. The browser submits only CCLD request inputs; the
             server performs retrieval, raw preservation, validation, and PostgreSQL import.</p>
             <form action="{CCLD_RECORD_REQUEST_PATH}" method="post">
@@ -2627,7 +2627,7 @@ def _render_retrieval_action(
                     value="{_escape(request.reviewer_status_filter)}">
                 <input type="hidden" name="{_RETRIEVAL_ACTION_FIELD}"
                     value="{_RETRIEVAL_ACTION_VALUE}">
-                <p><button type="submit">Run controlled CCLD retrieval</button></p>
+                <p><button type="submit">Request records from CCLD</button></p>
             </form>
         </section>"""
 
@@ -3415,10 +3415,10 @@ def _feedback_checklist_text(
         "- Return-to-queue link worked:",
         "- Queue showed updated note/status after returning and resubmitting:",
         "",
-        "Retrieval status/progress clarity",
-        "- It was clear whether records were already loaded, a controlled retrieval job was submitted, or a job was still waiting:",
-        "- Retrieval job/status/progress wording that was confusing:",
-        "- Next action after retrieval status was clear:",
+        "Job Status clarity",
+        "- It was clear whether records were already loaded, a Request Records job was submitted, or a job was still waiting:",
+        "- Request Records / Job Status wording that was confusing:",
+        "- Next action after Job Status was clear:",
         "",
         "Missing, unexpected, or confusing results",
         "- Records that seemed missing:",
@@ -3435,7 +3435,7 @@ def _feedback_checklist_text(
         "or second checklist.",
         "- Rendering this checklist does not change source-derived records, "
         "reviewer-created state, audit rows, import batches, or operational metadata.",
-        "- Browser pages only trigger controlled server-side retrieval when the retrieval "
+        "- Browser pages only trigger controlled server-side record requests when the Request Records "
         "action is explicitly submitted.",
         "- Include any records that seemed missing, unexpected, or confusing.",
         "- Open source links from the detail page when a source check is needed.",
