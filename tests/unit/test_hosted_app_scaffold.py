@@ -149,6 +149,20 @@ def test_app_shell_labels_placeholder_scope() -> None:
     assert "Open prioritized records" in html
     assert "Prepare packet/brief" in html
     assert "Check readiness before attorney review" in html
+    assert "First-time tester orientation" in html
+    assert "Try this first: open facility lookup" in html
+    assert (
+        "Use Request Records when you already have the digit facility/license number"
+        in normalized_html
+    )
+    assert "Loaded context means records and facility cues already available" in html
+    assert "not a statement that the public source is complete" in normalized_html
+    assert "Facility lookup helps fill the facility/license number for Request Records" in html
+    assert "Prioritized records show which loaded complaint records to open first" in html
+    assert "Reviewer detail is where you check source traceability" in html
+    assert "Packet preview and draft collect the current facility/date review context" in html
+    assert "The readiness checklist helps decide whether the loaded context is ready" in html
+    assert '<a href="/feedback">send tester feedback</a>' in html
     assert html.index("Find facility") < html.index("Review facility pattern summary")
     assert html.index("Review facility pattern summary") < html.index(
         "Open prioritized records"
@@ -171,6 +185,7 @@ def test_app_shell_labels_placeholder_scope() -> None:
         'href="/reviewer/packet/preview#packet-attorney-review-readiness-checklist">'
         "Open readiness checklist</a>"
     ) in html
+    assert 'href="/feedback">Open feedback</a>' in html
     assert "Attorney-focused public CCLD complaint/facility record review" not in html
     assert "New to this tool?" not in html
     assert "See Help for the review workflow" not in html
@@ -193,6 +208,22 @@ def test_app_shell_labels_placeholder_scope() -> None:
     assert "Start facility complaint review." not in html
     assert "Select the facility/license number." not in html
     assert "Choose the complaint date range." not in html
+
+
+def test_home_orientation_is_single_shared_entry_block_with_feedback_path() -> None:
+    html = render_app_shell()
+    normalized_html = " ".join(html.split())
+
+    assert html.count("First-time tester orientation") == 1
+    assert html.count("Loaded context means records and facility cues already available") == 1
+    assert "loaded-context cue, record order, source traceability cue" in normalized_html
+    assert "packet/brief cue, readiness item, wording, or keyboard flow" in normalized_html
+    assert 'href="/feedback">send tester feedback</a>' in html
+    assert 'href="/feedback">Open feedback</a>' in html
+    assert "saved session" not in normalized_html.casefold()
+    assert "persisted queue state" not in normalized_html.casefold()
+    assert "source-completeness proof" not in normalized_html.casefold()
+    assert "legal conclusion" not in normalized_html.casefold()
 
 
 def test_guided_attorney_review_workflow_acceptance_route_markers(
