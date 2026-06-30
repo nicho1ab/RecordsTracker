@@ -266,9 +266,9 @@ def render_feedback_page(
                 heading="Send feedback",
         main=f"""
         <section class="hero-card" aria-labelledby="feedback-purpose-heading">
-            <p class="launch-kicker">Tester support</p>
-            <h2 id="feedback-purpose-heading">What issue should be reported?</h2>
-            <p>Choose the feedback type and describe what blocked retrieval, retrieval status/progress, record review, wording, or keyboard flow.</p>
+            <p class="launch-kicker">Tester feedback</p>
+            <h2 id="feedback-purpose-heading">Send safe review feedback</h2>
+            <p>Choose the feedback type and describe what blocked Request Records, Job Status, record review, wording, or keyboard flow.</p>
             <p class="helper-text">Choose a feedback type, describe only safe details, and use the visible validation message if a required field is missing.</p>
         </section>
         {_feedback_context_panel(handoff_context)}
@@ -281,8 +281,8 @@ def render_feedback_page(
             <summary>Useful examples</summary>
             <ul>
                 <li>A complaint record looked missing or unexpected.</li>
-                <li>It was unclear whether the page was showing already-loaded records or a controlled retrieval job status.</li>
-                <li>A retrieval job state, progress count, notice, or next action was unclear.</li>
+                <li>It was unclear whether the page was showing already-loaded records or a Request Records job status.</li>
+                <li>A Job Status state, progress count, notice, or next action was unclear.</li>
                 <li>A date or finding looked confusing.</li>
                 <li>A review flag was unclear.</li>
                 <li>A source-confidence cue did not make the next action clear.</li>
@@ -348,7 +348,7 @@ def _feedback_context_panel(context: FeedbackHandoffContext | None) -> str:
             <p>Describe what was confusing, missing, unexpected, or hard to use, including active
             reviewer-created status filter confusion, shown-count or total-count confusion,
             filtered-empty recovery problems, source traceability concerns such as source URL, raw SHA-256 hash, connector metadata,
-            retrieval timestamp, retrieval job history/detail context, source document/report marker, or traceability value
+            retrieval timestamp, Job Status history/detail context, source document/report marker, or traceability value
             missing; source-confidence next-step confusion for missing source values,
             proxy-related cues, or cautious note/status wording; possible correction concerns where a source-derived value looked wrong or
             incomplete after checking traceability; or uncertainty about whether to use a
@@ -373,7 +373,7 @@ def _feedback_issue_starter(context: FeedbackHandoffContext | None) -> str:
     if context is None or not _feedback_context_rows(context):
         return ""
     surface = _feedback_starter_surface(context)
-    focus = "retrieval/status information" if _has_retrieval_context(context) else "review workflow information"
+    focus = "Job Status information" if _has_retrieval_context(context) else "review workflow information"
     lines = [f"I am reporting confusion about the {focus} on {surface}."]
     if context.facility_number:
         lines.append(f"Facility/license: {context.facility_number}")
@@ -381,11 +381,11 @@ def _feedback_issue_starter(context: FeedbackHandoffContext | None) -> str:
     if date_range:
         lines.append(f"Date range: {date_range}")
     if context.retrieval_context:
-        lines.append(f"Retrieval context: {context.retrieval_context}")
+        lines.append(f"Job context: {context.retrieval_context}")
     if context.retrieval_status:
-        lines.append(f"Retrieval status: {context.retrieval_status}")
+        lines.append(f"Job status: {context.retrieval_status}")
     if context.retrieval_job_id:
-        lines.append(f"Retrieval job ID: {context.retrieval_job_id}")
+        lines.append(f"Job ID: {context.retrieval_job_id}")
     if context.prompt:
         lines.extend(["", f"Prompt from previous screen: {context.prompt}"])
     lines.extend(["", "What was confusing:", "[Edit this before submitting.]"])
@@ -421,9 +421,9 @@ def _feedback_context_rows(context: FeedbackHandoffContext) -> list[tuple[str, s
         ("End date", context.end_date),
         ("Request origin", context.request_context_origin),
         ("Reviewer-status filter", context.reviewer_status_filter),
-        ("Retrieval context", context.retrieval_context),
-        ("Retrieval status", context.retrieval_status),
-        ("Retrieval job ID", context.retrieval_job_id),
+        ("Job context", context.retrieval_context),
+        ("Job status", context.retrieval_status),
+        ("Job ID", context.retrieval_job_id),
         ("Source record key", context.source_record_key),
         ("Complaint/control identifier", context.complaint_control_number),
         ("Suggested prompt", context.prompt),
@@ -724,7 +724,7 @@ def _page(*, title: str, heading: str, main: str) -> str:
                 main=main,
                 skip_label="Skip to main feedback content",
                 nav_label="Feedback navigation",
-                eyebrow="Server-side GitHub Issues feedback intake.",
+                eyebrow="Safe tester feedback for the review workflow.",
                 extra_nav_links=(),
                 active_path=FEEDBACK_PATH,
                 step_id="feedback",

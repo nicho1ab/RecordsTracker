@@ -210,7 +210,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if b"Skip to main CCLD review content" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return skip navigation.")
     if (
-        b"Start a facility complaint review"
+        b"Start a Facility Complaint Review"
         not in root_body
     ):
         raise RuntimeError("Hosted scaffold app shell did not return review session orientation.")
@@ -228,7 +228,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold facility sample shell did not return the fixture list.")
     if (
         ccld_status != 200
-        or b"Retrieve complaint records" not in ccld_body
+        or b"Request Records" not in ccld_body
         or b'for="facility-search-input"' not in ccld_body
         or b"facility-suggestion-list" not in ccld_body
         or b"Which facility should be reviewed?" not in ccld_body
@@ -240,26 +240,26 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold CCLD request shell did not return the request page.")
     if (
         ccld_retrieval_history_status != 200
-        or b"Retrieval status center" not in ccld_retrieval_history_body
-        or b"No retrieval jobs have been submitted" not in ccld_retrieval_history_body
+        or b"Job Status" not in ccld_retrieval_history_body
+        or b"No Request Records jobs have been submitted" not in ccld_retrieval_history_body
         or b"Controlled retrieval setup is missing" not in ccld_retrieval_history_body
-        or b"Submit or change retrieval request" not in ccld_retrieval_history_body
+        or b"Submit or change Request Records" not in ccld_retrieval_history_body
         or b"Report an issue with this job" not in ccld_retrieval_history_body
         or b"Report confusing retrieval progress" in ccld_retrieval_history_body
     ):
         raise RuntimeError("Hosted scaffold retrieval job history did not return safe guidance.")
     if (
         ccld_retrieval_detail_status != 404
-        or b"Retrieval job detail not found" not in ccld_retrieval_detail_body
-        or b"Return to retrieval job history" not in ccld_retrieval_detail_body
+        or b"Job Status detail not found" not in ccld_retrieval_detail_body
+        or b"Return to Job Status" not in ccld_retrieval_detail_body
         or b"Submit or change a CCLD request" not in ccld_retrieval_detail_body
     ):
         raise RuntimeError("Hosted scaffold retrieval job detail did not return safe not-found.")
     if (
         ccld_retrieval_detail_invalid_status != 400
-        or b"Retrieval job detail needs a valid job ID"
+        or b"Job Status detail needs a valid job ID"
         not in ccld_retrieval_detail_invalid_body
-        or b"Return to retrieval job history" not in ccld_retrieval_detail_invalid_body
+        or b"Return to Job Status" not in ccld_retrieval_detail_invalid_body
     ):
         raise RuntimeError(
             "Hosted scaffold retrieval job detail did not return safe invalid state."
@@ -299,10 +299,10 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
             raise RuntimeError("Hosted scaffold CCLD no-match result did not return load guidance.")
     if (
         ccld_retrieval_setup_status != 503
-        or b"Controlled CCLD retrieval setup required" not in ccld_retrieval_setup_body
-        or b"No retrieval job was created" not in ccld_retrieval_setup_body
+        or b"Request Records setup required" not in ccld_retrieval_setup_body
+        or b"No Request Records job was created" not in ccld_retrieval_setup_body
         or b"Operator setup checklist" not in ccld_retrieval_setup_body
-        or b"Report retrieval setup confusion" not in ccld_retrieval_setup_body
+        or b"Report Request Records setup confusion" not in ccld_retrieval_setup_body
     ):
         raise RuntimeError("Hosted scaffold retrieval setup state did not return safe guidance.")
     if (
@@ -311,20 +311,20 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Completed" not in ccld_retrieval_success_body
         or b"Records imported" not in ccld_retrieval_success_body
             or b"Open review queue" not in ccld_retrieval_success_body
-        or b"View retrieval job history" not in ccld_retrieval_success_body
+        or b"View Job Status" not in ccld_retrieval_success_body
             or b"View job details" not in ccld_retrieval_success_body
     ):
         raise RuntimeError("Hosted scaffold mock retrieval did not return completed status.")
     if (
         ccld_retrieval_history_after_status != 200
-        or b"Retrieval status center" not in ccld_retrieval_history_after_body
-        or b"View retrieval job details" not in ccld_retrieval_history_after_body
+        or b"Job Status" not in ccld_retrieval_history_after_body
+        or b"View job details" not in ccld_retrieval_history_after_body
         or b"Review imported records in the CCLD queue" not in ccld_retrieval_history_after_body
     ):
         raise RuntimeError("Hosted scaffold mock retrieval did not appear in history.")
     if (
         ccld_retrieval_success_detail_status != 200
-        or b"Retrieval job detail" not in ccld_retrieval_success_detail_body
+        or b"Job Status detail" not in ccld_retrieval_success_detail_body
         or b"Completed" not in ccld_retrieval_success_detail_body
         or b"Records imported" not in ccld_retrieval_success_detail_body
         or b"Review imported records in the CCLD queue"
@@ -349,7 +349,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         feedback_status != 200
         or b"Send feedback" not in feedback_body
-        or b"What issue should be reported?" not in feedback_body
+            or b"Send safe review feedback" not in feedback_body
         or b"Do not include private material" not in feedback_body
         or b"GitHub issue intake is not configured" not in feedback_body
         or b"Submit feedback" not in feedback_body
@@ -407,7 +407,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         packet_draft_empty_status != 200
         or b"No facility/date packet context was supplied" not in packet_draft_empty_body
-        or b"Open Retrieve" not in packet_draft_empty_body
+        or b"Open Request Records" not in packet_draft_empty_body
         or b"Open Review queue" not in packet_draft_empty_body
     ):
         raise RuntimeError(

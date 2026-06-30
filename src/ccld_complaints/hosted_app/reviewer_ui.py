@@ -1335,10 +1335,10 @@ def _render_packet_draft_context_needed(*, actor_label: str | None) -> str:
                         <p class="launch-kicker">Preparation draft for browser copy or print</p>
                         <h2 id="packet-context-needed-heading">No facility/date packet context was supplied.</h2>
                     </div>
-                    <p>Open this draft from a CCLD retrieval result, the packet preview, or a reviewer detail confirmation so the facility/date context can be carried into the draft for browser copy or print preparation.</p>
+                    <p>Open this draft from a Request Records result, the packet preview, or a reviewer detail confirmation so the facility/date context can be carried into the draft for browser copy or print preparation.</p>
                     <p>Use a facility/date context so the draft can include the matching loaded complaint records, source traceability cues, and reviewer-created status/note cues.</p>
                     <div class="form-actions packet-draft-actions">
-                        <a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Open Retrieve</a>
+                        <a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Open Request Records</a>
                         <a class="button button-secondary" href="{REVIEWER_UI_RECORDS_PATH}">Open Review queue</a>
                     </div>
                 </section>
@@ -1553,10 +1553,10 @@ def _detail_response(
         return _html_response(
             400,
             _render_message_page(
-                title="Select a seeded record",
-                heading="Select a seeded record",
-                message="Choose a seeded source-derived record before opening reviewer detail.",
-                guidance="Return to the reviewer list and open one of the seeded records.",
+                title="Select a complaint record",
+                heading="Select a complaint record",
+                message="Choose a loaded source-derived complaint record before opening reviewer detail.",
+                guidance="Return to the reviewer list and open one of the complaint records.",
                 links=(("Return to reviewer records", REVIEWER_UI_RECORDS_PATH),),
             ),
         )
@@ -1569,7 +1569,7 @@ def _detail_response(
         return _workflow_error_page(
             status,
             body,
-            missing_record_heading="Selected seeded record was not found",
+            missing_record_heading="Selected complaint record was not found",
         )
     payload = _json_object(body)
     return _detail_html_response(
@@ -1771,13 +1771,13 @@ def _render_record_list(
     )
     if not rows:
         rows = """        <tr>
-                    <td colspan="11">No seeded source-derived review records match the
+                    <td colspan="11">No loaded complaint records match the
                     current search.</td>
         </tr>"""
         cards = """        <article class="empty-state-card result-card">
           <div>
             <h3>No matching complaint records</h3>
-            <p>No seeded source-derived review records match the current search.</p>
+            <p>No loaded complaint records match the current search.</p>
           </div>
         </article>"""
         returned_count = _int_value(_mapping(queue, "pagination"), "returned_count")
@@ -1805,7 +1805,7 @@ def _render_record_list(
                     <summary>Filter or search queue</summary>
             <form action="{REVIEWER_UI_RECORDS_PATH}" method="get">
         <p>
-          <label for="q">Search seeded review records</label>
+          <label for="q">Search complaint records</label>
                     <input id="q" name="q" type="search" value="{_escape(search_query)}"
                         aria-describedby="reviewer-search-help">
                     <span id="reviewer-search-help">Search by complaint control number,
@@ -1856,18 +1856,18 @@ def _render_no_results_notice(
                 return ""
         if search_query:
                 return f"""<section aria-labelledby="no-results-heading">
-            <h2 id="no-results-heading">No matching seeded reviewer records</h2>
-            <p>No seeded source-derived records match {_escape(search_query)}.</p>
-            <p>Clear the search or return to the reviewer list to choose a seeded record.</p>
+            <h2 id="no-results-heading">No matching complaint records</h2>
+            <p>No loaded source-derived complaint records match {_escape(search_query)}.</p>
+            <p>Clear the search or return to the reviewer list to choose a complaint record.</p>
             <ul>
                 <li><a href="{REVIEWER_UI_RECORDS_PATH}">Clear search</a></li>
                 <li><a href="{REVIEWER_UI_PREFIX}">Return to reviewer home</a></li>
             </ul>
         </section>"""
         return f"""<section aria-labelledby="no-results-heading">
-            <h2 id="no-results-heading">No seeded reviewer records are available</h2>
-            <p>The seeded corpus did not return reviewer records.</p>
-            <p>Return to the reviewer home page and retry the scaffold.</p>
+            <h2 id="no-results-heading">No complaint records are available</h2>
+            <p>No loaded source-derived complaint records are available for this review queue.</p>
+            <p>Return to Request Records or the reviewer home page to choose the next step.</p>
             <ul>
                 <li><a href="{REVIEWER_UI_PREFIX}">Return to reviewer home</a></li>
             </ul>
@@ -2409,9 +2409,9 @@ def _render_packet_preview_context_needed(*, actor_label: str | None) -> str:
                 <section class="hero-card" aria-labelledby="packet-context-needed-heading">
                     <p class="launch-kicker">Preparation preview</p>
                     <h2 id="packet-context-needed-heading">No facility/date packet context was supplied.</h2>
-                    <p>Start from Retrieve or the Review queue to build a packet for a specific facility/date range.</p>
+                    <p>Start from Request Records or the Review queue to build a packet for a specific facility/date range.</p>
                     <div class="form-actions">
-                        <a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Open Retrieve</a>
+                        <a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Open Request Records</a>
                         <a class="button button-secondary" href="{REVIEWER_UI_RECORDS_PATH}">Open Review queue</a>
                     </div>
                     <p>Supply a facility/date context to show included records and review-readiness cues for packet preparation.</p>
@@ -4147,7 +4147,7 @@ def _render_detail_navigation(
                 <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find another CCLD facility</a></li>
                 <li><a href="{CCLD_HELP_PATH}">Open CCLD workflow help</a></li>
                 <li><a href="{REVIEWER_UI_RECORDS_PATH}">Back to reviewer records</a></li>
-                <li><a href="/ccld/retrieval/jobs">Job history</a></li>
+                <li><a href="/ccld/retrieval/jobs">Job Status</a></li>
                 <li><a href="{_escape(feedback_href)}">Report reviewer-detail feedback with safe context</a></li>
                 <li><a href="{_escape(detail_href)}">Refresh this seeded detail</a></li>
                 <li><a href="#record-summary-heading">Review record summary</a></li>
@@ -5991,7 +5991,7 @@ def _workflow_error_page(
     heading: str | None = None,
     guidance: str | None = None,
     links: tuple[tuple[str, str], ...] | None = None,
-    missing_record_heading: str = "Selected seeded record was not found",
+    missing_record_heading: str = "Selected complaint record was not found",
 ) -> tuple[int, str, bytes]:
     payload = _json_object(body)
     error = _mapping(payload, "error")
@@ -6004,10 +6004,10 @@ def _workflow_error_page(
                 title=missing_record_heading,
                 heading=missing_record_heading,
                 message=(
-                    "The selected seeded record is not available in this "
-                    "seeded corpus."
+                    "The selected complaint record is not available in this "
+                    "review queue."
                 ),
-                guidance="Return to the reviewer list and select a seeded record.",
+                guidance="Return to the reviewer list and select a complaint record.",
                 links=(("Return to reviewer records", REVIEWER_UI_RECORDS_PATH),),
             ),
         )

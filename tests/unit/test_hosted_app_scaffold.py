@@ -127,21 +127,23 @@ def test_app_shell_labels_placeholder_scope() -> None:
     assert parser.text_for("h1") == "Start a Facility Complaint Review"
     assert parser.text_for("h1") != "CCLD RecordsTracker"
     assert "Review aids only" in html
-    assert "Start a facility complaint review" in html
+    assert "Start a Facility Complaint Review" in html
     assert "Start with facility lookup" in html
     assert (
         '<a class="button button-secondary" href="/ccld/records/request">'
-        "Enter a license number</a>"
+        "Request Records</a>"
     ) in html
     assert "Enter a facility/license number directly" not in html
     assert (
-        "Find a facility, enter a facility/license number, or open the current review queue."
+        "Begin with the facility/license number, request CCLD complaint records"
         in html
     )
-    assert "How it works" in html
-    assert "Find a facility" in html
-    assert "Request complaint records" in html
-    assert "Review and prepare" in html
+    assert "Review path" in html
+    assert "Find facility" in html
+    assert "Request records" in html
+    assert "Review evidence" in html
+    assert "Prepare, export, and send feedback" in html
+    assert "Ready paths" in html
     assert "Attorney-focused public CCLD complaint/facility record review" not in html
     assert "New to this tool?" not in html
     assert "See Help for the review workflow" not in html
@@ -408,7 +410,7 @@ def test_explicit_local_dev_auth_mode_allows_default_workflow_actor() -> None:
     assert "provider_subject" not in reviewer_html
     assert "provider_issuer" not in reviewer_html
     assert ccld_status == 200
-    assert "Retrieve complaint records" in ccld_html
+    assert "Request Records" in ccld_html
 
 
 def test_source_record_list_route_labels_sample_read_only_scope() -> None:
@@ -1017,8 +1019,8 @@ def test_help_page_topics_toc_links_to_every_help_section_in_order() -> None:
         ("workflow", "How to review a facility (workflow)"),
         ("review-guidance", "Review guidance and next steps"),
         ("source-traceability", "How source traceability works"),
-        ("live-retrieval", "Retrieval modes"),
-        ("operator-setup", "Operator setup: enabling live retrieval"),
+        ("live-retrieval", "Request Records and Job Status"),
+        ("operator-setup", "Operator setup: enabling live Request Records"),
         ("tool-purpose", "What this tool helps you do"),
         ("review-flags", "What review flags mean"),
         ("source-confidence", "What to do with source-confidence cues"),
@@ -1224,7 +1226,7 @@ def test_live_mode_facility_lookup_not_configured_shows_safe_fallback_messaging(
 
     assert "Facility directory lookup is not configured" in html
     assert "Enter a known CCLD facility/license number" in html
-    assert "Open request form" in html
+    assert "Open Request Records" in html
     # Synthetic fixture names must not appear
     assert "Synthetic Orchard" not in html
     assert "Synthetic Valley" not in html

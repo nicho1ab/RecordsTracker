@@ -75,9 +75,9 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Send feedback" in html
-    assert "What issue should be reported?" in html
+    assert "Send safe review feedback" in html
     assert "packet/readiness" in html
-    assert "retrieval status/progress" in html
+    assert "Job Status" in html
     assert "already-loaded records" in html or "loaded-record" in html
     assert "browser copy issue" in normalized_html
     assert "print issue" in normalized_html
@@ -217,13 +217,13 @@ def test_feedback_page_renders_safe_retrieval_handoff_context() -> None:
     assert "Feedback context from review workflow" in html
     assert "retrieval-job-detail" in html
     assert "/ccld/retrieval/jobs/detail" in html
-    assert "Retrieval context" in html
+    assert "Job context" in html
     assert "controlled-job-detail" in html
-    assert "Retrieval status" in html
+    assert "Job status" in html
     assert "completed_with_warnings" in html
-    assert "Retrieval job ID" in html
+    assert "Job ID" in html
     assert "ccld-retrieval-157806098-20260615T120000Z" in html
-    assert "retrieval job history/detail context" in normalized_html
+    assert "Job Status history/detail context" in normalized_html
     assert "Describe retrieval status confusion." in html
     assert "C:/server/private/raw/artifact.html" not in html
     assert_no_secret_html(html)
@@ -260,7 +260,7 @@ def test_feedback_page_prefills_editable_starter_from_safe_handoff_context() -> 
         in html
     )
     starter_opening = (
-        "I am reporting confusion about the retrieval/status information on "
+        "I am reporting confusion about the Job Status information on "
         "retrieval job detail."
     )
     assert starter == "\n".join(
@@ -268,9 +268,9 @@ def test_feedback_page_prefills_editable_starter_from_safe_handoff_context() -> 
             starter_opening,
             "Facility/license: 157806098",
             "Date range: 2022-08-01 to 2022-08-31",
-            "Retrieval context: controlled-job-detail",
-            "Retrieval status: completed_with_warnings",
-            "Retrieval job ID: ccld-retrieval-157806098-20260615T120000Z",
+            "Job context: controlled-job-detail",
+            "Job status: completed_with_warnings",
+            "Job ID: ccld-retrieval-157806098-20260615T120000Z",
             "",
             "Prompt from previous screen: Describe retrieval status confusion.",
             "",
@@ -311,14 +311,14 @@ def test_feedback_starter_omits_unavailable_handoff_values() -> None:
     assert status == 200
     assert "Suggested issue starter" in html
     assert (
-        "I am reporting confusion about the retrieval/status information on request result."
+        "I am reporting confusion about the Job Status information on request result."
         in starter
     )
     assert "Facility/license: 157806098" in starter
-    assert "Retrieval context: already-loaded-records" in starter
+    assert "Job context: already-loaded-records" in starter
     assert "Date range:" not in starter
-    assert "Retrieval status:" not in starter
-    assert "Retrieval job ID:" not in starter
+    assert "Job status:" not in starter
+    assert "Job ID:" not in starter
     assert "Prompt from previous screen:" not in starter
     assert_no_secret_html(html)
 

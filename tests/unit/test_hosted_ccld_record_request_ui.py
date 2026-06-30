@@ -103,12 +103,12 @@ def test_ccld_record_request_page_renders_from_default_context(
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Retrieve complaint records" in html
+    assert "Request Records" in html
     assert "Skip to main CCLD request content" in html
     assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
-    assert "Retrieve complaint records for a facility" in html
+    assert "Request complaint records for a facility" in html
     assert "Start review" in html
-    assert "Choose a facility and date range, then open the complaint queue." in html
+    assert "Choose a facility and date range, then request CCLD complaint records" in html
     mode_panel = html.split('<div class="mode-panel" aria-label="Retrieval mode">', 1)[1].split(
         "</div>",
         1,
@@ -197,7 +197,7 @@ def test_ccld_trailing_slash_route_renders_request_start() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Retrieve complaint records" in html
+    assert "Request Records" in html
     assert "Start review request context" in html
     assert "Which facility should be reviewed?" in html
     assert_no_secret_html(html)
@@ -235,17 +235,17 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "do not edit source-derived fields" in html
     assert "correction concern in a reviewer-created note or feedback" in normalized_html
     assert "Open source links from the detail page when a source check is needed" in html
-    assert "Retrieval modes" in html
+    assert "Request Records and Job Status" in html
     assert "Show existing queue means the page searched already-loaded source-derived" in (
         normalized_html
     )
-    assert "it did not submit a controlled retrieval job" in normalized_html
-    assert "Retrieve complaint records means a configured controlled retrieval job" in (
+    assert "it did not submit a controlled job" in normalized_html
+    assert "Request Records means a configured controlled server-side job" in (
         normalized_html
     )
-    assert "status/progress pages show the current job state" in normalized_html
+    assert "Job Status pages show the current job state" in normalized_html
     assert "Loaded source-derived records can be ready for review" in normalized_html
-    assert "Retrieval status/progress is operational metadata" in normalized_html
+    assert "Job Status is operational metadata" in normalized_html
     assert "metadata for the current review workflow" in normalized_html
     assert "Review guidance and next steps" in html
     assert "How to send useful feedback" in html
@@ -276,7 +276,7 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "correction approved" not in normalized_html
     assert "correction applied" not in normalized_html
     assert "corrected source record" not in normalized_html
-    assert "Retrieve complaint records" in html
+    assert "Open Request Records" in html
     assert_no_secret_html(html)
 
 
@@ -489,9 +489,9 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert before_source_rows == after_source_rows
     assert counts == _empty_reviewer_counts()
     assert "Complaint records ready for attorney review" in html
-    assert "Retrieval job submitted" in html
+    assert "Request job submitted" in html
     assert "Already-loaded source-derived rows were searched" in html
-    assert "no controlled retrieval job was submitted for this request" in html
+    assert "no controlled server-side job was submitted for this request" in html
     assert "Records ready" in html
     assert "1 complaint queue record(s) are ready for review" in html
     assert "Review the already-loaded source-derived records in the queue" in html
@@ -617,7 +617,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Queue decision actions" in html
     assert "Open facility review priority list" in html
     assert "tester feedback for this queue context" in normalized_html
-    assert "Report unclear loaded-record versus retrieval-job state" in html
+    assert "Report unclear loaded-record versus job-state wording" in html
     assert "workflow_area=request-result" in html
     assert "retrieval_context=already-loaded-records" in html
     assert "retrieval_status=not_submitted" in html
@@ -682,7 +682,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "- Records that seemed unexpected:" in html
     assert "- Manual-copy only: copy this checklist" in html
     assert "Open reviewer records" in html
-    assert "did not submit a controlled retrieval job for this request" in html
+    assert "did not submit a controlled server-side job for this request" in html
     assert "run-ccld-live-fetch.ps1 -FacilityNumber 157806098" in html
     assert "legally sufficient" not in normalized_html.casefold()
     assert "verified abuse" not in normalized_html.casefold()
@@ -872,13 +872,13 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert "Check or change the facility/license number" in html
     assert "Adjust the complaint date range" in html
     assert "Use loaded records by changing the date range" in normalized_html
-    assert "Skip retrieval/job troubleshooting for this result" in normalized_html
-    assert "no controlled retrieval job was submitted" in normalized_html
+    assert "Skip Job Status troubleshooting for this result" in normalized_html
+    assert "no controlled server-side job was submitted" in normalized_html
     assert "Report confusion with the facility/license number, date range" in normalized_html
     assert "How to interpret this no-match result" in html
     assert "currently loaded source-derived rows only" in normalized_html
-    assert "did not submit a controlled retrieval job for this request" in normalized_html
-    assert "Retrieval job submitted" in html
+    assert "did not submit a controlled server-side job for this request" in normalized_html
+    assert "Request job submitted" in html
     assert "Already-loaded source-derived rows were searched" in html
     assert "Change the facility/date criteria" in normalized_html
     assert "Facility/license number searched" in html
@@ -894,11 +894,11 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert "Selected request context" in html
     assert "Change facility/date criteria for this request" in html
     assert "Copyable tester feedback checklist" in html
-    assert "Technical retrieval details" in html
+    assert "Technical job details" in html
     assert "Copy details for feedback" in html
     assert 'class="technical-details diagnostic-details"' in html
     assert 'class="technical-details dense-table-details"' in html
-    assert "Report unclear loaded-record versus retrieval-job state" in html
+    assert "Report unclear loaded-record versus job-state wording" in html
     assert "Open facility review priority list" in html
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098" in html
     assert "Check facility hub or signal-only facility hub for this request context" in html
@@ -995,15 +995,15 @@ def test_ccld_record_request_empty_hosted_records_offers_local_validated_load() 
     assert "Check or change the facility/license number" in html
     assert "Adjust the complaint date range" in html
     assert "Load or refresh records" in html
-    assert "Skip retrieval/job troubleshooting for this result" in normalized_html
+    assert "Skip Job Status troubleshooting for this result" in normalized_html
     assert "Report confusion with the facility/license number, date range" in normalized_html
-    assert "no controlled retrieval job was submitted for this request" in html
+    assert "no controlled server-side job was submitted for this request" in html
     assert "no</dd>" in html
     assert "Change the facility/date criteria" in " ".join(html.split())
     assert "Loaded source-derived rows for this facility before date filtering" in html
     assert "not submitted for this request" in html
     assert "Copyable tester feedback checklist" in html
-    assert "Report unclear loaded-record versus retrieval-job state" in html
+    assert "Report unclear loaded-record versus job-state wording" in html
     assert "workflow_area=request-result" in html
     assert "retrieval_context=already-loaded-records" in html
     assert "retrieval_status=not_submitted" in html
@@ -1047,7 +1047,7 @@ def test_ccld_record_request_loads_local_validated_output_then_shows_matches() -
     assert "New source-derived rows staged" in html
     assert "validated_seeded_corpus.json" in html
     assert "Complaint records ready for attorney review" in html
-    assert "Retrieval job submitted" in html
+    assert "Request job submitted" in html
     assert "no</dd>" in html
     assert "Already-loaded source-derived rows were searched" in html
     assert "Complaint records ready" in html
@@ -1137,14 +1137,14 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     assert "- Queue showed updated note/status after returning and resubmitting:" in (
         first_checklist
     )
-    assert "Retrieval status/progress clarity" in first_checklist
+    assert "Job Status clarity" in first_checklist
     assert (
-        "- It was clear whether records were already loaded, a controlled retrieval job was "
+        "- It was clear whether records were already loaded, a Request Records job was "
         "submitted, or a job was still waiting:"
         in first_checklist
     )
-    assert "- Retrieval job/status/progress wording that was confusing:" in first_checklist
-    assert "- Next action after retrieval status was clear:" in first_checklist
+    assert "- Request Records / Job Status wording that was confusing:" in first_checklist
+    assert "- Next action after Job Status was clear:" in first_checklist
     assert "Missing, unexpected, or confusing results" in first_checklist
     assert "- Records that seemed missing:" in first_checklist
     assert "- Records that seemed unexpected:" in first_checklist
@@ -1162,7 +1162,7 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
         first_checklist
     )
     assert "Rendering this checklist does not change source-derived records" in first_checklist
-    assert "Browser pages only trigger controlled server-side retrieval" in first_checklist
+    assert "Browser pages only trigger controlled server-side record requests" in first_checklist
     assert "Include any records that seemed missing, unexpected, or confusing" in first_checklist
     assert "Select the checklist text, copy it, paste it" in " ".join(first_html.split())
     assert "Open source links from the detail page when a source check is needed" in (

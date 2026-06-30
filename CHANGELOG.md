@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- Applied the reviewer-detail product-quality visual standard across remaining
+  hosted RecordsTracker pages. Home now presents the four-step facility review
+  path (find facility, request records, review evidence, prepare/export/send
+  feedback); Request Records, Job Status, facility lookup/hub/intelligence,
+  reviewer queue, packet context-empty states, feedback, and help use calmer
+  reviewer-facing labels and page-level orientation. Evidence capture and
+  acceptance checks now recognize the compact shared shell, active navigation,
+  page headings, and Request Records/Job Status route names instead of requiring
+  old workflow/keyboard rail text on every page. No schema, extraction,
+  retrieval, persistence, source connector, or lifecycle behavior changed.
 - Redesigned the hosted reviewer complaint detail page as an attorney-focused
   complaint-review workspace. The page now leads with complaint identity,
   facility/license context, a separated reviewer-created state panel, cautious
