@@ -41,7 +41,7 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_REVIEW_HUB_PATH,
     CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
     CCLD_FACILITY_REVIEW_PRIORITY_PATH,
-    REVIEWER_UI_DETAIL_PATH,
+    PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER,
     CcldFacilityReferenceSource,
     CcldFacilityReviewContext,
     CcldReviewNextRecommendation,
@@ -97,6 +97,9 @@ from ccld_complaints.hosted_app.reviewer_created_state_routes import (
 )
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
+    REVIEWER_UI_DETAIL_PATH,
+    REVIEWER_UI_PACKET_DRAFT_PATH,
+    REVIEWER_UI_PACKET_PREVIEW_PATH,
     REVIEWER_UI_PREFIX,
     REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH,
     ReviewerUiContext,
@@ -759,6 +762,10 @@ def render_related_facility_context(record: SampleSourceRecord) -> str:
 
 
 def render_app_shell() -> str:
+        facility_hub_href = (
+                f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number="
+                f"{PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER}"
+        )
         return render_page_shell(
                 title=APP_NAME,
                                 heading="Start a Facility Complaint Review",
@@ -772,7 +779,8 @@ def render_app_shell() -> str:
             <div>
                 <p class="launch-kicker">Start here</p>
                 <h2 id="start-heading">Start a Facility Complaint Review</h2>
-                <p class="launch-value">Begin with the facility/license number, request CCLD complaint records for a bounded date range, then review evidence and prepare next steps.</p>
+                <p class="launch-value">Begin with the facility/license number, review the facility pattern summary, open prioritized complaint records, then prepare the packet and readiness checklist.</p>
+                <p class="helper-text">Limited-data caution: this workflow shows loaded public-source review aids only. Check source traceability on detail pages before relying on values.</p>
             </div>
             <div class="attorney-hero-actions" aria-label="Primary actions">
                 <a class="button button-large" href="{CCLD_FACILITY_LOOKUP_PATH}">Start with facility lookup</a>
@@ -782,23 +790,32 @@ def render_app_shell() -> str:
         </section>
         <section aria-labelledby="how-it-works-heading">
             <h2 id="how-it-works-heading">Review path</h2>
-            <p>Use this page to move through the current CCLD review path in order.</p>
+            <p>Use this page to move through the current attorney review path in order.</p>
             <ol class="card-grid">
                 <li class="summary-card">
                     <h3>Find facility</h3>
                     <p>Search by facility name or location when you do not already have the facility/license number.</p>
+                    <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Open facility lookup</a></p>
                 </li>
                 <li class="summary-card">
-                    <h3>Request records</h3>
-                    <p>Enter the facility/license number and date range to request CCLD complaint records or show already-loaded records.</p>
+                    <h3>Review facility pattern summary</h3>
+                    <p>Use the facility hub summary to understand loaded finding, review-flag, traceability, and reviewer-created note/status cues.</p>
+                    <p><a href="{facility_hub_href}">Open facility review hub</a></p>
                 </li>
                 <li class="summary-card">
-                    <h3>Review evidence</h3>
-                    <p>Open the review queue and detail workspace to check source traceability before adding reviewer-created notes or status.</p>
+                    <h3>Open prioritized records</h3>
+                    <p>Open the review queue, prioritized-record links, or detail workspace to check source traceability before notes/status.</p>
+                    <p><a href="{REVIEWER_UI_PREFIX}">Open review queue</a> or <a href="{REVIEWER_UI_DETAIL_PATH}">open reviewer detail</a></p>
                 </li>
                 <li class="summary-card">
-                    <h3>Prepare, export, and send feedback</h3>
-                    <p>Use packet preview, draft, matrix export, and feedback after the facility/date review context is clear.</p>
+                    <h3>Prepare packet/brief</h3>
+                    <p>Use packet preview and draft brief preparation after the facility/date review context is clear.</p>
+                    <p><a href="{REVIEWER_UI_PACKET_PREVIEW_PATH}">Open packet preview</a> or <a href="{REVIEWER_UI_PACKET_DRAFT_PATH}">open packet draft</a></p>
+                </li>
+                <li class="summary-card">
+                    <h3>Check readiness before attorney review</h3>
+                    <p>Use the attorney review readiness checklist on packet preview or draft before copying, printing, or sharing a review handoff.</p>
+                    <p><a href="{REVIEWER_UI_PACKET_PREVIEW_PATH}#packet-attorney-review-readiness-checklist">Open readiness checklist</a></p>
                 </li>
             </ol>
         </section>
@@ -819,6 +836,11 @@ def render_app_shell() -> str:
                     <h3>Review queue</h3>
                     <p>Open loaded complaint records and continue source-traceable review.</p>
                     <p><a class="button button-secondary" href="/reviewer">Open review queue</a></p>
+                </article>
+                <article class="summary-card">
+                    <h3>Packet and readiness</h3>
+                    <p>Prepare the packet/brief and check readiness from the existing packet pages.</p>
+                    <p><a class="button button-secondary" href="{REVIEWER_UI_PACKET_PREVIEW_PATH}">Open packet preview</a></p>
                 </article>
             </div>
         </section>"""

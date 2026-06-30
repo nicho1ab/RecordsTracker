@@ -135,15 +135,41 @@ def test_app_shell_labels_placeholder_scope() -> None:
     ) in html
     assert "Enter a facility/license number directly" not in html
     assert (
-        "Begin with the facility/license number, request CCLD complaint records"
+        "Begin with the facility/license number, review the facility pattern summary"
+        in html
+    )
+    assert (
+        "Limited-data caution: this workflow shows loaded public-source review aids only."
         in html
     )
     assert "Review path" in html
     assert "Find facility" in html
-    assert "Request records" in html
-    assert "Review evidence" in html
-    assert "Prepare, export, and send feedback" in html
+    assert "Review facility pattern summary" in html
+    assert "Open prioritized records" in html
+    assert "Prepare packet/brief" in html
+    assert "Check readiness before attorney review" in html
+    assert html.index("Find facility") < html.index("Review facility pattern summary")
+    assert html.index("Review facility pattern summary") < html.index(
+        "Open prioritized records"
+    )
+    assert html.index("Open prioritized records") < html.index("Prepare packet/brief")
+    assert html.index("Prepare packet/brief") < html.index(
+        "Check readiness before attorney review"
+    )
     assert "Ready paths" in html
+    assert 'href="/ccld/facilities">Open facility lookup</a>' in html
+    assert (
+        'href="/ccld/facilities/detail?facility_number=434417302">'
+        "Open facility review hub</a>"
+    ) in html
+    assert 'href="/reviewer">Open review queue</a>' in html
+    assert 'href="/reviewer/records/detail">open reviewer detail</a>' in html
+    assert 'href="/reviewer/packet/preview">Open packet preview</a>' in html
+    assert 'href="/reviewer/packet/draft">open packet draft</a>' in html
+    assert (
+        'href="/reviewer/packet/preview#packet-attorney-review-readiness-checklist">'
+        "Open readiness checklist</a>"
+    ) in html
     assert "Attorney-focused public CCLD complaint/facility record review" not in html
     assert "New to this tool?" not in html
     assert "See Help for the review workflow" not in html
