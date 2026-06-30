@@ -762,6 +762,10 @@ def test_ccld_facility_review_hub_renders_safe_directory_context() -> None:
     assert "Licensed" in html
     assert "Complaint records are requested and reviewed separately" in html
     assert "Open source links from record detail when a source check is needed" in html
+    assert "Facility pattern review summary" in html
+    assert "No loaded complaint records are currently available" in html
+    assert "not a public-source completeness conclusion" in normalized_html
+    assert "Request or load records for this facility" in html
     assert "No complaint context is currently available" in html
     assert "Date range is needed before the review queue" in html
     assert "Start complaint request for this facility" in html
@@ -937,6 +941,17 @@ def test_ccld_facility_review_hub_renders_signal_only_context_without_mutation(
     assert "Complaint visit activity present review cue" in html
     assert "Citation indicator present review cue" in html
     assert "POC indicator present review cue" in html
+    assert "Facility pattern review summary" in html
+    assert "Review signals below use source-derived loaded records" in html
+    assert "1</strong><span>Loaded complaint records" in html
+    assert "1</strong><span>Delay-review records" in html
+    assert "1</strong><span>Missing-date records" in html
+    assert "1</strong><span>Records with source traceability" in html
+    assert "Unsubstantiated: 1" in html
+    assert "Not started: 1" in html
+    assert "0 loaded record(s) have reviewer-created note rows" in html
+    assert "1 Type A value(s); 1 Type B value(s); 2 POC date(s)" in html
+    assert "Open reviewer queue filtered to this facility" in html
     assert "Start complaint request for this facility" in html
     assert f"{CCLD_RECORD_REQUEST_PATH}?facility_number=157806098" in html
     assert "Open facility review priority list" in html
@@ -1009,7 +1024,23 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == _empty_reviewer_counts()
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
+    assert "Facility pattern review summary" in html
+    assert "Review signals below use source-derived loaded records" in html
+    assert "may deserve closer review" in html
+    assert "not legal conclusions or source-completeness findings" in html
     assert "1 loaded complaint record(s)" in html
+    assert "1</strong><span>Loaded complaint records" in html
+    assert "1</strong><span>Delay-review records" in html
+    assert "1</strong><span>Missing-date records" in html
+    assert "1</strong><span>Records with source traceability" in html
+    assert "Recent complaint/report/visit activity in loaded records" in html
+    assert "2022-08-26" in html
+    assert "Finding counts in loaded records" in html
+    assert "Unsubstantiated: 1" in html
+    assert "Reviewer-created status summary" in html
+    assert "Not started: 1" in html
+    assert "Suggested next loaded complaint" in html
+    assert "32-CR-20220407124448" in html
     assert "2022-04-07 to 2022-08-26" in html
     assert "Review loaded records for this facility/date context" in html
     assert "Open reviewer queue filtered to this facility" in html
@@ -1023,6 +1054,10 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
     assert "Open packet draft for this facility/date context" in html
     assert "Use this navigation context to open the complaint request" in normalized_html
     assert "packet preview, or feedback route" in normalized_html
+    assert "source_record_key" not in html
+    assert "source_document_id" not in html
+    assert "import_batch" not in html
+    assert "audit_id" not in html
     assert_no_secret_html(html)
 
 

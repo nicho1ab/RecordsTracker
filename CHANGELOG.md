@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Added a default-visible Facility Pattern Review Summary to facility review hubs.
+  The summary uses already loaded source-derived complaint records plus available
+  uploaded public summary fields to show complaint counts, finding mix,
+  delay/missing-date review signals, source-traceability availability,
+  reviewer-created note/status cues, recent activity, and existing request/queue
+  next-action links. Raw source keys, source document IDs, import/audit details,
+  retrieval behavior, extraction behavior, schemas, migrations, source-derived
+  mutation, reviewer-created write semantics, legal conclusions, source
+  verification, and source-completeness claims are unchanged.
 - Applied the reviewer-detail product-quality visual standard across remaining
   hosted RecordsTracker pages. Home now presents the four-step facility review
   path (find facility, request records, review evidence, prepare/export/send
