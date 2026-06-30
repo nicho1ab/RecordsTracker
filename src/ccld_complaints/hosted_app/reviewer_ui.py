@@ -37,7 +37,6 @@ from ccld_complaints.hosted_app.facility_case_brief import (
     FacilityCaseBriefRecord,
     priority_reason_labels,
     render_facility_case_brief,
-    render_record_flag_reason_section,
 )
 from ccld_complaints.hosted_app.facility_review_signals import (
     load_active_facility_review_signals,
@@ -120,6 +119,14 @@ _SAFE_ORIGINAL_VALUE_DENYLIST = (
     "allegation_text",
     "event_text",
     "source_text",
+)
+_NARRATIVE_FIELD_NAMES = (
+    "source_narrative",
+    "report_narrative",
+    "narrative",
+    "source_text",
+    "allegation_text",
+    "event_text",
 )
 _SAFE_CONTEXT_FIELDS_BY_ENTITY: Mapping[str, tuple[str, ...]] = {
     "facility": (
@@ -2856,8 +2863,208 @@ def _render_detail_flag_reason_section(
     related_records: list[Mapping[str, Any]],
     return_context: CcldQueueReturnContext,
 ) -> str:
+    items = "\n".join(
+        f"        <li>{_escape(item)}</li>"
+        for item in _detail_flag_reason_items(source_record, detail, related_records, return_context)
+    )
+    return f"""<section class="why-flagged-panel summary-card" aria-labelledby="why-flagged-heading">
+      <h2 id="why-flagged-heading">Why this record is flagged</h2>
+      <p>These are review cues from loaded source-derived values and existing reviewer-created state. They are screening aids, not legal conclusions.</p>
+      <ul>
+{items}
+      </ul>
+      <p><a href="#review-guidance-heading">View review guidance and next steps</a></p>
+    </section>"""
+
+
+def _detail_flag_reason_items(
+    source_record: Mapping[str, Any],
+    detail: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> tuple[str, ...]:
     record = _case_brief_record_from_detail(source_record, detail, related_records, return_context)
-    return render_record_flag_reason_section(record)
+    original_values = _mapping(source_record, "original_values")
+    source_document = _mapping(source_record, "source_document")
+    summary = _mapping(detail, "associated_reviewer_created_state_summary")
+    items: list[str] = []
+    if record.delay_thresholds:
+        items.append(
+            f"Complaint/report timing needs source check: over {max(record.delay_thresholds)} days between loaded date fields."
+        )
+    if record.report_date_used_as_proxy:
+        items.append("Report date used as proxy; verify against the source record before using timing language.")
+    if record.missing_first_activity_date:
+        items.append("First investigation activity date absent in loaded record; do not treat that as source absence.")
+    if record.missing_visit_date:
+        items.append("Visit date absent in loaded record; verify against the source record before relying on timing.")
+    items.extend(_citation_poc_cues(original_values, related_records))
+    if _current_reviewer_status_text(summary) == "No reviewer-created status":
+        items.append("No reviewer-created status recorded yet.")
+    if _has_visible_traceability_document(source_document):
+        items.append("Source traceability available for checking the original CCLD record.")
+    if not items:
+        items.append("No review flags are visible from loaded source-derived fields.")
+    return tuple(items[:7])
+
+
+def _render_detail_primary_actions(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+    complaint_summary: str,
+) -> str:
+    source_document = _mapping(source_record, "source_document")
+    identity = _mapping(source_record, "identity")
+    source_record_key = _string(identity, "source_record_key")
+    source_url = source_document.get("source_url")
+    source_action = (
+        f'<a class="button" href="{_escape(str(source_url))}">Open CCLD source record</a>'
+        if _has_display_value(source_url)
+        else '<span class="button button-disabled" aria-disabled="true">Open CCLD source record</span>'
+    )
+    queue_href = _ccld_request_href(related_records, return_context)
+    next_href = _next_priority_record_href(source_record_key, related_records, return_context)
+    next_action = (
+        f'<a class="button button-secondary" href="{_escape(next_href)}">Open next flagged record</a>'
+        if next_href != queue_href
+        else '<span class="button button-disabled" aria-disabled="true">Open next flagged record</span>'
+    )
+    return f"""<div class="reviewer-primary-actions" aria-label="Primary review actions">
+            {source_action}
+            <details class="copy-summary-details">
+              <summary>Copy complaint summary</summary>
+              <pre class="copyable-summary">{_escape(complaint_summary)}</pre>
+            </details>
+            <a class="button button-secondary" href="{_escape(queue_href)}">Return to facility queue</a>
+            {next_action}
+        </div>"""
+
+
+def _render_quick_review_cards(
+    source_record: Mapping[str, Any],
+    detail: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> str:
+    original_values = _mapping(source_record, "original_values")
+    source_document = _mapping(source_record, "source_document")
+    summary = _mapping(detail, "associated_reviewer_created_state_summary")
+    cards = (
+        (
+            "Finding",
+            _optional_string(original_values, "finding"),
+            "View allegations and findings",
+            "#allegations-findings-heading",
+        ),
+        (
+            "Timing",
+            _quick_timing_value(original_values),
+            "View investigation timeline",
+            "#complaint-timeline-heading",
+        ),
+        (
+            "Review flags",
+            _quick_review_flag_value(original_values),
+            "Review why flagged",
+            "#why-flagged-heading",
+        ),
+        (
+            "Citation / POC",
+            _citation_poc_card_value(original_values, related_records),
+            "View citation and POC",
+            "#citation-poc-heading",
+        ),
+        (
+            "Source",
+            _quick_source_value(source_document),
+            "Open source details",
+            "#traceability-heading",
+        ),
+        (
+            "Reviewer status",
+            _current_reviewer_status_text(summary),
+            "Update status or notes",
+            "#review-actions-heading",
+        ),
+    )
+    card_markup = "\n".join(
+        f"""        <a class="quick-review-card" href="{href}">
+          <span class="stage-kicker">{_escape(label)}</span>
+          <strong>{_escape(value)}</strong>
+          <span>{_escape(action)}</span>
+        </a>"""
+        for label, value, action, href in cards
+    )
+    return f"""<section class="quick-review-section" aria-labelledby="quick-review-heading">
+      <h2 id="quick-review-heading">Quick review summary</h2>
+      <div class="quick-review-grid">
+{card_markup}
+      </div>
+    </section>"""
+
+
+def _quick_timing_value(original_values: Mapping[str, Any]) -> str:
+    report_date = _optional_string(original_values, "report_date")
+    if report_date != "unknown":
+        return report_date
+    return _optional_string(original_values, "complaint_received_date")
+
+
+def _quick_review_flag_value(original_values: Mapping[str, Any]) -> str:
+    thresholds = _delay_thresholds(original_values)
+    if thresholds:
+        return f"Over {max(thresholds)} days"
+    if original_values.get("missing_first_activity_date") is True:
+        return "Needs source check"
+    if original_values.get("report_date_used_as_proxy") is True:
+        return "Proxy date"
+    return "No visible flags"
+
+
+def _quick_source_value(source_document: Mapping[str, Any]) -> str:
+    if _has_visible_traceability_document(source_document):
+        return "Traceability available"
+    return "Limited traceability"
+
+
+def _citation_poc_card_value(
+    original_values: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> str:
+    cues = _citation_poc_cues(original_values, related_records)
+    if not cues:
+        return "Not loaded"
+    return cues[0].split(";", 1)[0]
+
+
+def _citation_poc_cues(
+    original_values: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> tuple[str, ...]:
+    values = [original_values]
+    values.extend(_mapping(record, "original_values") for record in related_records)
+    text_parts: list[str] = []
+    for value_map in values:
+        for key, value in value_map.items():
+            if not _has_display_value(value):
+                continue
+            key_norm = key.casefold().replace("_", " ")
+            value_norm = _display_value(value).casefold()
+            text_parts.append(f"{key_norm}: {value_norm}")
+    joined = " | ".join(text_parts)
+    cues: list[str] = []
+    if "typea" in joined or "type a" in joined or "a citation" in joined:
+        cues.append("Type A citation cue loaded; verify wording in the source record.")
+    elif "citation" in joined or "deficien" in joined:
+        cues.append("Citation or deficiency cue loaded; verify wording in the source record.")
+    if "typeb" in joined or "type b" in joined or "b citation" in joined:
+        cues.append("Type B citation cue loaded; verify wording in the source record.")
+    if "poc" in joined or "plan of correction" in joined:
+        if "completion" not in joined and "completed" not in joined:
+            cues.append("POC received cue loaded; completion status not available in loaded record.")
+        else:
+            cues.append("POC cue loaded; verify completion wording in the source record.")
+    return tuple(dict.fromkeys(cues))
 
 
 def _case_brief_record_from_detail(
@@ -3368,96 +3575,48 @@ def _render_detail(
     import_batch = _mapping(source_record, "import_batch")
     source_record_key = _string(identity, "source_record_key")
     complaint_heading = _detail_heading(original_values, related_records)
-    complaint_label = _detail_complaint_label(original_values)
+    complaint_summary = _detail_summary_sentence(source_record, related_records)
     return _page(
         title=complaint_heading,
         heading=complaint_heading,
         actor_label=actor_label,
         main=f"""
     {_render_notice(saved_action, saved_value, source_record_key, related_records, return_context)}
-                <div class="detail-shell">
-                <section class="hero-card" aria-labelledby="detail-hero-heading">
-                    <div class="dense-page-header">
-                      <div>
-                        <p class="launch-kicker">Complaint review workspace</p>
-                        <h2 id="detail-hero-heading">Complaint overview</h2>
-                        <p class="muted">{_escape(complaint_label)}</p>
-                        <p>{_escape(_detail_summary_sentence(source_record, related_records))}</p>
-                      </div>
-                      <p><span class="badge badge-muted">Finding: {_escape(_optional_string(original_values, 'finding'))}</span></p>
-                    </div>
+        <div class="reviewer-detail-page detail-shell">
+            {_render_detail_context_row(source_record, related_records, return_context)}
+            <div class="reviewer-detail-top">
+                <section class="reviewer-brief-card hero-card" aria-labelledby="complaint-summary-heading">
+                    <p class="launch-kicker">Complaint investigation report &middot; CCLD public source record</p>
+                    <h2 id="complaint-summary-heading">Complaint review summary</h2>
+                    <p class="facility-identity-line">{_escape(_detail_facility_identity_line(related_records, return_context))}</p>
+                    <p class="launch-value">{_escape(complaint_summary)}</p>
                     {_render_review_flag_chips(original_values, source_document)}
+                    {_render_detail_primary_actions(source_record, related_records, return_context, complaint_summary)}
                 </section>
-            {_render_detail_decision_continuity(source_record, detail, related_records, return_context)}
+                <aside aria-labelledby="review-actions-heading">
+                    {_render_review_actions(source_record_key, detail, related_records, return_context)}
+                </aside>
+            </div>
             {_render_detail_flag_reason_section(source_record, detail, related_records, return_context)}
-                                                                {_render_source_traceability_section(
-                                                                                                identity,
-                                                                                                source_document,
-                                                                                                source_traceability,
-                                                                                                import_batch,
-                                                                )}
-                    <div class="detail-top-grid">
-                        <div>
-        {_render_record_summary_section(source_record, related_records, detail)}
-                {_render_key_date_cards(original_values)}
-                        </div>
-                        <aside aria-label="Reviewer-created notes and status">
-        {_render_reviewer_state_section(detail)}
-                        </aside>
-                    </div>
-        {_render_review_actions(source_record_key, detail, return_context)}
-        <details class="technical-details dense-table-details">
-          <summary>Show full complaint fields</summary>
-          <section aria-labelledby="source-derived-heading">
-                        <h2 id="source-derived-heading">Full complaint fields</h2>
-            <p>These are safe scalar fields for the selected complaint. Narrative source text is hidden.</p>
-      <dl>
-        <dt>Source record key</dt>
-        <dd>{_escape(source_record_key)}</dd>
-        <dt>Entity type</dt>
-        <dd>{_escape(_string(identity, 'entity_type'))}</dd>
-        <dt>Stable source ID</dt>
-        <dd>{_escape(_string(identity, 'stable_source_id'))}</dd>
-        <dt>Facility ID</dt>
-        <dd>{_escape(_optional_string(identity, 'facility_id'))}</dd>
-      </dl>
-      <table>
-        <caption>Safe source-derived values for the selected seeded record</caption>
-        <thead>
-          <tr>
-            <th scope="col">Field</th>
-            <th scope="col">Value</th>
-          </tr>
-        </thead>
-        <tbody>
-{_render_original_value_rows(original_values)}
-        </tbody>
-      </table>
-          </section>
-        </details>
-                <details class="technical-details dense-table-details">
-                    <summary>Source-confidence cues</summary>
-        {_render_source_confidence_cues_section(source_record, related_records)}
-                </details>
-                <details class="technical-details diagnostic-details">
-                    <summary>Field-note and technical context</summary>
-        {_render_field_note_guidance_section()}
-        {_render_source_context_section(related_records, source_record_key)}
-                </details>
-        <details class="technical-details dense-table-details">
-        <summary>Detail navigation</summary>
-        {_render_detail_navigation(source_record_key, related_records, return_context)}
-        </details>
-    {_render_scope_notice(_mapping(payload, 'workflow_shell'))}
-        <details class="technical-details dense-table-details">
-        <summary>First-run detail steps</summary>
-        {_render_detail_first_run_steps(source_record_key, related_records, return_context)}
-        </details>
-        <details class="technical-details dense-table-details">
-        <summary>Feedback handoff details</summary>
-            {_render_detail_feedback_guidance(source_record, related_records, return_context)}
-        </details>
-                </div>""",
+            {_render_quick_review_cards(source_record, detail, related_records)}
+            {_render_record_summary_section(source_record, related_records, detail)}
+            {_render_complaint_timeline_section(source_record)}
+            {_render_allegations_findings_section(source_record, related_records)}
+            {_render_citation_poc_section(source_record, related_records)}
+            {_render_source_narrative_section(source_record, related_records)}
+            {_render_source_traceability_section(
+                identity,
+                source_document,
+                source_traceability,
+                import_batch,
+                original_values,
+            )}
+            {_render_reviewer_state_section(detail)}
+            {_render_review_guidance_glossary_section(source_record)}
+            {_render_source_context_section(related_records, source_record_key)}
+            {_render_full_source_fields_details(identity, original_values)}
+            {_render_technical_operator_details(source_record, related_records, return_context, _mapping(payload, 'workflow_shell'))}
+        </div>""",
     )
 
 
@@ -3465,13 +3624,9 @@ def _detail_heading(
     original_values: Mapping[str, Any],
     related_records: list[Mapping[str, Any]],
 ) -> str:
-    facility_name = _optional_string(original_values, "facility_name")
-    if facility_name != "unknown":
-        return facility_name
-    facility = _facility_context(related_records)
-    facility_name = _facility_context_value(facility, "facility_name")
-    if facility_name != "unknown":
-        return facility_name
+    complaint_control_number = _optional_string(original_values, "complaint_control_number")
+    if complaint_control_number != "unknown":
+        return f"Complaint {complaint_control_number}"
     return "Complaint record detail"
 
 
@@ -3492,11 +3647,64 @@ def _detail_summary_sentence(
     facility_number = _facility_context_value(facility, "external_facility_number")
     finding = _optional_string(original_values, "finding")
     control_number = _optional_string(original_values, "complaint_control_number")
+    date_sentence = _date_summary(original_values)
+    cue_sentence = _detail_summary_cue_sentence(original_values, related_records)
     return (
-        f"Complaint {control_number} for {facility_name} / {facility_number} has "
-        f"source-derived finding {finding}. Review source traceability before adding "
-        "reviewer-created notes/status."
+        f"Complaint {control_number} for {facility_name} / facility {facility_number} "
+        f"has source-derived finding {finding}. {date_sentence}. {cue_sentence}"
     )
+
+
+def _detail_summary_cue_sentence(
+    original_values: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> str:
+    cues: list[str] = []
+    thresholds = _delay_thresholds(original_values)
+    if thresholds:
+        cues.append(f"complaint/report timing has a review flag over {max(thresholds)} days")
+    if original_values.get("missing_first_activity_date") is True:
+        cues.append("first investigation activity date is absent in the loaded record")
+    if original_values.get("report_date_used_as_proxy") is True:
+        cues.append("report date is marked as a proxy")
+    citation_cues = _citation_poc_cues(original_values, related_records)
+    cues.extend(citation_cues[:2])
+    if not cues:
+        return "Use source traceability before relying on source-derived values in reviewer-created notes/status."
+    return "Review cues: " + "; ".join(cues) + "."
+
+
+def _detail_facility_identity_line(
+    related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext | None = None,
+) -> str:
+    facility = _facility_context(related_records)
+    facility_name = _facility_context_value(facility, "facility_name")
+    facility_number = (
+        return_context.facility_number
+        if return_context is not None and return_context.facility_number
+        else _facility_context_value(facility, "external_facility_number")
+    )
+    return f"{facility_name} | Facility/license {facility_number}"
+
+
+def _render_detail_context_row(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> str:
+    original_values = _mapping(source_record, "original_values")
+    facility = _facility_context(related_records)
+    facility_name = _facility_context_value(facility, "facility_name")
+    complaint_label = _detail_complaint_label(original_values).replace(":", "")
+    queue_href = _ccld_request_href(related_records, return_context)
+    return f"""<nav class="reviewer-detail-context" aria-label="Review context">
+            <a href="{_escape(queue_href)}">Review queue</a>
+            <span aria-hidden="true">&gt;</span>
+            <span>{_escape(facility_name)}</span>
+            <span aria-hidden="true">&gt;</span>
+            <span>{_escape(complaint_label)}</span>
+        </nav>"""
 
 
 def _render_detail_decision_continuity(
@@ -3994,37 +4202,217 @@ def _render_record_summary_section(
     related_records: list[Mapping[str, Any]],
     detail: Mapping[str, Any],
 ) -> str:
-    identity = _mapping(source_record, "identity")
-    source_document = _mapping(source_record, "source_document")
-    original_values = _mapping(source_record, "original_values")
-    state_summary = _mapping(detail, "associated_reviewer_created_state_summary")
     facility = _facility_context(related_records)
     facility_number = _facility_context_value(facility, "external_facility_number")
     facility_name = _facility_context_value(facility, "facility_name")
-    reviewer_statuses = ", ".join(_string_items(state_summary.get("reviewer_statuses_present", [])))
-    if not reviewer_statuses:
-        reviewer_statuses = "None recorded"
-    return f"""<section aria-labelledby="record-summary-heading">
-      <h2 id="record-summary-heading">Record summary</h2>
-            <dl class="summary-list">
-        <dt>Complaint control number</dt>
-        <dd>{_escape(_optional_string(original_values, 'complaint_control_number'))}</dd>
-        <dt>Finding</dt>
-        <dd>{_escape(_optional_string(original_values, 'finding'))}</dd>
-        <dt>Complaint and report dates</dt>
-        <dd>{_escape(_date_summary(original_values))}</dd>
-        <dt>Facility/license number</dt>
-        <dd>{_escape(facility_number)}</dd>
-        <dt>Facility name</dt>
-        <dd>{_escape(facility_name)}</dd>
-        <dt>Selected source record key</dt>
-        <dd>{_escape(_string(identity, 'source_record_key'))}</dd>
-        <dt>Source document ID</dt>
-        <dd>{_escape(_string(source_document, 'source_document_id'))}</dd>
-        <dt>Reviewer-created status recorded</dt>
-        <dd>{_escape(reviewer_statuses)}</dd>
+    return f"""<section class="detail-card" aria-labelledby="record-summary-heading">
+      <p class="launch-kicker">Source</p>
+      <h2 id="record-summary-heading">Facility identity and license facts</h2>
+      <dl class="fact-grid">
+        {_render_fact_item("Facility name", facility_name)}
+        {_render_fact_item("Facility/license number", facility_number)}
+        {_render_fact_item("Facility type", _facility_context_value(facility, "facility_type"))}
+        {_render_fact_item("County", _facility_context_value(facility, "county"))}
+        {_render_fact_item("License status", _facility_context_value(facility, "license_status"))}
+        {_render_fact_item("Source ID", _facility_context_value(facility, "source_id"))}
       </dl>
     </section>"""
+
+
+def _render_fact_item(label: str, value: str) -> str:
+    return f"""        <div class="fact-card">
+          <dt>{_escape(label)}</dt>
+          <dd>{_escape(value)}</dd>
+        </div>"""
+
+
+def _render_complaint_timeline_section(source_record: Mapping[str, Any]) -> str:
+    original_values = _mapping(source_record, "original_values")
+    rows = (
+        (
+            "Complaint received",
+            _optional_string(original_values, "complaint_received_date"),
+            "Source-derived complaint received date.",
+        ),
+        (
+            "First investigation activity",
+            _timeline_first_activity_value(original_values),
+            _timeline_first_activity_note(original_values),
+        ),
+        (
+            "Visit / inspection",
+            _optional_string(original_values, "visit_date"),
+            "Use source traceability before treating this as the only investigation activity.",
+        ),
+        (
+            "Report date",
+            _optional_string(original_values, "report_date"),
+            _timeline_report_date_note(original_values),
+        ),
+        (
+            "Date signed / finalized",
+            _optional_string(original_values, "date_signed"),
+            "Source-derived signed/finalized date when loaded.",
+        ),
+    )
+    items = "\n".join(
+        f"""        <li class="timeline-item">
+          <span>{_escape(label)}</span>
+          <strong>{_escape(value)}</strong>
+          <em>{_escape(note)}</em>
+        </li>"""
+        for label, value, note in rows
+    )
+    return f"""<section class="detail-card" aria-labelledby="complaint-timeline-heading">
+      <p class="launch-kicker">Source</p>
+      <h2 id="complaint-timeline-heading">Complaint and investigation timeline</h2>
+      <ol class="timeline-list">
+{items}
+      </ol>
+    </section>"""
+
+
+def _timeline_first_activity_value(original_values: Mapping[str, Any]) -> str:
+    value = original_values.get("first_investigation_activity_date")
+    if _has_display_value(value):
+        return _display_value(value)
+    return "Not available in loaded record"
+
+
+def _timeline_first_activity_note(original_values: Mapping[str, Any]) -> str:
+    if original_values.get("missing_first_activity_date") is True:
+        return "Do not treat this missing local value as source absence."
+    return "First activity value is source-derived when loaded."
+
+
+def _timeline_report_date_note(original_values: Mapping[str, Any]) -> str:
+    if original_values.get("report_date_used_as_proxy") is True:
+        return "Report date used as proxy; verify against source."
+    return "Source-derived report date when loaded."
+
+
+def _render_allegations_findings_section(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> str:
+    original_values = _mapping(source_record, "original_values")
+    allegation_rows = [
+        record
+        for record in related_records
+        if _string(record, "entity_type") == "allegation"
+    ]
+    rows = "\n".join(_render_allegation_row(record) for record in allegation_rows)
+    if not rows:
+        rows = f"""        <tr>
+          <td>{_escape(_optional_string(original_values, "finding"))}</td>
+          <td>Allegation details are not loaded for this complaint record.</td>
+          <td>{_escape(_optional_string(original_values, "extraction_confidence"))}</td>
+        </tr>"""
+    return f"""<section class="detail-card" aria-labelledby="allegations-findings-heading">
+      <p class="launch-kicker">Source</p>
+      <h2 id="allegations-findings-heading">Allegations and findings</h2>
+      <table>
+        <caption>Loaded allegation and finding values</caption>
+        <thead>
+          <tr>
+            <th scope="col">Finding</th>
+            <th scope="col">Allegation text or loaded summary</th>
+            <th scope="col">Extraction confidence</th>
+          </tr>
+        </thead>
+        <tbody>
+{rows}
+        </tbody>
+      </table>
+    </section>"""
+
+
+def _render_allegation_row(record: Mapping[str, Any]) -> str:
+    original_values = _mapping(record, "original_values")
+    return f"""        <tr>
+          <td>{_escape(_optional_string(original_values, "finding"))}</td>
+          <td>{_escape(_optional_string(original_values, "allegation_text"))}</td>
+          <td>{_escape(_optional_string(original_values, "extraction_confidence"))}</td>
+        </tr>"""
+
+
+def _render_citation_poc_section(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> str:
+    original_values = _mapping(source_record, "original_values")
+    cues = _citation_poc_cues(original_values, related_records)
+    if cues:
+        cue_items = "\n".join(f"        <li>{_escape(cue)}</li>" for cue in cues)
+    else:
+        cue_items = "        <li>No citation, deficiency, or Plan of Correction cue is loaded for this complaint record.</li>"
+    return f"""<section class="detail-card" aria-labelledby="citation-poc-heading">
+      <p class="launch-kicker">Source</p>
+      <h2 id="citation-poc-heading">Citations, deficiencies, and Plan of Correction</h2>
+      <ul>
+{cue_items}
+      </ul>
+      <p>Use the original CCLD source record before relying on citation, deficiency, civil penalty, or POC wording.</p>
+    </section>"""
+
+
+def _render_source_narrative_section(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> str:
+    narrative = _source_narrative_text(source_record, related_records)
+    if not narrative:
+        return """<section class="detail-card" aria-labelledby="source-narrative-heading">
+      <p class="launch-kicker">Source</p>
+      <h2 id="source-narrative-heading">Source narrative excerpt</h2>
+      <p>No source narrative excerpt is loaded for this complaint record.</p>
+    </section>"""
+    excerpt, has_more = _excerpt_text(narrative, 360)
+    full_details = (
+        f"""      <details>
+        <summary>Show full source narrative</summary>
+        <p>{_escape(narrative)}</p>
+      </details>"""
+        if has_more
+        else ""
+    )
+    return f"""<section class="detail-card" aria-labelledby="source-narrative-heading">
+      <p class="launch-kicker">Source</p>
+      <h2 id="source-narrative-heading">Source narrative excerpt</h2>
+      <blockquote>{_escape(excerpt)}</blockquote>
+{full_details}
+      <p class="helper-text">Verify all facts against the original source document before relying on narrative wording.</p>
+    </section>"""
+
+
+def _source_narrative_text(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> str:
+    texts: list[str] = []
+    for value_map in [_mapping(source_record, "original_values")]:
+        texts.extend(_narrative_values(value_map))
+    for record in related_records:
+        if _string(record, "entity_type") in {"allegation", "event"}:
+            texts.extend(_narrative_values(_mapping(record, "original_values")))
+    deduped = list(dict.fromkeys(texts))
+    return " ".join(deduped)
+
+
+def _narrative_values(values: Mapping[str, Any]) -> list[str]:
+    texts: list[str] = []
+    for field_name in _NARRATIVE_FIELD_NAMES:
+        value = values.get(field_name)
+        if isinstance(value, str) and value.strip():
+            texts.append(" ".join(value.split()))
+    return texts
+
+
+def _excerpt_text(text: str, limit: int) -> tuple[str, bool]:
+    if len(text) <= limit:
+        return text, False
+    truncated = text[:limit].rsplit(" ", 1)[0].rstrip(".,;:")
+    return f"{truncated}...", True
 
 
 def _render_source_confidence_cues_section(
@@ -4155,20 +4543,24 @@ def _render_source_traceability_section(
     source_document: Mapping[str, Any],
     source_traceability: Mapping[str, Any],
     import_batch: Mapping[str, Any],
+    original_values: Mapping[str, Any],
 ) -> str:
-        return f"""<section id="traceability-heading" aria-labelledby="traceability-title">
-            <h2 id="traceability-title">Original source</h2>
+        source_link = _source_link_markup(source_document)
+        return f"""<section class="detail-card" aria-labelledby="traceability-heading">
+            <p class="launch-kicker">Source</p>
+            <h2 id="traceability-heading">Source traceability</h2>
             <p>{_escape(_source_traceability_cue(source_document))}</p>
-            <dl class="summary-list">
-                <dt>Source URL</dt>
-                <dd>{_escape(_availability_label(source_document.get('source_url')))}</dd>
-                <dt>Raw SHA-256</dt>
-                <dd>{_escape(_availability_label(source_document.get('raw_sha256')))}</dd>
-                <dt>Connector and retrieval time</dt>
-                <dd>{_escape(_connector_retrieval_availability(source_document))}</dd>
+            <dl class="fact-grid">
+                {_render_fact_item("Source type", _source_type_label(source_document))}
+                {_render_fact_item("Traceability level", _traceability_level_label(source_document, source_traceability))}
+                {_render_fact_item("Record loaded date", _record_loaded_date(import_batch, source_document))}
+                {_render_fact_item("Fields extracted", _fields_extracted_label(original_values))}
+                {_render_fact_item("Extraction confidence", _optional_string(original_values, "extraction_confidence"))}
+                {_render_fact_item("Connector", _connector_label(source_document) or "not available in this record")}
             </dl>
+            <p>{source_link}</p>
             <details class="technical-details">
-                <summary>Show source identifiers and preservation details</summary>
+                <summary>Show field-level source details</summary>
       <p>Use these fields when checking the public source or reporting a confusing record.</p>
             {_render_traceability_summary(source_document, source_traceability, import_batch)}
       <table>
@@ -4186,6 +4578,55 @@ def _render_source_traceability_section(
       </table>
       </details>
     </section>"""
+
+
+def _source_link_markup(source_document: Mapping[str, Any]) -> str:
+    source_url = source_document.get("source_url")
+    if _has_display_value(source_url):
+        return f'<a href="{_escape(str(source_url))}">Open CCLD portal source link</a>'
+    return "Source link not available in this loaded record."
+
+
+def _source_type_label(source_document: Mapping[str, Any]) -> str:
+    document_type = _optional_string(source_document, "document_type")
+    if document_type == "complaint_investigation_report":
+        return "CCLD complaint investigation report"
+    return document_type
+
+
+def _traceability_level_label(
+    source_document: Mapping[str, Any],
+    source_traceability: Mapping[str, Any],
+) -> str:
+    if _has_visible_traceability_document(source_document) and source_traceability:
+        return "Field-level available"
+    if _has_display_value(source_document.get("source_url")):
+        return "Source link available"
+    return "Limited in loaded record"
+
+
+def _record_loaded_date(
+    import_batch: Mapping[str, Any],
+    source_document: Mapping[str, Any],
+) -> str:
+    imported_at = import_batch.get("imported_at")
+    if _has_display_value(imported_at):
+        return _display_value(imported_at)
+    retrieved_at = source_document.get("retrieved_at")
+    if _has_display_value(retrieved_at):
+        return _display_value(retrieved_at)
+    return "not available in this record"
+
+
+def _fields_extracted_label(original_values: Mapping[str, Any]) -> str:
+    scalar_fields = [
+        key
+        for key, value in original_values.items()
+        if key not in _SAFE_ORIGINAL_VALUE_DENYLIST
+        and (isinstance(value, str | int | float | bool) or value is None)
+    ]
+    extracted = [key for key in scalar_fields if _has_display_value(original_values.get(key))]
+    return f"{len(extracted)} of {len(scalar_fields)}"
 
 
 def _availability_label(value: object) -> str:
@@ -4439,28 +4880,32 @@ def _render_traceability_summary_row(label: str, value: object) -> str:
 
 
 def _render_source_context_section(
-        related_records: list[Mapping[str, Any]],
-        selected_source_record_key: str,
+    related_records: list[Mapping[str, Any]],
+    selected_source_record_key: str,
 ) -> str:
-        rows = "\n".join(
-                _render_related_source_record_row(record, selected_source_record_key)
-                for record in related_records
-        )
-        if not rows:
-                rows = """        <tr>
+    rows = "\n".join(
+        _render_related_source_record_row(record, selected_source_record_key)
+        for record in related_records
+    )
+    if not rows:
+        rows = """        <tr>
                     <td colspan="5">No related seeded source-derived rows are available.</td>
                 </tr>"""
-        return f"""<section id="source-context-heading" aria-labelledby="source-context-title">
-            <h2 id="source-context-title">Related seeded source-derived context</h2>
-            <p>This context comes from the same authenticated source-derived
-            read seam as the selected record. Narrative fields are not shown in this
-            browser shell.</p>
-            <p>Use this section to distinguish the selected complaint from related facility,
-            source document, allegation, event, and extraction-audit rows already present in
-            the seeded bundle.</p>
-            {_render_source_context_summary(related_records)}
-            <table>
-                <caption>Safe related source-derived rows in the selected seeded bundle</caption>
+    return f"""<section class="detail-card" aria-labelledby="source-context-heading">
+            <p class="launch-kicker">Source</p>
+            <h2 id="source-context-heading">Related facility activity</h2>
+            <p>Use these compact source-derived rows for pattern and context review. Detailed
+            bundle fields remain available below when traceability or debugging context is needed.</p>
+            {_render_related_activity_cards(related_records, selected_source_record_key)}
+            <details class="technical-details dense-table-details related-source-details">
+              <summary>View related source bundle details</summary>
+              <section aria-labelledby="related-source-bundle-heading">
+                <h3 id="related-source-bundle-heading">Related source bundle details</h3>
+                <p>These details show the raw source-derived row identifiers and safe scalar
+                context for the selected seeded bundle.</p>
+                {_render_source_context_summary(related_records)}
+                <table>
+                <caption>Related source-derived rows in the selected seeded bundle</caption>
                 <thead>
                     <tr>
                         <th scope="col">Entity type</th>
@@ -4473,8 +4918,183 @@ def _render_source_context_section(
                 <tbody>
 {rows}
                 </tbody>
-            </table>
+                </table>
+              </section>
+            </details>
         </section>"""
+
+
+def _render_related_activity_cards(
+    related_records: list[Mapping[str, Any]],
+    selected_source_record_key: str,
+) -> str:
+    cards = "\n".join(
+        _render_related_activity_card(record, selected_source_record_key)
+        for record in related_records
+    )
+    if not cards:
+        return '<p class="helper-text">No related facility activity is loaded for this record.</p>'
+    return f"""<div class="related-activity-list">
+{cards}
+            </div>"""
+
+
+def _render_related_activity_card(
+    record: Mapping[str, Any],
+    selected_source_record_key: str,
+) -> str:
+    entity_type = _string(record, "entity_type")
+    badge = _related_activity_badge(record)
+    badge_html = (
+        f'<span class="badge badge-muted">{_escape(badge)}</span>'
+        if badge
+        else ""
+    )
+    date_value = _related_activity_date(record)
+    date_row = (
+        f"""              <dt>Date</dt>
+              <dd>{_escape(date_value)}</dd>"""
+        if date_value
+        else ""
+    )
+    return f"""              <article class="related-activity-card">
+                <header>
+                  <span class="related-activity-type">{_escape(_related_record_type_label(entity_type))}</span>
+                  {badge_html}
+                </header>
+                <h3>{_escape(_related_activity_title(record))}</h3>
+                <dl class="related-activity-meta">
+                  {date_row}
+                  <dt>Context</dt>
+                  <dd>{_escape(_related_activity_context(record, selected_source_record_key))}</dd>
+                </dl>
+                <p>{_escape(_related_activity_reason(record, selected_source_record_key))}</p>
+              </article>"""
+
+
+def _related_record_type_label(entity_type: str) -> str:
+    labels = {
+        "facility": "Facility",
+        "source_document": "Source report",
+        "complaint": "Complaint",
+        "allegation": "Allegation",
+        "event": "Activity",
+        "extraction_audit": "Traceability",
+    }
+    return labels.get(entity_type, entity_type.replace("_", " ").strip().title())
+
+
+def _related_activity_title(record: Mapping[str, Any]) -> str:
+    entity_type = _string(record, "entity_type")
+    original_values = _mapping(record, "original_values")
+    if entity_type == "facility":
+        return _short_activity_value(original_values.get("facility_name"), "Facility identity")
+    if entity_type == "source_document":
+        document_type = _optional_string(original_values, "document_type")
+        if document_type == "complaint_investigation_report":
+            return "Complaint investigation report"
+        return _short_activity_label(document_type, "Source report")
+    if entity_type == "complaint":
+        control_number = original_values.get("complaint_control_number")
+        if _has_display_value(control_number):
+            return f"Complaint {_display_value(control_number)}"
+        return "Complaint record"
+    if entity_type == "allegation":
+        return _short_activity_value(
+            original_values.get("allegation_category"),
+            "Allegation context",
+        )
+    if entity_type == "event":
+        return _short_activity_label(original_values.get("event_type"), "Activity cue")
+    if entity_type == "extraction_audit":
+        field_name = _short_activity_label(
+            original_values.get("field_name"),
+            "displayed field",
+        )
+        return f"Traceability for {field_name}"
+    return _related_record_type_label(entity_type)
+
+
+def _related_activity_date(record: Mapping[str, Any]) -> str:
+    original_values = _mapping(record, "original_values")
+    for field_name in (
+        "complaint_received_date",
+        "visit_date",
+        "report_date",
+        "date_signed",
+        "event_date",
+        "retrieved_at",
+    ):
+        value = original_values.get(field_name)
+        if _has_display_value(value):
+            return _display_value(value)
+    return ""
+
+
+def _related_activity_context(
+    record: Mapping[str, Any],
+    selected_source_record_key: str,
+) -> str:
+    if _string(record, "source_record_key") == selected_source_record_key:
+        return "Selected complaint record"
+    entity_type = _string(record, "entity_type")
+    contexts = {
+        "facility": "Same facility/license context",
+        "source_document": "Source report in this complaint bundle",
+        "complaint": "Complaint row in the same facility context",
+        "allegation": "Allegation row in the same source report",
+        "event": "Activity row in the same source report",
+        "extraction_audit": "Extraction traceability row",
+    }
+    return contexts.get(entity_type, "Related loaded source-derived row")
+
+
+def _related_activity_badge(record: Mapping[str, Any]) -> str:
+    original_values = _mapping(record, "original_values")
+    for label, field_name in (
+        ("Finding", "finding"),
+        ("Status", "status"),
+        ("Facility status", "facility_status"),
+        ("License status", "license_status"),
+    ):
+        value = original_values.get(field_name)
+        if _has_display_value(value):
+            return f"{label}: {_short_activity_value(value, 'available', max_length=36)}"
+    return ""
+
+
+def _related_activity_reason(
+    record: Mapping[str, Any],
+    selected_source_record_key: str,
+) -> str:
+    if _string(record, "source_record_key") == selected_source_record_key:
+        return "Keeps the selected complaint visible next to related facility activity."
+    entity_type = _string(record, "entity_type")
+    reasons = {
+        "facility": "Confirms the facility/license identity tied to the complaint.",
+        "source_document": "Points back to the public report context before relying on displayed values.",
+        "complaint": "Shows another loaded complaint for the same facility context.",
+        "allegation": "Surfaces allegation and finding context without raw narrative text.",
+        "event": "Adds dated activity context when the loaded bundle includes it.",
+        "extraction_audit": "Shows that extraction traceability is available in the detailed bundle.",
+    }
+    return reasons.get(entity_type, "Adds loaded context for comparing records in the same bundle.")
+
+
+def _short_activity_label(value: object, fallback: str, *, max_length: int = 72) -> str:
+    text = _short_activity_value(value, fallback, max_length=max_length)
+    if text == fallback:
+        return fallback
+    return text.replace("_", " ").strip().capitalize()
+
+
+def _short_activity_value(value: object, fallback: str, *, max_length: int = 72) -> str:
+    if not _has_display_value(value):
+        return fallback
+    text = _display_value(value).strip()
+    if len(text) <= max_length:
+        return text
+    return text[: max_length - 3].rstrip() + "..."
 
 
 def _render_source_context_summary(related_records: list[Mapping[str, Any]]) -> str:
@@ -4591,7 +5211,7 @@ def _safe_context_summary(record: Mapping[str, Any]) -> str:
         if field in original_values and _has_display_value(original_values[field])
     ]
     if entity_type == "allegation":
-        values.append("allegation_text: hidden in this UI")
+        values.append("allegation text: shown in source narrative section when loaded")
     if not values:
         return "No safe scalar context fields available"
     return "; ".join(values)
@@ -4781,20 +5401,19 @@ def _render_reviewer_state_section(detail: Mapping[str, Any]) -> str:
     latest_display = (
         latest_created_at if isinstance(latest_created_at, str) else "None recorded"
     )
-    return f"""<details class="technical-details" id="reviewer-state-heading">
-      <summary>Notes/status history</summary>
-      <section aria-labelledby="reviewer-state-title">
-      <h2 id="reviewer-state-title">Notes/status history</h2>
-      <p>Notes and statuses are optional review aids; they do not change the complaint record.</p>
+    return f"""<section class="detail-card reviewer-history-section" aria-labelledby="reviewer-state-heading">
+      <p class="launch-kicker">Reviewer</p>
+      <h2 id="reviewer-state-heading">Reviewer-created notes and status history</h2>
+      <p>Notes and statuses are reviewer-created review aids; they do not change the source-derived complaint record.</p>
       <dl>
         <dt>Status recorded</dt>
         <dd>{_escape(statuses)}</dd>
         <dt>Latest note/status</dt>
         <dd>{_escape(latest_display)}</dd>
+        <dt>Payload kinds recorded</dt>
+        <dd>{_escape(payload_kinds)}</dd>
       </dl>
-      <details>
-        <summary>Show full note/status table</summary>
-        <table>
+      <table>
           <caption>Reviewer notes and statuses for this complaint</caption>
           <thead>
             <tr>
@@ -4808,45 +5427,67 @@ def _render_reviewer_state_section(detail: Mapping[str, Any]) -> str:
           <tbody>
 {rows}
           </tbody>
-        </table>
-      </details>
-      </section>
-    </details>"""
+      </table>
+    </section>"""
 
 def _render_review_actions(
     source_record_key: str,
     detail: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
     return_context: CcldQueueReturnContext,
 ) -> str:
     summary = _mapping(detail, "associated_reviewer_created_state_summary")
     current_status = _current_reviewer_status_text(summary)
     note_presence = _detail_note_presence_text(summary)
-    next_action = _recommended_review_action(summary)
-    return f"""<details class="technical-details reviewer-action-panel" id="review-actions-heading">
-            <summary>Add a note or status if useful</summary>
-            <section aria-labelledby="review-actions-title">
-            <h2 id="review-actions-title">Optional note/status</h2>
-            <p>Use these controls only when a note or status helps the review queue.</p>
+    latest_created_at = _latest_created_at_text(summary)
+    queue_href = _ccld_request_href(related_records, return_context)
+    next_href = _next_priority_record_href(source_record_key, related_records, return_context)
+    next_action = (
+        f'<a class="button button-secondary" href="{_escape(next_href)}">Open next flagged record</a>'
+        if next_href != queue_href
+        else '<span class="button button-disabled" aria-disabled="true">Open next flagged record</span>'
+    )
+    return f"""<section class="reviewer-created-panel action-card" id="review-actions-heading" aria-labelledby="review-actions-title">
+            <p class="launch-kicker">Reviewer-created review state</p>
+            <h2 id="review-actions-title">Reviewer-created review state</h2>
+            <p class="reviewer-panel-note">Update queue-only review state for this record.</p>
             <dl class="summary-list">
                 <dt>Current status</dt>
                 <dd>{_escape(current_status)}</dd>
                 <dt>Note</dt>
                 <dd>{_escape(note_presence)}</dd>
-                <dt>Suggested use</dt>
-                <dd>{_escape(next_action)}</dd>
+                <dt>Last note/status</dt>
+                <dd>{_escape(latest_created_at)}</dd>
             </dl>
-            <section aria-labelledby="cautious-action-guidance-heading">
-                <h3 id="cautious-action-guidance-heading">Keep it cautious</h3>
-                <p>Record what you checked. Do not turn the page display into a legal conclusion.
-                If a value looks wrong or incomplete, check the original source link first.</p>
-                <p>Do not write that abuse, neglect, harm, liability, rights deprivation, or source
-                completeness has been verified by this page.</p>
-            </section>
-            {_return_context_hidden_summary(return_context)}
-            {_render_note_form(source_record_key, return_context)}
+            {_render_reviewer_panel_queue_context(return_context)}
+            <div class="reviewer-panel-actions" aria-label="Reviewer detail navigation">
+                <a class="button" href="{_escape(queue_href)}">Return to facility queue</a>
+                {next_action}
+            </div>
             {_render_status_form(source_record_key, return_context)}
-            </section>
-        </details>"""
+            {_render_note_form(source_record_key, return_context)}
+            <p class="reviewer-panel-note">Reviewer-created state stays separate from source-derived fields.</p>
+        </section>"""
+
+
+def _render_reviewer_panel_queue_context(
+    return_context: CcldQueueReturnContext,
+) -> str:
+    if (
+        return_context.facility_number is None
+        and return_context.start_date is None
+        and return_context.end_date is None
+        and return_context.context_origin is None
+    ):
+        return ""
+    return f"""<dl class="reviewer-panel-context" aria-label="Returned queue context">
+                <dt>Facility/license number</dt>
+                <dd>{_escape(return_context.facility_number or "not provided")}</dd>
+                <dt>Date range</dt>
+                <dd>{_escape(_return_context_date_range(return_context))}</dd>
+                <dt>Request origin</dt>
+                <dd>{_escape(return_context.context_origin or "not provided")}</dd>
+            </dl>"""
 
 
 def _current_reviewer_status_text(summary: Mapping[str, Any]) -> str:
@@ -4956,6 +5597,103 @@ def _render_status_form(
                                 <p><button type="submit">Save status for this record</button></p>
       </form>
     </section>"""
+
+
+def _render_review_guidance_glossary_section(source_record: Mapping[str, Any]) -> str:
+    original_values = _mapping(source_record, "original_values")
+    return f"""<section class="detail-card" aria-labelledby="review-guidance-heading">
+      <p class="launch-kicker">Guidance</p>
+      <h2 id="review-guidance-heading">Review guidance and glossary</h2>
+      <ol>
+        <li>Open the CCLD source record before relying on missing, confusing, citation, POC, or timing values.</li>
+        <li>Use source-derived finding value {_escape(_optional_string(original_values, "finding"))} as a displayed source value, not as a new legal conclusion.</li>
+        <li>Use reviewer-created notes/status only for cautious observations that help the queue.</li>
+        <li>Keep notes factual and source-checkable; avoid legal, harm, abuse, neglect, liability, rights-deprivation, source-completeness, or delay conclusions from page cues alone.</li>
+        <li>Return to the facility queue after updating status or note state.</li>
+      </ol>
+      <details class="glossary-details">
+        <summary>Key terms for this record</summary>
+        <dl class="glossary-list">
+{_render_glossary_items()}
+        </dl>
+      </details>
+    </section>"""
+
+
+def _render_glossary_items() -> str:
+    terms = (
+        ("CCLD", "California Community Care Licensing Division, the public source context used for these complaint records."),
+        ("Citation", "A source-derived citation or deficiency cue that must be checked in the original CCLD record before use."),
+        ("Type A citation", "A higher-priority CCLD citation label when present in source-derived values; this page does not verify legal effect."),
+        ("Type B citation", "A CCLD citation label when present in source-derived values; check the source record for exact wording."),
+        ("POC / Plan of Correction", "A plan-of-correction cue from source-derived values when loaded; completion may not be available in this record."),
+        ("Substantiated", "A source-derived finding value. Do not treat the page display as an independent legal finding."),
+        ("Unsubstantiated", "A source-derived finding value. Do not infer facility-wide conclusions from this page."),
+        ("Inconclusive", "A source-derived finding value that should be read with the source record."),
+        ("Complaint investigation report", "The CCLD public source record type represented by this detail page when loaded."),
+        ("Source traceability", "The visible source link, source type, connector, loaded date, and field-level details used to check source-derived values."),
+        ("Report date used as proxy", "A loaded flag that means report date is being used as a proxy value; verify the source before using timing language."),
+    )
+    return "\n".join(
+        f"""          <dt>{_escape(term)}</dt>
+          <dd>{_escape(definition)}</dd>"""
+        for term, definition in terms
+    )
+
+
+def _render_full_source_fields_details(
+    identity: Mapping[str, Any],
+    original_values: Mapping[str, Any],
+) -> str:
+    return f"""<details class="technical-details dense-table-details">
+      <summary>Full source-derived fields</summary>
+      <section aria-labelledby="source-derived-heading">
+        <h2 id="source-derived-heading">Full source-derived fields</h2>
+        <p>These are safe scalar fields for the selected complaint. Source narrative appears only in the source narrative excerpt section above.</p>
+        <dl>
+          <dt>Source record key</dt>
+          <dd>{_escape(_string(identity, 'source_record_key'))}</dd>
+          <dt>Entity type</dt>
+          <dd>{_escape(_string(identity, 'entity_type'))}</dd>
+          <dt>Stable source ID</dt>
+          <dd>{_escape(_string(identity, 'stable_source_id'))}</dd>
+          <dt>Facility ID</dt>
+          <dd>{_escape(_optional_string(identity, 'facility_id'))}</dd>
+        </dl>
+        <table>
+          <caption>Safe source-derived values for the selected seeded record</caption>
+          <thead>
+            <tr>
+              <th scope="col">Field</th>
+              <th scope="col">Value</th>
+            </tr>
+          </thead>
+          <tbody>
+{_render_original_value_rows(original_values)}
+          </tbody>
+        </table>
+      </section>
+    </details>"""
+
+
+def _render_technical_operator_details(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+    workflow: Mapping[str, Any],
+) -> str:
+    identity = _mapping(source_record, "identity")
+    source_record_key = _string(identity, "source_record_key")
+    return f"""<details class="technical-details dense-table-details technical-operator-details">
+      <summary>Technical and operator details</summary>
+      {_render_source_confidence_cues_section(source_record, related_records)}
+      {_render_field_note_guidance_section()}
+      {_render_detail_facility_context_cues(related_records, return_context)}
+      {_render_detail_navigation(source_record_key, related_records, return_context)}
+      {_render_detail_first_run_steps(source_record_key, related_records, return_context)}
+      {_render_detail_feedback_guidance(source_record, related_records, return_context)}
+      {_render_scope_notice(workflow)}
+    </details>"""
 
 
 def _render_detail_feedback_guidance(

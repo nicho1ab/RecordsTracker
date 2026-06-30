@@ -106,8 +106,8 @@
   No-search-results, missing-record, invalid-form, and permission-blocked states
   provide local/test next-step links but do not diagnose production access or
   data availability.
-  Narrative source fields are hidden in the browser
-  shell. The UI uses process-local seeded test state and a fixture actor context; it is not production
+  A concise source narrative excerpt can appear on reviewer detail, with longer
+  loaded narrative behind disclosure. The UI uses process-local seeded test state and a fixture actor context; it is not production
   authentication, durable hosted deployment, full reviewer workflow behavior, or
   complete public-source coverage. The path does not run live crawling,
   execute connectors, automate production imports,

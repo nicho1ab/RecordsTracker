@@ -344,7 +344,7 @@ REQUIRED_CONTENT = {
         "list-level reviewer-created note/status indicators",
         "safe related seeded bundle context",
         "permission-blocked states include clear",
-        "Narrative source fields are hidden in the browser shell",
+        "Concise source narrative excerpts may appear on reviewer detail",
         "UI actions do not mutate source-derived records",
         "does not install software",
         "does not require admin rights",
