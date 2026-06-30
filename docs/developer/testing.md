@@ -122,7 +122,8 @@ confidence cues for present, missing, and proxy-flagged local/test complaint
 fields, facility-context navigation cues for directory-backed facility hub,
 signal-only facility hub, and manual request context behavior, field-note guidance
 for cautious reviewer-created observations, safe
-related seeded bundle context with sensitive narrative fields hidden,
+related seeded bundle context and source narrative excerpt behavior with
+sensitive narrative controlled,
 local/test complaint review matrix CSV export content, source-derived field
 columns, source-traceability cues, clearly separated reviewer-created note/status
 columns, empty-context CSV behavior, and matrix links from reviewer detail,

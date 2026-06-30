@@ -1021,6 +1021,7 @@ def test_reviewer_ui_missing_detail_record_has_clear_next_step() -> None:
     assert_no_secret_html(missing_key_html)
     assert_no_secret_html(invalid_key_html)
 
+
 def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     with _seeded_connection() as connection:
         status, content_type, body = route_response(
@@ -1036,412 +1037,191 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert parser.tags.count("h1") == 1
-    assert parser.text_for("h1") == "A. MIRIAM JAMISON CHILDREN'S CENTER"
-    assert "32-CR-20220407124448" not in parser.text_for("h1")
-    assert "Complaint: 32-CR-20220407124448" in parser.text_for("main")
-    assert "Complaint overview" in html
-    assert "Check this complaint, then return to the queue" in html
-    assert "Recommended action" in html
-    assert "More actions and request context" in html
-    assert "Why this record matters" in html
-    assert "Check first" in html
-    assert "← Back to queue" in parser.text_for("a")
-    assert "Next record →" in parser.text_for("a")
-    assert "Return to same facility/date queue" not in html
-    assert "Return to the same facility/date queue to choose the next record" not in html
-    assert "Open next recommended record from this context" in html
-    assert "Report confusion about this reviewer detail" in html
-    assert "workflow_area=reviewer-detail" in html
-    assert "source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448" in html
-    assert "Describe+what+was+confusing+about+this+reviewer+detail+step" in html
-    assert (
-        "If a displayed value looks wrong or incomplete, check the source link first"
-        in normalized_html
+    assert parser.text_for("h1") == "Complaint 32-CR-20220407124448"
+    assert html.index("Complaint 32-CR-20220407124448") < html.index(
+        "Source record key"
     )
-    assert "Why this record is flagged" in html
-    assert "Optional note/status" in html
-    assert "Original source" in html
-    assert html.index("Complaint overview") < html.index(
-        "Check this complaint, then return to the queue"
+    assert "Review queue" in html
+    assert "Complaint investigation report &middot; CCLD public source record" in html
+    assert "Complaint review summary" in html
+    assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER | Facility/license 157806098" in html
+    assert html.index("A. MIRIAM JAMISON") < html.index("Source traceability")
+    assert html.index("A. MIRIAM JAMISON") < html.index(
+        "Technical and operator details"
     )
-    assert html.index("Check this complaint, then return to the queue") < html.index(
-        "Why this record is flagged"
-    )
-    assert html.index("Why this record is flagged") < html.index("Original source")
-    assert html.index("Original source") < html.index("Record summary")
-    assert html.index("Notes/status history") < html.index("Optional note/status")
-    assert "screening aids, not legal conclusions" in normalized_html
-    assert (
-        '<span class="review-chip">Possible delay indicator: over 120 days</span>'
-        in html
-    )
-    assert (
-        '<span class="review-chip badge-danger">'
-        "Needs source check: first activity date missing locally</span>"
-        in html
-    )
-    assert '<span class="review-chip source-chip">Original CCLD source link saved</span>' in html
-    assert html.index("Possible delay indicator: over 120 days") < html.index(
-        "Needs source check: first activity date missing locally"
-    )
-    assert html.index("Needs source check: first activity date missing locally") < html.index(
-        "Original CCLD source link saved"
-    )
-    assert "Needs source check: first activity date missing locally" in html
-    assert "Original CCLD source link saved" in html
-    assert "Key dates and finding" in html
-    assert "Skip to main reviewer content" in html
-    assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
-    assert "First-run detail steps" in html
-    assert "Detail navigation" in html
-    assert "Use the same-queue link when you came from CCLD request results" in normalized_html
-    assert "← Back to queue" in parser.text_for("a")
-    assert "Return to same facility/date queue" not in html
-    assert "Return to the same facility/date queue to choose the next record" not in html
-    assert "Open next recommended record from this context" in html
-    assert "Download complaint review matrix CSV" in html
-    assert f"{REVIEWER_UI_MATRIX_EXPORT_PATH}?facility_number=157806098" in html
-    assert "Find another CCLD facility" in html
-    assert "Open CCLD workflow help" in html
-    assert "Back to reviewer records" in html
-    assert "Review record summary" in html
-    assert "Review source-confidence cues" in html
-    assert "Review field-note guidance" in html
-    assert "Review source traceability" in html
-    assert "Review source-derived context" in html
-    assert "Prepare tester feedback" in html
-    assert "Report reviewer-detail feedback with safe context" in html
-    assert "Record summary" in html
-    assert "This summary orients the selected CCLD complaint record" not in normalized_html
-    assert "Complaint review workspace" in html
-    assert "Legal-review flags and source checks" in html
-    assert "detail-top-grid" in html
-    assert "Complaint export records (source-derived):" in html
-    assert "Serious review cue records: 0" in html
-    assert (
-        "Serious review cues are deterministic keyword-based review aids and are not "
-        "verified severity findings."
-    ) in html
-    assert "not verified severity findings" in normalized_html
-    assert "Download serious review cue CSV" in html
-    assert html.index("Serious review cue records: 0") < html.index(
-        "Serious review cues are deterministic keyword-based review aids and are not "
-        "verified severity findings."
-    )
-    assert html.index(
-        "Serious review cues are deterministic keyword-based review aids and are not "
-        "verified severity findings."
-    ) < html.index("Download serious review cue CSV")
-    assert "Global complaint exports" in html
-    assert html.index("Global complaint exports") < html.index(
-        "Serious review cue records: 0"
-    )
-    assert html.index("Global complaint exports") < html.index(
-        "Download substantiated complaint CSV"
-    )
-    assert (
-        "Start with the substantiated complaint CSV for the clearest first review set. "
-        "Use the serious review cue CSV to triage possible priority topics across all "
-        "complaint statuses."
-    ) in html
-    assert "Start with the substantiated complaint CSV" in normalized_html
-    assert "triage possible priority topics" in normalized_html
-    assert html.index("Serious review cue records: 0") < html.index(
-        "Start with the substantiated complaint CSV"
-    )
-    assert "review matrix export" in html
-    matrix_heading_index = html.index("review matrix export")
-    matrix_link_index = html.index("Download complaint review matrix CSV")
-    global_exports_index = html.index("Global complaint exports")
-    cue_count_index = html.index("Serious review cue records: 0")
-    download_hint_index = html.index("Start with the substantiated complaint CSV")
-    field_summary_index = html.index("CSV exports include")
-    source_guidance_index = html.index("Use CSV exports to triage and navigate records.")
-    substantiated_export_index = html.index("Download substantiated complaint CSV")
 
-    assert matrix_heading_index < matrix_link_index
-    assert matrix_link_index < global_exports_index
-    assert global_exports_index < cue_count_index
-    assert cue_count_index < download_hint_index
-    assert download_hint_index < field_summary_index
-    assert field_summary_index < source_guidance_index
-    assert source_guidance_index < substantiated_export_index
-    assert (
-        "CSV exports include facility name, complaint received date, complaint status, "
-        "source link, and serious review cue."
-    ) in html
-    assert "facility name" in normalized_html
-    assert "complaint received date" in normalized_html
-    assert "complaint status" in normalized_html
-    assert "source link" in normalized_html
-    assert "serious review cue" in normalized_html
-
-    assert (
-        "Use CSV exports to triage and navigate records. "
-        "Open the linked source record before relying on exported values."
-    ) in html
-    assert "triage and navigate records" in normalized_html
-    assert "Open the linked source record" in normalized_html
-
-    assert "This facility complaint export records:" in html
-    assert "This facility complaint exports" in html
-    assert "Download this facility's substantiated complaint CSV" in html
-    assert "Download this facility's all complaint CSV" in html
-    assert "Download this facility's serious review cue CSV" in html
-    assert "Download this facility's last 30 days complaint CSV" in html
-    assert "Download this facility's last 90 days complaint CSV" in html
-    assert (
-        f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?facility=157806098&amp;status=substantiated"
-    ) in html
-    assert (
-        f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?facility=157806098&amp;status=all"
-    ) in html
-    assert (
-        f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?facility=157806098&amp;status=all"
-        "&amp;review_cue=serious"
-    ) in html
-    assert (
-        f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?facility=157806098&amp;status=all"
-        "&amp;start_date="
-    ) in html
-    assert html.index("Download this facility's serious review cue CSV") < html.index(
-        "Download this facility's last 30 days complaint CSV"
+    assert "Reviewer-created review state" in html
+    assert html.index("Complaint review summary") < html.index(
+        "Reviewer-created review state"
     )
-    assert html.index("Download this facility's last 30 days complaint CSV") < html.index(
-        "Download this facility's last 90 days complaint CSV"
+    assert html.index("Reviewer-created review state") < html.index(
+        "Facility identity and license facts"
     )
-    assert html.index(
-        "Download all complaint CSV"
-    ) < html.index("This facility complaint export records:")
-    assert "Download last 30 days complaint CSV" in html
-    assert "Download last 90 days complaint CSV" in html
-    assert f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?status=all&amp;start_date=" in html
-    assert "&amp;end_date=" in html
-    assert html.index("Download serious review cue CSV") < html.index(
-        "Download last 30 days complaint CSV"
-    )
-    assert (
-        "Use these facility CSV links when reviewing this facility. "
-        "Use the global complaint exports to compare records across facilities."
-    ) in html
-    assert "Use these facility CSV links" in normalized_html
-    assert "compare records across facilities" in normalized_html
-    assert html.index(
-        "This facility complaint export records:"
-    ) < html.index("Use these facility CSV links")
-    assert html.index("Use these facility CSV links") < html.index(
-        "This facility complaint exports"
-    )
-    assert html.index("This facility complaint exports") < html.index(
-        "Download this facility's substantiated complaint CSV"
-    )
-    assert (
-        f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?facility_number=157806098"
-        "&amp;start_date=&amp;end_date=&amp;request_context_origin=prefilled_link"
-        "&amp;lookup_facility_name=&amp;facility=157806098"
-        "&amp;status=all&amp;review_cue=serious"
-    ) in html
-    assert "Source-confidence cues" in html
-    assert "Field-note and technical context" in html
-    assert "Complaint and report dates" in html
-    assert "Facility/license number" in html
-    assert "157806098" in html
-    assert "Facility name" in html
-    assert "A. MIRIAM JAMISON" in html
-    assert "Reviewer-created status recorded" in html
-    assert "Full complaint fields" in html
-    assert "These are safe scalar fields for the selected complaint" in normalized_html
-    assert "Safe source-derived values for the selected seeded record" in html
-    assert "complaint_control_number" in html
-    assert "32-CR-20220407124448" in html
-    assert "Source-confidence cues" in html
-    assert "Source-confidence cues for visible complaint fields" in html
-    assert "visible source-derived complaint fields already loaded" in normalized_html
-    assert "Use missing, confusing, and proxy-related cues" in normalized_html
-    assert "Missing values should be described" in normalized_html
-    assert "not available in this record" in normalized_html
-    assert "Next action: check source traceability" in normalized_html
-    assert "use cautious reviewer-created note/status wording only when it helps" in (
-        normalized_html
-    )
-    assert "use feedback when the cue or wording remains confusing" in normalized_html
-    assert "then return to the same queue for the suggested next record" in normalized_html
-    assert "Complaint field" in html
-    assert "Source-confidence cue" in html
-    assert "Present in this source-derived record" in html
-    assert "First investigation activity date" in html
-    assert "missing-field flag is true" in normalized_html
-    assert "Report date proxy flag" in html
-    assert "Current field does not mark report date as the delay-review proxy" in (
-        normalized_html
-    )
-    assert "Use fallback/proxy wording only when this cue says" in normalized_html
-    assert "Field-note guidance" in html
-    assert "Cautious wording for reviewer-created notes/status" in html
-    assert "Reviewer notes/status are reviewer-created observations" in normalized_html
-    assert "they do not edit source-derived fields" in normalized_html
-    assert (
-        "For now, use a reviewer-created note to describe the possible correction concern"
-        in html
-    )
-    assert "The workflow does not submit correction decisions" in normalized_html
-    assert "For missing, confusing, or proxy-related source-derived values" in normalized_html
-    assert "avoid source absence or verification claims" in normalized_html
-    assert "continue review from the same queue context" in normalized_html
-    assert "Field is present" in html
-    assert "record shows complaint received date" in html
-    assert (
-        "Do not say the value is legally verified or a public-source conclusion"
-        in normalized_html
-    )
-    assert "Field is not available locally" in html
-    assert "Do not say the source does not contain this" in normalized_html
-    assert "the record is incomplete" in html
-    assert "or data was lost" in html
-    assert "Report-date proxy flag is shown" in html
-    assert "cue marks report date as a proxy" in normalized_html
-    assert "Do not use the proxy flag alone" in normalized_html
-    assert "use feedback if proxy wording or next action remains confusing" in (
-        normalized_html
-    )
-    assert "Field remains confusing after source traceability" in html
-    assert "field remained unclear after checking source traceability" in normalized_html
-    assert "Value looks like a UI or data issue" in html
-    assert "Use the manual feedback checklist" in html
-    assert "instead of treating the note as a source-derived edit" in normalized_html
-    assert "Possible correction concern" in html
-    assert "what should receive correction review later" in html
-    assert "Selected complaint source traceability fields" in html
-    assert "Show source identifiers and preservation details" in html
-    assert "Visible source traceability summary" in html
-    assert "Traceability field" in html
-    assert "Visibility" in html
-    assert "visible and use reviewer detail when the value needs more checking" in normalized_html
-    assert "Original CCLD source link saved" in html
-    assert "Next action" in html
-    assert "If a source-derived value looks wrong or incomplete" in html
-    assert "check source traceability first" in normalized_html
-    assert (
-        "use a reviewer-created note to describe the possible correction concern"
-        in normalized_html
-    )
-    assert "source URL, raw SHA-256 hash, raw artifact reference" in normalized_html
-    assert "Use these fields when checking the public source" in html
-    assert "Use these fields when checking the public source" in html
-    assert "not available in this record" in html
-    assert "Selected source record key" in html
-    assert "Stable source identity" in html
-    assert "Visible source traceability summary" in html
-    assert "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports" in html
-    assert "Raw SHA-256" in html
-    assert "6088c9627374baac647e2f2a54f6e389cb68c1b92db42da00020aaf508a853bd" in html
-    assert "Source artifact identity" in html
-    assert "Report index or source page marker" in html
-    assert "Retrieved at capture time" in html
-    assert "Raw hash validation status" in html
-    assert "Use this to report artifact validation state" in html
-    assert "Connector name" in html
-    assert "Connector name and version" in html
-    assert "ccld_facility_reports" in html
-    assert "Source document ID" in html
-    assert "ccld:document:157806098:3" in html
-    assert "Import batch ID" in html
-    assert TEST_SCOPE.scope_id in html
-    assert "Use these fields to confirm that the selected record remains tied" in (
-        normalized_html
-    )
-    assert "Selected source-derived bundle summary" in html
-    assert "Related seeded source-derived context" in html
-    assert "Use this section to distinguish the selected complaint" in normalized_html
-    assert "Safe related source-derived rows in the selected seeded bundle" in html
-    assert "facility" in html
-    assert "source_document" in html
-    assert "complaint" in html
-    assert "allegation" in html
-    assert "extraction_audit" in html
-    assert "facility_name: A. MIRIAM JAMISON" in html
-    assert "external_facility_number: 157806098" in html
-    assert "county: Kern" in html
-    assert "document_type: complaint_investigation_report" in html
-    assert "allegation_category: Staff conduct" in html
-    assert "allegation_category: Inadequate supervision" in html
-    assert "allegation_text: hidden in this UI" in html
-    assert "field_name: facility_number" in html
-    assert "extraction_method: ccld_facility_report_html_labels" in html
-    assert "Facility clients are being mistreated" not in html
-    assert "adequate supervision to the facility clients" not in html
-    assert "Notes/status history" in html
-    assert "Notes and statuses are optional review aids" in normalized_html
-    assert "Status recorded" in html
-    assert "Latest note/status" in html
-    assert "Optional note/status" in html
-    assert "Use these controls only when a note or status helps the review queue" in normalized_html
-    assert "Current status" in html
-    assert "Suggested use" in html
-    assert "No reviewer-created status" in html
-    assert "No reviewer note" in html
-    assert "Skip unless it helps." in html
-    assert "They do not change the complaint record" in html
-    assert "Add a note or status if useful" in html
-    assert "Review note" in html
-    assert "Review status" in html
-    assert "Status helps the queue show progress" in normalized_html
-    assert "It does not correct or verify the complaint record" in html
-    assert "Do not write that abuse, neglect, harm" in html
-    assert "Note for this record" in html
-    assert "Status for this record" in html
-    assert "Use safe plain text" in html
-    assert "appear below after saving" in normalized_html
-    assert "Keyboard flow after saving" not in html
-    assert "They do not change the complaint record" in html
+    assert f'action="{REVIEWER_UI_NOTE_PATH}"' in html
+    assert f'action="{REVIEWER_UI_STATUS_PATH}"' in html
+    assert "name=\"source_record_key\"" in html
     assert "Save note for this record" in html
     assert "Save status for this record" in html
-    assert f"action=\"{REVIEWER_UI_NOTE_PATH}\"" in html
-    assert "Return to the same CCLD queue" in html
-    assert "submit the request again to see queue progress" in normalized_html
-    assert "return_facility_number" in html
-    assert "Status for this record" in html
-    assert "Status helps the queue show progress" in normalized_html
-    assert "It does not correct or verify the complaint record" in html
-    assert "Save status for this record" in html
-    assert ">Needs follow-up</option>" in html
-    assert f"action=\"{REVIEWER_UI_STATUS_PATH}\"" in html
+
+    assert "Open CCLD source record" in html
+    assert "Copy complaint summary" in html
+    assert "Return to facility queue" in html
+    assert "Open next flagged record" in html
+    review_panel_start = html.index('id="review-actions-heading"')
+    review_panel_end = html.index('id="why-flagged-heading"', review_panel_start)
+    review_panel_html = html[review_panel_start:review_panel_end]
+    assert "Current status" in review_panel_html
+    assert "Status for this record" in review_panel_html
+    assert "Note for this record" in review_panel_html
+    assert "Save status for this record" in review_panel_html
+    assert "Save note for this record" in review_panel_html
+    assert "Return to facility queue" in review_panel_html
+    assert "Open next flagged record" in review_panel_html
+    assert "Keep it cautious" not in review_panel_html
+    assert "Record what you checked" not in review_panel_html
+    assert "Do not write that abuse, neglect, harm" not in review_panel_html
+    assert "submit the request again" not in review_panel_html
+
+    assert "Why this record is flagged" in html
+    assert "Complaint/report timing needs source check" in html
+    assert "First investigation activity date absent in loaded record" in html
+    assert "Source traceability available for checking the original CCLD record" in html
+    assert html.index("Complaint review summary") < html.index(
+        "Why this record is flagged"
+    )
+    assert html.index("Why this record is flagged") < html.index(
+        "Quick review summary"
+    )
+
+    assert html.count('class="quick-review-card"') == 6
+    for href, label in (
+        ("#allegations-findings-heading", "Finding"),
+        ("#complaint-timeline-heading", "Timing"),
+        ("#why-flagged-heading", "Review flags"),
+        ("#citation-poc-heading", "Citation / POC"),
+        ("#traceability-heading", "Source"),
+        ("#review-actions-heading", "Reviewer status"),
+    ):
+        assert f'href="{href}"' in html
+        assert label in html
+
+    ordered_sections = [
+        'id="record-summary-heading"',
+        'id="complaint-timeline-heading"',
+        'id="allegations-findings-heading"',
+        'id="citation-poc-heading"',
+        'id="source-narrative-heading"',
+        'id="traceability-heading"',
+        'id="reviewer-state-heading"',
+        'id="review-guidance-heading"',
+        'id="source-context-heading"',
+        '<summary>Full source-derived fields</summary>',
+        '<summary>Technical and operator details</summary>',
+    ]
+    previous_index = -1
+    for section in ordered_sections:
+        section_index = html.index(section)
+        assert section_index > previous_index
+        previous_index = section_index
+
+    assert "Facility clients are being mistreated while in care." in html
+    assert "Facility staff do not provide adequate supervision" in html
+    assert "No citation, deficiency, or Plan of Correction cue is loaded" in html
+    assert "Source type" in html
+    assert "Traceability level" in html
+    assert "Record loaded date" in html
+    assert "Fields extracted" in html
+    assert "Extraction confidence" in html
+    assert "Connector" in html
+    assert "Open CCLD portal source link" in html
+    assert "Raw SHA-256" in html
+    assert "Selected complaint source traceability fields" in html
+
+    for term in (
+        "CCLD",
+        "Citation",
+        "Type A citation",
+        "Type B citation",
+        "POC / Plan of Correction",
+        "Substantiated",
+        "Unsubstantiated",
+        "Inconclusive",
+        "Complaint investigation report",
+        "Source traceability",
+        "Report date used as proxy",
+    ):
+        assert term in html
+
+    related_section_start = html.index('id="source-context-heading"')
+    related_details_summary = "<summary>View related source bundle details</summary>"
+    related_details_start = html.index(related_details_summary, related_section_start)
+    related_default_html = html[related_section_start:related_details_start]
+    related_details_end = html.index(
+        "<summary>Full source-derived fields</summary>",
+        related_details_start,
+    )
+    related_details_html = html[related_details_start:related_details_end]
+    assert 'class="related-activity-card"' in related_default_html
+    assert "Complaint investigation report" in related_default_html
+    assert "Selected complaint record" in related_default_html
+    assert "Finding: Unsubstantiated" in related_default_html
+    assert "<table>" not in related_default_html
+    assert "Stable source ID" not in related_default_html
+    assert "Source document ID" not in related_default_html
+    assert "Safe context shown" not in related_default_html
+    assert "Same seeded bundle" not in related_default_html
+    assert COMPLAINT_KEY not in related_default_html
+    assert "ccld:document:" not in related_default_html
+    assert "source_document:" not in related_default_html
+    assert "Facility clients are being mistreated while in care." not in (
+        related_default_html
+    )
+    _assert_collapsed_disclosure(html, "View related source bundle details")
+    assert "Related source-derived rows in the selected seeded bundle" in (
+        related_details_html
+    )
+    assert "Stable source ID" in related_details_html
+    assert "Source document ID" in related_details_html
+    assert "Safe context shown" in related_details_html
+    assert "ccld:document:" in related_details_html
+
+    _assert_collapsed_disclosure(html, "Full source-derived fields")
+    _assert_collapsed_disclosure(html, "Technical and operator details")
+    assert "verified delay" not in normalized_html.casefold()
+    assert "proof of delayed investigation" not in normalized_html.casefold()
+    assert "source is complete" not in normalized_html.casefold()
+    assert "verified abuse" not in normalized_html.casefold()
     assert_no_correction_workflow_html(html)
-    assert "Feedback for this record" in html
-    assert "use the tester feedback checklist on the CCLD request queue" in normalized_html
-    assert (
-        "Include the identifiers below and what looked missing, confusing, or unexpected"
-        in normalized_html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_detail_collapses_long_source_narrative() -> None:
+    long_narrative = " ".join(
+        ["Long source narrative sentence for disclosure testing."] * 20
     )
-    assert "Mention the original source link status or field label" in normalized_html
-    assert (
-        "Use feedback when missing local fields make the next review step unclear"
-        in normalized_html
+    with _seeded_connection() as connection:
+        _set_source_record_original_values(
+            connection,
+            COMPLAINT_KEY,
+            {"source_text": long_narrative},
+        )
+        status, _content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert "Source narrative excerpt" in html
+    assert "Show full source narrative" in html
+    assert html.index("Source narrative excerpt") < html.index(
+        "Show full source narrative"
     )
-    assert "Notes and statuses are optional" in html
-    assert (
-        "Use feedback instead when you are unsure what the next step should be"
-        in normalized_html
+    assert html.index("Source narrative excerpt") < html.index(
+        "Full source-derived fields"
     )
-    assert "Return request context" in html
-    assert "facility/license number 157806098; date range not provided" in html
-    assert "What to include in feedback" in html
-    assert "Record feedback notes" in html
-    assert "This page does not save, send, export, or persist feedback" in html
-    assert "Manual feedback checklist bridge" in html
-    assert "both queue observations and record-specific observations" in normalized_html
-    assert "Do not create a separate checklist from this page" in normalized_html
-    assert "Source link or source field that was missing or confusing" in html
-    assert "Record value, date, finding, or flag" in html
-    assert "Original source: note fields that were easy to confirm" in html
-    assert "Complaint values: note dates, findings, flags" in html
-    assert "Note/status: note whether save confirmation or queue progress was unclear" in html
-    assert "Return-to-queue flow" in html
-    assert "Any label, wording, keyboard flow, or next step" in html
-    assert "/ccld/records/request?facility_number=157806098" in html
-    assert "Open feedback with this record context" in html
-    assert "/ccld/facilities" in html
-    assert "/ccld/help" in html
+    _assert_collapsed_disclosure(html, "Show full source narrative")
     assert_no_secret_html(html)
 
 def test_reviewer_ui_complaint_export_section_smoke_regression() -> None:
@@ -1463,31 +1243,11 @@ def test_reviewer_ui_complaint_export_section_smoke_regression() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Global complaint exports" in html
-    assert "This facility complaint exports" in html
-    assert "Complaint export records (source-derived):" in html
-    assert "This facility complaint export records:" in html
-    assert "Serious review cue records: 0" in html
-    assert (
-        "Serious review cues are deterministic keyword-based review aids and are not "
-        "verified severity findings."
-    ) in html
-    assert "Download substantiated complaint CSV" in html
-    assert "Download unsubstantiated complaint CSV" in html
-    assert "Download all complaint CSV" in html
-    assert "Download serious review cue CSV" in html
-    assert "Download last 30 days complaint CSV" in html
-    assert "Download last 90 days complaint CSV" in html
-    assert "Download this facility's substantiated complaint CSV" in html
-    assert "Download this facility's all complaint CSV" in html
-    assert "Download this facility's serious review cue CSV" in html
-    assert "Download this facility's last 30 days complaint CSV" in html
-    assert "Download this facility's last 90 days complaint CSV" in html
-    assert (
-        "Use CSV exports to triage and navigate records. "
-        "Open the linked source record before relying on exported values."
-    ) in html
-    assert "triage and navigate records" in normalized_html
+    assert "Complaint review summary" in html
+    assert "Return to facility queue" in html
+    assert "Global complaint exports" not in html
+    assert "triage and navigate records" not in normalized_html
+    assert_no_secret_html(html)
 
     csv_text = csv_body.decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(csv_text))
@@ -2288,7 +2048,7 @@ def test_reviewer_ui_detail_missing_traceability_uses_clear_non_conclusive_wordi
     assert "Raw artifact preservation" in html
     assert "not available in this record" in html
     assert "Missing: raw artifact reference" in html
-    assert "Show source identifiers and preservation details" in html
+    assert "Show field-level source details" in html
     assert "Source-confidence cues" in html
     assert "Field-note guidance" in html
     assert "First investigation activity date" in html
@@ -2316,12 +2076,12 @@ def test_reviewer_ui_detail_preserves_direct_queue_request_context() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert before_counts == after_counts
-    assert "Check this complaint, then return to the queue" in html
+    assert "Complaint review summary" in html
     assert "Facility/license number" in html
     assert "157806098" in html
     assert "Date range" in html
     assert "2026-01-01 to 2026-01-31" in html
-    assert "Manual facility/license entry" in html
+    assert "manual_entry" in html
     assert "return_facility_number" in html
     assert "return_start_date" in html
     assert "return_end_date" in html
@@ -2370,10 +2130,9 @@ def test_reviewer_ui_detail_shows_serious_review_cue_count_when_present() -> Non
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Serious review cue records: 1" in html
-    assert "Download serious review cue CSV" in html
-    assert f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?facility_number=157806098" in html
-    assert "review_cue=serious" in html
+    assert "staff misconduct concern" in html
+    assert "Serious review cue records:" not in html
+    assert "review_cue=serious" not in html
     assert_no_secret_html(html)
 
 def test_reviewer_ui_detail_links_signal_only_facility_context_without_mutation(
@@ -2421,7 +2180,6 @@ def test_reviewer_ui_detail_links_signal_only_facility_context_without_mutation(
     assert "uploaded public summary signals are available" in html
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098" in html
     assert "Open signal-only facility hub" in html
-    assert "Return to signal-only facility hub" in html
     assert CCLD_FACILITY_REVIEW_PRIORITY_PATH in html
     assert "Return to facility review priority list" in html
     assert "Start complaint request if needed" in html
@@ -2476,7 +2234,6 @@ def test_reviewer_ui_detail_distinguishes_directory_backed_facility_context(
     assert "facility hub" in html
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098" in html
     assert "Open facility hub" in html
-    assert "Return to facility hub" in html
     assert "signal-only facility hub" not in html
     assert_no_secret_html(html)
 
@@ -2600,7 +2357,7 @@ def test_reviewer_ui_detail_render_is_non_mutating() -> None:
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
     }
-    assert "Record summary" in html
+    assert "Complaint review summary" in html
     assert "Field-note guidance" in html
     assert "Feedback for this record" in html
     assert_no_secret_html(html)
@@ -2691,9 +2448,9 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert "Review saved notes and statuses below" in html
     assert "Review source traceability before export." in html
     assert "reviewer_note_scaffold" in html
-    assert "Notes/status history" in html
+    assert "Reviewer-created notes and status history" in html
     assert "Latest note/status" in html
-    assert "Related seeded source-derived context" in html
+    assert "Related facility activity" in html
     assert "Field-note guidance" in html
     assert "Fixture UI Note Reviewer (tester)" in html
     assert "Reviewer-created; source-derived record unchanged" in html
@@ -2838,9 +2595,9 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "reviewer_status_scaffold" in html
     assert "needs_follow_up" in html
     assert "Status recorded" in html
-    assert "Notes/status history" in html
+    assert "Reviewer-created notes and status history" in html
     assert "Latest note/status" in html
-    assert "Related seeded source-derived context" in html
+    assert "Related facility activity" in html
     assert "Field-note guidance" in html
     assert "Fixture UI Status Reviewer (tester)" in html
     assert_no_correction_workflow_html(html)

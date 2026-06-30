@@ -530,7 +530,7 @@ a bounded reviewer status, see a saved-state confirmation with same-request
 return-to-queue progress and next-record navigation guidance, and see
 read-after-write reviewer-created state on the page. No-search-results,
 missing-record, invalid-form, and permission-blocked states include clear
-browser guidance and links back to useful local/test next steps. Narrative source fields are hidden in the browser shell.
+browser guidance and links back to useful local/test next steps. Concise source narrative excerpts may appear on reviewer detail, with longer loaded narrative behind disclosure.
 Reviewer pages include skip-to-main links, CCLD workflow navigation, first-run
 detail steps, source traceability review guidance before note/status actions,
 record-specific note/status action text, record-specific feedback handoff cues,
@@ -1065,7 +1065,7 @@ derived mutation.
 The reviewer UI shell tests verify local/test browser-accessible landing and
 detail HTML pages over the seeded fixture corpus, list-level reviewer-created
 state indicators, safe source traceability display, safe related seeded bundle
-context with narrative fields hidden, semantic form controls, note/status form
+context with concise source narrative excerpt behavior, semantic form controls, note/status form
 delegation to the existing workflow actions, read-after-write reviewer-created state display, clear no-match, missing-record, invalid-form, and blocked-request guidance,
 unauthenticated, disabled or revoked, role-denied, out-of-scope, and permission-
 separation blocking, no-secret HTML output, successful audit creation, and no

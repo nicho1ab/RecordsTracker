@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Redesigned the hosted reviewer complaint detail page as an attorney-focused
+  complaint-review workspace. The page now leads with complaint identity,
+  facility/license context, a separated reviewer-created state panel, cautious
+  why-flagged cues, keyboard-focusable quick review cards, visible structured
+  source-backed sections, compact glossary support, source traceability summary,
+  source narrative excerpt, and collapsed full source-derived and
+  technical/operator details. Existing note/status action paths are unchanged;
+  no schema, extraction, retrieval, or persistence behavior changed.
 - Stakeholder facility overview export now produces a single Excel workbook
 	(`.xlsx`) instead of a ZIP of loose files. The workbook contains five
 	worksheets in order: `README`, `facility-overview`, `substantiated-complaints`,

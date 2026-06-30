@@ -364,17 +364,24 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold reviewer UI shell did not return the seeded list.")
     if (
         reviewer_detail_status != 200
-        or b"Complaint overview" not in reviewer_detail_body
-        or b"Why this record matters" not in reviewer_detail_body
-        or b"Original source" not in reviewer_detail_body
-        or b"Record summary" not in reviewer_detail_body
-        or b"Optional note/status" not in reviewer_detail_body
-        or (
-            b"&larr; Back to queue" not in reviewer_detail_body
-            and b"Back to reviewer records" not in reviewer_detail_body
-        )
+        or b"Complaint investigation report" not in reviewer_detail_body
+        or b"CCLD public source record" not in reviewer_detail_body
+        or b"Reviewer-created review state" not in reviewer_detail_body
+        or b"Why this record is flagged" not in reviewer_detail_body
+        or b"Quick review summary" not in reviewer_detail_body
+        or b"Facility identity and license facts" not in reviewer_detail_body
+        or b"Complaint and investigation timeline" not in reviewer_detail_body
+        or b"Allegations and findings" not in reviewer_detail_body
+        or b"Citations, deficiencies, and Plan of Correction" not in reviewer_detail_body
+        or b"Source narrative excerpt" not in reviewer_detail_body
+        or b"Source traceability" not in reviewer_detail_body
+        or b"Reviewer-created notes and status history" not in reviewer_detail_body
+        or b"Review guidance and glossary" not in reviewer_detail_body
+        or b"Full source-derived fields" not in reviewer_detail_body
+        or b"Technical and operator details" not in reviewer_detail_body
+        or b"Open CCLD source record" not in reviewer_detail_body
+        or b"Return to facility queue" not in reviewer_detail_body
         or b"32-CR-20220407124448" not in reviewer_detail_body
-        or b"Key dates and finding" not in reviewer_detail_body
     ):
         raise RuntimeError("Hosted scaffold reviewer detail did not return usable guidance.")
     if (

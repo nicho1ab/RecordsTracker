@@ -182,8 +182,9 @@ existing workflow, reviewer-created state, source-derived, and audit seams. The
 HTML output is limited to safe source traceability fields, safe scalar source-
 derived values, safe related seeded bundle context, reviewer-created note/status
 indicator/display values, non-secret actor display labels, record-summary,
-navigation, feedback-guidance, and local/test boundary text.
-Narrative source fields are hidden in the browser shell. It must not expose provider
+navigation, feedback-guidance, and local/test boundary text. The reviewer detail
+page may show a concise source narrative excerpt and keeps longer loaded
+narrative behind disclosure. It must not expose provider
 subjects or issuers, email addresses, tokens, cookies, private headers,
 connection strings, client secrets, raw provider claims, hosted URLs, private
 URLs, or unnecessary sensitive narrative content. It does not implement real
@@ -193,7 +194,7 @@ deployment, or public launch behavior.
 Reviewer note/status confirmations may state that reviewer-created state was
 saved, show non-secret read-after-write reviewer-created state, and link back to
 the CCLD request queue. They must not expose raw provider claims, credentials,
-private values, or narrative source fields.
+private values, or unnecessary sensitive narrative content.
 The local/test complaint review matrix CSV route may expose only safe source-
 derived complaint fields, safe source URL/source-traceability cues, request
 context, and clearly separated reviewer-created status/note presence metadata
