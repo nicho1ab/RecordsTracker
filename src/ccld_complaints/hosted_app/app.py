@@ -777,7 +777,7 @@ def render_app_shell() -> str:
                 extra_nav_links=(),
                                 main=f"""    <section id="start" class="hero-card attorney-hero" aria-labelledby="start-heading">
             <div>
-                <p class="launch-kicker">Start here</p>
+                <p class="launch-kicker">guided attorney review workflow</p>
                 <h2 id="start-heading">Start a Facility Complaint Review</h2>
                 <p class="launch-value">Begin with the facility/license number, review the facility pattern summary, open prioritized complaint records, then prepare the packet and readiness checklist.</p>
                 <p class="helper-text">Limited-data caution: this workflow shows loaded public-source review aids only. Check source traceability on detail pages before relying on values.</p>

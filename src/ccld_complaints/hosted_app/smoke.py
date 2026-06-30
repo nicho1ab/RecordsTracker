@@ -207,6 +207,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold health check did not return ok.")
     if root_status != 200 or b"Attorney public-record review workspace" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return the guided launch notice.")
+    if b"guided attorney review workflow" not in root_body:
+        raise RuntimeError("Hosted scaffold app shell did not return attorney workflow label.")
     if b"Skip to main CCLD review content" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return skip navigation.")
     if (
@@ -272,6 +274,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         )
         or b"Do this next" not in ccld_queue_body
         or b"32-CR-20220407124448" not in ccld_queue_body
+        or b"Review packet readiness before copying or printing" not in ccld_queue_body
     ):
         raise RuntimeError("Hosted scaffold CCLD request queue did not return triage guidance.")
     if (
@@ -387,8 +390,11 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         packet_preview_status != 200
         or b"Packet preparation preview" not in packet_preview_body
+        or b"Packet readiness" not in packet_preview_body
         or b"Traceability readiness" not in packet_preview_body
         or b"Reviewer-created state summary" not in packet_preview_body
+        or b"Copy-ready attorney review brief" not in packet_preview_body
+        or b"Attorney review readiness checklist" not in packet_preview_body
         or b"Included complaint records" not in packet_preview_body
         or b"Why included" not in packet_preview_body
         or b"Before copying or printing" not in packet_preview_body
@@ -400,6 +406,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Attorney Review Packet Draft" not in packet_draft_body
         or b"Use browser copy or print only after review" not in packet_draft_body
         or b"Copyable packet summary" not in packet_draft_body
+        or b"Copy-ready attorney review brief" not in packet_draft_body
+        or b"Attorney review readiness checklist" not in packet_draft_body
         or b"Before using this draft" not in packet_draft_body
         or b"No export file is generated" not in packet_draft_body
     ):
