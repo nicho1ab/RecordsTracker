@@ -1080,6 +1080,268 @@ SHARED_CSS = r"""
       display: grid;
       gap: 1rem;
     }
+    .reviewer-detail-page {
+      gap: 1rem;
+    }
+    .reviewer-detail-context {
+      align-items: center;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      font-size: 0.88rem;
+      gap: 0.4rem;
+    }
+    .reviewer-detail-top {
+      align-items: start;
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: minmax(0, 1.65fr) minmax(19rem, 0.85fr);
+    }
+    .reviewer-brief-card {
+      border-left-color: var(--teal);
+    }
+    .facility-identity-line {
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 0.55rem;
+    }
+    .reviewer-primary-actions {
+      align-items: center;
+      border-top: 1px solid var(--line-soft);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      margin-top: 1rem;
+      padding-top: 0.85rem;
+    }
+    .button-disabled {
+      background: #eef1f3;
+      border-color: var(--line);
+      color: var(--muted);
+      cursor: not-allowed;
+    }
+    .copy-summary-details {
+      border: 0;
+      margin: 0;
+      padding: 0;
+    }
+    .copy-summary-details > summary {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--ds-link);
+      display: inline-flex;
+      font-size: 0.92rem;
+      line-height: 1.2;
+      padding: 0.55rem 0.75rem;
+    }
+    .copyable-summary {
+      background: #f8fafb;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin: 0.65rem 0 0;
+      max-width: 52rem;
+      overflow-x: auto;
+      padding: 0.8rem;
+      white-space: pre-wrap;
+    }
+    .reviewer-created-panel {
+      background: #f8fbfb;
+      border-color: #bdded8;
+      box-shadow: var(--shadow-strong);
+    }
+    .reviewer-created-panel .summary-list {
+      font-size: 0.92rem;
+      gap: 0.35rem 0.75rem;
+      grid-template-columns: minmax(7rem, 9rem) 1fr;
+      margin-bottom: 0.65rem;
+    }
+    .reviewer-panel-actions {
+      align-items: stretch;
+      border-bottom: 1px solid var(--line-soft);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 0.7rem 0 0.85rem;
+      padding-bottom: 0.85rem;
+    }
+    .reviewer-panel-actions .button,
+    .reviewer-panel-actions .button-disabled {
+      flex: 1 1 9rem;
+      justify-content: center;
+      text-align: center;
+    }
+    .reviewer-panel-note {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin: 0.35rem 0 0.65rem;
+    }
+    .reviewer-panel-context {
+      background: #ffffff;
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      display: grid;
+      font-size: 0.88rem;
+      gap: 0.25rem 0.65rem;
+      grid-template-columns: minmax(7rem, 9rem) 1fr;
+      margin: 0.65rem 0;
+      padding: 0.65rem;
+    }
+    .reviewer-panel-context dt {
+      color: var(--muted);
+      font-weight: 800;
+    }
+    .reviewer-panel-context dd {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+    .reviewer-created-panel form p {
+      margin: 0.45rem 0;
+    }
+    .reviewer-created-panel h3 {
+      font-size: 0.98rem;
+      margin-bottom: 0.35rem;
+    }
+    .quick-review-section h2 {
+      font-size: 1rem;
+    }
+    .quick-review-grid {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+    .quick-review-card {
+      background: #ffffff;
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      box-shadow: 0 1px 2px rgb(23 33 43 / 5%);
+      color: var(--ink);
+      display: grid;
+      gap: 0.35rem;
+      min-height: 8.25rem;
+      padding: 0.8rem;
+      text-decoration: none;
+    }
+    .quick-review-card:hover,
+    .quick-review-card:focus {
+      border-color: var(--ds-nav-active-border);
+      box-shadow: var(--shadow);
+      outline: 2px solid transparent;
+    }
+    .quick-review-card strong {
+      color: var(--teal);
+      overflow-wrap: anywhere;
+    }
+    .quick-review-card span:last-child {
+      color: var(--ds-link);
+      font-size: 0.88rem;
+      font-weight: 800;
+      margin-top: auto;
+    }
+    .why-flagged-panel {
+      background: #fffaf0;
+      border-color: #efd39a;
+    }
+    .timeline-list {
+      display: grid;
+      gap: 0.65rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .timeline-item {
+      border-left: 3px solid var(--teal);
+      display: grid;
+      gap: 0.15rem;
+      padding-left: 0.75rem;
+    }
+    .timeline-item span {
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 800;
+    }
+    .timeline-item strong {
+      color: var(--ink);
+    }
+    .timeline-item em {
+      color: var(--muted);
+      font-style: normal;
+    }
+    .glossary-details {
+      border-top: 1px solid var(--line-soft);
+    }
+    .glossary-list {
+      display: grid;
+      gap: 0.45rem 1rem;
+      grid-template-columns: minmax(10rem, 15rem) 1fr;
+    }
+    .glossary-list dt {
+      color: var(--ink);
+      font-weight: 800;
+    }
+    .glossary-list dd {
+      margin: 0;
+    }
+    .reviewer-history-section table {
+      margin-top: 0.75rem;
+    }
+    .related-activity-list {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+      margin: 0.85rem 0;
+    }
+    .related-activity-card {
+      background: #ffffff;
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      box-shadow: 0 1px 2px rgb(23 33 43 / 5%);
+      display: grid;
+      gap: 0.45rem;
+      padding: 0.85rem;
+    }
+    .related-activity-card header {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      justify-content: space-between;
+    }
+    .related-activity-type {
+      color: var(--teal);
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+    .related-activity-card h3 {
+      font-size: 1rem;
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+    .related-activity-card p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin: 0;
+    }
+    .related-activity-meta {
+      display: grid;
+      font-size: 0.9rem;
+      gap: 0.2rem 0.65rem;
+      grid-template-columns: minmax(4.5rem, 6rem) 1fr;
+      margin: 0;
+    }
+    .related-activity-meta dt {
+      color: var(--muted);
+      font-weight: 800;
+    }
+    .related-activity-meta dd {
+      margin: 0;
+    }
+    .related-source-details {
+      margin-top: 0.75rem;
+    }
+    .related-source-details section {
+      padding-top: 0.6rem;
+    }
     .detail-top-grid {
       display: grid;
       gap: 1rem;
@@ -1442,8 +1704,23 @@ SHARED_CSS = r"""
         display: block;
       }
       .attorney-hero, .legal-summary-grid, .detail-top-grid, .support-layout,
-      .dense-page-header, .dense-section-header {
+      .dense-page-header, .dense-section-header, .reviewer-detail-top {
         display: block;
+      }
+      .reviewer-detail-top > aside {
+        margin-top: 1rem;
+      }
+      .quick-review-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .quick-review-card {
+        min-height: 7.5rem;
+      }
+      .glossary-list {
+        display: block;
+      }
+      .glossary-list dt {
+        margin-top: 0.55rem;
       }
       .dense-page-header .form-actions,
       .dense-page-actions {
