@@ -35,6 +35,8 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
 from ccld_complaints.hosted_app.facility_case_brief import (
     FacilityCaseBrief,
     FacilityCaseBriefRecord,
+    display_record_label,
+    prioritized_records,
     priority_reason_labels,
     render_facility_case_brief,
 )
@@ -1359,6 +1361,13 @@ def _render_packet_draft(
     readiness_counts = _packet_readiness_counts(records, state_summaries)
     findings = _packet_finding_counts(records)
     generated_at = _format_packet_generated_at(datetime.now(UTC))
+    prioritized_record_context = _render_packet_prioritized_records_section(
+        records,
+        state_summaries,
+        return_context,
+        heading_level=3,
+        section_id="draft-prioritized-records",
+    )
     feedback_href = _feedback_href(
         workflow_area="packet-draft",
         page_path=REVIEWER_UI_PACKET_DRAFT_PATH,
@@ -1487,6 +1496,7 @@ def _render_packet_draft(
                             <li>Reviewer-created note text is not printed here; use reviewer detail when note content needs review.</li>
                         </ul>
                     </section>
+{prioritized_record_context}
                     <section aria-labelledby="draft-next-review-heading">
                         <h3 id="draft-next-review-heading">Before using this draft</h3>
                         <ul>
@@ -1979,6 +1989,13 @@ def _render_packet_preview(
     traceability_counts = _packet_traceability_counts(records)
     state_counts = _packet_reviewer_state_counts(records, state_summaries)
     readiness_counts = _packet_readiness_counts(records, state_summaries)
+    prioritized_record_context = _render_packet_prioritized_records_section(
+        records,
+        state_summaries,
+        return_context,
+        heading_level=2,
+        section_id="packet-prioritized-records",
+    )
     feedback_href = _feedback_href(
         workflow_area="packet-preview",
         page_path=REVIEWER_UI_PACKET_PREVIEW_PATH,
@@ -2091,6 +2108,7 @@ def _render_packet_preview(
             <dd>{state_counts['blocked']}</dd>
           </dl>
         </section>
+{prioritized_record_context}
         <section aria-labelledby="packet-records-heading">
           <h2 id="packet-records-heading">Included complaint records</h2>
           <div class="result-list" aria-label="Included complaint records">
@@ -2221,6 +2239,176 @@ def _render_packet_draft_record(
             </section>"""
 
 
+def _render_packet_prioritized_records_section(
+    records: list[Mapping[str, Any]],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+    *,
+    heading_level: int,
+    section_id: str,
+) -> str:
+    heading_tag = f"h{heading_level}"
+    prioritized = _packet_prioritized_case_records(
+        records,
+        state_summaries,
+        return_context,
+    )
+    facility_hub_link = _packet_facility_hub_link(return_context)
+    if not prioritized:
+        return f"""                    <section aria-labelledby="{section_id}-heading">
+                        <{heading_tag} id="{section_id}-heading">Prioritized records for review</{heading_tag}>
+                        <p>No prioritized records are available from the loaded packet context.</p>
+                        <p>Request records for this facility, review prioritized records first when they appear, or return to the queue when no loaded records are available in this context.</p>
+                        <p><a href="{_escape(_ccld_request_href(records, return_context))}">Back to review queue</a>{facility_hub_link}</p>
+                    </section>"""
+    priority_items = "\n".join(
+        _render_packet_prioritized_record_item(record, index)
+        for index, record in enumerate(prioritized[:3], start=1)
+    )
+    return f"""                    <section aria-labelledby="{section_id}-heading">
+                        <{heading_tag} id="{section_id}-heading">Prioritized records for review</{heading_tag}>
+                        <p>This summary uses the existing review-next priority order for the loaded packet records. Reasons are source-derived review cues and reviewer-created note/status cues only; they are not legal conclusions or source-completeness findings.</p>
+                        <dl class="summary-list">
+                            <dt>Prioritized records available</dt>
+                            <dd>{len(prioritized)}</dd>
+                            <dt>Shown first</dt>
+                            <dd>{min(len(prioritized), 3)}</dd>
+                        </dl>
+                        <ol class="review-next-list">
+{priority_items}
+                        </ol>
+                        <p>Use reviewer detail or the facility hub before copying or printing when a prioritized record needs source check, reviewer-created status/note attention, or possible correction-readiness review.</p>
+                        <p><a href="{_escape(_ccld_request_href(records, return_context))}">Back to review queue</a>{facility_hub_link}</p>
+                    </section>"""
+
+
+def _render_packet_prioritized_record_item(
+    record: FacilityCaseBriefRecord,
+    index: int,
+) -> str:
+    reasons = priority_reason_labels(record)
+    if not reasons:
+        reasons = ("Part of the current loaded facility/date review queue.",)
+    reason_items = "\n".join(
+        f"                                <li>{_escape(reason)}</li>" for reason in reasons
+    )
+    return f"""                            <li class="review-next-item">
+                                <p><strong>{index}. {_escape(display_record_label(record))}</strong></p>
+                                <dl class="summary-list">
+                                    <dt>Finding/status cue</dt>
+                                    <dd>{_escape(_packet_prioritized_finding_status_text(record))}</dd>
+                                    <dt>Date shown</dt>
+                                    <dd>{_escape(_packet_prioritized_date_text(record))}</dd>
+                                    <dt>Why prioritized</dt>
+                                    <dd>
+                                        <ul class="flag-list">
+{reason_items}
+                                        </ul>
+                                    </dd>
+                                </dl>
+                                <p><a href="{_escape(record.detail_href)}">Open reviewer detail for {_escape(display_record_label(record))}</a></p>
+                            </li>"""
+
+
+def _packet_prioritized_case_records(
+    records: list[Mapping[str, Any]],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> tuple[FacilityCaseBriefRecord, ...]:
+    case_records = tuple(
+        _packet_case_brief_record(index, item, state_summaries, return_context)
+        for index, item in enumerate(records)
+    )
+    return prioritized_records(case_records)
+
+
+def _packet_case_brief_record(
+    index: int,
+    item: Mapping[str, Any],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> FacilityCaseBriefRecord:
+    source_record = _mapping(item, "source_record")
+    identity = _mapping(source_record, "identity")
+    source_document = _mapping(source_record, "source_document")
+    original_values = _mapping(source_record, "original_values")
+    source_record_key = _string(identity, "source_record_key")
+    state_summary = state_summaries.get(source_record_key, _empty_state_summary())
+    latest_status = _summary_optional_string(state_summary, "latest_status")
+    facility_number = return_context.facility_number or _optional_string(
+        original_values,
+        "external_facility_number",
+    )
+    facility_name = return_context.lookup_facility_name or _optional_string(
+        original_values,
+        "facility_name",
+    )
+    return FacilityCaseBriefRecord(
+        source_record_key=source_record_key,
+        detail_href=_reviewer_detail_href(source_record_key, return_context),
+        complaint_control_number=_packet_record_display_label(source_record),
+        finding=_optional_string(original_values, "finding"),
+        complaint_received_date=_optional_string(original_values, "complaint_received_date"),
+        visit_date=_optional_string(original_values, "visit_date"),
+        report_date=_optional_string(original_values, "report_date"),
+        date_signed=_optional_string(original_values, "date_signed"),
+        facility_number=facility_number,
+        facility_name=facility_name,
+        has_source_traceability=_has_visible_traceability_document(source_document),
+        reviewer_status=latest_status,
+        reviewer_status_label=_REVIEWER_STATUS_LABELS.get(latest_status or "", latest_status),
+        reviewer_note_count=_summary_int(state_summary, "note_count"),
+        delay_thresholds=_delay_thresholds(original_values),
+        missing_first_activity_date=original_values.get("missing_first_activity_date") is True,
+        missing_visit_date=not _has_display_value(original_values.get("visit_date")),
+        missing_report_date=not _has_display_value(original_values.get("report_date")),
+        missing_signed_date=not _has_display_value(original_values.get("date_signed")),
+        report_date_used_as_proxy=original_values.get("report_date_used_as_proxy") is True,
+        order_index=index,
+    )
+
+
+def _packet_record_display_label(source_record: Mapping[str, Any]) -> str:
+    original_values = _mapping(source_record, "original_values")
+    label = _optional_string(original_values, "complaint_control_number")
+    if label:
+        return label
+    return "Complaint record"
+
+
+def _packet_prioritized_finding_status_text(record: FacilityCaseBriefRecord) -> str:
+    finding = record.finding or "not listed"
+    reviewer_status = record.reviewer_status_label or "No reviewer-created status"
+    note_text = (
+        f"{record.reviewer_note_count} reviewer-created note(s)"
+        if record.reviewer_note_count
+        else "No reviewer-created notes"
+    )
+    return f"Finding: {finding}; reviewer status: {reviewer_status}; {note_text}"
+
+
+def _packet_prioritized_date_text(record: FacilityCaseBriefRecord) -> str:
+    date_value = (
+        record.complaint_received_date
+        or record.report_date
+        or record.visit_date
+        or record.date_signed
+    )
+    if not date_value:
+        return "No loaded date available"
+    return f"Recent loaded activity date: {date_value}"
+
+
+def _packet_facility_hub_link(return_context: CcldQueueReturnContext) -> str:
+    if not return_context.facility_number:
+        return ""
+    query_values = {"facility_number": return_context.facility_number}
+    return (
+        f' or <a href="{_escape(CCLD_FACILITY_REVIEW_HUB_PATH)}?'
+        f'{_escape(urlencode(query_values))}">open the facility hub</a>'
+    )
+
+
 def _packet_copy_summary(
     records: list[Mapping[str, Any]],
     state_summaries: Mapping[str, Mapping[str, Any]],
@@ -2258,8 +2446,25 @@ def _packet_copy_summary(
         f"- Connector/retrieval metadata available: {traceability_counts['connector_retrieval']}",
         f"- Missing visible traceability cues: {traceability_counts['missing_any']}",
         "",
-        "Included complaint records",
+        "Prioritized records for review",
     ]
+    prioritized = _packet_prioritized_case_records(records, state_summaries, return_context)
+    if not prioritized:
+        lines.append("- No prioritized records are available from this loaded packet context.")
+    for index, record in enumerate(prioritized[:3], start=1):
+        lines.append(
+            f"- {index}. {display_record_label(record)}; "
+            f"{_packet_prioritized_finding_status_text(record)}; "
+            f"{_packet_prioritized_date_text(record)}; "
+            "reasons: "
+            + "; ".join(priority_reason_labels(record))
+        )
+    lines.extend(
+        [
+            "",
+            "Included complaint records",
+        ]
+    )
     if not records:
         lines.append("- None shown for this packet context.")
     for item in records:

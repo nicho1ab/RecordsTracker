@@ -629,6 +629,34 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Records with reviewer-created notes" in html
     assert "Records without reviewer-created state" in html
     assert "In review" in html
+    assert "Prioritized records for review" in html
+    assert "existing review-next priority order" in html
+    assert "Prioritized records available" in html
+    assert "Shown first" in html
+    assert (
+        "Reasons are source-derived review cues and reviewer-created "
+        "note/status cues only"
+        in html
+    )
+    assert (
+        "Finding: Unsubstantiated; reviewer status: In review; "
+        "1 reviewer-created note(s)"
+        in html
+    )
+    assert "Why prioritized" in html
+    assert "Possible delay indicator: over 120 days" in html
+    assert "Needs source check: first activity date missing locally" in html
+    assert "Original CCLD source link saved" in html
+    assert "Finding value: Unsubstantiated" in html
+    assert "Reviewer status: In review" in html
+    assert "Open reviewer detail for 32-CR-20220407124448" in html
+    assert "open the facility hub" in html
+    prioritized_start = html.index("Prioritized records for review")
+    prioritized_end = html.index("Included complaint records", prioritized_start)
+    prioritized_html = html[prioritized_start:prioritized_end]
+    assert "source_document_id" not in prioritized_html
+    assert "import_batch" not in prioritized_html
+    assert "audit_id" not in prioritized_html
     assert "Included complaint records" in html
     assert "32-CR-20220407124448" in html
     assert "Finding" in html
@@ -792,6 +820,35 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     assert "Reviewer-created state included in this draft" in html
     assert "They may point to possible correction concerns" in html
     assert "this draft does not alter source-derived values" in html
+    assert "Prioritized records for review" in html
+    assert "existing review-next priority order" in html
+    assert "Prioritized records available" in html
+    assert "Shown first" in html
+    assert (
+        "Reasons are source-derived review cues and reviewer-created "
+        "note/status cues only"
+        in html
+    )
+    assert (
+        "Finding: Unsubstantiated; reviewer status: Needs follow-up; "
+        "1 reviewer-created note(s)"
+        in html
+    )
+    assert "Why prioritized" in html
+    assert "Possible delay indicator: over 120 days" in html
+    assert "Needs source check: first activity date missing locally" in html
+    assert "Original CCLD source link saved" in html
+    assert "Finding value: Unsubstantiated" in html
+    assert "Reviewer status: Needs follow-up" in html
+    assert "Open reviewer detail for 32-CR-20220407124448" in html
+    assert "Prioritized records for review" in html
+    assert "- 1. 32-CR-20220407124448; Finding: Unsubstantiated" in html
+    prioritized_start = html.index("Prioritized records for review")
+    prioritized_end = html.index("Before using this draft", prioritized_start)
+    prioritized_html = html[prioritized_start:prioritized_end]
+    assert "source_document_id" not in prioritized_html
+    assert "import_batch" not in prioritized_html
+    assert "audit_id" not in prioritized_html
     assert "Included complaint records" in html
     assert "32-CR-20220407124448" in html
     assert "Complaint control number" in html
