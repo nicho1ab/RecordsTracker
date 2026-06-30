@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Added acceptance guardrails for the guided attorney review workflow across
+  the hosted entry point, facility pattern review hub, prioritized record
+  queue, packet preview/draft brief, and attorney readiness checklist using the
+  existing fixture/demo routes and loaded context only.
 - Added a guided attorney review workflow entry point on the hosted home page.
   The path links existing facility lookup/hub, reviewer queue/detail, packet
   preview/draft, and readiness checklist areas, with concise limited-data

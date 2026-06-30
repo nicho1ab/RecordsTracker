@@ -128,6 +128,7 @@ def test_app_shell_labels_placeholder_scope() -> None:
     assert parser.text_for("h1") != "CCLD RecordsTracker"
     assert "Review aids only" in html
     assert "Start a Facility Complaint Review" in html
+    assert "guided attorney review workflow" in html
     assert "Start with facility lookup" in html
     assert (
         '<a class="button button-secondary" href="/ccld/records/request">'
@@ -192,6 +193,98 @@ def test_app_shell_labels_placeholder_scope() -> None:
     assert "Start facility complaint review." not in html
     assert "Select the facility/license number." not in html
     assert "Choose the complaint date range." not in html
+
+
+def test_guided_attorney_review_workflow_acceptance_route_markers(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv(
+        "CCLD_FACILITY_REFERENCE_CSV",
+        str(
+            ROOT
+            / "tests"
+            / "fixtures"
+            / "public_source_facilities"
+            / "ccld_program_facilities_tiny.csv"
+        ),
+    )
+    auth_config = load_hosted_auth_runtime_config(
+        environ={
+            "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
+            "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
+        }
+    )
+    route_specs = (
+        (
+            "entry",
+            "/",
+            (
+                "guided attorney review workflow",
+                "Review facility pattern summary",
+                "Open prioritized records",
+                "Prepare packet/brief",
+                "Check readiness before attorney review",
+            ),
+        ),
+        (
+            "facility review",
+            "/ccld/facilities/detail?facility_number=900000001",
+            (
+                "Facility pattern review summary",
+                "Review next",
+                "Packet readiness",
+                "Request records for this facility before preparing packet content.",
+            ),
+        ),
+        (
+            "prioritized records",
+            "/reviewer",
+            (
+                "Complaint records ready for review",
+                "Suggested first record for review",
+                "Open priority record",
+                "Open packet preview",
+            ),
+        ),
+        (
+            "packet preview",
+            (
+                "/reviewer/packet/preview?facility_number=157806098"
+                "&start_date=2022-08-01&end_date=2022-08-31"
+            ),
+            (
+                "Packet readiness",
+                "Prioritized records for review",
+                "Copy-ready attorney review brief",
+                "Attorney review readiness checklist",
+            ),
+        ),
+        (
+            "packet draft",
+            (
+                "/reviewer/packet/draft?facility_number=157806098"
+                "&start_date=2022-08-01&end_date=2022-08-31"
+            ),
+            (
+                "Attorney Review Packet Draft",
+                "Copy-ready attorney review brief",
+                "Attorney review readiness checklist",
+            ),
+        ),
+    )
+
+    for route_name, path, markers in route_specs:
+        status, content_type, body = route_response(
+            path,
+            auth_runtime_config=auth_config,
+            page_data_mode="fixture-demo",
+        )
+        html = body.decode("utf-8")
+
+        assert status == 200, f"{route_name}: expected 200 for {path}, got {status}"
+        assert content_type == "text/html; charset=utf-8"
+        for marker in markers:
+            assert marker in html, f"{route_name}: missing acceptance marker {marker!r}"
 
 
 def test_polished_shared_layout_navigation_on_key_pages() -> None:
