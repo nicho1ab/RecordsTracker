@@ -195,7 +195,19 @@ def test_app_shell_labels_placeholder_scope() -> None:
     assert "Choose the complaint date range." not in html
 
 
-def test_guided_attorney_review_workflow_acceptance_route_markers() -> None:
+def test_guided_attorney_review_workflow_acceptance_route_markers(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv(
+        "CCLD_FACILITY_REFERENCE_CSV",
+        str(
+            ROOT
+            / "tests"
+            / "fixtures"
+            / "public_source_facilities"
+            / "ccld_program_facilities_tiny.csv"
+        ),
+    )
     auth_config = load_hosted_auth_runtime_config(
         environ={
             "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
@@ -216,12 +228,12 @@ def test_guided_attorney_review_workflow_acceptance_route_markers() -> None:
         ),
         (
             "facility review",
-            "/ccld/facilities/detail?facility_number=157806098",
+            "/ccld/facilities/detail?facility_number=900000001",
             (
                 "Facility pattern review summary",
                 "Review next",
                 "Packet readiness",
-                "Open packet preview for this facility/date context",
+                "Request records for this facility before preparing packet content.",
             ),
         ),
         (
