@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Added a compact default-visible Review next section to facility review hubs.
+  The section recommends loaded complaint records using existing source-derived
+  and reviewer-created cues, shows cautious reasons, and links to existing
+  reviewer detail pages without changing retrieval, schemas, persistence,
+  source-derived records, or reviewer note/status semantics.
 - Added a default-visible Facility Pattern Review Summary to facility review hubs.
   The summary uses already loaded source-derived complaint records plus available
   uploaded public summary fields to show complaint counts, finding mix,
