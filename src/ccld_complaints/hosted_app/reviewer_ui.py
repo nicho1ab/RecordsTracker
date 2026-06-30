@@ -1368,18 +1368,26 @@ def _render_packet_draft(
         heading_level=3,
         section_id="draft-prioritized-records",
     )
+    feedback_href = _feedback_href(
+        workflow_area="packet-draft",
+        page_path=REVIEWER_UI_PACKET_DRAFT_PATH,
+        return_context=return_context,
+        prompt="Describe browser copy or print preparation or packet readiness confusion.",
+    )
+    attorney_review_checklist = _render_attorney_review_readiness_checklist_section(
+        records,
+        state_summaries,
+        return_context,
+        heading_level=3,
+        section_id="draft-attorney-review-readiness-checklist",
+        feedback_href=feedback_href,
+    )
     attorney_review_brief = _render_copy_ready_attorney_review_brief_section(
         records,
         state_summaries,
         return_context,
         heading_level=3,
         section_id="draft-attorney-review-brief",
-    )
-    feedback_href = _feedback_href(
-        workflow_area="packet-draft",
-        page_path=REVIEWER_UI_PACKET_DRAFT_PATH,
-        return_context=return_context,
-        prompt="Describe browser copy or print preparation or packet readiness confusion.",
     )
     record_sections = "\n".join(
         _render_packet_draft_record(record, state_summaries, return_context)
@@ -1504,6 +1512,7 @@ def _render_packet_draft(
                         </ul>
                     </section>
 {prioritized_record_context}
+{attorney_review_checklist}
 {attorney_review_brief}
                     <section aria-labelledby="draft-next-review-heading">
                         <h3 id="draft-next-review-heading">Before using this draft</h3>
@@ -2004,18 +2013,26 @@ def _render_packet_preview(
         heading_level=2,
         section_id="packet-prioritized-records",
     )
+    feedback_href = _feedback_href(
+        workflow_area="packet-preview",
+        page_path=REVIEWER_UI_PACKET_PREVIEW_PATH,
+        return_context=return_context,
+        prompt="Describe copy/print preparation, packet readiness, source-check, or reviewer-state confusion.",
+    )
+    attorney_review_checklist = _render_attorney_review_readiness_checklist_section(
+        records,
+        state_summaries,
+        return_context,
+        heading_level=2,
+        section_id="packet-attorney-review-readiness-checklist",
+        feedback_href=feedback_href,
+    )
     attorney_review_brief = _render_copy_ready_attorney_review_brief_section(
         records,
         state_summaries,
         return_context,
         heading_level=2,
         section_id="packet-attorney-review-brief",
-    )
-    feedback_href = _feedback_href(
-        workflow_area="packet-preview",
-        page_path=REVIEWER_UI_PACKET_PREVIEW_PATH,
-        return_context=return_context,
-        prompt="Describe copy/print preparation, packet readiness, source-check, or reviewer-state confusion.",
     )
     record_cards = "\n".join(
         _render_packet_preview_record(record, state_summaries, return_context)
@@ -2124,6 +2141,7 @@ def _render_packet_preview(
           </dl>
         </section>
 {prioritized_record_context}
+{attorney_review_checklist}
 {attorney_review_brief}
         <section aria-labelledby="packet-records-heading">
           <h2 id="packet-records-heading">Included complaint records</h2>
@@ -2324,6 +2342,204 @@ def _render_packet_prioritized_record_item(
                                 </dl>
                                 <p><a href="{_escape(record.detail_href)}">Open reviewer detail for {_escape(display_record_label(record))}</a></p>
                             </li>"""
+
+
+def _render_attorney_review_readiness_checklist_section(
+    records: list[Mapping[str, Any]],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+    *,
+    heading_level: int,
+    section_id: str,
+    feedback_href: str,
+) -> str:
+    heading_tag = f"h{heading_level}"
+    traceability_counts = _packet_traceability_counts(records)
+    readiness_counts = _packet_readiness_counts(records, state_summaries)
+    prioritized = _packet_prioritized_case_records(
+        records,
+        state_summaries,
+        return_context,
+    )
+    source_check_needed = readiness_counts["needs_source_check"] > 0
+    reviewer_attention_needed = readiness_counts["needs_reviewer_attention"] > 0
+    checklist_rows = "\n".join(
+        (
+            _attorney_review_readiness_checklist_row(
+                "Loaded complaint records",
+                "Ready" if records else "Not available in loaded context",
+                (
+                    f"{len(records)} loaded complaint record(s) match this "
+                    "facility/date packet context."
+                    if records
+                    else "No loaded complaint records match this packet context."
+                ),
+            ),
+            _attorney_review_readiness_checklist_row(
+                "Prioritized records",
+                "Ready" if prioritized else "Not available in loaded context",
+                (
+                    f"{len(prioritized)} prioritized record cue(s) are available "
+                    "from the existing review-next ordering."
+                    if prioritized
+                    else "No prioritized record cues are available from the loaded context."
+                ),
+            ),
+            _attorney_review_readiness_checklist_row(
+                "Source traceability cues",
+                _attorney_review_traceability_readiness_label(
+                    records,
+                    traceability_counts,
+                ),
+                (
+                    "Visible source URL, raw hash, connector/retrieval metadata, "
+                    "or source document/report marker cues are available for checking."
+                    if records and traceability_counts["missing_any"] == 0
+                    else "Review missing visible traceability cues before relying on important source-derived values."
+                ),
+            ),
+            _attorney_review_readiness_checklist_row(
+                "Reviewer-created note/status presence",
+                _attorney_review_reviewer_state_readiness_label(
+                    records,
+                    reviewer_attention_needed,
+                ),
+                (
+                    "Each included record has at least one reviewer-created status/note cue."
+                    if records and not reviewer_attention_needed
+                    else "Review records missing reviewer-created status or note cues when those cues would help the handoff."
+                ),
+            ),
+            _attorney_review_readiness_checklist_row(
+                "Follow-up questions",
+                _attorney_review_follow_up_readiness_label(
+                    records,
+                    source_check_needed,
+                    reviewer_attention_needed,
+                ),
+                "Use the suggested follow-up questions in the copy-ready brief below as review prompts before relying on this packet.",
+            ),
+        )
+    )
+    limited_notes = _attorney_review_limited_data_notes(
+        records,
+        prioritized,
+        traceability_counts,
+    )
+    limited_note_items = "\n".join(
+        f"                            <li>{_escape(note)}</li>" for note in limited_notes
+    )
+    limited_note_markup = (
+        f"""                        <ul>
+{limited_note_items}
+                        </ul>"""
+        if limited_notes
+        else "<p>No limited-data warning is visible from the loaded checklist signals.</p>"
+    )
+    packet_feedback_href = _packet_level_feedback_href(feedback_href)
+    return f"""                    <section aria-labelledby="{section_id}-heading">
+                        <{heading_tag} id="{section_id}-heading">Attorney review readiness checklist</{heading_tag}>
+                        <p>This compact checklist uses existing loaded context only. It is review readiness guidance for packet preparation, not a legal sufficiency decision, source-completeness proof, complaint-coverage finding, or facility-wide conclusion.</p>
+                        <table>
+                            <caption>Attorney review readiness checklist for the current packet context</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Checklist signal</th>
+                                    <th scope="col">Readiness</th>
+                                    <th scope="col">Loaded-context guidance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+{checklist_rows}
+                            </tbody>
+                        </table>
+                        <div class="helper-text">
+                            <p><strong>Limited-data warnings</strong></p>
+{limited_note_markup}
+                        </div>
+                        <p><a href="{_escape(_ccld_request_href(records, return_context))}">Back to review queue</a> or <a href="{_escape(packet_feedback_href)}">report packet readiness concern</a>.</p>
+                    </section>"""
+
+
+def _packet_level_feedback_href(feedback_href: str) -> str:
+    parsed = urlparse(feedback_href)
+    query_values = parse_qs(parsed.query, keep_blank_values=True)
+    query_values.pop("source_record_key", None)
+    query_values.pop("complaint_control_number", None)
+    compact_values = {
+        key: values[-1] if values else ""
+        for key, values in query_values.items()
+    }
+    if not compact_values:
+        return parsed.path
+    return f"{parsed.path}?{urlencode(compact_values)}"
+
+
+def _attorney_review_readiness_checklist_row(
+    signal: str,
+    readiness: str,
+    guidance: str,
+) -> str:
+    return f"""                                <tr>
+                                    <th scope="row">{_escape(signal)}</th>
+                                    <td>{_escape(readiness)}</td>
+                                    <td>{_escape(guidance)}</td>
+                                </tr>"""
+
+
+def _attorney_review_traceability_readiness_label(
+    records: list[Mapping[str, Any]],
+    traceability_counts: Mapping[str, int],
+) -> str:
+    if not records:
+        return "Not available in loaded context"
+    if traceability_counts["missing_any"] > 0:
+        return "Needs review"
+    return "Ready"
+
+
+def _attorney_review_reviewer_state_readiness_label(
+    records: list[Mapping[str, Any]],
+    reviewer_attention_needed: bool,
+) -> str:
+    if not records:
+        return "Not available in loaded context"
+    if reviewer_attention_needed:
+        return "Needs review"
+    return "Ready"
+
+
+def _attorney_review_follow_up_readiness_label(
+    records: list[Mapping[str, Any]],
+    source_check_needed: bool,
+    reviewer_attention_needed: bool,
+) -> str:
+    if not records:
+        return "Not available in loaded context"
+    if source_check_needed or reviewer_attention_needed:
+        return "Needs review"
+    return "Ready"
+
+
+def _attorney_review_limited_data_notes(
+    records: list[Mapping[str, Any]],
+    prioritized: tuple[FacilityCaseBriefRecord, ...],
+    traceability_counts: Mapping[str, int],
+) -> tuple[str, ...]:
+    notes: list[str] = []
+    if not records:
+        notes.append(
+            "Limited-data warning: no loaded complaint records match this packet context; request or load matching records before treating this as record-by-record review guidance."
+        )
+    if records and traceability_counts["missing_any"] > 0:
+        notes.append(
+            f"Limited-data warning: {traceability_counts['missing_any']} record(s) are missing one or more visible traceability cues; missing local traceability values are not source-completeness proof."
+        )
+    if not prioritized:
+        notes.append(
+            "Limited-data warning: no prioritized record cues are available from the loaded context."
+        )
+    return tuple(notes)
 
 
 def _render_copy_ready_attorney_review_brief_section(

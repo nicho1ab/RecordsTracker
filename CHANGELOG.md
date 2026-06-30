@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Added an attorney review readiness checklist near the packet preview/draft
+  attorney brief. The checklist uses only loaded packet context to label
+  prioritized records, source-traceability cues, reviewer-created note/status
+  presence, limited-data warnings, and follow-up questions as review-readiness
+  guidance without adding packet state, exports, legal conclusions, or source-
+  completeness claims.
 - Added a copy-ready attorney review brief to packet preview and draft pages.
   The brief uses the active facility/date context, loaded record counts,
   prioritized records, packet readiness cues, source-traceability cue counts,
