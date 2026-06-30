@@ -78,11 +78,11 @@ def test_verify_script_checks_complete_tester_readiness_route_set() -> None:
         assert route_path in script
 
     for marker in (
-        "Start a facility complaint review",
-        "Lookup or manual entry?",
+        "Start a Facility Complaint Review",
+        "Find the facility/license number",
         "PreloadedFacilityNumber",
-        "Keyboard flow:",
-        "Ready to retrieve complaint records",
+        "Send safe review feedback",
+        "Ready to request complaint records",
         "Complaint overview",
         "Before copying or printing",
         "Review before copying or printing",
@@ -176,7 +176,7 @@ def test_acceptance_doc_covers_full_route_set_and_review_context() -> None:
         "route, screenshot, text, and accessibility review",
         "public CCLD portal remains the source of record",
         "Reviewer-created status/note cues remain separate",
-        "visible keyboard-flow guidance",
+        "visible page-level orientation",
         "Write checks require explicit",
         "safe local test or staging instance",
     ):

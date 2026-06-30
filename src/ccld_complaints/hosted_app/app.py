@@ -768,32 +768,56 @@ def render_app_shell() -> str:
                                 main=f"""    <section id="start" class="hero-card attorney-hero" aria-labelledby="start-heading">
             <div>
                 <p class="launch-kicker">Start here</p>
-                <h2 id="start-heading">Start a facility complaint review</h2>
-                <p class="launch-value">Find a facility, enter a facility/license number, or open the current review queue.</p>
+                <h2 id="start-heading">Start a Facility Complaint Review</h2>
+                <p class="launch-value">Begin with the facility/license number, request CCLD complaint records for a bounded date range, then review evidence and prepare next steps.</p>
             </div>
             <div class="attorney-hero-actions" aria-label="Primary actions">
                 <a class="button button-large" href="{CCLD_FACILITY_LOOKUP_PATH}">Start with facility lookup</a>
-                <a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Enter a license number</a>
+                <a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Request Records</a>
                 <a class="button button-secondary" href="/reviewer">Open review queue</a>
             </div>
         </section>
         <section aria-labelledby="how-it-works-heading">
-            <h2 id="how-it-works-heading">How it works</h2>
-            <p>Use this page to start the current CCLD review path in order.</p>
+            <h2 id="how-it-works-heading">Review path</h2>
+            <p>Use this page to move through the current CCLD review path in order.</p>
             <ol class="card-grid">
                 <li class="summary-card">
-                    <h3>Find a facility</h3>
+                    <h3>Find facility</h3>
                     <p>Search by facility name or location when you do not already have the facility/license number.</p>
                 </li>
                 <li class="summary-card">
-                    <h3>Request complaint records</h3>
-                    <p>Enter the facility/license number and date range to load matching CCLD records.</p>
+                    <h3>Request records</h3>
+                    <p>Enter the facility/license number and date range to request CCLD complaint records or show already-loaded records.</p>
                 </li>
                 <li class="summary-card">
-                    <h3>Review and prepare</h3>
-                    <p>Open the review queue to check source traceability, add reviewer-created notes or status, and prepare next steps.</p>
+                    <h3>Review evidence</h3>
+                    <p>Open the review queue and detail workspace to check source traceability before adding reviewer-created notes or status.</p>
+                </li>
+                <li class="summary-card">
+                    <h3>Prepare, export, and send feedback</h3>
+                    <p>Use packet preview, draft, matrix export, and feedback after the facility/date review context is clear.</p>
                 </li>
             </ol>
+        </section>
+        <section aria-labelledby="ready-paths-heading">
+            <h2 id="ready-paths-heading">Ready paths</h2>
+            <div class="card-grid">
+                <article class="summary-card">
+                    <h3>Facility lookup</h3>
+                    <p>Find the facility/license number before opening Request Records.</p>
+                    <p><a class="button button-secondary" href="{CCLD_FACILITY_LOOKUP_PATH}">Find a facility</a></p>
+                </article>
+                <article class="summary-card">
+                    <h3>Request Records</h3>
+                    <p>Confirm the facility/date context, request complaint records, or show the current queue.</p>
+                    <p><a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Open Request Records</a></p>
+                </article>
+                <article class="summary-card">
+                    <h3>Review queue</h3>
+                    <p>Open loaded complaint records and continue source-traceable review.</p>
+                    <p><a class="button button-secondary" href="/reviewer">Open review queue</a></p>
+                </article>
+            </div>
         </section>"""
         )
 

@@ -168,7 +168,7 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
       ul.href='/ccld/records/request?facility_number='+encodeURIComponent(f.num)
         +'&request_context_origin=facility_lookup'
         +'&lookup_facility_name='+encodeURIComponent(f.n);
-    ul.setAttribute('aria-label','Use '+f.n+' / '+f.num+' for complaint record retrieval');
+    ul.setAttribute('aria-label','Use '+f.n+' / '+f.num+' for Request Records');
     }
     sc.removeAttribute('hidden');
   }
@@ -458,19 +458,19 @@ def render_ccld_facility_lookup_page(
         hero_value = (
             "Facility directory lookup is not configured for this hosted environment. "
             "Enter a known CCLD facility/license number to continue. "
-            "Directory lookup is optional and does not affect controlled complaint retrieval."
+            "Directory lookup is optional and does not affect Request Records or review."
         )
         primary_action_section = f"""    <section class="workflow-panel" aria-labelledby="facility-manual-entry-primary-heading">
       <h2 id="facility-manual-entry-primary-heading">Enter a facility/license number directly</h2>
-      <p>Facility directory lookup is not configured. Enter a known CCLD facility/license number on the request form to retrieve complaint records.</p>
-      <p>Use manual entry when lookup is unavailable; complaint retrieval still starts from the request form.</p>
-      <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Open request form</a></p>
+      <p>Facility directory lookup is not configured. Enter a known CCLD facility/license number on Request Records.</p>
+      <p>Use manual entry when lookup is unavailable; complaint record requests still start from Request Records.</p>
+      <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Open Request Records</a></p>
     </section>"""
         lookup_section_label = "Facility directory search (not configured)"
         lookup_section_intro = f"""    <section class="quiet-section" aria-labelledby="facility-start-guidance-heading">
       <h2 id="facility-start-guidance-heading">{_escape(lookup_section_label)}</h2>
-      <p>Facility directory lookup is not configured for this hosted environment. Use the request form to enter a known facility/license number directly.</p>
-      <p>Lookup rows are public facility-directory data for finding the facility/license number before complaint retrieval.</p>
+      <p>Facility directory lookup is not configured for this hosted environment. Use Request Records to enter a known facility/license number directly.</p>
+      <p>Lookup rows are public facility-directory data for finding the facility/license number before Request Records.</p>
     </section>"""
     else:
         hero_value = (
@@ -484,8 +484,8 @@ def render_ccld_facility_lookup_page(
     </section>"""
     manual_entry_section = "" if lookup_unavailable else f"""    <details class="technical-details">
       <summary id="manual-entry-heading">Enter a facility/license number directly</summary>
-      <p>If you already know the CCLD facility/license number, type it on the request form.</p>
-      <p><a class="button-quiet" href="{CCLD_RECORD_REQUEST_PATH}">Open request form</a></p>
+      <p>If you already know the CCLD facility/license number, type it on Request Records.</p>
+      <p><a class="button-quiet" href="{CCLD_RECORD_REQUEST_PATH}">Open Request Records</a></p>
     </details>"""
     return _page(
         title="Find CCLD facility",
@@ -503,11 +503,11 @@ def render_ccld_facility_lookup_page(
     {_render_lookup_results(result)}
         <section class="quiet-section" aria-labelledby="facility-priority-link-heading">
             <h2 id="facility-priority-link-heading">Optional: review-priority and intelligence</h2>
-            <p>These views require uploaded public summary CSVs. They are not required for complaint retrieval and review.</p>
+            <p>These views require uploaded public summary CSVs. They are not required for Request Records or review.</p>
             <details>
                 <summary>Open optional review-priority or intelligence views</summary>
                 <p><a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}">Facility review priority list</a></p>
-                <p><a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">Facility review intelligence dashboard</a></p>
+                <p><a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">Facility review intelligence</a></p>
             </details>
         </section>
     {_render_reference_details_section(reference_source)}
@@ -555,6 +555,16 @@ def render_ccld_facility_review_hub_page(
         <p class="launch-kicker">Facility-directory context</p>
         <h2 id="facility-hub-heading">{_escape(record.facility_name)}</h2>
         <p class="launch-value">Use this facility-centered hub to move from directory discovery into the existing complaint request and review routes for facility {_escape(record.facility_number)}.</p>
+        <dl class="summary-list">
+          <dt>Facility/license number</dt>
+          <dd>{_escape(record.facility_number)}</dd>
+          <dt>Facility type</dt>
+          <dd>{_escape(_display_value(record.facility_type))}</dd>
+          <dt>Location</dt>
+          <dd>{_escape(_display_value(_display_location(record)))}</dd>
+          <dt>Status</dt>
+          <dd>{_escape(_display_value(_display_facility_status_code(record.status)))}</dd>
+        </dl>
       </div>
     </section>
     <section aria-labelledby="facility-directory-details-heading">
@@ -694,8 +704,8 @@ def render_ccld_facility_review_intelligence_page(
     if not rows:
         rows = _render_intelligence_empty_rows(cue_filter, county_filter, status_filter)
     return _page(
-        title="Facility Review Intelligence Dashboard",
-        heading="Facility Review Intelligence Dashboard",
+        title="Facility review intelligence",
+        heading="Facility review intelligence",
         main=f"""    <section class="hero-card attorney-hero" aria-labelledby="facility-intelligence-heading">
       <div>
         <p class="launch-kicker">Facility review intelligence</p>
@@ -832,7 +842,7 @@ def _render_intelligence_filters(
 def _render_intelligence_guidance_disclosure() -> str:
     return """    <details class="technical-details">
       <summary>How to use these indicators</summary>
-      <p>This dashboard uses existing public facility-directory fields and supported uploaded public licensing/visit/citation summary fields for review planning.</p>
+      <p>This view uses existing public facility-directory fields and supported uploaded public licensing/visit/citation summary fields for review planning.</p>
       <p>Use indicators to choose a facility hub, start a complaint request, inspect loaded records, and decide what feedback or packet preparation may be useful.</p>
     </details>"""
 
@@ -866,7 +876,7 @@ def _render_intelligence_summary(
         for cue in _PRIORITY_CUE_ORDER
     }
     return f"""    <section aria-labelledby="facility-intelligence-summary-heading">
-      <h2 id="facility-intelligence-summary-heading">Dashboard summary</h2>
+      <h2 id="facility-intelligence-summary-heading">Review intelligence summary</h2>
       <dl class="summary-list">
         <dt>Facilities with supported uploaded summary signals</dt>
         <dd>{len(signal_result.summaries)}</dd>
@@ -907,7 +917,7 @@ def _render_intelligence_empty_rows(
     return f"""          <tr>
             <td colspan="4">
               <p>No facility review intelligence rows are available for {_escape(filter_text)}.</p>
-              <p>This does not mean facilities have no complaints, visits, citations, POC dates, or public-source records. It only means supported uploaded public summary fields did not produce a visible row for this dashboard view.</p>
+              <p>This does not mean facilities have no complaints, visits, citations, POC dates, or public-source records. It only means supported uploaded public summary fields did not produce a visible row for this view.</p>
             </td>
           </tr>"""
 
@@ -1144,7 +1154,7 @@ def _no_reference_source(
     default_notices = (
         "Facility directory lookup is not configured for this hosted environment. "
         "Enter a known CCLD facility/license number to continue. "
-        "Directory lookup is optional and does not affect controlled complaint retrieval.",
+        "Directory lookup is optional and does not affect Request Records or review.",
     )
     return CcldFacilityReferenceSource(
         source_kind="no_reference",
@@ -1244,6 +1254,8 @@ def _render_facility_combobox_section(
     )
     selected_card = _render_facility_selected_card_html(mode="facility")
     return f"""    <section class="workflow-panel" aria-labelledby="facility-combobox-heading" id="facility-selector-wrap" data-facility-mode="facility">
+            <p class="stage-kicker">Facility lookup</p>
+            <h2 id="facility-combobox-heading">Find the facility/license number</h2>
             <label for="facility-search-input">Facility</label>
             <p id="facility-search-hint" class="helper-text">Search by name, license number, city, county, ZIP, facility type, program type, or status code.</p>
             <form action="{CCLD_FACILITY_LOOKUP_PATH}" method="get" class="facility-search-form">
@@ -1261,7 +1273,7 @@ def _render_facility_combobox_section(
             <details class="technical-details">
                 <summary>When to use lookup vs. manual entry</summary>
                 <p>Use facility lookup when you know a facility name, city, county, ZIP, facility type, program type, or status code but not the exact facility/license number. Use manual entry when you already know the digit facility/license number.</p>
-                <p>Lookup rows are public facility-directory data for facility lookup assistance before complaint retrieval.</p>
+                <p>Lookup rows are public facility-directory data for facility lookup assistance before Request Records.</p>
             </details>
 {limited_note_markup}
 {selected_card}
@@ -1285,8 +1297,10 @@ def _render_facility_combobox_section_unavailable(
         else ""
     )
     return f"""    <section class="workflow-panel" aria-labelledby="facility-combobox-heading">
+            <p class="stage-kicker">Facility lookup</p>
+            <h2 id="facility-combobox-heading">Find the facility/license number</h2>
             <label for="facility-search-input">Search facility directory (not configured)</label>
-            <p id="facility-search-hint" class="helper-text">Facility directory lookup is not configured for this hosted environment. Enter a known CCLD facility/license number on the request form instead. Directory lookup is optional and does not affect controlled complaint retrieval.</p>
+            <p id="facility-search-hint" class="helper-text">Facility directory lookup is not configured for this hosted environment. Enter a known CCLD facility/license number on Request Records instead. Directory lookup is optional and does not affect Request Records or review.</p>
             <form action="{CCLD_FACILITY_LOOKUP_PATH}" method="get" class="facility-search-form">
                 <div>
                     <input id="facility-search-input" name="q" type="search" autocomplete="off"
@@ -1306,7 +1320,7 @@ def _render_facility_selected_card_html(*, mode: str = "facility") -> str:
     """Render the hidden selected-facility confirmation card filled by JS."""
     if mode == "request":
         actions = """<div class="form-actions">
-                    <button type="submit" class="button">Continue to dates</button>
+                    <button type="submit" class="button">Confirm facility</button>
                     <button type="button" id="facility-change-btn" class="button-secondary">Change selected facility</button>
                 </div>"""
     else:
@@ -1344,7 +1358,7 @@ def _render_reference_source_section(source: CcldFacilityReferenceSource) -> str
         <dd>{len(source.records)}</dd>
       </dl>
 {notice_markup}
-        <p>Reference data is lookup assistance only; use it to find a facility/license number before complaint retrieval.</p>
+        <p>Reference data is lookup assistance only; use it to find a facility/license number before Request Records.</p>
         <details>
             <summary>Developer reference setup</summary>
             <p>Full facility CSV support is read-only. Full facility CSV files must stay outside
@@ -1370,7 +1384,7 @@ def _render_reference_details_section(source: CcldFacilityReferenceSource) -> st
             <summary>Reference data details</summary>
             <p>{_escape(user_label)} &mdash; {len(source.records)} record(s) loaded.</p>
             <p>Reference data is lookup assistance only; use it to find a facility/license
-            number before complaint retrieval. Open source links from record detail when a source check is needed.</p>
+            number before Request Records. Open source links from record detail when a source check is needed.</p>
 {notice_markup}
             <p>To use a full facility reference CSV, set
             <code>{CCLD_FACILITY_REFERENCE_CSV_ENV}</code> or place the file at the documented
@@ -1386,8 +1400,8 @@ def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
       <h2 id="facility-results-heading">Facility results</h2>
         <p>No facility-directory results matched <strong>{_escape(result.query)}</strong>.</p>
         <p>Try a shorter name, license number, city, county, ZIP, facility type, or program type. You can also enter
-      a facility/license number directly on the request form.</p>
-    <p><a class="button-quiet" href="{CCLD_RECORD_REQUEST_PATH}">Open request form</a></p>
+      a facility/license number directly on Request Records.</p>
+    <p><a class="button-quiet" href="{CCLD_RECORD_REQUEST_PATH}">Open Request Records</a></p>
     </section>"""
     cards = "\n".join(
         _render_result_card(record, index=index)
@@ -1727,7 +1741,7 @@ def _render_priority_empty_rows(cue_filter: str) -> str:
     return f"""          <tr>
             <td colspan="4">
               <p>No facility review priority rows are available{filter_text}.</p>
-              <p>This optional feature requires uploaded public summary CSVs to be configured. It is not required for complaint record retrieval or review.</p>
+              <p>This optional feature requires uploaded public summary CSVs to be configured. It is not required for Request Records or review.</p>
               <p>This does not mean facilities have no complaints, visits, citations, POC dates, or public-source records. It only means supported uploaded public summary fields did not produce a visible row for this view.</p>
               <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Return to facility lookup to find a facility and retrieve complaint records.</a></p>
             </td>
