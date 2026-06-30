@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Added a guided attorney review workflow entry point on the hosted home page.
+  The path links existing facility lookup/hub, reviewer queue/detail, packet
+  preview/draft, and readiness checklist areas, with concise limited-data
+  caution language and no new workflow state, persistence, export lifecycle, or
+  source-derived record changes.
 - Added an attorney review readiness checklist near the packet preview/draft
   attorney brief. The checklist uses only loaded packet context to label
   prioritized records, source-traceability cues, reviewer-created note/status
