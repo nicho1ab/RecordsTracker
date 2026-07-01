@@ -162,11 +162,22 @@ def test_app_shell_labels_placeholder_scope() -> None:
     )
     assert "Loaded context means records and facility cues already available" in html
     assert "not a statement that the public source is complete" in normalized_html
-    assert "Facility lookup helps fill the facility/license number for Request Records" in html
-    assert "Prioritized records show which loaded complaint records to open first" in html
-    assert "Reviewer detail is where you check source traceability" in html
-    assert "Packet preview and draft collect the current facility/date review context" in html
-    assert "The readiness checklist helps decide whether the loaded context is ready" in html
+    assert "Tester task guide" in html
+    assert "Start with facility lookup when you know a name" in html
+    assert "Expected: selecting a result carries the facility/license number" in html
+    assert "Request records when you already have the digit facility/license number" in html
+    assert "Expected: the page confirms the facility/date request context" in html
+    assert "Review prioritized records or next-review cues" in html
+    assert (
+        "using source-traceability and reviewer-created note/status cues as review aids only"
+        in html
+    )
+    assert "Open reviewer detail before relying on a record" in html
+    assert "source-derived values, source traceability, and reviewer-created notes/status" in html
+    assert "Check packet/brief and readiness outputs after detail review" in html
+    assert "without becoming a legal report or final export" in html
+    assert "Use feedback when something blocks or confuses review" in html
+    assert "the feedback page carries only safe workflow context" in html
     assert f'<a href="{ENTRY_FEEDBACK_HREF}">send tester feedback</a>' in html
     assert html.index("Find facility") < html.index("Review facility pattern summary")
     assert html.index("Review facility pattern summary") < html.index(
@@ -220,7 +231,18 @@ def test_home_orientation_is_single_shared_entry_block_with_feedback_path() -> N
     normalized_html = " ".join(html.split())
 
     assert html.count("First-time tester orientation") == 1
+    assert html.count("Tester task guide") == 1
     assert html.count("Loaded context means records and facility cues already available") == 1
+    assert html.count("Expected:") == 6
+    assert "Start with facility lookup when you know a name" in normalized_html
+    assert (
+        "Request records when you already have the digit facility/license number"
+        in normalized_html
+    )
+    assert "Review prioritized records or next-review cues" in normalized_html
+    assert "Open reviewer detail before relying on a record" in normalized_html
+    assert "Check packet/brief and readiness outputs after detail review" in normalized_html
+    assert "Use feedback when something blocks or confuses review" in normalized_html
     assert "loaded-context cue, record order, source traceability cue" in normalized_html
     assert "packet/brief cue, readiness item, wording, or keyboard flow" in normalized_html
     assert f'href="{ENTRY_FEEDBACK_HREF}">send tester feedback</a>' in html

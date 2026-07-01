@@ -836,12 +836,14 @@ def render_app_shell() -> str:
             review workspace for the current facility/date request. It is a review aid
             for the current loaded data, not a statement that the public source is
             complete.</p>
-            <ol class="compact-list">
-                <li>Facility lookup helps fill the facility/license number for Request Records.</li>
-                <li>Prioritized records show which loaded complaint records to open first.</li>
-                <li>Reviewer detail is where you check source traceability before adding reviewer-created notes/status.</li>
-                <li>Packet preview and draft collect the current facility/date review context into a copy-ready brief.</li>
-                <li>The readiness checklist helps decide whether the loaded context is ready for attorney review handoff.</li>
+            <h3 id="tester-task-guide-heading">Tester task guide</h3>
+            <ol class="compact-list" aria-labelledby="tester-task-guide-heading">
+                <li><strong>Start with facility lookup when you know a name, location, or facility detail.</strong> Expected: selecting a result carries the facility/license number into Request Records, or the lookup page gives a clear no-match or narrow-search next step.</li>
+                <li><strong>Request records when you already have the digit facility/license number.</strong> Expected: the page confirms the facility/date request context and shows loaded records, safe job/setup guidance, or no-match guidance without claiming public-source completeness.</li>
+                <li><strong>Review prioritized records or next-review cues.</strong> Expected: the facility hub or queue names which loaded complaint records to open first and why, using source-traceability and reviewer-created note/status cues as review aids only.</li>
+                <li><strong>Open reviewer detail before relying on a record.</strong> Expected: source-derived values, source traceability, and reviewer-created notes/status are visibly separated before you add cautious reviewer-created observations.</li>
+                <li><strong>Check packet/brief and readiness outputs after detail review.</strong> Expected: packet preview, draft brief, and the readiness checklist summarize the current facility/date context for attorney review handoff without becoming a legal report or final export.</li>
+                <li><strong>Use feedback when something blocks or confuses review.</strong> Expected: the feedback page carries only safe workflow context and asks what you tried, what you expected, what happened, and whether review was blocked.</li>
             </ol>
             <p>When a start path, loaded-context cue, record order, source traceability
             cue, packet/brief cue, readiness item, wording, or keyboard flow is
