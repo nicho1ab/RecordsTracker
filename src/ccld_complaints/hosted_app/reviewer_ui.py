@@ -6159,14 +6159,17 @@ def _render_review_guidance_glossary_section(source_record: Mapping[str, Any]) -
     original_values = _mapping(source_record, "original_values")
     return f"""<section class="detail-card" aria-labelledby="review-guidance-heading">
       <p class="launch-kicker">Guidance</p>
-      <h2 id="review-guidance-heading">Review guidance and glossary</h2>
+      <h2 id="review-guidance-heading">How to read this record</h2>
+      <p>Review guidance and glossary for interpreting this selected public record.</p>
       <ol>
-        <li>Open the CCLD source record before relying on missing, confusing, citation, POC, or timing values.</li>
-        <li>Use source-derived finding value {_escape(_optional_string(original_values, "finding"))} as a displayed source value, not as a new legal conclusion.</li>
-        <li>Use reviewer-created notes/status only for cautious observations that help the queue.</li>
-        <li>Keep notes factual and source-checkable; avoid legal, harm, abuse, neglect, liability, rights-deprivation, source-completeness, or delay conclusions from page cues alone.</li>
-        <li>Return to the facility queue after updating status or note state.</li>
+        <li>Source-derived fields come from public CCLD records or loaded public data; check the visible source context before relying on them.</li>
+        <li>Review cues are prompts for attorney/tester attention, not findings.</li>
+        <li>Check dates, status labels, and counts against the visible record context before using them in notes, packet outputs, briefs, or readiness review.</li>
+        <li>Absence of a cue does not prove absence of a concern.</li>
+        <li>This page does not decide abuse, neglect, liability, rights deprivation, source completeness, or whether CCLD source coverage is complete.</li>
+        <li>Next action: open the source context, review related records, use the packet/brief/readiness outputs, or send feedback if this record is confusing.</li>
       </ol>
+      <p>Source-derived finding value {_escape(_optional_string(original_values, "finding"))} is displayed source context only.</p>
       <details class="glossary-details">
         <summary>Key terms for this record</summary>
         <dl class="glossary-list">
