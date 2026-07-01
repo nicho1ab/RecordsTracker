@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Added facility source profiling and database-fit assessment output for the
+  CHHS/CDSS Community Care Licensing Facilities preload planning path. The
+  local profiler now records the official target resource registry, per-file
+  resource matching, blank/type/duplicate facility-number signals, source-to-app
+  field mappings, and a machine-readable gap report without adding imports,
+  schemas, migrations, UI, hosted routes, raw CSV commits, generated profile
+  commits, QNAP/deployment/auth changes, or live downloads.
 - Aligned the data/source contract so CHHS/CDSS CCLD Community Care Licensing
   Facilities CSV resources are authoritative facility reference sources for the
   facility preload path, with raw hash optional diagnostic metadata for
