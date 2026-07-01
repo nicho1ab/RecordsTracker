@@ -140,6 +140,7 @@ class FeedbackSubmission:
     feedback_type: str
     description: str
     page_path: str | None
+    handoff_context: FeedbackHandoffContext | None = None
 
 
 @dataclass(frozen=True)
@@ -271,8 +272,8 @@ def render_feedback_page(
     handoff_context: FeedbackHandoffContext | None = None,
 ) -> str:
     form_values = {"feedback_type": [selected_type]} if selected_type in FEEDBACK_TYPE_OPTIONS else {}
-    if handoff_context and handoff_context.page_path:
-        form_values["page_path"] = [handoff_context.page_path]
+    if handoff_context:
+        form_values.update(_feedback_handoff_context_form_values(handoff_context))
     issue_starter = _feedback_issue_starter(handoff_context)
     if issue_starter:
         form_values["description"] = [issue_starter]
@@ -491,6 +492,26 @@ def _feedback_context_rows(context: FeedbackHandoffContext) -> list[tuple[str, s
     return [(label, value) for label, value in fields if value]
 
 
+def _feedback_handoff_context_form_values(
+    context: FeedbackHandoffContext,
+) -> dict[str, list[str]]:
+    values = {
+        "page_path": context.page_path,
+        "workflow_area": context.workflow_area,
+        "facility_number": context.facility_number,
+        "start_date": context.start_date,
+        "end_date": context.end_date,
+        "request_context_origin": context.request_context_origin,
+        "reviewer_status_filter": context.reviewer_status_filter,
+        "retrieval_context": context.retrieval_context,
+        "retrieval_status": context.retrieval_status,
+        "retrieval_job_id": context.retrieval_job_id,
+        "complaint_control_number": context.complaint_control_number,
+        "prompt": context.prompt,
+    }
+    return {key: [value] for key, value in values.items() if value is not None}
+
+
 def _safe_choice(value: str, allowed: Sequence[str]) -> str | None:
     if value in allowed:
         return value
@@ -537,7 +558,14 @@ def validate_feedback_submission(
 ) -> FeedbackValidationResult:
     feedback_type = _first_form_value(form_values, "feedback_type")
     description = _first_form_value(form_values, "description")
-    page_path = _safe_page_path(_first_form_value(form_values, "page_path"))
+    handoff_context = _feedback_handoff_context_from_values(
+        {
+            key: form_values[key]
+            for key in ALLOWED_FEEDBACK_CONTEXT_PARAMETERS
+            if key in form_values
+        }
+    )
+    page_path = handoff_context.page_path
     errors: list[str] = []
     if feedback_type not in FEEDBACK_TYPE_OPTIONS:
         errors.append("Choose a supported feedback type.")
@@ -548,7 +576,9 @@ def validate_feedback_submission(
             f"Feedback description must be {MAX_FEEDBACK_DESCRIPTION_LENGTH} characters or fewer."
         )
     if _contains_secret_marker(description):
-        errors.append("Feedback must not include secrets, tokens, cookies, or private headers.")
+        errors.append(
+            "Feedback must not include secrets, credentials, or private browser/session values."
+        )
     if errors:
         return FeedbackValidationResult(submission=None, errors=tuple(errors))
     return FeedbackValidationResult(
@@ -556,6 +586,7 @@ def validate_feedback_submission(
             feedback_type=feedback_type,
             description=description,
             page_path=page_path,
+            handoff_context=handoff_context,
         ),
         errors=(),
     )
@@ -632,6 +663,7 @@ def _post_feedback_response(
         return _feedback_blocked_response(403, "Feedback was blocked", str(error))
 
     if not context.github_config.configured:
+        submission = validation.submission
         return _html_response(
             503,
             _page(
@@ -643,6 +675,8 @@ def _post_feedback_response(
       <h2 id="feedback-unconfigured-heading">Feedback was not sent</h2>
       <p>GitHub feedback intake is not configured on this server. No GitHub issue was created.</p>
     </section>
+    {_feedback_confirmation_summary(submission, status_message="Review what you entered before copying it to the agreed tester support channel.")}
+    {_feedback_next_steps()}
     {_feedback_form(form_values)}
 """,
             ),
@@ -670,11 +704,13 @@ def _post_feedback_response(
             _page(
                 title="Feedback could not be sent",
                 heading="Feedback could not be sent",
-                main="""
+                main=f"""
     <section aria-labelledby="feedback-failure-heading">
       <h2 id="feedback-failure-heading">Feedback could not be sent</h2>
       <p>The server could not create the GitHub issue. No token or private details are shown.</p>
     </section>
+    {_feedback_confirmation_summary(submission, status_message="Review what you entered before trying again or copying it to the agreed tester support channel.")}
+    {_feedback_next_steps()}
 """,
             ),
         )
@@ -691,9 +727,68 @@ def _post_feedback_response(
       <p>{html.escape(issue_text)} was created for triage.</p>
       <p>Labels: {html.escape(', '.join(labels))}</p>
     </section>
+    {_feedback_confirmation_summary(submission, status_message="Review the submitted details below.")}
+    {_feedback_next_steps()}
 """,
         ),
     )
+
+
+def _feedback_confirmation_summary(
+    submission: FeedbackSubmission,
+    *,
+    status_message: str,
+) -> str:
+    field_rows = [
+        ("Feedback type", submission.feedback_type),
+        ("Submitted page path", submission.page_path or FEEDBACK_PATH),
+        ("Description", submission.description),
+    ]
+    field_markup = "\n".join(
+        f"        <dt>{html.escape(label)}</dt>\n        <dd>{html.escape(value)}</dd>"
+        for label, value in field_rows
+    )
+    context_markup = _feedback_submitted_context_summary(submission.handoff_context)
+    return f"""    <section class="summary-card" aria-labelledby="feedback-confirmation-summary-heading">
+      <h2 id="feedback-confirmation-summary-heading">Submitted feedback summary</h2>
+      <p>{html.escape(status_message)}</p>
+      <dl>
+{field_markup}
+      </dl>
+    </section>
+{context_markup}"""
+
+
+def _feedback_submitted_context_summary(
+    context: FeedbackHandoffContext | None,
+) -> str:
+    if context is None:
+        return ""
+    rows = tuple(_feedback_context_rows(context))
+    if not rows:
+        return ""
+    row_markup = "\n".join(
+        f"        <dt>{html.escape(label)}</dt>\n        <dd>{html.escape(value)}</dd>"
+        for label, value in rows
+    )
+    return f"""    <section class="summary-card" aria-labelledby="feedback-submitted-context-heading">
+      <h2 id="feedback-submitted-context-heading">Submitted safe context</h2>
+      <p>Only allowlisted, bounded context from the feedback form is shown here.</p>
+      <dl>
+{row_markup}
+      </dl>
+    </section>"""
+
+
+def _feedback_next_steps() -> str:
+    return f"""    <section class="notice-card" aria-labelledby="feedback-next-steps-heading">
+      <h2 id="feedback-next-steps-heading">What to do next</h2>
+      <ul>
+        <li><a href="/">Return to the tester task guide</a> if you want to restart the guided review path.</li>
+        <li><a href="/ccld/records/request">Continue review</a> with the same facility/date context or request another loaded CCLD queue.</li>
+        <li><a href="{FEEDBACK_PATH}">Add more detail</a> if the feedback above is incomplete.</li>
+      </ul>
+    </section>"""
 
 
 def _feedback_blocked_response(status: int, heading: str, message: str) -> tuple[int, str, bytes]:
@@ -720,8 +815,18 @@ def _configuration_notice(config: GitHubFeedbackConfig) -> str:
 def _feedback_form(form_values: Mapping[str, list[str]]) -> str:
     selected_type = _first_form_value(form_values, "feedback_type")
     description = _first_form_value(form_values, "description")
+    if _contains_secret_marker(description):
+        description = ""
     escaped_description = html.escape(description)
-    page_path = _first_form_value(form_values, "page_path") or FEEDBACK_PATH
+    page_path = _safe_page_path(_first_form_value(form_values, "page_path")) or FEEDBACK_PATH
+    handoff_context = _feedback_handoff_context_from_values(
+        {
+            key: form_values[key]
+            for key in ALLOWED_FEEDBACK_CONTEXT_PARAMETERS
+            if key in form_values
+        }
+    )
+    context_inputs = _feedback_context_form_controls(handoff_context)
     options = "\n".join(
         _feedback_type_option(option, selected_type) for option in FEEDBACK_TYPE_OPTIONS
     )
@@ -758,9 +863,43 @@ def _feedback_form(form_values: Mapping[str, list[str]]) -> str:
           <input id="page_path" name="page_path" type="text" value="{html.escape(page_path)}" readonly aria-describedby="page-path-help">
           <span id="page-path-help">This visible context is included with the feedback when submitted.</span>
         </p>
+        {context_inputs}
         <p><button type="submit">Submit feedback</button></p>
       </form>
     </section>"""
+
+
+def _feedback_context_form_controls(context: FeedbackHandoffContext) -> str:
+    controls = []
+    for name, label, value in (
+        ("workflow_area", "Workflow area", context.workflow_area),
+        ("facility_number", "Facility/license number", context.facility_number),
+        ("start_date", "Start date", context.start_date),
+        ("end_date", "End date", context.end_date),
+        ("request_context_origin", "Request origin", context.request_context_origin),
+        ("reviewer_status_filter", "Reviewer-status filter", context.reviewer_status_filter),
+        ("retrieval_context", "Job context", context.retrieval_context),
+        ("retrieval_status", "Job status", context.retrieval_status),
+        ("retrieval_job_id", "Job ID", context.retrieval_job_id),
+        ("complaint_control_number", "Complaint/control identifier", context.complaint_control_number),
+        ("prompt", "Suggested prompt", context.prompt),
+    ):
+        if value:
+            escaped_name = html.escape(name)
+            escaped_value = html.escape(value)
+            input_id = f"feedback-context-{escaped_name}"
+            controls.append(
+                f"""          <p>
+            <label for="{input_id}">{html.escape(label)}</label>
+            <input id="{input_id}" name="{escaped_name}" type="text" value="{escaped_value}" readonly>
+          </p>"""
+            )
+    if not controls:
+        return ""
+    return f"""        <section class="summary-card" aria-labelledby="feedback-visible-context-heading">
+          <h3 id="feedback-visible-context-heading">Visible context included with this feedback</h3>
+{chr(10).join(controls)}
+        </section>"""
 
 
 def _feedback_type_option(option: str, selected_type: str) -> str:

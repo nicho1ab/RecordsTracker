@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Improved hosted `/feedback` submission confirmation so testers can review
+  the submitted feedback fields, visible safe context, and next actions after
+  submit without adding feedback storage, sending behavior, or another workflow.
 - Added a concise tester task guide to the hosted entry orientation with concrete
   first-run review tasks, expected observations, and the existing safe feedback
   handoff.

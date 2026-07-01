@@ -226,6 +226,13 @@ def test_feedback_page_renders_safe_optional_handoff_context() -> None:
     assert '<option value="Bug report" selected="selected">Bug report</option>' in html
     assert 'name="page_path" type="text" value="/reviewer/packet/preview" readonly' in html
     assert 'type="hidden" name="page_path"' not in html
+    assert 'name="workflow_area" type="text" value="packet-preview" readonly' in html
+    assert 'name="facility_number" type="text" value="157806098" readonly' in html
+    assert (
+        'name="complaint_control_number" type="text" '
+        'value="32-CR-20220407124448" readonly'
+    ) in html
+    assert 'name="prompt" type="text" value="Describe packet readiness confusion." readonly' in html
     assert_no_secret_html(html)
 
 
@@ -436,6 +443,36 @@ def test_feedback_validation_errors_are_safe() -> None:
     assert_no_secret_html(html)
 
 
+def test_feedback_validation_error_does_not_echo_secret_like_values() -> None:
+    context = _feedback_context(configured=True, actor=_actor())
+
+    status, _content_type, body = route_response(
+        FEEDBACK_PATH,
+        method="POST",
+        request_body=_form_bytes(
+            {
+                "feedback_type": "Bug report",
+                "description": f"authorization bearer {TEST_AUTH_VALUE}",
+                "page_path": "https://private.example.test/app",
+                "private_url": "https://private.example.test/path",
+            }
+        ),
+        feedback_context=context,
+    )
+    html = body.decode("utf-8")
+
+    assert status == 400
+    assert (
+        "Feedback must not include secrets, credentials, or private browser/session values."
+        in html
+    )
+    assert 'name="page_path" type="text" value="/feedback" readonly' in html
+    assert "private.example" not in html
+    assert TEST_AUTH_VALUE not in html
+    assert "authorization bearer" not in html
+    assert_no_secret_html(html)
+
+
 def test_feedback_unconfigured_state_does_not_call_github() -> None:
     client = MockGitHubIssueClient()
     context = _feedback_context(configured=False, actor=_actor(), client=client)
@@ -455,14 +492,68 @@ def test_feedback_unconfigured_state_does_not_call_github() -> None:
     assert_no_secret_html(html)
 
 
-def test_feedback_configured_submission_uses_mocked_client_and_labels() -> None:
+def test_feedback_unconfigured_confirmation_shows_safe_submitted_summary() -> None:
+    client = MockGitHubIssueClient()
+    context = _feedback_context(configured=False, actor=_actor(), client=client)
+
+    status, _content_type, body = route_response(
+        FEEDBACK_PATH,
+        method="POST",
+        request_body=_valid_form_bytes(
+            feedback_type="Bug report",
+            description="The queue order was unclear after filtering.",
+            extra={
+                "workflow_area": "queue",
+                "facility_number": "157806098",
+                "reviewer_status_filter": "needs-review",
+                "private_url": "https://private.example.test/path",
+                "source_record_key": "complaint:ccld:complaint:32-CR-20220407124448",
+                "token": TEST_AUTH_VALUE,
+            },
+        ),
+        feedback_context=context,
+    )
+    html = body.decode("utf-8")
+
+    assert status == 503
+    assert "Feedback was not sent" in html
+    assert "Submitted feedback summary" in html
+    assert "Bug report" in html
+    assert "The queue order was unclear after filtering." in html
+    assert "Submitted safe context" in html
+    assert "Only allowlisted, bounded context from the feedback form is shown here." in html
+    assert "queue" in html
+    assert "157806098" in html
+    assert "needs-review" in html
+    assert "Return to the tester task guide" in html
+    assert "Continue review" in html
+    assert "Add more detail" in html
+    assert "private.example" not in html
+    assert "source_record_key" not in html
+    assert "complaint:ccld:complaint:32-CR-20220407124448" not in html
+    assert client.calls == []
+    assert_no_secret_html(html)
+
+
+def test_feedback_configured_confirmation_escapes_submitted_fields_and_context() -> None:
     client = MockGitHubIssueClient()
     context = _feedback_context(configured=True, actor=_actor(), client=client)
 
     status, _content_type, body = route_response(
         FEEDBACK_PATH,
         method="POST",
-        request_body=_valid_form_bytes(feedback_type="Feature request"),
+        request_body=_valid_form_bytes(
+            feedback_type="Feature request",
+            description="<b>Please add</b> & keep keyboard-friendly sorting.",
+            page_path="/reviewer/detail?<script>alert(1)</script>",
+            extra={
+                "workflow_area": "reviewer-detail",
+                "facility_number": "157806098",
+                "complaint_control_number": "32-CR-20220407124448",
+                "prompt": "Describe <sorting> confusion & next step.",
+                "raw_storage_path": "C:/server/private/raw/artifact.html",
+            },
+        ),
         feedback_context=context,
     )
     html = body.decode("utf-8")
@@ -470,6 +561,16 @@ def test_feedback_configured_submission_uses_mocked_client_and_labels() -> None:
     assert status == 201
     assert "Feedback submitted" in html
     assert "Issue #42" in html
+    assert "Submitted feedback summary" in html
+    assert "&lt;b&gt;Please add&lt;/b&gt; &amp; keep keyboard-friendly sorting." in html
+    assert "<b>Please add</b>" not in html
+    assert "/reviewer/detail?&lt;script&gt;alert(1)&lt;/script&gt;" in html
+    assert "Submitted safe context" in html
+    assert "reviewer-detail" in html
+    assert "32-CR-20220407124448" in html
+    assert "Describe sorting confusion  next step." in html
+    assert "Describe <sorting> confusion & next step." not in html
+    assert "C:/server/private/raw/artifact.html" not in html
     assert len(client.calls) == 1
     call = client.calls[0]
     assert call["repo"] == "example/repo"
@@ -482,10 +583,48 @@ def test_feedback_configured_submission_uses_mocked_client_and_labels() -> None:
         "feature-request",
     )
     assert "Feature request" in call["body"]
-    assert "Please add keyboard-friendly sorting." in call["body"]
+    assert "<b>Please add</b> & keep keyboard-friendly sorting." in call["body"]
     assert TEST_AUTH_VALUE not in call["body"]
     assert "provider_subject" not in call["body"]
     assert "provider_issuer" not in call["body"]
+    assert_no_secret_html(html)
+
+
+def test_feedback_confirmation_ignores_unknown_and_unsafe_posted_context() -> None:
+    client = MockGitHubIssueClient()
+    context = _feedback_context(configured=True, actor=_actor(), client=client)
+
+    status, _content_type, body = route_response(
+        FEEDBACK_PATH,
+        method="POST",
+        request_body=_valid_form_bytes(
+            feedback_type="Bug report",
+            extra={
+                "workflow_area": "unexpected-area",
+                "page_path": "https://private.example.test/app",
+                "facility_number": "157806098-secret",
+                "retrieval_context": "raw-storage-path",
+                "retrieval_status": "provider_subject",
+                "retrieval_job_id": "token=abc123",
+                "prompt": "authorization: bearer secret",
+                "source_record_key": "complaint:ccld:complaint:32-CR-20220407124448",
+                "private_url": "https://private.example.test/path",
+            },
+        ),
+        feedback_context=context,
+    )
+    html = body.decode("utf-8")
+
+    assert status == 201
+    assert "Submitted feedback summary" in html
+    assert "Submitted safe context" not in html
+    assert "unexpected-area" not in html
+    assert "private.example" not in html
+    assert "157806098-secret" not in html
+    assert "raw-storage-path" not in html
+    assert "provider_subject" not in html
+    assert "source_record_key" not in html
+    assert "complaint:ccld:complaint:32-CR-20220407124448" not in html
     assert_no_secret_html(html)
 
 
@@ -652,14 +791,21 @@ def _local_dev_auth_config() -> Any:
     )
 
 
-def _valid_form_bytes(*, feedback_type: str = "Feature request") -> bytes:
-    return _form_bytes(
-        {
-            "feedback_type": feedback_type,
-            "description": "Please add keyboard-friendly sorting.",
-            "page_path": "/ccld/records/request",
-        }
-    )
+def _valid_form_bytes(
+    *,
+    feedback_type: str = "Feature request",
+    description: str = "Please add keyboard-friendly sorting.",
+    page_path: str = "/ccld/records/request",
+    extra: dict[str, str] | None = None,
+) -> bytes:
+    values = {
+        "feedback_type": feedback_type,
+        "description": description,
+        "page_path": page_path,
+    }
+    if extra:
+        values.update(extra)
+    return _form_bytes(values)
 
 
 def _form_bytes(values: dict[str, str]) -> bytes:
