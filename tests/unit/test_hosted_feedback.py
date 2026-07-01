@@ -102,6 +102,47 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "print issue" in normalized_html
     assert "Submit feedback" in html
     assert "copy" in html.lower()
+    assert "Useful feedback examples" in html
+    assert (
+        "I was trying to request records from Request Records, but the Job Status "
+        "notice did not make the next step clear."
+        in html
+    )
+    assert (
+        "I expected to know whether to wait, retry, or review already-loaded records."
+        in html
+    )
+    assert (
+        "The visible context showed the facility number and date range."
+        in html
+    )
+    assert (
+        "I was on the reviewer queue after applying the reviewer-status filter."
+        in html
+    )
+    assert (
+        "I was reviewing a complaint detail page and checking source traceability "
+        "before adding a note."
+        in html
+    )
+    assert (
+        "The visible context showed the detail page and complaint/control identifier."
+        in html
+    )
+    assert (
+        "I was preparing packet/readiness review and one prioritized record looked "
+        "missing or unexpected in the packet content."
+        in html
+    )
+    assert (
+        "The visible context showed the packet preview step and facility/date context."
+        in html
+    )
+    assert (
+        "The transition from facility lookup to Request Records and loaded records "
+        "was confusing."
+        in html
+    )
     assert (
         '<section class="notice-card" aria-labelledby="feedback-safety-heading">'
         in html
@@ -137,11 +178,6 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert 'name="page_path" type="text" value="/feedback" readonly' in html
     assert "This visible context is included with the feedback when submitted." in html
     assert 'type="hidden" name="page_path"' not in html
-    assert (
-        "The first-time tester orientation did not make facility lookup, Request Records, "
-        "loaded context, prioritized records, packet/brief, readiness checklist, or feedback clear."
-        in html
-    )
     assert_ordered(
         html,
         (
@@ -159,6 +195,56 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
             "<p>Note: Server-side GitHub issue intake is not configured on this deployment.",
         ),
     )
+
+
+def test_feedback_examples_use_safe_actionable_wording() -> None:
+    status, _content_type, body = route_response(FEEDBACK_PATH)
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert "Useful feedback examples" in html
+    for required_fragment in (
+        "I was trying to",
+        "I was on the reviewer queue",
+        "I was reviewing a complaint detail page",
+        "I was preparing packet/readiness review",
+        "I expected",
+        "looked wrong or incomplete",
+        "looked missing or unexpected",
+        "The visible context showed",
+    ):
+        assert required_fragment in html
+
+    unsafe_example_wording = (
+        "raw source",
+        "raw sha",
+        "source url",
+        "connector metadata",
+        "retrieval timestamp",
+        "source document/report marker",
+        "private url",
+        "stack trace",
+        "server path",
+        "token",
+        "cookie",
+        "secret",
+        "legal conclusion",
+        "source-completeness",
+        "complaint-coverage",
+        "verified delay",
+        "harm",
+        "abuse",
+        "neglect",
+        "liability",
+        "rights-deprivation",
+    )
+    examples_section = normalized_html.split("Useful feedback examples", 1)[1]
+    assert not any(
+        unsafe_fragment in examples_section.casefold()
+        for unsafe_fragment in unsafe_example_wording
+    )
+    assert_no_secret_html(html)
 
 
 def test_feedback_page_renders_safe_optional_handoff_context() -> None:

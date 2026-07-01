@@ -303,24 +303,13 @@ def render_feedback_page(
         </div>
     {_configuration_notice(context.github_config)}
         <details class="technical-details">
-            <summary>Useful examples</summary>
+            <summary>Useful feedback examples</summary>
             <ul>
-                <li>A complaint record looked missing or unexpected.</li>
-                <li>It was unclear whether the page was showing already-loaded records or a Request Records job status.</li>
-                <li>A Job Status state, progress count, notice, or next action was unclear.</li>
-                <li>A date or finding looked confusing.</li>
-                <li>A review flag was unclear.</li>
-                <li>A source-confidence cue did not make the next action clear.</li>
-                <li>The source traceability summary was hard to use.</li>
-                <li>Packet readiness, browser copy, or print preparation was unclear.</li>
-                <li>A packet seemed to include a missing or unexpected record, confusing source traceability cue, reviewer-created note/status concern, or correction-readiness concern.</li>
-                <li>A source-derived value looked wrong or incomplete after checking source traceability.</li>
-                <li>The correction-readiness guidance did not make clear whether to use a reviewer-created note or feedback.</li>
-                <li>A source URL, raw SHA-256 hash, connector metadata, retrieval timestamp, or source document/report marker looked missing or confusing.</li>
-                <li>A missing value or proxy-related cue made it unclear whether to add cautious reviewer-created state or use feedback.</li>
-                <li>The workflow did not help me decide what to review next.</li>
-                <li>The active reviewer-created status filter, shown count, total queue count, or filtered-empty recovery action was confusing.</li>
-                <li>The first-time tester orientation did not make facility lookup, Request Records, loaded context, prioritized records, packet/brief, readiness checklist, or feedback clear.</li>
+                <li>I was trying to request records from Request Records, but the Job Status notice did not make the next step clear. I expected to know whether to wait, retry, or review already-loaded records. The visible context showed the facility number and date range.</li>
+                <li>I was on the reviewer queue after applying the reviewer-status filter. The shown count and empty-state recovery action looked confusing. I expected a clear way back to the full loaded queue. The visible context showed the queue page and active filter.</li>
+                <li>I was reviewing a complaint detail page and checking source traceability before adding a note. A source-derived date looked wrong or incomplete, but the guidance did not make clear whether to add a cautious note or use feedback. The visible context showed the detail page and complaint/control identifier.</li>
+                <li>I was preparing packet/readiness review and one prioritized record looked missing or unexpected in the packet content. I expected the packet cue to explain what to review next. The visible context showed the packet preview step and facility/date context.</li>
+                <li>I was using the first-time tester path from the task guide. The transition from facility lookup to Request Records and loaded records was confusing. I expected the page to show which workflow step came next. The visible context showed the entry-orientation step.</li>
             </ul>
         </details>
 """,
