@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Added a concise tester task guide to the hosted entry orientation with concrete
+  first-run review tasks, expected observations, and the existing safe feedback
+  handoff.
 - Tightened hosted `/feedback` context handling with an explicit safe query
   allowlist, visible submitted page-path context, and hosted entry/orientation
   links that carry safe workflow context without source keys or hidden
