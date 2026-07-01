@@ -68,6 +68,7 @@ from ccld_complaints.hosted_app.feedback import (
     FEEDBACK_PATH,
     FeedbackContext,
     GitHubRestIssueClient,
+    feedback_href,
     load_github_feedback_config,
     route_feedback_response,
 )
@@ -766,6 +767,12 @@ def render_app_shell() -> str:
                 f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number="
                 f"{PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER}"
         )
+        entry_feedback_href = feedback_href(
+                feedback_type="Bug report",
+                workflow_area="entry-orientation",
+                page_path="/",
+                prompt="Describe what was confusing about the first-time tester orientation.",
+        )
         return render_page_shell(
                 title=APP_NAME,
                                 heading="Start a Facility Complaint Review",
@@ -838,7 +845,7 @@ def render_app_shell() -> str:
             </ol>
             <p>When a start path, loaded-context cue, record order, source traceability
             cue, packet/brief cue, readiness item, wording, or keyboard flow is
-            confusing, <a href="{FEEDBACK_PATH}">send tester feedback</a>.</p>
+            confusing, <a href="{entry_feedback_href}">send tester feedback</a>.</p>
         </section>
         <section aria-labelledby="ready-paths-heading">
             <h2 id="ready-paths-heading">Ready paths</h2>
@@ -866,7 +873,7 @@ def render_app_shell() -> str:
                 <article class="summary-card">
                     <h3>Tester feedback</h3>
                     <p>Report what you tried, what loaded context or route was confusing, and what blocked review.</p>
-                    <p><a class="button button-secondary" href="{FEEDBACK_PATH}">Open feedback</a></p>
+                    <p><a class="button button-secondary" href="{entry_feedback_href}">Open feedback</a></p>
                 </article>
             </div>
         </section>"""

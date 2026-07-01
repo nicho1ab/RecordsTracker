@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Tightened hosted `/feedback` context handling with an explicit safe query
+  allowlist, visible submitted page-path context, and hosted entry/orientation
+  links that carry safe workflow context without source keys or hidden
+  submission context.
 - Added a concise first-time tester orientation on the hosted entry page that
   explains the start path, loaded context, facility lookup, prioritized records,
   packet/brief, readiness checklist, and `/feedback` handoff. The existing
