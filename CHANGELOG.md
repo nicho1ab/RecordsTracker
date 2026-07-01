@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Added a concise "How to read this record" guide to hosted reviewer detail so
+  testers can distinguish source-derived public record context, review cues, and
+  follow-up actions without treating page guidance as legal conclusions.
 - Added concise useful-feedback examples to hosted `/feedback` so testers can
   describe what they were trying to do, where they were in the workflow, what
   looked wrong or confusing, what they expected, and what visible safe context
