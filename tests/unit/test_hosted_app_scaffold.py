@@ -20,6 +20,11 @@ from ccld_complaints.hosted_app.auth import load_hosted_auth_runtime_config
 from ccld_complaints.hosted_app.smoke import run_scaffold_smoke_check
 
 ROOT = Path(__file__).resolve().parents[2]
+ENTRY_FEEDBACK_HREF = (
+    "/feedback?feedback_type=Bug+report&page_path=%2F"
+    "&workflow_area=entry-orientation"
+    "&prompt=Describe+what+was+confusing+about+the+first-time+tester+orientation."
+)
 
 
 class HtmlStructureParser(HTMLParser):
@@ -162,7 +167,7 @@ def test_app_shell_labels_placeholder_scope() -> None:
     assert "Reviewer detail is where you check source traceability" in html
     assert "Packet preview and draft collect the current facility/date review context" in html
     assert "The readiness checklist helps decide whether the loaded context is ready" in html
-    assert '<a href="/feedback">send tester feedback</a>' in html
+    assert f'<a href="{ENTRY_FEEDBACK_HREF}">send tester feedback</a>' in html
     assert html.index("Find facility") < html.index("Review facility pattern summary")
     assert html.index("Review facility pattern summary") < html.index(
         "Open prioritized records"
@@ -185,7 +190,7 @@ def test_app_shell_labels_placeholder_scope() -> None:
         'href="/reviewer/packet/preview#packet-attorney-review-readiness-checklist">'
         "Open readiness checklist</a>"
     ) in html
-    assert 'href="/feedback">Open feedback</a>' in html
+    assert f'href="{ENTRY_FEEDBACK_HREF}">Open feedback</a>' in html
     assert "Attorney-focused public CCLD complaint/facility record review" not in html
     assert "New to this tool?" not in html
     assert "See Help for the review workflow" not in html
@@ -218,8 +223,10 @@ def test_home_orientation_is_single_shared_entry_block_with_feedback_path() -> N
     assert html.count("Loaded context means records and facility cues already available") == 1
     assert "loaded-context cue, record order, source traceability cue" in normalized_html
     assert "packet/brief cue, readiness item, wording, or keyboard flow" in normalized_html
-    assert 'href="/feedback">send tester feedback</a>' in html
-    assert 'href="/feedback">Open feedback</a>' in html
+    assert f'href="{ENTRY_FEEDBACK_HREF}">send tester feedback</a>' in html
+    assert f'href="{ENTRY_FEEDBACK_HREF}">Open feedback</a>' in html
+    assert "workflow_area=entry-orientation" in html
+    assert "page_path=%2F" in html
     assert "saved session" not in normalized_html.casefold()
     assert "persisted queue state" not in normalized_html.casefold()
     assert "source-completeness proof" not in normalized_html.casefold()

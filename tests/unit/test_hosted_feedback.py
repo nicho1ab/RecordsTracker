@@ -19,11 +19,13 @@ from ccld_complaints.hosted_app.auth import (
     load_hosted_auth_runtime_config,
 )
 from ccld_complaints.hosted_app.feedback import (
+    ALLOWED_FEEDBACK_CONTEXT_PARAMETERS,
     FEEDBACK_PATH,
     FeedbackContext,
     GitHubFeedbackConfig,
     GitHubIssueClient,
     build_issue_body,
+    feedback_href,
     feedback_labels,
 )
 from ccld_complaints.hosted_app.reviewer_ui import LOCAL_REVIEWER_UI_SCOPE
@@ -131,6 +133,10 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
         "without private material."
         in normalized_html
     )
+    assert '<label for="page_path">Submitted page path</label>' in html
+    assert 'name="page_path" type="text" value="/feedback" readonly' in html
+    assert "This visible context is included with the feedback when submitted." in html
+    assert 'type="hidden" name="page_path"' not in html
     assert (
         "The first-time tester orientation did not make facility lookup, Request Records, "
         "loaded context, prioritized records, packet/brief, readiness checklist, or feedback clear."
@@ -192,7 +198,7 @@ def test_feedback_page_renders_safe_optional_handoff_context() -> None:
     assert "active reviewer-created status filter confusion" in normalized_html
     assert "shown-count or total-count confusion" in normalized_html
     assert "filtered-empty recovery problems" in normalized_html
-    assert "complaint:ccld:complaint:32-CR-20220407124448" in html
+    assert "complaint:ccld:complaint:32-CR-20220407124448" not in html
     assert "32-CR-20220407124448" in html
     assert "Describe packet readiness confusion." in html
     assert "packet/readiness confusion" in normalized_html
@@ -218,7 +224,8 @@ def test_feedback_page_renders_safe_optional_handoff_context() -> None:
     assert "private.example" not in html
     assert TEST_AUTH_VALUE not in html
     assert '<option value="Bug report" selected="selected">Bug report</option>' in html
-    assert 'name="page_path" value="/reviewer/packet/preview"' in html
+    assert 'name="page_path" type="text" value="/reviewer/packet/preview" readonly' in html
+    assert 'type="hidden" name="page_path"' not in html
     assert_no_secret_html(html)
 
 
@@ -379,6 +386,36 @@ def test_feedback_page_ignores_unsafe_context_parameters() -> None:
     assert "authorization" not in html.casefold()
     assert "bearer" not in html.casefold()
     assert_no_secret_html(html)
+
+
+def test_feedback_context_allowlist_is_explicit_and_helper_ignores_unknown_values() -> None:
+    assert "source_record_key" not in ALLOWED_FEEDBACK_CONTEXT_PARAMETERS
+    assert "page_path" in ALLOWED_FEEDBACK_CONTEXT_PARAMETERS
+    assert "workflow_area" in ALLOWED_FEEDBACK_CONTEXT_PARAMETERS
+    assert "prompt" in ALLOWED_FEEDBACK_CONTEXT_PARAMETERS
+
+    href = feedback_href(
+        feedback_type="Bug report",
+        workflow_area="entry-orientation",
+        page_path="/",
+        prompt="Describe what was confusing.",
+        source_record_key="complaint:ccld:complaint:32-CR-20220407124448",
+        private_url="https://private.example.test",
+    )
+
+    assert href.startswith(f"{FEEDBACK_PATH}?")
+    assert "entry-orientation" in href
+    assert "source_record_key" not in href
+    assert "private_url" not in href
+    assert "private.example" not in href
+
+    unsafe_href = feedback_href(
+        feedback_type="Bug report",
+        page_path="https://private.example.test/app",
+        prompt="authorization: bearer secret",
+    )
+
+    assert unsafe_href == f"{FEEDBACK_PATH}?feedback_type=Bug+report"
 
 
 def test_feedback_validation_errors_are_safe() -> None:

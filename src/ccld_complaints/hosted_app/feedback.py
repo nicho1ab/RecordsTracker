@@ -31,7 +31,23 @@ GITHUB_FEEDBACK_TOKEN_ENV = "GITHUB_FEEDBACK_TOKEN"
 GITHUB_FEEDBACK_DEFAULT_LABELS_ENV = "GITHUB_FEEDBACK_DEFAULT_LABELS"
 MAX_FEEDBACK_DESCRIPTION_LENGTH = 4000
 FEEDBACK_TYPE_OPTIONS = ("Bug report", "Feature request", "New data source")
+ALLOWED_FEEDBACK_CONTEXT_PARAMETERS = (
+    "feedback_type",
+    "page_path",
+    "workflow_area",
+    "facility_number",
+    "start_date",
+    "end_date",
+    "request_context_origin",
+    "reviewer_status_filter",
+    "retrieval_context",
+    "retrieval_status",
+    "retrieval_job_id",
+    "complaint_control_number",
+    "prompt",
+)
 SAFE_WORKFLOW_AREAS = (
+    "entry-orientation",
     "queue",
     "request-result",
     "retrieval-setup-required",
@@ -144,7 +160,6 @@ class FeedbackHandoffContext:
     retrieval_context: str | None = None
     retrieval_status: str | None = None
     retrieval_job_id: str | None = None
-    source_record_key: str | None = None
     complaint_control_number: str | None = None
     prompt: str | None = None
 
@@ -315,6 +330,43 @@ def _feedback_type_href(feedback_type: str) -> str:
     return f"{FEEDBACK_PATH}?{urlencode({'feedback_type': feedback_type})}"
 
 
+def feedback_href(**context_values: str | None) -> str:
+    raw_values = {
+        key: [value]
+        for key in ALLOWED_FEEDBACK_CONTEXT_PARAMETERS
+        if (value := context_values.get(key))
+    }
+    context = _feedback_handoff_context_from_values(raw_values)
+    candidate_values: dict[str, str | None] = {}
+    feedback_type = context_values.get("feedback_type")
+    if feedback_type in FEEDBACK_TYPE_OPTIONS:
+        candidate_values["feedback_type"] = feedback_type
+    candidate_values.update(
+        {
+            "page_path": context.page_path,
+            "workflow_area": context.workflow_area,
+            "facility_number": context.facility_number,
+            "start_date": context.start_date,
+            "end_date": context.end_date,
+            "request_context_origin": context.request_context_origin,
+            "reviewer_status_filter": context.reviewer_status_filter,
+            "retrieval_context": context.retrieval_context,
+            "retrieval_status": context.retrieval_status,
+            "retrieval_job_id": context.retrieval_job_id,
+            "complaint_control_number": context.complaint_control_number,
+            "prompt": context.prompt,
+        }
+    )
+    safe_values = {
+        key: value
+        for key in ALLOWED_FEEDBACK_CONTEXT_PARAMETERS
+        if (value := candidate_values.get(key)) is not None
+    }
+    if not safe_values:
+        return FEEDBACK_PATH
+    return f"{FEEDBACK_PATH}?{urlencode(safe_values)}"
+
+
 def _feedback_handoff_context_from_values(
     values: Mapping[str, list[str]],
 ) -> FeedbackHandoffContext:
@@ -333,7 +385,6 @@ def _feedback_handoff_context_from_values(
             _first_form_value(values, "retrieval_status"), SAFE_RETRIEVAL_STATUSES
         ),
         retrieval_job_id=_safe_retrieval_job_id(_first_form_value(values, "retrieval_job_id")),
-        source_record_key=_safe_short_value(_first_form_value(values, "source_record_key"), max_length=180),
         complaint_control_number=_safe_short_value(_first_form_value(values, "complaint_control_number"), max_length=80),
         prompt=_safe_short_value(_first_form_value(values, "prompt"), max_length=220),
     )
@@ -434,7 +485,6 @@ def _feedback_context_rows(context: FeedbackHandoffContext) -> list[tuple[str, s
         ("Job context", context.retrieval_context),
         ("Job status", context.retrieval_status),
         ("Job ID", context.retrieval_job_id),
-        ("Source record key", context.source_record_key),
         ("Complaint/control identifier", context.complaint_control_number),
         ("Suggested prompt", context.prompt),
     )
@@ -703,7 +753,11 @@ def _feedback_form(form_values: Mapping[str, list[str]]) -> str:
                     {textarea}
                     <span id="description-help">Describe the page, action, expected result, actual result, loaded-context cue, source traceability cue, packet/readiness concern, browser copy issue, or print issue without private material.</span>
         </p>
-        <input type="hidden" name="page_path" value="{html.escape(page_path)}">
+        <p>
+          <label for="page_path">Submitted page path</label>
+          <input id="page_path" name="page_path" type="text" value="{html.escape(page_path)}" readonly aria-describedby="page-path-help">
+          <span id="page-path-help">This visible context is included with the feedback when submitted.</span>
+        </p>
         <p><button type="submit">Submit feedback</button></p>
       </form>
     </section>"""
