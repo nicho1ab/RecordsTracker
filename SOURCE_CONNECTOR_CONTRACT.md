@@ -14,7 +14,7 @@ canonical fields, hosted workflows, or legal conclusions.
 
 ## Required connector functions
 
-Each connector must implement:
+Document/report connectors must implement:
 
 ```text
 discover()
@@ -26,11 +26,22 @@ validate()
 emit()
 ```
 
+Structured open-data CSV source loaders may use a narrower deterministic
+download/profile/validate path when the source is an authoritative public
+reference CSV rather than an individual report artifact. Loader planning must
+still be recorded in `PUBLIC_SOURCE_DATA_INVENTORY.md`, and implementation still
+requires a later approved task before adding download code, import code,
+schemas, migrations, hosted behavior, or canonical fields.
+
 ## Required behavior
 
 - Discover source documents without relying on browser-only manual steps when an API or stable public endpoint is available.
-- Fetch raw source content and store it before extraction.
-- Compute a SHA-256 hash for every raw source file.
+- Fetch raw report/document source content and store it before extraction.
+- Compute a SHA-256 hash for every raw report/document source file.
+- For authoritative structured public CSV facility resources, deterministically
+  download or resolve the resource, profile and validate the CSV shape, preserve
+  source metadata, and treat raw SHA-256 as optional diagnostic metadata rather
+  than a required product/data-contract field.
 - Extract fields deterministically when reliable patterns exist.
 - Normalize records into the canonical data contract.
 - Validate output against JSON schemas.
@@ -42,6 +53,8 @@ emit()
 
 - Do not create source-specific columns in canonical tables without an approved data contract change.
 - Do not overwrite raw files without preserving hashes or retrieval history.
+- Do not weaken raw artifact preservation or hash requirements for
+  complaint/report connectors when adding structured CSV facility loaders.
 - Do not hide extraction failures.
 - Do not use LLMs for fields that can be parsed deterministically.
 - Do not bypass accessibility requirements in user-facing output.
