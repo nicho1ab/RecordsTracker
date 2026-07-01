@@ -1368,6 +1368,40 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Raw SHA-256" in html
     assert "Selected complaint source traceability fields" in html
 
+    guide_start = html.index('id="review-guidance-heading"')
+    guide_end = html.index("<summary>Key terms for this record</summary>", guide_start)
+    guide_html = html[guide_start:guide_end]
+    normalized_guide = " ".join(guide_html.split())
+    assert html.count("How to read this record") == 1
+    assert "public CCLD records or loaded public data" in guide_html
+    assert "Review cues are prompts for attorney/tester attention, not findings." in (
+        guide_html
+    )
+    assert (
+        "Check dates, status labels, and counts against the visible record context"
+        in guide_html
+    )
+    assert "Absence of a cue does not prove absence of a concern." in guide_html
+    assert (
+        "This page does not decide abuse, neglect, liability, rights deprivation, "
+        "source completeness, or whether CCLD source coverage is complete."
+    ) in guide_html
+    assert (
+        "open the source context, review related records, use the "
+        "packet/brief/readiness outputs, or send feedback"
+    ) in normalized_guide
+    for unsafe_phrase in (
+        "proves abuse",
+        "proves neglect",
+        "proves liability",
+        "proves rights deprivation",
+        "proves source coverage is complete",
+        "decides source coverage is complete",
+        "verified delay",
+        "verified severity finding",
+    ):
+        assert unsafe_phrase not in normalized_guide.casefold()
+
     for term in (
         "CCLD",
         "Citation",
