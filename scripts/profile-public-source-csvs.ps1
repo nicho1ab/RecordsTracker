@@ -2,7 +2,7 @@
 .SYNOPSIS
 Profiles local ignored public-source CSV files.
 .DESCRIPTION
-Runs the local CSV profiler against data\raw\source-profiling by default and writes ignored JSON, CSV, and log outputs under data\processed\source-profiling and data\logs. This script does not import data, modify raw files, create schemas, add connectors, contact the internet, or require cloud services.
+Runs the local CSV profiler against data\raw\source-profiling by default and writes ignored JSON, CSV, facility source gap-assessment, and log outputs under data\processed\source-profiling and data\logs. This script does not import data, modify raw files, create schemas, add connectors, contact the internet, or require cloud services.
 .PARAMETER SourceRoot
 Local source-profiling folder to scan recursively for CSV files.
 .PARAMETER OutputDir

@@ -55,6 +55,10 @@ def main() -> None:
     print(f"Malformed or irregular rows: {totals['total_malformed_row_count']}")
     print(f"JSON summary: {(args.output_dir / 'csv-profile-summary.json').as_posix()}")
     print(f"CSV summary: {(args.output_dir / 'csv-profile-summary.csv').as_posix()}")
+    print(
+        "Facility source gap assessment: "
+        f"{(args.output_dir / 'facility-source-gap-assessment.json').as_posix()}"
+    )
     print(f"Log: {args.log_path.as_posix()}")
     print(
         "Boundary: local profiling only; no raw file edits, imports, "

@@ -64,6 +64,12 @@ Current target facility resource set:
 | 24-Hour Residential Care for Children | `c9df723a-437f-4dcd-be37-ec73ae518bb9` | `24HourResidentialCareforChildren06072026.csv` |
 | Statewide facility master/local facility-directory example | Needs confirmation from official CHHS dataset metadata before use. | `CDSS_CCL_Facilities_2065342970436235361.csv` |
 
+The committed local profiling registry for this target set lives in
+`src/ccld_complaints/source_profiling.py` as `FACILITY_SOURCE_REGISTRY`. That
+registry is source metadata for local profiling and gap assessment only; it does
+not implement download, import, schema, migration, hosted route, UI, connector,
+or deployment behavior.
+
 The target facility resources share a statewide facility export shape. Exact
 source column names must be preserved when known during profiling and mapping;
 known local helper columns already referenced by this inventory include
@@ -128,9 +134,10 @@ Recommended local profiling before implementation:
   `scripts/profile-public-source-csvs.ps1` against the ignored local
   `data/raw/source-profiling/` workspace before any connector, import, schema,
   migration, hosted behavior, or canonical-field work is proposed. The profiler
-  writes ignored local summaries under `data/processed/source-profiling/` and
-  `data/logs/`; those generated outputs are discovery artifacts and must not be
-  committed.
+  writes ignored local summaries and the machine-readable
+  `facility-source-gap-assessment.json` under
+  `data/processed/source-profiling/`, plus logs under `data/logs/`; those
+  generated outputs are discovery artifacts and must not be committed.
 - Record official dataset URL or catalog URL.
 - Record resource ID when available.
 - Record resource name.
