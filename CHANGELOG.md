@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Added concise useful-feedback examples to hosted `/feedback` so testers can
+  describe what they were trying to do, where they were in the workflow, what
+  looked wrong or confusing, what they expected, and what visible safe context
+  was shown without adding storage, sending behavior, or another workflow.
 - Improved hosted `/feedback` submission confirmation so testers can review
   the submitted feedback fields, visible safe context, and next actions after
   submit without adding feedback storage, sending behavior, or another workflow.
