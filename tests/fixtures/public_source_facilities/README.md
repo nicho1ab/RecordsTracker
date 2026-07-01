@@ -16,7 +16,7 @@ public record datasets.
 | File | Why it exists | Profiled source shape represented | Source family supported |
 |---|---|---|---|
 | `ccld_program_facilities_tiny.csv` | Represents the CCLD program-specific public download shape with human-readable facility columns. | 31-column files such as `ChildCareCenters06072026.csv`, `HomeCare06072026.csv`, `FosterFamilyAgencies06072026.csv`, and related program downloads. | CCLD public download CSVs. |
-| `chhs_facility_master_tiny.csv` | Represents the CalHHS/CHHS facility-master style shape with `FAC_NBR`, `PROGRAM_TYPE`, status, capacity, geography, and coordinate columns. | 21- or 22-column files such as `CDSS_CCL_Facilities_2065342970436235361.csv` and `downloads/chhs-community-care-licensing-facilities.csv`. | CalHHS/CHHS facility master CSVs. |
+| `chhs_facility_master_tiny.csv` | Represents the CHHS/CDSS facility-master style shape with `FAC_NBR`, `PROGRAM_TYPE`, status, capacity, geography, and coordinate columns. | 21- or 22-column files such as `CDSS_CCL_Facilities_2065342970436235361.csv` and `downloads/chhs-community-care-licensing-facilities.csv`. | CHHS/CDSS facility master CSVs. |
 | `source_fixture_manifest.csv` | Records fixture-level source-family, jurisdiction, profiled-shape, source-reference, raw-hash placeholder, and retrieval-time placeholder metadata for future source-view tests. | Local profiling summary metadata and source traceability planning fields. | Fixture manifest only. |
 
 ## Selection rationale
@@ -30,7 +30,7 @@ read-only source/facility view work:
 - CCLD program-specific public download CSVs with facility number, facility
   name, facility type, county, status, capacity, visit/date fields, and
   complaint-summary-like columns.
-- CalHHS/CHHS facility-master CSVs with `FAC_NBR`, `PROGRAM_TYPE`, `STATUS`,
+- CHHS/CDSS facility-master CSVs with `FAC_NBR`, `PROGRAM_TYPE`, `STATUS`,
   `CAPACITY`, `COUNTY`, and location fields.
 
 The profiled metadata CSV is not represented as a committed tiny fixture in this

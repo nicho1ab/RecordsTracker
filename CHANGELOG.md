@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Aligned the data/source contract so CHHS/CDSS CCLD Community Care Licensing
+  Facilities CSV resources are authoritative facility reference sources for the
+  facility preload path, with raw hash optional diagnostic metadata for
+  structured facility CSV resources. No import, schema, migration, UI, hosted
+  behavior, connector implementation, raw CSV commit, or generated profiling
+  output was added.
 - Added a concise "How to read this record" guide to hosted reviewer detail so
   testers can distinguish source-derived public record context, review cues, and
   follow-up actions without treating page guidance as legal conclusions.

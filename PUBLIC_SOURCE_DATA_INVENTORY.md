@@ -20,7 +20,7 @@ hosted tester MVP ADR boundaries.
 
 | Source type | Examples | Planning notes |
 |---|---|---|
-| Structured CSV/open-data sources | CCLD public download CSVs, CalHHS/CHHS Community Care Licensing Facilities dataset, uploaded local CSV examples | Profile locally before implementation. Preserve source URL, download timestamp, file name, raw hash, row count, column count, parser warnings, and known limitations. |
+| Structured CSV/open-data sources | CHHS/CDSS Community Care Licensing Facilities resources, CCLD public download CSVs, uploaded local CSV examples | Profile locally before implementation. Preserve dataset/catalog URL, resource ID when available, resource name, access/download timestamp, source file name or resolved download URL when available, file/snapshot date when present, row count, column count, parser warnings, source column mapping/version when implemented later, and known limitations. Raw hash is optional diagnostic metadata for authoritative structured facility CSV resources. |
 | HTML portal/detail pages | CCLD individual complaint report pages | Use deterministic discovery and extraction when reliable. Preserve source URL, raw HTML or source document, raw hash, retrieval timestamp, connector metadata, report index when available, and extraction audit context. |
 | PDFs/document reports | Future public report PDFs or scanned public documents | Treat as future work. PDF extraction requires accessibility, deterministic parsing where possible, source preservation, fixture-backed tests, and careful handling of parsing confidence and warnings. |
 | Metadata/catalog pages | Open-data dataset metadata pages, data dictionaries, portal catalog records | Preserve catalog URL, dataset title, publisher, update cadence when known, license or terms reviewed, field descriptions, download URL, and access date. |
@@ -31,26 +31,65 @@ hosted tester MVP ADR boundaries.
 | Source candidate | Source type | Source URL status | Update frequency status | Planning use | Known limitations and parsing risks | Traceability requirements |
 |---|---|---|---|---|---|---|
 | CCLD individual complaint report pages | HTML portal/detail pages | Existing connector records page-level source URLs during discovery. | Unknown; depends on public portal updates. | Primary complaint report source path for current extraction and review workflows. | HTML layouts vary; reports may have missing fields, wrapped allegations, label variants, punctuation variants, or changed public availability. Reports are public-source records, not complete facility conclusions. | Preserve source URL, raw path when available, raw SHA-256 hash, retrieval timestamp, connector name and version, report index where available, extraction audit rows, and parser warnings. |
-| CCLD public download CSVs | Structured CSV/open-data sources | Exact download URLs must be recorded during local profiling or future connector planning. | Unknown until source metadata or portal notes are reviewed. | Candidate source for facility, licensing, program, or complaint summary context. | CSV columns may change; encodings, delimiters, headers, dates, missing values, and program-specific fields may vary. Summary rows may not equal complaint-level source facts. | Preserve download URL, retrieved_at timestamp, original file name, raw SHA-256 hash, row count, column count, parser profile, parser warnings, and source-specific known limitations. |
-| CalHHS/CHHS Community Care Licensing Facilities dataset | Structured CSV/open-data source plus metadata/catalog page | Exact dataset and metadata URLs must be recorded during profiling. | Unknown until dataset metadata is reviewed. | Candidate facility master/reference data for names, facility numbers, program type, status, capacity, county, or regional office context if mapped through approved contract fields. | Open-data field names and update cadence may differ from CCLD report data. Facility rows may be stale, changed, corrected, or scoped differently than complaint reports. | Preserve dataset URL, metadata URL, publisher, access/download timestamp, raw hash, file name, row count, column count, field list, parser warnings, and source limitations. |
-| Facility master data | Structured CSV/open-data source | To be identified from CCLD or CalHHS/CHHS source metadata. | Unknown. | Candidate facility identity and facility context source. | Must not overwrite complaint-report-derived source facts without approved import/sync and conflict rules. | Preserve stable source-derived identity, source URL, raw hash, retrieval timestamp, file name, row count, column count, and mapping rationale. |
-| Program-specific facility/licensing/complaint summary CSVs | Structured CSV/open-data sources | To be identified from CCLD public downloads and local example files. | Unknown; file names may include snapshot dates. | Candidate source for program-scoped facility and licensing context. | Program files may use different schemas, date formats, status codes, and summary definitions. Snapshot dates in file names are not proof of official update cadence. | Preserve source URL if available, download timestamp, original file name, raw hash, row count, column count, parser profile, parser warnings, and program scope notes. |
+| CHHS/CDSS Community Care Licensing Facilities dataset | Structured CSV/open-data source plus metadata/catalog page | Official dataset URL: `https://data.chhs.ca.gov/dataset/ccl-facilities`; dataset slug: `ccl-facilities`. Stable resource IDs and dataset metadata should drive future download/profile logic because direct temporary CSV filenames and resolved URLs may change. | Unknown until dataset metadata is profiled. | Authoritative public facility reference source for the RecordsTracker facility preload path. | Open-data field names and update cadence may differ from CCLD complaint/report data. Facility rows must not overwrite complaint-report-derived source facts without approved import/sync and conflict rules. | Preserve official dataset/catalog URL, resource ID when available, resource name, publisher, access/download timestamp, source file name or resolved download URL when available, file/snapshot date when present, row count, column count, parser warnings, and source column mapping/version when implemented later. Raw hash is optional diagnostic metadata. |
+| CCLD public download CSVs outside the target facility resource set | Structured CSV/open-data sources | Exact download URLs or catalog records must be recorded during local profiling or future connector planning. | Unknown until source metadata or portal notes are reviewed. | Candidate source for licensing, program, or complaint summary context outside the current facility preload target set. | CSV columns may change; encodings, delimiters, headers, dates, missing values, and program-specific fields may vary. Summary rows may not equal complaint-level source facts. | Preserve download/catalog URL, resource ID when available, retrieved_at timestamp, original file name or resolved download URL, row count, column count, parser profile, parser warnings, and source-specific known limitations. Raw hash is optional diagnostic metadata for structured facility CSV resources. |
+| Facility master data | Structured CSV/open-data source | Identified through CHHS/CDSS Community Care Licensing Facilities dataset metadata or future confirmed CCLD/CHHS/CDSS source metadata. | Unknown. | Authoritative facility identity and facility context source only after an approved preload/import task. | Must not overwrite complaint-report-derived source facts without approved import/sync and conflict rules. | Preserve stable source-derived identity, official dataset/catalog URL, resource ID when available, resource name, access/download timestamp, source file name or resolved download URL, row count, column count, parser warnings, and mapping rationale. Raw hash is optional diagnostic metadata. |
+| Program-specific facility/licensing/complaint summary CSVs | Structured CSV/open-data sources | The current target facility resources are listed below. Other program CSVs need source metadata confirmation before implementation. | Unknown; file names may include snapshot dates. | Authoritative facility reference sources for the target facility preload path only when they are confirmed CHHS/CDSS Community Care Licensing Facilities resources; otherwise candidate context. | Program files may use different schemas, date formats, status codes, and summary definitions. Snapshot dates in file names are not proof of official update cadence. | Preserve official dataset/catalog URL, resource ID when available, resource name, access/download timestamp, source file name or resolved download URL, file/snapshot date when present, row count, column count, parser profile, parser warnings, and program scope notes. Raw hash is optional diagnostic metadata. |
 | Metadata files | Metadata/catalog pages or CSV metadata exports | Exact source URL must be recorded when known. | Unknown. | Candidate field descriptions, publisher, license, refresh, and catalog context. | Metadata may be incomplete, stale, or inconsistent with downloaded files. | Preserve metadata URL, access timestamp, raw hash, file name, row count, column count, and field descriptions. |
 
-## Uploaded CSV examples
+## Authoritative facility CSV resources
 
-The following uploaded local source examples are known planning inputs by file
-name only. They are not tracked in the repository at the time this inventory was
-added, and full/raw copies must remain untracked unless a later task explicitly
-approves repository storage:
+RecordsTracker treats the CHHS/CDSS Community Care Licensing Facilities dataset
+as the authoritative public facility reference source family for the facility
+preload path. This branch records source framing only; it does not approve
+import code, schemas, migrations, database tables, hosted behavior, deployment,
+UI changes, connector implementation, raw CSV commits, or generated profiling
+outputs.
 
-- `CDSS_CCL_Facilities_2065342970436235361.csv`
+Parent dataset:
+
+- Dataset name: Community Care Licensing Facilities.
+- Dataset slug: `ccl-facilities`.
+- Official dataset URL: `https://data.chhs.ca.gov/dataset/ccl-facilities`.
+- Publisher/agency: CHHS/CDSS / California Community Care Licensing Division.
+
+Current target facility resource set:
+
+| Target resource name | Official CHHS resource ID | Local example filename, when already known |
+|---|---|---|
+| Child Care Centers | `7aed8063-cea7-4367-8651-c81643164ae0` | `ChildCareCenters06072026.csv` |
+| Family Child Care Homes | `4b5cc48d-03b1-4f42-a7d1-b9816903eb2b` | `CHILDCAREHOMEmorethan806072026.csv` |
+| Home Care Organization | `b4d78b7f-12df-4b0c-a81a-ff40b949bc75` | `HomeCare06072026.csv` |
+| Foster Family Agencies | `5f5f7124-1a38-4b61-93b9-4e4be3b3b07d` | `FosterFamilyAgencies06072026.csv` |
+| 24-Hour Residential Care for Children | `c9df723a-437f-4dcd-be37-ec73ae518bb9` | `24HourResidentialCareforChildren06072026.csv` |
+| Statewide facility master/local facility-directory example | Needs confirmation from official CHHS dataset metadata before use. | `CDSS_CCL_Facilities_2065342970436235361.csv` |
+
+The target facility resources share a statewide facility export shape. Exact
+source column names must be preserved when known during profiling and mapping;
+known local helper columns already referenced by this inventory include
+`FAC_NBR`, `NAME`, `PROGRAM_TYPE`, `STATUS`, and `CAPACITY`. Intended field
+coverage includes facility type, facility number, facility name, licensee,
+facility administrator, telephone, address, city, state, ZIP, county, regional
+office, capacity, status, license first date, closed date, and file date or
+snapshot date.
+
+Direct temporary CSV filenames and resolved download URLs may change. Future
+download/profile logic should use stable resource IDs and official dataset
+metadata when available, while recording the resolved file name or download URL
+observed at access time.
+
+Raw full-size CSV files remain untracked and ignored. Do not commit raw full-
+size CSVs unless a later task explicitly approves repository storage. Generated
+profiling outputs remain ignored by Git.
+
+## Local CSV examples
+
+The following local source examples are known only as ignored local files unless
+the authoritative resource table above identifies their official CHHS resource
+ID. They are not tracked in the repository, and full/raw copies must remain
+untracked unless a later task explicitly approves repository storage:
+
 - `community-care-licensing-facilities-metadata.csv`
-- `HomeCare06072026.csv`
-- `CHILDCAREHOMEmorethan806072026.csv`
-- `ChildCareCenters06072026.csv`
-- `24HourResidentialCareforChildren06072026.csv`
-- `FosterFamilyAgencies06072026.csv`
 
 Do not commit raw full-size CSVs unless they are already intentionally tracked
 and approved for repository storage. Use them locally for source profiling until
@@ -92,25 +131,33 @@ Recommended local profiling before implementation:
   writes ignored local summaries under `data/processed/source-profiling/` and
   `data/logs/`; those generated outputs are discovery artifacts and must not be
   committed.
-- Record source URL or catalog URL when known.
+- Record official dataset URL or catalog URL.
+- Record resource ID when available.
+- Record resource name.
 - Record access or download timestamp.
-- Compute and record the raw SHA-256 hash locally.
-- Record original file name, file size, row count, column count, header row, and
-  encoding when known.
+- Record source file name or resolved download URL when available.
+- Record file date or snapshot date when present.
+- Record row count, column count, header row, and encoding when known.
+- Record raw SHA-256 locally only as optional diagnostic metadata for
+  authoritative structured facility CSV resources.
 - Document columns, apparent data types, date formats, missing-value markers,
   duplicate key candidates, and source identifiers.
 - Identify malformed rows, irregular quoting, delimiter issues, embedded
   newlines, blank rows, repeated headers, unexpected encodings, or parser
   warnings.
-- Compare facility identifiers and names against existing CCLD-derived records
-  without treating either source as automatically authoritative.
+- Compare facility identifiers and names against existing CCLD-derived
+  complaint/report records without overwriting either source unless a later
+  approved import/sync task defines conflict rules.
 - Create tiny sampled fixtures only when implementation needs them and only with
   source metadata, Git-normalized hash expectations, and fixture documentation.
 
-Future CSV handling must preserve at least source URL when known, download
-timestamp, original file name, raw hash, row count, column count, parser profile,
-parser warnings, and source-specific known limitations. These planning fields do
-not add canonical source-derived fields to `DATA_CONTRACT.md` by themselves.
+Future structured CSV facility handling must preserve at least official dataset
+URL or catalog URL, resource ID when available, resource name, access/download
+timestamp, source file name or resolved download URL when available, file date or
+snapshot date when present, row count, column count, parser warnings, and source
+column mapping/version when implemented later. Raw hash is optional diagnostic
+metadata for structured facility CSV resources. These planning fields do not add
+canonical source-derived fields to `DATA_CONTRACT.md` by themselves.
 
 Local profiling does not import data, create canonical fields, approve schemas
 or migrations, add connectors, create database tables, populate the hosted app,
@@ -127,7 +174,7 @@ approved HTML scraping inputs.
 
 The committed fixtures under `tests/fixtures/public_source_facilities/` are
 tiny, synthetic representatives selected from local profiling results. They
-cover the CCLD program-specific facility download shape and the CalHHS/CHHS
+cover the CCLD program-specific facility download shape and the CHHS/CDSS
 facility-master shape for fixture-backed source/facility view planning. The
 local hosted scaffold `/facilities` route now uses these committed tiny fixtures
 only for a read-only sample facility master view and detail pages. The fixtures
