@@ -42,6 +42,7 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_REVIEW_HUB_PATH,
     CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
     CCLD_FACILITY_REVIEW_PRIORITY_PATH,
+    CCLD_FACILITY_SUGGESTIONS_PATH,
     PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER,
     CcldFacilityReferenceSource,
     CcldFacilityReviewContext,
@@ -67,6 +68,8 @@ from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
 )
 from ccld_complaints.hosted_app.facility_reference_preload import (
     facility_reference_source_from_connection,
+    facility_reference_source_summary_from_connection,
+    search_facility_reference_records,
 )
 from ccld_complaints.hosted_app.feedback import (
     FEEDBACK_PATH,
@@ -1212,12 +1215,15 @@ def route_response(
         parsed_path = CCLD_UI_PREFIX
     if parsed_path in {
         CCLD_FACILITY_LOOKUP_PATH,
+        CCLD_FACILITY_SUGGESTIONS_PATH,
         CCLD_FACILITY_REVIEW_HUB_PATH,
         CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
         CCLD_FACILITY_REVIEW_PRIORITY_PATH,
     }:
         if active_page_data_mode == FIXTURE_DEMO_PAGE_DATA_MODE:
             if parsed_path == CCLD_FACILITY_LOOKUP_PATH:
+                return route_ccld_facility_lookup_response(path)
+            if parsed_path == CCLD_FACILITY_SUGGESTIONS_PATH:
                 return route_ccld_facility_lookup_response(path)
             active_ccld_context = _default_ccld_context_for_mode(
                 active_auth_config,
@@ -1243,7 +1249,29 @@ def route_response(
         )
         if active_ccld_context is None:
             return _postgres_setup_required_response("Facility search setup required")
-        facility_reference = _facility_reference_from_context(active_ccld_context)
+        lookup_result = None
+        if parsed_path in {
+            CCLD_FACILITY_LOOKUP_PATH,
+            CCLD_FACILITY_SUGGESTIONS_PATH,
+        }:
+            query = _first_query_value(
+                parse_qs(parsed_url.query, keep_blank_values=True),
+                "q",
+            )
+            facility_reference = _facility_reference_summary_from_context(
+                active_ccld_context
+            )
+            if facility_reference.source_kind == "postgres_facility_reference":
+                try:
+                    source_context = active_ccld_context.reviewer_ui_context.workflow_shell_context.source_derived_api_context
+                    lookup_result = search_facility_reference_records(
+                        source_context.connection,
+                        query,
+                    )
+                except SQLAlchemyError:
+                    lookup_result = None
+        else:
+            facility_reference = _facility_reference_from_context(active_ccld_context)
         facility_number = _first_query_value(
             parse_qs(parsed_url.query, keep_blank_values=True),
             "facility_number",
@@ -1252,6 +1280,7 @@ def route_response(
             path,
             facility_reference,
             _facility_review_context_from_context(active_ccld_context, facility_number),
+            lookup_result=lookup_result,
         )
     if parsed_path.startswith(CCLD_UI_PREFIX):
         active_ccld_context = _default_ccld_context_for_mode(
@@ -1530,6 +1559,21 @@ def _facility_reference_from_context(
     if not isinstance(records, list):
         records = []
     return facility_reference_from_source_derived_records(records)
+
+
+def _facility_reference_summary_from_context(
+    context: CcldRecordRequestUiContext,
+) -> CcldFacilityReferenceSource:
+    source_context = context.reviewer_ui_context.workflow_shell_context.source_derived_api_context
+    try:
+        facility_reference = facility_reference_source_summary_from_connection(
+            source_context.connection
+        )
+    except SQLAlchemyError:
+        return _facility_reference_from_context(context)
+    if facility_reference.record_count:
+        return facility_reference
+    return _facility_reference_from_context(context)
 
 
 def _facility_review_context_from_context(

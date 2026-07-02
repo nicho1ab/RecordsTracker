@@ -21,6 +21,7 @@ from ccld_complaints.hosted_app.facility_review_signals import (
 from ccld_complaints.hosted_app.ui_shell import render_page_shell
 
 CCLD_FACILITY_LOOKUP_PATH = "/ccld/facilities"
+CCLD_FACILITY_SUGGESTIONS_PATH = f"{CCLD_FACILITY_LOOKUP_PATH}/suggestions"
 CCLD_FACILITY_REVIEW_HUB_PATH = f"{CCLD_FACILITY_LOOKUP_PATH}/detail"
 CCLD_FACILITY_REVIEW_PRIORITY_PATH = f"{CCLD_FACILITY_LOOKUP_PATH}/review-priority"
 CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH = f"{CCLD_FACILITY_LOOKUP_PATH}/intelligence"
@@ -95,8 +96,10 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
   var sl=document.getElementById('facility-suggestion-list');
   var sc=document.getElementById('facility-selected-card');
   var de=document.getElementById('facility-reference-json');
+  var suggestUrl=wrap.getAttribute('data-facility-suggest-url')||'';
   if(!si||!sl||!de)return;
   var facs=[];
+  var requestSeq=0;
   try{facs=JSON.parse(de.textContent||'[]');}catch(e){return;}
   // Show JS combobox, hide no-JS fallback
   var co=document.getElementById('facility-combobox-outer');
@@ -140,15 +143,29 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
     }
     return h;
   }
+  function renderMatches(matches){
+    if(!matches.length){sl.innerHTML='<li><span class="suggestion-empty">No matches found.</span></li>';}
+    else{sl.innerHTML=buildHtml(matches);}
+    sl.removeAttribute('hidden');
+    si.setAttribute('aria-expanded','true');
+  }
   function showSugs(q){
     var toks=norm(q).split(' ').filter(Boolean);
     if(!toks.length){hideSugs();return;}
+    if(suggestUrl&&typeof fetch==='function'){
+      var seq=++requestSeq;
+      sl.innerHTML='<li><span class="suggestion-empty">Searching...</span></li>';
+      sl.removeAttribute('hidden');
+      si.setAttribute('aria-expanded','true');
+      fetch(suggestUrl+'?q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}})
+        .then(function(resp){if(!resp.ok)throw new Error('lookup');return resp.json();})
+        .then(function(data){if(seq!==requestSeq)return;renderMatches(data.records||[]);})
+        .catch(function(){if(seq!==requestSeq)return;renderMatches([]);});
+      return;
+    }
     var ms=[];
     for(var i=0;i<facs.length&&ms.length<25;i++){if(match(facs[i],toks))ms.push(facs[i]);}
-    if(!ms.length){sl.innerHTML='<li><span class="suggestion-empty">No matches found.</span></li>';}
-    else{sl.innerHTML=buildHtml(ms);}
-    sl.removeAttribute('hidden');
-    si.setAttribute('aria-expanded','true');
+    renderMatches(ms);
   }
   function hideSugs(){
     sl.setAttribute('hidden','');
@@ -261,6 +278,7 @@ class CcldFacilityReferenceSource:
     path_label: str
     records: tuple[CcldFacilityLookupRecord, ...]
     notices: tuple[str, ...] = ()
+    record_count: int | None = None
 
 
 @dataclass(frozen=True)
@@ -426,10 +444,12 @@ def route_ccld_facility_lookup_response_with_source(
     path: str,
     reference_source: CcldFacilityReferenceSource | None,
     review_context: CcldFacilityReviewContext | None = None,
+    lookup_result: CcldFacilityLookupResult | None = None,
 ) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
     if parsed_url.path not in {
         CCLD_FACILITY_LOOKUP_PATH,
+        CCLD_FACILITY_SUGGESTIONS_PATH,
         CCLD_FACILITY_REVIEW_HUB_PATH,
         CCLD_FACILITY_REVIEW_PRIORITY_PATH,
         CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
@@ -443,6 +463,15 @@ def route_ccld_facility_lookup_response_with_source(
             ),
         )
     query_values = parse_qs(parsed_url.query, keep_blank_values=True)
+    if parsed_url.path == CCLD_FACILITY_SUGGESTIONS_PATH:
+        return _json_response(
+            200,
+            _facility_suggestions_payload(
+                _first_query_value(query_values, "q"),
+                reference_source,
+                lookup_result=lookup_result,
+            ),
+        )
     if parsed_url.path == CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH:
         return _html_response(200, render_ccld_facility_review_intelligence_page(query_values, reference_source))
     if parsed_url.path == CCLD_FACILITY_REVIEW_PRIORITY_PATH:
@@ -458,15 +487,23 @@ def route_ccld_facility_lookup_response_with_source(
             ),
         )
     query = _first_query_value(query_values, "q")
-    return _html_response(200, render_ccld_facility_lookup_page(query, reference_source))
+    return _html_response(
+        200,
+        render_ccld_facility_lookup_page(
+            query,
+            reference_source,
+            lookup_result=lookup_result,
+        ),
+    )
 
 
 def render_ccld_facility_lookup_page(
     query: str = "",
     reference_source: CcldFacilityReferenceSource | None = None,
+    lookup_result: CcldFacilityLookupResult | None = None,
 ) -> str:
     reference_source = reference_source or load_active_ccld_facility_reference()
-    result = search_ccld_facilities(
+    result = lookup_result or search_ccld_facilities(
         query,
         reference_source.records,
         reference_source=reference_source,
@@ -1224,6 +1261,7 @@ def _is_lookup_unavailable(source: CcldFacilityReferenceSource) -> bool:
             "postgres_source_derived",
         }
         and not source.records
+        and _source_record_count(source) == 0
     )
 
 
@@ -1277,13 +1315,17 @@ def _render_facility_combobox_section(
     if _is_lookup_unavailable(reference_source):
         return _render_facility_combobox_section_unavailable(current_query, limited_note)
     json_data = _build_facility_json_data(reference_source)
+    suggest_url = _facility_suggest_url(reference_source)
+    suggest_attr = (
+        f' data-facility-suggest-url="{_escape(suggest_url)}"' if suggest_url else ""
+    )
     limited_note_markup = (
         f'<p class="helper-text limited-note">{_escape(limited_note)}</p>'
         if limited_note
         else ""
     )
     selected_card = _render_facility_selected_card_html(mode="facility")
-    return f"""    <section class="workflow-panel" aria-labelledby="facility-combobox-heading" id="facility-selector-wrap" data-facility-mode="facility">
+    return f"""    <section class="workflow-panel" aria-labelledby="facility-combobox-heading" id="facility-selector-wrap" data-facility-mode="facility"{suggest_attr}>
             <p class="stage-kicker">Facility lookup</p>
             <h2 id="facility-combobox-heading">Find the facility/license number</h2>
             <label for="facility-search-input">Facility</label>
@@ -1412,7 +1454,7 @@ def _render_reference_details_section(source: CcldFacilityReferenceSource) -> st
     user_label = _user_facing_source_label(source)
     return f"""    <details class="reference-details-section">
             <summary>Reference data details</summary>
-            <p>{_escape(user_label)} &mdash; {len(source.records)} record(s) loaded.</p>
+            <p>{_escape(user_label)} &mdash; {_source_record_count(source)} record(s) loaded.</p>
             <p>Reference data is lookup assistance only; use it to find a facility/license
             number before Request Records. Open source links from record detail when a source check is needed.</p>
 {notice_markup}
@@ -2259,12 +2301,13 @@ def _limited_reference_note(source: CcldFacilityReferenceSource) -> str:
             "postgres_source_derived",
         }
         and not source.records
+        and _source_record_count(source) == 0
     ):
         return (
             "Facility directory lookup is not configured for this hosted environment. "
             "Enter a known CCLD facility/license number to continue."
         )
-    if source.source_kind == "tiny_fixture_fallback" or len(source.records) <= 2:
+    if source.source_kind == "tiny_fixture_fallback" or _source_record_count(source) <= 2:
         return "Limited reference list: suggestions may not include every CCLD facility."
     return ""
 
@@ -2293,6 +2336,66 @@ def _build_facility_json_data(
     raw = json.dumps(records, ensure_ascii=True)
     # Prevent </script> injection in the embedded JSON block
     return raw.replace("</", "<\\/")
+
+
+def _source_record_count(source: CcldFacilityReferenceSource) -> int:
+    if source.record_count is not None:
+        return source.record_count
+    return len(source.records)
+
+
+def _facility_suggest_url(source: CcldFacilityReferenceSource) -> str:
+    if source.source_kind == "postgres_facility_reference":
+        return CCLD_FACILITY_SUGGESTIONS_PATH
+    return ""
+
+
+def _facility_suggestions_payload(
+    query: str,
+    reference_source: CcldFacilityReferenceSource | None,
+    *,
+    lookup_result: CcldFacilityLookupResult | None = None,
+) -> dict[str, Any]:
+    reference_source = reference_source or load_active_ccld_facility_reference()
+    result = lookup_result or search_ccld_facilities(
+        query,
+        reference_source.records,
+        reference_source=reference_source,
+    )
+    return {
+        "query": result.query,
+        "total_match_count": result.total_match_count,
+        "result_limit": result.result_limit,
+        "records": _facility_json_records(result.returned_records),
+    }
+
+
+def _facility_json_records(
+    records: Iterable[CcldFacilityLookupRecord],
+) -> list[dict[str, str]]:
+    return [
+        {
+            "num": record.facility_number,
+            "n": record.facility_name,
+            "city": record.city,
+            "state": record.state,
+            "co": record.county,
+            "zip": record.zip_code,
+            "t": record.facility_type,
+            "p": record.program_type,
+            "cap": record.capacity,
+            "s": record.status,
+        }
+        for record in records
+    ]
+
+
+def _json_response(status: int, payload: Mapping[str, Any]) -> tuple[int, str, bytes]:
+    return (
+        status,
+        "application/json; charset=utf-8",
+        json.dumps(payload, sort_keys=True, ensure_ascii=True).encode("utf-8"),
+    )
 
 
 def _escape(value: str) -> str:
