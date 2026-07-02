@@ -589,5 +589,7 @@ def _none_if_empty(value: str) -> str | None:
     return value or None
 
 
-def _normalized_header(value: str) -> str:
+def _normalized_header(value: str | None) -> str:
+    if value is None:
+        return ""
     return _HEADER_NORMALIZE_PATTERN.sub("", value.casefold())
