@@ -252,4 +252,5 @@ def test_alembic_scaffold_has_seeded_import_domain_migration_only() -> None:
         "20260614_0003_audit_event_scaffold.py",
         "20260614_0004_reset_reload_operational_metadata.py",
         "20260615_0005_ccld_retrieval_jobs.py",
+        "20260701_0006_facility_reference_preload.py",
     ]

@@ -118,12 +118,17 @@ flow state only; they are not canonical source-derived fields and do not require
 schema or migration changes in this scaffold. Loaded rows remain ordinary hosted
 source-derived rows with existing source URL, raw SHA-256, raw path, connector
 metadata, original values, and source traceability.
-A local/test CCLD facility lookup page can read configured full local/test CCLD
-facility reference CSV rows, or committed tiny fixture rows as a deterministic
-fallback, to help testers find a facility/license number by safe scalar fields
-and carry that number into the request page. Lookup values are UI helper state
-only; they are not canonical source-derived fields, do not persist new facility
-records, and do not require schema or migration changes in this scaffold.
+A local/test CCLD facility lookup page can read PostgreSQL-backed
+`hosted_facility_reference_records` rows preloaded from ignored CHHS/CDSS CCLD
+facility CSV resources when PostgreSQL page mode is active. It can also read
+configured full local/test CCLD facility reference CSV rows, or committed tiny
+fixture rows as a deterministic fallback, to help testers find a
+facility/license number by safe scalar fields and carry that number into the
+request page. Facility-reference preload rows are structured reference data with
+explicit source/resource metadata; they are not complaint records and are not
+canonical source-derived fields. The preload path does not mutate
+source-derived records, reviewer-created state, audit rows, feedback, export
+packet state, or complaint retrieval behavior.
 A local/test facility review signals helper can also read supported ignored
 uploaded public licensing/visit/citation summary CSV files for safe scalar
 facility-level review cues on the facility hub. Those signals are UI helper

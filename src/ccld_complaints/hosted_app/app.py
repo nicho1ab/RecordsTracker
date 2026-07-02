@@ -15,6 +15,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
 
 from ccld_complaints.hosted_app.audit_coverage_plan import (
     AUDIT_COVERAGE_PLAN_API_PATH,
@@ -63,6 +64,9 @@ from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
     CcldHttpRetrievalClient,
     CcldRetrievalContext,
     load_ccld_retrieval_config,
+)
+from ccld_complaints.hosted_app.facility_reference_preload import (
+    facility_reference_source_from_connection,
 )
 from ccld_complaints.hosted_app.feedback import (
     FEEDBACK_PATH,
@@ -1499,9 +1503,19 @@ def _default_postgres_reviewer_context() -> ReviewerUiContext | None:
 def _facility_reference_from_context(
     context: CcldRecordRequestUiContext,
 ) -> CcldFacilityReferenceSource:
+    source_context = context.reviewer_ui_context.workflow_shell_context.source_derived_api_context
+    try:
+        facility_reference = facility_reference_source_from_connection(
+            source_context.connection
+        )
+    except SQLAlchemyError:
+        facility_reference = None
+    if facility_reference is not None and facility_reference.records:
+        return facility_reference
+
     status, _content_type, body = route_source_derived_api_response(
         "/api/source-derived-records?limit=100",
-        context.reviewer_ui_context.workflow_shell_context.source_derived_api_context,
+        source_context,
     )
     if status != 200:
         return facility_reference_from_source_derived_records(

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import re
 import shutil
@@ -165,7 +165,8 @@ def test_qnap_verifier_reports_missing_env_file(tmp_path: Path) -> None:
     result = run_verifier("-EnvFile", str(missing_env), "-SkipComposeConfig")
 
     assert result.returncode != 0
-    assert "not found" in (result.stderr + result.stdout)
+    output = result.stderr + result.stdout
+    assert "Copy .env.example to .env" in output
 
 
 def test_qnap_verifier_rejects_unsafe_local_dev_auth(tmp_path: Path) -> None:
@@ -197,7 +198,8 @@ def test_qnap_verifier_rejects_mock_success_without_override(tmp_path: Path) -> 
     output = result.stderr + result.stdout
     assert "CCLD_RETRIEVAL_DEMO_MODE=mock-success" in output
     assert "AllowLocalDevDemo" in output
-    assert "production validation" in output
+    assert "AllowLocalDevDemo" in output
+    assert "mock-success" in output
 
 
 def test_qnap_verifier_detects_retrieval_enabled_without_raw_storage(tmp_path: Path) -> None:

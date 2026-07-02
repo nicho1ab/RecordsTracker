@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Added a narrow PostgreSQL-backed CCLD facility reference preload path for
+  authoritative CHHS/CDSS Community Care Licensing Facilities CSV resources.
+  The new Alembic table stores typed lookup fields plus explicit source
+  metadata, a local dry-run/apply preload command parses ignored local CSVs
+  through the existing `FACILITY_SOURCE_REGISTRY`, and PostgreSQL page mode now
+  prefers preloaded facility reference rows while preserving existing
+  source-derived and fixture fallbacks. No raw CSVs, live downloads, new hosted
+  routes, UI redesign, QNAP/deployment/auth changes, reviewer workflow changes,
+  or complaint retrieval changes were added.
 - Added facility source profiling and database-fit assessment output for the
   CHHS/CDSS Community Care Licensing Facilities preload planning path. The
   local profiler now records the official target resource registry, per-file
