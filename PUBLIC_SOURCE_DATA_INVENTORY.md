@@ -66,9 +66,9 @@ Current target facility resource set:
 
 The committed local profiling registry for this target set lives in
 `src/ccld_complaints/source_profiling.py` as `FACILITY_SOURCE_REGISTRY`. That
-registry is source metadata for local profiling and gap assessment only; it does
-not implement download, import, schema, migration, hosted route, UI, connector,
-or deployment behavior.
+registry is reused by the local facility-reference preload command to match
+ignored local CSV files to known CHHS/CDSS resources. It does not implement live
+download, connector execution, QNAP/deployment behavior, or statewide crawling.
 
 The target facility resources share a statewide facility export shape. Exact
 source column names must be preserved when known during profiling and mapping;
@@ -102,15 +102,17 @@ and approved for repository storage. Use them locally for source profiling until
 an implementation task approves tiny sampled fixtures or a controlled raw-data
 storage approach.
 
-The hosted CCLD facility lookup can use `CDSS_CCL_Facilities_2065342970436235361.csv`
-as an ignored local facility-directory reference input through
-`CCLD_FACILITY_REFERENCE_CSV` or `data/raw/ccld/facility-reference.csv`. That
-support is limited to preloaded local/test lookup and request-page type-ahead
-fields such as `FAC_NBR`, `NAME`, `PROGRAM_TYPE`, `STATUS`, `CAPACITY`, location,
-county, and facility type. It does not commit the raw CSV, import rows, add a
-connector, change schemas or migrations, populate source-derived records, verify
-official facility status, prove complaint coverage, or make source-completeness
-claims.
+The hosted CCLD facility lookup can use ignored local facility-directory
+reference inputs in two local/test ways. Fixture/demo mode can still read
+`CCLD_FACILITY_REFERENCE_CSV` or `data/raw/ccld/facility-reference.csv`.
+PostgreSQL mode can read rows preloaded into
+`hosted_facility_reference_records` by
+`scripts/load-facility-reference-preload.ps1`. Both paths are limited to lookup
+and request-page type-ahead fields such as `FAC_NBR`, `NAME`, `PROGRAM_TYPE`,
+`STATUS`, `CAPACITY`, location, county, and facility type. They do not commit
+raw CSVs, run live downloads, add connectors, populate source-derived complaint
+records, verify official facility status, prove complaint coverage, or make
+source-completeness claims.
 
 The hosted CCLD facility hub can also read supported ignored local public summary
 CSV inputs through `CCLD_FACILITY_REVIEW_SIGNALS_CSVS` or the existing ignored

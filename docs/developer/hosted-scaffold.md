@@ -382,15 +382,18 @@ The scaffold includes a browser-accessible local/test CCLD facility lookup page 
 http://127.0.0.1:8000/ccld/facilities
 ```
 
-The lookup is CCLD-only. It reads a full local/test CCLD program facility CSV or
-CDSS/CHHS facility-directory CSV when `CCLD_FACILITY_REFERENCE_CSV` points to one
-or when a file is available at the ignored local path
-`data/raw/ccld/facility-reference.csv`. When that full CSV is not configured,
-unavailable, or malformed, the lookup falls back to the committed tiny fixture
-CSV. Testers can search by facility/license number, facility name, city, county,
-ZIP code, facility type, program type, capacity, or status code when those fields
-are present. Results are bounded and display safe scalar directory fields only.
-The active reference source and any fallback guidance are visible on the page.
+The lookup is CCLD-only. In PostgreSQL page-data mode, it prefers facility
+reference rows from the `hosted_facility_reference_records` preload table when
+rows are available. In fixture/demo mode, it reads a full local/test CCLD
+program facility CSV or CDSS/CHHS facility-directory CSV when
+`CCLD_FACILITY_REFERENCE_CSV` points to one or when a file is available at the
+ignored local path `data/raw/ccld/facility-reference.csv`. When the PostgreSQL
+table has no rows or the full CSV is not configured, unavailable, or malformed,
+the lookup falls back through the existing local/test source behavior. Testers
+can search by facility/license number, facility name, city, county, ZIP code,
+facility type, program type, capacity, or status code when those fields are
+present. Results are bounded and display safe scalar directory fields only. The
+active reference source and any fallback guidance are visible on the page.
 The `Start complaint request` action carries the selected facility/license number into
 `/ccld/records/request`. Manual facility/license entry on the request page remains
 available.
@@ -406,10 +409,11 @@ The page includes a skip-to-main link, start-here instructions, a labeled search
 field with help text, and a no-JS submit button fallback.
 
 The lookup does not run live CCLD retrieval, execute connectors, persist lookup
-data, mutate source-derived records, mutate reviewer-created state, create audit
-rows, persist operational metadata, prove public-source completeness, or support
-non-CCLD sources. Full/raw facility CSV files must remain ignored local files and
-must not be committed.
+data outside the explicit local/test preload command, mutate source-derived
+records, mutate reviewer-created state, create audit rows, persist operational
+metadata, prove public-source completeness, or support non-CCLD sources.
+Full/raw facility CSV files must remain ignored local files and must not be
+committed.
 
 The scaffold includes a browser-accessible local/test CCLD record request page at:
 
