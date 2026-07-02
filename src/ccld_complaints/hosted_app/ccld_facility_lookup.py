@@ -1218,7 +1218,12 @@ def load_active_ccld_facility_reference_live_safe(
 def _is_lookup_unavailable(source: CcldFacilityReferenceSource) -> bool:
     """True when no real facility directory data is loaded (no live suggestions available)."""
     return source.source_kind == "no_reference" or (
-        source.source_kind == "postgres_source_derived" and not source.records
+        source.source_kind
+        in {
+            "postgres_facility_reference",
+            "postgres_source_derived",
+        }
+        and not source.records
     )
 
 
@@ -2247,7 +2252,14 @@ def _limited_reference_note(source: CcldFacilityReferenceSource) -> str:
             "Facility directory lookup is not configured for this hosted environment. "
             "Enter a known CCLD facility/license number to continue."
         )
-    if source.source_kind == "postgres_source_derived" and not source.records:
+    if (
+        source.source_kind
+        in {
+            "postgres_facility_reference",
+            "postgres_source_derived",
+        }
+        and not source.records
+    ):
         return (
             "Facility directory lookup is not configured for this hosted environment. "
             "Enter a known CCLD facility/license number to continue."

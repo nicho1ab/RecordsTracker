@@ -161,6 +161,30 @@ Run migrations manually when needed:
 docker compose -f docker-compose.qnap.yml --env-file .env run --rm app alembic upgrade head
 ```
 
+## Preload local/test CCLD facility reference rows
+
+After PostgreSQL migrations are applied, a local/test operator can preload
+ignored CHHS/CDSS CCLD facility CSV files into the hosted facility-reference
+table. The command reads local CSV files only; it does not download CHHS data,
+run complaint retrieval, modify reviewer-created rows, or contact deployment
+hosts.
+
+Dry-run from the default ignored source-profiling folder:
+
+```powershell
+.\scripts\load-facility-reference-preload.ps1 -InputPath data\raw\source-profiling -DryRun
+```
+
+Apply the preload after reviewing dry-run counts:
+
+```powershell
+.\scripts\load-facility-reference-preload.ps1 -InputPath data\raw\source-profiling -Apply
+```
+
+The script uses `CCLD_HOSTED_TESTER_DATABASE_URL` from the local environment and
+prints per-resource inserted, updated, unchanged, skipped, and warning counts.
+Use a specific ignored CSV path with `-InputPath` when preloading one resource.
+
 After importing a validated CCLD hosted artifact or seeded corpus, capture
 validated import batch counts, source-derived row counts, safe traceability
 linkage counts, route results, feedback configuration decision, retrieval
