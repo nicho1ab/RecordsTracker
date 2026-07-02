@@ -23,6 +23,7 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_LOOKUP_PATH,
     CCLD_FACILITY_REVIEW_HUB_PATH,
     CCLD_FACILITY_REVIEW_PRIORITY_PATH,
+    CCLD_FACILITY_SUGGESTIONS_PATH,
     CcldFacilityReferenceSource,
     _build_facility_json_data,
     _limited_reference_note,
@@ -632,8 +633,18 @@ def _render_facility_selection_state(reference_source: CcldFacilityReferenceSour
                 else ""
         )
         json_data = _build_facility_json_data(reference_source)
+        suggest_url = (
+                CCLD_FACILITY_SUGGESTIONS_PATH
+                if reference_source.source_kind == "postgres_facility_reference"
+                else ""
+        )
+        suggest_attr = (
+                f' data-facility-suggest-url="{_escape(suggest_url)}"'
+                if suggest_url
+                else ""
+        )
         selected_card = _render_facility_selected_card_html(mode="request")
-        return f"""<section class="workflow-panel" aria-labelledby="facility-selector-heading" id="facility-selector-wrap" data-facility-mode="request">
+        return f"""<section class="workflow-panel" aria-labelledby="facility-selector-heading" id="facility-selector-wrap" data-facility-mode="request"{suggest_attr}>
             <p class="stage-kicker">Facility</p>
             <h2 id="facility-selector-heading">Which facility should be reviewed?</h2>
             <p>Search for a facility when you do not know the exact facility/license number, or type the digit facility/license number directly if you already have it.</p>
