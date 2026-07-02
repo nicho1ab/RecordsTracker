@@ -3,11 +3,13 @@
 import csv
 import importlib.util
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
+import pytest
 from sqlalchemy import create_engine, func, inspect, select
 from sqlalchemy.engine import Connection
 
@@ -365,10 +367,13 @@ def test_powershell_preload_rejects_apply_and_dry_run_together(
     tmp_path: Path,
 ) -> None:
     repo_root = Path(__file__).resolve().parents[2]
+    powershell_executable = shutil.which("pwsh") or shutil.which("powershell")
+    if powershell_executable is None:
+        pytest.skip("PowerShell executable is not available on this runner.")
 
     completed = subprocess.run(
         [
-            "powershell",
+            powershell_executable,
             "-NoProfile",
             "-ExecutionPolicy",
             "Bypass",
