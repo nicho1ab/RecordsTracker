@@ -13,6 +13,7 @@ import pytest
 from sqlalchemy import create_engine, func, inspect, select
 from sqlalchemy.engine import Connection
 
+from ccld_complaints.hosted_app import facility_reference_preload as preload_module
 from ccld_complaints.hosted_app.app import route_response
 from ccld_complaints.hosted_app.auth import load_hosted_auth_runtime_config
 from ccld_complaints.hosted_app.ccld_facility_lookup import CCLD_FACILITY_LOOKUP_PATH
@@ -474,3 +475,12 @@ def _load_preload_cli_module() -> Any:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+def test_value_lookup_ignores_extra_csv_fields_without_headers() -> None:
+    row = {
+        None: ["unexpected", "extra", "values"],
+        "FAC_NBR": " 123456789 ",
+    }
+
+    assert preload_module._value(row, "FAC_NBR") == "123456789"
+
