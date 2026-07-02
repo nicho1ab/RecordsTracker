@@ -8,11 +8,30 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
-from sqlalchemy import JSON, Column, Index, Integer, MetaData, String, Table, Text, select, update
+from sqlalchemy import (
+    JSON,
+    Column,
+    Index,
+    Integer,
+    MetaData,
+    String,
+    Table,
+    Text,
+    and_,
+    func,
+    or_,
+    select,
+    update,
+)
+from sqlalchemy import (
+    cast as sql_cast,
+)
 from sqlalchemy.engine import Connection
 
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
+    MAX_FACILITY_LOOKUP_RESULTS,
     CcldFacilityLookupRecord,
+    CcldFacilityLookupResult,
     CcldFacilityReferenceSource,
 )
 from ccld_complaints.hosted_app.persistence import load_hosted_database_config
@@ -331,6 +350,72 @@ def facility_reference_source_from_connection(
         path_label=FACILITY_REFERENCE_TABLE_NAME,
         records=records,
         notices=notices,
+        record_count=len(records),
+    )
+
+
+def facility_reference_source_summary_from_connection(
+    connection: Connection,
+) -> CcldFacilityReferenceSource:
+    record_count = connection.execute(
+        select(func.count()).select_from(hosted_facility_reference_records)
+    ).scalar_one()
+    notices: tuple[str, ...] = ()
+    if record_count == 0:
+        notices = (
+            "Facility lookup suggestions are not available. Preload facility reference "
+            "rows before using PostgreSQL-backed lookup suggestions.",
+        )
+    return CcldFacilityReferenceSource(
+        source_kind="postgres_facility_reference",
+        label="PostgreSQL facility reference records",
+        path_label=FACILITY_REFERENCE_TABLE_NAME,
+        records=(),
+        notices=notices,
+        record_count=record_count,
+    )
+
+
+def search_facility_reference_records(
+    connection: Connection,
+    query: str,
+    *,
+    result_limit: int = MAX_FACILITY_LOOKUP_RESULTS,
+) -> CcldFacilityLookupResult:
+    if result_limit < 1:
+        raise ValueError("result_limit must be at least 1.")
+    source = facility_reference_source_summary_from_connection(connection)
+    query_tokens = _normalized_query_tokens(query)
+    if not query_tokens:
+        return CcldFacilityLookupResult(
+            query=query.strip(),
+            total_match_count=0,
+            returned_records=(),
+            result_limit=result_limit,
+            reference_source=source,
+        )
+    filters = tuple(_search_token_filter(token) for token in query_tokens)
+    total_match_count = connection.execute(
+        select(func.count())
+        .select_from(hosted_facility_reference_records)
+        .where(and_(*filters))
+    ).scalar_one()
+    rows = connection.execute(
+        select(hosted_facility_reference_records)
+        .where(and_(*filters))
+        .order_by(
+            hosted_facility_reference_records.c.facility_name,
+            hosted_facility_reference_records.c.facility_number,
+        )
+        .limit(result_limit)
+    ).mappings()
+    records = tuple(_lookup_record_from_reference_row(dict(row)) for row in rows)
+    return CcldFacilityLookupResult(
+        query=query.strip(),
+        total_match_count=total_match_count,
+        returned_records=records,
+        result_limit=result_limit,
+        reference_source=source,
     )
 
 
@@ -550,6 +635,31 @@ def _row_str(row: Mapping[str, Any], key: str) -> str:
     if value is None:
         return ""
     return str(value)
+
+
+def _normalized_query_tokens(query: str) -> tuple[str, ...]:
+    normalized = re.sub(r"\s+", " ", query.casefold()).strip()
+    return tuple(token for token in normalized.split(" ") if token)
+
+
+def _search_token_filter(token: str) -> Any:
+    pattern = f"%{token}%"
+    searchable_columns = (
+        hosted_facility_reference_records.c.facility_number,
+        hosted_facility_reference_records.c.facility_name,
+        hosted_facility_reference_records.c.city,
+        hosted_facility_reference_records.c.county,
+        hosted_facility_reference_records.c.zip,
+        hosted_facility_reference_records.c.facility_type,
+        hosted_facility_reference_records.c.program_type,
+        hosted_facility_reference_records.c.status,
+    )
+    return or_(
+        *(
+            func.lower(func.coalesce(sql_cast(column, String), "")).like(pattern)
+            for column in searchable_columns
+        )
+    )
 
 
 def _snapshot_date_from_filename(file_name: str) -> str | None:

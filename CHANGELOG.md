@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Updated the hosted CCLD facility lookup in PostgreSQL page mode to search the
+  active preloaded facility reference table server-side before applying the
+  browser result limit. The lookup and request comboboxes now use a narrow
+  query-specific suggestions route for PostgreSQL-backed reference rows, so
+  loaded facility numbers and names from Child Care Centers, Family Child Care
+  Homes, Home Care Organization, Foster Family Agencies, 24-Hour Residential
+  Care for Children, and statewide facility master sources remain searchable
+  without preloading only the first static browser slice.
 - Added a narrow PostgreSQL-backed CCLD facility reference preload path for
   authoritative CHHS/CDSS Community Care Licensing Facilities CSV resources.
   The new Alembic table stores typed lookup fields plus explicit source

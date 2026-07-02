@@ -1,8 +1,10 @@
 ﻿from __future__ import annotations
 
+import json
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, cast
+from urllib.parse import urlencode
 
 import pytest
 from sqlalchemy import create_engine, func, select
@@ -26,6 +28,7 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_REVIEW_HUB_PATH,
     CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
     CCLD_FACILITY_REVIEW_PRIORITY_PATH,
+    CCLD_FACILITY_SUGGESTIONS_PATH,
     CCLD_RECORD_REQUEST_PATH,
     PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER,
     CcldFacilityLookupRecord,
@@ -41,6 +44,10 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
 )
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     ccld_record_request_context_for_reviewer_context,
+)
+from ccld_complaints.hosted_app.facility_reference_preload import (
+    hosted_facility_reference_metadata,
+    hosted_facility_reference_records,
 )
 from ccld_complaints.hosted_app.facility_review_signals import (
     FACILITY_REVIEW_SIGNALS_CSVS_ENV,
@@ -283,6 +290,117 @@ def test_postgres_mode_facility_lookup_uses_source_derived_records() -> None:
     assert "A. MIRIAM JAMISON CHILDREN" in html
     assert "Tiny committed CCLD facility fixture fallback" not in html
     assert counts == _empty_reviewer_counts()
+    assert_no_secret_html(html)
+
+
+@pytest.mark.parametrize(
+    ("query", "expected_number", "expected_name"),
+    (
+        (
+            "107TH. STREET ELEMENTARY SCHOOL CSPP/HEAD START",
+            "197416900",
+            "107TH. STREET ELEMENTARY SCHOOL CSPP/HEAD START",
+        ),
+        ("197416900", "197416900", "107TH. STREET ELEMENTARY SCHOOL CSPP/HEAD START"),
+        ("AARON, LADASHA", "073406243", "AARON, LADASHA"),
+        ("073406243", "073406243", "AARON, LADASHA"),
+        (
+            "123 HOMECARE SERVICES, INC.",
+            "434700161",
+            "123 HOMECARE SERVICES, INC.",
+        ),
+        ("434700161", "434700161", "123 HOMECARE SERVICES, INC."),
+        (
+            "3 ANGELS CHILDREN & FAMILY SERVICES, INC.",
+            "286890053",
+            "3 ANGELS CHILDREN & FAMILY SERVICES, INC.",
+        ),
+        ("286890053", "286890053", "3 ANGELS CHILDREN & FAMILY SERVICES, INC."),
+        ("19TH STREET STRTP", "435390031", "19TH STREET STRTP"),
+        ("435390031", "435390031", "19TH STREET STRTP"),
+    ),
+)
+def test_postgres_mode_facility_lookup_searches_full_preloaded_reference(
+    query: str,
+    expected_number: str,
+    expected_name: str,
+) -> None:
+    with _seeded_connection() as connection:
+        _seed_preloaded_facility_reference_rows(connection)
+        context = ccld_record_request_context_for_reviewer_context(
+            reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(roles=("tester_reviewer",)),
+            )
+        )
+        status, content_type, body = route_response(
+            f"{CCLD_FACILITY_LOOKUP_PATH}?{urlencode({'q': query})}",
+            auth_runtime_config=_local_dev_auth_config(),
+            page_data_mode="postgres",
+            ccld_record_request_ui_context=context,
+        )
+        counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert expected_number in html
+    assert expected_name.replace("&", "&amp;") in html
+    assert f"facility_number={expected_number}" in html
+    assert "request_context_origin=facility_lookup" in html
+    assert "Tiny committed CCLD facility fixture fallback" not in html
+    assert counts == _empty_reviewer_counts()
+    assert_no_secret_html(html)
+
+
+def test_postgres_facility_suggestions_query_full_preloaded_reference() -> None:
+    with _seeded_connection() as connection:
+        _seed_preloaded_facility_reference_rows(connection)
+        context = ccld_record_request_context_for_reviewer_context(
+            reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(roles=("tester_reviewer",)),
+            )
+        )
+        status, content_type, body = route_response(
+            f"{CCLD_FACILITY_SUGGESTIONS_PATH}?{urlencode({'q': '286890053'})}",
+            auth_runtime_config=_local_dev_auth_config(),
+            page_data_mode="postgres",
+            ccld_record_request_ui_context=context,
+        )
+
+    payload = json.loads(body.decode("utf-8"))
+
+    assert status == 200
+    assert content_type == "application/json; charset=utf-8"
+    assert payload["total_match_count"] == 1
+    assert payload["records"][0]["num"] == "286890053"
+    assert payload["records"][0]["n"] == "3 ANGELS CHILDREN & FAMILY SERVICES, INC."
+
+
+def test_postgres_facility_lookup_uses_server_suggestions_without_static_slice() -> None:
+    with _seeded_connection() as connection:
+        _seed_preloaded_facility_reference_rows(connection)
+        context = ccld_record_request_context_for_reviewer_context(
+            reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(roles=("tester_reviewer",)),
+            )
+        )
+        status, _content_type, body = route_response(
+            CCLD_FACILITY_LOOKUP_PATH,
+            auth_runtime_config=_local_dev_auth_config(),
+            page_data_mode="postgres",
+            ccld_record_request_ui_context=context,
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert f'data-facility-suggest-url="{CCLD_FACILITY_SUGGESTIONS_PATH}"' in html
+    assert '<script type="application/json" id="facility-reference-json">[]</script>' in html
+    assert "AARON, LADASHA" not in html
     assert_no_secret_html(html)
 
 
@@ -2181,6 +2299,130 @@ def _program_summary_signal_row(
         "Other TypeA": "",
         "Other TypeB": "",
         "Complaint Info- Date, #Sub Aleg, # Inc Aleg, # Uns Aleg, # TypeA, # TypeB ...": "",
+    }
+
+
+def _seed_preloaded_facility_reference_rows(connection: Connection) -> None:
+    hosted_facility_reference_metadata.create_all(connection)
+    rows = [
+        _facility_reference_row(
+            source_resource_id="child-care-centers",
+            source_resource_name="Child Care Centers",
+            facility_number="197416900",
+            facility_name="107TH. STREET ELEMENTARY SCHOOL CSPP/HEAD START",
+            facility_type="Child Care Center",
+            program_type="Child Care",
+            city="Los Angeles",
+            county="Los Angeles",
+            zip_code="90003",
+            status="Licensed",
+        ),
+        _facility_reference_row(
+            source_resource_id="family-child-care-homes",
+            source_resource_name="Family Child Care Homes",
+            facility_number="073406243",
+            facility_name="AARON, LADASHA",
+            facility_type="Family Child Care Home",
+            program_type="Child Care",
+            city="Oakland",
+            county="Alameda",
+            zip_code="94601",
+            status="Licensed",
+        ),
+        _facility_reference_row(
+            source_resource_id="home-care-organization",
+            source_resource_name="Home Care Organization",
+            facility_number="434700161",
+            facility_name="123 HOMECARE SERVICES, INC.",
+            facility_type="Home Care Organization",
+            program_type="Home Care",
+            city="San Jose",
+            county="Santa Clara",
+            zip_code="95112",
+            status="Licensed",
+        ),
+        _facility_reference_row(
+            source_resource_id="foster-family-agencies",
+            source_resource_name="Foster Family Agencies",
+            facility_number="286890053",
+            facility_name="3 ANGELS CHILDREN & FAMILY SERVICES, INC.",
+            facility_type="Foster Family Agency",
+            program_type="Children's Residential",
+            city="Bakersfield",
+            county="Kern",
+            zip_code="93301",
+            status="Licensed",
+        ),
+        _facility_reference_row(
+            source_resource_id="hour-residential-care-children",
+            source_resource_name="24-Hour Residential Care for Children",
+            facility_number="435390031",
+            facility_name="19TH STREET STRTP",
+            facility_type="Short-Term Residential Therapeutic Program",
+            program_type="Children's Residential",
+            city="San Jose",
+            county="Santa Clara",
+            zip_code="95112",
+            status="Licensed",
+        ),
+        _facility_reference_row(
+            source_resource_id="statewide-facility-master",
+            source_resource_name="Statewide Facility Master",
+            facility_number="214005552",
+            facility_name="SUSD- TOMALES PRESCHOOL",
+            facility_type="DAY CARE CENTER",
+            program_type="CHILD CARE",
+            city="TOMALES",
+            county="Marin",
+            zip_code="94971",
+            status="3",
+        ),
+    ]
+    connection.execute(hosted_facility_reference_records.insert(), rows)
+
+
+def _facility_reference_row(
+    *,
+    source_resource_id: str,
+    source_resource_name: str,
+    facility_number: str,
+    facility_name: str,
+    facility_type: str,
+    program_type: str,
+    city: str,
+    county: str,
+    zip_code: str,
+    status: str,
+) -> dict[str, Any]:
+    return {
+        "source_resource_id": source_resource_id,
+        "facility_number": facility_number,
+        "facility_name": facility_name,
+        "facility_type": facility_type,
+        "program_type": program_type,
+        "licensee_name": None,
+        "facility_administrator": None,
+        "telephone": None,
+        "address": None,
+        "city": city,
+        "state": "CA",
+        "zip": zip_code,
+        "county": county,
+        "regional_office": None,
+        "capacity": 24,
+        "status": status,
+        "license_first_date": None,
+        "closed_date": None,
+        "snapshot_date": "2026-06-07",
+        "source_resource_name": source_resource_name,
+        "source_dataset_slug": "ccl-facilities",
+        "source_dataset_url": "public-ccl-facilities",
+        "source_accessed_at": "2026-07-01T12:00:00+00:00",
+        "source_file_name": f"{source_resource_id}.csv",
+        "original_row_json": {
+            "Facility Number": facility_number,
+            "Facility Name": facility_name,
+        },
     }
 
 
