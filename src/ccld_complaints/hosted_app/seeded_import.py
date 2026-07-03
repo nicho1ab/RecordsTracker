@@ -205,18 +205,31 @@ def import_seeded_corpus_artifact(
     flattened_records = flatten_seeded_corpus_records(artifact)
     _upsert_batch(connection, artifact)
 
-    counts_by_entity: dict[str, int] = {
-        entity_type: 0 for entity_type in SOURCE_DERIVED_ENTITY_TYPES
-    }
     for record in flattened_records:
         _upsert_source_record(connection, record)
-        counts_by_entity[record.entity_type] += 1
+
+    persisted_counts_by_entity = _unique_persisted_counts_by_entity(flattened_records)
 
     return SeededCorpusImportResult(
         import_batch_id=artifact.import_batch_id,
-        imported_record_count=len(flattened_records),
-        imported_counts_by_entity=counts_by_entity,
+        imported_record_count=sum(persisted_counts_by_entity.values()),
+        imported_counts_by_entity=persisted_counts_by_entity,
     )
+
+
+def _unique_persisted_counts_by_entity(
+    records: Sequence[SeededSourceDerivedRecord],
+) -> Mapping[str, int]:
+    counts_by_entity: dict[str, int] = {
+        entity_type: 0 for entity_type in SOURCE_DERIVED_ENTITY_TYPES
+    }
+    seen_source_record_keys: set[str] = set()
+    for record in records:
+        if record.source_record_key in seen_source_record_keys:
+            continue
+        seen_source_record_keys.add(record.source_record_key)
+        counts_by_entity[record.entity_type] += 1
+    return counts_by_entity
 
 
 def _flatten_normalized_record(
