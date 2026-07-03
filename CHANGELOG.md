@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Fixed live Request Records imported-count semantics so retrieval job metadata,
+  Request Records messaging, and Job Status show the number of unique
+  source-derived rows persisted after import/upsert normalization, not the
+  pre-persistence flattened candidate-row count.
 - Improved hosted facility lookup and Request Records typeahead suggestions so
   each suggestion shows a compact text status badge near the facility name and
   wraps long facility number, location, county, type, and program text without

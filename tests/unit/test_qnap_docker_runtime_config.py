@@ -165,8 +165,9 @@ def test_qnap_verifier_reports_missing_env_file(tmp_path: Path) -> None:
     result = run_verifier("-EnvFile", str(missing_env), "-SkipComposeConfig")
 
     assert result.returncode != 0
-    output = result.stderr + result.stdout
-    assert "Copy .env.example to .env" in output
+    output = plain_process_output(result)
+    assert ".env.example to .env" in output
+    assert "replace placeholders" in output
 
 
 def test_qnap_verifier_rejects_unsafe_local_dev_auth(tmp_path: Path) -> None:

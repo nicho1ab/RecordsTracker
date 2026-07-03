@@ -262,6 +262,64 @@ def test_controlled_retrieval_imports_records_and_links_queue(tmp_path: Path) ->
     assert_no_secret_html(html)
 
 
+def test_retrieval_imported_count_uses_persisted_unique_source_rows(
+    tmp_path: Path,
+) -> None:
+    client = MockCcldRetrievalClient(
+        facility_detail_html=_facility_detail_with_duplicate_record_links(),
+        report_content_by_index={
+            3: RAW_FIXTURE.read_bytes(),
+            33: RAW_FIXTURE.read_bytes(),
+        },
+    )
+    with _empty_connection() as connection:
+        context = _request_context(connection, tmp_path, client=client, per_job_limit=2)
+        status, _content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_retrieval_form_bytes(),
+            ccld_record_request_ui_context=context,
+        )
+        counts = _table_counts(connection)
+        job = connection.execute(select(hosted_ccld_retrieval_jobs)).mappings().one()
+        detail_status, _content_type, detail_body = route_response(
+            f"{CCLD_RETRIEVAL_JOB_DETAIL_PATH}?job_id={job['retrieval_job_id']}",
+            ccld_record_request_ui_context=context,
+        )
+        history_status, _content_type, history_body = route_response(
+            CCLD_RETRIEVAL_JOBS_PATH,
+            ccld_record_request_ui_context=context,
+        )
+
+    html = body.decode("utf-8")
+    detail_html = detail_body.decode("utf-8")
+    history_html = history_body.decode("utf-8")
+    imported_count = job["result_counts"]["imported_source_derived_records"]
+
+    assert status == 200
+    assert detail_status == 200
+    assert history_status == 200
+    assert len(client.report_calls) == 2
+    assert job["result_counts"]["selected_report_candidates"] == 2
+    assert job["result_counts"]["retrieved_record_bundles"] == 2
+    assert job["result_counts"]["matched_record_bundles"] == 2
+    assert imported_count == counts["source_records"]
+    assert imported_count < 52
+    assert counts["source_records"] == 48
+    assert counts["import_batches"] == 1
+    assert "Records imported" in html
+    assert f"<dd>{imported_count}</dd>" in html
+    assert "2 complaint queue record(s) are ready for review" not in html
+    assert "1 complaint queue record(s) are ready for review" in html
+    assert f"<dd>{imported_count}</dd>" in detail_html
+    assert f"<td>{imported_count}</td>" in history_html
+    assert "raw paths not shown" in detail_html
+    assert "raw paths not shown" in history_html
+    assert_no_secret_html(html)
+    assert_no_secret_html(detail_html)
+    assert_no_secret_html(history_html)
+
+
 def test_postgres_retrieval_persists_jobs_and_queue_after_reopened_connection(
     tmp_path: Path,
 ) -> None:
@@ -1610,6 +1668,7 @@ def _request_context(
     *,
     client: MockCcldRetrievalClient | None = None,
     rate_limit: int = 3,
+    per_job_limit: int = 1,
     now: Any | None = None,
 ) -> CcldRecordRequestUiContext:
     reviewer_context = reviewer_ui_context_for_connection(
@@ -1625,7 +1684,7 @@ def _request_context(
             enabled=True,
             raw_dir=tmp_path / "raw",
             max_date_range_days=30,
-            per_job_request_limit=1,
+            per_job_request_limit=per_job_limit,
             rate_limit_per_actor=rate_limit,
             timeout_seconds=5,
             retry_limit=0,
@@ -1713,6 +1772,20 @@ def _facility_detail_with_mixed_complaint_links() -> str:
         <a href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&amp;inx=33">08/09/2022</a>
         <a href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&amp;inx=3">08/24/2022</a>
         <a href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=123456789&amp;inx=4">08/24/2022</a>
+    </p>
+</body>
+</html>"""
+
+
+def _facility_detail_with_duplicate_record_links() -> str:
+        return """<!doctype html>
+<html lang="en">
+<body>
+    <h1>Facility Detail</h1>
+    <h2>Complaints</h2>
+    <p>
+        <a href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&amp;inx=3">08/24/2022</a>
+        <a href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&amp;inx=33">08/24/2022</a>
     </p>
 </body>
 </html>"""
