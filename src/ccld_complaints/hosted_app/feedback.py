@@ -30,7 +30,14 @@ GITHUB_FEEDBACK_REPO_ENV = "GITHUB_FEEDBACK_REPO"
 GITHUB_FEEDBACK_TOKEN_ENV = "GITHUB_FEEDBACK_TOKEN"
 GITHUB_FEEDBACK_DEFAULT_LABELS_ENV = "GITHUB_FEEDBACK_DEFAULT_LABELS"
 MAX_FEEDBACK_DESCRIPTION_LENGTH = 4000
-FEEDBACK_TYPE_OPTIONS = ("Bug report", "Feature request", "New data source")
+FEEDBACK_TYPE_OPTIONS = (
+    "Bug report",
+    "Feature request",
+    "Confusing page or workflow",
+    "Packet/export issue",
+    "Source/data concern",
+    "New data source request",
+)
 ALLOWED_FEEDBACK_CONTEXT_PARAMETERS = (
     "feedback_type",
     "page_path",
@@ -44,6 +51,8 @@ ALLOWED_FEEDBACK_CONTEXT_PARAMETERS = (
     "retrieval_status",
     "retrieval_job_id",
     "complaint_control_number",
+    "visible_workflow_state",
+    "action_attempted",
     "prompt",
 )
 SAFE_WORKFLOW_AREAS = (
@@ -80,11 +89,14 @@ SAFE_RETRIEVAL_STATUSES = (
     "blocked_by_validation",
     "rate_limited",
 )
-BASE_FEEDBACK_LABELS = ("feedback", "from-app", "needs-triage")
+BASE_FEEDBACK_LABELS = ("user-feedback", "from-app", "needs-triage")
 TYPE_LABELS = {
     "Bug report": "bug",
     "Feature request": "feature-request",
-    "New data source": "new-data-source",
+    "Confusing page or workflow": "workflow-confusion",
+    "Packet/export issue": "packet-export",
+    "Source/data concern": "source-data",
+    "New data source request": "data-source-request",
 }
 SECRET_MARKERS = (
     "authorization",
@@ -133,6 +145,7 @@ class FeedbackContext:
     github_client: GitHubIssueClient
     now: Callable[[], datetime] = lambda: datetime.now(UTC)
     app_version: str | None = None
+    app_mode: str | None = None
 
 
 @dataclass(frozen=True)
@@ -162,6 +175,8 @@ class FeedbackHandoffContext:
     retrieval_status: str | None = None
     retrieval_job_id: str | None = None
     complaint_control_number: str | None = None
+    visible_workflow_state: str | None = None
+    action_attempted: str | None = None
     prompt: str | None = None
 
 
@@ -284,7 +299,7 @@ def render_feedback_page(
         <section class="hero-card" aria-labelledby="feedback-purpose-heading">
             <p class="launch-kicker">Tester feedback</p>
             <h2 id="feedback-purpose-heading">Send safe review feedback</h2>
-            <p>Choose the feedback type and describe what blocked Request Records, Job Status, record review, packet/readiness review, wording, or keyboard flow.</p>
+            <p>Choose the feedback type and describe what blocked Request Records, Job Status, record review, packet/readiness review, source/data review, wording, or keyboard flow.</p>
             <p class="helper-text">Actionable tester feedback names the page or route, what you tried first, what you expected, what happened instead, and whether the issue blocked review.</p>
         </section>
         <section class="notice-card" aria-labelledby="actionable-feedback-heading">
@@ -344,6 +359,8 @@ def feedback_href(**context_values: str | None) -> str:
             "retrieval_status": context.retrieval_status,
             "retrieval_job_id": context.retrieval_job_id,
             "complaint_control_number": context.complaint_control_number,
+            "visible_workflow_state": context.visible_workflow_state,
+            "action_attempted": context.action_attempted,
             "prompt": context.prompt,
         }
     )
@@ -376,6 +393,12 @@ def _feedback_handoff_context_from_values(
         ),
         retrieval_job_id=_safe_retrieval_job_id(_first_form_value(values, "retrieval_job_id")),
         complaint_control_number=_safe_short_value(_first_form_value(values, "complaint_control_number"), max_length=80),
+        visible_workflow_state=_safe_short_value(
+            _first_form_value(values, "visible_workflow_state"), max_length=140
+        ),
+        action_attempted=_safe_short_value(
+            _first_form_value(values, "action_attempted"), max_length=140
+        ),
         prompt=_safe_short_value(_first_form_value(values, "prompt"), max_length=220),
     )
 
@@ -463,7 +486,9 @@ def _has_retrieval_context(context: FeedbackHandoffContext) -> bool:
     return any((context.retrieval_context, context.retrieval_status, context.retrieval_job_id))
 
 
-def _feedback_context_rows(context: FeedbackHandoffContext) -> list[tuple[str, str]]:
+def _feedback_context_rows(context: FeedbackHandoffContext | None) -> list[tuple[str, str]]:
+    if context is None:
+        return []
     fields = (
         ("Workflow area", context.workflow_area),
         ("Page path", context.page_path),
@@ -476,6 +501,8 @@ def _feedback_context_rows(context: FeedbackHandoffContext) -> list[tuple[str, s
         ("Job status", context.retrieval_status),
         ("Job ID", context.retrieval_job_id),
         ("Complaint/control identifier", context.complaint_control_number),
+        ("Visible workflow state", context.visible_workflow_state),
+        ("Action attempted", context.action_attempted),
         ("Suggested prompt", context.prompt),
     )
     return [(label, value) for label, value in fields if value]
@@ -496,6 +523,8 @@ def _feedback_handoff_context_form_values(
         "retrieval_status": context.retrieval_status,
         "retrieval_job_id": context.retrieval_job_id,
         "complaint_control_number": context.complaint_control_number,
+        "visible_workflow_state": context.visible_workflow_state,
+        "action_attempted": context.action_attempted,
         "prompt": context.prompt,
     }
     return {key: [value] for key, value in values.items() if value is not None}
@@ -590,7 +619,10 @@ def feedback_labels(feedback_type: str, default_labels: Sequence[str] = ()) -> t
 
 
 def build_issue_title(submission: FeedbackSubmission) -> str:
-    return f"[App feedback] {submission.feedback_type}"
+    surface = _safe_title_surface(submission.handoff_context)
+    if surface:
+        return f"RecordsTracker feedback: {submission.feedback_type} on {surface}"
+    return f"RecordsTracker feedback: {submission.feedback_type}"
 
 
 def build_issue_body(
@@ -599,12 +631,14 @@ def build_issue_body(
     submitted_at: datetime,
     actor: AuthenticatedActor | None,
     app_version: str | None = None,
+    app_mode: str | None = None,
 ) -> str:
     lines = [
         "## Feedback",
         "",
         f"Type: {submission.feedback_type}",
         f"Submitted at: {submitted_at.isoformat()}",
+        "Private material should not be included in RecordsTracker feedback.",
     ]
     if submission.page_path is not None:
         lines.append(f"Page path: {submission.page_path}")
@@ -613,6 +647,12 @@ def build_issue_body(
         lines.append(f"Submitted by: {actor_label}")
     if app_version is not None and app_version.strip():
         lines.append(f"App version: {app_version.strip()}")
+    if app_mode is not None and app_mode.strip():
+        lines.append(f"App mode: {app_mode.strip()}")
+    context_rows = _feedback_context_rows(submission.handoff_context)
+    if context_rows:
+        lines.extend(["", "## Safe Captured Context", ""])
+        lines.extend(f"- {label}: {value}" for label, value in context_rows)
     lines.extend(["", "## Description", "", submission.description])
     body = "\n".join(lines)
     if _contains_secret_marker(body):
@@ -653,6 +693,7 @@ def _post_feedback_response(
 
     if not context.github_config.configured:
         submission = validation.submission
+        submitted_at = context.now()
         return _html_response(
             503,
             _page(
@@ -665,6 +706,7 @@ def _post_feedback_response(
       <p>GitHub feedback intake is not configured on this server. No GitHub issue was created.</p>
     </section>
     {_feedback_confirmation_summary(submission, status_message="Review what you entered before copying it to the agreed tester support channel.")}
+    {_feedback_copyable_summary(submission, submitted_at=submitted_at)}
     {_feedback_next_steps()}
     {_feedback_form(form_values)}
 """,
@@ -679,15 +721,16 @@ def _post_feedback_response(
             submitted_at=context.now(),
             actor=context.actor,
             app_version=context.app_version,
+            app_mode=context.app_mode,
         )
-        issue = context.github_client.create_issue(
-            repo=context.github_config.repo or "",
-            token=context.github_config.token or "",
-            title=build_issue_title(submission),
-            body=issue_body,
+        issue = _create_github_issue_with_label_fallback(
+            context=context,
+            submission=submission,
+            issue_body=issue_body,
             labels=labels,
         )
     except Exception:
+        submitted_at = context.now()
         return _html_response(
             502,
             _page(
@@ -699,12 +742,19 @@ def _post_feedback_response(
       <p>The server could not create the GitHub issue. No token or private details are shown.</p>
     </section>
     {_feedback_confirmation_summary(submission, status_message="Review what you entered before trying again or copying it to the agreed tester support channel.")}
+    {_feedback_copyable_summary(submission, submitted_at=submitted_at)}
     {_feedback_next_steps()}
 """,
             ),
         )
     issue_number = issue.get("number")
     issue_text = f"Issue #{issue_number}" if isinstance(issue_number, int) else "GitHub issue"
+    issue_url = _safe_github_issue_url(issue.get("html_url"), context.github_config.repo)
+    issue_link = (
+        f'<p><a href="{html.escape(issue_url)}">Open created GitHub issue</a></p>'
+        if issue_url
+        else ""
+    )
     return _html_response(
         201,
         _page(
@@ -714,6 +764,7 @@ def _post_feedback_response(
     <section aria-labelledby="feedback-success-heading">
       <h2 id="feedback-success-heading">Feedback submitted</h2>
       <p>{html.escape(issue_text)} was created for triage.</p>
+      {issue_link}
       <p>Labels: {html.escape(', '.join(labels))}</p>
     </section>
     {_feedback_confirmation_summary(submission, status_message="Review the submitted details below.")}
@@ -748,6 +799,15 @@ def _feedback_confirmation_summary(
 {context_markup}"""
 
 
+def _feedback_copyable_summary(submission: FeedbackSubmission, *, submitted_at: datetime | None = None) -> str:
+    safe_summary = _manual_feedback_summary(submission, submitted_at=submitted_at)
+    return f"""    <section class="summary-card" aria-labelledby="feedback-copyable-summary-heading">
+      <h2 id="feedback-copyable-summary-heading">Copyable feedback summary</h2>
+      <p>Copy this safe summary to the agreed tester support channel.</p>
+      <textarea id="feedback-copyable-summary" rows="12" readonly>{html.escape(safe_summary)}</textarea>
+    </section>"""
+
+
 def _feedback_submitted_context_summary(
     context: FeedbackHandoffContext | None,
 ) -> str:
@@ -767,6 +827,34 @@ def _feedback_submitted_context_summary(
 {row_markup}
       </dl>
     </section>"""
+
+
+def _manual_feedback_summary(
+    submission: FeedbackSubmission,
+    *,
+    submitted_at: datetime | None = None,
+) -> str:
+    lines = [
+        "RecordsTracker feedback",
+        f"Type: {submission.feedback_type}",
+        f"Submitted page path: {submission.page_path or FEEDBACK_PATH}",
+    ]
+    if submitted_at is not None:
+        lines.append(f"Prepared at: {submitted_at.isoformat()}")
+    context_rows = _feedback_context_rows(submission.handoff_context)
+    if context_rows:
+        lines.extend(["", "Safe context:"])
+        lines.extend(f"- {label}: {value}" for label, value in context_rows)
+    lines.extend(
+        [
+            "",
+            "Description:",
+            submission.description,
+            "",
+            "Private material, credentials, session values, raw artifacts, raw server paths, stack traces, and private URLs should not be included.",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def _feedback_next_steps() -> str:
@@ -871,6 +959,8 @@ def _feedback_context_form_controls(context: FeedbackHandoffContext) -> str:
         ("retrieval_status", "Job status", context.retrieval_status),
         ("retrieval_job_id", "Job ID", context.retrieval_job_id),
         ("complaint_control_number", "Complaint/control identifier", context.complaint_control_number),
+        ("visible_workflow_state", "Visible workflow state", context.visible_workflow_state),
+        ("action_attempted", "Action attempted", context.action_attempted),
         ("prompt", "Suggested prompt", context.prompt),
     ):
         if value:
@@ -977,6 +1067,67 @@ def _safe_actor_label(actor: AuthenticatedActor | None) -> str | None:
     if actor.display_name and actor.display_name.strip():
         return actor.display_name.strip()
     return actor.actor_category
+
+
+def _safe_title_surface(context: FeedbackHandoffContext | None) -> str:
+    if context is None:
+        return ""
+    if context.workflow_area:
+        return context.workflow_area.replace("-", " ").title()
+    if context.page_path:
+        route_titles = {
+            "/": "Home",
+            "/feedback": "Feedback",
+            "/ccld/records/request": "Request Records",
+            "/ccld/retrieval/jobs": "Job Status",
+            "/ccld/retrieval/jobs/detail": "Job Status Detail",
+            "/reviewer": "Review Queue",
+            "/reviewer/records": "Review Queue",
+            "/reviewer/packet/preview": "Packet Preview",
+            "/reviewer/packet/draft": "Packet Draft",
+        }
+        if context.page_path in route_titles:
+            return route_titles[context.page_path]
+        page_name = context.page_path.strip("/").split("/")[-1].replace("-", " ")
+        return page_name.title() if page_name else "Home"
+    return ""
+
+
+def _create_github_issue_with_label_fallback(
+    *,
+    context: FeedbackContext,
+    submission: FeedbackSubmission,
+    issue_body: str,
+    labels: Sequence[str],
+) -> Mapping[str, Any]:
+    issue_title = build_issue_title(submission)
+    try:
+        return context.github_client.create_issue(
+            repo=context.github_config.repo or "",
+            token=context.github_config.token or "",
+            title=issue_title,
+            body=issue_body,
+            labels=labels,
+        )
+    except Exception:
+        if not labels:
+            raise
+        return context.github_client.create_issue(
+            repo=context.github_config.repo or "",
+            token=context.github_config.token or "",
+            title=issue_title,
+            body=issue_body,
+            labels=(),
+        )
+
+
+def _safe_github_issue_url(raw_url: object, repo: str | None) -> str | None:
+    if not isinstance(raw_url, str) or not raw_url.strip() or repo is None:
+        return None
+    expected_prefix = f"https://github.com/{repo}/issues/"
+    if raw_url.startswith(expected_prefix) and _contains_secret_marker(raw_url) is False:
+        return raw_url
+    return None
 
 
 def _html_response(status: int, markup: str) -> tuple[int, str, bytes]:
