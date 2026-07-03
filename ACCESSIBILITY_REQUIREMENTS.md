@@ -163,6 +163,25 @@ Accessibility requirements apply to:
 
 - Text and meaningful UI elements must meet contrast requirements.
 - Do not use color alone to communicate findings, warnings, or status.
+- Traffic-light review signals may be used where helpful: green for ready,
+  complete, or no action needed; yellow for review recommended or missing
+  context; and red for blocked, failed, or action required. Each status must be
+  paired with visible text and accessible labels.
+- Reviewer-facing status, warning, and review-flag language must remain concise
+  enough to support the workflow without dominating the page.
+
+### Actions and navigation
+
+- Navigation may be styled as tabs or buttons when semantic structure and
+  keyboard operation remain clear.
+- In-page action groups must not mix links and buttons as visually equivalent
+  controls.
+- Ordered lists must not be used to structure buttons, form controls, dropdowns,
+  or other non-text interactive elements.
+- Primary, secondary, and "More actions" controls must have accessible names
+  that explain the action without relying on icon, color, or position alone.
+- Print/export controls must identify whether they open a printable page,
+  trigger browser print, download a file, or open another workflow step.
 
 ### Plain language
 
