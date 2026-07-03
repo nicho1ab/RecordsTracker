@@ -254,6 +254,13 @@ the governed primary future review experience.
 	records were imported, and feedback guidance without adding audit export,
 	broader audit UI, scheduler behavior, raw artifact viewing, or new retrieval
 	capability.
+- Added an operator command-based batch CCLD complaint retrieval loader that
+	selects facilities from preloaded PostgreSQL facility reference rows, splits
+	long date ranges into 366-day-or-less windows, defaults to dry-run, writes
+	ignored JSONL manifests with resume support, skips already-loaded windows
+	unless forced, and reuses the existing controlled Request Records
+	retrieval/import path without adding browser automation, statewide crawling,
+	non-CCLD sources, reviewer UI redesign, or raw artifact viewing.
 - Added an explicit local-dev mock-success retrieval demo path so the hosted
 	scaffold can validate the successful browser-triggered job/import/status/
 	history/detail/queue flow using committed fixtures only, without live CCLD calls,

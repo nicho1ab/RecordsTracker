@@ -80,6 +80,10 @@ not be treated as source-completeness, production, legal, or export evidence.
 - Implements the first controlled browser-triggered, server-executed CCLD
   complaint retrieval job slice when configured with authenticated local/test
   context, server-side raw storage, and database persistence.
+- Provides an operator batch complaint retrieval CLI that selects facilities
+  from the PostgreSQL facility-reference table, splits long date ranges into
+  compliant windows, defaults to dry-run, writes JSONL manifests, and reuses the
+  same controlled retrieval/import path as Request Records.
 - Provides a server-side tester feedback route for bug reports, feature
   requests, confusing workflow/page reports, packet/export issues, source/data
   concerns, and new data source requests. It can create GitHub Issues only when
@@ -178,6 +182,22 @@ For local live public CCLD retrieval, use the explicit live startup command:
 The live command makes controlled server-side public CCLD requests only when a
 browser user submits a retrieval job. The demo command uses committed fixtures.
 Neither mode proves CCLD public-source completeness.
+
+## Batch Complaint Retrieval
+
+Operators can plan or run bounded CCLD complaint retrieval by facility type and
+date range without using the browser. Dry-run is the default and writes a JSONL
+manifest under `data/processed/batch-retrieval` without creating retrieval jobs,
+fetching CCLD, importing source-derived rows, or writing raw artifacts:
+
+```powershell
+python -m ccld_complaints.hosted_app.batch_complaint_retrieval --facility-type "SHORT TERM RESIDENTIAL THERAPEUTIC PROGRAM" --start-date 2025-07-02 --end-date 2026-07-02
+```
+
+Apply mode requires `--apply` and uses the existing controlled Request Records
+retrieval/import seam. Add `--max-facilities 1 --max-windows 1` for a first
+operator test, and use `--resume --manifest-path <manifest.jsonl>` to continue a
+manifest while skipping succeeded or already-skipped windows.
 
 ## Local Datasette And CSV Review
 
