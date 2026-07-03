@@ -185,6 +185,21 @@ The script uses `CCLD_HOSTED_TESTER_DATABASE_URL` from the local environment and
 prints per-resource inserted, updated, unchanged, skipped, and warning counts.
 Use a specific ignored CSV path with `-InputPath` when preloading one resource.
 
+To diagnose missing address values for an already preloaded facility reference
+row, run the read-only address diagnostic with a facility/license number:
+
+```powershell
+.\scripts\diagnose-facility-reference-address.ps1 -FacilityNumber 347006659
+```
+
+The diagnostic compares normalized address fields in
+`hosted_facility_reference_records` with address-like columns preserved in
+`original_row_json`, prints all matching source rows with source resource/file
+metadata, and reports `source_missing_address`, `normalization_gap`,
+`duplicate_source_variance`, `has_mapped_address`, or `inconclusive`. It does
+not download source data, run complaint retrieval, write database rows, modify
+reviewer-created state, or contact deployment hosts.
+
 After importing a validated CCLD hosted artifact or seeded corpus, capture
 validated import batch counts, source-derived row counts, safe traceability
 linkage counts, route results, feedback configuration decision, retrieval

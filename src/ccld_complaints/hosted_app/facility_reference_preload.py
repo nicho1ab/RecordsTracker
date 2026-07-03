@@ -3,7 +3,7 @@
 import csv
 import re
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
@@ -45,6 +45,9 @@ FACILITY_REFERENCE_DATASET_URL = FACILITY_SOURCE_REGISTRY["parent_dataset"][
 ]
 _FILENAME_DATE_PATTERN = re.compile(r"(?<!\d)(\d{2})(\d{2})(\d{4})(?!\d)")
 _HEADER_NORMALIZE_PATTERN = re.compile(r"[^a-z0-9]+")
+_UNUSABLE_ADDRESS_VALUES = frozenset(
+    ("", "unavailable", "not listed", "unknown", "n/a", "na")
+)
 
 hosted_facility_reference_metadata = MetaData()
 
@@ -223,6 +226,30 @@ class FacilityReferencePreloadResult:
     @property
     def warning_count(self) -> int:
         return sum(result.warning_count for result in self.resource_results)
+
+
+@dataclass(frozen=True)
+class FacilityReferenceAddressDiagnostic:
+    facility_number: str
+    facility_name: str
+    source_resource_id: str
+    source_resource_name: str
+    source_file_name: str
+    normalized_address_fields: Mapping[str, str | None]
+    raw_address_fields: Mapping[str, str]
+    conclusion: str
+
+    @property
+    def raw_has_usable_address_fields(self) -> bool:
+        return _raw_has_usable_address_fields(self.raw_address_fields)
+
+    @property
+    def normalized_has_missing_address_fields(self) -> bool:
+        return any(
+            not _is_usable_address_value(value)
+            for key, value in self.normalized_address_fields.items()
+            if key in {"address", "city", "state", "zip"}
+        )
 
 
 def parse_facility_reference_csv(
@@ -417,6 +444,25 @@ def search_facility_reference_records(
         result_limit=result_limit,
         reference_source=source,
     )
+
+
+def diagnose_facility_reference_address(
+    connection: Connection,
+    facility_number: str,
+) -> tuple[FacilityReferenceAddressDiagnostic, ...]:
+    normalized_number = _clean_value(facility_number)
+    if not normalized_number or not normalized_number.isdigit():
+        raise ValueError("facility_number must contain digits only.")
+    rows = connection.execute(
+        select(hosted_facility_reference_records)
+        .where(hosted_facility_reference_records.c.facility_number == normalized_number)
+        .order_by(
+            hosted_facility_reference_records.c.source_resource_name,
+            hosted_facility_reference_records.c.source_file_name,
+        )
+    ).mappings()
+    diagnostics = tuple(_address_diagnostic_from_row(dict(row)) for row in rows)
+    return _mark_duplicate_source_variance(diagnostics)
 
 
 def open_configured_facility_reference_connection() -> Connection:
@@ -618,6 +664,154 @@ def _lookup_record_from_reference_row(row: Mapping[str, Any]) -> CcldFacilityLoo
     )
 
 
+def _address_diagnostic_from_row(
+    row: Mapping[str, Any],
+) -> FacilityReferenceAddressDiagnostic:
+    normalized_fields = {
+        "address": _optional_row_str(row, "address"),
+        "city": _optional_row_str(row, "city"),
+        "state": _optional_row_str(row, "state"),
+        "zip": _optional_row_str(row, "zip"),
+        "county": _optional_row_str(row, "county"),
+        "regional_office": _optional_row_str(row, "regional_office"),
+    }
+    original_row = row.get("original_row_json")
+    original_row_mapping: Mapping[Any, Any]
+    if isinstance(original_row, Mapping):
+        original_row_mapping = original_row
+        original_row_was_mapping = True
+    else:
+        original_row_mapping = {}
+        original_row_was_mapping = False
+    raw_fields = _raw_address_fields(original_row_mapping)
+    return FacilityReferenceAddressDiagnostic(
+        facility_number=_row_str(row, "facility_number"),
+        facility_name=_row_str(row, "facility_name"),
+        source_resource_id=_row_str(row, "source_resource_id"),
+        source_resource_name=_row_str(row, "source_resource_name"),
+        source_file_name=_row_str(row, "source_file_name"),
+        normalized_address_fields=normalized_fields,
+        raw_address_fields=raw_fields,
+        conclusion=_address_diagnostic_conclusion(
+            normalized_fields=normalized_fields,
+            raw_fields=raw_fields,
+            original_row_was_mapping=original_row_was_mapping,
+        ),
+    )
+
+
+def _raw_address_fields(original_row: Mapping[Any, Any]) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    for key, value in original_row.items():
+        if not isinstance(key, str):
+            continue
+        if _is_address_like_header(key):
+            fields[key] = _clean_value(str(value)) if value is not None else ""
+    return dict(sorted(fields.items()))
+
+
+def _is_address_like_header(header: str) -> bool:
+    return _is_mappable_address_header(header) or "county" in _header_tokens(header)
+
+
+def _address_diagnostic_conclusion(
+    *,
+    normalized_fields: Mapping[str, str | None],
+    raw_fields: Mapping[str, str],
+    original_row_was_mapping: bool = True,
+) -> str:
+    if _has_mapped_address(normalized_fields):
+        return "has_mapped_address"
+    if not original_row_was_mapping:
+        return "inconclusive"
+    if _raw_has_usable_address_fields(raw_fields):
+        return "normalization_gap"
+    return "source_missing_address"
+
+
+def _mark_duplicate_source_variance(
+    diagnostics: tuple[FacilityReferenceAddressDiagnostic, ...],
+) -> tuple[FacilityReferenceAddressDiagnostic, ...]:
+    if len(diagnostics) < 2:
+        return diagnostics
+    any_row_has_address = any(
+        _has_mapped_address(item.normalized_address_fields)
+        or _raw_has_usable_address_fields(item.raw_address_fields)
+        for item in diagnostics
+    )
+    any_row_lacks_address = any(
+        not _has_mapped_address(item.normalized_address_fields)
+        and not _raw_has_usable_address_fields(item.raw_address_fields)
+        for item in diagnostics
+    )
+    if not any_row_has_address or not any_row_lacks_address:
+        return diagnostics
+    return tuple(
+        replace(item, conclusion="duplicate_source_variance")
+        if not _has_mapped_address(item.normalized_address_fields)
+        and not _raw_has_usable_address_fields(item.raw_address_fields)
+        else item
+        for item in diagnostics
+    )
+
+
+def _has_mapped_address(normalized_fields: Mapping[str, str | None]) -> bool:
+    return any(
+        _is_usable_address_value(normalized_fields.get(key))
+        for key in ("address", "city", "state", "zip")
+    )
+
+
+def _raw_has_usable_address_fields(raw_fields: Mapping[str, str]) -> bool:
+    return any(
+        _is_usable_address_value(value) and _is_mappable_address_header(key)
+        for key, value in raw_fields.items()
+    )
+
+
+def _is_usable_address_value(value: str | None) -> bool:
+    return _clean_value(value).casefold() not in _UNUSABLE_ADDRESS_VALUES
+
+
+def _is_mappable_address_header(header: str) -> bool:
+    tokens = set(_header_tokens(header))
+    compact = _normalized_header(header)
+    if "capacity" in tokens or compact.endswith("capacity"):
+        return False
+    if tokens.intersection(
+        {
+            "address",
+            "addr",
+            "street",
+            "city",
+            "state",
+            "zip",
+            "postal",
+            "location",
+            "latitude",
+            "longitude",
+        }
+    ):
+        return True
+    return (
+        "address" in compact
+        or "addr" in compact
+        or "street" in compact
+        or compact.endswith("city")
+        or compact.endswith("state")
+        or "zip" in compact
+        or "postal" in compact
+    )
+
+
+def _header_tokens(header: str) -> tuple[str, ...]:
+    return tuple(
+        token
+        for token in re.split(r"[^a-z0-9]+", header.casefold())
+        if token
+    )
+
+
 def _value(row: Mapping[str, str], *headers: str) -> str:
     normalized_row = {_normalized_header(key): value for key, value in row.items()}
     for header in headers:
@@ -634,6 +828,13 @@ def _row_str(row: Mapping[str, Any], key: str) -> str:
     value = row.get(key)
     if value is None:
         return ""
+    return str(value)
+
+
+def _optional_row_str(row: Mapping[str, Any], key: str) -> str | None:
+    value = row.get(key)
+    if value is None:
+        return None
     return str(value)
 
 
