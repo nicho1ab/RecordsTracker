@@ -42,8 +42,9 @@ TEST_AUTH_VALUE = "test-auth-value-not-rendered"
 
 
 class MockGitHubIssueClient:
-    def __init__(self, *, fail: bool = False) -> None:
+    def __init__(self, *, fail: bool = False, fail_with_labels: bool = False) -> None:
         self.fail = fail
+        self.fail_with_labels = fail_with_labels
         self.calls: list[dict[str, Any]] = []
 
     def create_issue(
@@ -55,7 +56,7 @@ class MockGitHubIssueClient:
         body: str,
         labels: Sequence[str],
     ) -> dict[str, Any]:
-        if self.fail:
+        if self.fail or (self.fail_with_labels and labels):
             raise RuntimeError("mock GitHub failure")
         self.calls.append(
             {
@@ -66,7 +67,7 @@ class MockGitHubIssueClient:
                 "labels": tuple(labels),
             }
         )
-        return {"number": 42}
+        return {"number": 42, "html_url": f"https://github.com/{repo}/issues/42"}
 
 
 def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
@@ -101,6 +102,15 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "browser copy issue" in normalized_html
     assert "print issue" in normalized_html
     assert "Submit feedback" in html
+    for option in (
+        "Bug report",
+        "Feature request",
+        "Confusing page or workflow",
+        "Packet/export issue",
+        "Source/data concern",
+        "New data source request",
+    ):
+        assert f'<option value="{option}">{option}</option>' in html
     assert "copy" in html.lower()
     assert "Useful feedback examples" in html
     assert (
@@ -574,6 +584,8 @@ def test_feedback_unconfigured_state_does_not_call_github() -> None:
     assert status == 503
     assert "Feedback was not sent" in html
     assert "No GitHub issue was created" in html
+    assert "Copyable feedback summary" in html
+    assert "RecordsTracker feedback" in html
     assert client.calls == []
     assert_no_secret_html(html)
 
@@ -604,6 +616,7 @@ def test_feedback_unconfigured_confirmation_shows_safe_submitted_summary() -> No
     assert status == 503
     assert "Feedback was not sent" in html
     assert "Submitted feedback summary" in html
+    assert "Copyable feedback summary" in html
     assert "Bug report" in html
     assert "The queue order was unclear after filtering." in html
     assert "Submitted safe context" in html
@@ -611,6 +624,7 @@ def test_feedback_unconfigured_confirmation_shows_safe_submitted_summary() -> No
     assert "queue" in html
     assert "157806098" in html
     assert "needs-review" in html
+    assert "Safe context:" in html
     assert "Return to the tester task guide" in html
     assert "Continue review" in html
     assert "Add more detail" in html
@@ -647,6 +661,8 @@ def test_feedback_configured_confirmation_escapes_submitted_fields_and_context()
     assert status == 201
     assert "Feedback submitted" in html
     assert "Issue #42" in html
+    assert "Open created GitHub issue" in html
+    assert "https://github.com/example/repo/issues/42" in html
     assert "Submitted feedback summary" in html
     assert "&lt;b&gt;Please add&lt;/b&gt; &amp; keep keyboard-friendly sorting." in html
     assert "<b>Please add</b>" not in html
@@ -662,13 +678,19 @@ def test_feedback_configured_confirmation_escapes_submitted_fields_and_context()
     assert call["repo"] == "example/repo"
     assert call["token"] == TEST_AUTH_VALUE
     assert call["labels"] == (
-        "feedback",
+        "user-feedback",
         "from-app",
         "needs-triage",
         "pilot",
         "feature-request",
     )
+    assert call["title"] == "RecordsTracker feedback: Feature request on Reviewer Detail"
     assert "Feature request" in call["body"]
+    assert "## Safe Captured Context" in call["body"]
+    assert "- Workflow area: reviewer-detail" in call["body"]
+    assert "- Facility/license number: 157806098" in call["body"]
+    assert "- Complaint/control identifier: 32-CR-20220407124448" in call["body"]
+    assert "App mode:" not in call["body"]
     assert "<b>Please add</b> & keep keyboard-friendly sorting." in call["body"]
     assert TEST_AUTH_VALUE not in call["body"]
     assert "provider_subject" not in call["body"]
@@ -716,13 +738,16 @@ def test_feedback_confirmation_ignores_unknown_and_unsafe_posted_context() -> No
 
 def test_feedback_type_label_mapping_is_reliable() -> None:
     assert feedback_labels("Bug report") == (
-        "feedback",
+        "user-feedback",
         "from-app",
         "needs-triage",
         "bug",
     )
     assert feedback_labels("Feature request")[-1] == "feature-request"
-    assert feedback_labels("New data source")[-1] == "new-data-source"
+    assert feedback_labels("Confusing page or workflow")[-1] == "workflow-confusion"
+    assert feedback_labels("Packet/export issue")[-1] == "packet-export"
+    assert feedback_labels("Source/data concern")[-1] == "source-data"
+    assert feedback_labels("New data source request")[-1] == "data-source-request"
 
 
 def test_feedback_client_failure_shows_safe_failure() -> None:
@@ -743,7 +768,28 @@ def test_feedback_client_failure_shows_safe_failure() -> None:
     assert status == 502
     assert "Feedback could not be sent" in html
     assert "No token or private details are shown" in html
+    assert "Copyable feedback summary" in html
     assert_no_secret_html(html)
+
+
+def test_feedback_retries_without_labels_when_github_rejects_labels() -> None:
+    client = MockGitHubIssueClient(fail_with_labels=True)
+    context = _feedback_context(configured=True, actor=_actor(), client=client)
+
+    status, _content_type, body = route_response(
+        FEEDBACK_PATH,
+        method="POST",
+        request_body=_valid_form_bytes(feedback_type="Packet/export issue"),
+        feedback_context=context,
+    )
+
+    assert status == 201
+    assert len(client.calls) == 1
+    assert client.calls[0]["labels"] == ()
+    assert client.calls[0]["title"] == (
+        "RecordsTracker feedback: Packet/export issue on Request Records"
+    )
+    assert_no_secret_html(body.decode("utf-8"))
 
 
 def test_feedback_production_anonymous_submission_is_blocked_when_configured() -> None:

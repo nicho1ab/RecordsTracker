@@ -122,13 +122,16 @@ links to history/detail/queue, keeps setup-required and validation-blocked state
 working, makes no live CCLD or GitHub calls, exposes no private values, and does
 not mutate source-derived or reviewer-created rows through review pages.
 GitHub Issues feedback intake tests must prove the feedback page renders, the
-feedback type dropdown has exactly bug report, feature request, and new data
-source options, description and submit controls are accessible, missing values
-validate safely, missing GitHub configuration does not call GitHub, configured
-submission uses only a mocked client, labels are correct, success/failure states
-are safe, tokens and provider claims are not rendered or included in issue
-bodies, tests make no live GitHub calls, feedback submission does not mutate
-source-derived records, and anonymous production submissions are blocked.
+feedback type dropdown has exactly bug report, feature request, confusing page
+or workflow, packet/export issue, source/data concern, and new data source
+request options, description and submit controls are accessible, missing values
+validate safely, missing GitHub configuration does not call GitHub and shows a
+copyable safe fallback summary, configured submission uses only a mocked client,
+labels are correct, missing-label failures retry safely without labels,
+success/failure states are safe, tokens and provider claims are not rendered or
+included in issue bodies, tests make no live GitHub calls, feedback submission
+does not mutate source-derived records, and anonymous production submissions are
+blocked.
 Audit coverage planning tests must prove authenticated audit/admin-style access,
 unauthenticated, disabled or revoked, role-denied, and out-of-scope rejection,
 deterministic ordering, no secret exposure, no audit row creation, no

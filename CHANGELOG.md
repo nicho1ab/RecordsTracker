@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Expanded hosted `/feedback` into the shared GitHub-backed feedback intake for
+  bug reports, feature requests, confusing workflow/page reports, packet/export
+  issues, source/data concerns, and new data source requests. Configured
+  submissions now build concise RecordsTracker issue titles, safe issue bodies
+  with allowlisted context, safe issue links, and label-fallback retries; missing
+  GitHub configuration or GitHub failures show a copyable safe summary without
+  exposing tokens or server internals.
 - Added steering, design, and accessibility governance for the approved
   attorney-facing reviewer surface model, including reviewer/operator/developer
   surface separation, reviewer action patterns, facility/request workflow rules,
