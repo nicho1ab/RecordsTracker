@@ -22,6 +22,7 @@ from ccld_complaints.hosted_app.ccld_record_request_ui import (
 )
 from ccld_complaints.hosted_app.facility_reference_preload import (
     FACILITY_REFERENCE_TABLE_NAME,
+    diagnose_facility_reference_address,
     facility_reference_source_from_connection,
     hosted_facility_reference_metadata,
     hosted_facility_reference_records,
@@ -266,6 +267,71 @@ def test_facility_reference_source_reads_database_rows_for_lookup(tmp_path: Path
     assert source.records[0].city == "Irvine"
 
 
+def test_address_diagnostic_distinguishes_raw_absence_from_mapping_gap() -> None:
+    with _connection() as connection:
+        connection.execute(
+            hosted_facility_reference_records.insert(),
+            (
+                _diagnostic_reference_row(
+                    facility_number="347006659",
+                    facility_name="REFUGE SUNSET",
+                    address=None,
+                    city=None,
+                    state=None,
+                    zip_code=None,
+                    original_row_json={
+                        "FAC_NBR": "347006659",
+                        "NAME": "REFUGE SUNSET",
+                        "STATUS": "3",
+                        "COUNTY": "SACRAMENTO",
+                    },
+                ),
+                _diagnostic_reference_row(
+                    facility_number="900000111",
+                    facility_name="MAPPED GAP HOUSE",
+                    address=None,
+                    city=None,
+                    state=None,
+                    zip_code=None,
+                    original_row_json={
+                        "FAC_NBR": "900000111",
+                        "NAME": "MAPPED GAP HOUSE",
+                        "RES_STREET_ADDR": "10 SOURCE WAY",
+                        "RES_CITY": "SOURCE CITY",
+                        "RES_STATE": "CA",
+                        "RES_ZIP_CODE": "90001",
+                    },
+                ),
+            ),
+        )
+
+        refuge = diagnose_facility_reference_address(connection, "347006659")
+        mapped_gap = diagnose_facility_reference_address(connection, "900000111")
+
+    assert len(refuge) == 1
+    assert refuge[0].facility_name == "REFUGE SUNSET"
+    assert refuge[0].source_resource_name == "24-Hour Residential Care for Children"
+    assert refuge[0].source_file_name == "ChildrenResidential.csv"
+    assert refuge[0].normalized_address_fields == {
+        "address": None,
+        "city": None,
+        "state": None,
+        "zip": None,
+        "county": "SACRAMENTO",
+        "regional_office": None,
+    }
+    assert refuge[0].raw_address_fields == {"COUNTY": "SACRAMENTO"}
+    assert refuge[0].conclusion == "source_missing_address"
+
+    assert mapped_gap[0].raw_address_fields == {
+        "RES_CITY": "SOURCE CITY",
+        "RES_STATE": "CA",
+        "RES_STREET_ADDR": "10 SOURCE WAY",
+        "RES_ZIP_CODE": "90001",
+    }
+    assert mapped_gap[0].conclusion == "normalization_gap"
+
+
 def test_postgres_facility_lookup_route_prefers_preloaded_reference_rows(
     tmp_path: Path,
 ) -> None:
@@ -463,6 +529,45 @@ def _write_csv(
             writer.writerow(row)
 
 
+def _diagnostic_reference_row(
+    *,
+    facility_number: str,
+    facility_name: str,
+    address: str | None,
+    city: str | None,
+    state: str | None,
+    zip_code: str | None,
+    original_row_json: dict[str, str],
+) -> dict[str, Any]:
+    return {
+        "source_resource_id": f"diagnostic-{facility_number}",
+        "facility_number": facility_number,
+        "facility_name": facility_name,
+        "facility_type": "SHORT TERM RESIDENTIAL THERAPEUTIC PROGRAM",
+        "program_type": "CHILDREN'S RESIDENTIAL",
+        "licensee_name": None,
+        "facility_administrator": None,
+        "telephone": None,
+        "address": address,
+        "city": city,
+        "state": state,
+        "zip": zip_code,
+        "county": "SACRAMENTO",
+        "regional_office": None,
+        "capacity": 6,
+        "status": "3",
+        "license_first_date": None,
+        "closed_date": None,
+        "snapshot_date": "2026-06-07",
+        "source_resource_name": "24-Hour Residential Care for Children",
+        "source_dataset_slug": "ccl-facilities",
+        "source_dataset_url": "public-ccl-facilities",
+        "source_accessed_at": "2026-07-01T12:00:00+00:00",
+        "source_file_name": "ChildrenResidential.csv",
+        "original_row_json": original_row_json,
+    }
+
+
 def _load_preload_cli_module() -> Any:
     repo_root = Path(__file__).resolve().parents[2]
     script_path = repo_root / "scripts" / "load_facility_reference_preload.py"
@@ -483,4 +588,3 @@ def test_value_lookup_ignores_extra_csv_fields_without_headers() -> None:
     }
 
     assert preload_module._value(row, "FAC_NBR") == "123456789"
-

@@ -1550,7 +1550,7 @@ SHARED_CSS = r"""
       font-weight: 800;
     }
     .facility-combobox-outer {
-      max-width: 28rem;
+      max-width: min(42rem, 100%);
       position: relative;
     }
     .facility-suggestions {
@@ -1562,6 +1562,7 @@ SHARED_CSS = r"""
       list-style: none;
       margin: 0;
       max-height: 18rem;
+      overflow-x: hidden;
       overflow-y: auto;
       padding: 0.3rem;
       position: absolute;
@@ -1578,6 +1579,7 @@ SHARED_CSS = r"""
       display: flex;
       flex-direction: column;
       gap: 0.1rem;
+      min-width: 0;
       padding: 0.5rem 0.6rem;
       text-align: left;
       width: 100%;
@@ -1586,10 +1588,51 @@ SHARED_CSS = r"""
       background: var(--ds-info-soft);
       color: var(--ink);
     }
+    .suggestion-main {
+      align-items: flex-start;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      min-width: 0;
+      width: 100%;
+    }
+    .suggestion-status {
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      display: inline-flex;
+      flex: 0 0 auto;
+      font-size: 0.72rem;
+      font-weight: 800;
+      line-height: 1.2;
+      padding: 0.12rem 0.3rem;
+      white-space: nowrap;
+    }
+    .suggestion-status-licensed {
+      background: var(--success-bg);
+      border-color: var(--success-line);
+      color: #1E5D3B;
+    }
+    .suggestion-status-closed {
+      background: var(--ds-danger-soft);
+      border-color: #D88992;
+      color: var(--ds-danger);
+    }
+    .suggestion-status-pending {
+      background: var(--ds-attention-soft);
+      border-color: #D7A529;
+      color: var(--ds-attention);
+    }
+    .suggestion-status-other {
+      background: #EEF1F3;
+      color: #495661;
+    }
     .suggestion-name {
+      flex: 1 1 13rem;
       font-size: 0.96rem;
       font-weight: 700;
       line-height: 1.3;
+      min-width: 0;
+      overflow-wrap: anywhere;
     }
     .suggestion-badge {
       background: var(--surface-alt);
@@ -1598,12 +1641,17 @@ SHARED_CSS = r"""
       display: inline-block;
       font-size: 0.78rem;
       font-weight: 700;
+      max-width: 100%;
+      overflow-wrap: anywhere;
       padding: 0.05rem 0.3rem;
+      white-space: normal;
     }
     .suggestion-details {
       color: var(--muted);
       font-size: 0.82rem;
       line-height: 1.3;
+      overflow-wrap: anywhere;
+      white-space: normal;
     }
     .suggestion-empty {
       color: var(--muted);

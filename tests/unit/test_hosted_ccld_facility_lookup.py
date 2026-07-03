@@ -790,6 +790,11 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert "Lookup rows are public facility-directory data" not in pre_form_html
     _assert_collapsed_disclosure(html, "When to use lookup vs. manual entry")
     assert "facility-suggestion-list" in html
+    assert "suggestion-status-licensed" in html
+    assert "suggestion-status-closed" in html
+    assert "aria-label=\"Facility status: " in html
+    assert "overflow-x: hidden;" in html
+    assert "overflow-wrap: anywhere;" in html
     assert "Search CCLD facilities" in html
     _assert_primary_button(html, "Search CCLD facilities")
     assert any(
@@ -838,10 +843,11 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
     assert "Los Angeles" in html
     assert "90001" in html
     assert "Child Care Center" in html
-    assert "Capacity directory field" in html
+    assert "Capacity" in html
     assert "24" in html
-    assert "Status code directory field" in html
+    assert "Status" in html
     assert "Licensed" in html
+    assert "directory field" not in html
     assert "Example Licensee" not in html
     assert "555-0101" not in html
     assert "100 Example Way" not in html
@@ -872,7 +878,7 @@ def test_ccld_facility_review_hub_renders_safe_directory_context() -> None:
         "City / State / ZIP",
         "County",
         "Capacity",
-        "Status code",
+        "Status",
     ]
     assert "directory field" not in html
     assert "900000001" in html
@@ -947,7 +953,7 @@ def test_ccld_facility_review_hub_known_loaded_preloaded_example_renders(
     assert "434417302" in html
     assert "DAY CARE CENTER" in html
     assert "Santa Clara" in html
-    assert "Status code</dt>" in html
+    assert "Status</dt>" in html
     assert "<dd>3 (Licensed)</dd>" in html
     assert "<dd>3</dd>" not in html
     assert "Complaint records are requested and reviewed separately" in html

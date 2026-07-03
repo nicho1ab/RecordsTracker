@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Improved hosted facility lookup and Request Records typeahead suggestions so
+  each suggestion shows a compact text status badge near the facility name and
+  wraps long facility number, location, county, type, and program text without
+  horizontal scrolling. Facility result/detail labels now use concise field
+  names without "directory field" suffixes. Added a read-only facility reference
+  address diagnostic command that compares normalized address fields with
+  address-like columns preserved in `original_row_json` for loaded PostgreSQL
+  facility reference rows.
 - Updated the hosted CCLD facility lookup in PostgreSQL page mode to search the
   active preloaded facility reference table server-side before applying the
   browser result limit. The lookup and request comboboxes now use a narrow
