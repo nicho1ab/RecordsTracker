@@ -578,10 +578,11 @@ cautious-language, tester feedback, and reviewer-state boundaries.
 
 ## Batch loading direction
 
-A future command-based batch complaint loader may load by facility type and date
-range. It must use the same controlled retrieval/import path as browser
-retrieval and support dry-run/apply, manifests, resume, rate limiting, 366-day
-window handling, and skip/already-loaded behavior.
+The command-based batch complaint loader may load by facility type and date
+range for operator/data-loading use. It must use the same controlled
+retrieval/import path as browser retrieval and support dry-run/apply, manifests,
+resume, rate limiting, 366-day window handling, and skip/already-loaded
+behavior. It is not a reviewer-facing redesign.
 
 ## Usability principles
 

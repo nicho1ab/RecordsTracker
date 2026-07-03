@@ -316,6 +316,58 @@ Backups for retrieval-enabled deployments must cover both PostgreSQL and raw
 source artifacts. A database backup alone is not enough when source-derived rows
 reference raw artifact paths or raw hashes.
 
+## Run batch CCLD complaint retrieval
+
+The batch complaint retrieval command is an operator/data-loading path for CCLD
+complaint records only. It selects facilities from
+`hosted_facility_reference_records`, splits the requested date range into
+366-day-or-less windows, writes a JSONL manifest under
+`data/processed/batch-retrieval` by default, and reuses the same controlled
+retrieval/import path as browser Request Records. Dry-run is the default.
+
+Dry-run from inside the app container:
+
+```powershell
+python -m ccld_complaints.hosted_app.batch_complaint_retrieval --facility-type "SHORT TERM RESIDENTIAL THERAPEUTIC PROGRAM" --start-date 2025-07-02 --end-date 2026-07-02
+```
+
+Apply a one-facility, one-window smoke test only after reviewing the dry-run
+manifest and confirming retrieval raw storage is configured and backed up:
+
+```powershell
+python -m ccld_complaints.hosted_app.batch_complaint_retrieval --facility-type "SHORT TERM RESIDENTIAL THERAPEUTIC PROGRAM" --start-date 2025-07-02 --end-date 2026-07-02 --max-facilities 1 --max-windows 1 --delay-seconds 2 --apply
+```
+
+Resume from a manifest:
+
+```powershell
+python -m ccld_complaints.hosted_app.batch_complaint_retrieval --resume --manifest-path data/processed/batch-retrieval/<manifest-name>.jsonl --apply
+```
+
+Available filters are `--county`, `--status`, `--facility-number`,
+`--max-facilities`, and `--max-windows`. The command skips a facility/date
+window when a matching completed retrieval job with data mutations already
+exists, or when existing CCLD complaint source-derived rows demonstrate that
+the facility/date context has already been imported. Use `--force` only when an
+operator intentionally wants to rerun an already-loaded window.
+
+For QNAP Compose operators, run the same command through the app service:
+
+```powershell
+docker compose -f docker-compose.qnap.yml --env-file .env exec app python -m ccld_complaints.hosted_app.batch_complaint_retrieval --facility-type "SHORT TERM RESIDENTIAL THERAPEUTIC PROGRAM" --start-date 2025-07-02 --end-date 2026-07-02
+```
+
+QNAP one-facility apply smoke test:
+
+```powershell
+docker compose -f docker-compose.qnap.yml --env-file .env exec app python -m ccld_complaints.hosted_app.batch_complaint_retrieval --facility-type "SHORT TERM RESIDENTIAL THERAPEUTIC PROGRAM" --start-date 2025-07-02 --end-date 2026-07-02 --max-facilities 1 --max-windows 1 --delay-seconds 2 --apply
+```
+
+Normal command output and manifests must stay operator-safe: no database URLs,
+connection strings, tokens, cookies, private host values, raw artifact contents,
+stack traces, private URLs, or server-specific raw paths. Do not commit generated
+manifests.
+
 ## Run fixture-backed sample ingestion
 
 Use committed fixtures to populate the local sample database without making live

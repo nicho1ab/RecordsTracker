@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Added an operator batch CCLD complaint retrieval CLI at
+  `ccld_complaints.hosted_app.batch_complaint_retrieval`. The command selects
+  facilities from `hosted_facility_reference_records`, defaults to dry-run,
+  splits date ranges into 366-day-or-less windows, writes JSONL manifests with
+  resume support, skips already-loaded windows unless `--force` is supplied, and
+  reuses the existing controlled Request Records retrieval/import seam for
+  apply mode.
 - Expanded hosted `/feedback` into the shared GitHub-backed feedback intake for
   bug reports, feature requests, confusing workflow/page reports, packet/export
   issues, source/data concerns, and new data source requests. Configured

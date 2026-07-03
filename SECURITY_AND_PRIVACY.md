@@ -109,6 +109,16 @@ source scraping, and direct browser crawling remain prohibited. Retrieval job
 metadata is operational metadata and remains separate from source-derived
 records, reviewer-created state, audit events, and feedback issues.
 
+The command-based batch complaint retrieval loader is an operator path over the
+same controlled retrieval/import seam. It must default to dry-run, require an
+explicit apply flag before mutations, select facilities from preloaded public
+facility reference rows, split date ranges into bounded windows, write ignored
+JSONL manifests under processed output, and skip already-loaded windows unless
+forced. Console output and manifests may include safe facility/date context,
+retrieval job IDs, counts, warnings, and safe artifact identities, but must not
+include database URLs, connection strings, tokens, cookies, private host values,
+raw artifact contents, raw server paths, stack traces, private URLs, or secrets.
+
 `CCLD_RETRIEVAL_DEMO_MODE=mock-success` is allowed only for explicit local-dev
 scaffold validation when local-dev auth is enabled and retrieval raw storage is
 configured. It uses committed fixtures through a fixture-backed retrieval client,

@@ -215,6 +215,14 @@
     unsupported automated complaint findings, and unsupported record types remain
     out of scope. All supported record types currently resolves to complaint
     records only.
+- The command-based batch complaint retrieval loader is an operator/data-loading
+    path over the same controlled Request Records retrieval/import seam. It reads
+    preloaded `hosted_facility_reference_records`, defaults to dry-run, writes
+    ignored JSONL manifests under `data/processed/batch-retrieval`, and requires
+    `--apply` before creating retrieval jobs, fetching public CCLD, importing
+    source-derived rows, or preserving raw artifacts. It is not a scheduler,
+    statewide crawl, completeness check, reviewer-facing redesign, non-CCLD
+    source path, production auth implementation, or raw artifact viewer.
 - `CCLD_RETRIEVAL_DEMO_MODE=mock-success` is an explicit local-dev scaffold
     validation mode only. It uses committed fixtures to demonstrate successful
     job/import/history/detail/queue behavior without live CCLD calls. It is not
