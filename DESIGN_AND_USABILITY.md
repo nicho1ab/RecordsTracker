@@ -21,6 +21,48 @@ The minimum hosted reviewer workflows, review states, annotation boundaries,
 correction boundaries, and tester-readiness expectations are defined in
 `PRODUCTION_DISCOVERY_REQUIREMENTS.md`.
 
+## Approved reviewer surface direction
+
+RecordsTracker must become an attorney-facing public-record review workspace.
+Default user pages are the reviewer surface and must show only information that
+helps attorneys or advocates find a facility, select dates, request or load
+records, review complaint records, prepare packet context, print or export, or
+submit feedback. Technical, operator, diagnostic, source-mechanics, and
+developer details must be preserved in the repository and product, but moved out
+of the default reviewer surface when they do not support attorney use.
+
+The approved surface model has three layers:
+
+1. Reviewer surface: the default attorney-facing workflow.
+2. Operator diagnostics surface: safe support and runtime visibility for
+   administrators or operators, including job states, import counts, diagnostic
+   summaries, setup checks, and safe operational metadata.
+3. Developer debug surface: local/dev-only implementation detail for maintainers,
+   including deeper import, source, and debug details that are not appropriate
+   for normal users.
+
+Operator diagnostics must not expose secrets, tokens, private URLs, raw server
+paths, stack traces, raw artifact contents, or private material. Developer debug
+details must stay local/dev-only unless a later approved task explicitly creates
+a safe operator diagnostic view.
+
+All reviewer-facing information must support attorney use. Existing page content
+must be removed, refactored, hidden, or reorganized when it does not support
+attorney use. Preserve technical, operator, and developer work by moving it to
+the correct surface instead of deleting it.
+
+Before any reviewer-facing UI implementation branch, ChatGPT or Codex must
+provide a numbered page-change inventory and wait for the user's numbered
+approval. The inventory must include the page or route; visible content or
+interaction to remove, refactor, or reorganize; why the change supports attorney
+use; what operator or developer detail is preserved elsewhere; and whether it
+affects feedback, print/export, loaded records, reviewer-created state, or
+source-related diagnostics. A design-exploration step using Figma AI or similar
+design tooling may be included when useful before implementation.
+
+Every design-affecting handoff must describe what changed, on which pages, and
+why it improves attorney use.
+
 ## Intended users
 
 The local review experience must support:
@@ -443,6 +485,103 @@ cautious-language, tester feedback, and reviewer-state boundaries.
 - Favor stable, documented local workflows over account-specific services or
   optional paid platform features.
 - Treat extracted records as review aids, not authoritative conclusions.
+
+## Reviewer action and workflow rules
+
+- Top navigation may remain visually styled as navigation tabs or buttons.
+- In-page action groups must be consistent and must not mix buttons and links in
+  the same visual action group.
+- Do not use ordered lists for buttons, form controls, dropdowns, or other
+  non-text interactive elements.
+- Use primary buttons for the main action and secondary buttons for alternate
+  actions in the same workflow.
+- Put rare, bulk, export, diagnostic, or alternate-path actions into a
+  consistent "More actions" pattern.
+- Avoid unnecessary confirmation or review steps after a user has already made a
+  clear non-destructive selection.
+- Treat too many clicks, repeated inputs, excessive scrolling, dead-end pages,
+  and duplicate summaries as global UX problems to identify and fix across the
+  app.
+
+## Facility and record request workflow rules
+
+- When a user selects a facility from typeahead, the app should immediately
+  resolve or search that facility.
+- After facility selection, date range pickers should appear immediately.
+- Facility ID and selected date range should persist across related workflow
+  pages.
+- Request Records should move toward one intelligent action: use already-loaded
+  records when present, retrieve missing records for the selected facility/date
+  range when needed, then show the ready queue.
+- Users should not need to choose between "view existing queue" and "request
+  records" when the app can decide safely.
+
+## Reviewer language and source-detail rules
+
+- Review all reviewer-facing terminology for clarity and consistency.
+- Avoid technical reviewer-facing labels such as `source-derived rows`,
+  `intelligence views`, `source cues`, `operator/runtime`, `retrieval metadata`,
+  and `source traceability mechanics`.
+- Prefer user-centered labels such as `Complaint records`, `Records ready`,
+  `Review flags`, `Needs attention`, `Packet preparation`, and `Report an
+  issue`.
+- Safety warnings must exist where needed, but they must not dominate attorney-
+  facing pages. Provide concise guardrails without overwhelming the workflow.
+- Source reliability is built into the controlled import model. Default reviewer
+  pages should not require attorneys to interpret source traceability mechanics.
+- A simple user-facing indication that the record came from CCLD is enough in
+  most reviewer contexts.
+- Deeper source fields, hashes, raw artifact references, connector metadata, and
+  import details belong in operator or developer surfaces unless a user-facing
+  problem requires attention.
+
+## Approved page direction
+
+- Home should become a compelling product start page, not documentation. It
+  should capture the user and make the primary paths obvious.
+- Facility lookup should focus on finding and selecting the correct facility.
+- Facility results should show "Open Facility Hub" only when imported records or
+  useful review context exist; otherwise emphasize requesting complaint records.
+- Facility Hub should become an attorney case-review summary.
+- Review Queue should have one primary record view and should not duplicate the
+  same records as equally prominent cards and tables.
+- Reviewer detail should focus on complaint review, not source/import
+  inspection.
+- Packet preview and draft should be packet-focused, context-aware, and
+  print-ready.
+- Print actions should invoke a printable version and browser print dialog, not
+  merely navigate to another page that still requires a separate print action.
+- Job Status likely should leave the main reviewer navigation. Keep job progress
+  inline where needed and preserve Job Status as an operator/support diagnostics
+  surface.
+- Help should become a user-focused help-center-style page with search, clear
+  categories, and common task articles. It should not include operator setup
+  topics.
+- Feedback should be standardized across pages and integrated with GitHub safely.
+
+## Feedback and help direction
+
+- Use one GitHub feedback flow for bugs, feature requests, confusing workflow or
+  page reports, packet/export issues, source/data concerns, and new data source
+  requests.
+- Each page should have an unobtrusive report or feedback action.
+- Feedback may safely capture page context when available: route, page title,
+  facility/license number, date range, complaint/control number, job ID, visible
+  workflow state, and user action attempted.
+- Feedback safety guidance should be concise and must not dominate pages.
+- Help should use search or category-style organization, avoid a numbered topic
+  list that repeats collapsible sections below, and keep topics user-focused:
+  Find a facility, Request complaint records, Review complaint records, Prepare
+  a packet, Print or export, Report an issue, and Understand review flags.
+- Operator setup topics belong in operator docs or diagnostics, not reviewer
+  Help.
+
+## Batch loading direction
+
+A future command-based batch complaint loader may load by facility type and date
+range. It must use the same controlled retrieval/import path as browser
+retrieval and support dry-run/apply, manifests, resume, rate limiting, 366-day
+window handling, and skip/already-loaded behavior.
 
 ## Usability principles
 

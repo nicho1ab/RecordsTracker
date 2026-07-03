@@ -21,12 +21,14 @@ another host without hard-coding QNAP-specific paths into application code.
 This is a public-interest hobby project, not a the user's employer project. The first expected
 tester audience is external stakeholder organization users reviewing the hosted CCLD workflow.
 
-The proof of concept has proven ingestion, deterministic extraction, raw source
+Earlier project work proved ingestion, deterministic extraction, raw source
 preservation, source traceability, local review, and source-traceable exports.
-Current work should define product and architecture requirements for reviewer
-state, guided queues, annotations, corrections, collaboration, accessibility,
-exports, and source traceability before a production-build phase selects or
-implements a primary review application stack.
+Current work should move RecordsTracker toward an attorney-facing public-record
+review workspace that helps attorneys and advocates find a facility, select
+dates, request or load records, review complaint records, prepare packet context,
+print or export, and submit feedback. Product and architecture requirements
+must preserve deeper operator and developer visibility, but separate those
+diagnostics from the default reviewer surface.
 
 ## Primary goal
 
@@ -52,11 +54,14 @@ Initial facility:
 
 ## Target users
 
-- Researchers and analysts reviewing facility complaint history
-- Advocates reviewing public licensing data
-- Developers maintaining source connectors and extraction logic
-- Reviewers using local source-traceable exports, Datasette inspection, and
-	future primary review workflows
+- Attorneys and advocates reviewing public licensing complaint records.
+- Researchers and analysts reviewing facility complaint history.
+- Operators supporting safe runtime visibility for imports, retrieval jobs,
+  diagnostics, and setup checks.
+- Developers maintaining source connectors, extraction logic, schemas, tests,
+  and local debug surfaces.
+- Reviewers using source-traceable exports, retained Datasette inspection, and
+  primary review workflows.
 
 ## Success criteria
 

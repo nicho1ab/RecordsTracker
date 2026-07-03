@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Added steering, design, and accessibility governance for the approved
+  attorney-facing reviewer surface model, including reviewer/operator/developer
+  surface separation, reviewer action patterns, facility/request workflow rules,
+  terminology and source-detail boundaries, page-direction rules, feedback/help
+  direction, traffic-light status accessibility, and the required numbered
+  page-change inventory gate before reviewer-facing UI implementation.
 - Fixed live Request Records imported-count semantics so retrieval job metadata,
   Request Records messaging, and Job Status show the number of unique
   source-derived rows persisted after import/upsert normalization, not the
