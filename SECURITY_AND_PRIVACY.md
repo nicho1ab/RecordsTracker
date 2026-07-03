@@ -135,8 +135,10 @@ The current tester feedback seam can create GitHub Issues server-side only when
 The token must never be rendered into HTML, JavaScript, logs, tests, issue
 bodies, screenshots, or documentation. Feedback issue bodies may include only
 safe context such as feedback type, description, safe page path, timestamp, app
-version when configured, and safe actor display label. They must not include
-tokens, cookies, raw provider claims, provider subject or issuer values, private
+version when configured, safe actor display label, workflow area,
+facility/license number, date range, complaint/control number, retrieval job ID,
+visible workflow state, and action attempted. They must not include tokens,
+cookies, raw provider claims, provider subject or issuer values, private
 headers, connection strings, raw source narrative text, hosted/private URLs, or
 secrets. GitHub Projects and GitHub issue types are not required; labels are the
 reliable classification mechanism.

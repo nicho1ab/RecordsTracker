@@ -80,8 +80,11 @@ not be treated as source-completeness, production, legal, or export evidence.
 - Implements the first controlled browser-triggered, server-executed CCLD
   complaint retrieval job slice when configured with authenticated local/test
   context, server-side raw storage, and database persistence.
-- Provides a server-side tester feedback route that can create GitHub Issues
-  only when configured with host-side feedback settings and safe labels.
+- Provides a server-side tester feedback route for bug reports, feature
+  requests, confusing workflow/page reports, packet/export issues, source/data
+  concerns, and new data source requests. It can create GitHub Issues only when
+  configured with host-side feedback settings and safe labels, and otherwise
+  shows a copyable safe fallback summary.
 
 ## Current Status
 
