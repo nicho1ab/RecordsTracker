@@ -368,7 +368,7 @@ def run_ccld_retrieval_job(
     if _active_actor_job_count(context.connection, authorization.actor.provider_subject) >= (
         context.config.rate_limit_per_actor
     ):
-        return _persist_initial_job(
+        rate_limited_job = _persist_initial_job(
             context,
             retrieval_request,
             actor=authorization.actor,
@@ -376,6 +376,8 @@ def run_ccld_retrieval_job(
             safe_message="Controlled CCLD retrieval is rate-limited for this tester.",
             data_mutations_performed=False,
         )
+        _commit_retrieval_persistence(context.connection)
+        return rate_limited_job
 
     job = _persist_initial_job(
         context,
@@ -422,6 +424,7 @@ def run_ccld_retrieval_job(
             errors=("Controlled retrieval failed safely.",),
             data_mutations_performed=False,
         )
+    _commit_retrieval_persistence(context.connection)
     return final_job
 
 
@@ -842,6 +845,11 @@ def _update_job_state(
         )
     )
     return _job_result_from_row(context, retrieval_job_id)
+
+
+def _commit_retrieval_persistence(connection: Connection) -> None:
+    if connection.in_transaction():
+        connection.commit()
 
 
 def _job_result_from_row(

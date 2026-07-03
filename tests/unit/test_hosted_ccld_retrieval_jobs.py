@@ -262,6 +262,121 @@ def test_controlled_retrieval_imports_records_and_links_queue(tmp_path: Path) ->
     assert_no_secret_html(html)
 
 
+def test_postgres_retrieval_persists_jobs_and_queue_after_reopened_connection(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "hosted-retrieval.db"
+    engine = create_engine(f"sqlite+pysqlite:///{database_path}")
+    hosted_seeded_import_metadata.create_all(engine)
+    first_connection = engine.connect()
+    try:
+        first_context = _request_context(
+            first_connection,
+            tmp_path,
+            client=MockCcldRetrievalClient(),
+        )
+        status, _content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_retrieval_form_bytes(),
+            page_data_mode="postgres",
+            ccld_record_request_ui_context=first_context,
+        )
+    finally:
+        first_connection.close()
+
+    first_html = body.decode("utf-8")
+    assert status == 200
+    assert "Complaint records ready for attorney review" in first_html
+    assert_no_secret_html(first_html)
+
+    second_connection = engine.connect()
+    try:
+        second_context = _request_context(second_connection, tmp_path)
+        counts = _table_counts(second_connection)
+        history_status, _content_type, history_body = route_response(
+            CCLD_RETRIEVAL_JOBS_PATH,
+            page_data_mode="postgres",
+            ccld_record_request_ui_context=second_context,
+        )
+        queue_status, _content_type, queue_body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=urlencode(
+                {
+                    "facility_number": "157806098",
+                    "record_type": "complaints",
+                    "start_date": "2022-08-01",
+                    "end_date": "2022-08-31",
+                }
+            ).encode("utf-8"),
+            page_data_mode="postgres",
+            ccld_record_request_ui_context=second_context,
+        )
+    finally:
+        second_connection.close()
+        engine.dispose()
+
+    history_html = history_body.decode("utf-8")
+    queue_html = queue_body.decode("utf-8")
+    assert counts["import_batches"] == 1
+    assert counts["source_records"] == 26
+    assert counts["retrieval_jobs"] == 1
+    assert history_status == 200
+    assert "Job Status" in history_html
+    assert "ccld-retrieval-157806098-" in history_html
+    assert "Records imported" in history_html
+    assert queue_status == 200
+    assert "Already-loaded source-derived rows were searched" in queue_html
+    assert "1 complaint queue record(s) are ready for review" in queue_html
+    assert "32-CR-20220407124448" in queue_html
+    assert_no_secret_html(history_html)
+    assert_no_secret_html(queue_html)
+
+
+def test_duplicate_retrieval_rerun_does_not_duplicate_visible_source_rows(
+    tmp_path: Path,
+) -> None:
+    with _empty_connection() as connection:
+        first_context = _request_context(
+            connection,
+            tmp_path,
+            client=MockCcldRetrievalClient(),
+            now=lambda: datetime(2026, 6, 15, 12, 0, 0, tzinfo=UTC),
+        )
+        second_context = _request_context(
+            connection,
+            tmp_path,
+            client=MockCcldRetrievalClient(),
+            now=lambda: datetime(2026, 6, 15, 12, 1, 0, tzinfo=UTC),
+        )
+        first_status, _content_type, first_body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_retrieval_form_bytes(),
+            ccld_record_request_ui_context=first_context,
+        )
+        second_status, _content_type, second_body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_retrieval_form_bytes(),
+            ccld_record_request_ui_context=second_context,
+        )
+        counts = _table_counts(connection)
+
+    first_html = first_body.decode("utf-8")
+    second_html = second_body.decode("utf-8")
+    assert first_status == 200
+    assert second_status == 200
+    assert counts["retrieval_jobs"] == 2
+    assert counts["import_batches"] == 1
+    assert counts["source_records"] == 26
+    assert "1 complaint queue record(s) are visible now" in first_html
+    assert "1 complaint queue record(s) are visible now" in second_html
+    assert_no_secret_html(first_html)
+    assert_no_secret_html(second_html)
+
+
 def test_controlled_retrieval_fetches_only_complaint_links_in_requested_date_range(
     tmp_path: Path,
 ) -> None:
@@ -1495,6 +1610,7 @@ def _request_context(
     *,
     client: MockCcldRetrievalClient | None = None,
     rate_limit: int = 3,
+    now: Any | None = None,
 ) -> CcldRecordRequestUiContext:
     reviewer_context = reviewer_ui_context_for_connection(
         connection,
@@ -1515,7 +1631,7 @@ def _request_context(
             retry_limit=0,
         ),
         client=client or MockCcldRetrievalClient(),
-        now=lambda: datetime(2026, 6, 15, 12, 0, 0, tzinfo=UTC),
+        now=now or (lambda: datetime(2026, 6, 15, 12, 0, 0, tzinfo=UTC)),
     )
     return ccld_record_request_context_for_reviewer_context(
         reviewer_context,
