@@ -124,20 +124,33 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
   function esc(s){
     return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+  function statusInfo(s){
+    var raw=String(s==null?'':s).trim();
+    var v=norm(raw);
+    if(v==='3'||v.indexOf('licensed')!==-1)return{label:'Licensed',cls:'licensed'};
+    if(v.indexOf('closed')!==-1)return{label:'Closed',cls:'closed'};
+    if(v.indexOf('pending')!==-1)return{label:'Pending',cls:'pending'};
+    if(raw)return{label:'Other',cls:'other',title:'Other status: '+raw};
+    return{label:'Unknown',cls:'other',title:'Status unknown'};
+  }
   function buildHtml(matches){
     var h='';
     for(var i=0;i<matches.length;i++){
       var f=matches[i];
+    var info=statusInfo(f.s);
     var geo=[f.city,f.state,f.zip].filter(Boolean).join(' \u00b7 ');
-    var meta=[f.t,f.p,f.s].filter(Boolean).join(' \u2022 ');
+    var meta=[f.num,f.co,f.t,f.p].filter(Boolean).join(' \u2022 ');
       var det=[geo,meta].filter(Boolean).join(' | ');
       h+='<li role="option"><button type="button" class="suggestion-btn"'
         +' data-num="'+esc(f.num)+'" data-name="'+esc(f.n)+'"'
         +' data-city="'+esc(f.city||'')+'" data-state="'+esc(f.state||'')+'"'
         +' data-zip="'+esc(f.zip||'')+'" data-type="'+esc(f.t||'')+'"'
         +' data-program="'+esc(f.p||'')+'" data-status="'+esc(f.s||'')+'">'
+        +'<span class="suggestion-main">'
+        +'<span class="suggestion-status suggestion-status-'+esc(info.cls)+'" aria-label="Facility status: '+esc(info.title||info.label)+'" title="'+esc(info.title||('Facility status: '+info.label))+'">'+esc(info.label)+'</span>'
         +'<span class="suggestion-name">'+esc(f.n)+'</span>'
-        +' <span class="suggestion-badge">'+esc(f.num)+'</span>'
+        +'</span>'
+        +' <span class="suggestion-badge">Facility '+esc(f.num)+'</span>'
         +(det?'<span class="suggestion-details">'+esc(det)+'</span>':'')
         +'</button></li>';
     }
@@ -1517,27 +1530,14 @@ def _render_facility_directory_details(
         concise_labels: bool = False,
 ) -> str:
         labels = (
-                (
-                        "Facility number",
-                        "Name",
-                        "Program type",
-                        "Facility type",
-                        "City / State / ZIP",
-                        "County",
-                        "Capacity",
-                        "Status code",
-                )
-                if concise_labels
-                else (
-                        "Facility number directory field",
-                        "Name directory field",
-                        "Program type directory field",
-                        "Facility type directory field",
-                        "City/state/ZIP directory field",
-                        "County directory field",
-                        "Capacity directory field",
-                        "Status code directory field",
-                )
+                "Facility number",
+                "Name",
+                "Program type",
+                "Facility type",
+                "City/state/ZIP" if not concise_labels else "City / State / ZIP",
+                "County",
+                "Capacity",
+                "Status",
         )
         return f"""<dl class="summary-list">
                 <dt>{labels[0]}</dt>
