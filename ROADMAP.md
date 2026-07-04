@@ -673,6 +673,14 @@ resolve a concrete MVP-blocking risk. Deferred readiness work stays tracked, but
 it should be sequenced by user value and MVP risk rather than by implementation
 convenience.
 
+Before reviewer-facing UI implementation begins, use the numbered
+RecordsTracker UI/product improvement inventory in `DESIGN_AND_USABILITY.md` as
+the approval gate. Implementation branches should name the approved item
+numbers, follow the recommended small PR groupings, preserve operator/support
+diagnostics outside the primary attorney path, and stop when the inventory's
+documented boundaries would require new schema, retrieval, batch-loader,
+deployment, QNAP runtime, or production auth work.
+
 1. Improve reviewer detail usability for the CCLD local/test review loop,
 	including source-traceability clarity only when it directly helps testers
 	verify records.
