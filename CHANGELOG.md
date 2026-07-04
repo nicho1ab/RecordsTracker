@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Simplified the hosted attorney start, facility lookup, and Request Records flow
+  so Home centers the review path, facility lookup result selection carries the
+  facility/license number and name into Request Records with immediate date
+  controls, and Request Records distinguishes already-loaded queue review from
+  controlled retrieval requests while preserving safe facility/date/feedback
+  context and existing retrieval/import behavior.
 - Simplified hosted attorney-facing navigation by removing Job Status from the
   primary navigation, keeping job diagnostics available through support-oriented
   diagnostics pages and contextual Request Records links, and standardizing the

@@ -43,7 +43,6 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
     CCLD_FACILITY_REVIEW_PRIORITY_PATH,
     CCLD_FACILITY_SUGGESTIONS_PATH,
-    PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER,
     CcldFacilityReferenceSource,
     CcldFacilityReviewContext,
     CcldReviewNextRecommendation,
@@ -106,7 +105,6 @@ from ccld_complaints.hosted_app.reviewer_created_state_routes import (
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
     REVIEWER_UI_DETAIL_PATH,
-    REVIEWER_UI_PACKET_DRAFT_PATH,
     REVIEWER_UI_PACKET_PREVIEW_PATH,
     REVIEWER_UI_PREFIX,
     REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH,
@@ -770,119 +768,65 @@ def render_related_facility_context(record: SampleSourceRecord) -> str:
 
 
 def render_app_shell() -> str:
-        facility_hub_href = (
-                f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number="
-                f"{PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER}"
-        )
         entry_feedback_href = feedback_href(
                 feedback_type="Bug report",
                 workflow_area="entry-orientation",
                 page_path="/",
-                prompt="Describe what was confusing about the first-time tester orientation.",
+                prompt="Describe what was confusing about starting the attorney review path.",
         )
         return render_page_shell(
                 title=APP_NAME,
-                                heading="Start a Facility Complaint Review",
+                heading="Start a Facility Complaint Review",
                 skip_label="Skip to main CCLD review content",
                 nav_label="CCLD records review navigation",
                 eyebrow="Attorney public-record review workspace.",
-                                active_path="/",
+                active_path="/",
                 step_id="start",
                 extra_nav_links=(),
-                                main=f"""    <section id="start" class="hero-card attorney-hero" aria-labelledby="start-heading">
+                main=f"""    <section id="start" class="hero-card attorney-hero" aria-labelledby="start-heading">
             <div>
-                <p class="launch-kicker">guided attorney review workflow</p>
+                <p class="launch-kicker">Attorney review start</p>
                 <h2 id="start-heading">Start a Facility Complaint Review</h2>
-                <p class="launch-value">Begin with the facility/license number, review the facility pattern summary, open prioritized complaint records, then prepare the packet and readiness checklist.</p>
-                <p class="helper-text">Limited-data caution: this workflow shows loaded public-source review aids only. Check source traceability on detail pages before relying on values.</p>
+                <p class="launch-value">Find the facility, choose dates, open already-loaded complaint records or submit a controlled Request Records job, then review records and prepare packet context.</p>
+                <p class="helper-text">Review aids only: check source traceability before relying on source-derived values. Loaded records are not a public-source completeness conclusion.</p>
             </div>
             <div class="attorney-hero-actions" aria-label="Primary actions">
                 <a class="button button-large" href="{CCLD_FACILITY_LOOKUP_PATH}">Start with facility lookup</a>
                 <a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Request Records</a>
-                <a class="button button-secondary" href="/reviewer">Open review queue</a>
             </div>
         </section>
-        <section aria-labelledby="how-it-works-heading">
-            <h2 id="how-it-works-heading">Review path</h2>
-            <p>Use this page to move through the current attorney review path in order.</p>
-            <ol class="card-grid">
-                <li class="summary-card">
-                    <h3>Find facility</h3>
-                    <p>Search by facility name or location when you do not already have the facility/license number.</p>
-                    <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Open facility lookup</a></p>
-                </li>
-                <li class="summary-card">
-                    <h3>Review facility pattern summary</h3>
-                    <p>Use the facility hub summary to understand loaded finding, review-flag, traceability, and reviewer-created note/status cues.</p>
-                    <p><a href="{facility_hub_href}">Open facility review hub</a></p>
-                </li>
-                <li class="summary-card">
-                    <h3>Open prioritized records</h3>
-                    <p>Open the review queue, prioritized-record links, or detail workspace to check source traceability before notes/status.</p>
-                    <p><a href="{REVIEWER_UI_PREFIX}">Open review queue</a> or <a href="{REVIEWER_UI_DETAIL_PATH}">open reviewer detail</a></p>
-                </li>
-                <li class="summary-card">
-                    <h3>Prepare packet/brief</h3>
-                    <p>Use packet preview and draft brief preparation after the facility/date review context is clear.</p>
-                    <p><a href="{REVIEWER_UI_PACKET_PREVIEW_PATH}">Open packet preview</a> or <a href="{REVIEWER_UI_PACKET_DRAFT_PATH}">open packet draft</a></p>
-                </li>
-                <li class="summary-card">
-                    <h3>Check readiness before attorney review</h3>
-                    <p>Use the attorney review readiness checklist on packet preview or draft before copying, printing, or sharing a review handoff.</p>
-                    <p><a href="{REVIEWER_UI_PACKET_PREVIEW_PATH}#packet-attorney-review-readiness-checklist">Open readiness checklist</a></p>
-                </li>
-            </ol>
-        </section>
-        <section aria-labelledby="tester-orientation-heading">
-            <h2 id="tester-orientation-heading">First-time tester orientation</h2>
-            <p>Try this first: open facility lookup if you know a facility name,
-            location, or other directory detail. Use Request Records when you already
-            have the digit facility/license number, then choose the complaint date
-            range and review the loaded queue.</p>
-            <p>Loaded context means records and facility cues already available in this
-            review workspace for the current facility/date request. It is a review aid
-            for the current loaded data, not a statement that the public source is
-            complete.</p>
-            <h3 id="tester-task-guide-heading">Tester task guide</h3>
-            <ol class="compact-list" aria-labelledby="tester-task-guide-heading">
-                <li><strong>Start with facility lookup when you know a name, location, or facility detail.</strong> Expected: selecting a result carries the facility/license number into Request Records, or the lookup page gives a clear no-match or narrow-search next step.</li>
-                <li><strong>Request records when you already have the digit facility/license number.</strong> Expected: the page confirms the facility/date request context and shows loaded records, safe job/setup guidance, or no-match guidance without claiming public-source completeness.</li>
-                <li><strong>Review prioritized records or next-review cues.</strong> Expected: the facility hub or queue names which loaded complaint records to open first and why, using source-traceability and reviewer-created note/status cues as review aids only.</li>
-                <li><strong>Open reviewer detail before relying on a record.</strong> Expected: source-derived values, source traceability, and reviewer-created notes/status are visibly separated before you add cautious reviewer-created observations.</li>
-                <li><strong>Check packet/brief and readiness outputs after detail review.</strong> Expected: packet preview, draft brief, and the readiness checklist summarize the current facility/date context for attorney review handoff without becoming a legal report or final export.</li>
-                <li><strong>Report an issue when something blocks or confuses review.</strong> Expected: the Report an issue page carries only safe workflow context and asks what you tried, what you expected, what happened, and whether review was blocked.</li>
-            </ol>
-            <p>When a start path, loaded-context cue, record order, source traceability
-            cue, packet/brief cue, readiness item, wording, or keyboard flow is
-            confusing, <a href="{entry_feedback_href}">report an issue</a>.</p>
-        </section>
-        <section aria-labelledby="ready-paths-heading">
-            <h2 id="ready-paths-heading">Ready paths</h2>
+        <section aria-labelledby="start-choice-heading">
+            <h2 id="start-choice-heading">Start here</h2>
             <div class="card-grid">
                 <article class="summary-card">
-                    <h3>Facility lookup</h3>
-                    <p>Find the facility/license number before opening Request Records.</p>
-                    <p><a class="button button-secondary" href="{CCLD_FACILITY_LOOKUP_PATH}">Find a facility</a></p>
+                    <h3>Find the facility</h3>
+                    <p>Use lookup when you know a name, city, county, ZIP, facility type, or other public directory detail.</p>
+                    <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Open facility lookup</a></p>
                 </article>
                 <article class="summary-card">
-                    <h3>Request Records</h3>
-                    <p>Confirm the facility/date context, request complaint records, or show the current queue.</p>
-                    <p><a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Open Request Records</a></p>
+                    <h3>Choose dates and records</h3>
+                    <p>Use Request Records when you already have the digit facility/license number, or after selecting a lookup result.</p>
+                    <p><a href="{CCLD_RECORD_REQUEST_PATH}">Open Request Records</a></p>
                 </article>
                 <article class="summary-card">
-                    <h3>Review queue</h3>
-                    <p>Open loaded complaint records and continue source-traceable review.</p>
-                    <p><a class="button button-secondary" href="/reviewer">Open review queue</a></p>
+                    <h3>Open the review queue</h3>
+                    <p>Open already-loaded records from Request Records, then use reviewer detail before notes, statuses, packet context, or feedback.</p>
+                    <p><a href="{REVIEWER_UI_PREFIX}">Open review queue</a></p>
                 </article>
+            </div>
+        </section>
+        <section aria-labelledby="next-actions-heading">
+            <h2 id="next-actions-heading">After records are loaded</h2>
+            <div class="card-grid">
                 <article class="summary-card">
                     <h3>Packet and readiness</h3>
-                    <p>Prepare the packet/brief and check readiness from the existing packet pages.</p>
-                    <p><a class="button button-secondary" href="{REVIEWER_UI_PACKET_PREVIEW_PATH}">Open packet preview</a></p>
+                    <p>Use packet preview and the readiness checklist only after the facility/date context and record detail review are clear.</p>
+                    <p><a href="{REVIEWER_UI_PACKET_PREVIEW_PATH}">Open packet preview</a></p>
                 </article>
                 <article class="summary-card">
                     <h3>Report an issue</h3>
-                    <p>Report what you tried, what loaded context or route was confusing, and what blocked review.</p>
-                    <p><a class="button button-secondary" href="{entry_feedback_href}">Report an issue</a></p>
+                    <p>Send safe context when facility lookup, date range, loaded queue, source traceability, wording, or keyboard flow blocks review.</p>
+                    <p><a href="{entry_feedback_href}">Report an issue</a></p>
                 </article>
             </div>
         </section>"""
