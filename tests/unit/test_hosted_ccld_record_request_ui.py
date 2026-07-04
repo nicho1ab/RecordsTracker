@@ -310,7 +310,7 @@ def test_ccld_record_request_prefills_selected_facility_from_lookup() -> None:
     assert "Choose complaint date range" in html
     assert "Use a bounded date range" in html
     assert (
-        "Use the date range to narrow complaint, visit, report, signed, or retrieval dates"
+        "Use the date range to narrow complaint, visit, report, or signed dates"
         in html
     )
     assert_no_secret_html(html)
@@ -688,6 +688,186 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "verified abuse" not in normalized_html.casefold()
     assert "confirmed harm" not in normalized_html.casefold()
     assert "complete source record" not in normalized_html.casefold()
+    assert_no_secret_html(html)
+
+
+def test_ccld_record_request_existing_queue_finds_batch_loaded_rows_after_first_page() -> None:
+    with _empty_connection() as connection:
+        _insert_import_batch(connection, import_batch_id=TEST_SCOPE.scope_id)
+        for index in range(105):
+            _insert_ccld_complaint_bundle(
+                connection,
+                import_batch_id=TEST_SCOPE.scope_id,
+                facility_number=f"900{index:06d}",
+                facility_name=f"Other Fixture Facility {index}",
+                document_suffix=f"a{index:03d}",
+                complaint_suffix=f"a{index:03d}",
+                complaint_received_date="2025-08-01",
+                complaint_control_number=f"OTHER-{index:03d}",
+            )
+        _insert_ccld_complaint_bundle(
+            connection,
+            import_batch_id=TEST_SCOPE.scope_id,
+            facility_number="455001037",
+            facility_name="OPEN LINE - WOODCLIFF",
+            document_suffix="z-target",
+            complaint_suffix="z-target",
+            complaint_received_date="2025-07-02",
+            complaint_control_number="32-CR-20250702001037",
+        )
+
+        status, content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "facility_number": "455001037",
+                    "start_date": "2025-07-02",
+                    "end_date": "2026-07-02",
+                }
+            ),
+            ccld_record_request_ui_context=_context(connection),
+        )
+        counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert counts["import_batches"] == 1
+    assert counts["source_records"] == 318
+    assert "Complaint records ready for attorney review" in html
+    assert "OPEN LINE - WOODCLIFF" in html
+    assert "32-CR-20250702001037" in html
+    assert "1 complaint queue record(s) are ready for review" in html
+    assert "Already-loaded source-derived rows were searched" in html
+    assert "no controlled server-side job was submitted for this request" in normalized_html
+    assert "No loaded complaint records match this request yet" not in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_record_request_existing_queue_spans_multiple_loaded_windows() -> None:
+    with _empty_connection() as connection:
+        _insert_import_batch(connection, import_batch_id=TEST_SCOPE.scope_id)
+        _insert_ccld_complaint_bundle(
+            connection,
+            import_batch_id=TEST_SCOPE.scope_id,
+            facility_number="455001037",
+            facility_name="OPEN LINE - WOODCLIFF",
+            document_suffix="window-1",
+            complaint_suffix="window-1",
+            complaint_received_date="2025-07-02",
+            complaint_control_number="32-CR-20250702001037",
+        )
+        _insert_ccld_complaint_bundle(
+            connection,
+            import_batch_id=TEST_SCOPE.scope_id,
+            facility_number="455001037",
+            facility_name="OPEN LINE - WOODCLIFF",
+            document_suffix="window-2",
+            complaint_suffix="window-2",
+            complaint_received_date="2026-06-30",
+            complaint_control_number="32-CR-20260630001037",
+        )
+
+        status, content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "facility_number": "455001037",
+                    "start_date": "2025-07-02",
+                    "end_date": "2026-07-02",
+                }
+            ),
+            ccld_record_request_ui_context=_context(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Complaint records ready for attorney review" in html
+    assert "2 complaint queue record(s) are ready for review" in html
+    assert "32-CR-20250702001037" in html
+    assert "32-CR-20260630001037" in html
+    assert "No loaded complaint records match this request yet" not in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_record_request_existing_queue_rejects_nonmatching_batch_facility() -> None:
+    with _empty_connection() as connection:
+        _insert_import_batch(connection, import_batch_id=TEST_SCOPE.scope_id)
+        _insert_ccld_complaint_bundle(
+            connection,
+            import_batch_id=TEST_SCOPE.scope_id,
+            facility_number="455001037",
+            facility_name="OPEN LINE - WOODCLIFF",
+            document_suffix="match-only",
+            complaint_suffix="match-only",
+            complaint_received_date="2025-07-02",
+            complaint_control_number="32-CR-20250702001037",
+        )
+
+        status, content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "facility_number": "455001038",
+                    "start_date": "2025-07-02",
+                    "end_date": "2026-07-02",
+                }
+            ),
+            ccld_record_request_ui_context=_context(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "No loaded complaint records match this request yet" in html
+    assert "32-CR-20250702001037" not in html
+    assert "- Matching complaint records in queue: 0" in html
+    assert_no_secret_html(html)
+
+
+def test_ccld_record_request_existing_queue_rejects_out_of_range_batch_dates() -> None:
+    with _empty_connection() as connection:
+        _insert_import_batch(connection, import_batch_id=TEST_SCOPE.scope_id)
+        _insert_ccld_complaint_bundle(
+            connection,
+            import_batch_id=TEST_SCOPE.scope_id,
+            facility_number="455001037",
+            facility_name="OPEN LINE - WOODCLIFF",
+            document_suffix="out-of-range",
+            complaint_suffix="out-of-range",
+            complaint_received_date="2025-07-02",
+            complaint_control_number="32-CR-20250702001037",
+        )
+
+        status, content_type, body = route_response(
+            CCLD_RECORD_REQUEST_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "facility_number": "455001037",
+                    "start_date": "2024-01-01",
+                    "end_date": "2024-12-31",
+                }
+            ),
+            ccld_record_request_ui_context=_context(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Candidates may be outside the selected date range" in html
+    assert "32-CR-20250702001037" not in html
+    assert "- Matching complaint records in queue: 0" in html
+    assert "- Local facility rows before date filtering: 3" in html
     assert_no_secret_html(html)
 
 
@@ -1600,6 +1780,113 @@ def _write_program_summary_signals_csv(
         fixture_file.write(
             ",".join(f'"{row.get(fieldname, "")}"' for fieldname in fieldnames)
             + "\n"
+        )
+
+
+def _insert_import_batch(connection: Connection, *, import_batch_id: str) -> None:
+    connection.execute(
+        hosted_import_batches.insert().values(
+            import_batch_id=import_batch_id,
+            imported_at="2026-07-03T12:00:00+00:00",
+            source_artifact_identity=f"fixture:{import_batch_id}",
+            source_pipeline_version="fixture-batch-loader",
+            validation_status="validated",
+            raw_hash_validation_status="validated",
+            record_counts={"facility": 0, "source_document": 0, "complaint": 0},
+            warnings=[],
+            errors=[],
+        )
+    )
+
+
+def _insert_ccld_complaint_bundle(
+    connection: Connection,
+    *,
+    import_batch_id: str,
+    facility_number: str,
+    facility_name: str,
+    document_suffix: str,
+    complaint_suffix: str,
+    complaint_received_date: str,
+    complaint_control_number: str,
+) -> None:
+    facility_id = f"ccld:facility:{facility_number}"
+    document_id = f"ccld:document:{facility_number}:{document_suffix}"
+    complaint_id = f"ccld:complaint:{facility_number}:{complaint_suffix}"
+    source_url = (
+        "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports"
+        f"?facNum={facility_number}&inx={document_suffix}"
+    )
+    traceability = {
+        "source_document_id": document_id,
+        "source_url": source_url,
+        "raw_sha256": "a" * 64,
+        "raw_path": None,
+        "connector_name": "ccld_facility_reports",
+        "connector_version": "fixture",
+        "retrieved_at": "2026-07-03T12:00:00+00:00",
+    }
+    for entity_type, stable_source_id, original_values in (
+        (
+            "facility",
+            facility_id,
+            {
+                "facility_id": facility_id,
+                "external_facility_number": int(facility_number),
+                "facility_name": facility_name,
+            },
+        ),
+        (
+            "source_document",
+            document_id,
+            {
+                "document_id": document_id,
+                "facility_id": facility_id,
+                "source_url": source_url,
+                "connector_name": "ccld_facility_reports",
+                "retrieved_at": "2026-07-03T12:00:00+00:00",
+            },
+        ),
+        (
+            "complaint",
+            complaint_id,
+            {
+                "complaint_id": complaint_id,
+                "document_id": document_id,
+                "facility_id": facility_id,
+                "external_facility_number": int(facility_number),
+                "facility_name": facility_name,
+                "complaint_control_number": complaint_control_number,
+                "complaint_received_date": complaint_received_date,
+                "finding": "Substantiated",
+            },
+        ),
+    ):
+        source_record_key = f"{entity_type}:{stable_source_id}"
+        existing_key = connection.execute(
+            select(hosted_source_derived_records.c.source_record_key).where(
+                hosted_source_derived_records.c.source_record_key == source_record_key
+            )
+        ).scalar_one_or_none()
+        if existing_key is not None:
+            continue
+        connection.execute(
+            hosted_source_derived_records.insert().values(
+                source_record_key=source_record_key,
+                entity_type=entity_type,
+                stable_source_id=stable_source_id,
+                import_batch_id=import_batch_id,
+                source_document_id=document_id,
+                facility_id=facility_id,
+                source_url=source_url,
+                raw_sha256="a" * 64,
+                raw_path=None,
+                connector_name="ccld_facility_reports",
+                connector_version="fixture",
+                retrieved_at="2026-07-03T12:00:00+00:00",
+                original_values=original_values,
+                source_traceability=traceability,
+            )
         )
 
 

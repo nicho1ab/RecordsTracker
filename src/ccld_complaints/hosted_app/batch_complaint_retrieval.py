@@ -15,7 +15,6 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.exc import SQLAlchemyError
 
 from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
-    CCLD_CONNECTOR_NAME,
     RECORD_TYPE_LABELS,
     CcldFixtureRetrievalClient,
     CcldHttpRetrievalClient,
@@ -38,7 +37,9 @@ from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
     local_test_reviewer_actor,
 )
-from ccld_complaints.hosted_app.seeded_import import hosted_source_derived_records
+from ccld_complaints.hosted_app.source_derived_reads import (
+    find_ccld_source_derived_records_for_request,
+)
 
 BATCH_MANIFEST_DIR = Path("data/processed/batch-retrieval")
 DATE_WINDOW_LIMIT_DAYS = 366
@@ -622,53 +623,13 @@ def _matching_source_derived_complaint_count(
     connection: Connection,
     planned_window: BatchPlannedWindow,
 ) -> int:
-    rows = connection.execute(
-        select(hosted_source_derived_records).where(
-            hosted_source_derived_records.c.entity_type == "complaint",
-            hosted_source_derived_records.c.connector_name == CCLD_CONNECTOR_NAME,
-        )
-    ).mappings()
-    return sum(
-        1
-        for row in rows
-        if _source_record_matches_window(dict(row), planned_window)
+    lookup = find_ccld_source_derived_records_for_request(
+        connection,
+        facility_number=planned_window.facility.facility_number,
+        start_date=planned_window.date_window.start_date,
+        end_date=planned_window.date_window.end_date,
     )
-
-
-def _source_record_matches_window(
-    row: Mapping[str, Any],
-    planned_window: BatchPlannedWindow,
-) -> bool:
-    original_values = row.get("original_values")
-    if not isinstance(original_values, Mapping):
-        return False
-    facility_number = planned_window.facility.facility_number
-    if not (
-        original_values.get("external_facility_number") == facility_number
-        or original_values.get("facility_number") == facility_number
-        or str(row.get("facility_id") or "").endswith(facility_number)
-        or f"facNum={facility_number}" in str(row.get("source_url") or "")
-    ):
-        return False
-    start = _required_date(planned_window.date_window.start_date, "start_date")
-    end = _required_date(planned_window.date_window.end_date, "end_date")
-    return any(start <= record_date <= end for record_date in _record_dates(original_values))
-
-
-def _record_dates(original_values: Mapping[str, Any]) -> tuple[date, ...]:
-    dates: list[date] = []
-    for field_name in (
-        "complaint_received_date",
-        "visit_date",
-        "report_date",
-        "date_signed",
-    ):
-        value = original_values.get(field_name)
-        if isinstance(value, str):
-            parsed = _parse_iso_date(value[:10])
-            if parsed is not None:
-                dates.append(parsed)
-    return tuple(dates)
+    return len(lookup.matched_complaint_keys)
 
 
 def _facility_from_row(row: Mapping[str, Any]) -> BatchFacility:
