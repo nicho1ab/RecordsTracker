@@ -10,7 +10,9 @@ from sqlalchemy.engine import Connection
 
 from ccld_complaints.hosted_app.seeded_import import SourceDerivedEntityType
 from ccld_complaints.hosted_app.source_derived_reads import (
+    CcldSourceDerivedRequestLookup,
     SourceDerivedRecordRead,
+    find_ccld_source_derived_records_for_request,
     get_source_derived_record_by_identity,
     get_source_derived_record_by_key,
     list_source_derived_records,
@@ -456,6 +458,35 @@ def list_authorized_source_derived_records(
         import_batch_id=scoped_import_batch_id,
         limit=limit,
         offset=offset,
+    )
+
+
+def find_authorized_ccld_source_derived_records_for_request(
+    connection: Connection,
+    actor: AuthenticatedActor | None,
+    *,
+    scope: HostedAccessScope,
+    facility_number: str,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    import_batch_id: str | None = None,
+) -> CcldSourceDerivedRequestLookup:
+    scoped_import_batch_id = _scoped_import_batch_id(scope, import_batch_id)
+    require_permission(
+        actor,
+        permission=SOURCE_DERIVED_READ_PERMISSION,
+        scope=scope,
+        target=AuthorizationTarget(
+            "source_derived_record_list",
+            scoped_import_batch_id,
+        ),
+    )
+    return find_ccld_source_derived_records_for_request(
+        connection,
+        facility_number=facility_number,
+        start_date=start_date,
+        end_date=end_date,
+        import_batch_id=scoped_import_batch_id,
     )
 
 
