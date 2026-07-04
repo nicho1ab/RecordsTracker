@@ -608,10 +608,10 @@ def _render_request_form(
     )
     return _page(
                                 title="Request Records",
-                                heading="Request Records",
+                heading="Request Records",
                 step_id="retrieve" if has_date_range else "date_range" if has_facility else "facility",
                 next_action=(
-                        "Request complaint records"
+                        "Open loaded queue or request records"
                         if has_date_range
                         else "Set the date range"
                         if has_facility
@@ -620,25 +620,11 @@ def _render_request_form(
                 main=f"""    <section class="hero-card" aria-labelledby="request-hero-heading">
                     <p class="launch-kicker">Start review</p>
                     <h2 id="request-hero-heading">Request complaint records for a facility</h2>
-                    <p class="launch-value">Choose a facility and date range, then request CCLD complaint records or open the current complaint queue.</p>
+                    <p class="launch-value">Choose a facility and date range, then open already-loaded records or submit a controlled Request Records job.</p>
             <p><a class="helper-link" href="{CCLD_HELP_PATH}#review-guidance">See review guidance and next steps.</a></p>
         </section>
-                <details class="quiet-section orientation-details" open>
-                    <summary id="request-start-orientation-heading">Start review request context</summary>
-                    <p>Facility/license number identifies the CCLD facility. Date range narrows the loaded complaint records.</p>
-                    <p>When records are found, open the recommended record and return to the same queue when done.</p>
-                </details>
                 {workflow_state}""",
     )
-
-
-def _render_request_start_orientation() -> str:
-        return """<section class="quiet-section" aria-labelledby="request-start-orientation-heading">
-            <h2 id="request-start-orientation-heading">Start review request context</h2>
-            <p>Facility/license number identifies the CCLD facility. Date range narrows complaint, visit, report, or signed dates already represented in preloaded source-derived records.</p>
-            <p>Request Records uses the configured controlled server-side request path only when available. Show existing queue searches loaded source-derived records for the selected facility/date context.</p>
-            <p>When records are found, continue to the review queue, open the recommended record, review source traceability on detail, then use packet preparation and feedback when needed.</p>
-        </section>"""
 
 
 def _render_request_workflow_state(
@@ -654,24 +640,21 @@ def _render_request_workflow_state(
 ) -> str:
         if not has_facility:
                 return _render_facility_selection_state(reference_source)
-        context_card = _render_request_context_confirmation(
-                facility_number=selected_facility_number,
-                start_date=selected_start_date or None,
-                end_date=selected_end_date or None,
-                request_context_origin=request_context_origin,
-                lookup_facility_name=lookup_facility_name,
-                reference_source=reference_source,
-                include_change_links=False,
-        )
         if not has_date_range:
-                return f"""<div class="request-layout">
-                        <div>{_render_date_range_state(selected_facility_number, request_context_origin, lookup_facility_name, selected_start_date, selected_end_date)}</div>
-                        <aside class="sidebar-stack" aria-label="Selected facility context">{context_card}</aside>
-                </div>"""
-        return f"""<div class="request-layout">
-                        <div>{_render_date_ready_state(selected_facility_number, request_context_origin, lookup_facility_name, selected_start_date, selected_end_date)}</div>
-                        <aside class="sidebar-stack" aria-label="Selected request context">{context_card}</aside>
-                </div>"""
+                return _render_date_range_state(
+                        selected_facility_number,
+                        request_context_origin,
+                        lookup_facility_name,
+                        selected_start_date,
+                        selected_end_date,
+                )
+        return _render_date_ready_state(
+                selected_facility_number,
+                request_context_origin,
+                lookup_facility_name,
+                selected_start_date,
+                selected_end_date,
+        )
 
 
 def _render_facility_selection_state(reference_source: CcldFacilityReferenceSource) -> str:
@@ -731,7 +714,14 @@ def _render_date_range_state(
         return f"""<section class="workflow-panel" aria-labelledby="date-range-heading">
             <p class="stage-kicker">Date range</p>
             <h2 id="date-range-heading">Choose complaint date range</h2>
-            <p>Use a bounded date range that matches the complaint review period you want to inspect.</p>
+            <p>Selected facility context is ready. Set the complaint review dates now, or change the facility before continuing.</p>
+            {_render_selected_request_context_summary(
+                facility_number=facility_number,
+                lookup_facility_name=lookup_facility_name,
+                request_context_origin=request_context_origin,
+                start_date=selected_start_date or None,
+                end_date=selected_end_date or None,
+            )}
             <form action="{CCLD_RECORD_REQUEST_PATH}" method="get">
                 <input type="hidden" name="facility_number" value="{_escape(facility_number)}">
                 <input type="hidden" name="{_REQUEST_CONTEXT_ORIGIN_FIELD}" value="{_escape(request_context_origin)}">
@@ -753,7 +743,7 @@ def _render_date_range_state(
                 </div>
                 <p id="date-range-help" class="helper-text">Use the date range to narrow complaint, visit, report, or signed dates in loaded records.</p>
                 <div class="form-actions">
-                    <button type="submit">Confirm date range</button>
+                    <button type="submit">Use this facility/date context</button>
                     <a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Change facility</a>
                 </div>
             </form>
@@ -769,16 +759,15 @@ def _render_date_ready_state(
 ) -> str:
         return f"""<section class="workflow-panel workflow-panel-primary" aria-labelledby="retrieve-ready-heading">
             <p class="stage-kicker">Request Records</p>
-            <h2 id="retrieve-ready-heading">Ready to request complaint records</h2>
-            <p>Review this facility/date context before requesting records or showing the existing queue. Start with the recommended record.</p>
-            <dl>
-                <dt>Facility/license number</dt>
-                <dd>{_escape(facility_number)}</dd>
-                <dt>Date range</dt>
-                <dd>{_escape(selected_start_date)} to {_escape(selected_end_date)}</dd>
-                <dt>Record type</dt>
-                <dd>Complaint records</dd>
-            </dl>
+            <h2 id="retrieve-ready-heading">Open loaded records or request complaint records</h2>
+            <p>Use <strong>Show existing queue</strong> to open records already loaded for this facility/date context. Use <strong>Request Records</strong> to submit a controlled CCLD retrieval request when records are not loaded or need refresh.</p>
+            {_render_selected_request_context_summary(
+                facility_number=facility_number,
+                lookup_facility_name=lookup_facility_name,
+                request_context_origin=request_context_origin,
+                start_date=selected_start_date,
+                end_date=selected_end_date,
+            )}
             <form action="{CCLD_RECORD_REQUEST_PATH}" method="post" aria-describedby="retrieve-actions-help">
                 <input type="hidden" name="{_REQUEST_CONTEXT_ORIGIN_FIELD}" value="{_escape(request_context_origin)}">
                 <input type="hidden" name="{_LOOKUP_FACILITY_NAME_FIELD}" value="{_escape(lookup_facility_name or '')}">
@@ -788,13 +777,39 @@ def _render_date_ready_state(
                 <input type="hidden" name="end_date" value="{_escape(selected_end_date)}">
                 <input type="hidden" name="reviewer_status_filter" value="all">
                 <div class="form-actions">
-                    <button type="submit" name="{_RETRIEVAL_ACTION_FIELD}" value="{_RETRIEVAL_ACTION_VALUE}">Request Records</button>
-                    <button class="secondary" type="submit">Show existing queue</button>
+                    <button type="submit">Show existing queue</button>
+                    <button class="secondary" type="submit" name="{_RETRIEVAL_ACTION_FIELD}" value="{_RETRIEVAL_ACTION_VALUE}">Request Records</button>
                     <a class="button button-quiet" href="{CCLD_RECORD_REQUEST_PATH}?{_escape(urlencode({'facility_number': facility_number, _REQUEST_CONTEXT_ORIGIN_FIELD: request_context_origin, _LOOKUP_FACILITY_NAME_FIELD: lookup_facility_name or ''}))}">Change date range</a>
                 </div>
                 <p id="retrieve-actions-help" class="helper-text">Request Records creates a controlled server-side job only when configured. Show existing queue reviews already-loaded records.</p>
             </form>
         </section>"""
+
+
+def _render_selected_request_context_summary(
+    *,
+    facility_number: str,
+    lookup_facility_name: str | None,
+    request_context_origin: str,
+    start_date: str | None,
+    end_date: str | None,
+) -> str:
+    lookup_name_markup = ""
+    if lookup_facility_name:
+        lookup_name_markup = f"""
+                <dt>Facility name</dt>
+                <dd>{_escape(lookup_facility_name)}</dd>"""
+    return f"""            <dl class="summary-list selected-request-context">
+                <dt>Facility/license number</dt>
+                <dd>{_escape(facility_number)}</dd>{lookup_name_markup}
+                <dt>Date range</dt>
+                <dd>{_escape(_date_scope_from_values(start_date, end_date))}</dd>
+                <dt>Record type</dt>
+                <dd>Complaint records</dd>
+                <dt>Context source</dt>
+                <dd>{_escape(_request_origin_label(request_context_origin))}</dd>
+            </dl>
+            <p class="helper-text"><a href="{_escape(_facility_hub_href(facility_number))}">Open facility hub or signal-only facility hub for this request context</a> or <a href="{CCLD_RECORD_REQUEST_PATH}">change facility</a>.</p>"""
 
 
 def _render_facility_datalist_options(source: CcldFacilityReferenceSource) -> str:
@@ -1426,7 +1441,7 @@ def _render_no_match_result(
 ) -> str:
     local_count = len(result.all_facility_records)
     headline = _no_match_headline(retrieval_result, local_count)
-    primary_action = _no_match_primary_action(retrieval_result)
+    primary_action = _no_match_primary_action(request, retrieval_result)
     return _page(
                 title=headline,
                 heading=headline,
@@ -1596,13 +1611,23 @@ def _no_match_headline(
     return _retrieval_result_headline(retrieval_result, imported_count)
 
 
-def _no_match_primary_action(result: CcldRetrievalJobResult | None) -> str:
+def _no_match_primary_action(
+    request: CcldRecordRequest,
+    result: CcldRetrievalJobResult | None,
+) -> str:
+    request_change_href = _request_change_href(
+        facility_number=request.facility_number,
+        start_date=request.start_date,
+        end_date=request.end_date,
+        request_context_origin=request.request_context_origin,
+        lookup_facility_name=request.lookup_facility_name,
+    )
     if result is None:
-        return f'<a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Adjust date range</a>'
+        return f'<a class="button" href="{_escape(request_change_href)}">Adjust date range</a>'
     if result.job_state in {"failed", "completed_with_warnings"}:
         return f'<a class="button" href="{_escape(_retrieval_job_detail_href(result.retrieval_job_id))}">View job details</a>'
     if result.job_state == "blocked_by_validation":
-        return f'<a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Adjust request</a>'
+        return f'<a class="button" href="{_escape(request_change_href)}">Adjust request</a>'
     return f'<a class="button" href="{_FEEDBACK_PATH}">Report an issue</a>'
 
 

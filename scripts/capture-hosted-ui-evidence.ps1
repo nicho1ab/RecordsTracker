@@ -276,7 +276,7 @@ function Test-RouteOrientationMarker {
     param([hashtable]$Route, [string]$Html)
     $name = [string]$Route.Name
     $markersByRoute = @{
-        "home" = @("Start a Facility Complaint Review", "Review path")
+        "home" = @("Start a Facility Complaint Review", "Start here")
         "facility" = @("Find a facility", "Find the facility/license number")
         "facility-priority" = @("Facility review priority", "Facilities grouped by review cue priority")
         "facility-intelligence" = @("Facility review intelligence", "Facilities by review-priority indicator")

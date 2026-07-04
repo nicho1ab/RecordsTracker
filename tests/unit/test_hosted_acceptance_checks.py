@@ -82,7 +82,7 @@ def test_verify_script_checks_complete_tester_readiness_route_set() -> None:
         "Find the facility/license number",
         "PreloadedFacilityNumber",
         "Report a review issue",
-        "Ready to request complaint records",
+        "Open loaded records or request complaint records",
         "Complaint overview",
         "Before copying or printing",
         "Review before copying or printing",

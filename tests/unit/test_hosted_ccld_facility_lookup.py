@@ -801,6 +801,13 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
         "button-secondary" in classes
         for classes in _button_classes(html, "Change selected facility")
     )
+    assert 'class="selected-facility-request-form"' in html
+    assert 'name="facility_number"' in html
+    assert 'name="request_context_origin" value="facility_lookup"' in html
+    assert 'name="lookup_facility_name"' in html
+    assert 'id="lookup_start_date" name="start_date" type="date"' in html
+    assert 'id="lookup_end_date" name="end_date" type="date"' in html
+    assert "Continue to Request Records" in html
     assert "Search by name, license number, city, county, ZIP" in (
         normalized_html
     )
@@ -826,11 +833,17 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Facility matches" in html
     assert "Facility-directory results" in html
-    assert "These are public facility-directory results" in html
-    assert "Complaint records are retrieved separately" in html
+    assert (
+        "Choose a facility to carry its facility/license number and name into Request Records"
+        in html
+    )
+    assert "Date controls appear as soon as a facility is selected" in html
+    assert 'id="lookup_start_date" name="start_date" type="date"' in html
+    assert 'id="lookup_end_date" name="end_date" type="date"' in html
+    assert "Continue to Request Records" in html
     assert "Showing 1 of 1 matching facility." in normalized_html
-    assert "Start complaint request for facility 900000001" in html
-    assert "Open facility review hub" in html
+    assert "Use this facility in Request Records" in html
+    assert "Open facility hub when loaded context is available" in html
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=900000001" in html
     assert "Find a facility" in html
     assert request_href in html
@@ -1882,14 +1895,14 @@ def test_ccld_facility_lookup_selection_prefills_request_form_without_mutation()
     assert content_type == "text/html; charset=utf-8"
     assert before_source_rows == after_source_rows
     assert counts == _empty_reviewer_counts()
-    assert "Selected request context" in html or "No facility selected yet" not in html
+    assert "Selected facility context is ready" in html
+    assert "No facility selected yet" not in html
     assert "Prefilled facility/license link" in html
-    assert "Facility/license number being requested" in html
+    assert "Facility/license number" in html
     assert "value=\"900000001\"" in html
     assert "Choose complaint date range" in html
     assert "Complaint records" in html
-    assert "Active facility reference source" in html
-    assert "Confirm date range" in html
+    assert "Use this facility/date context" in html
     assert "Change facility" in html
     assert_no_secret_html(html)
 
@@ -2023,7 +2036,7 @@ def test_ccld_facility_lookup_result_card_review_action_has_descriptive_label() 
 
     assert status == 200
     assert (
-        'aria-label="Start complaint request for facility 900000001 (Synthetic Orchard Child Care)"'
+        'aria-label="Use facility 900000001 (Synthetic Orchard Child Care) in Request Records"'
         in html
     )
     assert_no_secret_html(html)
