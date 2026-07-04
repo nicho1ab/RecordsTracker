@@ -293,13 +293,13 @@ def render_feedback_page(
     if issue_starter:
         form_values["description"] = [issue_starter]
     return _page(
-                title="Send feedback",
-                heading="Send feedback",
+                title="Report an issue",
+                heading="Report an issue",
         main=f"""
         <section class="hero-card" aria-labelledby="feedback-purpose-heading">
             <p class="launch-kicker">Tester feedback</p>
-            <h2 id="feedback-purpose-heading">Send safe review feedback</h2>
-            <p>Choose the feedback type and describe what blocked Request Records, Job Status, record review, packet/readiness review, source/data review, wording, or keyboard flow.</p>
+            <h2 id="feedback-purpose-heading">Report a review issue</h2>
+            <p>Choose the feedback type and describe what blocked Request Records, job diagnostics, record review, packet/readiness review, source/data review, wording, or keyboard flow.</p>
             <p class="helper-text">Actionable tester feedback names the page or route, what you tried first, what you expected, what happened instead, and whether the issue blocked review.</p>
         </section>
         <section class="notice-card" aria-labelledby="actionable-feedback-heading">
@@ -320,9 +320,9 @@ def render_feedback_page(
         <details class="technical-details">
             <summary>Useful feedback examples</summary>
             <ul>
-                <li>I was trying to request records from Request Records, but the Job Status notice did not make the next step clear. I expected to know whether to wait, retry, or review already-loaded records. The visible context showed the facility number and date range.</li>
+                <li>I was trying to request records from Request Records, but the job diagnostics notice did not make the next step clear. I expected to know whether to wait, retry, or review already-loaded records. The visible context showed the facility number and date range.</li>
                 <li>I was on the reviewer queue after applying the reviewer-status filter. The shown count and empty-state recovery action looked confusing. I expected a clear way back to the full loaded queue. The visible context showed the queue page and active filter.</li>
-                <li>I was reviewing a complaint detail page and checking source traceability before adding a note. A source-derived date looked wrong or incomplete, but the guidance did not make clear whether to add a cautious note or use feedback. The visible context showed the detail page and complaint/control identifier.</li>
+                <li>I was reviewing a complaint detail page and checking source traceability before adding a note. A source-derived date looked wrong or incomplete, but the guidance did not make clear whether to add a cautious note or report an issue. The visible context showed the detail page and complaint/control identifier.</li>
                 <li>I was preparing packet/readiness review and one prioritized record looked missing or unexpected in the packet content. I expected the packet cue to explain what to review next. The visible context showed the packet preview step and facility/date context.</li>
                 <li>I was using the first-time tester path from the task guide. The transition from facility lookup to Request Records and loaded records was confusing. I expected the page to show which workflow step came next. The visible context showed the entry-orientation step.</li>
             </ul>
@@ -422,7 +422,7 @@ def _feedback_context_panel(context: FeedbackHandoffContext | None) -> str:
             <p>Describe what was confusing, missing, unexpected, or hard to use, including active
             reviewer-created status filter confusion, shown-count or total-count confusion,
             filtered-empty recovery problems, source traceability concerns such as source URL, raw SHA-256 hash, connector metadata,
-            retrieval timestamp, Job Status history/detail context, source document/report marker, or traceability value
+            retrieval timestamp, job diagnostics history/detail context, source document/report marker, or traceability value
             missing; source-confidence next-step confusion for missing source values,
             proxy-related cues, or cautious note/status wording; possible correction concerns where a source-derived value looked wrong or
             incomplete after checking traceability; or uncertainty about whether to use a
@@ -447,7 +447,7 @@ def _feedback_issue_starter(context: FeedbackHandoffContext | None) -> str:
     if context is None or not _feedback_context_rows(context):
         return ""
     surface = _feedback_starter_surface(context)
-    focus = "Job Status information" if _has_retrieval_context(context) else "review workflow information"
+    focus = "job diagnostics information" if _has_retrieval_context(context) else "review workflow information"
     lines = [f"I am reporting confusion about the {focus} on {surface}."]
     if context.facility_number:
         lines.append(f"Facility/license: {context.facility_number}")
@@ -914,7 +914,7 @@ def _feedback_form(form_values: Mapping[str, list[str]]) -> str:
         f"{escaped_description}</textarea>"
     )
     return f"""    <section aria-labelledby="feedback-form-heading">
-      <h2 id="feedback-form-heading">Send tester feedback</h2>
+      <h2 id="feedback-form-heading">Report an issue</h2>
       <form action="{FEEDBACK_PATH}" method="post">
         <div>
           <label for="feedback_type">Feedback type</label>
@@ -941,7 +941,7 @@ def _feedback_form(form_values: Mapping[str, list[str]]) -> str:
           <span id="page-path-help">This visible context is included with the feedback when submitted.</span>
         </p>
         {context_inputs}
-        <p><button type="submit">Submit feedback</button></p>
+        <p><button type="submit">Submit issue report</button></p>
       </form>
     </section>"""
 
@@ -1079,8 +1079,8 @@ def _safe_title_surface(context: FeedbackHandoffContext | None) -> str:
             "/": "Home",
             "/feedback": "Feedback",
             "/ccld/records/request": "Request Records",
-            "/ccld/retrieval/jobs": "Job Status",
-            "/ccld/retrieval/jobs/detail": "Job Status Detail",
+            "/ccld/retrieval/jobs": "Job Diagnostics",
+            "/ccld/retrieval/jobs/detail": "Job Diagnostics Detail",
             "/reviewer": "Review Queue",
             "/reviewer/records": "Review Queue",
             "/reviewer/packet/preview": "Packet Preview",

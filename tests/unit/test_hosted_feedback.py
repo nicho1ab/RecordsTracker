@@ -77,8 +77,8 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Send feedback" in html
-    assert "Send safe review feedback" in html
+    assert "Report an issue" in html
+    assert "Report a review issue" in html
     assert "What makes feedback actionable" in html
     assert (
         "Actionable tester feedback names the page or route, what you tried first, "
@@ -97,11 +97,11 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     )
     assert "Say what would have helped you continue review." in html
     assert "packet/readiness" in html
-    assert "Job Status" in html
+    assert "job diagnostics" in html
     assert "already-loaded records" in html or "loaded-record" in html
     assert "browser copy issue" in normalized_html
     assert "print issue" in normalized_html
-    assert "Submit feedback" in html
+    assert "Submit issue report" in html
     for option in (
         "Bug report",
         "Feature request",
@@ -114,7 +114,7 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "copy" in html.lower()
     assert "Useful feedback examples" in html
     assert (
-        "I was trying to request records from Request Records, but the Job Status "
+        "I was trying to request records from Request Records, but the job diagnostics "
         "notice did not make the next step clear."
         in html
     )
@@ -200,7 +200,7 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
             "that was confusing.</p>",
             '<h3 id="feedback-safety-heading">Do not include private material</h3>',
             '<label for="description">Description</label>',
-            '<button type="submit">Submit feedback</button>',
+            '<button type="submit">Submit issue report</button>',
             '<h2 id="feedback-unconfigured-heading">How feedback is submitted</h2>',
             "<p>Note: Server-side GitHub issue intake is not configured on this deployment.",
         ),
@@ -364,7 +364,7 @@ def test_feedback_page_renders_safe_retrieval_handoff_context() -> None:
     assert "completed_with_warnings" in html
     assert "Job ID" in html
     assert "ccld-retrieval-157806098-20260615T120000Z" in html
-    assert "Job Status history/detail context" in normalized_html
+    assert "job diagnostics history/detail context" in normalized_html
     assert "Describe retrieval status confusion." in html
     assert "C:/server/private/raw/artifact.html" not in html
     assert_no_secret_html(html)
@@ -401,7 +401,7 @@ def test_feedback_page_prefills_editable_starter_from_safe_handoff_context() -> 
         in html
     )
     starter_opening = (
-        "I am reporting confusion about the Job Status information on "
+        "I am reporting confusion about the job diagnostics information on "
         "retrieval job detail."
     )
     assert starter == "\n".join(
@@ -452,7 +452,7 @@ def test_feedback_starter_omits_unavailable_handoff_values() -> None:
     assert status == 200
     assert "Suggested issue starter" in html
     assert (
-        "I am reporting confusion about the Job Status information on request result."
+        "I am reporting confusion about the job diagnostics information on request result."
         in starter
     )
     assert "Facility/license: 157806098" in starter

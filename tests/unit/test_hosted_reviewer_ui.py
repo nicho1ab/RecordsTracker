@@ -590,9 +590,12 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Review records flagged for source check" in html
     assert "Review records missing reviewer-created status/note cues" in html
     assert "Confirm source traceability for important source-derived values" in html
-    assert "capture the possible correction concern in a reviewer-created note or feedback" in html
     assert (
-        "Use feedback if records, wording, readiness cues, or copy/print preparation "
+        "capture the possible correction concern in a reviewer-created note or issue report"
+        in html
+    )
+    assert (
+        "Report an issue if records, wording, readiness cues, or copy/print preparation "
         "content seems wrong"
         in html
     )
@@ -615,7 +618,10 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
         "does not change source-derived records or submit correction decisions"
         in normalized_html
     )
-    assert "Possible correction concerns should stay in reviewer-created notes or feedback" in html
+    assert (
+        "Possible correction concerns should stay in reviewer-created notes or issue reports"
+        in html
+    )
     assert (
         "what still needs source check or reviewer-created status/note attention"
         in normalized_html
@@ -735,7 +741,7 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Open record 32-CR-20220407124448" in html
     assert "Review packet notes" in html
     assert "This preview is a preparation aid." in html
-    assert "use the feedback link with this packet context" in html
+    assert "report an issue with this packet context" in html
     assert "Source-derived fields remain separate from reviewer-created notes/status." in html
     assert "Possible correction concerns are reviewer-created observations" in html
     assert "Review flags identify records needing attorney review." in html
@@ -839,7 +845,7 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     assert "missing traceability values" in normalized_guidance_html
     assert "Correction-readiness before copying or printing" in guidance_html
     assert (
-        "capture the possible correction concern in a reviewer-created note or feedback"
+        "capture the possible correction concern in a reviewer-created note or issue report"
         in guidance_html
     )
     assert (
@@ -867,7 +873,7 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     assert "Review-readiness before copying or printing" in html
     assert "Review before copying or printing" in html
     assert "Review before relying on this packet" in normalized_html
-    assert "return to the queue, open reviewer detail, or use feedback" in normalized_html
+    assert "return to the queue, open reviewer detail, or report an issue" in normalized_html
     assert "preparation draft" in html
     assert "Possible correction concerns should remain reviewer-created observations" in html
     assert "future correction workflow is not implemented here" in html
@@ -977,7 +983,7 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     assert "Before using this draft" in html
     assert "Confirm the facility/date context matches the queue you intended to prepare." in html
     assert "Open reviewer detail for records needing source check." in html
-    assert "Send feedback before copying or printing" in html
+    assert "Report an issue before copying or printing" in html
     assert "Copyable packet summary" in html
     assert "Attorney Review Packet Draft" in html
     assert "Facility/license: 157806098" in html
@@ -1388,7 +1394,7 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     ) in guide_html
     assert (
         "open the source context, review related records, use the "
-        "packet/brief/readiness outputs, or send feedback"
+        "packet/brief/readiness outputs, or report an issue if this record is confusing"
     ) in normalized_guide
     for unsafe_phrase in (
         "proves abuse",
@@ -2590,7 +2596,7 @@ def test_reviewer_ui_detail_source_confidence_proxy_cues_are_non_mutating() -> N
     assert "cue marks report date as a proxy" in normalized_html
     assert "Do not use the proxy flag alone" in normalized_html
     assert "Use fallback/proxy wording only when this cue says" in normalized_html
-    assert "use feedback if proxy wording or next action remains confusing" in (
+    assert "report an issue if proxy wording or next action remains confusing" in (
         normalized_html
     )
     assert "do not use it as a source-confidence score" in normalized_html
@@ -2624,7 +2630,7 @@ def test_reviewer_ui_detail_render_is_non_mutating() -> None:
     }
     assert "Complaint review summary" in html
     assert "Field-note guidance" in html
-    assert "Feedback for this record" in html
+    assert "Issue report for this record" in html
     assert_no_secret_html(html)
 
 def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write() -> None:
@@ -2684,7 +2690,7 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert "Next" in html
     assert "Return to facility queue" in html
     assert "Open next priority record" in html
-    assert "Report save or return-to-queue confusion" in html
+    assert "Report an issue" in html
     assert "workflow_area=save-confirmation" in html
     assert "Describe+note%2Fstatus+save%2C+return-to-queue%2C+or+next-record+confusion" in html
     assert "Review packet readiness before copying or printing" in html
@@ -2699,10 +2705,10 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert "submit the request again" in html
     assert "continuing to the next record" in html
     assert "The suggested next record is navigation guidance" in html
-    assert "manual feedback checklist" in html
+    assert "issue-report details" in html
     assert "use packet preview or draft as preparation checkpoints" in normalized_html
     assert "record-specific observation" in html
-    assert "existing manual feedback checklist" in html
+    assert "Report an issue flow" in html
     assert (
         "source traceability, source-confidence, field-note, or possible correction concern wording"
         in normalized_html
@@ -2834,7 +2840,7 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "Next" in html
     assert "Return to facility queue" in html
     assert "Open next priority record" in html
-    assert "Report save or return-to-queue confusion" in html
+    assert "Report an issue" in html
     assert "workflow_area=save-confirmation" in html
     assert "Review packet readiness before copying or printing" in html
     assert f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?facility_number=157806098" in html
@@ -2847,10 +2853,10 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert "submit the request again" in html
     assert "continuing to the next record" in html
     assert "The suggested next record is navigation guidance" in html
-    assert "manual feedback checklist" in html
+    assert "issue-report details" in html
     assert "use packet preview or draft as preparation checkpoints" in " ".join(html.split())
     assert "record-specific observation" in html
-    assert "existing manual feedback checklist" in html
+    assert "Report an issue flow" in html
     assert (
         "source traceability, source-confidence, field-note, or possible correction concern wording"
         in " ".join(html.split())
