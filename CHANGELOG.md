@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Added a numbered RecordsTracker UI/product improvement inventory for user
+  approval before reviewer-facing UI implementation. The inventory organizes
+  proposed Home, facility lookup, facility hub, Request Records, queue, reviewer
+  detail, packet, feedback, Help, diagnostics, and cross-page workflow changes
+  by page/workflow, preserves operator/support diagnostics outside the primary
+  attorney path, marks items needing Figma AI/design exploration, and defines
+  small implementation PR groupings and stop conditions without changing app
+  behavior.
 - Added an operator batch CCLD complaint retrieval CLI at
   `ccld_complaints.hosted_app.batch_complaint_retrieval`. The command selects
   facilities from `hosted_facility_reference_records`, defaults to dry-run,
