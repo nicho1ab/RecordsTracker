@@ -3424,12 +3424,12 @@ def _render_detail_flag_reason_section(
         for item in _detail_flag_reason_items(source_record, detail, related_records, return_context)
     )
     return f"""<section class="why-flagged-panel summary-card" aria-labelledby="why-flagged-heading">
-      <h2 id="why-flagged-heading">Why this record is flagged</h2>
-      <p>These are review cues from loaded source-derived values and existing reviewer-created state. They are screening aids, not legal conclusions.</p>
+      <h2 id="why-flagged-heading">Why this record may need closer review</h2>
+      <p>These are review cues from loaded source-derived values and existing reviewer-created state. They are screening aids, not legal conclusions or facility-wide findings.</p>
       <ul>
 {items}
       </ul>
-      <p><a href="#review-guidance-heading">View review guidance and next steps</a></p>
+      <p><a href="#source-confidence-heading">Check source-derived values and reviewer-created note guidance</a></p>
     </section>"""
 
 
@@ -3521,7 +3521,7 @@ def _render_quick_review_cards(
         (
             "Review flags",
             _quick_review_flag_value(original_values),
-            "Review why flagged",
+            "Review why it may need closer review",
             "#why-flagged-heading",
         ),
         (
@@ -4155,6 +4155,8 @@ def _render_detail(
             </div>
             {_render_detail_flag_reason_section(source_record, detail, related_records, return_context)}
             {_render_quick_review_cards(source_record, detail, related_records)}
+            {_render_source_confidence_cues_section(source_record, related_records)}
+            {_render_field_note_guidance_section()}
             {_render_record_summary_section(source_record, related_records, detail)}
             {_render_complaint_timeline_section(source_record)}
             {_render_allegations_findings_section(source_record, related_records)}
@@ -4998,8 +5000,9 @@ def _render_source_confidence_cues_section(
             _render_report_date_proxy_confidence_row(original_values),
         )
     )
-    return f"""<section id="source-confidence-heading" aria-labelledby="source-confidence-title">
-            <h2 id="source-confidence-title">Legal-review flags and source checks</h2>
+    return f"""<section class="detail-card" id="source-confidence-heading" aria-labelledby="source-confidence-title">
+            <p class="launch-kicker">Source-derived facts</p>
+            <h2 id="source-confidence-title">Review flags and source checks</h2>
             <p>These cues summarize visible source-derived complaint fields already loaded in
             this record. They help testers see which values are present, which
             expected values are not available locally, and which fields need source traceability
@@ -5203,8 +5206,9 @@ def _connector_retrieval_availability(source_document: Mapping[str, Any]) -> str
 
 
 def _render_field_note_guidance_section() -> str:
-    return """<section id="field-note-guidance-heading"
+    return """<section class="detail-card" id="field-note-guidance-heading"
             aria-labelledby="field-note-guidance-title">
+            <p class="launch-kicker">Reviewer-created guidance</p>
             <h2 id="field-note-guidance-title">Field-note guidance</h2>
             <p>Use this guidance after checking source traceability and the source-confidence
             cues. Reviewer notes/status are reviewer-created observations for this
@@ -6004,8 +6008,8 @@ def _render_review_actions(
     )
     return f"""<section class="reviewer-created-panel action-card" id="review-actions-heading" aria-labelledby="review-actions-title">
             <p class="launch-kicker">Reviewer-created review state</p>
-            <h2 id="review-actions-title">Reviewer-created review state</h2>
-            <p class="reviewer-panel-note">Update queue-only review state for this record.</p>
+            <h2 id="review-actions-title">Update reviewer-created status or note</h2>
+            <p class="reviewer-panel-note">Update queue-only review state for this record after checking source-derived facts.</p>
             <dl class="summary-list">
                 <dt>Current status</dt>
                 <dd>{_escape(current_status)}</dd>
@@ -6021,7 +6025,7 @@ def _render_review_actions(
             </div>
             {_render_status_form(source_record_key, return_context)}
             {_render_note_form(source_record_key, return_context)}
-            <p class="reviewer-panel-note">Reviewer-created state stays separate from source-derived fields.</p>
+            <p class="reviewer-panel-note">Next action: save reviewer-created status or note only when useful, then return to the same queue or open the next flagged record. Reviewer-created state stays separate from source-derived fields.</p>
         </section>"""
 
 
@@ -6244,8 +6248,6 @@ def _render_technical_operator_details(
     source_record_key = _string(identity, "source_record_key")
     return f"""<details class="technical-details dense-table-details technical-operator-details">
       <summary>Technical and operator details</summary>
-      {_render_source_confidence_cues_section(source_record, related_records)}
-      {_render_field_note_guidance_section()}
       {_render_detail_facility_context_cues(related_records, return_context)}
       {_render_detail_navigation(source_record_key, related_records, return_context)}
       {_render_detail_first_run_steps(source_record_key, related_records, return_context)}

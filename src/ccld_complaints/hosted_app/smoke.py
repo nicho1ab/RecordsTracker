@@ -370,8 +370,10 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Complaint investigation report" not in reviewer_detail_body
         or b"CCLD public source record" not in reviewer_detail_body
         or b"Reviewer-created review state" not in reviewer_detail_body
-        or b"Why this record is flagged" not in reviewer_detail_body
+        or b"Why this record may need closer review" not in reviewer_detail_body
         or b"Quick review summary" not in reviewer_detail_body
+        or b"Review flags and source checks" not in reviewer_detail_body
+        or b"Field-note guidance" not in reviewer_detail_body
         or b"Facility identity and license facts" not in reviewer_detail_body
         or b"Complaint and investigation timeline" not in reviewer_detail_body
         or b"Allegations and findings" not in reviewer_detail_body

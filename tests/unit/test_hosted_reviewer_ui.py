@@ -1319,15 +1319,29 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Do not write that abuse, neglect, harm" not in review_panel_html
     assert "submit the request again" not in review_panel_html
 
-    assert "Why this record is flagged" in html
+    assert "Update reviewer-created status or note" in html
+    assert "Next action: save reviewer-created status or note only when useful" in (
+        html
+    )
+
+    assert "Why this record may need closer review" in html
     assert "Complaint/report timing needs source check" in html
     assert "First investigation activity date absent in loaded record" in html
     assert "Source traceability available for checking the original CCLD record" in html
     assert html.index("Complaint review summary") < html.index(
-        "Why this record is flagged"
+        "Why this record may need closer review"
     )
-    assert html.index("Why this record is flagged") < html.index(
+    assert html.index("Why this record may need closer review") < html.index(
         "Quick review summary"
+    )
+    assert html.index("Quick review summary") < html.index(
+        "Review flags and source checks"
+    )
+    assert html.index("Review flags and source checks") < html.index(
+        "Field-note guidance"
+    )
+    assert html.index("Field-note guidance") < html.index(
+        "Facility identity and license facts"
     )
 
     assert html.count('class="quick-review-card"') == 6
@@ -1373,6 +1387,11 @@ def test_reviewer_ui_detail_shows_source_traceability_and_forms() -> None:
     assert "Open CCLD portal source link" in html
     assert "Raw SHA-256" in html
     assert "Selected complaint source traceability fields" in html
+
+    technical_start = html.index("<summary>Technical and operator details</summary>")
+    technical_html = html[technical_start:]
+    assert "Review flags and source checks" not in technical_html
+    assert "Field-note guidance" not in technical_html
 
     guide_start = html.index('id="review-guidance-heading"')
     guide_end = html.index("<summary>Key terms for this record</summary>", guide_start)
