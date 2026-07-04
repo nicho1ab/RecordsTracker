@@ -16,8 +16,7 @@ PRIMARY_NAV_LINKS: tuple[tuple[str, str], ...] = (
   ("Facility", "/ccld/facilities"),
   ("Request Records", "/ccld/records/request"),
   ("Review", "/reviewer"),
-  ("Job Status", "/ccld/retrieval/jobs"),
-    ("Feedback", "/feedback"),
+  ("Report an issue", "/feedback"),
   ("Help", "/ccld/help"),
 )
 
@@ -56,9 +55,9 @@ GUIDED_STEPS: tuple[GuidedStep, ...] = (
   ),
   GuidedStep(
     "review_results",
-    "Status",
-    "/ccld/retrieval/jobs",
-    "Review Request Records job status.",
+    "Records",
+    "/reviewer",
+    "Open records after Request Records returns results.",
   ),
   GuidedStep(
     "review_records",
@@ -68,9 +67,9 @@ GUIDED_STEPS: tuple[GuidedStep, ...] = (
   ),
   GuidedStep(
     "feedback",
-    "Feedback",
+    "Report",
     "/feedback",
-    "Send concise tester feedback without private values.",
+    "Report an issue without private values.",
   ),
 )
 
@@ -79,9 +78,9 @@ DEFAULT_NEXT_ACTIONS: Mapping[str, str] = {
   "facility": "Confirm a facility, then choose a date range",
   "date_range": "Choose dates, then request complaint records",
   "retrieve": "Request complaint records",
-  "review_results": "Review imported records or job status",
-  "review_records": "Open next record or send feedback",
-  "feedback": "Submit feedback when useful",
+  "review_results": "Review records or check support diagnostics only when needed",
+  "review_records": "Open next record or report an issue",
+  "feedback": "Submit the issue report when useful",
 }
 
 MODE_BADGE_CLASSES = {

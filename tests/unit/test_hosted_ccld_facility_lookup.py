@@ -973,7 +973,7 @@ def test_ccld_facility_review_hub_not_found_state_is_safe() -> None:
     assert "Facility-directory result not found" in html
     assert "999999999" in html
     assert "Try a different search, enter the facility/license number directly" in normalized_html
-    assert "send feedback if the lookup result is confusing" in normalized_html
+    assert "report an issue if the lookup result is confusing" in normalized_html
     assert "Return to facility lookup" in html
     assert "Start complaint request for facility 999999999" in html
     assert_no_secret_html(html)
@@ -1226,7 +1226,7 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
     assert "end_date=2022-08-26" in html
     assert "Open packet draft for this facility/date context" in html
     assert "Use this navigation context to open the complaint request" in normalized_html
-    assert "packet preview, or feedback route" in normalized_html
+    assert "packet preview, or Report an issue route" in normalized_html
     assert "source_record_key" not in html
     assert "source_document_id" not in html
     assert "import_batch" not in html

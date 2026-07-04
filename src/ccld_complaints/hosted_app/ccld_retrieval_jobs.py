@@ -556,7 +556,7 @@ def _execute_job(
             "CCLD complaint report links were found for this facility, but none had a "
             "discovered report date within the requested range or its extended window. "
             "Complaint investigation visits typically occur weeks to months after complaint "
-            "receipt; if records are expected, try a wider date range or send feedback."
+            "receipt; if records are expected, try a wider date range or report an issue."
         )
     elif not result.records and result.failures:
         fetch_failures = [f for f in result.failures if f.stage == "fetch"]
@@ -570,7 +570,7 @@ def _execute_job(
             warnings.append(
                 "Selected CCLD complaint report links were fetched but no records imported; "
                 "validation failed for at least one report. "
-                "If this persists, send feedback to an operator."
+                "If this persists, report an issue for operator support."
             )
         else:
             warnings.append(
@@ -948,7 +948,7 @@ def _failure_warnings(failures: Sequence[Any]) -> list[str]:
             warnings.append(
                 f"Report {failure.candidate.report_index} was fetched and extracted but "
                 "could not be validated against the expected complaint record format. "
-                "If this persists, send feedback to an operator."
+                "If this persists, report an issue for operator support."
             )
         elif failure.stage in {"extract", "normalize", "emit"}:
             warnings.append(

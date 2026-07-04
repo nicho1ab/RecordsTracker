@@ -81,7 +81,7 @@ def test_verify_script_checks_complete_tester_readiness_route_set() -> None:
         "Start a Facility Complaint Review",
         "Find the facility/license number",
         "PreloadedFacilityNumber",
-        "Send safe review feedback",
+        "Report a review issue",
         "Ready to request complaint records",
         "Complaint overview",
         "Before copying or printing",
