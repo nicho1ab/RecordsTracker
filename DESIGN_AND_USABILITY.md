@@ -584,6 +584,486 @@ retrieval/import path as browser retrieval and support dry-run/apply, manifests,
 resume, rate limiting, 366-day window handling, and skip/already-loaded
 behavior. It is not a reviewer-facing redesign.
 
+## RecordsTracker UI/product improvement approval inventory
+
+This inventory is the user-review gate before any reviewer-facing UI
+implementation branch. It captures approved product direction for RecordsTracker
+as an attorney public-record review workspace, not a prettier copy of the public
+CCLD site. The current app must move attorneys toward finding a facility,
+choosing dates, loading or retrieving records, reviewing complaint records,
+preparing packet context, printing or exporting, and sending feedback.
+
+Future implementation details are not approved by this inventory. Each later
+implementation branch must name the item numbers it implements, stay within the
+implementation boundary for those items, and avoid unrelated route, template,
+style, retrieval, database, batch-loader, deployment, or QNAP runtime changes.
+The user must approve the numbered item or item group before implementation
+begins.
+
+Operator and support diagnostics must be preserved even when they leave the
+primary attorney-facing navigation. Job state, import counts, safe runtime
+warnings, setup guidance, source traceability, raw-artifact-preserved signals,
+and other support details belong in operator/support or developer surfaces when
+they do not help the attorney complete review. They must not expose secrets,
+tokens, private URLs, server-local paths, stack traces, raw artifact contents,
+or unnecessary narrative source text.
+
+### Home/start page
+
+1. **UI-01 - Make Home the review start.** Current problem: Home still reads
+   too much like orientation documentation and competes with secondary links.
+   Proposed change: lead with the primary RecordsTracker path: find a facility,
+   choose dates, get complaint records, review records, prepare packet context,
+   and report an issue. User benefit: first-time attorneys see where to start
+   without reading setup context. Implementation boundary: presentation,
+   navigation labels, and safe links only; no new workflow state, auth,
+   retrieval behavior, or persistence. Audience: attorney-facing. Figma
+   AI/design exploration: yes, for first-screen hierarchy and navigation.
+2. **UI-02 - Remove runtime mechanics from primary Home navigation.** Current
+   problem: attorney-facing navigation can make Job Status and runtime concepts
+   feel like normal review steps. Proposed change: remove operator/runtime
+   surfaces from the main attorney path while keeping a support/diagnostics
+   entry available outside the primary review flow. User benefit: attorneys stay
+   focused on review tasks, while operators can still troubleshoot. Implementation
+   boundary: navigation placement only; do not remove existing diagnostics,
+   routes, safe job history, or support metadata. Audience: both. Figma
+   AI/design exploration: no.
+3. **UI-03 - Shorten Home safety guidance.** Current problem: repeated caution
+   text can dominate the start page before a user takes action. Proposed change:
+   keep a concise public-record and non-legal-conclusion reminder near the start
+   path, with deeper limitations linked from Help. User benefit: safety remains
+   visible without burying the workflow. Implementation boundary: copy and link
+   organization only; do not weaken source, limitation, or accessibility
+   boundaries. Audience: attorney-facing. Figma AI/design exploration: no.
+
+### Facility lookup
+
+4. **UI-04 - Resolve selected typeahead facilities immediately.** Current
+   problem: selecting a facility can still leave the user needing another search
+   or confirmation step. Proposed change: when a user chooses a facility from
+   typeahead, immediately resolve/search that facility and carry the selected
+   facility/license number forward. User benefit: fewer clicks and less doubt
+   about whether the selected facility is active. Implementation boundary:
+   browser/form flow over existing lookup data only; no new facility import,
+   external query, source-derived mutation, or retrieval behavior. Audience:
+   attorney-facing. Figma AI/design exploration: no.
+5. **UI-05 - Show date pickers right after facility selection.** Current
+   problem: date narrowing is not always presented as the next visible step.
+   Proposed change: reveal start/end date controls immediately after a facility
+   is selected or resolved. User benefit: attorneys can define the review scope
+   before requesting or loading records. Implementation boundary: presentation
+   and form flow only; do not add saved sessions, date inference, or retrieval
+   expansion. Audience: attorney-facing. Figma AI/design exploration: no.
+6. **UI-06 - Make facility results action-specific.** Current problem: results
+   can repeat details and present "Open Facility Hub" even when there is little
+   review context. Proposed change: show "Open Facility Hub" only when imported
+   records or useful review context exist; otherwise emphasize requesting
+   complaint records for that facility/date scope. User benefit: users choose
+   the next useful action instead of landing on a sparse hub. Implementation
+   boundary: result presentation and action labels only; do not change lookup
+   matching, source data, import behavior, or facility reference schemas.
+   Audience: attorney-facing. Figma AI/design exploration: no.
+
+### Facility review hub
+
+7. **UI-07 - Turn Facility Hub into an attorney case-review summary.** Current
+   problem: the hub can feel like a collection of data panels instead of a legal
+   review starting point. Proposed change: summarize facility identity, selected
+   date scope, loaded complaint counts, review flags, source-traceability
+   availability, reviewer-created status/note cues, and the next useful review
+   action. User benefit: attorneys can understand what is ready to review before
+   opening the queue. Implementation boundary: summarize existing safe
+   source-derived and reviewer-created read data only; no scoring, legal
+   conclusion, source-completeness claim, new query domain, or persistence.
+   Audience: attorney-facing. Figma AI/design exploration: yes, for case-review
+   summary layout.
+8. **UI-08 - Make "Review next" focused and default-visible.** Current problem:
+   priority guidance can be diluted by long panels or repeated lists. Proposed
+   change: show one compact "Review next" area with the suggested complaint
+   record and cautious source-derived/reviewer-created reasons. User benefit:
+   attorneys can continue review without hunting for the next record.
+   Implementation boundary: use existing ordering/cues only; do not add
+   assignment, record claiming, workflow-engine state, or legal priority scores.
+   Audience: attorney-facing. Figma AI/design exploration: yes, for compact
+   priority layout.
+9. **UI-09 - Preserve hub diagnostics outside the primary view.** Current
+   problem: import, raw-source, and operator context can crowd the attorney hub.
+   Proposed change: move deeper mechanics into collapsed support details or a
+   support/diagnostics surface, while leaving a simple CCLD/source-traceability
+   indication in the attorney view. User benefit: attorneys see review context
+   first, and support staff retain diagnostic visibility. Implementation
+   boundary: organization only; do not remove source traceability, raw-artifact
+   preservation indicators, auditability, or safe operator metadata. Audience:
+   both. Figma AI/design exploration: no.
+
+### Request Records workflow
+
+10. **UI-10 - Replace split queue/request choices with one intelligent action.**
+    Current problem: users must decide between "View existing queue" and
+    "Request records" even when the app can safely use loaded records and
+    retrieve missing records. Proposed change: provide one primary action for
+    the selected facility/date range that uses already-loaded records when
+    present, retrieves missing complaint records when permitted, and then shows
+    the ready queue. User benefit: fewer decisions and clearer forward motion.
+    Implementation boundary: orchestrate existing controlled CCLD request and
+    queue paths only; do not broaden retrieval scope, add statewide crawling,
+    change batch-loader behavior, or alter import semantics. Audience:
+    attorney-facing. Figma AI/design exploration: no.
+11. **UI-11 - Compact request-context confirmation.** Current problem:
+    repeated confirmations and duplicated copy slow down non-destructive review
+    actions. Proposed change: show the selected facility/license number, date
+    range, record type, and change links once, near the primary action. User
+    benefit: attorneys can verify scope without being forced through redundant
+    steps. Implementation boundary: copy and layout only; do not remove
+    validation messages, rate-limit messages, or source-completeness cautions.
+    Audience: attorney-facing. Figma AI/design exploration: no.
+12. **UI-12 - Keep retrieval progress inline only when it helps review.**
+    Current problem: Job Status can appear as a separate review destination.
+    Proposed change: show concise queued/running/completed/failed progress and
+    ready-queue links inside the Request Records flow, with full job history in
+    support diagnostics. User benefit: attorneys know when records are ready
+    without entering operator pages. Implementation boundary: safe status/count
+    display only; do not expose stack traces, raw artifact paths, raw source
+    contents, credentials, or private host details. Audience: both. Figma
+    AI/design exploration: no.
+13. **UI-13 - Keep batch complaint loading operator-facing.** Current problem:
+    batch loading can be confused with an attorney request workflow. Proposed
+    change: keep batch complaint loading in operator/data-loading documentation
+    and diagnostics, not in the attorney review path. User benefit: attorneys
+    avoid bulk-loader concepts, while operators keep the controlled dry-run/apply
+    path. Implementation boundary: navigation/documentation placement only; do
+    not change batch CLI behavior, manifests, resume, rate limiting, retrieval,
+    import, or QNAP runtime state. Audience: operator-facing. Figma
+    AI/design exploration: no.
+
+### Review queue
+
+14. **UI-14 - Use one primary queue record presentation.** Current problem:
+    queue pages can duplicate the same records as equally prominent cards and
+    tables. Proposed change: choose one primary scannable record presentation
+    with secondary details available on demand. User benefit: attorneys scan,
+    compare, and open records with less vertical waste. Implementation boundary:
+    presentation only over existing queue data; do not change filtering,
+    ordering semantics, reviewer-created state, retrieval, or export behavior.
+    Audience: attorney-facing. Figma AI/design exploration: yes, for the queue
+    density and record-row pattern.
+15. **UI-15 - Replace source mechanics with review cues.** Current problem:
+    raw source/import labels can make the queue feel like a data dump. Proposed
+    change: show complaint dates, finding/status, review flags, note/status
+    cues, source-traceability availability, and why a record may need attention
+    in user-centered terms. User benefit: attorneys can decide what to open
+    next without interpreting implementation fields. Implementation boundary:
+    label and summary changes using existing fields only; do not create
+    confidence scores, legal classifications, or new canonical fields. Audience:
+    attorney-facing. Figma AI/design exploration: yes, for cue hierarchy.
+16. **UI-16 - Make status filters explicit queue views.** Current problem:
+    filtered-empty states can look like missing public records. Proposed change:
+    always state the active reviewer-created status filter, records shown under
+    it, total records in the same facility/date queue, available status values,
+    and the clear-filter action. User benefit: attorneys understand that a
+    filter hid records, not that records are absent. Implementation boundary:
+    copy and status-filter presentation only; do not add persisted queue state,
+    assignments, claiming, or source-completeness assertions. Audience:
+    attorney-facing. Figma AI/design exploration: no.
+17. **UI-17 - Standardize queue feedback entry.** Current problem: queue-level
+    feedback guidance can be bulky or inconsistent with detail pages. Proposed
+    change: provide a small "Report an issue" action that routes to the shared
+    GitHub-backed feedback flow with safe queue context. User benefit: testers
+    can report confusing queue order, filters, labels, or missing context from
+    the page where they noticed it. Implementation boundary: safe context
+    handoff only; do not add duplicate feedback forms, feedback persistence, raw
+    narrative source text, private URLs, or secrets. Audience: both. Figma
+    AI/design exploration: no.
+
+### Reviewer detail page
+
+18. **UI-18 - Lead detail with complaint review, not raw source inspection.**
+    Current problem: the reviewer detail page still looks too much like a
+    raw-source/data dump. Proposed change: start with complaint identity,
+    facility/date context, finding/status, key dates, allegations/categories
+    when safe, review flags, and the attorney's next action. User benefit:
+    attorneys can understand the record before opening technical detail.
+    Implementation boundary: presentation and ordering only over existing safe
+    fields; do not change extraction, source-derived values, note/status
+    behavior, or legal meaning. Audience: attorney-facing. Figma AI/design
+    exploration: yes, for detail-page information architecture.
+19. **UI-19 - Summarize source traceability, preserve full diagnostics.**
+    Current problem: attorneys need confidence that source traceability exists
+    but should not have to parse hashes, connector fields, and import mechanics
+    by default. Proposed change: show a simple source indication and source-check
+    reminder in the main detail view; keep full traceability fields, hashes,
+    raw-artifact-preserved indicators, connector/capture details, and import
+    context in a collapsed support area or operator/developer surface. User
+    benefit: source traceability remains available without overwhelming the
+    review. Implementation boundary: organization only; do not remove
+    traceability, raw-source preservation, audit context, or safe source metadata.
+    Audience: both. Figma AI/design exploration: no.
+20. **UI-20 - Make note/status actions a guided review loop.** Current problem:
+    reviewer-created state controls can feel separate from the complaint review
+    task. Proposed change: group current status, notes, cautious field-note
+    guidance, save actions, confirmation, return-to-queue, and next-record
+    links as one action panel. User benefit: attorneys can review, save an
+    observation, and continue. Implementation boundary: use existing note/status
+    actions and audit path only; do not add new state kinds, annotations,
+    corrections, assignments, claiming, or workflow-engine behavior. Audience:
+    attorney-facing. Figma AI/design exploration: yes, for action-panel layout.
+21. **UI-21 - Reduce repeated detail confirmations and safety copy.** Current
+    problem: repeated confirmations and warnings consume vertical space after a
+    user has made a safe action. Proposed change: consolidate saved-state
+    confirmation, queue refresh guidance, and limitations into concise messages
+    near the relevant action. User benefit: users see what happened and where to
+    go next without rereading the same cautions. Implementation boundary: copy
+    and message placement only; do not weaken validation, audit, source, or
+    public-record limitations. Audience: attorney-facing. Figma AI/design
+    exploration: no.
+22. **UI-22 - Keep detail navigation task-based.** Current problem: mixed
+    links/buttons and repeated paths make it hard to continue from detail.
+    Proposed change: provide consistent actions for back to queue, next record,
+    packet preview/draft, feedback, and Help, with diagnostics in "More
+    actions" or support areas. User benefit: attorneys can move through the
+    review loop without guessing which controls are primary. Implementation
+    boundary: navigation and labels only; do not create new routes unless a
+    later approved implementation branch requires them. Audience:
+    attorney-facing. Figma AI/design exploration: no.
+
+### Packet draft
+
+23. **UI-23 - Make packet draft copy/print-ready.** Current problem: packet
+    draft content can still feel like an app page instead of an attorney handoff
+    draft. Proposed change: present title, facility/date scope, limitations,
+    included records, review reasons, reviewer-created cues, source-traceability
+    readiness, and copy-ready text in a print-focused layout. User benefit:
+    attorneys can prepare a review handoff with fewer cleanup steps.
+    Implementation boundary: browser presentation and print styling only; do
+    not create server-side export files, packet lifecycle state, final reports,
+    delivery, persistence, or legal conclusions. Audience: attorney-facing.
+    Figma AI/design exploration: yes, for print/copy layout.
+24. **UI-24 - Hide app chrome in printable draft output.** Current problem:
+    navigation and technical chrome can appear in printed packet drafts.
+    Proposed change: keep necessary packet context visible and suppress
+    non-packet navigation in print styles. User benefit: printed drafts are
+    cleaner and easier to share internally for review. Implementation boundary:
+    print presentation only; do not change export generation, download behavior,
+    route authorization, or packet contents. Audience: attorney-facing. Figma
+    AI/design exploration: no.
+25. **UI-25 - Make no-context packet draft states explicit.** Current problem:
+    packet pages without facility/date context can feel broken or empty.
+    Proposed change: state that packet draft needs a selected facility/date
+    context and link back to facility lookup or Request Records. User benefit:
+    users can recover without guessing. Implementation boundary: empty-state
+    copy and navigation only; do not create saved packet state or infer context.
+    Audience: attorney-facing. Figma AI/design exploration: no.
+
+### Packet preview/export
+
+26. **UI-26 - Focus packet preview on readiness.** Current problem: preview can
+    mix packet preparation, source checks, and app mechanics. Proposed change:
+    show active facility/date context, included record counts, records needing
+    source check, reviewer-created note/status attention, possible correction
+    concerns, and packet/export issue feedback. User benefit: attorneys can
+    decide whether the current packet context is ready for copy/print review.
+    Implementation boundary: read-only summaries from existing data only; do not
+    generate final exports, add packet persistence, edit source-derived records,
+    or create legal reports. Audience: attorney-facing. Figma AI/design
+    exploration: yes, for readiness checklist hierarchy.
+27. **UI-27 - Separate preview, printable draft, and unavailable final export.**
+    Current problem: packet actions can blur whether the app is previewing,
+    printing, downloading, or finalizing. Proposed change: label actions
+    precisely and state when browser print/copy is the current path. User
+    benefit: users know what each packet action does before clicking.
+    Implementation boundary: labels, help text, and action grouping only; do not
+    add final export generation, file storage, delivery, or lifecycle state.
+    Audience: attorney-facing. Figma AI/design exploration: no.
+28. **UI-28 - Route packet concerns into shared feedback.** Current problem:
+    packet/export concerns can lack a standard reporting path. Proposed change:
+    add a small feedback action for packet readiness, print/copy, confusing
+    included records, or source-check concerns. User benefit: packet issues are
+    reported through the same GitHub-backed flow as other product feedback.
+    Implementation boundary: safe context handoff only; do not include raw
+    narrative text, private details, or generated packet content in feedback
+    context. Audience: both. Figma AI/design exploration: no.
+
+### Feedback
+
+29. **UI-29 - Standardize one unobtrusive feedback action.** Current problem:
+    feedback prompts vary across pages and can interrupt review. Proposed
+    change: use one small "Report an issue" or equivalent action across Home,
+    lookup, request, queue, detail, packet, and Help. User benefit: users can
+    report problems without leaving the review path mentally. Implementation
+    boundary: links/forms to existing `/feedback` flow only; do not add a
+    second feedback workflow or new persistence. Audience: both. Figma
+    AI/design exploration: no.
+30. **UI-30 - Keep feedback context safe and allowlisted.** Current problem:
+    page context is useful but can become risky if broad query strings or source
+    details are included. Proposed change: carry only safe fields such as route,
+    page title, facility/license number, date range, complaint/control number,
+    job ID, visible workflow state, and action attempted. User benefit: support
+    receives useful reports without exposing private or sensitive material.
+    Implementation boundary: safe context handling only; never include tokens,
+    cookies, provider claims, private URLs, server paths, stack traces, raw
+    narrative source text, or secrets. Audience: both. Figma AI/design
+    exploration: no.
+31. **UI-31 - Normalize feedback states.** Current problem: unconfigured,
+    validation, success, and failure feedback states can feel different from
+    page to page. Proposed change: use consistent accessible labels, validation,
+    copyable fallback summary, safe success/failure messages, and return links.
+    User benefit: testers can complete or recover from feedback submission
+    reliably. Implementation boundary: presentation over existing GitHub-backed
+    feedback flow only; do not add GitHub Projects, issue types, local feedback
+    persistence, or token exposure. Audience: both. Figma AI/design exploration:
+    no.
+
+### Help
+
+32. **UI-32 - Rebuild Help as a user-focused help center.** Current problem:
+    Help can read like a numbered topic list or setup guide instead of task
+    support. Proposed change: provide search or category-style organization for
+    finding a facility, requesting complaint records, reviewing complaint
+    records, preparing a packet, printing/exporting, reporting an issue, and
+    understanding review flags. User benefit: attorneys find task help without
+    scanning operator setup content. Implementation boundary: Help content and
+    layout only; do not add new support workflows, search infrastructure, or
+    source behavior unless separately approved. Audience: attorney-facing.
+    Figma AI/design exploration: yes, for help-center organization.
+33. **UI-33 - Move operator setup topics out of reviewer Help.** Current
+    problem: operator setup and diagnostics can make Help feel technical.
+    Proposed change: keep operator setup, environment, import, batch loading,
+    and diagnostics topics in operator docs or support diagnostics. User
+    benefit: attorney Help stays focused on review tasks while operators keep
+    their references. Implementation boundary: information architecture only; do
+    not remove operator guidance from the repository or support surfaces.
+    Audience: both. Figma AI/design exploration: no.
+34. **UI-34 - Keep safety and source explanations concise in Help.** Current
+    problem: safety warnings can either dominate pages or disappear into dense
+    text. Proposed change: provide short articles explaining public-source
+    limits, review flags, source traceability, missing values, packet readiness,
+    and feedback reporting in user language. User benefit: users can learn the
+    boundaries when they need them. Implementation boundary: content only; do
+    not weaken source traceability, public-record limitations, or legal
+    conclusion restrictions. Audience: attorney-facing. Figma AI/design
+    exploration: no.
+
+### Job Status/operator diagnostics
+
+35. **UI-35 - Move Job Status out of primary attorney navigation.** Current
+    problem: Job Status appears like a normal attorney review destination.
+    Proposed change: remove it from the primary attorney nav while preserving a
+    support/operator diagnostics route and contextual links from Request Records
+    when a job is relevant. User benefit: attorneys see the review workflow, and
+    operators keep troubleshooting access. Implementation boundary: navigation
+    placement only; do not remove job history/detail pages, safe status data, or
+    retrieval auditability. Audience: both, with operator-facing diagnostics.
+    Figma AI/design exploration: no.
+36. **UI-36 - Keep diagnostics safe and support-oriented.** Current problem:
+    diagnostic pages can expose too much implementation detail if treated as
+    general user pages. Proposed change: show safe request context, job state,
+    timestamps, counts, raw-artifact-preserved indicators, warning/error
+    summaries, setup guidance, and queue links when records exist. User benefit:
+    operators can support the pilot build without exposing sensitive internals.
+    Implementation boundary: diagnostic presentation only; do not expose
+    secrets, private URLs, server paths, stack traces, raw source contents,
+    provider claims, or unnecessary narrative text. Audience: operator-facing.
+    Figma AI/design exploration: no.
+37. **UI-37 - Keep job progress visible at the point of need.** Current
+    problem: moving Job Status out of primary nav could hide useful request
+    progress. Proposed change: keep concise job progress and recovery links
+    inline on Request Records and related pages when a job affects the current
+    facility/date context. User benefit: attorneys do not lose visibility into
+    whether records are ready. Implementation boundary: contextual status
+    display only; do not add polling requirements, new scheduler behavior,
+    broader audit UI, or retrieval changes. Audience: both. Figma AI/design
+    exploration: no.
+
+### Cross-page navigation, persistence, and action consistency
+
+38. **UI-38 - Persist facility/date context across related pages.** Current
+    problem: users may need to re-enter or reconstruct facility/date context
+    across lookup, request, queue, detail, packet, feedback, and Help. Proposed
+    change: carry facility/license number, selected date range, record type, and
+    safe page context through URLs, forms, or existing route context where
+    appropriate. User benefit: users stay in one review session flow.
+    Implementation boundary: safe context propagation only; do not add saved
+    sessions, cookies, production auth behavior, durable queue state, or hidden
+    source keys. Audience: attorney-facing. Figma AI/design exploration: no.
+39. **UI-39 - Standardize links, buttons, and action hierarchy.** Current
+    problem: mixed links/buttons, ordered-list buttons, duplicate action groups,
+    and inconsistent labels add friction. Proposed change: use primary buttons
+    for the main action, secondary buttons for alternate actions, descriptive
+    links for navigation, and avoid ordered lists for interactive controls. User
+    benefit: actions become predictable and keyboard flow becomes clearer.
+    Implementation boundary: markup, labels, and styling only; do not change
+    route behavior, permissions, or data operations. Audience: both. Figma
+    AI/design exploration: no.
+40. **UI-40 - Use "More actions" for secondary work.** Current problem: rare,
+    export, diagnostic, support, and alternate-path actions compete with the
+    main review task. Proposed change: place secondary actions in a consistent
+    "More actions" pattern or support area. User benefit: common actions stay
+    visible and secondary actions remain discoverable. Implementation boundary:
+    action grouping only; do not remove export support, diagnostics, source
+    traceability, or feedback paths. Audience: both. Figma AI/design exploration:
+    yes, for shared action-group patterns.
+41. **UI-41 - Make cross-page wording consistent.** Current problem: repeated
+    concepts use different labels across pages, such as source-derived rows,
+    source cues, runtime, intelligence views, or feedback checklist. Proposed
+    change: use consistent user-centered labels such as Complaint records,
+    Records ready, Review flags, Needs attention, Packet preparation, Job
+    diagnostics, and Report an issue. User benefit: screen reader users,
+    first-time testers, and attorneys do not have to infer that different terms
+    mean the same workflow concept. Implementation boundary: terminology only;
+    do not rename canonical fields, schemas, database columns, or source
+    contracts. Audience: both. Figma AI/design exploration: no.
+
+### Recommended implementation sequence
+
+1. **Approval checkpoint:** the user reviews and approves item numbers or a
+   smaller item group. No UI implementation begins before this checkpoint.
+2. **PR 1 - Navigation, diagnostics placement, and global action language:**
+   UI-02, UI-03, UI-29, UI-30, UI-31, UI-35, UI-36, UI-37, UI-39, UI-41.
+   This separates attorney navigation from operator diagnostics while
+   preserving support access and safe feedback.
+3. **PR 2 - Start, lookup, request, and carried context:** UI-01, UI-04, UI-05,
+   UI-06, UI-10, UI-11, UI-12, UI-13, UI-38. This creates the smoother
+   facility/date/request path before deeper page redesign.
+4. **PR 3 - Facility hub and review queue:** UI-07, UI-08, UI-09, UI-14,
+   UI-15, UI-16, UI-17, UI-40. This makes loaded complaint review scannable
+   before changing detail pages.
+5. **PR 4 - Reviewer detail review loop:** UI-18, UI-19, UI-20, UI-21, UI-22.
+   This moves detail from raw-source inspection toward complaint review while
+   preserving source traceability and existing note/status behavior.
+6. **PR 5 - Packet preview, packet draft, and print/copy readiness:** UI-23,
+   UI-24, UI-25, UI-26, UI-27, UI-28. This keeps packet work read-only and
+   separates preview, print/copy, and final export language.
+7. **PR 6 - Help center refinement:** UI-32, UI-33, UI-34. This can happen
+   earlier if testers are blocked by Help confusion, but it should not absorb
+   operator setup topics into attorney Help.
+
+Items that need Figma AI or similar design exploration before implementation:
+UI-01, UI-07, UI-08, UI-14, UI-15, UI-18, UI-20, UI-23, UI-26, UI-32, and
+UI-40.
+
+### Stop conditions for implementation branches
+
+- Stop if the user has not approved the specific inventory item numbers for the
+  branch.
+- Stop if a Figma AI/design-exploration item is selected and the implementation
+  branch lacks an approved design direction or explicit user decision to skip
+  that exploration.
+- Stop if the branch needs schema, migration, database, retrieval, batch-loader,
+  QNAP runtime, deployment, production auth, or connector changes not already
+  approved for that item group.
+- Stop if a change would remove source traceability, raw-source preservation
+  indicators, auditability, safe job diagnostics, or operator/support access
+  instead of moving them to the correct surface.
+- Stop if attorney-facing pages would expose secrets, private URLs, server-local
+  paths, raw stack traces, raw artifact contents, provider claims, credentials,
+  or unnecessary narrative source text.
+- Stop if an item needs new canonical fields, legal classifications,
+  confidence scores, source-completeness claims, assignments, record claiming,
+  workflow-engine state, packet lifecycle state, or final export behavior.
+- Stop and split the branch if implementation crosses unrelated page groups or
+  cannot be validated with focused UI/accessibility tests plus the required
+  repository checks.
+
 ## Usability principles
 
 - Put the most common review fields together in human-readable views.
