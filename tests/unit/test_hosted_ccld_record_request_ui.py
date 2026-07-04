@@ -24,7 +24,6 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_LOOKUP_PATH,
     CCLD_FACILITY_REFERENCE_CSV_ENV,
     CCLD_FACILITY_REVIEW_HUB_PATH,
-    CCLD_FACILITY_REVIEW_PRIORITY_PATH,
     no_reference_facility_source,
 )
 from ccld_complaints.hosted_app.ccld_import_reload import (
@@ -108,7 +107,7 @@ def test_ccld_record_request_page_renders_from_default_context(
     assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
     assert "Request complaint records for a facility" in html
     assert "Start review" in html
-    assert "Choose a facility and date range, then request CCLD complaint records" in html
+    assert "Choose a facility and date range, then open already-loaded records" in html
     mode_panel = html.split('<div class="mode-panel" aria-label="Retrieval mode">', 1)[1].split(
         "</div>",
         1,
@@ -117,11 +116,7 @@ def test_ccld_record_request_page_renders_from_default_context(
     assert html.count('<span class="ds-badge ds-badge--info">Fixture/mock demo</span>') == 1
     assert '<span class="ds-badge ds-badge--info">Fixture/mock demo</span>' in mode_panel
     assert "Keyboard flow: move from facility selection to date range" not in html
-    assert '<details class="quiet-section orientation-details" open>' in html
-    assert "Start review request context" in html
-    assert "Facility/license number identifies the CCLD facility" in html
-    assert "Date range narrows the loaded complaint records" in html
-    assert "When records are found, open the recommended record" in html
+    assert '<details class="quiet-section orientation-details" open>' not in html
     assert "Choose complaint date range" in html or "Which facility should be reviewed?" in html
     assert 'for="facility-search-input"' in html
     assert "facility-suggestion-list" in html
@@ -198,7 +193,7 @@ def test_ccld_trailing_slash_route_renders_request_start() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Request Records" in html
-    assert "Start review request context" in html
+    assert "Request complaint records for a facility" in html
     assert "Which facility should be reviewed?" in html
     assert_no_secret_html(html)
 
@@ -292,23 +287,18 @@ def test_ccld_record_request_prefills_selected_facility_from_lookup() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Selected request context" in html
     assert "Facility lookup result" in html
-    assert "Facility context cue" in html
-    assert "facility hub" in html
-    assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=900000001" in html
-    assert "Open facility hub for this request context" in html
-    assert CCLD_FACILITY_REVIEW_PRIORITY_PATH in html
-    assert "Open facility review priority list" in html
-    assert "Facility/license number being requested" in html
+    assert "Selected facility context is ready" in html
+    assert "Facility/license number" in html
     assert "Synthetic Orchard Child Care" in html
-    assert "Active facility reference source" in html
+    assert "Context source" in html
     assert "value=\"900000001\"" in html
     assert "name=\"request_context_origin\"" in html
     assert "value=\"facility_lookup\"" in html
     assert "name=\"lookup_facility_name\"" in html
     assert "Choose complaint date range" in html
-    assert "Use a bounded date range" in html
+    assert 'id="start_date" name="start_date" type="date"' in html
+    assert 'id="end_date" name="end_date" type="date"' in html
     assert (
         "Use the date range to narrow complaint, visit, report, or signed dates"
         in html
@@ -340,16 +330,25 @@ def test_ccld_record_request_prefill_links_signal_only_facility_hub(
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Selected request context" in html
-    assert "Facility context cue" in html
+    assert "Open loaded records or request complaint records" in html
+    assert "Show existing queue" in html
+    assert "Request Records" in html
+    assert (
+        "Use <strong>Show existing queue</strong> to open records already loaded"
+        in html
+    )
+    assert (
+        "Use <strong>Request Records</strong> to submit a controlled CCLD retrieval request"
+        in html
+    )
+    assert 'name="ccld_retrieval_action"' in html
+    assert 'value="run_controlled_ccld_retrieval"' in html
     assert "signal-only facility hub" in html
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098" in html
-    assert "Check facility hub or signal-only facility hub for this request context" in html
-    assert "Open facility review priority list" in html
-    assert "Start a new complaint request flow" in html
-    assert "manual request context" in normalized_html
-    assert "use this request context to decide whether to retrieve records" in normalized_html
-    assert "return to the facility hub, or change criteria" in normalized_html
+    assert "Open facility hub or signal-only facility hub for this request context" in html
+    assert "manual facility/license entry" in normalized_html
+    assert "already-loaded records" in normalized_html
+    assert "controlled ccld retrieval request" in normalized_html
     assert_no_secret_html(html)
 
 

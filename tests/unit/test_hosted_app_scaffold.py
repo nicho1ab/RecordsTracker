@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 ENTRY_FEEDBACK_HREF = (
     "/feedback?feedback_type=Bug+report&page_path=%2F"
     "&workflow_area=entry-orientation"
-    "&prompt=Describe+what+was+confusing+about+the+first-time+tester+orientation."
+    "&prompt=Describe+what+was+confusing+about+starting+the+attorney+review+path."
 )
 
 
@@ -133,7 +133,7 @@ def test_app_shell_labels_placeholder_scope() -> None:
     assert parser.text_for("h1") != "CCLD RecordsTracker"
     assert "Review aids only" in html
     assert "Start a Facility Complaint Review" in html
-    assert "guided attorney review workflow" in html
+    assert "Attorney review start" in html
     assert "Start with facility lookup" in html
     assert (
         '<a class="button button-secondary" href="/ccld/records/request">'
@@ -141,66 +141,27 @@ def test_app_shell_labels_placeholder_scope() -> None:
     ) in html
     assert "Enter a facility/license number directly" not in html
     assert (
-        "Begin with the facility/license number, review the facility pattern summary"
+        "Find the facility, choose dates, open already-loaded complaint records"
         in html
     )
     assert (
-        "Limited-data caution: this workflow shows loaded public-source review aids only."
+        "Loaded records are not a public-source completeness conclusion."
         in html
     )
-    assert "Review path" in html
-    assert "Find facility" in html
-    assert "Review facility pattern summary" in html
-    assert "Open prioritized records" in html
-    assert "Prepare packet/brief" in html
-    assert "Check readiness before attorney review" in html
-    assert "First-time tester orientation" in html
-    assert "Try this first: open facility lookup" in html
+    assert "Start here" in html
+    assert "Find the facility" in html
+    assert "Choose dates and records" in html
+    assert "Open the review queue" in html
     assert (
         "Use Request Records when you already have the digit facility/license number"
         in normalized_html
     )
-    assert "Loaded context means records and facility cues already available" in html
-    assert "not a statement that the public source is complete" in normalized_html
-    assert "Tester task guide" in html
-    assert "Start with facility lookup when you know a name" in html
-    assert "Expected: selecting a result carries the facility/license number" in html
-    assert "Request records when you already have the digit facility/license number" in html
-    assert "Expected: the page confirms the facility/date request context" in html
-    assert "Review prioritized records or next-review cues" in html
-    assert (
-        "using source-traceability and reviewer-created note/status cues as review aids only"
-        in html
-    )
-    assert "Open reviewer detail before relying on a record" in html
-    assert "source-derived values, source traceability, and reviewer-created notes/status" in html
-    assert "Check packet/brief and readiness outputs after detail review" in html
-    assert "without becoming a legal report or final export" in html
-    assert "Report an issue when something blocks or confuses review" in html
-    assert "the Report an issue page carries only safe workflow context" in html
-    assert f'<a href="{ENTRY_FEEDBACK_HREF}">report an issue</a>' in html
-    assert html.index("Find facility") < html.index("Review facility pattern summary")
-    assert html.index("Review facility pattern summary") < html.index(
-        "Open prioritized records"
-    )
-    assert html.index("Open prioritized records") < html.index("Prepare packet/brief")
-    assert html.index("Prepare packet/brief") < html.index(
-        "Check readiness before attorney review"
-    )
-    assert "Ready paths" in html
+    assert "After records are loaded" in html
+    assert html.index("Find the facility") < html.index("Choose dates and records")
+    assert html.index("Choose dates and records") < html.index("Open the review queue")
     assert 'href="/ccld/facilities">Open facility lookup</a>' in html
-    assert (
-        'href="/ccld/facilities/detail?facility_number=434417302">'
-        "Open facility review hub</a>"
-    ) in html
     assert 'href="/reviewer">Open review queue</a>' in html
-    assert 'href="/reviewer/records/detail">open reviewer detail</a>' in html
     assert 'href="/reviewer/packet/preview">Open packet preview</a>' in html
-    assert 'href="/reviewer/packet/draft">open packet draft</a>' in html
-    assert (
-        'href="/reviewer/packet/preview#packet-attorney-review-readiness-checklist">'
-        "Open readiness checklist</a>"
-    ) in html
     assert f'href="{ENTRY_FEEDBACK_HREF}">Report an issue</a>' in html
     assert "Attorney-focused public CCLD complaint/facility record review" not in html
     assert "New to this tool?" not in html
@@ -230,22 +191,17 @@ def test_home_orientation_is_single_shared_entry_block_with_feedback_path() -> N
     html = render_app_shell()
     normalized_html = " ".join(html.split())
 
-    assert html.count("First-time tester orientation") == 1
-    assert html.count("Tester task guide") == 1
-    assert html.count("Loaded context means records and facility cues already available") == 1
-    assert html.count("Expected:") == 6
-    assert "Start with facility lookup when you know a name" in normalized_html
+    assert "First-time tester orientation" not in html
+    assert "Tester task guide" not in html
+    assert "Expected:" not in html
+    assert html.count("Start here") == 1
+    assert "Find the facility" in normalized_html
     assert (
-        "Request records when you already have the digit facility/license number"
+        "Use Request Records when you already have the digit facility/license number"
         in normalized_html
     )
-    assert "Review prioritized records or next-review cues" in normalized_html
-    assert "Open reviewer detail before relying on a record" in normalized_html
-    assert "Check packet/brief and readiness outputs after detail review" in normalized_html
-    assert "Report an issue when something blocks or confuses review" in normalized_html
-    assert "loaded-context cue, record order, source traceability cue" in normalized_html
-    assert "packet/brief cue, readiness item, wording, or keyboard flow" in normalized_html
-    assert f'href="{ENTRY_FEEDBACK_HREF}">report an issue</a>' in html
+    assert "Open already-loaded records from Request Records" in normalized_html
+    assert "facility lookup, date range, loaded queue, source traceability" in normalized_html
     assert f'href="{ENTRY_FEEDBACK_HREF}">Report an issue</a>' in html
     assert "workflow_area=entry-orientation" in html
     assert "page_path=%2F" in html
@@ -279,11 +235,11 @@ def test_guided_attorney_review_workflow_acceptance_route_markers(
             "entry",
             "/",
             (
-                "guided attorney review workflow",
-                "Review facility pattern summary",
-                "Open prioritized records",
-                "Prepare packet/brief",
-                "Check readiness before attorney review",
+                "Attorney review start",
+                "Start here",
+                "Find the facility",
+                "Choose dates and records",
+                "Open the review queue",
             ),
         ),
         (

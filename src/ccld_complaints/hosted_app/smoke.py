@@ -207,7 +207,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold health check did not return ok.")
     if root_status != 200 or b"Attorney public-record review workspace" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return the guided launch notice.")
-    if b"guided attorney review workflow" not in root_body:
+    if b"Attorney review start" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return attorney workflow label.")
     if b"Skip to main CCLD review content" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return skip navigation.")

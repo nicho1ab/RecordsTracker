@@ -113,14 +113,14 @@ $encodedSourceRecordKey = [System.Uri]::EscapeDataString('complaint:ccld:complai
 $contextQuery = "facility_number=$ContextFacilityNumber&start_date=$ContextStartDate&end_date=$ContextEndDate&request_context_origin=manual_entry"
 
 $checks = @(
-    @{ Name = "home-start"; Path = "/"; Required = @("Start a Facility Complaint Review", "Find facility", "Request Records", "Open prioritized records", "Report an issue") },
-    @{ Name = "ccld-start"; Path = "/ccld/"; Required = @("Request Records", "Start review request context", "Which facility should be reviewed?") },
+    @{ Name = "home-start"; Path = "/"; Required = @("Start a Facility Complaint Review", "Find the facility", "Request Records", "Open review queue", "Report an issue") },
+    @{ Name = "ccld-start"; Path = "/ccld/"; Required = @("Request Records", "Request complaint records for a facility", "Which facility should be reviewed?") },
     @{ Name = "facility-lookup"; Path = "/ccld/facilities"; Required = @("Find a facility", "Find the facility/license number", "Search by name, license number, city, county, ZIP") },
     @{ Name = "facility-priority"; Path = "/ccld/facilities/review-priority"; Required = @("Facility review priority", "review cue", "uploaded public summary fields") },
     @{ Name = "facility-intelligence"; Path = "/ccld/facilities/intelligence"; Required = @("Facility review intelligence", "review cue", "How to use these indicators") },
     @{ Name = "facility-hub"; Path = "/ccld/facilities/detail?facility_number=$PreloadedFacilityNumber"; Required = @("Facility review hub", "Facility-directory details", "Return to facility lookup") },
-    @{ Name = "record-request"; Path = "/ccld/records/request"; Required = @("Which facility should be reviewed?", "Confirm facility", "Start review request context") },
-    @{ Name = "record-request-context"; Path = "/ccld/records/request?$contextQuery"; Required = @($ContextFacilityNumber, "Ready to request complaint records", "Show existing queue", "Date range") },
+    @{ Name = "record-request"; Path = "/ccld/records/request"; Required = @("Which facility should be reviewed?", "Confirm facility", "Request complaint records for a facility") },
+    @{ Name = "record-request-context"; Path = "/ccld/records/request?$contextQuery"; Required = @($ContextFacilityNumber, "Open loaded records or request complaint records", "Show existing queue", "Date range") },
     @{ Name = "reviewer"; Path = "/reviewer"; Required = @("Worklist", "Open packet preview", "Open print draft"); Forbidden = @("Open local/test packet preview", "Open local/test preparation draft for browser copy or print") },
     @{ Name = "reviewer-records"; Path = "/reviewer/records"; Required = @("Worklist", "Open record", "Source traceability available") },
     @{ Name = "matrix-export"; Path = "/reviewer/records/matrix.csv?$contextQuery"; Required = @("local/test complaint review matrix", "CSV export", "source_record_key", "review_guidance") },

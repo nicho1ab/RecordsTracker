@@ -191,10 +191,16 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
     var ge=sc.querySelector('.selected-geo');
     var me=sc.querySelector('.selected-meta');
     var ul=sc.querySelector('.selected-use-link');
+    var sf=sc.querySelector('.selected-facility-number-field');
+    var so=sc.querySelector('.selected-facility-origin-field');
+    var sn=sc.querySelector('.selected-facility-name-field');
     if(ne)ne.textContent=f.n;
     if(nue)nue.textContent=f.num;
     if(ge)ge.textContent=[f.city,f.state,f.zip].filter(Boolean).join(', ');
     if(me)me.textContent=[f.t,f.p,f.s].filter(Boolean).join(' \u2022 ');
+    if(sf)sf.value=f.num;
+    if(so)so.value='facility_lookup';
+    if(sn)sn.value=f.n;
     if(ul){
       ul.href='/ccld/records/request?facility_number='+encodeURIComponent(f.num)
         +'&request_context_origin=facility_lookup'
@@ -208,6 +214,10 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
     si.value='';
     if(of_)of_.value='manual_entry';
     if(lf)lf.value='';
+    var sf=sc?sc.querySelector('.selected-facility-number-field'):null;
+    var sn=sc?sc.querySelector('.selected-facility-name-field'):null;
+    if(sf)sf.value='';
+    if(sn)sn.value='';
     updateSubmitState();
     si.focus();
   }
@@ -1409,10 +1419,26 @@ def _render_facility_selected_card_html(*, mode: str = "facility") -> str:
                     <button type="button" id="facility-change-btn" class="button-secondary">Change selected facility</button>
                 </div>"""
     else:
-        actions = """<div class="form-actions">
-                    <a id="facility-use-link" class="button selected-use-link" href="#">Start complaint request for selected facility</a>
-                    <button type="button" id="facility-change-btn" class="button-secondary">Change selected facility</button>
-                </div>"""
+        actions = f"""<form action="{CCLD_RECORD_REQUEST_PATH}" method="get" class="selected-facility-request-form" aria-describedby="selected-facility-date-help">
+                    <input class="selected-facility-number-field" type="hidden" name="facility_number" value="">
+                    <input class="selected-facility-origin-field" type="hidden" name="request_context_origin" value="facility_lookup">
+                    <input class="selected-facility-name-field" type="hidden" name="lookup_facility_name" value="">
+                    <div class="form-row">
+                        <p>
+                            <label for="lookup_start_date">Start date</label>
+                            <input id="lookup_start_date" name="start_date" type="date" aria-describedby="selected-facility-date-help">
+                        </p>
+                        <p>
+                            <label for="lookup_end_date">End date</label>
+                            <input id="lookup_end_date" name="end_date" type="date" aria-describedby="selected-facility-date-help">
+                        </p>
+                    </div>
+                    <p id="selected-facility-date-help" class="helper-text">Choose dates now, or leave them blank and set the date range on Request Records.</p>
+                    <div class="form-actions">
+                        <button type="submit" class="button">Continue to Request Records</button>
+                        <button type="button" id="facility-change-btn" class="button-secondary">Change selected facility</button>
+                    </div>
+                </form>"""
     return f"""    <div id="facility-selected-card" class="facility-selected-card" hidden>
                 <div class="selected-facility-info">
                     <h3 class="selected-name"></h3>
@@ -1500,7 +1526,7 @@ def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
       {result.total_match_count} matching facilit{"y" if result.total_match_count == 1 else "ies"}.</p>"""
     return f"""    <section aria-labelledby="facility-results-heading">
         <h2 id="facility-results-heading">Facility-directory results</h2>
-        <p>These are public facility-directory results. Complaint records are retrieved separately after a tester starts a complaint request for a selected facility number.</p>
+        <p>Choose a facility to carry its facility/license number and name into Request Records. Date controls appear as soon as a facility is selected.</p>
 {more_guidance}
             <div class="result-list" aria-label="Facility matches">
 {cards}
@@ -1518,8 +1544,11 @@ def _render_result_card(record: CcldFacilityLookupRecord, *, index: int) -> str:
                         {_render_facility_directory_details(record)}
                     </div>
                     <div class="form-actions" aria-label="Actions for facility {_escape(record.facility_number)}">
-                        <a class="button" href="{_escape(hub_href)}" aria-label="Open facility review hub for {_escape(record.facility_number)} ({_escape(record.facility_name)})">Open facility review hub</a>
-                        <a class="button button-secondary" href="{_escape(request_href)}" aria-label="Start complaint request for facility {_escape(record.facility_number)} ({_escape(record.facility_name)})">Start complaint request for facility {_escape(record.facility_number)}</a>
+                        <a class="button" href="{_escape(request_href)}" aria-label="Use facility {_escape(record.facility_number)} ({_escape(record.facility_name)}) in Request Records">Use this facility in Request Records</a>
+                        <details class="secondary-actions">
+                            <summary>More actions</summary>
+                            <p><a href="{_escape(hub_href)}" aria-label="Open facility review hub for {_escape(record.facility_number)} ({_escape(record.facility_name)})">Open facility hub when loaded context is available</a></p>
+                        </details>
                     </div>
                 </article>"""
 
