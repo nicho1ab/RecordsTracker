@@ -1578,7 +1578,7 @@ def _render_facility_hub_not_found(facility_number: str) -> str:
         return f"""    <section class="empty-state-card" aria-labelledby="facility-hub-not-found-heading">
             <h2 id="facility-hub-not-found-heading">Facility-directory result not found</h2>
             <p>No active preloaded facility-directory row matched facility number <strong>{_escape(searched)}</strong>.</p>
-            <p>Try a different search, enter the facility/license number directly, or send feedback if the lookup result is confusing.</p>
+            <p>Try a different search, enter the facility/license number directly, or report an issue if the lookup result is confusing.</p>
             <nav aria-label="Facility hub recovery actions">
                 <ul>
                     <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Return to facility lookup</a></li>
@@ -1608,7 +1608,7 @@ def _render_facility_hub_review_context(
                 <dt>Known date context</dt>
                 <dd>{_escape(date_text)}</dd>
             </dl>
-            <p>Use this navigation context to open the complaint request, loaded records, packet preview, or feedback route that matches this facility/date review.</p>
+            <p>Use this navigation context to open the complaint request, loaded records, packet preview, or Report an issue route that matches this facility/date review.</p>
         </section>"""
 
 

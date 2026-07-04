@@ -242,26 +242,26 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold CCLD request shell did not return the request page.")
     if (
         ccld_retrieval_history_status != 200
-        or b"Job Status" not in ccld_retrieval_history_body
+        or b"Job diagnostics" not in ccld_retrieval_history_body
         or b"No Request Records jobs have been submitted" not in ccld_retrieval_history_body
         or b"Controlled retrieval setup is missing" not in ccld_retrieval_history_body
         or b"Submit or change Request Records" not in ccld_retrieval_history_body
-        or b"Report an issue with this job" not in ccld_retrieval_history_body
+        or b"Report an issue" not in ccld_retrieval_history_body
         or b"Report confusing retrieval progress" in ccld_retrieval_history_body
     ):
         raise RuntimeError("Hosted scaffold retrieval job history did not return safe guidance.")
     if (
         ccld_retrieval_detail_status != 404
-        or b"Job Status detail not found" not in ccld_retrieval_detail_body
-        or b"Return to Job Status" not in ccld_retrieval_detail_body
+        or b"Job diagnostics detail not found" not in ccld_retrieval_detail_body
+        or b"Return to job diagnostics" not in ccld_retrieval_detail_body
         or b"Submit or change a CCLD request" not in ccld_retrieval_detail_body
     ):
         raise RuntimeError("Hosted scaffold retrieval job detail did not return safe not-found.")
     if (
         ccld_retrieval_detail_invalid_status != 400
-        or b"Job Status detail needs a valid job ID"
+        or b"Job diagnostics detail needs a valid job ID"
         not in ccld_retrieval_detail_invalid_body
-        or b"Return to Job Status" not in ccld_retrieval_detail_invalid_body
+        or b"Return to job diagnostics" not in ccld_retrieval_detail_invalid_body
     ):
         raise RuntimeError(
             "Hosted scaffold retrieval job detail did not return safe invalid state."
@@ -305,7 +305,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Request Records setup required" not in ccld_retrieval_setup_body
         or b"No Request Records job was created" not in ccld_retrieval_setup_body
         or b"Operator setup checklist" not in ccld_retrieval_setup_body
-        or b"Report Request Records setup confusion" not in ccld_retrieval_setup_body
+        or b"Report an issue" not in ccld_retrieval_setup_body
     ):
         raise RuntimeError("Hosted scaffold retrieval setup state did not return safe guidance.")
     if (
@@ -314,20 +314,20 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Completed" not in ccld_retrieval_success_body
         or b"Records imported" not in ccld_retrieval_success_body
             or b"Open review queue" not in ccld_retrieval_success_body
-        or b"View Job Status" not in ccld_retrieval_success_body
+        or b"Open job diagnostics" not in ccld_retrieval_success_body
             or b"View job details" not in ccld_retrieval_success_body
     ):
         raise RuntimeError("Hosted scaffold mock retrieval did not return completed status.")
     if (
         ccld_retrieval_history_after_status != 200
-        or b"Job Status" not in ccld_retrieval_history_after_body
+        or b"Job diagnostics" not in ccld_retrieval_history_after_body
         or b"View job details" not in ccld_retrieval_history_after_body
         or b"Review imported records in the CCLD queue" not in ccld_retrieval_history_after_body
     ):
         raise RuntimeError("Hosted scaffold mock retrieval did not appear in history.")
     if (
         ccld_retrieval_success_detail_status != 200
-        or b"Job Status detail" not in ccld_retrieval_success_detail_body
+        or b"Job diagnostics detail" not in ccld_retrieval_success_detail_body
         or b"Completed" not in ccld_retrieval_success_detail_body
         or b"Records imported" not in ccld_retrieval_success_detail_body
         or b"Review imported records in the CCLD queue"
@@ -351,11 +351,11 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold CCLD help page did not return guided help.")
     if (
         feedback_status != 200
-        or b"Send feedback" not in feedback_body
-            or b"Send safe review feedback" not in feedback_body
+        or b"Report an issue" not in feedback_body
+            or b"Report a review issue" not in feedback_body
         or b"Do not include private material" not in feedback_body
         or b"GitHub issue intake is not configured" not in feedback_body
-        or b"Submit feedback" not in feedback_body
+        or b"Submit issue report" not in feedback_body
     ):
         raise RuntimeError("Hosted scaffold feedback page did not return safe form state.")
     if (
@@ -432,7 +432,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Queue progress and note/status cues are derived" not in reviewer_note_body
         or b"Use the show-all status view" not in reviewer_note_body
         or b"The suggested next record is navigation guidance" not in reviewer_note_body
-        or b"manual feedback checklist" not in reviewer_note_body
+        or b"issue-report details" not in reviewer_note_body
     ):
         raise RuntimeError("Hosted scaffold reviewer note did not return confirmation.")
     if (
@@ -446,7 +446,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Queue progress and note/status cues are derived" not in reviewer_saved_status_body
         or b"Use the show-all status view" not in reviewer_saved_status_body
         or b"The suggested next record is navigation guidance" not in reviewer_saved_status_body
-        or b"manual feedback checklist" not in reviewer_saved_status_body
+        or b"issue-report details" not in reviewer_saved_status_body
     ):
         raise RuntimeError("Hosted scaffold reviewer status did not return confirmation.")
     return payload if isinstance(payload, dict) else {}

@@ -231,11 +231,11 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "How correction-readiness works" in html
     assert "Correction-readiness means a tester has noticed" in html
     assert "Check source traceability first" in html
-    assert "possible correction concern in a reviewer-created note or feedback" in html
+    assert "possible correction concern in a reviewer-created note or issue report" in html
     assert "do not edit source-derived fields" in html
-    assert "correction concern in a reviewer-created note or feedback" in normalized_html
+    assert "correction concern in a reviewer-created note or issue report" in normalized_html
     assert "Open source links from the detail page when a source check is needed" in html
-    assert "Request Records and Job Status" in html
+    assert "Request Records and job diagnostics" in html
     assert "Show existing queue means the page searched already-loaded source-derived" in (
         normalized_html
     )
@@ -243,15 +243,15 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "Request Records means a configured controlled server-side job" in (
         normalized_html
     )
-    assert "Job Status pages show the current job state" in normalized_html
+    assert "job diagnostics pages show the current job state" in normalized_html
     assert "Loaded source-derived records can be ready for review" in normalized_html
-    assert "Job Status is operational metadata" in normalized_html
-    assert "metadata for the current review workflow" in normalized_html
+    assert "Job diagnostics is operational metadata" in normalized_html
+    assert "metadata for support and troubleshooting" in normalized_html
     assert "Review guidance and next steps" in html
-    assert "How to send useful feedback" in html
+    assert "How to report a review issue" in html
     assert "How packet preparation fits in" in html
     assert "packet preview/draft are preparation" in normalized_html
-    assert "feedback carries safe context" in normalized_html
+    assert "Report an issue page carries safe context" in normalized_html
     assert "Packet readiness means review readiness" in html
     assert "manual review, browser copy, or browser print" in normalized_html
     assert "source-derived values, source traceability" in normalized_html
@@ -260,7 +260,7 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
         "Packet preview and packet draft summarize loaded source-derived complaint records"
         in html
     )
-    assert "Use feedback when packet readiness wording is confusing" in normalized_html
+    assert "Report an issue when packet readiness wording is confusing" in normalized_html
     assert "source-derived records" in normalized_html.casefold()
     assert "reviewer-created notes/status" in normalized_html
     assert "How reviewer-created status filters work" in html
@@ -270,7 +270,7 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "filtered-empty result can mean the filter is hiding records" in normalized_html
     assert "filtered-empty result can mean the filter is hiding records" in normalized_html
     assert "Correction-readiness" in html
-    assert "possible correction concern in a reviewer-created note or feedback" in html
+    assert "possible correction concern in a reviewer-created note or issue report" in html
     assert 'action="/ccld/correction' not in normalized_html
     assert 'name="correction_status"' not in normalized_html
     assert "correction approved" not in normalized_html
@@ -559,7 +559,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
         in normalized_html
     )
     assert (
-        "Use the feedback checklist only when the queue or detail page is confusing"
+        "Use issue-report details only when the queue or detail page is confusing"
         in normalized_html
     )
     assert "Facility/date-scoped CCLD complaint records ready for review" in html
@@ -575,7 +575,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     )
     assert "Open detail before relying on a missing or confusing value" in normalized_html
     assert "Next action: check the detail page" in normalized_html
-    assert "Use the feedback checklist below only for missing records" in normalized_html
+    assert "Use the issue-report details below only for missing records" in normalized_html
     assert "Continue review guidance" in html
     assert "derived from this facility/date request context" in normalized_html
     assert "Use it as navigation help for choosing" in html
@@ -616,7 +616,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "do not assign, claim, or change records" in normalized_html
     assert "Queue decision actions" in html
     assert "Open facility review priority list" in html
-    assert "tester feedback for this queue context" in normalized_html
+    assert "Report an issue" in html
     assert "Report unclear loaded-record versus job-state wording" in html
     assert "workflow_area=request-result" in html
     assert "retrieval_context=already-loaded-records" in html
@@ -633,7 +633,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Find another CCLD facility" in html
     assert "Start a new CCLD request" in html
     assert "Open CCLD workflow help" in html
-    assert "Copy tester feedback checklist" in html
+    assert "Copy issue-report details" in html
     assert "Reviewer-status filter for this queue" in html
     assert "Apply reviewer-status filter" in html
     assert "Active reviewer-created status filter" in html
@@ -657,14 +657,14 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "1 loaded complaint records in bundle" not in html
     assert "6 loaded complaint records in bundle" in html
     assert "Open detail before relying on missing or confusing fields" in html
-    assert "Copyable tester feedback checklist" in html
-    assert "Copy details for feedback" in html
-    assert "Structured CCLD feedback checklist" in html
+    assert "Copyable issue-report details" in html
+    assert "Copy issue-report details" in html
+    assert "Structured CCLD issue-report details" in html
     assert "id=\"feedback-checklist-section\"" in html
-    assert "Select the checklist text, copy it, paste it" in normalized_html
-    assert "Use this same manual checklist for queue observations" in normalized_html
+    assert "Copy only the details that help explain an issue" in normalized_html
+    assert "Use these same details for queue observations" in normalized_html
     assert "filtered-empty recovery, no-match/load guidance" in normalized_html
-    assert "CCLD tester feedback checklist" in html
+    assert "CCLD issue-report details" in html
     assert "- Matching source-derived rows shown: 6" in html
     assert "- Matching complaint records in queue: 1" in html
     assert "- Not started: 1" in html
@@ -680,7 +680,8 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "- Queue showed updated note/status after returning" in html
     assert "- Records that seemed missing:" in html
     assert "- Records that seemed unexpected:" in html
-    assert "- Manual-copy only: copy this checklist" in html
+    assert "- Use the Report an issue page for feedback." in html
+    assert "- When GitHub issue intake is configured, the server creates a GitHub issue." in html
     assert "Open reviewer records" in html
     assert "did not submit a controlled server-side job for this request" in html
     assert "run-ccld-live-fetch.ps1 -FacilityNumber 157806098" in html
@@ -995,11 +996,11 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
     assert "Show all reviewer statuses for this facility/date request" in blocked_html
     assert "name=\"reviewer_status_filter\" value=\"all\"" in blocked_html
     assert "return to the full CCLD request queue" in blocked_normalized
-    assert "manual feedback checklist" in blocked_html
+    assert "issue-report details" in blocked_html
     assert "what you expected to see" in blocked_normalized
     assert "choose All queue records" in blocked_normalized
     assert "filtered-empty result" in blocked_normalized
-    assert "tester feedback for this filtered queue" in blocked_normalized
+    assert "Report an issue" in blocked_normalized
     assert "Open facility review priority list" in blocked_html
     assert "reviewer_status_filter=blocked" in blocked_html
     assert counts == {
@@ -1052,9 +1053,9 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert "Check or change the facility/license number" in html
     assert "Adjust the complaint date range" in html
     assert "Use loaded records by changing the date range" in normalized_html
-    assert "Skip Job Status troubleshooting for this result" in normalized_html
+    assert "Skip job diagnostics troubleshooting for this result" in normalized_html
     assert "no controlled server-side job was submitted" in normalized_html
-    assert "Report confusion with the facility/license number, date range" in normalized_html
+    assert "Report an issue with the facility/license number, date range" in normalized_html
     assert "How to interpret this no-match result" in html
     assert "currently loaded source-derived rows only" in normalized_html
     assert "did not submit a controlled server-side job for this request" in normalized_html
@@ -1069,13 +1070,13 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert "Change the facility/license number or date range" in normalized_html
     assert "use the local validated CCLD load action" in html
     assert "outside-browser live fetch and artifact-builder workflow" in normalized_html
-    assert "copy the feedback checklist" in html
+    assert "report an issue when records still look unexpected" in normalized_html
     assert "Use the no-match result to confirm criteria" in html
     assert "Selected request context" in html
     assert "Change facility/date criteria for this request" in html
-    assert "Copyable tester feedback checklist" in html
+    assert "Copyable issue-report details" in html
     assert "Technical job details" in html
-    assert "Copy details for feedback" in html
+    assert "Copy issue-report details" in html
     assert 'class="technical-details diagnostic-details"' in html
     assert 'class="technical-details dense-table-details"' in html
     assert "Report unclear loaded-record versus job-state wording" in html
@@ -1175,14 +1176,14 @@ def test_ccld_record_request_empty_hosted_records_offers_local_validated_load() 
     assert "Check or change the facility/license number" in html
     assert "Adjust the complaint date range" in html
     assert "Load or refresh records" in html
-    assert "Skip Job Status troubleshooting for this result" in normalized_html
-    assert "Report confusion with the facility/license number, date range" in normalized_html
+    assert "Skip job diagnostics troubleshooting for this result" in normalized_html
+    assert "Report an issue with the facility/license number, date range" in normalized_html
     assert "no controlled server-side job was submitted for this request" in html
     assert "no</dd>" in html
     assert "Change the facility/date criteria" in " ".join(html.split())
     assert "Loaded source-derived rows for this facility before date filtering" in html
     assert "not submitted for this request" in html
-    assert "Copyable tester feedback checklist" in html
+    assert "Copyable issue-report details" in html
     assert "Report unclear loaded-record versus job-state wording" in html
     assert "workflow_area=request-result" in html
     assert "retrieval_context=already-loaded-records" in html
@@ -1285,7 +1286,7 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     assert before_source_rows == after_source_rows
     assert counts == _empty_reviewer_counts()
     assert first_checklist == second_checklist
-    assert first_checklist.startswith("CCLD tester feedback checklist")
+    assert first_checklist.startswith("CCLD issue-report details")
     assert "- Source scope: CCLD public complaint records only" in first_checklist
     assert "- Facility/license number: 157806098" in first_checklist
     assert "- Facility lookup used or skipped: Manual facility/license entry" in first_checklist
@@ -1317,14 +1318,14 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     assert "- Queue showed updated note/status after returning and resubmitting:" in (
         first_checklist
     )
-    assert "Job Status clarity" in first_checklist
+    assert "Job diagnostics clarity" in first_checklist
     assert (
         "- It was clear whether records were already loaded, a Request Records job was "
         "submitted, or a job was still waiting:"
         in first_checklist
     )
-    assert "- Request Records / Job Status wording that was confusing:" in first_checklist
-    assert "- Next action after Job Status was clear:" in first_checklist
+    assert "- Request Records / job diagnostics wording that was confusing:" in first_checklist
+    assert "- Next action after job diagnostics was clear:" in first_checklist
     assert "Missing, unexpected, or confusing results" in first_checklist
     assert "- Records that seemed missing:" in first_checklist
     assert "- Records that seemed unexpected:" in first_checklist
@@ -1334,17 +1335,17 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     )
     assert "- Keyboard, reading-order, or checklist-copy friction:" in first_checklist
     assert "- Suggested enhancements:" in first_checklist
-    assert "- Manual-copy only: copy this checklist" in first_checklist
-    assert "- The app does not store, send, email, export, or persist this feedback." in (
-        first_checklist
+    assert "- Use the Report an issue page for feedback." in first_checklist
+    assert "When GitHub issue intake is configured" in first_checklist
+    assert (
+        "does not create a saved review session, persisted queue state, or duplicate "
+        "issue-report workflow"
+        in first_checklist
     )
-    assert "does not create a saved review session, persisted queue state, or second checklist" in (
-        first_checklist
-    )
-    assert "Rendering this checklist does not change source-derived records" in first_checklist
+    assert "Rendering these details does not change source-derived records" in first_checklist
     assert "Browser pages only trigger controlled server-side record requests" in first_checklist
     assert "Include any records that seemed missing, unexpected, or confusing" in first_checklist
-    assert "Select the checklist text, copy it, paste it" in " ".join(first_html.split())
+    assert "Copy only the details that help explain an issue" in " ".join(first_html.split())
     assert "Open source links from the detail page when a source check is needed" in (
         first_checklist
     )

@@ -282,16 +282,16 @@ function Test-RouteOrientationMarker {
         "facility-intelligence" = @("Facility review intelligence", "Facilities by review-priority indicator")
         "facility-hub" = @("Facility review hub", "Facility-directory details")
         "request-records" = @("Request Records", "Which facility should be reviewed?")
-        "jobs" = @("Job Status", "Track Request Records jobs")
+        "jobs" = @("Job diagnostics", "Track Request Records jobs")
         "reviewer" = @("Complaint records ready for review", "Worklist")
         "substantiated-triage" = @("substantiated complaint triage", "Source-derived finding")
         "packet-preview-empty" = @("Review packet preview", "No facility/date packet context was supplied.")
         "packet-preview-context" = @("Review packet preview", "Packet preparation preview")
         "packet-draft-empty" = @("Attorney Review Packet Draft", "No facility/date packet context was supplied.")
         "packet-draft-context" = @("Attorney Review Packet Draft", "Packet scope")
-        "feedback" = @("Send feedback", "Send safe review feedback")
+        "feedback" = @("Report an issue", "Report a review issue")
         "help" = @("Help", "Use RecordsTracker for facility complaint review")
-        "job-detail" = @("Job Status detail", "Request job summary and next step")
+        "job-detail" = @("Job diagnostics detail", "Request job summary and next step")
         "reviewer-detail" = @("Complaint review", "Complaint overview")
     }
     if (-not $markersByRoute.ContainsKey($name)) { return $false }
@@ -428,7 +428,7 @@ try {
         @{ Name = "packet-preview-context"; Path = "/reviewer/packet/preview?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry"; Label = "06-packet-preview-context"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
         @{ Name = "packet-draft-empty"; Path = "/reviewer/packet/draft"; Label = "07-packet-draft-empty"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
         @{ Name = "packet-draft-context"; Path = "/reviewer/packet/draft?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry"; Label = "08-packet-draft-context"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
-        @{ Name = "feedback"; Path = "/feedback"; Label = "09-feedback"; ActiveHref = "/feedback"; WorkflowStep = "Feedback" },
+        @{ Name = "feedback"; Path = "/feedback"; Label = "09-feedback"; ActiveHref = "/feedback"; WorkflowStep = "Report" },
         @{ Name = "help"; Path = "/ccld/help"; Label = "10-help"; ActiveHref = "/ccld/help" }
     )
 

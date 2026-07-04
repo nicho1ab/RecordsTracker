@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Simplified hosted attorney-facing navigation by removing Job Status from the
+  primary navigation, keeping job diagnostics available through support-oriented
+  diagnostics pages and contextual Request Records links, and standardizing the
+  feedback entry label as "Report an issue" while preserving the GitHub-backed
+  `/feedback` flow, safe context allowlist, request/queue/reviewer/detail
+  routes, and retrieval/import behavior.
 - Added a numbered RecordsTracker UI/product improvement inventory for user
   approval before reviewer-facing UI implementation. The inventory organizes
   proposed Home, facility lookup, facility hub, Request Records, queue, reviewer

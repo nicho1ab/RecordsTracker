@@ -176,9 +176,9 @@ def test_app_shell_labels_placeholder_scope() -> None:
     assert "source-derived values, source traceability, and reviewer-created notes/status" in html
     assert "Check packet/brief and readiness outputs after detail review" in html
     assert "without becoming a legal report or final export" in html
-    assert "Use feedback when something blocks or confuses review" in html
-    assert "the feedback page carries only safe workflow context" in html
-    assert f'<a href="{ENTRY_FEEDBACK_HREF}">send tester feedback</a>' in html
+    assert "Report an issue when something blocks or confuses review" in html
+    assert "the Report an issue page carries only safe workflow context" in html
+    assert f'<a href="{ENTRY_FEEDBACK_HREF}">report an issue</a>' in html
     assert html.index("Find facility") < html.index("Review facility pattern summary")
     assert html.index("Review facility pattern summary") < html.index(
         "Open prioritized records"
@@ -201,12 +201,12 @@ def test_app_shell_labels_placeholder_scope() -> None:
         'href="/reviewer/packet/preview#packet-attorney-review-readiness-checklist">'
         "Open readiness checklist</a>"
     ) in html
-    assert f'href="{ENTRY_FEEDBACK_HREF}">Open feedback</a>' in html
+    assert f'href="{ENTRY_FEEDBACK_HREF}">Report an issue</a>' in html
     assert "Attorney-focused public CCLD complaint/facility record review" not in html
     assert "New to this tool?" not in html
     assert "See Help for the review workflow" not in html
     assert "Open review queue" in html
-    assert "Feedback" in html
+    assert "Report an issue" in html
     assert "Developer/operator commands" not in html
     assert "Local pilot runtime" not in html
     assert "Live public CCLD retrieval" not in html
@@ -242,11 +242,11 @@ def test_home_orientation_is_single_shared_entry_block_with_feedback_path() -> N
     assert "Review prioritized records or next-review cues" in normalized_html
     assert "Open reviewer detail before relying on a record" in normalized_html
     assert "Check packet/brief and readiness outputs after detail review" in normalized_html
-    assert "Use feedback when something blocks or confuses review" in normalized_html
+    assert "Report an issue when something blocks or confuses review" in normalized_html
     assert "loaded-context cue, record order, source traceability cue" in normalized_html
     assert "packet/brief cue, readiness item, wording, or keyboard flow" in normalized_html
-    assert f'href="{ENTRY_FEEDBACK_HREF}">send tester feedback</a>' in html
-    assert f'href="{ENTRY_FEEDBACK_HREF}">Open feedback</a>' in html
+    assert f'href="{ENTRY_FEEDBACK_HREF}">report an issue</a>' in html
+    assert f'href="{ENTRY_FEEDBACK_HREF}">Report an issue</a>' in html
     assert "workflow_area=entry-orientation" in html
     assert "page_path=%2F" in html
     assert "saved session" not in normalized_html.casefold()
@@ -394,9 +394,11 @@ def test_polished_shared_layout_navigation_on_key_pages() -> None:
         assert 'href="/ccld/records/request">Request Records</a>' in html
         assert 'href="/ccld/records/request">Retrieve</a>' not in html
         assert "Review" in html
-        assert 'href="/ccld/retrieval/jobs">Job Status</a>' in html
+        assert 'href="/ccld/retrieval/jobs">Job Status</a>' not in html
+        assert 'href="/ccld/retrieval/jobs">Job diagnostics</a>' not in html
         assert 'href="/ccld/retrieval/jobs">Jobs</a>' not in html
-        assert "Feedback" in html
+        assert "Report an issue" in html
+        assert 'href="/feedback">Report an issue</a>' in html
         assert "Feedbac k" not in html
         assert "Commands</a>" not in html
         assert "Health check</a>" not in html
@@ -1125,8 +1127,8 @@ def test_route_active_nav_highlights_correct_item() -> None:
         ("/ccld/records/request", "/ccld/records/request", "Request Records"),
         ("/ccld/help", "/ccld/help", "Help"),
         ("/reviewer", "/reviewer", "Review"),
-        ("/ccld/retrieval/jobs", "/ccld/retrieval/jobs", "Job Status"),
-        ("/feedback", "/feedback", "Feedback"),
+        ("/ccld/retrieval/jobs", "/ccld/retrieval/jobs", "Job diagnostics"),
+        ("/feedback", "/feedback", "Report an issue"),
     )
     for path, expected_href, expected_label in route_active_specs:
         status, _content_type, body = route_response(
@@ -1198,7 +1200,7 @@ def test_help_page_topics_toc_links_to_every_help_section_in_order() -> None:
         ("workflow", "How to review a facility (workflow)"),
         ("review-guidance", "Review guidance and next steps"),
         ("source-traceability", "How source traceability works"),
-        ("live-retrieval", "Request Records and Job Status"),
+        ("live-retrieval", "Request Records and job diagnostics"),
         ("operator-setup", "Operator setup: enabling live Request Records"),
         ("tool-purpose", "What this tool helps you do"),
         ("review-flags", "What review flags mean"),
@@ -1206,7 +1208,7 @@ def test_help_page_topics_toc_links_to_every_help_section_in_order() -> None:
         ("reviewer-created-notes-status", "How reviewer-created notes/status work"),
         ("reviewer-status-filters", "How reviewer-created status filters work"),
         ("correction-readiness", "How correction-readiness works"),
-        ("feedback", "How to send useful feedback"),
+        ("feedback", "How to report a review issue"),
         ("packet-preparation", "How packet preparation fits in"),
     ]
     expected_hrefs = [f"#{topic_id}" for topic_id, _label in expected_topics]
@@ -1232,15 +1234,15 @@ def test_help_page_topics_toc_links_to_every_help_section_in_order() -> None:
     assert parser.summary_texts == [label for _topic_id, label in expected_topics]
 
 
-def test_retrieval_job_detail_route_highlights_jobs_nav() -> None:
-    """Job detail routes must highlight Job Status in the top nav."""
+def test_retrieval_job_detail_route_highlights_support_diagnostics_nav() -> None:
+    """Job detail routes must highlight the secondary diagnostics nav link."""
     auth_config = load_hosted_auth_runtime_config(
         environ={
             "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
             "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
         }
     )
-    # A missing job_id returns 404, but the nav should still show Job Status as active
+    # A missing job_id returns 404, but the support nav still shows diagnostics as active.
     status, _content_type, body = route_response(
         "/ccld/retrieval/jobs/detail?job_id=test-missing-job",
         auth_runtime_config=auth_config,
@@ -1248,9 +1250,10 @@ def test_retrieval_job_detail_route_highlights_jobs_nav() -> None:
     )
     html = body.decode("utf-8")
 
-    # 404 for missing job, but the nav must still show Job Status as active (not Request Records)
+    # 404 for missing job, but the nav must still show diagnostics active (not Request Records).
     assert status == 404
-    assert 'aria-current="page" href="/ccld/retrieval/jobs">Job Status' in html
+    assert 'aria-current="page" href="/ccld/retrieval/jobs">Job diagnostics' in html
+    assert 'aria-current="page" href="/ccld/retrieval/jobs">Job Status' not in html
     assert 'aria-current="page" href="/ccld/retrieval/jobs">Jobs' not in html
     assert 'aria-current="page" href="/ccld/records/request">Request Records' not in html
     assert 'aria-current="page" href="/ccld/records/request">Retrieve' not in html

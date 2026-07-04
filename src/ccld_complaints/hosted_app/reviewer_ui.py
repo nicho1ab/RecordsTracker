@@ -185,17 +185,17 @@ _SOURCE_CONFIDENCE_COMPLAINT_FIELDS = (
     (
         "Complaint control number",
         "complaint_control_number",
-        "Use this as the complaint identifier only after checking the source document context; use feedback if the identifier or next step is confusing.",
+        "Use this as the complaint identifier only after checking the source document context; report an issue if the identifier or next step is confusing.",
     ),
     (
         "Complaint received date",
         "complaint_received_date",
-        "Check the source traceability fields before relying on this date in notes/status; if unclear, describe the cue cautiously or use feedback.",
+        "Check the source traceability fields before relying on this date in notes/status; if unclear, describe the cue cautiously or report an issue.",
     ),
     (
         "Visit date",
         "visit_date",
-        "If this is missing, describe it as not available locally, not as proof no visit occurred; use feedback if the next step is unclear.",
+        "If this is missing, describe it as not available locally, not as proof no visit occurred; report an issue if the next step is unclear.",
     ),
     (
         "Report date",
@@ -205,12 +205,12 @@ _SOURCE_CONFIDENCE_COMPLAINT_FIELDS = (
     (
         "Date signed",
         "date_signed",
-        "Use this as a source-derived display value; check source context before relying on it or report confusion through feedback.",
+        "Use this as a source-derived display value; check source context before relying on it or report an issue if it is confusing.",
     ),
     (
         "Finding",
         "finding",
-        "Treat this as a source-derived value, not as a new reviewer finding; use feedback if the safe wording is unclear.",
+        "Treat this as a source-derived value, not as a new reviewer finding; report an issue if the safe wording is unclear.",
     ),
     (
         "Extraction confidence",
@@ -1425,8 +1425,8 @@ def _render_packet_draft(
                         <p><strong>Packet readiness means review readiness only.</strong> The draft can be ready for manual review, browser copy, or browser print after the tester confirms the active facility/date context, included record count, important source-derived values, visible source traceability, reviewer-created status/note cues, and possible correction-readiness concerns.</p>
                         <p><strong>Review before copying or printing:</strong> check records flagged for source check, records missing reviewer-created status/note cues, important source-derived values, missing traceability values, and any wording that seems wrong, incomplete, confusing, or risky.</p>
                         <p>Source traceability available means visible source URL, raw SHA-256 hash, raw artifact reference, connector metadata, retrieval timestamp, or source document/report marker cues are available to help check important source-derived values.</p>
-                        <p><strong>Correction-readiness before copying or printing:</strong> if a source-derived value looks wrong or incomplete, check source traceability first and capture the possible correction concern in a reviewer-created note or feedback for now. This draft does not change source-derived records, alter source-derived values, or submit correction decisions.</p>
-                        <p>If copy/print preparation content seems wrong, incomplete, confusing, or risky, use the feedback link before using this draft.</p>
+                        <p><strong>Correction-readiness before copying or printing:</strong> if a source-derived value looks wrong or incomplete, check source traceability first and capture the possible correction concern in a reviewer-created note or issue report for now. This draft does not change source-derived records, alter source-derived values, or submit correction decisions.</p>
+                        <p>If copy/print preparation content seems wrong, incomplete, confusing, or risky, report an issue before using this draft.</p>
                     </details>
                     <section aria-labelledby="draft-scope-heading">
                         <h3 id="draft-scope-heading">Packet scope</h3>
@@ -1474,9 +1474,9 @@ def _render_packet_draft(
                         <p>Review before copying or printing: this packet draft is a preparation draft.
                         Check source traceability, review flags, and reviewer-created status/note cues
                         before relying on any source-derived value in a handoff.</p>
-                        <p>Review before relying on this packet also means confirming the facility/date context and the included complaint records match the queue you intended to prepare. If the packet content looks incomplete, risky, or not ready, return to the queue, open reviewer detail, or use feedback before copying or printing.</p>
+                        <p>Review before relying on this packet also means confirming the facility/date context and the included complaint records match the queue you intended to prepare. If the packet content looks incomplete, risky, or not ready, return to the queue, open reviewer detail, or report an issue before copying or printing.</p>
                         <p>Possible correction concerns should remain reviewer-created observations or
-                        feedback for now. The future correction workflow is not implemented here, and this
+                        issue reports for now. The future correction workflow is not implemented here, and this
                         draft does not submit correction decisions.</p>
                         <ul>
                             <li>{readiness_counts['needs_source_check']} record(s) may still need source check based on visible review flags, missing dates, proxy cues, or missing traceability.</li>
@@ -1520,7 +1520,7 @@ def _render_packet_draft(
                             <li>Confirm the facility/date context matches the queue you intended to prepare.</li>
                             <li>Open reviewer detail for records needing source check.</li>
                             <li>Resolve missing reviewer-created status/note attention when useful.</li>
-                            <li>Send feedback before copying or printing when draft wording or readiness cues are confusing.</li>
+                            <li>Report an issue before copying or printing when draft wording or readiness cues are confusing.</li>
                         </ul>
                     </section>
                     <section aria-labelledby="copyable-packet-summary-heading">
@@ -2085,8 +2085,8 @@ def _render_packet_preview(
                         <li>Review records flagged for source check before relying on important source-derived values.</li>
                         <li>Review records missing reviewer-created status/note cues when the readiness counts show attention is needed.</li>
                         <li>Confirm source traceability for important source-derived values; source traceability available means visible source URL, raw SHA-256 hash, raw artifact reference, connector metadata, retrieval timestamp, or source document/report marker cues are available for checking.</li>
-                        <li>If a source-derived value looks wrong or incomplete, check source traceability first and capture the possible correction concern in a reviewer-created note or feedback for now.</li>
-                        <li>Use feedback if records, wording, readiness cues, or copy/print preparation content seems wrong, incomplete, confusing, or risky.</li>
+                        <li>If a source-derived value looks wrong or incomplete, check source traceability first and capture the possible correction concern in a reviewer-created note or issue report for now.</li>
+                        <li>Report an issue if records, wording, readiness cues, or copy/print preparation content seems wrong, incomplete, confusing, or risky.</li>
                     </ul>
                 </section>
                 <section aria-labelledby="packet-readiness-heading">
@@ -2102,7 +2102,7 @@ def _render_packet_preview(
                         <dd>{readiness_counts['needs_reviewer_attention']}</dd>
                     </dl>
                     <p>Source-derived values should be checked against traceability when important.</p>
-                    <p>Packet preview includes source-derived values and reviewer-created cues, but it does not change source-derived records or submit correction decisions. Possible correction concerns should stay in reviewer-created notes or feedback for now.</p>
+                    <p>Packet preview includes source-derived values and reviewer-created cues, but it does not change source-derived records or submit correction decisions. Possible correction concerns should stay in reviewer-created notes or issue reports for now.</p>
                 </section>
         <section aria-labelledby="packet-traceability-heading">
           <h2 id="packet-traceability-heading">Traceability readiness</h2>
@@ -2154,11 +2154,11 @@ def _render_packet_preview(
           <ul>
             <li>This preview is a preparation aid.</li>
             <li>Source-derived fields remain separate from reviewer-created notes/status.</li>
-            <li>Possible correction concerns are reviewer-created observations for notes or feedback in this workflow.</li>
+            <li>Possible correction concerns are reviewer-created observations for notes or issue reports in this workflow.</li>
             <li>Review flags identify records needing attorney review.</li>
             <li>Open source links from record detail when a source check is needed.</li>
             <li>Use this preview to prepare review before browser copy or print.</li>
-                        <li>If packet readiness, source-check-needed wording, missing reviewer-created state, copy/print preparation, or keyboard flow is confusing, use the feedback link with this packet context.</li>
+                        <li>If packet readiness, source-check-needed wording, missing reviewer-created state, copy/print preparation, or keyboard flow is confusing, report an issue with this packet context.</li>
           </ul>
         </section>
         <details class="technical-details">
@@ -4330,14 +4330,14 @@ def _render_detail_decision_continuity(
             </dl>
             {_render_detail_facility_context_cues(related_records, return_context)}
             <p>If a displayed value looks wrong or incomplete, check the source link first.
-            Add a note only when it helps explain what still needs review, or use feedback
+            Add a note only when it helps explain what still needs review, or report an issue
             when the page itself is confusing.</p>
             <div class="form-actions">
               {_detail_facility_hub_action(return_context)}
               <a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}">Return to facility review priority list</a>
               <a class="button button-secondary" href="{_escape(_ccld_request_href(related_records, return_context))}">Start complaint request if needed</a>
 {packet_links}
-              <a class="button button-secondary" href="{_escape(feedback_href)}">Report confusion about this reviewer detail</a>
+              <a class="button button-secondary" href="{_escape(feedback_href)}">Report an issue</a>
             </div>
           </details>
         </section>"""
@@ -4611,7 +4611,7 @@ def _detail_check_first_items(original_values: Mapping[str, Any]) -> tuple[str, 
     if original_values.get("report_date_used_as_proxy") is True:
         items.append("Review flag: report date used as proxy; use cautious proxy wording only after source traceability review.")
     items.append("Review source traceability before relying on missing, confusing, or proxy-related values.")
-    items.append("If a source-derived value looks wrong or incomplete, treat it as a possible correction concern for reviewer-created notes or feedback, not as a changed source record.")
+    items.append("If a source-derived value looks wrong or incomplete, treat it as a possible correction concern for reviewer-created notes or issue reports, not as a changed source record.")
     return tuple(items)
 
 
@@ -4666,7 +4666,7 @@ def _render_detail_first_run_steps(
                 <li><a href="{_escape(ccld_request_href)}">Return to the CCLD request queue</a>
                 with the same request context, resubmit when needed, and use the refreshed
                 queue's suggested next record to continue.</li>
-                <li>Copy the tester feedback checklist when ready.</li>
+                <li>Copy issue-report details when ready.</li>
             </ol>
             <p>Next-record guidance is navigation help derived from existing
             reviewer-created note/status cues. It is not a persisted assignment, automatic
@@ -4703,8 +4703,7 @@ def _render_detail_navigation(
                 <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find another CCLD facility</a></li>
                 <li><a href="{CCLD_HELP_PATH}">Open CCLD workflow help</a></li>
                 <li><a href="{REVIEWER_UI_RECORDS_PATH}">Back to reviewer records</a></li>
-                <li><a href="/ccld/retrieval/jobs">Job Status</a></li>
-                <li><a href="{_escape(feedback_href)}">Report reviewer-detail feedback with safe context</a></li>
+                <li><a href="{_escape(feedback_href)}">Report an issue with this record</a></li>
                 <li><a href="{_escape(detail_href)}">Refresh this seeded detail</a></li>
                 <li><a href="#record-summary-heading">Review record summary</a></li>
                 <li><a href="#source-confidence-heading">Review source-confidence cues</a></li>
@@ -4713,7 +4712,7 @@ def _render_detail_navigation(
                 <li><a href="#source-context-heading">Review source-derived context</a></li>
                 <li><a href="#reviewer-state-heading">Review notes and statuses</a></li>
                 <li><a href="#review-actions-heading">Add note or status</a></li>
-                <li><a href="#detail-feedback-heading">Prepare tester feedback</a></li>
+                <li><a href="#detail-feedback-heading">Prepare issue details</a></li>
             </ul>
         </section>"""
 
@@ -5006,11 +5005,11 @@ def _render_source_confidence_cues_section(
             expected values are not available locally, and which fields need source traceability
             review before a reviewer-created note or status observation relies on them.</p>
             <p>Use missing, confusing, and proxy-related cues to decide which source-derived
-            values need source traceability review before notes, status, or feedback.</p>
+            values need source traceability review before notes, status, or an issue report.</p>
             <p>Missing values should be described in reviewer-created notes/status or
-            manual feedback as <q>not available in this record</q>.</p>
+            issue-report details as <q>not available in this record</q>.</p>
             <p>Next action: check source traceability, use cautious reviewer-created
-            note/status wording only when it helps the queue, use feedback when
+            note/status wording only when it helps the queue, report an issue when
             the cue or wording remains confusing, then return to the same queue for the
             suggested next record.</p>
             <table>
@@ -5057,7 +5056,7 @@ def _render_first_activity_confidence_row(values: Mapping[str, Any]) -> str:
                         <td>{_escape(cue)}</td>
                         <td>{_escape(_source_confidence_value(value))}</td>
                         <td>When relevant, say this value is not available locally; do not say
-                        investigation activity did or did not happen. Use feedback if the
+                        investigation activity did or did not happen. Report an issue if the
                         missing-value next step is unclear.</td>
                     </tr>"""
 
@@ -5075,7 +5074,7 @@ def _render_report_date_proxy_confidence_row(values: Mapping[str, Any]) -> str:
                         <td>{_escape(cue)}</td>
                         <td>{_escape(_source_confidence_value(value))}</td>
                         <td>Use fallback/proxy wording only when this cue says the current
-                        field identifies a proxy-derived delay basis; use feedback
+                        field identifies a proxy-derived delay basis; report an issue
                         if proxy wording or next action remains confusing.</td>
                     </tr>"""
 
@@ -5212,11 +5211,11 @@ def _render_field_note_guidance_section() -> str:
             queue; they do not edit source-derived fields.</p>
             <p>If a source-derived value looks wrong or incomplete, check source traceability first.
             For now, use a reviewer-created note to describe the possible correction concern or use
-            feedback if the correction path is confusing. The workflow does not submit
+            an issue report if the correction path is confusing. The workflow does not submit
             correction decisions.</p>
             <p>For missing, confusing, or proxy-related source-derived values, the safe next
             action is to name the cue, avoid source absence or verification claims,
-            use feedback when the note/status wording is unclear, and continue review from the
+            report an issue when the note/status wording is unclear, and continue review from the
             same queue context.</p>
             <p>Keep notes short and cautious. When a value is unclear, describe what the
             page showed and what still needs checking rather than making a source,
@@ -5259,7 +5258,7 @@ def _render_field_note_guidance_section() -> str:
                     </tr>
                     <tr>
                         <th scope="row">Value looks like a UI or data issue</th>
-                        <td>Use the manual feedback checklist for suspected wording, display, or
+                        <td>Use issue-report details for suspected wording, display, or
                         data issues instead of treating the note as a source-derived
                         edit.</td>
                         <td>Do not imply the app corrected, edited, or replaced the source-derived
@@ -6167,7 +6166,7 @@ def _render_review_guidance_glossary_section(source_record: Mapping[str, Any]) -
         <li>Check dates, status labels, and counts against the visible record context before using them in notes, packet outputs, briefs, or readiness review.</li>
         <li>Absence of a cue does not prove absence of a concern.</li>
         <li>This page does not decide abuse, neglect, liability, rights deprivation, source completeness, or whether CCLD source coverage is complete.</li>
-        <li>Next action: open the source context, review related records, use the packet/brief/readiness outputs, or send feedback if this record is confusing.</li>
+        <li>Next action: open the source context, review related records, use the packet/brief/readiness outputs, or report an issue if this record is confusing.</li>
       </ol>
       <p>Source-derived finding value {_escape(_optional_string(original_values, "finding"))} is displayed source context only.</p>
       <details class="glossary-details">
@@ -6275,13 +6274,13 @@ def _render_detail_feedback_guidance(
         prompt="Describe source traceability, wording, keyboard flow, or next-step confusion.",
     )
     return f"""<section id="detail-feedback-heading" aria-labelledby="detail-feedback-title">
-            <h2 id="detail-feedback-title">Feedback for this record</h2>
-            <p>If this detail looks wrong or incomplete, use the tester feedback checklist on
+            <h2 id="detail-feedback-title">Issue report for this record</h2>
+            <p>If this detail looks wrong or incomplete, use the issue-report details on
             the CCLD request queue. Include the identifiers below and what looked missing,
             confusing, or unexpected.</p>
             <p>Mention the original source link status or field label when source information is
-            hard to check. Use feedback when missing local fields make the next review step unclear.</p>
-            <p>Notes and statuses are optional. Use feedback instead when you are unsure what
+            hard to check. Report an issue when missing local fields make the next review step unclear.</p>
+            <p>Notes and statuses are optional. Report an issue instead when you are unsure what
             the next step should be.</p>
             <dl>
                 <dt>Facility/license number</dt>
@@ -6296,10 +6295,11 @@ def _render_detail_feedback_guidance(
                 <dd>{_escape(_detail_feedback_request_context(return_context))}</dd>
             </dl>
             <details class="technical-details">
-                <summary>What to include in feedback</summary>
+                <summary>What to include in the issue report</summary>
             <section aria-labelledby="record-feedback-handoff-heading">
-                <h3 id="record-feedback-handoff-heading">Record feedback notes</h3>
-                <p>This page does not save, send, export, or persist feedback.</p>
+                <h3 id="record-feedback-handoff-heading">Record issue-report notes</h3>
+                <p>Use the Report an issue page. This detail section only helps
+                you identify safe context to include.</p>
                 <ul>
                     <li>Source link or source field that was missing or confusing.</li>
                     <li>Record value, date, finding, or flag that looked wrong or incomplete.</li>
@@ -6309,10 +6309,10 @@ def _render_detail_feedback_guidance(
                 </ul>
             </section>
             <section aria-labelledby="feedback-checklist-bridge-heading">
-                <h3 id="feedback-checklist-bridge-heading">Manual feedback checklist bridge</h3>
-                <p>Use the existing manual feedback checklist on the CCLD request queue for
-                both queue observations and record-specific observations from this detail.
-                Do not create a separate checklist from this page.</p>
+                <h3 id="feedback-checklist-bridge-heading">Issue-report detail bridge</h3>
+                <p>Use the same Report an issue flow for both queue observations and
+                record-specific observations from this detail. Do not create a separate
+                feedback workflow from this page.</p>
                 <ul>
                     <li>Original source: note fields that were easy to confirm, missing, or confusing.</li>
                     <li>Complaint values: note dates, findings, flags, or values that were hard to trust.</li>
@@ -6325,7 +6325,7 @@ def _render_detail_feedback_guidance(
             <ul>
                 <li><a href="{_escape(ccld_request_href)}">Return to CCLD request or queue</a></li>
                 <li><a href="{CCLD_HELP_PATH}">Open CCLD workflow help</a></li>
-                <li><a href="{_escape(feedback_href)}">Open feedback with this record context</a></li>
+                <li><a href="{_escape(feedback_href)}">Report an issue with this record context</a></li>
             </ul>
         </section>"""
 
@@ -6416,7 +6416,7 @@ def _render_notice(
                 context and existing reviewer-created note/status cues.</p>
                 <p>If the saved confirmation, same-context return link, or refreshed queue cue
                 did not behave as expected, include that record-specific observation in the
-                existing manual feedback checklist. Also carry forward any source traceability,
+                issue-report details. Also carry forward any source traceability,
                 source-confidence, field-note, or possible correction concern wording that was
                 confusing for this record.</p>
                 <p>Use packet preview or draft only when you are ready for preparation;
@@ -6433,7 +6433,7 @@ def _render_notice(
                 {_packet_preview_confirmation_link(return_context)}
                 {_packet_draft_confirmation_link(return_context)}
                 <a class="button button-secondary" href="{_escape(next_record_href)}">Open next priority record</a>
-                <a class="button button-secondary" href="{_escape(feedback_href)}">Report save or return-to-queue confusion</a>
+                <a class="button button-secondary" href="{_escape(feedback_href)}">Report an issue</a>
                 <a class="button button-secondary" href="{_escape(detail_href)}">Refresh this reviewer detail</a>
             </div>
             <p class="helper-text">{_escape(next_record_note)}</p>

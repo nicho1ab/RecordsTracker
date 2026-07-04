@@ -850,11 +850,11 @@ def render_app_shell() -> str:
                 <li><strong>Review prioritized records or next-review cues.</strong> Expected: the facility hub or queue names which loaded complaint records to open first and why, using source-traceability and reviewer-created note/status cues as review aids only.</li>
                 <li><strong>Open reviewer detail before relying on a record.</strong> Expected: source-derived values, source traceability, and reviewer-created notes/status are visibly separated before you add cautious reviewer-created observations.</li>
                 <li><strong>Check packet/brief and readiness outputs after detail review.</strong> Expected: packet preview, draft brief, and the readiness checklist summarize the current facility/date context for attorney review handoff without becoming a legal report or final export.</li>
-                <li><strong>Use feedback when something blocks or confuses review.</strong> Expected: the feedback page carries only safe workflow context and asks what you tried, what you expected, what happened, and whether review was blocked.</li>
+                <li><strong>Report an issue when something blocks or confuses review.</strong> Expected: the Report an issue page carries only safe workflow context and asks what you tried, what you expected, what happened, and whether review was blocked.</li>
             </ol>
             <p>When a start path, loaded-context cue, record order, source traceability
             cue, packet/brief cue, readiness item, wording, or keyboard flow is
-            confusing, <a href="{entry_feedback_href}">send tester feedback</a>.</p>
+            confusing, <a href="{entry_feedback_href}">report an issue</a>.</p>
         </section>
         <section aria-labelledby="ready-paths-heading">
             <h2 id="ready-paths-heading">Ready paths</h2>
@@ -880,9 +880,9 @@ def render_app_shell() -> str:
                     <p><a class="button button-secondary" href="{REVIEWER_UI_PACKET_PREVIEW_PATH}">Open packet preview</a></p>
                 </article>
                 <article class="summary-card">
-                    <h3>Tester feedback</h3>
+                    <h3>Report an issue</h3>
                     <p>Report what you tried, what loaded context or route was confusing, and what blocked review.</p>
-                    <p><a class="button button-secondary" href="{entry_feedback_href}">Open feedback</a></p>
+                    <p><a class="button button-secondary" href="{entry_feedback_href}">Report an issue</a></p>
                 </article>
             </div>
         </section>"""
