@@ -17,6 +17,7 @@ from ccld_complaints.hosted_app.auth import (
     HostedAuthenticationRequiredError,
     HostedRoleDeniedError,
     HostedScopeDeniedError,
+    find_authorized_ccld_source_derived_records_for_request,
 )
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
     _FACILITY_COMBOBOX_JS,
@@ -70,10 +71,7 @@ from ccld_complaints.hosted_app.reviewer_ui import (
     ReviewerUiContext,
     default_local_test_reviewer_ui_context,
 )
-from ccld_complaints.hosted_app.source_derived_routes import (
-    SOURCE_DERIVED_API_PREFIX,
-    route_source_derived_api_response,
-)
+from ccld_complaints.hosted_app.source_derived_reads import SourceDerivedRecordRead
 from ccld_complaints.hosted_app.ui_shell import render_page_shell
 
 CCLD_UI_PREFIX = "/ccld"
@@ -94,7 +92,6 @@ _DATE_FIELDS = (
     "visit_date",
     "report_date",
     "date_signed",
-    "retrieved_at",
 )
 _STATUS_FILTER_VALUES = (
     "all",
@@ -475,7 +472,10 @@ def _post_request_response(
             )
         except ValueError as error:
             return _html_response(400, _render_invalid_request((str(error),)))
-    source_status, source_records_or_body = _source_derived_records(context)
+    source_status, source_result = _source_derived_result_for_request(
+        context,
+        validation.request,
+    )
     if source_status != 200:
         return _html_response(
             source_status,
@@ -489,16 +489,15 @@ def _post_request_response(
                 links=(("Return to CCLD request", CCLD_RECORD_REQUEST_PATH),),
             ),
         )
-    if isinstance(source_records_or_body, bytes):
-        raise ValueError("Expected source-derived records.")
-    result = find_ccld_records_for_request(validation.request, source_records_or_body)
+    if source_result is None:
+        raise ValueError("Expected source-derived result.")
     reviewer_state_records = _reviewer_created_state_records(context)
     state_summaries = _state_summaries_by_source_record(reviewer_state_records)
     return _html_response(
         200,
         _render_request_result(
             validation.request,
-            result,
+            source_result,
             state_summaries=state_summaries,
             import_reload_result=import_reload_result,
             import_reload_available=context.import_reload_context is not None,
@@ -508,17 +507,64 @@ def _post_request_response(
     )
 
 
-def _source_derived_records(
+def _source_derived_result_for_request(
     context: CcldRecordRequestUiContext,
-) -> tuple[int, list[Mapping[str, Any]] | bytes]:
-    status, _content_type, body = route_source_derived_api_response(
-        f"{SOURCE_DERIVED_API_PREFIX}?limit=100",
-        context.reviewer_ui_context.workflow_shell_context.source_derived_api_context,
+    request: CcldRecordRequest,
+) -> tuple[int, CcldRequestSearchResult | None]:
+    source_context = context.reviewer_ui_context.workflow_shell_context.source_derived_api_context
+    try:
+        lookup = find_authorized_ccld_source_derived_records_for_request(
+            source_context.connection,
+            source_context.actor,
+            scope=source_context.scope,
+            facility_number=request.facility_number,
+            start_date=request.start_date,
+            end_date=request.end_date,
+        )
+    except HostedAuthenticationRequiredError:
+        return 401, None
+    except (HostedAccountDisabledError, HostedRoleDeniedError, HostedScopeDeniedError):
+        return 403, None
+    except ValueError:
+        return 400, None
+    return 200, CcldRequestSearchResult(
+        matched_records=tuple(
+            _source_derived_read_payload(record) for record in lookup.matched_records
+        ),
+        matched_complaint_keys=lookup.matched_complaint_keys,
+        all_facility_records=tuple(
+            _source_derived_read_payload(record) for record in lookup.all_facility_records
+        ),
     )
-    if status != 200:
-        return status, body
-    payload = _json_object(body)
-    return 200, _record_list(payload, "records")
+
+
+def _source_derived_read_payload(record: SourceDerivedRecordRead) -> dict[str, Any]:
+    return {
+        "source_record_key": record.source_record_key,
+        "entity_type": record.entity_type,
+        "stable_source_id": record.stable_source_id,
+        "source_document_id": record.source_document_id,
+        "facility_id": record.facility_id,
+        "source_url": record.source_url,
+        "raw_sha256": record.raw_sha256,
+        "raw_path": record.raw_path,
+        "connector_name": record.connector_name,
+        "connector_version": record.connector_version,
+        "retrieved_at": record.retrieved_at,
+        "original_values": dict(record.original_values),
+        "source_traceability": dict(record.source_traceability),
+        "import_batch": {
+            "import_batch_id": record.import_batch.import_batch_id,
+            "imported_at": record.import_batch.imported_at,
+            "source_artifact_identity": record.import_batch.source_artifact_identity,
+            "source_pipeline_version": record.import_batch.source_pipeline_version,
+            "validation_status": record.import_batch.validation_status,
+            "raw_hash_validation_status": record.import_batch.raw_hash_validation_status,
+            "record_counts": dict(record.import_batch.record_counts),
+            "warnings": list(record.import_batch.warnings),
+            "errors": list(record.import_batch.errors),
+        },
+    }
 
 
 def _reviewer_created_state_records(
@@ -586,7 +632,7 @@ def _render_request_form(
 def _render_request_start_orientation() -> str:
         return """<section class="quiet-section" aria-labelledby="request-start-orientation-heading">
             <h2 id="request-start-orientation-heading">Start review request context</h2>
-            <p>Facility/license number identifies the CCLD facility. Date range narrows complaint, visit, report, signed, or retrieval dates already represented in preloaded source-derived records.</p>
+            <p>Facility/license number identifies the CCLD facility. Date range narrows complaint, visit, report, or signed dates already represented in preloaded source-derived records.</p>
             <p>Request Records uses the configured controlled server-side request path only when available. Show existing queue searches loaded source-derived records for the selected facility/date context.</p>
             <p>When records are found, continue to the review queue, open the recommended record, review source traceability on detail, then use packet preparation and feedback when needed.</p>
         </section>"""
@@ -702,7 +748,7 @@ def _render_date_range_state(
                         <input id="end_date" name="end_date" type="date" value="{_escape(selected_end_date)}" aria-describedby="date-range-help" required>
                     </p>
                 </div>
-                <p id="date-range-help" class="helper-text">Use the date range to narrow complaint, visit, report, signed, or retrieval dates in loaded records.</p>
+                <p id="date-range-help" class="helper-text">Use the date range to narrow complaint, visit, report, or signed dates in loaded records.</p>
                 <div class="form-actions">
                     <button type="submit">Confirm date range</button>
                     <a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Change facility</a>

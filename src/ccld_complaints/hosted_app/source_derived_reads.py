@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import date
 from typing import Any, cast
+from urllib.parse import parse_qs, urlparse
 
 from sqlalchemy import Select, and_, select
 from sqlalchemy.engine import Connection, RowMapping
@@ -45,6 +47,22 @@ class SourceDerivedRecordRead:
     import_batch: ImportBatchRead
 
 
+@dataclass(frozen=True)
+class CcldSourceDerivedRequestLookup:
+    matched_records: tuple[SourceDerivedRecordRead, ...]
+    matched_complaint_keys: tuple[str, ...]
+    all_facility_records: tuple[SourceDerivedRecordRead, ...]
+
+
+CCLD_CONNECTOR_NAME = "ccld_facility_reports"
+CCLD_REVIEW_DATE_FIELDS = (
+    "complaint_received_date",
+    "visit_date",
+    "report_date",
+    "date_signed",
+)
+
+
 def list_source_derived_records(
     connection: Connection,
     *,
@@ -73,6 +91,70 @@ def list_source_derived_records(
 
     return tuple(
         _read_model_from_row(row) for row in connection.execute(query).mappings().all()
+    )
+
+
+def find_ccld_source_derived_records_for_request(
+    connection: Connection,
+    *,
+    facility_number: str,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    import_batch_id: str | None = None,
+) -> CcldSourceDerivedRequestLookup:
+    requested_facility = _normalized_facility_number(facility_number)
+    if requested_facility is None:
+        raise ValueError("facility_number must contain digits only for CCLD lookup.")
+    parsed_start = _optional_iso_date(start_date, "start_date")
+    parsed_end = _optional_iso_date(end_date, "end_date")
+    if parsed_start is not None and parsed_end is not None and parsed_end < parsed_start:
+        raise ValueError("end_date must not be before start_date.")
+
+    records = _list_ccld_source_derived_records(
+        connection,
+        import_batch_id=import_batch_id,
+    )
+    facility_records = tuple(
+        record
+        for record in records
+        if _ccld_record_matches_facility(record, requested_facility)
+    )
+    matching_complaints = tuple(
+        record
+        for record in facility_records
+        if record.entity_type == "complaint"
+        and _ccld_record_matches_date_range(
+            record,
+            start_date=parsed_start,
+            end_date=parsed_end,
+        )
+    )
+    matched_complaint_keys = tuple(record.source_record_key for record in matching_complaints)
+    if parsed_start is None and parsed_end is None:
+        matched_records = facility_records
+    elif matching_complaints:
+        document_ids = {record.source_document_id for record in matching_complaints}
+        facility_ids = {
+            record.facility_id
+            for record in matching_complaints
+            if record.facility_id is not None
+        }
+        matched_records = tuple(
+            record
+            for record in facility_records
+            if record.source_document_id in document_ids
+            or (
+                record.entity_type == "facility"
+                and record.facility_id in facility_ids
+            )
+        )
+    else:
+        matched_records = ()
+
+    return CcldSourceDerivedRequestLookup(
+        matched_records=_sort_source_derived_reads(matched_records),
+        matched_complaint_keys=matched_complaint_keys,
+        all_facility_records=_sort_source_derived_reads(facility_records),
     )
 
 
@@ -105,6 +187,25 @@ def get_source_derived_record_by_identity(
     if row is None:
         return None
     return _read_model_from_row(row)
+
+
+def _list_ccld_source_derived_records(
+    connection: Connection,
+    *,
+    import_batch_id: str | None,
+) -> tuple[SourceDerivedRecordRead, ...]:
+    query = _source_derived_read_query().where(
+        hosted_source_derived_records.c.connector_name == CCLD_CONNECTOR_NAME
+    )
+    if import_batch_id is not None:
+        query = query.where(hosted_source_derived_records.c.import_batch_id == import_batch_id)
+    query = query.order_by(
+        hosted_source_derived_records.c.entity_type,
+        hosted_source_derived_records.c.stable_source_id,
+    )
+    return tuple(
+        _read_model_from_row(row) for row in connection.execute(query).mappings().all()
+    )
 
 
 def _source_derived_read_query() -> Select[tuple[Any, ...]]:
@@ -177,6 +278,124 @@ def _read_model_from_row(row: RowMapping) -> SourceDerivedRecordRead:
             errors=_string_tuple_value(row, "batch_errors"),
         ),
     )
+
+
+def _ccld_record_matches_facility(
+    record: SourceDerivedRecordRead,
+    requested_facility_number: str,
+) -> bool:
+    original_values = record.original_values
+    candidate_values = (
+        original_values.get("external_facility_number"),
+        original_values.get("facility_number"),
+        original_values.get("facility_id"),
+        record.facility_id,
+        record.stable_source_id if record.entity_type == "facility" else None,
+    )
+    if any(
+        _normalized_facility_number(value) == requested_facility_number
+        for value in candidate_values
+    ):
+        return True
+    return _facility_number_from_source_url(record.source_url) == requested_facility_number
+
+
+def _ccld_record_matches_date_range(
+    record: SourceDerivedRecordRead,
+    *,
+    start_date: date | None,
+    end_date: date | None,
+) -> bool:
+    record_dates = _ccld_record_dates(record)
+    if start_date is None and end_date is None:
+        return True
+    return any(
+        (start_date is None or record_date >= start_date)
+        and (end_date is None or record_date <= end_date)
+        for record_date in record_dates
+    )
+
+
+def _ccld_record_dates(record: SourceDerivedRecordRead) -> tuple[date, ...]:
+    dates: list[date] = []
+    for field_name in CCLD_REVIEW_DATE_FIELDS:
+        value = record.original_values.get(field_name)
+        if isinstance(value, str):
+            parsed = _parse_iso_date(value[:10])
+            if parsed is not None:
+                dates.append(parsed)
+    return tuple(dates)
+
+
+def _normalized_facility_number(value: object) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    if text.isdigit():
+        return text
+    suffix = text.rsplit(":", 1)[-1].strip()
+    if suffix.isdigit():
+        return suffix
+    return None
+
+
+def _facility_number_from_source_url(source_url: str) -> str | None:
+    parsed = urlparse(source_url)
+    query_values = parse_qs(parsed.query, keep_blank_values=True)
+    for key, values in query_values.items():
+        if key.casefold() in {"facnum", "facilitynumber"}:
+            for value in values:
+                normalized = _normalized_facility_number(value)
+                if normalized is not None:
+                    return normalized
+    path_leaf = parsed.path.rstrip("/").rsplit("/", 1)[-1]
+    return _normalized_facility_number(path_leaf)
+
+
+def _optional_iso_date(value: str | None, field_name: str) -> date | None:
+    if value is None or not value.strip():
+        return None
+    parsed = _parse_iso_date(value)
+    if parsed is None:
+        raise ValueError(f"{field_name} must use YYYY-MM-DD format.")
+    return parsed
+
+
+def _parse_iso_date(value: str | None) -> date | None:
+    if value is None:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _sort_source_derived_reads(
+    records: tuple[SourceDerivedRecordRead, ...],
+) -> tuple[SourceDerivedRecordRead, ...]:
+    return tuple(
+        sorted(
+            records,
+            key=lambda record: (
+                _entity_sort_key(record.entity_type),
+                record.stable_source_id,
+            ),
+        )
+    )
+
+
+def _entity_sort_key(entity_type: SourceDerivedEntityType) -> int:
+    order = {
+        "facility": 0,
+        "source_document": 1,
+        "complaint": 2,
+        "allegation": 3,
+        "event": 4,
+        "extraction_audit": 5,
+    }
+    return order.get(entity_type, 99)
 
 
 def _entity_type(row: RowMapping) -> SourceDerivedEntityType:
