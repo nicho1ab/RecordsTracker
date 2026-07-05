@@ -117,44 +117,33 @@ detail output, and no source-derived mutation.
 Hosted reviewer UI shell tests should cover browser-accessible local/test
 landing and detail HTML pages over the seeded fixture corpus, list-level
 reviewer-created note/status indicators and latest reviewer-created timestamp,
-plain-language record summaries, safe source traceability display, source-
-confidence cues for present, missing, and proxy-flagged local/test complaint
-fields, facility-context navigation cues for directory-backed facility hub,
-signal-only facility hub, and manual request context behavior, field-note guidance
-for cautious reviewer-created observations, safe
-related seeded bundle context and source narrative excerpt behavior with
-sensitive narrative controlled,
+plain-language record summaries, attorney-facing source narrative, compact
+complaint/investigation timeline, finding/allegation summary, review-flag
+badges, copy affordances for core values, MM/DD/YYYY date display, and bounded
+source narrative behavior with sensitive narrative controlled,
 local/test complaint review matrix CSV export content, source-derived field
 columns, source-traceability cues, clearly separated reviewer-created note/status
-columns, empty-context CSV behavior, and matrix links from reviewer detail,
-clear missing-value wording for unavailable local/test traceability values, labeled search/
+columns, and empty-context CSV behavior,
+clear missing-value wording for unavailable local/test values, labeled search/
 note/status controls, note/status form delegation to the existing workflow
-actions, read-after-write reviewer-created state display, same-request
-return-to-queue progress guidance, CCLD return navigation, record-specific
-feedback guidance, non-conclusion boundary wording, no-match search, missing-record, invalid note/
+actions, read-after-write reviewer-created state display, focused
+return-to-queue/next-record guidance, CCLD return navigation,
+non-conclusion boundary wording, no-match search, missing-record, invalid note/
 status form, and blocked-request next-step guidance, unauthenticated, disabled or revoked, role-denied, out-of-scope,
 and source-read-versus-reviewer-state permission separation blocking, no-secret
 HTML output, successful audit creation, and no source-derived mutation.
-Record-specific feedback handoff coverage should verify that detail pages tell
-testers what source traceability, source context, note/status confirmation,
-same-queue return, queue refresh, unexpected-record, confusing label, wording,
-keyboard-flow, or next-step observations to carry into the existing manual
-checklist without adding feedback persistence.
-Feedback checklist bridge coverage should verify that reviewer detail points
-those observations to the existing manual checklist without rendering a second
-checklist, storing feedback, sending feedback, exporting feedback, or mutating
-source-derived, reviewer-created, audit, import, or operational metadata rows.
-Queue-to-detail checklist continuity coverage should verify that queue pages,
-reviewer detail pages, and note/status confirmations point to the same existing
-manual checklist for queue-level and detail-level observations while preserving
-single-checklist/manual-copy behavior.
+Reviewer detail absence coverage should prove source traceability internals,
+source-derived value-check tables, full source-derived fields, selected source
+bundle summaries, related source-derived row tables, technical/operator details,
+facility context cues, detail navigation dumps, first-run detail steps,
+issue-report bridge copy, repeated issue/help/return action dumps,
+source-confidence tables, and field-note guidance are not visible in the
+reviewer-facing tier.
 First-run review session orientation coverage should verify that home,
-request/help, queue, reviewer detail, note/status confirmation, and checklist
-surfaces explain the current CCLD-only path in order: facility lookup or manual
-entry, request-context confirmation, loaded local/test queue, reviewer detail
-source traceability/source-confidence/field-note review, reviewer-created
-note/status observations, same-queue refresh, next-record continuation, and
-manual checklist copy. Coverage should also prove the wording does not add saved
+request/help, queue, Help, feedback, and note/status confirmation surfaces
+explain the current CCLD-only path without requiring source traceability,
+source-confidence, field-note, or checklist guidance to render on reviewer
+detail. Coverage should also prove the wording does not add saved
 sessions, persisted queue state, duplicate checklists, feedback persistence,
 live browser fetch, connector execution, artifact building, schema changes, auth,
 workflow-engine state, or mutations.
@@ -162,10 +151,11 @@ Next-record navigation coverage should verify that queue and detail pages tell
 testers how to return to the same request context, resubmit when needed, and use
 suggested-next cues derived from existing reviewer-created state without
 implying persisted assignment, record claiming, or workflow-engine state.
-Queue source-confidence wording coverage should verify that queue summaries are
-labeled as source-derived display summaries and point testers to reviewer detail
-before relying on missing, confusing, or proxy-related fields in notes/status or
-manual feedback.
+Queue source-check wording coverage should verify that queue summaries are
+labeled as source-derived display summaries and point testers to reviewer
+detail, Help, or the public source link before relying on missing, confusing, or
+proxy-related fields in notes/status or feedback without requiring source-
+confidence tables on detail.
 Field-note guidance coverage should verify that reviewer detail gives short,
 cautious wording guidance for present, missing, proxy-flagged, and confusing
 fields while preserving existing note/status write behavior and no-mutation
@@ -202,10 +192,10 @@ confirmation, deterministic copyable feedback checklist guidance
 without persistence, accessibility-oriented headings/labels/captions/link text,
 and no-secret HTML output.
 Hosted reviewer UI shell tests should also cover skip-to-main links, CCLD
-workflow navigation, first-run detail steps, and record-specific note/status
-button text, saved-state confirmation wording, return-to-queue links, and
-read-after-write detail state while preserving existing read/write and audit
-behavior.
+workflow navigation, absence of first-run detail steps from reviewer detail,
+record-specific note/status button text, saved-state confirmation wording,
+return-to-queue links, and read-after-write detail state while preserving
+existing read/write and audit behavior.
 Hosted CCLD facility lookup tests should cover committed tiny fixture fallback,
 configured full local/test CCLD program facility CSV loading, CDSS/CHHS
 facility-directory CSV loading, safe scalar field display, exact duplicate row

@@ -250,13 +250,15 @@ private headers.
 ## GitHub Issues Feedback Intake
 
 The `/feedback` route provides the first real tester feedback workflow. It uses
-a server-rendered form with exactly three feedback types: Bug report, Feature
-request, and New data source. Submissions create GitHub Issues only when the
-server has `GITHUB_FEEDBACK_REPO` and `GITHUB_FEEDBACK_TOKEN` configured.
+a server-rendered form with five feedback types: Bug/problem, Feature request,
+Data connector/source request, Confusing wording/navigation, and Other
+feedback. Submissions create GitHub Issues only when the server has
+`GITHUB_FEEDBACK_REPO` and `GITHUB_FEEDBACK_TOKEN` configured.
 
 Optional `GITHUB_FEEDBACK_DEFAULT_LABELS` can add comma-separated labels. Every
-app feedback issue receives `feedback`, `from-app`, and `needs-triage`, plus one
-type label: `bug`, `feature-request`, or `new-data-source`.
+app feedback issue receives `user-feedback`, `from-app`, and `needs-triage`,
+plus one type label: `bug`, `feature-request`, `data-source-request`,
+`workflow-confusion`, or `general-feedback`.
 
 The token is server-side only. It must not appear in HTML, JavaScript, logs,
 tests, screenshots, issue bodies, or docs. Tests use mocked clients and must not

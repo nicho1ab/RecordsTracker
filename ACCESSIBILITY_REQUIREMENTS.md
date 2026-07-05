@@ -40,43 +40,26 @@ Accessibility requirements apply to:
 - Charts must have text alternatives or data tables.
 - Form fields must have accessible names.
 - The local/test hosted reviewer UI shell must use semantic headings, labeled
-	search, note, and status controls, table captions/headings for source-derived
-	context, safe related seeded context, list-level reviewer-created state
-	indicators, and reviewer-created state, and visible error or blocked-request
+	search, note, and status controls, list-level reviewer-created state
+	indicators, reviewer-created state, and visible error or blocked-request
 	messages with useful next-step links. Reviewer detail pages must include
-	accessible record-summary, source-traceability, related-context, reviewer-state,
-	action, saved-confirmation, navigation, and feedback-guidance sections with
-	meaningful link text. Reviewer detail source traceability must use visible
-	labels for selected-record identifiers, source URL, raw hash, raw path or
-	local artifact references, connector/capture details, source document/report
-	markers, missing-value wording, and non-conclusion boundary language.
-	Reviewer detail source-confidence cues must be visible text with table headers
-	that identify present source-derived fields, local/test missing fields,
-	existing proxy flags when available, and source-traceability review reminders
-	without relying on color, scoring, JavaScript, or automated verification.
-	Reviewer detail field-note guidance must be visible text with clear headings or
-	table headers that distinguish reviewer-created observations from source-
-	derived fields, explain cautious missing-field and proxy-flag wording, and avoid
-	color-only, generated-note, or JavaScript-dependent behavior.
-	Reviewer note/status saved confirmations must expose return-to-queue guidance,
-	same facility/date request-context reminders, queue-progress refresh guidance,
-	and next-record guidance as visible text with descriptive links.
-	Reviewer detail feedback handoff cues must be visible text near detail feedback
-	guidance and must name record-specific observations a tester can carry into the
-	manual checklist without requiring JavaScript or persisted feedback.
-	Reviewer detail checklist bridge cues must visibly point to the existing manual
-	feedback checklist and must not rely on JavaScript, color, a second checklist,
-	or persisted feedback state.
-	Queue-to-detail continuity cues must visibly tell testers to use the same
-	manual feedback checklist for queue observations and reviewer-detail
-	observations without requiring JavaScript or creating a second checklist.
-	First-run review session orientation must visibly tell testers where to start,
-	what order to follow, how facility lookup fills request context, how the queue
-	and reviewer detail fit together, how note/status observations refresh queue
-	cues, and that the single manual checklist remains copy-only and non-persistent.
-	This orientation must not require JavaScript or imply saved sessions, persisted
-	queue state, duplicate checklists, workflow-engine state, browser live fetch,
-	connector execution, or artifact building.
+	accessible reviewer-facing content for complaint identity, facility identity,
+	source narrative, compact timeline, finding/allegation summary, review-flag
+	badges, reviewer-created state/actions, saved confirmations, and focused
+	navigation with meaningful link/button text.
+	Reviewer-facing pages are not required to expose technical/source/debug/help
+	sections in the primary page to satisfy accessibility. Help, support,
+	operator, source traceability internals, source-derived value-check tables,
+	full field dumps, related source-bundle rows, connector metadata, hashes,
+	facility-context cues, first-run guidance, field-note guidance, feedback
+	checklist bridges, and issue-report instructions must be accessible where they
+	are exposed in Help, support/operator, developer/debug, packet, or feedback
+	surfaces, but they should not be forced onto reviewer detail solely for
+	accessibility coverage.
+	Reviewer note/status saved confirmations must expose concise visible return,
+	next-record, and unchanged-source-derived-record guidance with descriptive
+	links. Any copy-to-clipboard affordance must have an accessible name and must
+	not be the only way to read the copied value.
 - The local/test hosted CCLD record request page must use semantic headings,
 	labeled facility/license number and date controls, accessible validation
 	messages, labeled local validated load controls, table captions/headings for

@@ -1,6 +1,33 @@
 # Changelog
 
 ## Unreleased
+- Applied the Prompt 2 hosted UI contract across Request Records selected-context
+  and no-match recovery, Facility Hub, signal-only Facility summary, and
+  Facility Review Priority. Primary navigation now uses Home as the single
+  facility/start destination while `/ccld/facilities` remains available, task
+  actions use compact grouped buttons, user-facing Prompt 2 date ranges render
+  as MM/DD/YYYY, and operator/runtime details stay behind support disclosures.
+- Standardized hosted UI action groups for Home/Facility, Feedback, and Help:
+  Home now uses the Find a Facility start experience, key actions use compact
+  primary/secondary button grouping without list-item buttons, Feedback supports
+  broader feedback types with hidden page-path metadata, and Help remains a
+  short task-oriented user page with runtime notes kept secondary.
+- Tightened the screenshot-review pass for attorney-facing CCLD pages: reviewer
+  detail now hides the duplicate flag explainer and empty reviewer-history
+  table, Request Records/no-match support details are collapsed under
+  reviewer-oriented labels, facility lookup/hub details and optional planning
+  views are secondary to request actions, and Help now leads with reviewer
+  workflow topics while preserving runtime/source internals under support notes.
+- Corrected hosted reviewer detail tiering so the attorney-facing page no
+  longer renders source traceability internals, source-derived value-check
+  tables, full source field dumps, related source bundle rows,
+  technical/operator details, first-run/detail navigation dumps, field-note
+  guidance, or issue-report bridge copy. The page now emphasizes complaint and
+  facility identity, source narrative, compact timeline, finding/allegation
+  summary, review-flag badges, copy affordances, concise reviewer-created
+  note/status actions, and focused queue/next-record actions while preserving
+  source-derived records, traceability, reviewer-created persistence, audit,
+  retrieval, export, and runtime behavior.
 - Simplified the hosted attorney start, facility lookup, and Request Records flow
   so Home centers the review path, facility lookup result selection carries the
   facility/license number and name into Request Records with immediate date
@@ -10,7 +37,7 @@
 - Simplified hosted attorney-facing navigation by removing Job Status from the
   primary navigation, keeping job diagnostics available through support-oriented
   diagnostics pages and contextual Request Records links, and standardizing the
-  feedback entry label as "Report an issue" while preserving the GitHub-backed
+  feedback entry label as "Feedback" while preserving the GitHub-backed
   `/feedback` flow, safe context allowlist, request/queue/reviewer/detail
   routes, and retrieval/import behavior.
 - Added a numbered RecordsTracker UI/product improvement inventory for user
@@ -882,8 +909,9 @@
 	Projects, UI redesign, non-CCLD sources, direct browser crawling, statewide
 	crawling, and legal/completeness conclusions deferred.
 - Added server-side GitHub Issues tester feedback intake at `/feedback` with an
-	accessible form, exact feedback type options for bug reports, feature
-	requests, and new data sources, safe validation/unconfigured/success/failure
+	accessible form, exact feedback type options for bug/problem reports, feature
+	requests, data connector/source requests, wording/navigation feedback, and
+	other feedback, safe validation/unconfigured/success/failure
 	states, server-side `GITHUB_FEEDBACK_REPO` and `GITHUB_FEEDBACK_TOKEN`
 	configuration, label-based classification, mocked-client tests, and no local
 	feedback persistence, live GitHub calls in tests, token exposure, GitHub

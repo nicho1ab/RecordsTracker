@@ -34,6 +34,7 @@ Before making changes, read and follow:
 - Avoid project dependencies on optional paid platform features.
 - Do not introduce inaccessible user-facing output.
 - Do not make user-facing workflow, documentation, output, interface, or visual design changes without following `DESIGN_AND_USABILITY.md`.
+- Do not preserve outdated visible scaffold/helper/debug UI on reviewer-facing pages when the current RecordsTracker product-tier direction says to remove or move it. Update conflicting tests and docs instead, while preserving source traceability and operator/developer diagnostics in the appropriate tier.
 - Do not remove source traceability.
 - Do not delete raw source preservation behavior.
 - Do not store secrets in the repo.

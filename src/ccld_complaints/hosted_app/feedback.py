@@ -31,12 +31,11 @@ GITHUB_FEEDBACK_TOKEN_ENV = "GITHUB_FEEDBACK_TOKEN"
 GITHUB_FEEDBACK_DEFAULT_LABELS_ENV = "GITHUB_FEEDBACK_DEFAULT_LABELS"
 MAX_FEEDBACK_DESCRIPTION_LENGTH = 4000
 FEEDBACK_TYPE_OPTIONS = (
-    "Bug report",
+    "Bug/problem",
     "Feature request",
-    "Confusing page or workflow",
-    "Packet/export issue",
-    "Source/data concern",
-    "New data source request",
+    "Data connector/source request",
+    "Confusing wording/navigation",
+    "Other feedback",
 )
 ALLOWED_FEEDBACK_CONTEXT_PARAMETERS = (
     "feedback_type",
@@ -91,12 +90,11 @@ SAFE_RETRIEVAL_STATUSES = (
 )
 BASE_FEEDBACK_LABELS = ("user-feedback", "from-app", "needs-triage")
 TYPE_LABELS = {
-    "Bug report": "bug",
+    "Bug/problem": "bug",
     "Feature request": "feature-request",
-    "Confusing page or workflow": "workflow-confusion",
-    "Packet/export issue": "packet-export",
-    "Source/data concern": "source-data",
-    "New data source request": "data-source-request",
+    "Data connector/source request": "data-source-request",
+    "Confusing wording/navigation": "workflow-confusion",
+    "Other feedback": "general-feedback",
 }
 SECRET_MARKERS = (
     "authorization",
@@ -293,15 +291,18 @@ def render_feedback_page(
     if issue_starter:
         form_values["description"] = [issue_starter]
     return _page(
-                title="Report an issue",
-                heading="Report an issue",
+                title="Feedback",
+                heading="Feedback",
         main=f"""
         <section class="hero-card" aria-labelledby="feedback-purpose-heading">
             <p class="launch-kicker">Tester feedback</p>
-            <h2 id="feedback-purpose-heading">Report a review issue</h2>
-            <p>Choose the feedback type and describe what blocked Request Records, job diagnostics, record review, packet/readiness review, source/data review, wording, or keyboard flow.</p>
-            <p class="helper-text">Actionable tester feedback names the page or route, what you tried first, what you expected, what happened instead, and whether the issue blocked review.</p>
+            <h2 id="feedback-purpose-heading">Send RecordsTracker feedback</h2>
+            <p>Choose the feedback type and describe what blocked facility lookup, Request Records, record review, packet preparation, source/data review, wording, or keyboard flow.</p>
+            <p class="helper-text">Actionable tester feedback names the page or route, what you tried first, what you expected, what happened instead, and whether it blocked review.</p>
         </section>
+        {_feedback_form(form_values)}
+        {_feedback_issue_starter_panel(issue_starter)}
+        {_feedback_context_panel(handoff_context)}
         <section class="notice-card" aria-labelledby="actionable-feedback-heading">
             <h2 id="actionable-feedback-heading">What makes feedback actionable</h2>
             <ul>
@@ -311,18 +312,13 @@ def render_feedback_page(
             </ul>
             <p>Do not include raw source narrative, secrets, private URLs, provider claims, stack traces, server paths, legal conclusions, or source-completeness claims.</p>
         </section>
-        {_feedback_context_panel(handoff_context)}
-        <div class="support-layout">
-            {_feedback_issue_starter_panel(issue_starter)}
-            {_feedback_form(form_values)}
-        </div>
     {_configuration_notice(context.github_config)}
         <details class="technical-details">
             <summary>Useful feedback examples</summary>
             <ul>
                 <li>I was trying to request records from Request Records, but the job diagnostics notice did not make the next step clear. I expected to know whether to wait, retry, or review already-loaded records. The visible context showed the facility number and date range.</li>
                 <li>I was on the reviewer queue after applying the reviewer-status filter. The shown count and empty-state recovery action looked confusing. I expected a clear way back to the full loaded queue. The visible context showed the queue page and active filter.</li>
-                <li>I was reviewing a complaint detail page and checking source traceability before adding a note. A source-derived date looked wrong or incomplete, but the guidance did not make clear whether to add a cautious note or report an issue. The visible context showed the detail page and complaint/control identifier.</li>
+                <li>I was reviewing a complaint detail page and checking source traceability before adding a note. A source-derived date looked wrong or incomplete, but the guidance did not make clear whether to add a cautious note or send feedback. The visible context showed the detail page and complaint/control identifier.</li>
                 <li>I was preparing packet/readiness review and one prioritized record looked missing or unexpected in the packet content. I expected the packet cue to explain what to review next. The visible context showed the packet preview step and facility/date context.</li>
                 <li>I was using the first-time tester path from the task guide. The transition from facility lookup to Request Records and loaded records was confusing. I expected the page to show which workflow step came next. The visible context showed the entry-orientation step.</li>
             </ul>
@@ -437,7 +433,7 @@ def _feedback_issue_starter_panel(starter: str) -> str:
     if not starter:
         return ""
     return """    <section class="summary-card" aria-labelledby="feedback-starter-heading">
-      <h2 id="feedback-starter-heading">Suggested issue starter</h2>
+      <h2 id="feedback-starter-heading">Suggested feedback starter</h2>
       <p><strong>Edit this before submitting.</strong> This starter uses only safe handoff context from the screen you came from.</p>
       <p>Do not paste secrets, private URLs, stack traces, raw source narrative, or unrelated personal information.</p>
     </section>"""
@@ -491,7 +487,6 @@ def _feedback_context_rows(context: FeedbackHandoffContext | None) -> list[tuple
         return []
     fields = (
         ("Workflow area", context.workflow_area),
-        ("Page path", context.page_path),
         ("Facility/license number", context.facility_number),
         ("Start date", context.start_date),
         ("End date", context.end_date),
@@ -781,7 +776,6 @@ def _feedback_confirmation_summary(
 ) -> str:
     field_rows = [
         ("Feedback type", submission.feedback_type),
-        ("Submitted page path", submission.page_path or FEEDBACK_PATH),
         ("Description", submission.description),
     ]
     field_markup = "\n".join(
@@ -837,7 +831,6 @@ def _manual_feedback_summary(
     lines = [
         "RecordsTracker feedback",
         f"Type: {submission.feedback_type}",
-        f"Submitted page path: {submission.page_path or FEEDBACK_PATH}",
     ]
     if submitted_at is not None:
         lines.append(f"Prepared at: {submitted_at.isoformat()}")
@@ -914,7 +907,7 @@ def _feedback_form(form_values: Mapping[str, list[str]]) -> str:
         f"{escaped_description}</textarea>"
     )
     return f"""    <section aria-labelledby="feedback-form-heading">
-      <h2 id="feedback-form-heading">Report an issue</h2>
+      <h2 id="feedback-form-heading">Send feedback</h2>
       <form action="{FEEDBACK_PATH}" method="post">
         <div>
           <label for="feedback_type">Feedback type</label>
@@ -924,24 +917,22 @@ def _feedback_form(form_values: Mapping[str, list[str]]) -> str:
           </select>
           <p id="feedback-type-help" class="helper-text">Choose the category that best fits the route, action, loaded-context cue, packet/readiness cue, or keyboard step that was confusing.</p>
         </div>
-        <section class="notice-card" aria-labelledby="feedback-safety-heading">
-          <h3 id="feedback-safety-heading">Do not include private material</h3>
-          <p>Do not include private facts, credentials, legal strategy, privileged work product,
-          private URLs, secrets, tokens, provider claims, raw source narrative, raw artifact material,
-          server paths, connection details, or unrelated sensitive details.</p>
-        </section>
         <p>
           <label for="description">Description</label>
                     {textarea}
                     <span id="description-help">Describe the page, action, expected result, actual result, loaded-context cue, source traceability cue, packet/readiness concern, browser copy issue, or print issue without private material.</span>
         </p>
-        <p>
-          <label for="page_path">Submitted page path</label>
-          <input id="page_path" name="page_path" type="text" value="{html.escape(page_path)}" readonly aria-describedby="page-path-help">
-          <span id="page-path-help">This visible context is included with the feedback when submitted.</span>
-        </p>
+        <input id="page_path" name="page_path" type="hidden" value="{html.escape(page_path)}">
+        <section class="notice-card compact-guidance" aria-labelledby="feedback-safety-heading">
+          <h3 id="feedback-safety-heading">Do not include private material</h3>
+          <p>Leave out private facts, credentials, legal strategy, privileged work product,
+          private URLs, secrets, tokens, provider claims, raw narrative, raw artifacts,
+          server paths, connection details, and unrelated sensitive details.</p>
+        </section>
         {context_inputs}
-        <p><button type="submit">Submit issue report</button></p>
+        <div class="action-group" aria-label="Feedback form actions">
+          <button type="submit">Submit feedback</button>
+        </div>
       </form>
     </section>"""
 
