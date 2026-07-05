@@ -47,6 +47,7 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CcldFacilityReviewContext,
     CcldReviewNextRecommendation,
     facility_reference_from_source_derived_records,
+    render_ccld_facility_lookup_page,
     route_ccld_facility_lookup_response,
     route_ccld_facility_lookup_response_with_source,
 )
@@ -74,7 +75,6 @@ from ccld_complaints.hosted_app.feedback import (
     FEEDBACK_PATH,
     FeedbackContext,
     GitHubRestIssueClient,
-    feedback_href,
     load_github_feedback_config,
     route_feedback_response,
 )
@@ -105,7 +105,6 @@ from ccld_complaints.hosted_app.reviewer_created_state_routes import (
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
     REVIEWER_UI_DETAIL_PATH,
-    REVIEWER_UI_PACKET_PREVIEW_PATH,
     REVIEWER_UI_PREFIX,
     REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH,
     ReviewerUiContext,
@@ -768,69 +767,7 @@ def render_related_facility_context(record: SampleSourceRecord) -> str:
 
 
 def render_app_shell() -> str:
-        entry_feedback_href = feedback_href(
-                feedback_type="Bug report",
-                workflow_area="entry-orientation",
-                page_path="/",
-                prompt="Describe what was confusing about starting the attorney review path.",
-        )
-        return render_page_shell(
-                title=APP_NAME,
-                heading="Start a Facility Complaint Review",
-                skip_label="Skip to main CCLD review content",
-                nav_label="CCLD records review navigation",
-                eyebrow="Attorney public-record review workspace.",
-                active_path="/",
-                step_id="start",
-                extra_nav_links=(),
-                main=f"""    <section id="start" class="hero-card attorney-hero" aria-labelledby="start-heading">
-            <div>
-                <p class="launch-kicker">Attorney review start</p>
-                <h2 id="start-heading">Start a Facility Complaint Review</h2>
-                <p class="launch-value">Find the facility, choose dates, open already-loaded complaint records or submit a controlled Request Records job, then review records and prepare packet context.</p>
-                <p class="helper-text">Review aids only: check source traceability before relying on source-derived values. Loaded records are not a public-source completeness conclusion.</p>
-            </div>
-            <div class="attorney-hero-actions" aria-label="Primary actions">
-                <a class="button button-large" href="{CCLD_FACILITY_LOOKUP_PATH}">Start with facility lookup</a>
-                <a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Request Records</a>
-            </div>
-        </section>
-        <section aria-labelledby="start-choice-heading">
-            <h2 id="start-choice-heading">Start here</h2>
-            <div class="card-grid">
-                <article class="summary-card">
-                    <h3>Find the facility</h3>
-                    <p>Use lookup when you know a name, city, county, ZIP, facility type, or other public directory detail.</p>
-                    <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Open facility lookup</a></p>
-                </article>
-                <article class="summary-card">
-                    <h3>Choose dates and records</h3>
-                    <p>Use Request Records when you already have the digit facility/license number, or after selecting a lookup result.</p>
-                    <p><a href="{CCLD_RECORD_REQUEST_PATH}">Open Request Records</a></p>
-                </article>
-                <article class="summary-card">
-                    <h3>Open the review queue</h3>
-                    <p>Open already-loaded records from Request Records, then use reviewer detail before notes, statuses, packet context, or feedback.</p>
-                    <p><a href="{REVIEWER_UI_PREFIX}">Open review queue</a></p>
-                </article>
-            </div>
-        </section>
-        <section aria-labelledby="next-actions-heading">
-            <h2 id="next-actions-heading">After records are loaded</h2>
-            <div class="card-grid">
-                <article class="summary-card">
-                    <h3>Packet and readiness</h3>
-                    <p>Use packet preview and the readiness checklist only after the facility/date context and record detail review are clear.</p>
-                    <p><a href="{REVIEWER_UI_PACKET_PREVIEW_PATH}">Open packet preview</a></p>
-                </article>
-                <article class="summary-card">
-                    <h3>Report an issue</h3>
-                    <p>Send safe context when facility lookup, date range, loaded queue, source traceability, wording, or keyboard flow blocks review.</p>
-                    <p><a href="{entry_feedback_href}">Report an issue</a></p>
-                </article>
-            </div>
-        </section>"""
-        )
+        return render_ccld_facility_lookup_page(active_path="/")
 
 
 def render_source_record_list(filters: SourceRecordFilters | None = None) -> str:

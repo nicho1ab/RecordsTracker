@@ -276,7 +276,7 @@ function Test-RouteOrientationMarker {
     param([hashtable]$Route, [string]$Html)
     $name = [string]$Route.Name
     $markersByRoute = @{
-        "home" = @("Start a Facility Complaint Review", "Start here")
+        "home" = @("Find a Facility", "Find the facility/license number")
         "facility" = @("Find a facility", "Find the facility/license number")
         "facility-priority" = @("Facility review priority", "Facilities grouped by review cue priority")
         "facility-intelligence" = @("Facility review intelligence", "Facilities by review-priority indicator")
@@ -289,7 +289,7 @@ function Test-RouteOrientationMarker {
         "packet-preview-context" = @("Review packet preview", "Packet preparation preview")
         "packet-draft-empty" = @("Attorney Review Packet Draft", "No facility/date packet context was supplied.")
         "packet-draft-context" = @("Attorney Review Packet Draft", "Packet scope")
-        "feedback" = @("Report an issue", "Report a review issue")
+        "feedback" = @("Feedback", "Send RecordsTracker feedback")
         "help" = @("Help", "Use RecordsTracker for facility complaint review")
         "job-detail" = @("Job diagnostics detail", "Request job summary and next step")
         "reviewer-detail" = @("Complaint review", "Complaint overview")

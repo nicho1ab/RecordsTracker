@@ -18,7 +18,11 @@ from ccld_complaints.hosted_app.facility_review_signals import (
     FacilityReviewSignalsSummary,
     load_active_facility_review_signals,
 )
-from ccld_complaints.hosted_app.ui_shell import render_page_shell
+from ccld_complaints.hosted_app.ui_shell import (
+    ActionItem,
+    render_action_group,
+    render_page_shell,
+)
 
 CCLD_FACILITY_LOOKUP_PATH = "/ccld/facilities"
 CCLD_FACILITY_SUGGESTIONS_PATH = f"{CCLD_FACILITY_LOOKUP_PATH}/suggestions"
@@ -31,7 +35,6 @@ REVIEWER_UI_DETAIL_PATH = f"{REVIEWER_UI_RECORDS_PATH}/detail"
 REVIEWER_UI_MATRIX_EXPORT_PATH = "/reviewer/records/matrix.csv"
 REVIEWER_UI_PACKET_PREVIEW_PATH = "/reviewer/packet/preview"
 REVIEWER_UI_PACKET_DRAFT_PATH = "/reviewer/packet/draft"
-PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER = "434417302"
 DEFAULT_CCLD_FACILITY_REFERENCE_PATH = Path(
     "tests/fixtures/public_source_facilities/ccld_program_facilities_tiny.csv"
 )
@@ -524,6 +527,7 @@ def render_ccld_facility_lookup_page(
     query: str = "",
     reference_source: CcldFacilityReferenceSource | None = None,
     lookup_result: CcldFacilityLookupResult | None = None,
+    active_path: str = CCLD_FACILITY_LOOKUP_PATH,
 ) -> str:
     reference_source = reference_source or load_active_ccld_facility_reference()
     result = lookup_result or search_ccld_facilities(
@@ -543,7 +547,7 @@ def render_ccld_facility_lookup_page(
       <h2 id="facility-manual-entry-primary-heading">Enter a facility/license number directly</h2>
       <p>Facility directory lookup is not configured. Enter a known CCLD facility/license number on Request Records.</p>
       <p>Use manual entry when lookup is unavailable; complaint record requests still start from Request Records.</p>
-      <p><a class="button" href="{CCLD_RECORD_REQUEST_PATH}">Open Request Records</a></p>
+      {render_action_group(primary=ActionItem("Open Request Records", CCLD_RECORD_REQUEST_PATH), aria_label="Known facility number actions")}
     </section>"""
         lookup_section_label = "Facility directory search (not configured)"
         lookup_section_intro = f"""    <section class="quiet-section" aria-labelledby="facility-start-guidance-heading">
@@ -557,18 +561,29 @@ def render_ccld_facility_lookup_page(
             "then carry that selected facility into the request page to choose a complaint date range."
         )
         primary_action_section = ""
-        lookup_section_intro = f"""    <section class="quiet-section" aria-labelledby="facility-start-guidance-heading">
-      <h2 id="facility-start-guidance-heading">Facility lookup start</h2>
-            <p>Try a preloaded facility-directory example: <a href="{_escape(_facility_hub_href(PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER))}">open facility review hub for known loaded facility {PRELOADED_FACILITY_DIRECTORY_EXAMPLE_NUMBER}</a>.</p>
-    </section>"""
+        lookup_section_intro = ""
+    optional_planning_actions = render_action_group(
+        secondary=(
+            ActionItem(
+                "Facility review priority list",
+                CCLD_FACILITY_REVIEW_PRIORITY_PATH,
+            ),
+            ActionItem(
+                "Facility review intelligence",
+                CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+            ),
+        ),
+        aria_label="Optional planning view actions",
+    )
     manual_entry_section = "" if lookup_unavailable else f"""    <details class="technical-details">
       <summary id="manual-entry-heading">Enter a facility/license number directly</summary>
       <p>If you already know the CCLD facility/license number, type it on Request Records.</p>
-      <p><a class="button-quiet" href="{CCLD_RECORD_REQUEST_PATH}">Open Request Records</a></p>
+      {render_action_group(secondary=(ActionItem("Open Request Records", CCLD_RECORD_REQUEST_PATH),), aria_label="Manual entry actions")}
     </details>"""
     return _page(
-        title="Find CCLD facility",
-        heading="Find a facility",
+        title="Find a Facility",
+        heading="Find a Facility",
+        active_path=active_path,
         main=f"""    <section class="hero-card attorney-hero" aria-labelledby="facility-lookup-scope-heading">
       <div>
         <p class="launch-kicker">Facility intake</p>
@@ -581,12 +596,11 @@ def render_ccld_facility_lookup_page(
     {_render_facility_combobox_section(reference_source, query, limited_note)}
     {_render_lookup_results(result)}
         <section class="quiet-section" aria-labelledby="facility-priority-link-heading">
-            <h2 id="facility-priority-link-heading">Optional: review-priority and intelligence</h2>
+            <h2 id="facility-priority-link-heading">Optional planning views</h2>
             <p>These views require uploaded public summary CSVs. They are not required for Request Records or review.</p>
             <details>
-                <summary>Open optional review-priority or intelligence views</summary>
-                <p><a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}">Facility review priority list</a></p>
-                <p><a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">Facility review intelligence</a></p>
+                <summary>Open optional planning views</summary>
+                {optional_planning_actions}
             </details>
         </section>
     {_render_reference_details_section(reference_source)}
@@ -626,6 +640,44 @@ def render_ccld_facility_review_hub_page(
     duplicate_note = ""
     if len(matching_records) > 1:
         duplicate_note = f"""      <p class="helper-text">This directory has {len(matching_records)} distinct rows with this facility number. The hub shows the first deterministic directory row for review navigation only.</p>"""
+    if not review_context.has_loaded_context:
+        return _page(
+            title=f"Facility review hub {record.facility_number}",
+            heading="Facility review hub",
+            main=f"""    <section class="hero-card attorney-hero" aria-labelledby="facility-hub-heading">
+      <div>
+        <p class="launch-kicker">Facility-directory context</p>
+        <h2 id="facility-hub-heading">{_escape(record.facility_name)}</h2>
+        <p class="launch-value">No complaint records loaded for this facility. Choose a date range to request or show complaint records.</p>
+        <dl class="summary-list">
+          <dt>Facility/license number</dt>
+          <dd>{_escape(record.facility_number)}</dd>
+          <dt>Facility type</dt>
+          <dd>{_escape(_display_value(record.facility_type))}</dd>
+          <dt>Location</dt>
+          <dd>{_escape(_display_value(_display_location(record)))}</dd>
+          <dt>Status</dt>
+          <dd>{_escape(_display_value(_display_facility_status_code(record.status)))}</dd>
+        </dl>
+      </div>
+    </section>
+    {_render_facility_hub_review_context(record, review_context)}
+    {_render_facility_hub_actions(record, review_context)}
+    <details class="technical-details dense-table-details" id="facility-directory-review-details">
+      <summary>Directory and planning details</summary>
+      <section aria-labelledby="facility-directory-details-heading">
+        <h2 id="facility-directory-details-heading">Facility-directory details</h2>
+        <p>These fields come from the active preloaded facility directory. Complaint records are requested and reviewed separately. Open source links from record detail when a source check is needed.</p>
+{duplicate_note}
+        {_render_facility_directory_details(record, concise_labels=True)}
+      </section>
+      {_render_facility_pattern_review_summary(record, review_context, signals_summary)}
+      {_render_review_next_section(review_context)}
+      {_render_packet_readiness_section(record, review_context)}
+      {_render_facility_review_signals_section(record, signals_summary)}
+    </details>
+    """,
+        )
     return _page(
         title=f"Facility review hub {record.facility_number}",
         heading="Facility review hub",
@@ -633,7 +685,7 @@ def render_ccld_facility_review_hub_page(
       <div>
         <p class="launch-kicker">Facility-directory context</p>
         <h2 id="facility-hub-heading">{_escape(record.facility_name)}</h2>
-        <p class="launch-value">Use this facility-centered hub to move from directory discovery into the existing complaint request and review routes for facility {_escape(record.facility_number)}.</p>
+        <p class="launch-value">Open loaded records or start a new complaint request for this facility.</p>
         <dl class="summary-list">
           <dt>Facility/license number</dt>
           <dd>{_escape(record.facility_number)}</dd>
@@ -658,11 +710,7 @@ def render_ccld_facility_review_hub_page(
     {_render_facility_review_signals_section(record, signals_summary)}
     {_render_facility_hub_review_context(record, review_context)}
     {_render_facility_hub_actions(record, review_context)}
-    <section aria-labelledby="facility-hub-review-actions-heading">
-      <h2 id="facility-hub-review-actions-heading">Facility hub review actions</h2>
-      <p>Use this hub to start a complaint request, open loaded review records, prepare a packet, or return to lookup.</p>
-      <p>Opening this page leaves source-derived records and reviewer-created notes/statuses unchanged.</p>
-    </section>""",
+    """,
     )
 
 
@@ -673,33 +721,73 @@ def _render_signal_only_facility_hub_page(
 ) -> str:
     record = _facility_record_from_signal_summary(summary)
     facility_label = _safe_priority_text(summary.facility_name or summary.facility_number)
-    return _page(
-    title=f"Signal-only facility hub {summary.facility_number}",
-    heading="Facility review hub",
-    main=f"""    <section class="hero-card attorney-hero" aria-labelledby="signal-only-facility-hub-heading">
+    if not review_context.has_loaded_context:
+        return _page(
+            title=f"Facility summary {summary.facility_number}",
+            heading="Facility summary",
+            main=f"""    <section class="hero-card attorney-hero" aria-labelledby="signal-only-facility-hub-heading">
             <div>
-                <p class="launch-kicker">signal-only facility hub</p>
+                <p class="launch-kicker">Facility summary</p>
                 <h2 id="signal-only-facility-hub-heading">{_escape(facility_label)}</h2>
-                <p class="launch-value">Facility-directory record not available. Showing uploaded public summary fields for facility {_escape(summary.facility_number)}.</p>
+                <p class="launch-value">Facility-directory record not available. Uploaded summary signals are available for facility {_escape(summary.facility_number)}.</p>
             </div>
         </section>
         <section aria-labelledby="signal-only-context-heading">
             <h2 id="signal-only-context-heading">Facility-directory record not available</h2>
-            <p>Showing uploaded public summary fields because the active preloaded facility-directory data does not currently include this facility number.</p>
-            <p>Use the uploaded summary fields to decide whether to start a complaint request, then review complaint records separately.</p>
+            <p>Uploaded summary signals exist. Start a complaint request before drawing conclusions from complaint activity.</p>
         </section>
-        {_render_facility_pattern_review_summary(record, review_context, summary)}
-        {_render_review_next_section(review_context)}
-        {_render_packet_readiness_section(record, review_context)}
-        {_render_facility_review_signals_section(record, summary)}
+        {_render_signal_only_summary_cards(summary, review_context)}
         {_render_facility_hub_review_context(record, review_context)}
         {_render_facility_hub_actions(record, review_context)}
-        <section aria-labelledby="signal-only-actions-heading">
-            <h2 id="signal-only-actions-heading">Signal-only hub actions</h2>
-            <p>Opening this page keeps source-derived records and reviewer-created notes/statuses unchanged.</p>
-            <p>Use the request links when this facility/date context is ready for complaint review.</p>
-        </section>""",
+        <details class="technical-details dense-table-details" id="signal-only-planning-details">
+            <summary>Facility details</summary>
+            {_render_facility_pattern_review_summary(record, review_context, summary)}
+            {_render_review_next_section(review_context)}
+            {_render_packet_readiness_section(record, review_context)}
+            {_render_facility_review_signals_section(record, summary)}
+        </details>
+        """,
+        )
+    return _page(
+    title=f"Facility summary {summary.facility_number}",
+    heading="Facility summary",
+    main=f"""    <section class="hero-card attorney-hero" aria-labelledby="signal-only-facility-hub-heading">
+            <div>
+                <p class="launch-kicker">Facility summary</p>
+                <h2 id="signal-only-facility-hub-heading">{_escape(facility_label)}</h2>
+                <p class="launch-value">Facility-directory record not available. Uploaded summary signals and loaded complaint records are available for facility {_escape(summary.facility_number)}.</p>
+            </div>
+        </section>
+        <section aria-labelledby="signal-only-context-heading">
+            <h2 id="signal-only-context-heading">Facility-directory record not available</h2>
+            <p>Uploaded summary signals exist. Review loaded complaint records separately from directory lookup.</p>
+        </section>
+        {_render_signal_only_summary_cards(summary, review_context)}
+        {_render_facility_hub_review_context(record, review_context)}
+        {_render_facility_hub_actions(record, review_context)}
+        <details class="technical-details dense-table-details" id="signal-only-planning-details">
+            <summary>Facility details</summary>
+            {_render_facility_pattern_review_summary(record, review_context, summary)}
+            {_render_review_next_section(review_context)}
+            {_render_packet_readiness_section(record, review_context)}
+            {_render_facility_review_signals_section(record, summary)}
+        </details>""",
     )
+
+
+def _render_signal_only_summary_cards(
+    summary: FacilityReviewSignalsSummary,
+    review_context: CcldFacilityReviewContext,
+) -> str:
+    last_activity = _display_date(summary.last_visit_date) if summary.last_visit_date else "not listed"
+    return f"""        <section aria-labelledby="signal-only-summary-cards-heading">
+            <h2 id="signal-only-summary-cards-heading">Summary</h2>
+            <div class="dense-fact-row" aria-label="Facility summary signals">
+                <div class="stat-card"><strong>{review_context.loaded_complaint_record_count}</strong><span>Loaded complaint records</span></div>
+                <div class="stat-card"><strong>{len(_priority_cues(summary))}</strong><span>Review flags</span></div>
+                <div class="stat-card"><strong>{_escape(last_activity)}</strong><span>Last activity</span></div>
+            </div>
+        </section>"""
 
 
 def _facility_record_from_signal_summary(
@@ -725,26 +813,31 @@ def render_ccld_facility_review_priority_page(
 ) -> str:
         query_values = query_values or {}
         signal_result = load_active_facility_review_signals()
-        cue_filter = _first_query_value(query_values, "cue")
-        summaries = _filtered_priority_summaries(signal_result.summaries, cue_filter)
+        cue_filters = _selected_priority_cues(query_values)
+        search_query = _priority_search_query(query_values)
+        summaries = _searched_priority_summaries(
+            _filtered_priority_summaries(signal_result.summaries, cue_filters),
+            search_query,
+        )
         returned_summaries = summaries[:MAX_FACILITY_PRIORITY_RESULTS]
         rows = "\n".join(_render_priority_row(summary) for summary in returned_summaries)
         if not rows:
-                rows = _render_priority_empty_rows(cue_filter)
+                rows = _render_priority_empty_rows(cue_filters)
+        cards = _render_priority_cards(signal_result, cue_filters, search_query)
         return _page(
                 title="Facility review priority",
                 heading="Facility review priority",
                 main=f"""    <section class="hero-card attorney-hero" aria-labelledby="facility-priority-heading">
             <div>
                 <p class="launch-kicker">Facility review priority</p>
-                <h2 id="facility-priority-heading">Which facilities should I review first?</h2>
-                <p class="launch-value">Use transparent review cue groups from uploaded public summary fields to choose which facility review hub to open next.</p>
+                <h2 id="facility-priority-heading">Find facilities with review cues.</h2>
             </div>
         </section>
-        {_render_priority_filter(cue_filter)}
+        {_render_priority_filter(cue_filters, search_query)}
         {_render_priority_summary(signal_result, summaries, returned_summaries)}
+        {cards}
         <section aria-labelledby="facility-priority-list-heading">
-            <h2 id="facility-priority-list-heading">Facilities grouped by review cue priority</h2>
+            <h2 id="facility-priority-list-heading">Detailed priority table</h2>
             <table>
                 <caption>Facility review priority from uploaded public summary fields</caption>
                 <thead>
@@ -1056,7 +1149,7 @@ def _facility_context_label(
 ) -> str:
     if any(record.facility_number == facility_number for record in reference_source.records):
         return "directory-backed facility hub available"
-    return "signal-only facility hub when summary signals are available"
+    return "facility summary when uploaded summary signals are available"
 
 
 def _max_int(values: tuple[str, ...]) -> int:
@@ -1361,7 +1454,7 @@ def _render_facility_combobox_section(
                         value="{_escape(current_query)}">
                     <ul id="facility-suggestion-list" class="facility-suggestions" aria-label="Facility suggestions" hidden></ul>
                 </div>
-                <div class="form-actions">
+                <div class="form-actions action-group" aria-label="Facility search actions">
                     <button type="submit">Search CCLD facilities</button>
                 </div>
             </form>
@@ -1403,7 +1496,7 @@ def _render_facility_combobox_section_unavailable(
                         aria-describedby="facility-search-hint"
                         value="{_escape(current_query)}">
                 </div>
-                <div class="form-actions">
+                <div class="form-actions action-group" aria-label="Facility search actions">
                     <button type="submit" class="button-secondary">Search facility directory</button>
                 </div>
             </form>
@@ -1414,7 +1507,7 @@ def _render_facility_combobox_section_unavailable(
 def _render_facility_selected_card_html(*, mode: str = "facility") -> str:
     """Render the hidden selected-facility confirmation card filled by JS."""
     if mode == "request":
-        actions = """<div class="form-actions">
+        actions = """<div class="form-actions action-group" aria-label="Selected facility actions">
                     <button type="submit" class="button">Confirm facility</button>
                     <button type="button" id="facility-change-btn" class="button-secondary">Change selected facility</button>
                 </div>"""
@@ -1434,7 +1527,7 @@ def _render_facility_selected_card_html(*, mode: str = "facility") -> str:
                         </p>
                     </div>
                     <p id="selected-facility-date-help" class="helper-text">Choose dates now, or leave them blank and set the date range on Request Records.</p>
-                    <div class="form-actions">
+                    <div class="form-actions action-group" aria-label="Selected facility actions">
                         <button type="submit" class="button">Continue to Request Records</button>
                         <button type="button" id="facility-change-btn" class="button-secondary">Change selected facility</button>
                     </div>
@@ -1512,7 +1605,7 @@ def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
         <p>No facility-directory results matched <strong>{_escape(result.query)}</strong>.</p>
         <p>Try a shorter name, license number, city, county, ZIP, facility type, or program type. You can also enter
       a facility/license number directly on Request Records.</p>
-    <p><a class="button-quiet" href="{CCLD_RECORD_REQUEST_PATH}">Open Request Records</a></p>
+    {render_action_group(secondary=(ActionItem("Open Request Records", CCLD_RECORD_REQUEST_PATH),), aria_label="No-match recovery actions")}
     </section>"""
     cards = "\n".join(
         _render_result_card(record, index=index)
@@ -1541,10 +1634,23 @@ def _render_result_card(record: CcldFacilityLookupRecord, *, index: int) -> str:
         return f"""        <article class="result-card" aria-labelledby="{heading_id}">
                     <div>
                         <h3 id="{heading_id}">{_escape(record.facility_name)}</h3>
-                        {_render_facility_directory_details(record)}
+                        <dl class="summary-list">
+                            <dt>Facility/license number</dt>
+                            <dd>{_escape(record.facility_number)}</dd>
+                            <dt>Facility type</dt>
+                            <dd>{_escape(_display_value(record.facility_type))}</dd>
+                            <dt>Location</dt>
+                            <dd>{_escape(_display_value(_display_location(record)))}</dd>
+                            <dt>Status</dt>
+                            <dd>{_escape(_display_value(_display_facility_status_code(record.status)))}</dd>
+                        </dl>
+                        <details class="secondary-actions reference-details-section">
+                            <summary>Directory details</summary>
+                            {_render_facility_directory_details(record)}
+                        </details>
                     </div>
-                    <div class="form-actions" aria-label="Actions for facility {_escape(record.facility_number)}">
-                        <a class="button" href="{_escape(request_href)}" aria-label="Use facility {_escape(record.facility_number)} ({_escape(record.facility_name)}) in Request Records">Use this facility in Request Records</a>
+                    <div class="form-actions action-group" aria-label="Actions for facility {_escape(record.facility_number)}">
+                        <a class="button" href="{_escape(request_href)}" aria-label="Use facility {_escape(record.facility_number)} ({_escape(record.facility_name)}) in Request Records">Continue to Request Records</a>
                         <details class="secondary-actions">
                             <summary>More actions</summary>
                             <p><a href="{_escape(hub_href)}" aria-label="Open facility review hub for {_escape(record.facility_number)} ({_escape(record.facility_name)})">Open facility hub when loaded context is available</a></p>
@@ -1603,17 +1709,15 @@ def _render_facility_hub_not_found(facility_number: str) -> str:
         searched = facility_number if facility_number else "not provided"
         request_link = ""
         if facility_number.isdigit():
-                request_link = f"""        <li><a href="{_escape(_facility_request_href_for_values(facility_number=facility_number))}">Start complaint request for facility { _escape(facility_number) }</a></li>"""
+                request_link = f"""        <a class="button button-secondary" href="{_escape(_facility_request_href_for_values(facility_number=facility_number))}">Start complaint request</a>"""
         return f"""    <section class="empty-state-card" aria-labelledby="facility-hub-not-found-heading">
             <h2 id="facility-hub-not-found-heading">Facility-directory result not found</h2>
             <p>No active preloaded facility-directory row matched facility number <strong>{_escape(searched)}</strong>.</p>
             <p>Try a different search, enter the facility/license number directly, or report an issue if the lookup result is confusing.</p>
-            <nav aria-label="Facility hub recovery actions">
-                <ul>
-                    <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Return to facility lookup</a></li>
-{request_link}
-                </ul>
-            </nav>
+            <div class="action-group" aria-label="Facility hub recovery actions">
+                <a class="button" href="{CCLD_FACILITY_LOOKUP_PATH}">Back to search</a>
+                {request_link}
+            </div>
         </section>"""
 
 
@@ -1622,10 +1726,10 @@ def _render_facility_hub_review_context(
         review_context: CcldFacilityReviewContext,
 ) -> str:
         if not review_context.has_loaded_context:
-                return f"""    <section class="empty-state-card" aria-labelledby="facility-hub-context-heading">
+                return """    <section class="empty-state-card" aria-labelledby="facility-hub-context-heading">
             <h2 id="facility-hub-context-heading">Complaint review context</h2>
-            <p>No complaint context is currently available for facility {_escape(record.facility_number)} in the loaded review data.</p>
-            <p>Date range is needed before the review queue, packet preview, or packet draft can be scoped for this facility. Start a complaint request to choose dates or retrieve records through the existing controlled workflow.</p>
+            <p>No complaint records loaded for this facility.</p>
+            <p>Choose a date range to request or show complaint records.</p>
         </section>"""
         date_text = _hub_date_context_text(review_context)
         return f"""    <section aria-labelledby="facility-hub-context-heading">
@@ -1637,7 +1741,7 @@ def _render_facility_hub_review_context(
                 <dt>Known date context</dt>
                 <dd>{_escape(date_text)}</dd>
             </dl>
-            <p>Use this navigation context to open the complaint request, loaded records, packet preview, or Report an issue route that matches this facility/date review.</p>
+            <p>Use this context to open loaded records or start a new complaint request.</p>
         </section>"""
 
 
@@ -1676,7 +1780,7 @@ def _render_facility_pattern_review_summary(
             </div>
             <dl class="summary-list">
                 <dt>Recent complaint/report/visit activity in loaded records</dt>
-                <dd>{_escape(_display_value(review_context.recent_activity_date))}</dd>
+                <dd>{_escape(_display_date(review_context.recent_activity_date) if review_context.recent_activity_date else _display_value(review_context.recent_activity_date))}</dd>
                 <dt>Finding counts in loaded records</dt>
                 <dd>
                     <ul class="flag-list">
@@ -1739,7 +1843,7 @@ def _render_review_next_item(
                         <dt>Finding/status cue</dt>
                         <dd>{_escape(_display_value(item.finding_status_cue))}</dd>
                         <dt>Date shown</dt>
-                        <dd>{_escape(_display_value(item.date_label))}</dd>
+                        <dd>{_escape(_display_date(item.date_label) if item.date_label else _display_value(item.date_label))}</dd>
                         <dt>Why suggested</dt>
                         <dd>
                             <ul class="flag-list">
@@ -1825,7 +1929,7 @@ def _packet_readiness_query(
 
 def _packet_readiness_date_text(review_context: CcldFacilityReviewContext) -> str:
         if review_context.has_date_context:
-                return f" from {review_context.start_date} to {review_context.end_date}"
+                return f" from {_display_date(review_context.start_date)} to {_display_date(review_context.end_date)}"
         return " without a bounded date range"
 
 
@@ -1858,7 +1962,7 @@ def _render_facility_review_signals_section(
             <p>This empty state does not mean the facility has no complaints, visits, citations, POC dates, or public-source records. Start a complaint request or return to facility lookup when you need a different facility context.</p>
         </section>"""
         cues = "\n".join(
-                f"        <li>{_escape(cue)} review cue</li>" for cue in summary.review_cues
+                f"        <li>{_escape(_priority_filter_label(cue))}</li>" for cue in summary.review_cues
         )
         if not cues:
                 cues = "        <li>No supported uploaded public summary review cue is present for this facility.</li>"
@@ -1868,7 +1972,7 @@ def _render_facility_review_signals_section(
                 <div class="stat-card"><strong>{summary.complaint_visit_count}</strong><span>Complaint visits</span></div>
                 <div class="stat-card"><strong>{summary.citation_count}</strong><span>Citation values</span></div>
                 <div class="stat-card"><strong>{summary.poc_date_count}</strong><span>POC dates</span></div>
-                <div class="stat-card"><strong>{_escape(_display_value(summary.last_visit_date))}</strong><span>Last visit date</span></div>
+                <div class="stat-card"><strong>{_escape(_display_date(summary.last_visit_date) if summary.last_visit_date else _display_value(summary.last_visit_date))}</strong><span>Last visit date</span></div>
             </div>
             <details class="technical-details dense-table-details">
                 <summary>Uploaded summary field details</summary>
@@ -1884,11 +1988,11 @@ def _render_facility_review_signals_section(
                 <dt>County / regional office in uploaded summary</dt>
                 <dd>{_escape(_display_joined_parts((_display_tuple(summary.counties), _display_tuple(summary.regional_offices))))}</dd>
                 <dt>License first date in uploaded summary</dt>
-                <dd>{_escape(_display_tuple(summary.license_first_dates))}</dd>
+                <dd>{_escape(_display_date_tuple(summary.license_first_dates))}</dd>
                 <dt>Closed date in uploaded summary</dt>
-                <dd>{_escape(_display_tuple(summary.closed_dates))}</dd>
+                <dd>{_escape(_display_date_tuple(summary.closed_dates))}</dd>
                 <dt>Last visit date in uploaded summary</dt>
-                <dd>{_escape(_display_value(summary.last_visit_date))}</dd>
+                <dd>{_escape(_display_date(summary.last_visit_date) if summary.last_visit_date else _display_value(summary.last_visit_date))}</dd>
                 <dt>Visit activity in uploaded summary</dt>
                 <dd>{summary.total_visit_count} total; {summary.inspection_visit_count} inspection; {summary.complaint_visit_count} complaint; {summary.other_visit_count} other</dd>
                 <dt>Citation indicators in uploaded summary</dt>
@@ -1904,7 +2008,7 @@ def _render_facility_review_signals_section(
                 </ul>
                 <p>Use these cues to decide whether to start a complaint request, review loaded records where available, or return to facility lookup. Review source traceability before relying on summary fields.</p>
             </section>
-            <details class="technical-details diagnostic-details">
+            <details class="technical-details dense-table-details">
                 <summary>How to use these signals</summary>
                 <p>These facility review signals come from uploaded public summary fields in supported public licensing/visit/citation summary CSVs; complaint records are requested/reviewed separately.</p>
                 <p>Use signals to choose the next review route, then check source traceability before relying on summary fields.</p>
@@ -1922,7 +2026,7 @@ def _pattern_summary_signal_text(
                 f"{signals_summary.complaint_visit_count} complaint visit(s), "
                 f"{signals_summary.citation_count} citation value(s), "
                 f"{signals_summary.poc_date_count} POC date(s), and last visit "
-                f"{_escape(_display_value(signals_summary.last_visit_date))}.</p>"
+                f"{_escape(_display_date(signals_summary.last_visit_date) if signals_summary.last_visit_date else _display_value(signals_summary.last_visit_date))}.</p>"
         )
 
 
@@ -1934,7 +2038,7 @@ def _pattern_summary_signal_metrics(
         return f"""                <dt>Uploaded public summary citation/POC indicators</dt>
                 <dd>{signals_summary.type_a_citation_count} Type A value(s); {signals_summary.type_b_citation_count} Type B value(s); {signals_summary.poc_date_count} POC date(s)</dd>
                 <dt>Uploaded public summary visit activity</dt>
-                <dd>{signals_summary.complaint_visit_count} complaint visit(s); last visit {_escape(_display_value(signals_summary.last_visit_date))}</dd>"""
+                <dd>{signals_summary.complaint_visit_count} complaint visit(s); last visit {_escape(_display_date(signals_summary.last_visit_date) if signals_summary.last_visit_date else _display_value(signals_summary.last_visit_date))}</dd>"""
 
 
 def _render_pattern_summary_finding_items(
@@ -1984,12 +2088,46 @@ _PRIORITY_CUE_ORDER = (
 
 def _filtered_priority_summaries(
     summaries: tuple[FacilityReviewSignalsSummary, ...],
-    cue_filter: str,
+    cue_filters: tuple[str, ...],
 ) -> tuple[FacilityReviewSignalsSummary, ...]:
     ordered = tuple(sorted(summaries, key=_priority_sort_key))
-    if not cue_filter or cue_filter == "all":
+    active_filters = tuple(cue for cue in cue_filters if cue and cue != "all")
+    if not active_filters:
         return ordered
-    return tuple(summary for summary in ordered if cue_filter in _priority_cues(summary))
+    return tuple(
+        summary
+        for summary in ordered
+        if any(cue in _priority_cues(summary) for cue in active_filters)
+    )
+
+
+def _selected_priority_cues(query_values: Mapping[str, list[str]]) -> tuple[str, ...]:
+    selected = tuple(
+        cue
+        for cue in query_values.get("cue", [])
+        if cue == "all" or cue in _PRIORITY_CUE_ORDER
+    )
+    return selected if selected else ("all",)
+
+
+def _priority_search_query(query_values: Mapping[str, list[str]]) -> str:
+    return _clean_value(_first_query_value(dict(query_values), "q"))
+
+
+def _searched_priority_summaries(
+    summaries: tuple[FacilityReviewSignalsSummary, ...],
+    query: str,
+) -> tuple[FacilityReviewSignalsSummary, ...]:
+    normalized = _normalized_text(query)
+    if not normalized:
+        return summaries
+    return tuple(
+        summary
+        for summary in summaries
+        if normalized in _normalized_text(summary.facility_number)
+        or normalized in _normalized_text(summary.facility_name)
+        or any(normalized in _normalized_text(value) for value in summary.facility_types)
+    )
 
 
 def _priority_sort_key(summary: FacilityReviewSignalsSummary) -> tuple[Any, ...]:
@@ -2019,23 +2157,37 @@ def _reverse_date_key(value: str) -> int:
     return -int(value.replace("-", "")) if value and value.replace("-", "").isdigit() else 0
 
 
-def _render_priority_filter(active_cue: str) -> str:
-    options = ("all",) + _PRIORITY_CUE_ORDER
-    option_markup = "\n".join(
-        f'          <option value="{_escape(value)}"{_selected_attr(value, active_cue or "all")}>{_escape(_priority_filter_label(value))}</option>'
-        for value in options
+def _render_priority_filter(active_cues: tuple[str, ...], search_query: str) -> str:
+    active_set = set(active_cues or ("all",))
+    cue_controls = "\n".join(
+        f"""          <label class="filter-chip">
+            <input type="checkbox" name="cue" value="{_escape(value)}"{_checked_attr(value in active_set)}>
+            <span>{_escape(_priority_filter_label(value))}</span>
+          </label>"""
+        for value in ("all",) + _PRIORITY_CUE_ORDER
     )
-    return f"""    <section class="workflow-panel" aria-labelledby="facility-priority-filter-heading">
-      <h2 id="facility-priority-filter-heading">Filter review cues</h2>
-      <form action="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}" method="get">
+    clear_link = (
+        f'<a class="button button-quiet" href="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}">Clear cues</a>'
+        if active_set != {"all"}
+        else ""
+    )
+    return f"""    <section class="workflow-panel compact-filter-panel" aria-labelledby="facility-priority-filter-heading">
+      <h2 id="facility-priority-filter-heading">Filter</h2>
+      <form action="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}" method="get" class="compact-filter-form">
+        <fieldset>
+          <legend>Review cues</legend>
+          <div class="filter-chip-group">
+{cue_controls}
+          </div>
+        </fieldset>
         <p>
-          <label for="priority-cue-filter">Cue type</label>
-          <select id="priority-cue-filter" name="cue" aria-describedby="priority-cue-filter-help">
-{option_markup}
-          </select>
+          <label for="priority-search">Search</label>
+          <input id="priority-search" name="q" type="search" value="{_escape(search_query)}" placeholder="Facility name or license">
         </p>
-        <p id="priority-cue-filter-help" class="helper-text">Filter by transparent review cue over uploaded public summary fields.</p>
-        <p><button type="submit">Apply review cue filter</button></p>
+        <div class="form-actions">
+          <button type="submit" class="button button-secondary">Apply filters</button>
+          {clear_link}
+        </div>
       </form>
     </section>"""
 
@@ -2050,11 +2202,70 @@ def _render_priority_guidance_disclosure() -> str:
 
 
 def _priority_filter_label(value: str) -> str:
-    return "All review cues" if value == "all" else value
+    labels = {
+        "all": "All cues",
+        "Multiple signal types present": "Priority cue",
+        "Complaint visit activity present": "Possible delay",
+        "Citation indicator present": "Check source",
+        "POC indicator present": "Check source",
+        "Recent visit activity": "Check source",
+        "High-capacity facility": "Priority cue",
+        "Closed status in uploaded summary": "Check source",
+        "Long gap since last visit": "120+ day gap",
+    }
+    return labels.get(value, value)
 
 
 def _selected_attr(value: str, active_value: str) -> str:
     return " selected" if value == active_value else ""
+
+
+def _checked_attr(value: bool) -> str:
+    return " checked" if value else ""
+
+
+def _render_priority_cards(
+    signal_result: Any,
+    active_cues: tuple[str, ...],
+    search_query: str,
+) -> str:
+    cue_counts = {
+        cue: sum(1 for summary in signal_result.summaries if cue in _priority_cues(summary))
+        for cue in _PRIORITY_CUE_ORDER
+    }
+    card_items = tuple((cue, count) for cue, count in cue_counts.items() if count)
+    if not card_items:
+        return """        <section aria-labelledby="facility-priority-cards-heading">
+            <h2 id="facility-priority-cards-heading">Review cue summary</h2>
+            <p>No review cues are available.</p>
+        </section>"""
+    cards = "\n".join(
+        _render_priority_card(cue, count, active_cues=active_cues, search_query=search_query)
+        for cue, count in card_items
+    )
+    return f"""        <section aria-labelledby="facility-priority-cards-heading">
+            <h2 id="facility-priority-cards-heading">Review cue summary</h2>
+            <div class="card-grid priority-card-grid">
+{cards}
+            </div>
+        </section>"""
+
+
+def _render_priority_card(
+    cue: str,
+    count: int,
+    *,
+    active_cues: tuple[str, ...],
+    search_query: str,
+) -> str:
+    query_values: dict[str, str] = {"cue": cue}
+    if search_query:
+        query_values["q"] = search_query
+    active_class = " is-active" if cue in active_cues else ""
+    return f"""                <article class="summary-card priority-summary-card">
+                    <h3><a class="{active_class.strip()}" href="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}?{_escape(urlencode(query_values))}">{_escape(_priority_filter_label(cue))}</a></h3>
+                    <p><strong>{count}</strong> facilit{"y" if count == 1 else "ies"}</p>
+                </article>"""
 
 
 def _render_priority_summary(
@@ -2067,7 +2278,7 @@ def _render_priority_summary(
         for cue in _PRIORITY_CUE_ORDER
     }
     cue_rows = "\n".join(
-        f"        <dt>{_escape(cue)} facilities</dt><dd>{count}</dd>"
+        f"        <dt>{_escape(_priority_filter_label(cue))}</dt><dd>{count}</dd>"
         for cue, count in cue_counts.items()
         if count
     )
@@ -2097,10 +2308,11 @@ def _render_priority_summary(
     </section>"""
 
 
-def _render_priority_empty_rows(cue_filter: str) -> str:
+def _render_priority_empty_rows(cue_filters: tuple[str, ...]) -> str:
+    active_filters = tuple(cue for cue in cue_filters if cue and cue != "all")
     filter_text = (
-        f" for review cue {_escape(cue_filter)}"
-        if cue_filter and cue_filter != "all"
+        " for selected review cues"
+        if active_filters
         else ""
     )
     return f"""          <tr>
@@ -2108,18 +2320,18 @@ def _render_priority_empty_rows(cue_filter: str) -> str:
               <p>No facility review priority rows are available{filter_text}.</p>
               <p>This optional feature requires uploaded public summary CSVs to be configured. It is not required for Request Records or review.</p>
               <p>This does not mean facilities have no complaints, visits, citations, POC dates, or public-source records. It only means supported uploaded public summary fields did not produce a visible row for this view.</p>
-              <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Return to facility lookup to find a facility and retrieve complaint records.</a></p>
+              <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Back to search to find a facility and retrieve complaint records.</a></p>
             </td>
           </tr>"""
 
 
 def _render_priority_row(summary: FacilityReviewSignalsSummary) -> str:
     cues = _priority_cues(summary)
-    cue_text = "; ".join(f"{cue} review cue" for cue in cues) if cues else "No uploaded summary signals available"
+    cue_text = "; ".join(_priority_filter_label(cue) for cue in cues) if cues else "No uploaded summary signals available"
     field_text = (
         f"{summary.total_visit_count} total visits; {summary.complaint_visit_count} complaint visits; "
         f"{summary.citation_count} citation value(s); {summary.poc_date_count} POC date(s); "
-        f"last visit {_display_value(summary.last_visit_date)}; status {_display_tuple(summary.statuses)}; "
+        f"last visit {_display_date(summary.last_visit_date) if summary.last_visit_date else 'not listed'}; status {_display_tuple(summary.statuses)}; "
         f"capacity {_display_tuple(summary.capacities)}"
     )
     facility_label = _safe_priority_text(summary.facility_name or summary.facility_number)
@@ -2147,7 +2359,6 @@ def _render_facility_hub_actions(
 ) -> str:
         request_href = _facility_request_href(record)
         lookup_href = f"{CCLD_FACILITY_LOOKUP_PATH}?{urlencode({'q': record.facility_number})}"
-        context_actions = ""
         if review_context.has_loaded_context and review_context.has_date_context:
                 queue_query = {
                         "facility_number": record.facility_number,
@@ -2156,39 +2367,52 @@ def _render_facility_hub_actions(
                         "request_context_origin": "facility_lookup",
                         "lookup_facility_name": record.facility_name,
                 }
-                context_actions = f"""        <li>
-                    <form action="{CCLD_RECORD_REQUEST_PATH}" method="post">
+                return f"""    <section aria-labelledby="facility-hub-actions-heading">
+            <h2 id="facility-hub-actions-heading">Next actions</h2>
+            <form action="{CCLD_RECORD_REQUEST_PATH}" method="post" class="action-group" aria-label="Facility review hub actions">
                         <input type="hidden" name="facility_number" value="{_escape(record.facility_number)}">
                         <input type="hidden" name="record_type" value="complaints">
                         <input type="hidden" name="start_date" value="{_escape(review_context.start_date)}">
                         <input type="hidden" name="end_date" value="{_escape(review_context.end_date)}">
                         <input type="hidden" name="request_context_origin" value="facility_lookup">
                         <input type="hidden" name="lookup_facility_name" value="{_escape(record.facility_name)}">
-                        <button type="submit" class="button button-secondary">Review loaded records for this facility/date context</button>
+                        <button type="submit" class="button">Open loaded records</button>
+                        <a class="button button-secondary" href="{_escape(request_href)}">Start complaint request</a>
+                        <a class="button button-secondary" href="{_escape(lookup_href)}">Back to search</a>
                     </form>
-                </li>
-                <li><a class="button button-secondary" href="{REVIEWER_UI_RECORDS_PATH}?{_escape(urlencode({'q': record.facility_number}))}">Open reviewer queue filtered to this facility</a></li>
-                <li><a class="button button-secondary" href="{REVIEWER_UI_MATRIX_EXPORT_PATH}?{_escape(urlencode(queue_query))}">Download complaint review matrix CSV</a></li>
-                <li><a class="button button-secondary" href="{REVIEWER_UI_PACKET_PREVIEW_PATH}?{_escape(urlencode(queue_query))}">Open packet preview for this facility/date context</a></li>
-                <li><a class="button button-secondary" href="{REVIEWER_UI_PACKET_DRAFT_PATH}?{_escape(urlencode(queue_query))}">Open packet draft for this facility/date context</a></li>"""
+            <details class="technical-details dense-table-details">
+                <summary>Packet and export actions</summary>
+                <div class="action-group" aria-label="Facility packet and export actions">
+                    <a class="button button-secondary" href="{REVIEWER_UI_RECORDS_PATH}?{_escape(urlencode({'q': record.facility_number}))}">Open reviewer queue filtered to this facility</a>
+                    <a class="button button-secondary" href="{REVIEWER_UI_MATRIX_EXPORT_PATH}?{_escape(urlencode(queue_query))}">Download complaint review matrix CSV</a>
+                    <a class="button button-secondary" href="{REVIEWER_UI_PACKET_PREVIEW_PATH}?{_escape(urlencode(queue_query))}">Packet preview</a>
+                    <a class="button button-secondary" href="{REVIEWER_UI_PACKET_DRAFT_PATH}?{_escape(urlencode(queue_query))}">Packet draft</a>
+                </div>
+            </details>
+        </section>"""
         elif review_context.has_loaded_context:
-                context_actions = """        <li><span>Date range needed before review queue or packet routes can be scoped.</span></li>"""
+                return f"""    <section aria-labelledby="facility-hub-actions-heading">
+            <h2 id="facility-hub-actions-heading">Next actions</h2>
+            {render_action_group(
+                primary=ActionItem("Start complaint request", request_href),
+                secondary=(ActionItem("Back to search", lookup_href),),
+                aria_label="Facility review hub actions",
+            )}
+            <p class="helper-text">Date range needed before loaded records can be scoped.</p>
+        </section>"""
         return f"""    <section aria-labelledby="facility-hub-actions-heading">
             <h2 id="facility-hub-actions-heading">Next actions</h2>
-            <nav aria-label="Facility review hub actions">
-                <ul>
-                    <li><a class="button" href="{_escape(request_href)}">Start complaint request for this facility</a></li>
-{context_actions}
-                    <li><a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_PRIORITY_PATH}">Open facility review priority list</a></li>
-                    <li><a class="button button-quiet" href="{_escape(lookup_href)}">Return to facility lookup</a></li>
-                </ul>
-            </nav>
+            {render_action_group(
+                primary=ActionItem("Start complaint request", request_href),
+                secondary=(ActionItem("Back to search", lookup_href),),
+                aria_label="Facility review hub actions",
+            )}
         </section>"""
 
 
 def _hub_date_context_text(review_context: CcldFacilityReviewContext) -> str:
         if review_context.has_date_context:
-                return f"{review_context.start_date} to {review_context.end_date}"
+                return f"{_display_date(review_context.start_date)} to {_display_date(review_context.end_date)}"
         return "date range needed before review queue can be scoped"
 
 
@@ -2233,16 +2457,22 @@ def _render_message_page(*, title: str, heading: str, message: str) -> str:
     )
 
 
-def _page(*, title: str, heading: str, main: str) -> str:
+def _page(
+    *,
+    title: str,
+    heading: str,
+    main: str,
+    active_path: str = CCLD_FACILITY_LOOKUP_PATH,
+) -> str:
         return render_page_shell(
                 title=title,
                 heading=heading,
                 main=main,
                 skip_label="Skip to main CCLD facility lookup content",
                 nav_label="CCLD facility navigation",
-                active_path=CCLD_FACILITY_LOOKUP_PATH,
-                step_id="facility",
-                next_action="Review this facility",
+                active_path=active_path,
+                step_id="start" if active_path == "/" else "facility",
+                next_action="Find a facility",
         )
 
 
@@ -2273,8 +2503,20 @@ def _display_value(value: str) -> str:
     return value if value else "not listed"
 
 
+def _display_date(value: str) -> str:
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError:
+        return value
+    return f"{parsed:%m/%d/%Y}"
+
+
 def _display_tuple(values: tuple[str, ...]) -> str:
     return "; ".join(values) if values else "not listed"
+
+
+def _display_date_tuple(values: tuple[str, ...]) -> str:
+    return "; ".join(_display_date(value) for value in values) if values else "not listed"
 
 
 def _render_source_dataset_labels(values: tuple[str, ...]) -> str:

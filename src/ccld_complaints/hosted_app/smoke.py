@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import argparse
 import json
@@ -205,14 +205,14 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     payload = json.loads(health_body.decode("utf-8"))
     if health_status != 200 or payload.get("status") != "ok":
         raise RuntimeError("Hosted scaffold health check did not return ok.")
-    if root_status != 200 or b"Attorney public-record review workspace" not in root_body:
+    if root_status != 200 or b"CCLD-only public-record review workspace" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return the guided launch notice.")
-    if b"Attorney review start" not in root_body:
-        raise RuntimeError("Hosted scaffold app shell did not return attorney workflow label.")
-    if b"Skip to main CCLD review content" not in root_body:
+    if b"Facility intake" not in root_body:
+        raise RuntimeError("Hosted scaffold app shell did not return facility intake label.")
+    if b"Skip to main CCLD facility lookup content" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return skip navigation.")
     if (
-        b"Start a Facility Complaint Review"
+        b"Find the facility/license number"
         not in root_body
     ):
         raise RuntimeError("Hosted scaffold app shell did not return review session orientation.")
@@ -246,7 +246,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"No Request Records jobs have been submitted" not in ccld_retrieval_history_body
         or b"Controlled retrieval setup is missing" not in ccld_retrieval_history_body
         or b"Submit or change Request Records" not in ccld_retrieval_history_body
-        or b"Report an issue" not in ccld_retrieval_history_body
+        or b"Send feedback" not in ccld_retrieval_history_body
         or b"Report confusing retrieval progress" in ccld_retrieval_history_body
     ):
         raise RuntimeError("Hosted scaffold retrieval job history did not return safe guidance.")
@@ -289,23 +289,19 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold CCLD filtered queue did not return recovery guidance.")
     if (
         ccld_no_match_status != 200
-        or (
-            b"No loaded complaint records match this request yet" not in ccld_no_match_body
-            and b"Candidates may be outside the selected date range" not in ccld_no_match_body
-        )
-        or (
-            b"Try one next step" not in ccld_no_match_body
-            and b"How to interpret this no-match result" not in ccld_no_match_body
-        )
-            or b"Use the no-match result to confirm criteria" not in ccld_no_match_body
-        ):
-            raise RuntimeError("Hosted scaffold CCLD no-match result did not return load guidance.")
+        or b"No loaded records found" not in ccld_no_match_body
+        or b"No loaded complaint records matched this facility and date range"
+        not in ccld_no_match_body
+        or b"Adjust date range" not in ccld_no_match_body
+        or b"Send feedback" not in ccld_no_match_body
+    ):
+        raise RuntimeError("Hosted scaffold CCLD no-match result did not return load guidance.")
     if (
         ccld_retrieval_setup_status != 503
         or b"Request Records setup required" not in ccld_retrieval_setup_body
         or b"No Request Records job was created" not in ccld_retrieval_setup_body
         or b"Operator setup checklist" not in ccld_retrieval_setup_body
-        or b"Report an issue" not in ccld_retrieval_setup_body
+        or b"Send feedback" not in ccld_retrieval_setup_body
     ):
         raise RuntimeError("Hosted scaffold retrieval setup state did not return safe guidance.")
     if (
@@ -343,20 +339,20 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         help_status != 200
         or b"Help" not in help_body
-            or b"How to review a facility" not in help_body
-        or b"What review flags mean" not in help_body
-        or b"How source traceability works" not in help_body
-            or b"Review guidance and next steps" not in help_body
+            or b"Find a facility" not in help_body
+        or b"Understand review flags" not in help_body
+        or b"Request or show records" not in help_body
+            or b"Review complaint records" not in help_body
     ):
         raise RuntimeError("Hosted scaffold CCLD help page did not return guided help.")
     if (
-        feedback_status != 200
-        or b"Report an issue" not in feedback_body
-            or b"Report a review issue" not in feedback_body
-        or b"Do not include private material" not in feedback_body
-        or b"GitHub issue intake is not configured" not in feedback_body
-        or b"Submit issue report" not in feedback_body
-    ):
+            feedback_status != 200
+            or b"Send feedback" not in feedback_body
+                or b"Send RecordsTracker feedback" not in feedback_body
+            or b"Do not include private material" not in feedback_body
+            or b"GitHub issue intake is not configured" not in feedback_body
+            or b"Submit feedback" not in feedback_body
+        ):
         raise RuntimeError("Hosted scaffold feedback page did not return safe form state.")
     if (
         reviewer_status != 200
@@ -368,37 +364,35 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         reviewer_detail_status != 200
         or b"Complaint investigation report" not in reviewer_detail_body
-        or b"CCLD public source record" not in reviewer_detail_body
-        or b"Reviewer-created review state" not in reviewer_detail_body
-        or b"Why this record is flagged" not in reviewer_detail_body
-        or b"Quick review summary" not in reviewer_detail_body
-        or b"Facility identity and license facts" not in reviewer_detail_body
-        or b"Complaint and investigation timeline" not in reviewer_detail_body
+        or b"public source record" not in reviewer_detail_body
+        or b"inline-glossary-term" not in reviewer_detail_body
+            or b"Review status and note" not in reviewer_detail_body
+        or b"Source timeline" not in reviewer_detail_body
         or b"Allegations and findings" not in reviewer_detail_body
-        or b"Citations, deficiencies, and Plan of Correction" not in reviewer_detail_body
-        or b"Source narrative excerpt" not in reviewer_detail_body
-        or b"Source traceability" not in reviewer_detail_body
-        or b"Reviewer-created notes and status history" not in reviewer_detail_body
-        or b"Review guidance and glossary" not in reviewer_detail_body
-        or b"Full source-derived fields" not in reviewer_detail_body
-        or b"Technical and operator details" not in reviewer_detail_body
+        or b"Reviewer-created notes and status history" in reviewer_detail_body
+        or b"Source-derived value checks" in reviewer_detail_body
+        or b"Full source-derived fields" in reviewer_detail_body
+        or b"Technical and operator details" in reviewer_detail_body
+        or b"Source traceability" in reviewer_detail_body
+        or b"How to read this record" in reviewer_detail_body
+        or b"Field-note guidance" in reviewer_detail_body
         or b"Open CCLD source record" not in reviewer_detail_body
-        or b"Return to facility queue" not in reviewer_detail_body
+        or b"Return to review queue" not in reviewer_detail_body
         or b"32-CR-20220407124448" not in reviewer_detail_body
     ):
         raise RuntimeError("Hosted scaffold reviewer detail did not return usable guidance.")
     if (
         packet_preview_status != 200
-        or b"Packet preparation preview" not in packet_preview_body
-        or b"Packet readiness" not in packet_preview_body
-        or b"Traceability readiness" not in packet_preview_body
-        or b"Reviewer-created state summary" not in packet_preview_body
-        or b"Copy-ready attorney review brief" not in packet_preview_body
-        or b"Attorney review readiness checklist" not in packet_preview_body
+        or b"Packet preview" not in packet_preview_body
+        or b"Readiness checks" not in packet_preview_body
+        or b"Source availability" not in packet_preview_body
+        or b"Notes/status summary" not in packet_preview_body
+        or b"Copy-ready brief" not in packet_preview_body
+        or b"Packet readiness checklist" not in packet_preview_body
         or b"Included complaint records" not in packet_preview_body
-        or b"Why included" not in packet_preview_body
         or b"Before copying or printing" not in packet_preview_body
-        or b"No export file is generated" not in packet_preview_body
+        or b"Operator/runtime details" in packet_preview_body
+        or b"Technical runtime details" in packet_preview_body
     ):
         raise RuntimeError("Hosted scaffold review packet preview did not return safe guidance.")
     if (
@@ -423,30 +417,26 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         )
     if (
         reviewer_note_status != 200
-        or b"Reviewer-created state saved" not in reviewer_note_body
-        or b"Reviewer note saved for this record" not in reviewer_note_body
+        or b"Notes/status saved" not in reviewer_note_body
+        or b"Note saved for this record." not in reviewer_note_body
         or b"What changed" not in reviewer_note_body
         or b"What did not change" not in reviewer_note_body
         or b"Return to facility queue" not in reviewer_note_body
-        or b"Open next priority record" not in reviewer_note_body
-        or b"Queue progress and note/status cues are derived" not in reviewer_note_body
-        or b"Use the show-all status view" not in reviewer_note_body
-        or b"The suggested next record is navigation guidance" not in reviewer_note_body
-        or b"issue-report details" not in reviewer_note_body
+        or b"Open next flagged record" not in reviewer_note_body
+        or b"Saved notes and statuses" not in reviewer_note_body
+        or b"feedback details" in reviewer_note_body
     ):
         raise RuntimeError("Hosted scaffold reviewer note did not return confirmation.")
     if (
         reviewer_saved_status != 200
-        or b"Reviewer-created state saved" not in reviewer_saved_status_body
-        or b"Reviewer status saved for this record" not in reviewer_saved_status_body
+        or b"Notes/status saved" not in reviewer_saved_status_body
+        or b"Status saved for this record." not in reviewer_saved_status_body
         or b"What changed" not in reviewer_saved_status_body
         or b"What did not change" not in reviewer_saved_status_body
         or b"Return to facility queue" not in reviewer_saved_status_body
-        or b"Open next priority record" not in reviewer_saved_status_body
-        or b"Queue progress and note/status cues are derived" not in reviewer_saved_status_body
-        or b"Use the show-all status view" not in reviewer_saved_status_body
-        or b"The suggested next record is navigation guidance" not in reviewer_saved_status_body
-        or b"issue-report details" not in reviewer_saved_status_body
+        or b"Open next flagged record" not in reviewer_saved_status_body
+        or b"Saved notes and statuses" not in reviewer_saved_status_body
+        or b"feedback details" in reviewer_saved_status_body
     ):
         raise RuntimeError("Hosted scaffold reviewer status did not return confirmation.")
     return payload if isinstance(payload, dict) else {}

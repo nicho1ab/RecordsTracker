@@ -206,72 +206,45 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Help" in html
-    assert "What this tool helps you do" in html
-    assert "How to review a facility" in html
-    assert "What review flags mean" in html
-    assert "How source traceability works" in html
-    assert "What to do with source-confidence cues" in html
-    assert "Source-confidence cues are review prompts" in normalized_html
-    assert "Source-confidence cues are review prompts" in normalized_html
-    assert "describe only what the page showed" in normalized_html
-    assert "return to the same queue and continue with the suggested next record" in (
-        normalized_html
-    )
-    assert "source URL, raw SHA-256 hash" in html
-    assert "traceability value is missing" in normalized_html
-    assert "present, not available locally, confusing, or proxy-related" in normalized_html
-    assert "Before relying on a source-derived value" in html
-    assert "source document/report marker" in normalized_html
-    assert "How reviewer-created notes/status work" in html
-    assert "How correction-readiness works" in html
-    assert "Correction-readiness means a tester has noticed" in html
-    assert "Check source traceability first" in html
-    assert "possible correction concern in a reviewer-created note or issue report" in html
+    assert "Find a facility" in html
+    assert "Request or show records" in html
+    assert "Review complaint records" in html
+    assert "Understand review flags" in html
+    assert "Add reviewer status/note" in html
     assert "do not edit source-derived fields" in html
-    assert "correction concern in a reviewer-created note or issue report" in normalized_html
-    assert "Open source links from the detail page when a source check is needed" in html
-    assert "Request Records and job diagnostics" in html
-    assert "Show existing queue means the page searched already-loaded source-derived" in (
+    assert "Prepare packet content" in html
+    assert "Send feedback" in html
+    assert "Show existing queue searches already-loaded records only" in normalized_html
+    assert "Request Records submits a configured server-side public CCLD request" in (
         normalized_html
     )
-    assert "it did not submit a controlled job" in normalized_html
-    assert "Request Records means a configured controlled server-side job" in (
-        normalized_html
-    )
-    assert "job diagnostics pages show the current job state" in normalized_html
-    assert "Loaded source-derived records can be ready for review" in normalized_html
-    assert "Job diagnostics is operational metadata" in normalized_html
-    assert "metadata for support and troubleshooting" in normalized_html
-    assert "Review guidance and next steps" in html
-    assert "How to report a review issue" in html
-    assert "How packet preparation fits in" in html
-    assert "packet preview/draft are preparation" in normalized_html
-    assert "Report an issue page carries safe context" in normalized_html
+    assert "Open the suggested queue record first" in normalized_html
+    assert "original source link/status" in normalized_html
+    assert "Return to the same queue after saving" in normalized_html
     assert "Packet readiness means review readiness" in html
-    assert "manual review, browser copy, or browser print" in normalized_html
-    assert "source-derived values, source traceability" in normalized_html
-    assert "possible correction-readiness concerns" in normalized_html
+    assert "source links, and reviewer-created note/status cues" in normalized_html
     assert (
         "Packet preview and packet draft summarize loaded source-derived complaint records"
         in html
     )
-    assert "Report an issue when packet readiness wording is confusing" in normalized_html
+    assert "How reviewer-created status filters work" not in html
+    assert "Support notes" in html
+    assert "Support and runtime notes" in html
+    assert "source URL, raw SHA-256 hash" in normalized_html
+    assert "source document/report markers" in normalized_html
+    assert "Loaded records can be ready for review" in normalized_html
     assert "source-derived records" in normalized_html.casefold()
     assert "reviewer-created notes/status" in normalized_html
-    assert "How reviewer-created status filters work" in html
-    assert "active reviewer-created status filter" in normalized_html
-    assert "records shown under that filter" in normalized_html
-    assert "total records in the same facility/date queue" in normalized_html
-    assert "filtered-empty result can mean the filter is hiding records" in normalized_html
-    assert "filtered-empty result can mean the filter is hiding records" in normalized_html
-    assert "Correction-readiness" in html
-    assert "possible correction concern in a reviewer-created note or issue report" in html
+    assert "How source traceability works" not in html
+    assert "What to do with source-confidence cues" not in html
+    assert "Operator setup: enabling live Request Records" not in html
+    assert "How correction-readiness works" not in html
     assert 'action="/ccld/correction' not in normalized_html
     assert 'name="correction_status"' not in normalized_html
     assert "correction approved" not in normalized_html
     assert "correction applied" not in normalized_html
     assert "corrected source record" not in normalized_html
-    assert "Open Request Records" in html
+    assert "Open Request Records" not in html
     assert_no_secret_html(html)
 
 
@@ -287,11 +260,10 @@ def test_ccld_record_request_prefills_selected_facility_from_lookup() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Facility lookup result" in html
     assert "Selected facility context is ready" in html
     assert "Facility/license number" in html
     assert "Synthetic Orchard Child Care" in html
-    assert "Context source" in html
+    assert "Context source" not in html
     assert "value=\"900000001\"" in html
     assert "name=\"request_context_origin\"" in html
     assert "value=\"facility_lookup\"" in html
@@ -331,24 +303,18 @@ def test_ccld_record_request_prefill_links_signal_only_facility_hub(
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Open loaded records or request complaint records" in html
+    assert "Open loaded records, or request records for this facility and date range." in html
     assert "Show existing queue" in html
     assert "Request Records" in html
-    assert (
-        "Use <strong>Show existing queue</strong> to open records already loaded"
-        in html
-    )
-    assert (
-        "Use <strong>Request Records</strong> to submit a controlled CCLD retrieval request"
-        in html
-    )
+    assert "Use <strong>Show existing queue</strong>" not in html
+    assert "Use <strong>Request Records</strong>" not in html
     assert 'name="ccld_retrieval_action"' in html
     assert 'value="run_controlled_ccld_retrieval"' in html
-    assert "signal-only facility hub" in html
+    assert "signal-only facility hub" not in html
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098" in html
-    assert "Open facility hub or signal-only facility hub for this request context" in html
-    assert "manual facility/license entry" in normalized_html
+    assert "Facility summary" in html
+    assert "Open facility hub or signal-only facility hub for this request context" not in html
     assert "already-loaded records" in normalized_html
-    assert "controlled ccld retrieval request" in normalized_html
     assert_no_secret_html(html)
 
 
@@ -489,8 +455,8 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert counts == _empty_reviewer_counts()
     assert "Complaint records ready for attorney review" in html
     assert "Request job submitted" in html
-    assert "Already-loaded source-derived rows were searched" in html
-    assert "no controlled server-side job was submitted for this request" in html
+    assert "This page searched currently loaded complaint records only" in html
+    assert "no Request Records job was submitted for this request" in html
     assert "Records ready" in html
     assert "1 complaint queue record(s) are ready for review" in html
     assert "Review the already-loaded source-derived records in the queue" in html
@@ -519,14 +485,14 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "/reviewer/packet/draft?facility_number=157806098" in html
     assert "Matching source-derived rows shown" in html
     assert "facility/license number 157806098" in html
-    assert "2022-08-01 to 2022-08-31" in html
+    assert "08/01/2022 to 08/31/2022" in html
     assert "Selected request context" in html
     assert "Request started from" in html
     assert "Manual facility/license entry" in html
     assert "Facility context cue" in html
     assert "manual request context" in normalized_html.casefold()
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098" in html
-    assert "Check facility hub or signal-only facility hub for this request context" in html
+    assert "Facility summary" in html
     assert "Open facility review priority list" in html
     assert "Facility/license number being requested" in html
     assert "Date range being requested" in html
@@ -557,9 +523,8 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
         "Return to this same queue and continue with the next suggested record"
         in normalized_html
     )
-    assert (
-        "Use issue-report details only when the queue or detail page is confusing"
-        in normalized_html
+    assert "Use Send feedback only when the queue or detail page is confusing" in (
+        normalized_html
     )
     assert "Facility/date-scoped CCLD complaint records ready for review" in html
     assert "Queue progress summary" in html
@@ -574,7 +539,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     )
     assert "Open detail before relying on a missing or confusing value" in normalized_html
     assert "Next action: check the detail page" in normalized_html
-    assert "Use the issue-report details below only for missing records" in normalized_html
+    assert "Use Send feedback only for missing records" in normalized_html
     assert "Continue review guidance" in html
     assert "derived from this facility/date request context" in normalized_html
     assert "Use it as navigation help for choosing" in html
@@ -615,14 +580,14 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "do not assign, claim, or change records" in normalized_html
     assert "Queue decision actions" in html
     assert "Open facility review priority list" in html
-    assert "Report an issue" in html
+    assert "Send feedback" in html
     assert "Report unclear loaded-record versus job-state wording" in html
     assert "workflow_area=request-result" in html
     assert "retrieval_context=already-loaded-records" in html
     assert "retrieval_status=not_submitted" in html
     assert "a missing or unexpected record" in normalized_html
     assert "a confusing value, wording, filter" in normalized_html
-    assert "/feedback?feedback_type=Bug+report" in html
+    assert "/feedback?feedback_type=Bug%2Fproblem" in html
     assert "workflow_area=queue" in html
     assert "facility_number=157806098" in html
     assert "start_date=2022-08-01" in html
@@ -632,7 +597,8 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Find another CCLD facility" in html
     assert "Start a new CCLD request" in html
     assert "Open CCLD workflow help" in html
-    assert "Copy issue-report details" in html
+    assert "Feedback support details" in html
+    assert "Send feedback with queue context" in html
     assert "Reviewer-status filter for this queue" in html
     assert "Apply reviewer-status filter" in html
     assert "Active reviewer-created status filter" in html
@@ -656,14 +622,14 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "1 loaded complaint records in bundle" not in html
     assert "6 loaded complaint records in bundle" in html
     assert "Open detail before relying on missing or confusing fields" in html
-    assert "Copyable issue-report details" in html
-    assert "Copy issue-report details" in html
-    assert "Structured CCLD issue-report details" in html
+    assert "Feedback details" in html
+    assert "Structured CCLD issue details" in html
+    assert "Copy feedback details" not in html
     assert "id=\"feedback-checklist-section\"" in html
     assert "Copy only the details that help explain an issue" in normalized_html
     assert "Use these same details for queue observations" in normalized_html
     assert "filtered-empty recovery, no-match/load guidance" in normalized_html
-    assert "CCLD issue-report details" in html
+    assert "CCLD feedback details" in html
     assert "- Matching source-derived rows shown: 6" in html
     assert "- Matching complaint records in queue: 1" in html
     assert "- Not started: 1" in html
@@ -679,10 +645,10 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "- Queue showed updated note/status after returning" in html
     assert "- Records that seemed missing:" in html
     assert "- Records that seemed unexpected:" in html
-    assert "- Use the Report an issue page for feedback." in html
+    assert "- Use the Feedback page for feedback." in html
     assert "- When GitHub issue intake is configured, the server creates a GitHub issue." in html
     assert "Open reviewer records" in html
-    assert "did not submit a controlled server-side job for this request" in html
+    assert "did not submit a Request Records job for this request" in html
     assert "run-ccld-live-fetch.ps1 -FacilityNumber 157806098" in html
     assert "legally sufficient" not in normalized_html.casefold()
     assert "verified abuse" not in normalized_html.casefold()
@@ -741,8 +707,8 @@ def test_ccld_record_request_existing_queue_finds_batch_loaded_rows_after_first_
     assert "OPEN LINE - WOODCLIFF" in html
     assert "32-CR-20250702001037" in html
     assert "1 complaint queue record(s) are ready for review" in html
-    assert "Already-loaded source-derived rows were searched" in html
-    assert "no controlled server-side job was submitted for this request" in normalized_html
+    assert "This page searched currently loaded complaint records only" in html
+    assert "no Request Records job was submitted for this request" in normalized_html
     assert "No loaded complaint records match this request yet" not in html
     assert_no_secret_html(html)
 
@@ -827,7 +793,7 @@ def test_ccld_record_request_existing_queue_rejects_nonmatching_batch_facility()
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "No loaded complaint records match this request yet" in html
+    assert "No loaded records found" in html
     assert "32-CR-20250702001037" not in html
     assert "- Matching complaint records in queue: 0" in html
     assert_no_secret_html(html)
@@ -864,7 +830,7 @@ def test_ccld_record_request_existing_queue_rejects_out_of_range_batch_dates() -
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Candidates may be outside the selected date range" in html
+    assert "No loaded records found" in html
     assert "32-CR-20250702001037" not in html
     assert "- Matching complaint records in queue: 0" in html
     assert "- Local facility rows before date filtering: 3" in html
@@ -937,24 +903,20 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
 
     assert note_status == 200
     assert status_status == 200
-    assert "Reviewer note saved for this record" in note_html
-    assert "Reviewer status saved for this record" in status_html
-    assert "Reviewer-created state saved" in note_html
-    assert "Reviewer-created state saved" in status_html
+    assert "Note saved for this record." in note_html
+    assert "Status saved for this record." in status_html
+    assert "Notes/status saved" in note_html
+    assert "Notes/status saved" in status_html
     assert "Return to facility queue" in note_html
     assert "Return to facility queue" in status_html
-    assert "Open next priority record" in note_html
-    assert "Open next priority record" in status_html
-    assert "Queue progress and note/status cues are derived from reviewer-created state" in (
-        note_html
-    )
-    assert "Queue progress and note/status cues are derived from reviewer-created state" in (
-        status_html
-    )
+    assert "Open next flagged record" in note_html
+    assert "Open next flagged record" in status_html
+    assert "Saved notes and statuses" in note_html
+    assert "Saved notes and statuses" in status_html
     assert reviewed_status == 200
     assert '<div class="dense-section-header">' in reviewed_html
     assert 'class="technical-details dense-table-details"' in reviewed_html
-    assert 'class="technical-details diagnostic-details"' in reviewed_html
+    assert 'class="technical-details diagnostic-details"' not in reviewed_html
     assert "Latest reviewer-created status: Reviewed" in reviewed_html
     assert "1 reviewer-created note(s)" in reviewed_html
     assert "Complaint worklist" in reviewed_html
@@ -983,7 +945,7 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
     assert "same facility/date request context" in blocked_normalized
     assert "does not mean records are missing, deleted, absent" in blocked_normalized
     assert "Active request context" in blocked_html
-    assert "facility/license number 157806098; date range 2022-08-01 to 2022-08-31" in (
+    assert "facility/license number 157806098; date range 08/01/2022 to 08/31/2022" in (
         blocked_normalized
     )
     assert "Active reviewer-created status filter" in blocked_html
@@ -995,11 +957,11 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
     assert "Show all reviewer statuses for this facility/date request" in blocked_html
     assert "name=\"reviewer_status_filter\" value=\"all\"" in blocked_html
     assert "return to the full CCLD request queue" in blocked_normalized
-    assert "issue-report details" in blocked_html
+    assert "feedback details" in blocked_html
     assert "what you expected to see" in blocked_normalized
     assert "choose All queue records" in blocked_normalized
     assert "filtered-empty result" in blocked_normalized
-    assert "Report an issue" in blocked_normalized
+    assert "Send feedback" in blocked_normalized
     assert "Open facility review priority list" in blocked_html
     assert "reviewer_status_filter=blocked" in blocked_html
     assert counts == {
@@ -1041,56 +1003,43 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert before_source_rows == after_source_rows
     assert counts == _empty_reviewer_counts()
-    assert "Candidates may be outside the selected date range" in html
-    assert "Rows available before date filtering" in html
+    assert "No loaded records found" in html
+    assert "Loaded records for this facility before date filtering" in html
     assert "<dd>6</dd>" in html
     normalized_html = " ".join(html.split())
-    assert "Confirm the facility/date context" in normalized_html
-    assert "No loaded source-derived records matched this request context" in html
-    assert "Use the no-match result to confirm criteria" in normalized_html
-    assert "Try one next step" in html
-    assert "Check or change the facility/license number" in html
-    assert "Adjust the complaint date range" in html
-    assert "Use loaded records by changing the date range" in normalized_html
-    assert "Skip job diagnostics troubleshooting for this result" in normalized_html
-    assert "no controlled server-side job was submitted" in normalized_html
-    assert "Report an issue with the facility/license number, date range" in normalized_html
-    assert "How to interpret this no-match result" in html
-    assert "currently loaded source-derived rows only" in normalized_html
-    assert "did not submit a controlled server-side job for this request" in normalized_html
-    assert "Request job submitted" in html
-    assert "Already-loaded source-derived rows were searched" in html
-    assert "Change the facility/date criteria" in normalized_html
+    assert "No loaded complaint records matched this facility and date range" in html
+    assert "Try one next step" not in html
+    assert "Adjust date range" in html
+    assert "did not submit a Request Records job for this request" in normalized_html
+    assert "Support context for this no-match result" in html
+    assert "currently loaded complaint records only" in normalized_html
+    assert "did not submit a Request Records job for this request" in normalized_html
+    assert "Request job submitted" not in html
+    assert "This page searched currently loaded complaint records only" in html
     assert "Facility/license number searched" in html
     assert "Date range searched" in html
-    assert "Loaded source-derived rows for this facility before date filtering" in html
-    assert "Local validated load state" in html
-    assert "not submitted for this request" in html
-    assert "Change the facility/license number or date range" in normalized_html
-    assert "use the local validated CCLD load action" in html
-    assert "outside-browser live fetch and artifact-builder workflow" in normalized_html
-    assert "report an issue when records still look unexpected" in normalized_html
-    assert "Use the no-match result to confirm criteria" in html
-    assert "Selected request context" in html
-    assert "Change facility/date criteria for this request" in html
-    assert "Copyable issue-report details" in html
-    assert "Technical job details" in html
-    assert "Copy issue-report details" in html
-    assert 'class="technical-details diagnostic-details"' in html
+    assert "Loaded rows for this facility before date filtering" in html
+    assert "Load state" in html
+    assert "Support details" in html
+    assert "Feedback details" in html
+    assert "Structured CCLD issue details" in html
+    assert "Technical job details" not in html
+    assert "Copy feedback details" not in html
+    assert 'class="technical-details diagnostic-details"' not in html
     assert 'class="technical-details dense-table-details"' in html
-    assert "Report unclear loaded-record versus job-state wording" in html
-    assert "Open facility review priority list" in html
-    assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098" in html
-    assert "Check facility hub or signal-only facility hub for this request context" in html
+    assert "Send feedback" in html
+    assert "Check facility hub or signal-only facility hub for this request context" not in html
     assert "workflow_area=request-result" in html
     assert "retrieval_context=already-loaded-records" in html
     assert "retrieval_status=not_submitted" in html
-    assert "Advanced local/operator actions" in html
+    assert "Advanced local/operator actions" not in html
     assert "- Matching source-derived rows shown: 0" in html
     assert "- Matching complaint records in queue: 0" in html
     assert "- Local facility rows before date filtering: 6" in html
     assert "- None shown for this request." in html
-    assert "Technical preparation path" in html
+    assert "Preparation details" in html
+    assert "Outside-browser preparation path" not in html
+    assert "Technical preparation path" not in html
     assert "When controlled retrieval is configured" in html
     assert "use the browser retrieval action" in html
     assert "Server-side retrieval, raw preservation" in html
@@ -1134,7 +1083,7 @@ def test_ccld_record_request_queue_preserves_lookup_selected_context() -> None:
     assert "Selected lookup facility name" in html
     assert "A. MIRIAM JAMISON" in html
     assert "Date range being requested" in html
-    assert "2022-08-01 to 2022-08-31" in html
+    assert "08/01/2022 to 08/31/2022" in html
     assert "Open the suggested complaint first" in " ".join(html.split())
     assert "request_context_origin" in html
     assert "lookup_facility_name" in html
@@ -1165,25 +1114,19 @@ def test_ccld_record_request_empty_hosted_records_offers_local_validated_load() 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert counts == _empty_unloaded_counts()
-    assert "No loaded complaint records match this request yet" in html
+    assert "No loaded records found" in html
     assert "Load local validated CCLD records" in html
-    assert "How to interpret this no-match result" in html
+    assert "Support context for this no-match result" in html
     normalized_html = " ".join(html.split())
-    assert "currently loaded source-derived rows only" in normalized_html
-    assert "Use the no-match result to confirm criteria" in normalized_html
-    assert "Try one next step" in html
-    assert "Check or change the facility/license number" in html
-    assert "Adjust the complaint date range" in html
-    assert "Load or refresh records" in html
-    assert "Skip job diagnostics troubleshooting for this result" in normalized_html
-    assert "Report an issue with the facility/license number, date range" in normalized_html
-    assert "no controlled server-side job was submitted for this request" in html
-    assert "no</dd>" in html
-    assert "Change the facility/date criteria" in " ".join(html.split())
-    assert "Loaded source-derived rows for this facility before date filtering" in html
-    assert "not submitted for this request" in html
-    assert "Copyable issue-report details" in html
-    assert "Report unclear loaded-record versus job-state wording" in html
+    assert "currently loaded complaint records only" in normalized_html
+    assert "Try one next step" not in html
+    assert "Adjust date range" in html
+    assert "Change facility" in html
+    assert "Send feedback" in html
+    assert "did not submit a Request Records job for this request" in html
+    assert "Loaded rows for this facility before date filtering" in html
+    assert "Feedback details" in html
+    assert "Send feedback" in html
     assert "workflow_area=request-result" in html
     assert "retrieval_context=already-loaded-records" in html
     assert "retrieval_status=not_submitted" in html
@@ -1222,14 +1165,14 @@ def test_ccld_record_request_loads_local_validated_output_then_shows_matches() -
     assert before_source_rows == []
     assert len(after_source_rows) == 6
     assert counts == _empty_reviewer_counts()
-    assert "Local validated CCLD load result" in html
+    assert "Validated load result" in html
     assert "Load executed: yes." in html
     assert "New source-derived rows staged" in html
     assert "validated_seeded_corpus.json" in html
     assert "Complaint records ready for attorney review" in html
     assert "Request job submitted" in html
     assert "no</dd>" in html
-    assert "Already-loaded source-derived rows were searched" in html
+    assert "This page searched currently loaded complaint records only" in html
     assert "Complaint records ready" in html
     assert "Review the already-loaded source-derived records in the queue" in html
     assert "Matching source-derived rows shown" in html
@@ -1285,13 +1228,13 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     assert before_source_rows == after_source_rows
     assert counts == _empty_reviewer_counts()
     assert first_checklist == second_checklist
-    assert first_checklist.startswith("CCLD issue-report details")
+    assert first_checklist.startswith("CCLD feedback details")
     assert "- Source scope: CCLD public complaint records only" in first_checklist
     assert "- Facility/license number: 157806098" in first_checklist
     assert "- Facility lookup used or skipped: Manual facility/license entry" in first_checklist
     assert "- Selected lookup facility name: unknown" in first_checklist
     assert "- Active facility reference source:" in first_checklist
-    assert "- Date range requested: 2022-08-01 to 2022-08-31" in first_checklist
+    assert "- Date range requested: 08/01/2022 to 08/31/2022" in first_checklist
     assert "- Request criteria that felt unclear:" in first_checklist
     assert "- Matching source-derived rows shown: 6" in first_checklist
     assert "- Matching complaint records in queue: 1" in first_checklist
@@ -1334,11 +1277,11 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     )
     assert "- Keyboard, reading-order, or checklist-copy friction:" in first_checklist
     assert "- Suggested enhancements:" in first_checklist
-    assert "- Use the Report an issue page for feedback." in first_checklist
+    assert "- Use the Feedback page for feedback." in first_checklist
     assert "When GitHub issue intake is configured" in first_checklist
     assert (
         "does not create a saved review session, persisted queue state, or duplicate "
-        "issue-report workflow"
+        "feedback workflow"
         in first_checklist
     )
     assert "Rendering these details does not change source-derived records" in first_checklist
@@ -1375,14 +1318,14 @@ def test_ccld_record_request_local_validated_load_defers_when_dates_do_not_match
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert counts == _empty_unloaded_counts()
-    assert "Local validated CCLD load result" in html
+    assert "Validated load result" in html
     assert "Load executed: no." in html
     assert "reads prepared hosted seeded-corpus JSON only" in " ".join(html.split())
     assert "No local validated CCLD records matched" in html
     assert "submitted, but no matching local validated rows were loaded" in html
-    assert "No loaded complaint records match this request yet" in html
-    assert "How to interpret this no-match result" in html
-    assert "outside-browser live fetch and artifact-builder workflow" in " ".join(html.split())
+    assert "No loaded records found" in html
+    assert "Support context for this no-match result" in html
+    assert "Preparation details" in html
     assert_no_secret_html(html)
 
 

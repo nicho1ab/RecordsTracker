@@ -28,6 +28,7 @@ Read only the context needed for the task; do not rewrite governance just becaus
 - Prefer changes that let a tester, reviewer, or operator do something concrete that they could not do before.
 - Avoid governance-only, scaffold-only, polish-only, or documentation-only work unless it fixes stale/incorrect guidance, failing validation, repeated mistakes, or a direct blocker to tester/operator use.
 - Do not describe the current app as a prototype or proof of concept in new user-facing/stakeholder-facing language. Prefer "current app," "current version," "early version," "RecordsTracker," or "pilot build" as context requires.
+- Keep reviewer-facing UI in the attorney/reviewer tier: show only record identity, facility identity, source-derived facts needed for the current review task, review-flag badges, reviewer-created state/actions, and focused next actions. Move help, support, operator, source traceability internals, raw source-derived field dumps, connector metadata, hashes, debug details, first-run guidance, and issue-report bridge copy out of the primary reviewer page. If older docs or tests require outdated visible scaffold UI, update those docs/tests to the current product-tier direction instead of preserving the old UI.
 
 ## Security and privacy boundaries
 
