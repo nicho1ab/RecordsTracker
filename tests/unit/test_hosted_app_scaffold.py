@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -20,11 +21,6 @@ from ccld_complaints.hosted_app.auth import load_hosted_auth_runtime_config
 from ccld_complaints.hosted_app.smoke import run_scaffold_smoke_check
 
 ROOT = Path(__file__).resolve().parents[2]
-ENTRY_FEEDBACK_HREF = (
-    "/feedback?feedback_type=Bug+report&page_path=%2F"
-    "&workflow_area=entry-orientation"
-    "&prompt=Describe+what+was+confusing+about+starting+the+attorney+review+path."
-)
 
 
 class HtmlStructureParser(HTMLParser):
@@ -79,6 +75,14 @@ def parse_html_structure(markup: str) -> HtmlStructureParser:
     return parser
 
 
+def assert_no_buttons_inside_list_items(markup: str) -> None:
+    assert not re.search(
+        r"<li\b(?![^>]*role=\"option\")[^>]*>(?:(?!</li>).)*(?:<button\b|class=\"[^\"]*\bbutton\b)",
+        markup,
+        flags=re.DOTALL,
+    )
+
+
 def assert_source_shell_semantics(
     markup: str,
     *,
@@ -124,50 +128,46 @@ def test_app_shell_labels_placeholder_scope() -> None:
     normalized_html = " ".join(html.split())
     parser = parse_html_structure(html)
 
-    assert "Skip to main CCLD review content" in html
+    assert "Skip to main CCLD facility lookup content" in html
     assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
-    assert "Attorney public-record review workspace." in html
+    assert "CCLD-only public-record review workspace." in html
     assert "CCLD RecordsTracker" in html
     assert parser.tags.count("h1") == 1
-    assert parser.text_for("h1") == "Start a Facility Complaint Review"
+    assert parser.text_for("h1") == "Find a Facility"
     assert parser.text_for("h1") != "CCLD RecordsTracker"
     assert "Review aids only" in html
-    assert "Start a Facility Complaint Review" in html
-    assert "Attorney review start" in html
-    assert "Start with facility lookup" in html
+    assert "Find a Facility" in html
+    assert "Facility intake" in html
+    assert "Find a facility" in html
+    assert '<form action="/ccld/facilities" method="get" class="facility-search-form">' in html
+    assert 'for="facility-search-input"' in html
+    assert 'placeholder="Name, license number, city, or ZIP"' in html
+    assert "Search CCLD facilities" in html
+    assert 'class="selected-facility-request-form"' in html
+    assert "Continue to Request Records" in html
+    assert "Change selected facility" in html
     assert (
-        '<a class="button button-secondary" href="/ccld/records/request">'
-        "Request Records</a>"
+        '<summary id="manual-entry-heading">'
+        "Enter a facility/license number directly</summary>"
     ) in html
-    assert "Enter a facility/license number directly" not in html
     assert (
-        "Find the facility, choose dates, open already-loaded complaint records"
+        "Start review by finding the CCLD facility/license number in the preloaded "
+        "facility directory"
         in html
     )
-    assert (
-        "Loaded records are not a public-source completeness conclusion."
-        in html
-    )
-    assert "Start here" in html
-    assert "Find the facility" in html
-    assert "Choose dates and records" in html
-    assert "Open the review queue" in html
-    assert (
-        "Use Request Records when you already have the digit facility/license number"
-        in normalized_html
-    )
-    assert "After records are loaded" in html
-    assert html.index("Find the facility") < html.index("Choose dates and records")
-    assert html.index("Choose dates and records") < html.index("Open the review queue")
-    assert 'href="/ccld/facilities">Open facility lookup</a>' in html
-    assert 'href="/reviewer">Open review queue</a>' in html
-    assert 'href="/reviewer/packet/preview">Open packet preview</a>' in html
-    assert f'href="{ENTRY_FEEDBACK_HREF}">Report an issue</a>' in html
+    assert "then carry that selected facility into the request page" in html
+    assert "Review path" not in html
+    assert "1. Find the facility" not in html
+    assert "2. Request records" not in html
+    assert "3. Review complaints" not in html
+    assert 'href="/reviewer">Open review queue</a>' not in html
+    assert 'href="/reviewer/packet/preview">Open packet preview</a>' not in html
+    assert "workflow_area=entry-orientation" not in html
     assert "Attorney-focused public CCLD complaint/facility record review" not in html
     assert "New to this tool?" not in html
     assert "See Help for the review workflow" not in html
-    assert "Open review queue" in html
-    assert "Report an issue" in html
+    assert "Open review queue" not in html
+    assert "Feedback" in html
     assert "Developer/operator commands" not in html
     assert "Local pilot runtime" not in html
     assert "Live public CCLD retrieval" not in html
@@ -185,30 +185,58 @@ def test_app_shell_labels_placeholder_scope() -> None:
     assert "Start facility complaint review." not in html
     assert "Select the facility/license number." not in html
     assert "Choose the complaint date range." not in html
+    assert_no_buttons_inside_list_items(html)
 
 
-def test_home_orientation_is_single_shared_entry_block_with_feedback_path() -> None:
+def test_home_orientation_uses_shared_facility_start_experience() -> None:
     html = render_app_shell()
     normalized_html = " ".join(html.split())
 
     assert "First-time tester orientation" not in html
     assert "Tester task guide" not in html
     assert "Expected:" not in html
-    assert html.count("Start here") == 1
-    assert "Find the facility" in normalized_html
-    assert (
-        "Use Request Records when you already have the digit facility/license number"
-        in normalized_html
-    )
-    assert "Open already-loaded records from Request Records" in normalized_html
-    assert "facility lookup, date range, loaded queue, source traceability" in normalized_html
-    assert f'href="{ENTRY_FEEDBACK_HREF}">Report an issue</a>' in html
-    assert "workflow_area=entry-orientation" in html
-    assert "page_path=%2F" in html
+    assert "Review path" not in html
+    assert "1. Find the facility" not in normalized_html
+    assert "2. Request records" not in normalized_html
+    assert "3. Review complaints" not in normalized_html
+    assert "Facility intake" in html
+    assert "Find the facility/license number" in html
+    assert "Search CCLD facilities" in html
+    assert "Continue to Request Records" in html
+    assert "Change selected facility" in html
+    assert "Optional planning views" in html
+    assert "workflow_area=entry-orientation" not in html
+    assert "page_path=%2F" not in html
     assert "saved session" not in normalized_html.casefold()
     assert "persisted queue state" not in normalized_html.casefold()
     assert "source-completeness proof" not in normalized_html.casefold()
     assert "legal conclusion" not in normalized_html.casefold()
+    assert_no_buttons_inside_list_items(html)
+
+
+def test_home_and_facility_routes_share_find_facility_start_workflow() -> None:
+    root_status, root_content_type, root_body = route_response("/")
+    facility_status, facility_content_type, facility_body = route_response(
+        "/ccld/facilities",
+        page_data_mode="fixture-demo",
+    )
+    root_html = root_body.decode("utf-8")
+    facility_html = facility_body.decode("utf-8")
+
+    assert root_status == 200
+    assert facility_status == 200
+    assert root_content_type == facility_content_type == "text/html; charset=utf-8"
+    for html in (root_html, facility_html):
+        assert "Find a Facility" in html
+        assert "Facility intake" in html
+        assert "Find the facility/license number" in html
+        assert "Search CCLD facilities" in html
+        assert "Continue to Request Records" in html
+        assert "Change selected facility" in html
+        assert "Review path" not in html
+        assert "1. Find the facility" not in html
+        assert "Open review queue" not in html
+        assert_no_buttons_inside_list_items(html)
 
 
 def test_guided_attorney_review_workflow_acceptance_route_markers(
@@ -235,11 +263,11 @@ def test_guided_attorney_review_workflow_acceptance_route_markers(
             "entry",
             "/",
             (
-                "Attorney review start",
-                "Start here",
-                "Find the facility",
-                "Choose dates and records",
-                "Open the review queue",
+                "Find a Facility",
+                "Facility intake",
+                "Find the facility/license number",
+                "Search CCLD facilities",
+                "Continue to Request Records",
             ),
         ),
         (
@@ -257,9 +285,9 @@ def test_guided_attorney_review_workflow_acceptance_route_markers(
             "/reviewer",
             (
                 "Complaint records ready for review",
-                "Suggested first record for review",
-                "Open priority record",
-                "Open packet preview",
+                "Review cue summary",
+                "Worklist",
+                "Open record",
             ),
         ),
         (
@@ -269,10 +297,10 @@ def test_guided_attorney_review_workflow_acceptance_route_markers(
                 "&start_date=2022-08-01&end_date=2022-08-31"
             ),
             (
-                "Packet readiness",
-                "Prioritized records for review",
-                "Copy-ready attorney review brief",
-                "Attorney review readiness checklist",
+                "Packet preview",
+                "Included complaint records",
+                "Readiness checks",
+                "Copy-ready brief",
             ),
         ),
         (
@@ -311,7 +339,7 @@ def test_polished_shared_layout_navigation_on_key_pages() -> None:
         }
     )
     route_specs = (
-        ("/", "Skip to main CCLD review content"),
+        ("/", "Skip to main CCLD facility lookup content"),
         ("/ccld/facilities", "Skip to main CCLD facility lookup content"),
         ("/ccld/records/request", "Skip to main CCLD request content"),
         ("/ccld/help", "Skip to main CCLD request content"),
@@ -346,15 +374,16 @@ def test_polished_shared_layout_navigation_on_key_pages() -> None:
             assert "Attorney workflow" not in html
             assert "Current step" not in html
         assert "Future step" not in html
-        assert "Facility" in html
+        assert 'href="/ccld/facilities">Facility</a>' not in html
+        assert 'href="/">Home</a>' in html
         assert 'href="/ccld/records/request">Request Records</a>' in html
         assert 'href="/ccld/records/request">Retrieve</a>' not in html
         assert "Review" in html
         assert 'href="/ccld/retrieval/jobs">Job Status</a>' not in html
         assert 'href="/ccld/retrieval/jobs">Job diagnostics</a>' not in html
         assert 'href="/ccld/retrieval/jobs">Jobs</a>' not in html
-        assert "Report an issue" in html
-        assert 'href="/feedback">Report an issue</a>' in html
+        assert "Feedback" in html
+        assert 'href="/feedback">Feedback</a>' in html
         assert "Feedbac k" not in html
         assert "Commands</a>" not in html
         assert "Health check</a>" not in html
@@ -366,6 +395,8 @@ def test_polished_shared_layout_navigation_on_key_pages() -> None:
         assert "button:focus-visible" in html
         assert ".sr-only" in html
         assert "@media (max-width: 760px)" in html
+        if path in {"/", "/ccld/facilities", "/feedback", "/ccld/help"}:
+            assert_no_buttons_inside_list_items(html)
 
 
 def test_representative_hosted_pages_do_not_render_shared_footer_disclaimer() -> None:
@@ -467,7 +498,8 @@ def test_routes_return_shell_health_and_not_found() -> None:
 
     assert root_status == 200
     assert root_content_type == "text/html; charset=utf-8"
-    assert b"Attorney public-record review workspace" in root_body
+    assert b"CCLD-only public-record review workspace" in root_body
+    assert b"Find the facility/license number" in root_body
     assert health_status == 200
     assert health_content_type == "application/json; charset=utf-8"
     assert json.loads(health_body)["status"] == "ok"
@@ -1079,12 +1111,12 @@ def test_route_active_nav_highlights_correct_item() -> None:
     # (path, expected_active_href, expected_active_label)
     route_active_specs = (
         ("/", "/", "Home"),
-        ("/ccld/facilities", "/ccld/facilities", "Facility"),
+        ("/ccld/facilities", "/", "Home"),
         ("/ccld/records/request", "/ccld/records/request", "Request Records"),
         ("/ccld/help", "/ccld/help", "Help"),
         ("/reviewer", "/reviewer", "Review"),
         ("/ccld/retrieval/jobs", "/ccld/retrieval/jobs", "Job diagnostics"),
-        ("/feedback", "/feedback", "Report an issue"),
+        ("/feedback", "/feedback", "Feedback"),
     )
     for path, expected_href, expected_label in route_active_specs:
         status, _content_type, body = route_response(
@@ -1153,19 +1185,13 @@ def test_help_page_topics_toc_links_to_every_help_section_in_order() -> None:
     parser = parse_html_structure(html)
 
     expected_topics = [
-        ("workflow", "How to review a facility (workflow)"),
-        ("review-guidance", "Review guidance and next steps"),
-        ("source-traceability", "How source traceability works"),
-        ("live-retrieval", "Request Records and job diagnostics"),
-        ("operator-setup", "Operator setup: enabling live Request Records"),
-        ("tool-purpose", "What this tool helps you do"),
-        ("review-flags", "What review flags mean"),
-        ("source-confidence", "What to do with source-confidence cues"),
-        ("reviewer-created-notes-status", "How reviewer-created notes/status work"),
-        ("reviewer-status-filters", "How reviewer-created status filters work"),
-        ("correction-readiness", "How correction-readiness works"),
-        ("feedback", "How to report a review issue"),
-        ("packet-preparation", "How packet preparation fits in"),
+        ("find-facility", "Find a facility"),
+        ("request-records", "Request or show records"),
+        ("review-records", "Review complaint records"),
+        ("review-flags", "Understand review flags"),
+        ("reviewer-created-notes-status", "Add reviewer status/note"),
+        ("packet-preparation", "Prepare packet content"),
+        ("feedback", "Send feedback"),
     ]
     expected_hrefs = [f"#{topic_id}" for topic_id, _label in expected_topics]
     toc_start = html.index('<h2 id="help-topics-heading">Help topics</h2>')
@@ -1184,10 +1210,17 @@ def test_help_page_topics_toc_links_to_every_help_section_in_order() -> None:
 
     details_attrs = parser.start_attrs_by_tag["details"]
     detail_ids = [attrs.get("id", "") for attrs in details_attrs]
-    assert detail_ids == [topic_id for topic_id, _label in expected_topics]
+    assert detail_ids[: len(expected_topics)] == [
+        topic_id for topic_id, _label in expected_topics
+    ]
+    assert "support-operator-help" in detail_ids
+    assert "#support-operator-help" not in toc_html
     assert len(detail_ids) == len(set(detail_ids))
     assert all(detail_ids)
-    assert parser.summary_texts == [label for _topic_id, label in expected_topics]
+    assert parser.summary_texts[: len(expected_topics)] == [
+        label for _topic_id, label in expected_topics
+    ]
+    assert "Support and runtime notes" in parser.summary_texts
 
 
 def test_retrieval_job_detail_route_highlights_support_diagnostics_nav() -> None:

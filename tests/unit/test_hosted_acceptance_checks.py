@@ -78,10 +78,10 @@ def test_verify_script_checks_complete_tester_readiness_route_set() -> None:
         assert route_path in script
 
     for marker in (
-        "Start a Facility Complaint Review",
+        "Find a Facility",
         "Find the facility/license number",
         "PreloadedFacilityNumber",
-        "Report a review issue",
+        "Send RecordsTracker feedback",
         "Open loaded records or request complaint records",
         "Complaint overview",
         "Before copying or printing",

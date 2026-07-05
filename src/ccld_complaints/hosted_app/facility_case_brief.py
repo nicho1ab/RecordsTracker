@@ -41,9 +41,15 @@ class FacilityCaseBrief:
     mode_badge_class: str
     records: tuple[FacilityCaseBriefRecord, ...]
     record_count_label: str = "Complaint records visible/imported"
+    flag_count_label: str = "Records with review flags"
+    source_available_label: str = "Original source links saved"
+    reviewer_state_label: str = "Reviewer-created notes/statuses"
     full_queue_href: str = "/reviewer"
     packet_preview_href: str | None = None
     packet_draft_href: str | None = None
+    show_priority_record: bool = True
+    show_review_cue_summary: bool = True
+    show_findings_summary: bool = True
 
 
 def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
@@ -63,9 +69,9 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
     metric_cards = _metric_cards(
         (
             (brief.record_count_label, len(brief.records), True),
-            ("Records with review flags", flag_count, True),
-            ("Original source links saved", source_traceability_count, True),
-            ("Reviewer-created notes/statuses", reviewer_state_count, True),
+            (brief.flag_count_label, flag_count, True),
+            (brief.source_available_label, source_traceability_count, True),
+            (brief.reviewer_state_label, reviewer_state_count, True),
         )
     )
     flag_cards = _metric_cards(
@@ -85,9 +91,6 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
         f"            <li><span class=\"badge badge-muted\">{_escape(label)}: {count}</span></li>"
         for label, count in findings.items()
     )
-    priority_reasons = "\n".join(
-        f"                <li>{_escape(reason)}</li>" for reason in priority_reason_labels(priority)
-    )
     priority_label = display_record_label(priority)
     packet_preview_action = (
         f'          <a class="button button-secondary" href="{_escape(brief.packet_preview_href)}">Open packet preview</a>'
@@ -99,18 +102,12 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
         if brief.packet_draft_href
         else ""
     )
-    return f"""<section class="hero-card facility-case-brief" aria-labelledby="facility-case-brief-heading">
-      <div class="case-brief-header">
-        <div>
-          <p class="launch-kicker">Facility case brief</p>
-          <h2 id="facility-case-brief-heading">{_escape(facility_label)}</h2>
-          <p class="helper-text">Facility/license number: {_escape(brief.facility_number or 'unknown')}{_date_range_fragment(brief.date_range)}</p>
-        </div>
-      </div>
-      <div class="metric-strip" aria-label="Facility review summary">
-{metric_cards}
-      </div>
-      <section class="summary-card" aria-labelledby="priority-record-heading">
+    priority_section = ""
+    if brief.show_priority_record:
+        priority_reasons = "\n".join(
+            f"                <li>{_escape(reason)}</li>" for reason in priority_reason_labels(priority)
+        )
+        priority_section = f"""      <section class="summary-card" aria-labelledby="priority-record-heading">
         <h3 id="priority-record-heading">Suggested first record for review</h3>
         <p><strong>{_escape(priority_label)}</strong></p>
         <p>Why open this first:</p>
@@ -123,21 +120,39 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
 {packet_preview_action}
     {packet_draft_action}
         </div>
-      </section>
-      <section class="quiet-section case-brief-section-break" aria-labelledby="case-brief-flags-heading">
+      </section>"""
+    review_cue_section = ""
+    if brief.show_review_cue_summary:
+        review_cue_section = f"""      <section class="quiet-section case-brief-section-break" aria-labelledby="case-brief-flags-heading">
         <h3 id="case-brief-flags-heading">Review flags</h3>
         <div class="metric-strip" aria-label="Review flag summary">
 {flag_cards}
         </div>
-      </section>
-      <section class="quiet-section" aria-labelledby="case-brief-findings-heading">
+      </section>"""
+    findings_section = ""
+    if brief.show_findings_summary:
+        findings_section = f"""      <section class="quiet-section" aria-labelledby="case-brief-findings-heading">
         <h3 id="case-brief-findings-heading">Findings represented</h3>
         <ul class="flag-list" aria-label="Source-derived findings represented">
 {finding_items}
         </ul>
         <p class="helper-text">Findings are source-derived categories, not legal conclusions.</p>
       </section>
-      <p class="helper-text">Use this summary to decide what to review first. Review flags are screening aids, not legal conclusions.</p>
+      <p class="helper-text">Use this summary to decide what to review first. Review flags are screening aids, not legal conclusions.</p>"""
+    return f"""<section class="hero-card facility-case-brief" aria-labelledby="facility-case-brief-heading">
+      <div class="case-brief-header">
+        <div>
+          <p class="launch-kicker">Facility case brief</p>
+          <h2 id="facility-case-brief-heading">{_escape(facility_label)}</h2>
+          <p class="helper-text">Facility/license number: {_escape(brief.facility_number or 'unknown')}{_date_range_fragment(brief.date_range)}</p>
+        </div>
+      </div>
+      <div class="metric-strip" aria-label="Facility review summary">
+{metric_cards}
+      </div>
+{priority_section}
+{review_cue_section}
+{findings_section}
     </section>"""
 
 

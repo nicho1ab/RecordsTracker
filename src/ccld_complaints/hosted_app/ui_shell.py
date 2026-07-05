@@ -13,12 +13,18 @@ EYEBROW_TEXT = (
 )
 PRIMARY_NAV_LINKS: tuple[tuple[str, str], ...] = (
     ("Home", "/"),
-  ("Facility", "/ccld/facilities"),
   ("Request Records", "/ccld/records/request"),
   ("Review", "/reviewer"),
-  ("Report an issue", "/feedback"),
+  ("Feedback", "/feedback"),
   ("Help", "/ccld/help"),
 )
+
+@dataclass(frozen=True)
+class ActionItem:
+  label: str
+  href: str
+  aria_label: str | None = None
+
 
 @dataclass(frozen=True)
 class GuidedStep:
@@ -67,9 +73,9 @@ GUIDED_STEPS: tuple[GuidedStep, ...] = (
   ),
   GuidedStep(
     "feedback",
-    "Report",
+    "Feedback",
     "/feedback",
-    "Report an issue without private values.",
+    "Send feedback without private values.",
   ),
 )
 
@@ -79,8 +85,8 @@ DEFAULT_NEXT_ACTIONS: Mapping[str, str] = {
   "date_range": "Choose dates, then request complaint records",
   "retrieve": "Request complaint records",
   "review_results": "Review records or check support diagnostics only when needed",
-  "review_records": "Open next record or report an issue",
-  "feedback": "Submit the issue report when useful",
+  "review_records": "Open next record or send feedback",
+  "feedback": "Submit feedback when useful",
 }
 
 MODE_BADGE_CLASSES = {
@@ -158,6 +164,44 @@ def render_page_shell(
 </body>
 </html>
 """
+
+
+def render_action_group(
+    *,
+    primary: ActionItem | None = None,
+    secondary: Sequence[ActionItem] = (),
+    tertiary: Sequence[ActionItem] = (),
+    aria_label: str = "Actions",
+) -> str:
+    button_items = []
+    if primary is not None:
+        button_items.append(_action_anchor(primary, "button"))
+    button_items.extend(_action_anchor(item, "button button-secondary") for item in secondary)
+    button_markup = ""
+    if button_items:
+        button_markup = f"""<div class="action-group" aria-label="{html.escape(aria_label)}">
+{chr(10).join(button_items)}
+</div>"""
+    reference_markup = ""
+    if tertiary:
+        reference_links = "\n".join(_action_anchor(item, "") for item in tertiary)
+        reference_markup = f"""<div class="action-reference-links" aria-label="{html.escape(aria_label)} reference links">
+{reference_links}
+</div>"""
+    return "\n".join(part for part in (button_markup, reference_markup) if part)
+
+
+def _action_anchor(item: ActionItem, class_name: str) -> str:
+    class_attr = f' class="{html.escape(class_name, quote=True)}"' if class_name else ""
+    aria_attr = (
+        f' aria-label="{html.escape(item.aria_label, quote=True)}"'
+        if item.aria_label
+        else ""
+    )
+    return (
+        f'  <a{class_attr} href="{html.escape(item.href, quote=True)}"{aria_attr}>'
+        f"{html.escape(item.label)}</a>"
+    )
 
 
 def _nav_links(
@@ -265,7 +309,7 @@ def _is_active_nav(href: str, active_path: str | None) -> bool:
   if not active_path:
     return False
   if href == "/":
-    return active_path == "/"
+    return active_path in {"/", "/ccld/facilities"} or active_path.startswith("/ccld/facilities/")
   return active_path == href or active_path.startswith(f"{href}/")
 
 
@@ -738,6 +782,26 @@ SHARED_CSS = r"""
       font-size: 1.08rem;
       padding: 0.85rem 1.1rem;
     }
+    .action-group {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      margin-top: 0.35rem;
+    }
+    .action-group .button,
+    .action-group button {
+      margin: 0;
+    }
+    .action-reference-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 0.8rem;
+      margin-top: 0.45rem;
+    }
+    .action-reference-links a {
+      font-size: 0.94rem;
+    }
     .button-secondary, button.secondary {
       background: #fff;
       border-color: var(--ds-border);
@@ -877,7 +941,8 @@ SHARED_CSS = r"""
     }
     .attorney-hero-actions {
       align-content: start;
-      display: grid;
+      display: flex;
+      flex-wrap: wrap;
       gap: 0.55rem;
       min-width: 12rem;
     }
@@ -1090,18 +1155,44 @@ SHARED_CSS = r"""
       font-size: 0.88rem;
       gap: 0.4rem;
     }
-    .reviewer-detail-top {
-      align-items: start;
-      display: grid;
-      gap: 1rem;
-      grid-template-columns: minmax(0, 1.65fr) minmax(19rem, 0.85fr);
-    }
     .reviewer-brief-card {
       border-left-color: var(--teal);
+    }
+    .reviewer-brief-card.hero-card {
+      padding: 1rem;
     }
     .facility-identity-line {
       color: var(--muted);
       font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+    .top-fact-strip {
+      display: grid;
+      gap: 0.45rem;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      margin: 0.6rem 0;
+    }
+    .compact-fact {
+      background: #f8fafb;
+      border: 1px solid var(--line-soft);
+      border-radius: 6px;
+      padding: 0.5rem 0.6rem;
+    }
+    .compact-fact dt {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    .compact-fact dd {
+      color: var(--ink);
+      font-size: 0.92rem;
+      font-weight: 800;
+      margin: 0.15rem 0 0;
+      overflow-wrap: anywhere;
+    }
+    .reviewer-brief-card .launch-value {
+      font-size: 0.98rem;
       margin-bottom: 0.55rem;
     }
     .reviewer-primary-actions {
@@ -1144,12 +1235,44 @@ SHARED_CSS = r"""
       padding: 0.8rem;
       white-space: pre-wrap;
     }
-    .reviewer-created-panel {
+    .copyable-value {
+      align-items: center;
+      display: inline-flex;
+      gap: 0.35rem;
+      max-width: 100%;
+    }
+    .copy-icon-button {
+      align-items: center;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      color: var(--ds-link);
+      cursor: pointer;
+      display: inline-flex;
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 800;
+      justify-content: center;
+      line-height: 1;
+      min-height: 1.45rem;
+      min-width: 1.45rem;
+      padding: 0.15rem;
+    }
+    .copy-icon-button:hover {
+      background: var(--ds-info-soft);
+      border-color: var(--ds-nav-active-border);
+    }
+    .copy-icon-button svg {
+      display: block;
+      height: 1rem;
+      width: 1rem;
+    }
+    .review-status-panel {
       background: #f8fbfb;
       border-color: #bdded8;
       box-shadow: var(--shadow-strong);
     }
-    .reviewer-created-panel .summary-list {
+    .review-status-panel .summary-list {
       font-size: 0.92rem;
       gap: 0.35rem 0.75rem;
       grid-template-columns: minmax(7rem, 9rem) 1fr;
@@ -1175,34 +1298,19 @@ SHARED_CSS = r"""
       font-size: 0.9rem;
       margin: 0.35rem 0 0.65rem;
     }
-    .reviewer-panel-context {
-      background: #ffffff;
-      border: 1px solid var(--line-soft);
-      border-radius: 8px;
-      display: grid;
-      font-size: 0.88rem;
-      gap: 0.25rem 0.65rem;
-      grid-template-columns: minmax(7rem, 9rem) 1fr;
-      margin: 0.65rem 0;
-      padding: 0.65rem;
-    }
-    .reviewer-panel-context dt {
-      color: var(--muted);
-      font-weight: 800;
-    }
-    .reviewer-panel-context dd {
-      margin: 0;
-      overflow-wrap: anywhere;
-    }
-    .reviewer-created-panel form p {
+    .review-status-panel form p {
       margin: 0.45rem 0;
     }
-    .reviewer-created-panel h3 {
+    .review-status-panel h3 {
       font-size: 0.98rem;
       margin-bottom: 0.35rem;
     }
     .quick-review-section h2 {
       font-size: 1rem;
+    }
+    .quick-review-section h3 {
+      font-size: 0.98rem;
+      margin-top: 0.7rem;
     }
     .quick-review-grid {
       display: grid;
@@ -1237,24 +1345,84 @@ SHARED_CSS = r"""
       font-weight: 800;
       margin-top: auto;
     }
+    .reviewer-brief-card .quick-review-grid {
+      gap: 0.45rem;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .reviewer-brief-card .quick-review-card {
+      gap: 0.2rem;
+      min-height: 0;
+      padding: 0.55rem;
+    }
+    .reviewer-brief-card .quick-review-card span:last-child {
+      font-size: 0.8rem;
+    }
+    .reviewer-note-guidance {
+      background: #ffffff;
+      margin: 0.55rem 0;
+    }
+    .source-confidence-details {
+      background: var(--surface-alt);
+    }
+    .inline-glossary-term {
+      border-bottom: 1px dotted currentColor;
+      color: var(--ink);
+      cursor: help;
+      font-style: normal;
+      font-weight: 800;
+      position: relative;
+      text-decoration: none;
+      text-underline-offset: 0.18em;
+    }
+    .inline-glossary-term:focus {
+      border-radius: 3px;
+      outline: 2px solid var(--focus);
+      outline-offset: 3px;
+    }
+    .inline-glossary-definition {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      box-shadow: var(--shadow-strong);
+      color: var(--ink);
+      display: none;
+      font-size: 0.86rem;
+      font-weight: 600;
+      left: 0;
+      line-height: 1.35;
+      max-width: min(22rem, 80vw);
+      padding: 0.55rem 0.65rem;
+      position: absolute;
+      text-transform: none;
+      top: 1.5em;
+      width: max-content;
+      z-index: 20;
+    }
+    .inline-glossary-term:hover .inline-glossary-definition,
+    .inline-glossary-term:focus .inline-glossary-definition,
+    .inline-glossary-term:focus-within .inline-glossary-definition {
+      display: block;
+    }
     .why-flagged-panel {
       background: #fffaf0;
       border-color: #efd39a;
     }
     .timeline-list {
       display: grid;
-      gap: 0.65rem;
+      gap: 0.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
       list-style: none;
       margin: 0;
       padding: 0;
     }
     .timeline-item {
-      border-left: 3px solid var(--teal);
+      border-left: 0;
+      border-top: 3px solid var(--teal);
       display: grid;
       gap: 0.15rem;
-      padding-left: 0.75rem;
+      padding-top: 0.45rem;
     }
-    .timeline-item span {
+    .timeline-label {
       color: var(--muted);
       font-size: 0.88rem;
       font-weight: 800;
@@ -1472,6 +1640,48 @@ SHARED_CSS = r"""
       flex-wrap: wrap;
       gap: 0.65rem;
       margin-top: 0.25rem;
+    }
+    .form-actions.action-group {
+      gap: 0.55rem;
+      margin-top: 0.35rem;
+    }
+    .compact-filter-form {
+      display: grid;
+      gap: 0.85rem;
+    }
+    .compact-filter-form fieldset {
+      border: 0;
+      margin: 0;
+      padding: 0;
+    }
+    .compact-filter-form legend {
+      font-weight: 800;
+      margin-bottom: 0.45rem;
+    }
+    .filter-chip-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+    .filter-chip {
+      align-items: center;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      gap: 0.35rem;
+      min-height: 2rem;
+      padding: 0.35rem 0.65rem;
+    }
+    .filter-chip:focus-within,
+    .filter-chip:hover {
+      border-color: var(--ds-nav-active-border);
+      box-shadow: 0 0 0 3px rgb(36 87 166 / 12%);
+    }
+    .filter-chip input {
+      accent-color: var(--ds-link);
+      margin: 0;
     }
     .fixed-field {
       background: #f7fafb;
@@ -1751,17 +1961,20 @@ SHARED_CSS = r"""
         display: block;
       }
       .attorney-hero, .legal-summary-grid, .detail-top-grid, .support-layout,
-      .dense-page-header, .dense-section-header, .reviewer-detail-top {
+      .dense-page-header, .dense-section-header {
         display: block;
       }
-      .reviewer-detail-top > aside {
-        margin-top: 1rem;
+      .top-fact-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
       .quick-review-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
       .quick-review-card {
         min-height: 7.5rem;
+      }
+      .reviewer-brief-card .quick-review-card {
+        min-height: 0;
       }
       .glossary-list {
         display: block;

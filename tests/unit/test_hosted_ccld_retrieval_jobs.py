@@ -146,7 +146,7 @@ def test_retrieval_form_renders_record_type_and_safe_setup_state() -> None:
     assert "Operator setup checklist" in blocked_html
     assert "retrieval enablement" in blocked_normalized
     assert "server-side raw source storage" in blocked_normalized
-    assert "Report an issue" in blocked_html
+    assert "Send feedback" in blocked_html
     assert "workflow_area=retrieval-setup-required" in blocked_html
     assert "retrieval_context=setup-required" in blocked_html
     assert "retrieval_status=setup_required" in blocked_html
@@ -177,7 +177,7 @@ def test_retrieval_validation_blocks_bad_inputs_before_mutation(tmp_path: Path) 
     assert "Date range must be 30 days or fewer" in html
     assert "What to check next" in html
     assert "All supported record types currently means complaint records only" in html
-    assert "Report an issue" in html
+    assert "Send feedback" in html
     assert counts == _empty_counts()
     assert_no_secret_html(html)
 
@@ -252,7 +252,7 @@ def test_controlled_retrieval_imports_records_and_links_queue(tmp_path: Path) ->
     assert "Review imported records" not in html
     assert "Open job diagnostics" in html
     assert "View job details" in html
-    assert "Report an issue" in html
+    assert "Send feedback" in html
     assert "workflow_area=retrieval-job-summary" in html
     assert "retrieval_context=controlled-job-submitted" in html
     assert "retrieval_status=completed" in html
@@ -385,7 +385,7 @@ def test_postgres_retrieval_persists_jobs_and_queue_after_reopened_connection(
     assert "ccld-retrieval-157806098-" in history_html
     assert "Records imported" in history_html
     assert queue_status == 200
-    assert "Already-loaded source-derived rows were searched" in queue_html
+    assert "Already-loaded complaint records were searched" in queue_html
     assert "1 complaint queue record(s) are ready for review" in queue_html
     assert "32-CR-20220407124448" in queue_html
     assert_no_secret_html(history_html)
@@ -1220,7 +1220,7 @@ def test_retrieval_status_summary_explains_queued_running_and_failed_states() ->
     assert "Refresh the request status later" in running_html
     assert "Failed" in failed_html
     assert "Retry later or ask an operator" in failed_html
-    assert "Report an issue" in queued_html
+    assert "Send feedback" in queued_html
     assert "workflow_area=retrieval-job-summary" in queued_html
     assert "retrieval_context=controlled-job-submitted" in queued_html
     assert "retrieval_status=queued" in queued_html
@@ -1269,7 +1269,7 @@ def test_retrieval_job_history_empty_state_renders_for_allowed_local_dev_actor()
     )
     assert "Submit retrieval request" not in empty_state_card
     assert "Submit or change Request Records" in html
-    assert "Report an issue" in html
+    assert "Send feedback" in html
     assert "Report confusing retrieval progress" not in html
     assert "workflow_area=retrieval-job-history" in html
     assert "retrieval_context=no-jobs-yet" in html
@@ -1381,7 +1381,7 @@ def test_retrieval_job_history_renders_recent_jobs_safely_without_mutation(
     assert "Rate limited" in html
     assert "Wait for an active Request Records job to finish" in normalized
     assert "raw artifact preserved; source artifact identity available; raw paths not shown" in html
-    assert "Report an issue" in html
+    assert "Send feedback" in html
     assert "Report confusing retrieval progress" not in html
     assert "workflow_area=retrieval-job-history" in html
     assert "retrieval_context=controlled-job-history" in html
@@ -1446,7 +1446,7 @@ def test_retrieval_job_detail_renders_completed_job_without_mutation(tmp_path: P
     assert "Return to job diagnostics" in html
     assert "Submit or change a CCLD record request" in html
     assert "Read CCLD workflow help" in html
-    assert "Report an issue" in html
+    assert "Send feedback" in html
     assert "workflow_area=retrieval-job-detail" in html
     assert "retrieval_context=controlled-job-detail" in html
     assert "retrieval_status=completed" in html
@@ -1485,7 +1485,7 @@ def test_retrieval_job_detail_safe_missing_and_invalid_job_ids(tmp_path: Path) -
     assert blank_status == 400
     assert "Job diagnostics detail needs a valid job ID" in invalid_html
     assert "Job diagnostics detail needs a valid job ID" in blank_html
-    assert "Report an issue" in missing_html
+    assert "Send feedback" in missing_html
     assert "workflow_area=retrieval-job-detail" in missing_html
     assert "retrieval_context=controlled-job-detail" in invalid_html
     assert "token-value" not in invalid_html
@@ -1648,7 +1648,7 @@ def test_feedback_route_still_uses_mocked_client() -> None:
         method="POST",
         request_body=urlencode(
             {
-                "feedback_type": "Bug report",
+                "feedback_type": "Bug/problem",
                 "description": "Retrieval job form copy looks clear.",
                 "page_path": CCLD_RECORD_REQUEST_PATH,
             }

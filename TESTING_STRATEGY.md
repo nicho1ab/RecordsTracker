@@ -122,9 +122,9 @@ links to history/detail/queue, keeps setup-required and validation-blocked state
 working, makes no live CCLD or GitHub calls, exposes no private values, and does
 not mutate source-derived or reviewer-created rows through review pages.
 GitHub Issues feedback intake tests must prove the feedback page renders, the
-feedback type dropdown has exactly bug report, feature request, confusing page
-or workflow, packet/export issue, source/data concern, and new data source
-request options, description and submit controls are accessible, missing values
+feedback type dropdown has exactly bug/problem, feature request, data
+connector/source request, confusing wording/navigation, and other feedback
+options, description and submit controls are accessible, missing values
 validate safely, missing GitHub configuration does not call GitHub and shows a
 copyable safe fallback summary, configured submission uses only a mocked client,
 labels are correct, missing-label failures retry safely without labels,
@@ -168,12 +168,11 @@ workflow detail output show the status after write.
 Hosted reviewer UI shell tests must prove browser-accessible local/test landing
 and detail pages return usable semantic HTML over the seeded fixture corpus,
 list-level reviewer-created note/status indicators and latest reviewer-created
-timestamp are visible, plain-language detail record summaries are visible, safe
-source traceability fields and safe related seeded bundle context are visible,
-sensitive narrative fields remain hidden, note/status forms delegate to the
-existing workflow actions, note/status saved confirmations include next-step
-links, read-after-write reviewer-created state appears in the page, CCLD return
-navigation and record-specific feedback guidance are
+timestamp are visible, plain-language detail record summaries are visible,
+sensitive narrative fields remain bounded, note/status forms delegate to the
+existing workflow actions, concise note/status saved confirmations include
+next-step links, read-after-write reviewer-created state appears in the page,
+and focused CCLD return/next-record navigation is
 visible, unauthenticated, disabled or revoked, role-denied, and out-of-scope
 contexts are blocked with visible next steps, no-match search, missing-record,
 and invalid note/status form states show clear accessible guidance,
@@ -181,51 +180,30 @@ source-derived rows are not mutated by UI actions,
 reviewer-created state and audit rows are created only through the existing
 services, and HTML does not expose secrets, tokens, cookies, private headers,
 raw provider claims, private URLs, hosted URLs, credentials, or unnecessary
-sensitive narrative content. Reviewer detail source traceability tests should
-cover selected-record identifiers, available source URL/raw hash/raw path or
-artifact references, missing-value wording, non-conclusion boundary language,
-pre-note/status source-review guidance, and no-mutation behavior.
-Reviewer detail source-confidence cue tests should prove present source-derived
-complaint fields are labeled without completeness claims, missing source-derived
-fields use local/test non-conclusive wording, existing proxy flags are described
-only when current fields support them, source traceability review guidance
-remains visible, no confidence score or automated source verification is implied,
-and detail rendering does not mutate source-derived, reviewer-created, audit,
-import, or operational metadata rows.
-Reviewer detail field-note guidance tests should prove guidance renders near the
-source-confidence and source-traceability context, distinguishes reviewer-created
-observations from source-derived fields, explains missing local/test and proxy-
-flag wording cautiously, points UI/data concerns to the manual feedback checklist,
-does not imply generated notes, note templates, source edits, source absence, or
-official findings, and preserves no-mutation behavior.
-Reviewer note/status confirmation tests should cover return-to-same-queue
-guidance, same facility/date request-context reminders, queue cues derived from
-reviewer-created state, resubmit-to-refresh wording, next-record guidance, and
-preserved no-mutation behavior.
-Reviewer detail feedback handoff tests should prove record-specific cues render
-near detail feedback guidance, identify observations to carry into the existing
-manual checklist, preserve note/status confirmation and return-to-queue wording,
-remain no-secret, and do not mutate source-derived, reviewer-created, audit,
-import, or operational metadata rows during detail rendering.
-Reviewer detail feedback checklist bridge tests should prove bridge cues point
-to the existing manual feedback checklist without duplicating it, cover source
-traceability, source-confidence, field-note uncertainty, note/status confirmation,
-return-to-queue, queue refresh, and next-record observations, remain no-secret,
-and do not add feedback persistence, export behavior, or mutations.
-Queue-to-detail checklist continuity tests should prove queue pages and reviewer
-detail pages point queue-level and detail-level observations to the same existing
-manual checklist, preserve single-checklist/manual-copy behavior, and do not add
-feedback persistence, export behavior, or mutations.
-First-run review session orientation tests should prove home, request/help, queue,
-reviewer detail, note/status confirmation, and checklist surfaces describe the
-current CCLD-only path in order: facility lookup or manual entry, request-context
-confirmation, loaded local/test queue, reviewer detail source traceability,
-source-confidence cues, field-note guidance, reviewer-created note/status
-observations, same-queue refresh, next-record continuation, and manual checklist
-copy. Tests should also prove the wording does not add saved sessions, persisted
-queue state, duplicate checklists, feedback persistence, live browser fetch,
-connector execution, artifact building, schema changes, auth, workflow-engine
-state, or mutations.
+sensitive narrative content. Reviewer detail tests should prove the
+reviewer-facing tier includes complaint identity, facility identity once near the
+top, source narrative, compact complaint/investigation timeline, finding and
+allegation summary, review-flag badges as the primary flag expression,
+reviewer-created state/actions when useful, copy affordances for core values,
+and MM/DD/YYYY date display without changing stored values.
+Reviewer detail tests must also prove source traceability internals are not
+visible in the reviewer-facing tier: no traceability detail section, raw
+SHA-256, connector metadata, source artifact identity, field-level traceability,
+source-derived value-check tables, full source-derived field dumps, selected
+source-derived bundle summaries, related source-derived row tables,
+technical/operator details, facility-context cues, detail navigation dumps,
+first-run detail steps, issue-report bridge copy, repeated issue/help/return
+action dumps, source-confidence tables, or field-note guidance. These absence
+tests must preserve no-mutation behavior across source-derived,
+reviewer-created, audit, import, and operational metadata rows.
+Reviewer note/status confirmation tests should cover concise return-to-queue,
+next-record, unchanged-source-derived-record, read-after-write, and no-mutation
+behavior without requiring help/checklist/feedback bridge copy on the detail
+page.
+First-run orientation tests should cover Home, Request Records, Help, queue, and
+feedback surfaces where orientation belongs. They must not require first-run,
+how-to-read, field-note, source-confidence, or feedback-checklist guidance to be
+visible on reviewer detail.
 Reviewer detail next-record navigation tests should prove return-to-same-queue
 guidance, note/status confirmation next-record wording, queue suggested-next
 wording, and no-assignment/no-claim/no-workflow-state boundaries render while
@@ -234,9 +212,10 @@ Filtered-empty queue tests should prove the active reviewer-status filter, same
 facility/date request context, clear-filter action, reviewer-created-state basis,
 manual feedback guidance, and no-missing-record/no-public-absence wording render
 without mutating source-derived, reviewer-created, audit, import, or operational rows.
-Queue source-confidence wording tests should prove queue summaries identify their
-values as source-derived display summaries and direct testers to reviewer detail
-before relying on missing, confusing, or proxy-related fields.
+Queue source-check wording tests should prove queue summaries identify their
+values as source-derived display summaries and direct testers to reviewer
+detail, Help, or the public source link before relying on missing, confusing, or
+proxy-related fields without requiring source-confidence tables on detail.
 Terminology consistency tests should prove the app uses the selected plain-
 language terms for CCLD request context, facility/date request, loaded local/test
 CCLD records, source-derived records, reviewer-created notes/status, reviewer-

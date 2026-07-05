@@ -295,7 +295,7 @@ else {
         Stop-CheckFail "QNAP pilot mode should use CCLD_HOSTED_PAGE_DATA_MODE=postgres. Use fixture-demo only for explicit local demos."
     }
     if ($authMode -ne "production" -or $localDevAuth -ne "disabled") {
-        Stop-CheckFail "QNAP pilot mode should use production auth mode with local-dev auth disabled."
+        Stop-CheckFail "QNAP pilot mode should use production auth mode; local-dev auth disabled is required."
     }
     Write-CheckPass "QNAP pilot mode keeps PostgreSQL page data and production auth boundary defaults."
 }

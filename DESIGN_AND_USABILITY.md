@@ -132,80 +132,45 @@ from reviewer-created notes/statuses, keep local/test limitations visible, use
 semantic headings, tables, labels, and accessible buttons, avoid color-only
 meaning, and avoid unsupported legal, facility-wide, completeness, harm, abuse,
 neglect, liability, or rights-deprivation conclusions.
-Reviewer detail pages should orient first-time testers with a concise record
-summary, clear source-traceability explanation, related source/facility/context
-sections, visible reviewer-created state summaries, understandable note/status
-actions, clear saved-state confirmations, CCLD queue/request/help navigation,
-and feedback clues for reporting missing or confusing records.
-Reviewer detail facility-context cues should name whether the selected record is
-being reviewed from a directory-backed facility hub, a signal-only facility hub,
-or a manual request context when the active local/test inputs support that
-distinction. They should make next actions visible for returning to the facility
-hub, returning to the facility review priority list, returning to the same queue,
-opening packet preview/draft, starting a complaint request, and reporting
-confusing detail context, while preserving not-source-verification, not-
-complaint-coverage, not-source-completeness, and not-legal-finding boundaries.
-Reviewer detail source traceability should help testers identify the selected
-complaint record, distinguish source-derived identifiers from reviewer-created
-state, understand which traceability fields are visible or missing in the
-local/test record, and avoid treating missing local/test values as public-source
-absence, completeness, legal, facility-wide, harm, abuse, neglect, liability, or
-automated-finding conclusions.
-When a queue, reviewer detail, packet preview/draft, or feedback cue summarizes
-source traceability, it should use the same visible convention: name available
-source traceability values, name missing local/test traceability values, remind
-testers to check source traceability before relying on source-derived values,
-and state that missing local/test traceability is not source-completeness proof.
-Reviewer detail source-confidence cues should stay presentation-only and should
-use existing source-derived fields, traceability fields, missing-value flags, and
-proxy flags only. They may tell testers which loaded complaint values are
-present, which expected values are not available in the local/test record, and
-when an existing proxy flag applies, but they must not create confidence scores,
-automated source verification, source-completeness assertions, source absence
-claims, legal conclusions, or new source-derived fields.
-Source-confidence next-step cues should be explicit but bounded. When a queue,
-reviewer detail, help topic, or feedback prompt names a missing, confusing, or
-proxy-related source-derived value, it should direct testers to check reviewer
-detail source traceability, use only cautious reviewer-created note/status
-wording when helpful, use feedback when the cue or wording remains unclear, and
-continue review from the same queue context. It must not imply that the app has
-verified, completed, corrected, assigned, claimed, or legally sufficed a source
-record.
-Reviewer detail field-note guidance should help testers turn those cues into
-cautious reviewer-created observations. It should use short examples or action
-phrases only as visible writing guidance; it must not generate notes, store note
-templates, create new note fields, edit source-derived records, or imply public-
-source absence, record completeness, official findings, legal conclusions, or
-facility-wide conclusions.
-Hosted correction-readiness guidance should stay presentation-only. It should
-tell testers to check source traceability first when a source-derived value looks
-wrong or incomplete, describe the possible correction concern in a reviewer-
-created note for now, and use feedback when the correction path is confusing,
-the record appears unexpected, or the tester is unsure whether to use a note or
-feedback. It must state that the local/test workflow does not change source-
-derived records or submit correction decisions, and it must not imply that a
+Reviewer detail pages must stay in the reviewer-facing tier. They should orient
+attorneys with complaint identity, facility identity once near the top, a concise
+source narrative, a compact complaint/investigation timeline, finding/allegation
+summary, review-flag badges, reviewer-created state/actions when useful, and a
+small set of next actions for the current record.
+Reviewer detail must not expose Help, support, operator, source-mechanics, or
+developer-debug content just because older tests or docs expected it. Source
+traceability internals, source-derived value-check tables, full source-derived
+field dumps, related source-bundle rows, connector metadata, raw hashes, raw
+artifact identity, facility-context cues, detail navigation dumps, first-run
+detail steps, field-note guidance, source-confidence tables, feedback checklist
+bridges, and issue-report bridge copy belong in Help, support/operator surfaces,
+developer/debug surfaces, or future data/enrichment work unless they directly
+support the attorney's current record decision.
+Reviewer detail may show a public source link as a direct source-check action,
+but it must not render a traceability detail section, field-level traceability,
+raw SHA-256 values, connector/capture details, source artifact identifiers, or
+raw traceability tables in the primary reviewer page.
+Review flags on reviewer detail should use badges as the primary expression.
+Do not duplicate the same flag as both a badge and a separate card/table.
+Dates on reviewer detail should display as `MM/DD/YYYY` without times unless a
+time appears inside source narrative text rather than a timestamp field.
+Core values such as facility/license number, complaint number, key dates,
+finding/status, visible source URL, and complaint summary/source narrative should
+provide recognizable copy affordances where useful.
+Help-only guidance such as field definitions, how-to-read instructions,
+cautious note-writing examples, first-run orientation, and issue-report
+instructions should live in Help or focused help patterns, not repeated on
+reviewer detail.
+Hosted correction-readiness guidance should stay presentation-only and belong in
+Help, packet preparation, or future correction-focused surfaces unless the
+current record task directly needs a concise cue. It must not imply that a
 correction workflow, correction status, correction persistence, correction
 decision, export change, or official public-source fact has been implemented.
 Reviewer note/status confirmations should make the return path clear: saved
-notes/statuses are reviewer-created state, queue progress and note/status cues
-are derived from that state, the tester may need to resubmit the same local/test
-facility/date request context to refresh the queue display, and the next record
-should be chosen from the refreshed queue.
-Reviewer detail feedback handoff cues should be record-specific and brief. They
-should tell testers what source traceability, source context, note/status
-confirmation, same-queue return, queue refresh, unexpected-record, confusing
-label, wording, keyboard-flow, or next-step observations to carry into the
-existing manual checklist without adding a new feedback workflow.
-Reviewer detail checklist bridge cues should connect source-confidence,
-field-note, source-traceability, note/status confirmation, and return-to-queue
-observations to that same existing manual checklist. They must not duplicate the
-checklist, create a new feedback form, persist feedback, send feedback, or imply
-export/audit workflow behavior.
-Queue-to-detail checklist continuity cues should use the same manual checklist
-for queue-level and detail-level observations. Queue filters, filtered-empty
-states, no-match/load states, reviewer detail, note/status confirmation,
-return-to-queue refresh, and next-record confusion should point to one checklist
-without adding another checklist or workflow.
+notes/statuses are reviewer-created state, source-derived fields are unchanged,
+and the reviewer can return to the facility queue or open the next flagged
+record. They should not become a long Help, feedback, packet, or operator
+handoff surface.
 The `/feedback` route is now the first real tester feedback workflow. It should
 use an accessible feedback type dropdown, multiline description field, clear
 validation, safe unconfigured state, and safe success/failure messages. GitHub
@@ -222,11 +187,10 @@ provider claims, tokens, cookies, private URLs, stack traces, server-local paths
 environment values, legal conclusions, source-completeness claims, or new
 feedback persistence.
 First-run review session orientation should make the end-to-end local/test CCLD
-path visible from home, request/help, queue, and reviewer detail: facility lookup
-or manual entry, request-context confirmation, loaded local/test queue, reviewer
-detail source traceability, source-confidence cues, field-note guidance,
-reviewer-created note/status observations, same-queue refresh, next-record
-continuation, and manual feedback checklist copy. Orientation must not imply a
+path visible from home, request/help, queue, and Help: facility lookup or manual
+entry, request-context confirmation, loaded local/test queue, reviewer detail,
+reviewer-created note/status observations, same-queue return, next-record
+continuation, and the Send feedback flow when useful. Orientation must not imply a
 saved session, persisted queue state, duplicate checklist, feedback persistence,
 auth, workflow engine, browser live fetch, connector execution, or artifact
 building from browser requests.
@@ -298,12 +262,11 @@ requirements when they reduce confusion without adding new persistence or
 changing note/status behavior.
 Queue summaries should not overstate confidence in displayed source-derived
 values. When fields look missing, confusing, or proxy-related, the queue should
-direct testers to reviewer detail source-confidence cues before they rely on the
-values in reviewer-created notes/status or manual feedback. Queue summaries and
-cards should also make the next safe action clear: check reviewer detail source
-traceability, write cautious reviewer-created observations only when helpful,
-use feedback if source-confidence wording remains confusing, and continue from
-the same queue context.
+direct testers to the complaint detail, Help, or the public source link before
+they rely on the values in reviewer-created notes/status or feedback. Queue
+summaries and cards should also make the next safe action clear without sending
+attorneys to source-confidence tables, field-note guidance, or traceability
+internals on reviewer detail.
 Filtered-empty queue states should explain that records are hidden by the
 selected reviewer-status filter for the same facility/date request context, not
 necessarily missing from local/test data or public source material, and should
@@ -564,7 +527,7 @@ cautious-language, tester feedback, and reviewer-state boundaries.
 - Use one GitHub feedback flow for bugs, feature requests, confusing workflow or
   page reports, packet/export issues, source/data concerns, and new data source
   requests.
-- Each page should have an unobtrusive report or feedback action.
+- Each page should have an unobtrusive feedback action.
 - Feedback may safely capture page context when available: route, page title,
   facility/license number, date range, complaint/control number, job ID, visible
   workflow state, and user action attempted.
@@ -572,7 +535,7 @@ cautious-language, tester feedback, and reviewer-state boundaries.
 - Help should use search or category-style organization, avoid a numbered topic
   list that repeats collapsible sections below, and keep topics user-focused:
   Find a facility, Request complaint records, Review complaint records, Prepare
-  a packet, Print or export, Report an issue, and Understand review flags.
+  a packet, Print or export, Send feedback, and Understand review flags.
 - Operator setup topics belong in operator docs or diagnostics, not reviewer
   Help.
 
@@ -767,7 +730,7 @@ or unnecessary narrative source text.
     attorney-facing. Figma AI/design exploration: no.
 17. **UI-17 - Standardize queue feedback entry.** Current problem: queue-level
     feedback guidance can be bulky or inconsistent with detail pages. Proposed
-    change: provide a small "Report an issue" action that routes to the shared
+    change: provide a small "Send feedback" action that routes to the shared
     GitHub-backed feedback flow with safe queue context. User benefit: testers
     can report confusing queue order, filters, labels, or missing context from
     the page where they noticed it. Implementation boundary: safe context
@@ -787,26 +750,26 @@ or unnecessary narrative source text.
     fields; do not change extraction, source-derived values, note/status
     behavior, or legal meaning. Audience: attorney-facing. Figma AI/design
     exploration: yes, for detail-page information architecture.
-19. **UI-19 - Summarize source traceability, preserve full diagnostics.**
-    Current problem: attorneys need confidence that source traceability exists
-    but should not have to parse hashes, connector fields, and import mechanics
-    by default. Proposed change: show a simple source indication and source-check
-    reminder in the main detail view; keep full traceability fields, hashes,
-    raw-artifact-preserved indicators, connector/capture details, and import
-    context in a collapsed support area or operator/developer surface. User
-    benefit: source traceability remains available without overwhelming the
-    review. Implementation boundary: organization only; do not remove
-    traceability, raw-source preservation, audit context, or safe source metadata.
-    Audience: both. Figma AI/design exploration: no.
-20. **UI-20 - Make note/status actions a guided review loop.** Current problem:
+19. **UI-19 - Move source internals out of detail.** Current problem: hashes,
+    connector fields, import mechanics, and traceability tables make reviewer
+    detail read like a support/debug page. Proposed change: keep only a direct
+    public source action when useful on reviewer detail; move full traceability
+    fields, hashes, raw-artifact-preserved indicators, connector/capture details,
+    and import context to Help/support/operator/developer surfaces. User benefit:
+    attorneys can review the complaint without parsing implementation mechanics.
+    Implementation boundary: organization only; do not remove traceability,
+    raw-source preservation, audit context, or safe source metadata. Audience:
+    both. Figma AI/design exploration: no.
+20. **UI-20 - Make note/status actions a focused review loop.** Current problem:
     reviewer-created state controls can feel separate from the complaint review
-    task. Proposed change: group current status, notes, cautious field-note
-    guidance, save actions, confirmation, return-to-queue, and next-record
-    links as one action panel. User benefit: attorneys can review, save an
-    observation, and continue. Implementation boundary: use existing note/status
-    actions and audit path only; do not add new state kinds, annotations,
-    corrections, assignments, claiming, or workflow-engine behavior. Audience:
-    attorney-facing. Figma AI/design exploration: yes, for action-panel layout.
+    task. Proposed change: group current status, notes, save actions,
+    confirmation, return-to-queue, and next-record links as one focused action
+    panel, without embedding field-note guidance or issue-report bridges. User
+    benefit: attorneys can review, save an observation when useful, and continue.
+    Implementation boundary: use existing note/status actions and audit path
+    only; do not add new state kinds, annotations, corrections, assignments,
+    claiming, or workflow-engine behavior. Audience: attorney-facing. Figma
+    AI/design exploration: yes, for action-panel layout.
 21. **UI-21 - Reduce repeated detail confirmations and safety copy.** Current
     problem: repeated confirmations and warnings consume vertical space after a
     user has made a safe action. Proposed change: consolidate saved-state
@@ -887,7 +850,7 @@ or unnecessary narrative source text.
 
 29. **UI-29 - Standardize one unobtrusive feedback action.** Current problem:
     feedback prompts vary across pages and can interrupt review. Proposed
-    change: use one small "Report an issue" or equivalent action across Home,
+    change: use one small "Send feedback" action across Home,
     lookup, request, queue, detail, packet, and Help. User benefit: users can
     report problems without leaving the review path mentally. Implementation
     boundary: links/forms to existing `/feedback` flow only; do not add a
@@ -1007,7 +970,7 @@ or unnecessary narrative source text.
     source cues, runtime, intelligence views, or feedback checklist. Proposed
     change: use consistent user-centered labels such as Complaint records,
     Records ready, Review flags, Needs attention, Packet preparation, Job
-    diagnostics, and Report an issue. User benefit: screen reader users,
+    diagnostics, and Send feedback. User benefit: screen reader users,
     first-time testers, and attorneys do not have to infer that different terms
     mean the same workflow concept. Implementation boundary: terminology only;
     do not rename canonical fields, schemas, database columns, or source

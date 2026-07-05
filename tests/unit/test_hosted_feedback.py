@@ -77,12 +77,12 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Report an issue" in html
-    assert "Report a review issue" in html
+    assert "Send feedback" in html
+    assert "Send RecordsTracker feedback" in html
     assert "What makes feedback actionable" in html
     assert (
         "Actionable tester feedback names the page or route, what you tried first, "
-        "what you expected, what happened instead, and whether the issue blocked review."
+        "what you expected, what happened instead, and whether it blocked review."
         in html
     )
     assert (
@@ -101,14 +101,13 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "already-loaded records" in html or "loaded-record" in html
     assert "browser copy issue" in normalized_html
     assert "print issue" in normalized_html
-    assert "Submit issue report" in html
+    assert "Submit feedback" in html
     for option in (
-        "Bug report",
+        "Bug/problem",
         "Feature request",
-        "Confusing page or workflow",
-        "Packet/export issue",
-        "Source/data concern",
-        "New data source request",
+        "Data connector/source request",
+        "Confusing wording/navigation",
+        "Other feedback",
     ):
         assert f'<option value="{option}">{option}</option>' in html
     assert "copy" in html.lower()
@@ -154,7 +153,7 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
         in html
     )
     assert (
-        '<section class="notice-card" aria-labelledby="feedback-safety-heading">'
+        '<section class="notice-card compact-guidance" aria-labelledby="feedback-safety-heading">'
         in html
     )
     assert (
@@ -184,23 +183,22 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
         "without private material."
         in normalized_html
     )
-    assert '<label for="page_path">Submitted page path</label>' in html
-    assert 'name="page_path" type="text" value="/feedback" readonly' in html
-    assert "This visible context is included with the feedback when submitted." in html
-    assert 'type="hidden" name="page_path"' not in html
+    assert '<label for="page_path">Submitted page path</label>' not in html
+    assert "This visible context is included with the feedback when submitted." not in html
+    assert '<input id="page_path" name="page_path" type="hidden" value="/feedback">' in html
     assert_ordered(
         html,
         (
-            '<h2 id="actionable-feedback-heading">What makes feedback actionable</h2>',
             '<label for="feedback_type">Feedback type</label>',
             '<select id="feedback_type" name="feedback_type" required '
             'aria-describedby="feedback-type-help">',
             '<p id="feedback-type-help" class="helper-text">Choose the category that best fits '
             "the route, action, loaded-context cue, packet/readiness cue, or keyboard step "
             "that was confusing.</p>",
-            '<h3 id="feedback-safety-heading">Do not include private material</h3>',
             '<label for="description">Description</label>',
-            '<button type="submit">Submit issue report</button>',
+            '<h3 id="feedback-safety-heading">Do not include private material</h3>',
+            '<button type="submit">Submit feedback</button>',
+            '<h2 id="actionable-feedback-heading">What makes feedback actionable</h2>',
             '<h2 id="feedback-unconfigured-heading">How feedback is submitted</h2>',
             "<p>Note: Server-side GitHub issue intake is not configured on this deployment.",
         ),
@@ -260,7 +258,7 @@ def test_feedback_examples_use_safe_actionable_wording() -> None:
 def test_feedback_page_renders_safe_optional_handoff_context() -> None:
     query = urlencode(
         {
-            "feedback_type": "Bug report",
+            "feedback_type": "Bug/problem",
             "workflow_area": "packet-preview",
             "page_path": "/reviewer/packet/preview",
             "facility_number": "157806098",
@@ -283,6 +281,7 @@ def test_feedback_page_renders_safe_optional_handoff_context() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Feedback context from review workflow" in html
+    assert "Page path" not in html
     assert "packet-preview" in html
     assert "/reviewer/packet/preview" in html
     assert "157806098" in html
@@ -319,9 +318,11 @@ def test_feedback_page_renders_safe_optional_handoff_context() -> None:
     assert "corrected source record" not in normalized_html
     assert "private.example" not in html
     assert TEST_AUTH_VALUE not in html
-    assert '<option value="Bug report" selected="selected">Bug report</option>' in html
-    assert 'name="page_path" type="text" value="/reviewer/packet/preview" readonly' in html
-    assert 'type="hidden" name="page_path"' not in html
+    assert '<option value="Bug/problem" selected="selected">Bug/problem</option>' in html
+    assert (
+        '<input id="page_path" name="page_path" type="hidden" '
+        'value="/reviewer/packet/preview">'
+    ) in html
     assert 'name="workflow_area" type="text" value="packet-preview" readonly' in html
     assert 'name="facility_number" type="text" value="157806098" readonly' in html
     assert (
@@ -335,7 +336,7 @@ def test_feedback_page_renders_safe_optional_handoff_context() -> None:
 def test_feedback_page_renders_safe_retrieval_handoff_context() -> None:
     query = urlencode(
         {
-            "feedback_type": "Bug report",
+            "feedback_type": "Bug/problem",
             "workflow_area": "retrieval-job-detail",
             "page_path": "/ccld/retrieval/jobs/detail",
             "facility_number": "157806098",
@@ -356,6 +357,7 @@ def test_feedback_page_renders_safe_retrieval_handoff_context() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Feedback context from review workflow" in html
+    assert "Page path" not in html
     assert "retrieval-job-detail" in html
     assert "/ccld/retrieval/jobs/detail" in html
     assert "Job context" in html
@@ -373,7 +375,7 @@ def test_feedback_page_renders_safe_retrieval_handoff_context() -> None:
 def test_feedback_page_prefills_editable_starter_from_safe_handoff_context() -> None:
     query = urlencode(
         {
-            "feedback_type": "Bug report",
+            "feedback_type": "Bug/problem",
             "workflow_area": "retrieval-job-detail",
             "page_path": "/ccld/retrieval/jobs/detail",
             "facility_number": "157806098",
@@ -392,7 +394,7 @@ def test_feedback_page_prefills_editable_starter_from_safe_handoff_context() -> 
     starter = _description_textarea(html)
 
     assert status == 200
-    assert "Suggested issue starter" in html
+    assert "Suggested feedback starter" in html
     assert "Edit this before submitting" in html
     assert "This starter uses only safe handoff context from the screen you came from." in html
     assert (
@@ -438,7 +440,7 @@ def test_feedback_page_prefills_editable_starter_from_safe_handoff_context() -> 
 def test_feedback_starter_omits_unavailable_handoff_values() -> None:
     query = urlencode(
         {
-            "feedback_type": "Bug report",
+            "feedback_type": "Bug/problem",
             "workflow_area": "request-result",
             "facility_number": "157806098",
             "retrieval_context": "already-loaded-records",
@@ -450,7 +452,7 @@ def test_feedback_starter_omits_unavailable_handoff_values() -> None:
     starter = _description_textarea(html)
 
     assert status == 200
-    assert "Suggested issue starter" in html
+    assert "Suggested feedback starter" in html
     assert (
         "I am reporting confusion about the job diagnostics information on request result."
         in starter
@@ -483,7 +485,7 @@ def test_feedback_page_ignores_unsafe_context_parameters() -> None:
 
     assert status == 200
     assert "Feedback context from review workflow" not in html
-    assert "Suggested issue starter" not in html
+    assert "Suggested feedback starter" not in html
     assert "I am reporting confusion" not in html
     assert "private.example" not in html
     assert "authorization" not in html.casefold()
@@ -498,7 +500,7 @@ def test_feedback_context_allowlist_is_explicit_and_helper_ignores_unknown_value
     assert "prompt" in ALLOWED_FEEDBACK_CONTEXT_PARAMETERS
 
     href = feedback_href(
-        feedback_type="Bug report",
+        feedback_type="Bug/problem",
         workflow_area="entry-orientation",
         page_path="/",
         prompt="Describe what was confusing.",
@@ -513,12 +515,12 @@ def test_feedback_context_allowlist_is_explicit_and_helper_ignores_unknown_value
     assert "private.example" not in href
 
     unsafe_href = feedback_href(
-        feedback_type="Bug report",
+        feedback_type="Bug/problem",
         page_path="https://private.example.test/app",
         prompt="authorization: bearer secret",
     )
 
-    assert unsafe_href == f"{FEEDBACK_PATH}?feedback_type=Bug+report"
+    assert unsafe_href == f"{FEEDBACK_PATH}?feedback_type=Bug%2Fproblem"
 
 
 def test_feedback_validation_errors_are_safe() -> None:
@@ -547,7 +549,7 @@ def test_feedback_validation_error_does_not_echo_secret_like_values() -> None:
         method="POST",
         request_body=_form_bytes(
             {
-                "feedback_type": "Bug report",
+                "feedback_type": "Bug/problem",
                 "description": f"authorization bearer {TEST_AUTH_VALUE}",
                 "page_path": "https://private.example.test/app",
                 "private_url": "https://private.example.test/path",
@@ -562,7 +564,7 @@ def test_feedback_validation_error_does_not_echo_secret_like_values() -> None:
         "Feedback must not include secrets, credentials, or private browser/session values."
         in html
     )
-    assert 'name="page_path" type="text" value="/feedback" readonly' in html
+    assert '<input id="page_path" name="page_path" type="hidden" value="/feedback">' in html
     assert "private.example" not in html
     assert TEST_AUTH_VALUE not in html
     assert "authorization bearer" not in html
@@ -598,7 +600,7 @@ def test_feedback_unconfigured_confirmation_shows_safe_submitted_summary() -> No
         FEEDBACK_PATH,
         method="POST",
         request_body=_valid_form_bytes(
-            feedback_type="Bug report",
+            feedback_type="Bug/problem",
             description="The queue order was unclear after filtering.",
             extra={
                 "workflow_area": "queue",
@@ -617,7 +619,7 @@ def test_feedback_unconfigured_confirmation_shows_safe_submitted_summary() -> No
     assert "Feedback was not sent" in html
     assert "Submitted feedback summary" in html
     assert "Copyable feedback summary" in html
-    assert "Bug report" in html
+    assert "Bug/problem" in html
     assert "The queue order was unclear after filtering." in html
     assert "Submitted safe context" in html
     assert "Only allowlisted, bounded context from the feedback form is shown here." in html
@@ -666,7 +668,8 @@ def test_feedback_configured_confirmation_escapes_submitted_fields_and_context()
     assert "Submitted feedback summary" in html
     assert "&lt;b&gt;Please add&lt;/b&gt; &amp; keep keyboard-friendly sorting." in html
     assert "<b>Please add</b>" not in html
-    assert "/reviewer/detail?&lt;script&gt;alert(1)&lt;/script&gt;" in html
+    assert "/reviewer/detail?&lt;script&gt;alert(1)&lt;/script&gt;" not in html
+    assert '<label for="page_path">Submitted page path</label>' not in html
     assert "Submitted safe context" in html
     assert "reviewer-detail" in html
     assert "32-CR-20220407124448" in html
@@ -706,7 +709,7 @@ def test_feedback_confirmation_ignores_unknown_and_unsafe_posted_context() -> No
         FEEDBACK_PATH,
         method="POST",
         request_body=_valid_form_bytes(
-            feedback_type="Bug report",
+            feedback_type="Bug/problem",
             extra={
                 "workflow_area": "unexpected-area",
                 "page_path": "https://private.example.test/app",
@@ -737,17 +740,16 @@ def test_feedback_confirmation_ignores_unknown_and_unsafe_posted_context() -> No
 
 
 def test_feedback_type_label_mapping_is_reliable() -> None:
-    assert feedback_labels("Bug report") == (
+    assert feedback_labels("Bug/problem") == (
         "user-feedback",
         "from-app",
         "needs-triage",
         "bug",
     )
     assert feedback_labels("Feature request")[-1] == "feature-request"
-    assert feedback_labels("Confusing page or workflow")[-1] == "workflow-confusion"
-    assert feedback_labels("Packet/export issue")[-1] == "packet-export"
-    assert feedback_labels("Source/data concern")[-1] == "source-data"
-    assert feedback_labels("New data source request")[-1] == "data-source-request"
+    assert feedback_labels("Confusing wording/navigation")[-1] == "workflow-confusion"
+    assert feedback_labels("Data connector/source request")[-1] == "data-source-request"
+    assert feedback_labels("Other feedback")[-1] == "general-feedback"
 
 
 def test_feedback_client_failure_shows_safe_failure() -> None:
@@ -779,7 +781,7 @@ def test_feedback_retries_without_labels_when_github_rejects_labels() -> None:
     status, _content_type, body = route_response(
         FEEDBACK_PATH,
         method="POST",
-        request_body=_valid_form_bytes(feedback_type="Packet/export issue"),
+        request_body=_valid_form_bytes(feedback_type="Data connector/source request"),
         feedback_context=context,
     )
 
@@ -787,7 +789,7 @@ def test_feedback_retries_without_labels_when_github_rejects_labels() -> None:
     assert len(client.calls) == 1
     assert client.calls[0]["labels"] == ()
     assert client.calls[0]["title"] == (
-        "RecordsTracker feedback: Packet/export issue on Request Records"
+        "RecordsTracker feedback: Data connector/source request on Request Records"
     )
     assert_no_secret_html(body.decode("utf-8"))
 
@@ -842,7 +844,7 @@ def test_feedback_local_dev_actor_can_submit_with_mocked_client() -> None:
     status, _content_type, body = route_response(
         FEEDBACK_PATH,
         method="POST",
-        request_body=_valid_form_bytes(feedback_type="Bug report"),
+        request_body=_valid_form_bytes(feedback_type="Bug/problem"),
         auth_runtime_config=_local_dev_auth_config(),
         feedback_context=context,
     )
@@ -948,7 +950,7 @@ def _submission(description: str) -> Any:
     from ccld_complaints.hosted_app.feedback import FeedbackSubmission
 
     return FeedbackSubmission(
-        feedback_type="Bug report",
+        feedback_type="Bug/problem",
         description=description,
         page_path="/feedback",
     )
