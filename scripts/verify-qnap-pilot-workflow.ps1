@@ -81,6 +81,7 @@ function Write-CheckWarn {
 
 function Stop-CheckFail {
     param([string]$Message)
+    Write-Host "[FAIL] $Message"
     throw "[FAIL] $Message"
 }
 
