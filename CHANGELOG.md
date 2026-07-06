@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Reworked hosted Reviewer Detail toward the approved Complaint overview
+  workspace: the page now centers one compact overview card with complaint
+  identity, one facility/license fact row, source narrative, MM/DD/YYYY key-date
+  timeline, review badges, separate CCLD source availability/action, compact
+  status/note controls, accessible copy buttons, inline definitions, and finding
+  badge variants while keeping source traceability/debug/help-heavy content out
+  of the reviewer-facing tier.
 - Applied the Prompt 2 hosted UI contract across Request Records selected-context
   and no-match recovery, Facility Hub, signal-only Facility summary, and
   Facility Review Priority. Primary navigation now uses Home as the single
