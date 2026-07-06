@@ -1,13 +1,26 @@
 # Changelog
 
 ## Unreleased
+- Added the shared Figma-aligned hosted shell and applied it first to Review
+  Queue: the top shell now uses a compact RecordsTracker workspace bar with
+  Figma-derived font variables, teal/slate/amber tokens, explicit brand/search/
+  nav/mode grid columns, facility lookup, no-wrap primary navigation, and a
+  single mode badge; Review Queue now leads with a lighter facility brief and
+  Worklist-first task surface, moves search below the Worklist, keeps
+  table/cue/export sections collapsed below the Worklist, and removes generic
+  "Check source" plus stale first-activity cues as persistent review labels
+  while preserving specific source/date cues and source availability as separate
+  information.
 - Reworked hosted Reviewer Detail toward the approved Complaint overview
   workspace: the page now centers one compact overview card with complaint
-  identity, one facility/license fact row, source narrative, MM/DD/YYYY key-date
-  timeline, review badges, separate CCLD source availability/action, compact
-  status/note controls, accessible copy buttons, inline definitions, and finding
-  badge variants while keeping source traceability/debug/help-heavy content out
-  of the reviewer-facing tier.
+  identity, one structured facility facts bar, source narrative, MM/DD/YYYY
+  key-date timeline with a document-style received marker, centered event marker
+  variants, and centered 120+ day gap cue, warning versus informational review
+  badges, corrected first-activity warning logic, separate CCLD source
+  availability/action, compact status/note controls, accessible copy buttons
+  including source narrative, inline definitions, and finding badge variants
+  while keeping source traceability/debug/help-heavy content out of the
+  reviewer-facing tier.
 - Applied the Prompt 2 hosted UI contract across Request Records selected-context
   and no-match recovery, Facility Hub, signal-only Facility summary, and
   Facility Review Priority. Primary navigation now uses Home as the single

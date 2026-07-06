@@ -8,15 +8,17 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 APP_TITLE = "CCLD RecordsTracker"
+WORKSPACE_LABEL = "Reviewer Workspace"
 EYEBROW_TEXT = (
   "CCLD-only public-record review workspace."
 )
 PRIMARY_NAV_LINKS: tuple[tuple[str, str], ...] = (
     ("Home", "/"),
-  ("Request Records", "/ccld/records/request"),
-  ("Review", "/reviewer"),
-  ("Feedback", "/feedback"),
-  ("Help", "/ccld/help"),
+    ("Facilities", "/ccld/facilities"),
+    ("Request Records", "/ccld/records/request"),
+    ("Review", "/reviewer"),
+    ("Feedback", "/feedback"),
+    ("Help", "/ccld/help"),
 )
 
 @dataclass(frozen=True)
@@ -45,7 +47,7 @@ GUIDED_STEPS: tuple[GuidedStep, ...] = (
     "facility",
     "Facility",
     "/ccld/facilities",
-    "Select the facility/license number.",
+    "Select the Facility ID.",
   ),
   GuidedStep(
     "date_range",
@@ -136,27 +138,37 @@ def render_page_shell(
 <body class="ds-page-bg">
   <a class="skip-link" href="#main-content">{html.escape(skip_label)}</a>
   <header class="app-shell-header site-header ds-surface">
-    <div class="shell app-shell">
+    <div class="shell app-shell app-shell-compact">
       <div class="brand-title-row site-title-row">
-        <div class="brand-title-block brand-block">
-          <p class="product-name">{APP_TITLE}</p>
-          {eyebrow_markup}
-          <h1>{html.escape(heading)}</h1>
-          {actor_markup}
+        <div class="brand-title-block brand-block" aria-label="{APP_TITLE}">
+          <a class="product-name" href="/">Records<span>Tracker</span></a>
+          <span class="workspace-divider" aria-hidden="true"></span>
+          <span class="workspace-label">{WORKSPACE_LABEL}</span>
         </div>
-        <div class="mode-panel" aria-label="Retrieval mode">
-          <span class="{badge_class}">{html.escape(runtime_mode)}</span>
+        <form class="shell-lookup" action="/ccld/facilities" method="get" role="search">
+          <label class="sr-only" for="shell-facility-search">Search complaint, facility, Facility ID, or source record</label>
+          <input id="shell-facility-search" name="q" type="search" placeholder="Search complaint, facility, Facility ID, or source record...">
+        </form>
+        <div class="shell-nav-cluster">
+          <nav class="primary-nav site-nav" aria-label="{html.escape(nav_label)}">
+            <ul>
+{links}
+            </ul>
+          </nav>
+          <div class="mode-panel" aria-label="Retrieval mode">
+            <span class="{badge_class}">{html.escape(runtime_mode)}</span>
+          </div>
         </div>
       </div>
-      <nav class="primary-nav site-nav" aria-label="{html.escape(nav_label)}">
-        <ul>
-{links}
-        </ul>
-      </nav>
     </div>
   </header>
   <main id="main-content" class="ds-page-main app-page" tabindex="-1">
     <div class="shell page-main app-page-main">
+      <section class="page-title-block" aria-labelledby="page-heading">
+        {eyebrow_markup}
+        <h1 id="page-heading">{html.escape(heading)}</h1>
+        {actor_markup}
+      </section>
 {stepper}
 {main}
     </div>
@@ -309,7 +321,7 @@ def _is_active_nav(href: str, active_path: str | None) -> bool:
   if not active_path:
     return False
   if href == "/":
-    return active_path in {"/", "/ccld/facilities"} or active_path.startswith("/ccld/facilities/")
+    return active_path == "/"
   return active_path == href or active_path.startswith(f"{href}/")
 
 
@@ -327,37 +339,40 @@ def _runtime_mode_label() -> str:
 SHARED_CSS = r"""
     :root {
       color-scheme: light;
-      --ds-page-bg: #F5F7FA;
+      --ds-font-display: "Libre Baskerville", Georgia, "Times New Roman", serif;
+      --ds-font-ui: "DM Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      --ds-font-mono: "DM Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --ds-page-bg: #F2F4F7;
       --ds-surface: #ffffff;
       --ds-surface-muted: #F8FAFB;
-      --ds-surface-info: #EAF2FB;
-      --ds-surface-success: #EAF7EF;
-      --ds-surface-attention: #FFF7E0;
+      --ds-surface-info: #EEF8F8;
+      --ds-surface-success: #ECFDF5;
+      --ds-surface-attention: #FFF3CD;
       --ds-text: #17212B;
-      --ds-text-muted: #5B6775;
-      --ds-text-subtle: #6B7785;
-      --ds-border: #D8E0E7;
-      --ds-border-soft: #E6EBF0;
-      --ds-primary: #006B5F;
-      --ds-primary-hover: #00564D;
-      --ds-primary-soft: #EEF7F6;
+      --ds-text-muted: #64748B;
+      --ds-text-subtle: #7A8797;
+      --ds-border: #D8E1E8;
+      --ds-border-soft: rgba(15, 30, 45, 0.1);
+      --ds-primary: #0D6E6E;
+      --ds-primary-hover: #0A5555;
+      --ds-primary-soft: #EFF8F8;
       --ds-link: #2457A6;
       --ds-link-hover: #173F78;
       --ds-info: #2457A6;
       --ds-info-soft: #E6EEF9;
       --ds-nav-active-bg: #EEF3FA;
       --ds-nav-active-border: #9DB4D6;
-      --ds-attention: #8A5A00;
-      --ds-attention-soft: #FFF5DB;
+      --ds-attention: #92400E;
+      --ds-attention-soft: #FEF3C7;
       --ds-danger: #9B2C3A;
       --ds-danger-soft: #FFF0F2;
       --ds-success: #2E7D4F;
-      --ds-focus: #2457A6;
+      --ds-focus: #0D6E6E;
       --ds-radius-sm: 4px;
       --ds-radius-md: 6px;
       --ds-radius-lg: 8px;
-      --ds-shadow-card: 0 1px 2px rgb(23 33 43 / 6%), 0 10px 24px rgb(23 33 43 / 7%);
-      --ds-shadow-raised: 0 18px 42px rgb(23 33 43 / 12%);
+      --ds-shadow-card: 0 1px 4px rgb(15 30 45 / 6%), 0 0 0 1px rgb(15 30 45 / 3%);
+      --ds-shadow-raised: 0 2px 10px rgb(15 30 45 / 8%), 0 0 0 1px rgb(15 30 45 / 4%);
       --ds-space-1: 0.25rem;
       --ds-space-2: 0.5rem;
       --ds-space-3: 0.75rem;
@@ -368,6 +383,7 @@ SHARED_CSS = r"""
       --surface-alt: var(--ds-surface-info);
       --surface-strong: var(--ds-text);
       --ink: var(--ds-text);
+      --teal: var(--ds-primary);
       --muted: var(--ds-text-muted);
       --muted-2: var(--ds-text-subtle);
       --line: var(--ds-border);
@@ -397,18 +413,21 @@ SHARED_CSS = r"""
     body {
       background: var(--bg);
       color: var(--ink);
-      font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: var(--ds-font-ui);
       font-size: 16px;
       line-height: 1.55;
       margin: 0;
     }
     .shell {
       margin: 0 auto;
-      max-width: 80rem;
+      max-width: 87.5rem;
       padding: 0 1.25rem;
     }
     .app-shell {
-      max-width: 82rem;
+      max-width: 87.5rem;
+    }
+    .app-shell-compact {
+      max-width: 87.5rem;
     }
     .ds-page-bg {
       background: var(--ds-page-bg);
@@ -530,26 +549,77 @@ SHARED_CSS = r"""
     .site-header {
       background: rgba(255, 255, 255, 0.98);
       border-bottom: 1px solid var(--line-soft);
-      border-top: 4px solid var(--ds-primary);
-      box-shadow: 0 1px 10px rgb(23 33 43 / 6%);
+      box-shadow: 0 1px 8px rgb(23 33 43 / 7%);
     }
     .site-title-row {
-      align-items: flex-start;
-      display: flex;
-      gap: 1.4rem;
+      align-items: center;
+      display: grid;
+      gap: 0.9rem;
+      grid-template-columns: minmax(10rem, 12rem) minmax(16rem, 30rem) max-content;
       justify-content: space-between;
-      padding: 1.15rem 0 0.85rem;
+      padding: 0.62rem 0;
     }
     .brand-title-block {
-      max-width: 52rem;
+      align-items: start;
+      display: grid;
+      flex: 0 0 auto;
+      gap: 0.08rem;
+      min-width: 0;
     }
     .product-name {
       color: var(--ink);
-      font-size: 0.82rem;
-      font-weight: 800;
+      font-family: var(--ds-font-display);
+      font-size: 1.02rem;
+      font-weight: 900;
       letter-spacing: 0;
-      margin: 0 0 0.2rem;
+      margin: 0;
+      text-decoration: none;
+      text-transform: none;
+    }
+    .product-name span {
+      color: var(--ds-primary);
+    }
+    .workspace-divider {
+      background: var(--line);
+      display: none;
+      height: 1.15rem;
+      width: 1px;
+    }
+    .workspace-label {
+      color: var(--muted);
+      font-size: 0.66rem;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      line-height: 1.15;
       text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .shell-lookup {
+      display: block;
+      justify-self: stretch;
+      max-width: 30rem;
+      min-width: 0;
+    }
+    .shell-lookup input {
+      background: var(--ds-surface-muted);
+      border: 1px solid var(--line-soft);
+      border-radius: var(--ds-radius-md);
+      color: var(--ink);
+      font: inherit;
+      min-height: 2.5rem;
+      padding: 0.48rem 0.85rem;
+      width: 100%;
+    }
+    .shell-lookup input::placeholder {
+      color: #8492A4;
+    }
+    .shell-nav-cluster {
+      align-items: center;
+      display: flex;
+      flex: 0 1 auto;
+      gap: 0.55rem;
+      justify-content: flex-end;
+      min-width: max-content;
     }
     .pilot-eyebrow, .pilot-actor, .site-footer p, .helper-text {
       color: var(--muted);
@@ -602,19 +672,20 @@ SHARED_CSS = r"""
     }
     .site-nav ul {
       display: flex;
-      flex-wrap: wrap;
-      gap: 0.35rem;
+      flex-wrap: nowrap;
+      gap: 0.12rem;
       list-style: none;
       margin: 0;
-      padding: 0 0 0.95rem;
+      padding: 0;
     }
     .site-nav a {
       border: 1px solid transparent;
       border-radius: 6px;
       display: inline-block;
       color: var(--ds-link);
+      font-size: 0.9rem;
       line-height: 1.2;
-      padding: 0.48rem 0.66rem;
+      padding: 0.42rem 0.42rem;
       text-decoration: none;
       white-space: nowrap;
     }
@@ -624,9 +695,9 @@ SHARED_CSS = r"""
       color: var(--ds-link-hover);
     }
     .site-nav a.is-active {
-      background: var(--ds-nav-active-bg);
-      border-color: var(--ds-nav-active-border);
-      box-shadow: inset 0 -3px 0 var(--ds-link);
+      background: transparent;
+      border-color: transparent;
+      box-shadow: inset 0 -2px 0 var(--ds-link);
       color: var(--ds-link-hover);
     }
     .guided-stepper {
@@ -723,7 +794,17 @@ SHARED_CSS = r"""
       padding-top: 1.35rem;
     }
     .app-page-main {
-      max-width: 82rem;
+      max-width: 87.5rem;
+    }
+    .page-title-block {
+      margin: 0 0 1rem;
+      padding-top: 1.4rem;
+    }
+    .page-title-block .pilot-eyebrow {
+      margin-bottom: 0.25rem;
+    }
+    .page-title-block .pilot-actor {
+      margin-top: 0.35rem;
     }
     section {
       margin: 0 0 1.5rem;
@@ -870,10 +951,10 @@ SHARED_CSS = r"""
       padding: 1.25rem 0;
     }
     .mode-panel {
-      align-items: flex-start;
+      align-items: center;
       display: flex;
       justify-content: flex-end;
-      min-width: 12rem;
+      min-width: max-content;
     }
     .badge {
       border: 1px solid var(--line);
@@ -921,6 +1002,50 @@ SHARED_CSS = r"""
     .hero-card h2 {
       font-size: 1.55rem;
       max-width: 54rem;
+    }
+    .facility-case-brief {
+      background: transparent;
+      border: 0;
+      border-bottom: 1px solid var(--line-soft);
+      border-radius: 0;
+      box-shadow: none;
+      margin-bottom: 0.34rem;
+      padding: 0.08rem 0 0.58rem;
+    }
+    .facility-case-brief .case-brief-header {
+      align-items: center;
+    }
+    .facility-case-brief h2 {
+      font-size: 1rem;
+      line-height: 1.2;
+      margin-bottom: 0.16rem;
+    }
+    .facility-case-brief .launch-kicker {
+      font-size: 0.74rem;
+      margin-bottom: 0.18rem;
+    }
+    .facility-case-brief .metric-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem 0.65rem;
+      margin: 0.26rem 0 0;
+    }
+    .facility-case-brief .brief-metric {
+      align-items: baseline;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      display: inline-flex;
+      gap: 0.28rem;
+      padding: 0;
+    }
+    .facility-case-brief .brief-metric strong {
+      font-size: 0.96rem;
+      line-height: 1;
+    }
+    .facility-case-brief .brief-metric span {
+      font-size: 0.76rem;
+      margin: 0;
     }
     .launch-kicker {
       color: var(--muted);
@@ -995,14 +1120,19 @@ SHARED_CSS = r"""
       list-style: none;
     }
     .review-chip {
-      background: var(--amber-soft);
-      border: 1px solid var(--status-attention-line);
+      background: #EEF1F3;
+      border: 1px solid var(--line);
       border-radius: 999px;
-      color: var(--amber);
+      color: #34495E;
       display: inline-flex;
       font-size: 0.82rem;
       font-weight: 800;
       padding: 0.22rem 0.55rem;
+    }
+    .badge-info {
+      background: var(--ds-info-soft);
+      border-color: #B8CAE3;
+      color: var(--ds-info);
     }
     .source-chip {
       background: #E8F7F2;
@@ -1115,7 +1245,75 @@ SHARED_CSS = r"""
     }
     .result-card.work-item {
       align-items: start;
-      grid-template-columns: minmax(0, 1fr) minmax(8rem, auto);
+      border-color: rgba(13, 110, 110, 0.18);
+      gap: 0.85rem 1.1rem;
+      grid-template-columns: minmax(0, 1fr) minmax(11rem, 13.5rem);
+      padding: 0.78rem 0.9rem;
+    }
+    .result-card.work-item.is-suggested {
+      border-color: #86C8B9;
+      box-shadow: 0 8px 18px rgb(13 110 110 / 10%);
+    }
+    .work-item-main {
+      min-width: 0;
+    }
+    .work-item-main h3 {
+      font-family: var(--ds-font-mono);
+      font-size: 1.08rem;
+      margin: 0 0 0.24rem;
+    }
+    .work-item-facts {
+      display: grid;
+      gap: 0.38rem 0.85rem;
+      grid-template-columns: repeat(5, minmax(7rem, 1fr));
+      margin: 0.12rem 0 0;
+    }
+    .work-item-fact-pair {
+      display: grid;
+      gap: 0.12rem;
+      min-width: 0;
+    }
+    .work-item-facts dt {
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 850;
+      margin: 0;
+    }
+    .work-item-facts dd {
+      color: var(--ink);
+      font-weight: 650;
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+    .work-item-actions {
+      align-items: stretch;
+      display: grid;
+      gap: 0.34rem;
+      justify-items: stretch;
+      min-width: 0;
+    }
+    .work-item-actions .button {
+      margin: 0;
+      width: 100%;
+    }
+    .queue-record-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      margin-bottom: 0.42rem;
+    }
+    .work-item-source {
+      margin: 0.42rem 0 0;
+    }
+    .work-item-source .source-chip {
+      border-radius: var(--ds-radius-md);
+      display: inline-flex;
+      font-size: 0.78rem;
+      font-weight: 850;
+      line-height: 1.2;
+      max-width: 100%;
+      padding: 0.24rem 0.5rem;
+      white-space: normal;
     }
     .legal-summary-grid {
       display: grid;
@@ -1167,7 +1365,7 @@ SHARED_CSS = r"""
     }
     .complaint-overview-card {
       border-color: #C9DCE0;
-      border-top: 4px solid var(--teal);
+      border-top: 3px solid var(--teal);
       box-shadow: var(--shadow-strong);
       padding: 0;
       overflow: visible;
@@ -1189,12 +1387,12 @@ SHARED_CSS = r"""
     .overview-layout {
       align-items: start;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem);
+      grid-template-columns: minmax(0, 1fr) minmax(15rem, 18rem);
     }
     .overview-main {
       display: grid;
-      gap: 0.72rem;
-      padding: 0.8rem 0.9rem 0.9rem;
+      gap: 0.42rem;
+      padding: 0.66rem 0.86rem 0.58rem;
     }
     .overview-primary-row {
       align-items: start;
@@ -1204,6 +1402,7 @@ SHARED_CSS = r"""
     }
     .complaint-number-heading {
       color: var(--ink);
+      font-family: var(--ds-font-mono);
       font-size: 1.25rem;
       line-height: 1.2;
       margin: 0 0 0.35rem;
@@ -1223,19 +1422,19 @@ SHARED_CSS = r"""
     }
     .overview-side-panel {
       background: #F8FBFB;
-      border: 1px solid var(--line-soft);
-      border-radius: 0 0 0 8px;
+      border-left: 1px solid var(--line-soft);
+      border-radius: 0 0 8px 0;
       display: grid;
-      gap: 0.62rem;
+      gap: 0.34rem;
       align-content: start;
       align-self: start;
-      padding: 0.8rem;
+      padding: 0.66rem 0.72rem;
     }
     .overview-review-cues,
     .overview-source-narrative,
     .overview-timeline {
       display: grid;
-      gap: 0.42rem;
+      gap: 0.34rem;
     }
     .overview-review-cues h3,
     .overview-source-narrative h3,
@@ -1247,12 +1446,19 @@ SHARED_CSS = r"""
       margin: 0;
       text-transform: uppercase;
     }
+    .section-heading-with-copy {
+      align-items: center;
+      display: inline-flex;
+      gap: 0.45rem;
+    }
     .overview-source-narrative blockquote {
       border-left: 3px solid #16B8AC;
       color: var(--ink);
-      font-weight: 650;
+      font-size: 0.98rem;
+      font-weight: 500;
+      line-height: 1.62;
       margin: 0;
-      padding: 0.25rem 0 0.25rem 0.65rem;
+      padding: 0.22rem 0 0.22rem 0.62rem;
     }
     .overview-tertiary-actions {
       border-top: 1px solid var(--line-soft);
@@ -1277,37 +1483,64 @@ SHARED_CSS = r"""
       margin-bottom: 0.35rem;
     }
     .top-fact-strip {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.38rem;
+      background: #F8FAFB;
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      display: grid;
+      gap: 0;
+      grid-template-columns: minmax(7.5rem, 0.8fr) minmax(18rem, 2.3fr) minmax(7rem, 0.8fr) minmax(5.25rem, 0.62fr) minmax(5.5rem, 0.62fr);
+      align-items: center;
       margin: 0;
+      overflow: hidden;
+      padding: 0;
     }
     .compact-fact {
-      align-items: baseline;
-      background: #f8fafb;
-      border: 1px solid var(--line-soft);
-      border-radius: 999px;
-      display: inline-flex;
-      gap: 0.35rem;
+      align-items: start;
+      background: transparent;
+      border-right: 1px solid var(--line-soft);
+      display: grid;
+      gap: 0.08rem;
       max-width: 100%;
-      padding: 0.28rem 0.55rem;
+      min-width: 0;
+      padding: 0.48rem 0.62rem;
+    }
+    .compact-fact:last-child {
+      border-right: 0;
     }
     .compact-fact dt {
-      color: #425160;
-      font-size: 0.75rem;
+      color: var(--muted);
+      font-size: 0.68rem;
       font-weight: 900;
       line-height: 1.2;
+      text-transform: uppercase;
       white-space: nowrap;
     }
     .compact-fact dt::after {
-      content: ":";
+      content: "";
     }
     .compact-fact dd {
       color: var(--ink);
-      font-size: 0.84rem;
+      font-size: 0.9rem;
       font-weight: 850;
+      line-height: 1.25;
       margin: 0;
       overflow-wrap: anywhere;
+    }
+    .compact-fact--name {
+      min-width: min(18rem, 100%);
+    }
+    .compact-fact--name dd {
+      display: -webkit-box;
+      font-weight: 760;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+      overflow-wrap: normal;
+    }
+    .compact-fact--status dd {
+      color: var(--ink);
+      font-size: 0.9rem;
+      padding: 0;
     }
     .reviewer-brief-card .launch-value {
       font-size: 0.98rem;
@@ -1361,10 +1594,10 @@ SHARED_CSS = r"""
     }
     .copy-icon-button {
       align-items: center;
-      background: #F8FBFF;
-      border: 1px solid #92A8C8;
+      background: transparent;
+      border: 1px solid transparent;
       border-radius: 4px;
-      color: #173F78;
+      color: #64748B;
       cursor: pointer;
       display: inline-flex;
       font: inherit;
@@ -1377,8 +1610,9 @@ SHARED_CSS = r"""
       padding: 0.15rem;
     }
     .copy-icon-button:hover {
-      background: var(--ds-info-soft);
-      border-color: var(--ds-nav-active-border);
+      background: var(--ds-primary-soft);
+      border-color: #B7E2DD;
+      color: var(--ds-primary);
     }
     .copy-icon-button svg {
       display: block;
@@ -1387,12 +1621,12 @@ SHARED_CSS = r"""
     }
     .review-status-panel {
       display: grid;
-      gap: 0.5rem;
+      gap: 0.34rem;
     }
     .review-status-panel .summary-list {
-      font-size: 0.92rem;
-      gap: 0.25rem 0.65rem;
-      grid-template-columns: minmax(7rem, 9rem) 1fr;
+      font-size: 0.86rem;
+      gap: 0.18rem 0.55rem;
+      grid-template-columns: minmax(6rem, 8rem) 1fr;
       margin: 0;
     }
     .review-status-panel h2 {
@@ -1408,8 +1642,8 @@ SHARED_CSS = r"""
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
-      margin: 0.7rem 0 0.85rem;
-      padding-bottom: 0.85rem;
+      margin: 0.44rem 0 0.5rem;
+      padding-bottom: 0.5rem;
     }
     .reviewer-panel-actions .button,
     .reviewer-panel-actions .button-disabled {
@@ -1420,10 +1654,10 @@ SHARED_CSS = r"""
     .reviewer-panel-note {
       color: var(--muted);
       font-size: 0.9rem;
-      margin: 0.35rem 0 0.65rem;
+      margin: 0.25rem 0 0.48rem;
     }
     .review-status-panel form p {
-      margin: 0.35rem 0;
+      margin: 0.28rem 0;
     }
     .review-status-panel select,
     .review-status-panel textarea,
@@ -1431,7 +1665,7 @@ SHARED_CSS = r"""
       width: 100%;
     }
     .review-status-panel textarea {
-      min-height: 5.25rem;
+      min-height: 3.25rem;
     }
     .review-status-panel h3 {
       font-size: 0.98rem;
@@ -1555,51 +1789,123 @@ SHARED_CSS = r"""
       gap: 0.15rem;
       padding-top: 0.45rem;
     }
+    .rt-timeline {
+      --timeline-marker-size: 1.08rem;
+      --timeline-line-top: calc(1rem + (var(--timeline-marker-size) / 2));
+      padding: 1rem 0 0;
+      position: relative;
+    }
+    .rt-timeline__line {
+      background: rgba(15, 30, 45, 0.18);
+      height: 1.5px;
+      left: 12.5%;
+      position: absolute;
+      right: 12.5%;
+      top: var(--timeline-line-top);
+    }
+    .rt-timeline.has-gap .rt-timeline__line::after {
+      background: #FBBF24;
+      content: "";
+      height: 2px;
+      left: 0;
+      position: absolute;
+      top: -0.25px;
+      width: 33.333%;
+    }
     .timeline-list-linear {
       align-items: start;
       gap: 0;
       grid-template-columns: repeat(4, minmax(0, 1fr));
+      padding-bottom: 0;
+      padding-top: 0;
       position: relative;
     }
     .timeline-list-linear::before {
-      background: #6B7F8C;
-      content: "";
-      height: 2px;
-      left: 8%;
-      position: absolute;
-      right: 8%;
-      top: 0.55rem;
+      display: none;
+    }
+    .timeline-list-linear.has-gap::after {
+      display: none;
     }
     .timeline-list-linear .timeline-item {
       border-top: 0;
       justify-items: center;
       min-width: 0;
-      padding-top: 1.2rem;
+      padding-top: 0;
       position: relative;
       text-align: center;
     }
-    .timeline-list-linear .timeline-item::before {
-      background: #0A6F6A;
+    .timeline-marker {
+      align-items: center;
+      background: #0D6E6E;
       border: 3px solid #ffffff;
       border-radius: 999px;
       box-shadow: 0 0 0 1px #0A6F6A;
-      content: "";
-      height: 0.72rem;
-      position: absolute;
-      top: 0.12rem;
-      width: 0.72rem;
+      display: inline-flex;
+      height: var(--timeline-marker-size);
+      justify-content: center;
+      margin-bottom: 0.3rem;
+      position: relative;
+      width: var(--timeline-marker-size);
       z-index: 1;
+    }
+    .timeline-marker--received {
+      background: #ffffff;
+      border-color: #0D6E6E;
+      border-radius: 5px;
+      box-shadow: 0 0 0 3px #DFF5F2;
+      width: 0.92rem;
+    }
+    .timeline-marker--received::after {
+      background: #0D6E6E;
+      border-radius: 2px;
+      content: "";
+      height: 0.5rem;
+      width: 0.38rem;
+    }
+    .timeline-marker--report {
+      background: #2457A6;
+      box-shadow: 0 0 0 1px #2457A6;
+    }
+    .timeline-marker--signed {
+      background: #2E7D4F;
+      box-shadow: 0 0 0 1px #2E7D4F;
+    }
+    .timeline-marker--visit::after,
+    .timeline-marker--report::after,
+    .timeline-marker--signed::after {
+      background: #ffffff;
+      border-radius: 999px;
+      content: "";
+      height: 0.28rem;
+      width: 0.28rem;
     }
     .timeline-list-linear .timeline-label {
       color: var(--ink);
-      font-size: 0.84rem;
+      font-size: 0.78rem;
       font-weight: 900;
+      line-height: 1.15;
+    }
+    .rt-timeline__date {
+      display: block;
+      font-size: 0.84rem;
+      line-height: 1.25;
+      margin-top: 0.12rem;
     }
     .timeline-gap-badge {
-      grid-column: 1 / 3;
-      justify-self: center;
       list-style: none;
-      margin-top: -0.15rem;
+      margin: 0;
+      position: absolute;
+      left: 25%;
+      text-align: center;
+      top: calc(var(--timeline-line-top) - 0.68rem);
+      transform: translateX(-50%);
+      width: max-content;
+      z-index: 2;
+    }
+    .timeline-gap-badge .review-chip {
+      border-radius: var(--ds-radius-md);
+      font-size: 0.75rem;
+      padding: 0.18rem 0.45rem;
     }
     .finding-badge {
       align-items: center;
@@ -2172,6 +2478,21 @@ SHARED_CSS = r"""
       .site-title-row, .two-column, .request-layout {
         display: block;
       }
+      .brand-title-block {
+        min-width: 0;
+      }
+      .shell-lookup {
+        margin-top: 0.75rem;
+        max-width: none;
+        min-width: 0;
+      }
+      .shell-nav-cluster {
+        align-items: stretch;
+        display: grid;
+        gap: 0.6rem;
+        justify-content: stretch;
+        margin-top: 0.75rem;
+      }
       .attorney-hero, .legal-summary-grid, .detail-top-grid, .support-layout,
       .dense-page-header, .dense-section-header {
         display: block;
@@ -2188,17 +2509,41 @@ SHARED_CSS = r"""
         margin-top: 0.75rem;
       }
       .top-fact-strip {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .compact-fact--name {
+        min-width: 0;
+      }
+      .rt-timeline {
+        padding-top: 0;
+      }
+      .rt-timeline__line {
+        display: none;
       }
       .timeline-list-linear {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding-bottom: 0;
+        padding-top: 0;
         row-gap: 0.85rem;
       }
       .timeline-list-linear::before {
         display: none;
       }
+      .timeline-list-linear.has-gap::after {
+        display: none;
+      }
+      .timeline-marker {
+        left: auto;
+        margin-bottom: 0.25rem;
+        position: static;
+        top: auto;
+        transform: none;
+      }
       .timeline-gap-badge {
         grid-column: 1 / -1;
+        position: static;
+        transform: none;
+        width: auto;
       }
       .quick-review-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2225,7 +2570,6 @@ SHARED_CSS = r"""
       }
       .mode-panel {
         justify-content: flex-start;
-        margin-top: 0.75rem;
       }
       .site-nav ul {
         display: grid;

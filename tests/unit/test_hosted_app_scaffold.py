@@ -132,6 +132,23 @@ def test_app_shell_labels_placeholder_scope() -> None:
     assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
     assert "CCLD-only public-record review workspace." in html
     assert "CCLD RecordsTracker" in html
+    assert '<a class="product-name" href="/">Records<span>Tracker</span></a>' in html
+    assert '<span class="workspace-label">Reviewer Workspace</span>' in html
+    assert (
+        '<form class="shell-lookup" action="/ccld/facilities" method="get" role="search">'
+        in html
+    )
+    assert (
+        '<label class="sr-only" for="shell-facility-search">'
+        "Search complaint, facility, Facility ID, or source record</label>"
+        in html
+    )
+    assert (
+        '<label class="sr-only" for="shell-facility-search">Search facilities</label>'
+        not in html
+    )
+    assert 'placeholder="Search complaint, facility, Facility ID, or source record..."' in html
+    assert "Search complaint, facility, license, or source record" not in html
     assert parser.tags.count("h1") == 1
     assert parser.text_for("h1") == "Find a Facility"
     assert parser.text_for("h1") != "CCLD RecordsTracker"
@@ -141,17 +158,17 @@ def test_app_shell_labels_placeholder_scope() -> None:
     assert "Find a facility" in html
     assert '<form action="/ccld/facilities" method="get" class="facility-search-form">' in html
     assert 'for="facility-search-input"' in html
-    assert 'placeholder="Name, license number, city, or ZIP"' in html
+    assert 'placeholder="Name, Facility ID, city, or ZIP"' in html
     assert "Search CCLD facilities" in html
     assert 'class="selected-facility-request-form"' in html
     assert "Continue to Request Records" in html
     assert "Change selected facility" in html
     assert (
         '<summary id="manual-entry-heading">'
-        "Enter a facility/license number directly</summary>"
+        "Enter a Facility ID directly</summary>"
     ) in html
     assert (
-        "Start review by finding the CCLD facility/license number in the preloaded "
+        "Start review by finding the CCLD Facility ID in the preloaded "
         "facility directory"
         in html
     )
@@ -183,7 +200,7 @@ def test_app_shell_labels_placeholder_scope() -> None:
     assert "Keyboard flow: use the skip link, top navigation, and step links" not in html
     assert "current step and next action are stated in text" not in html
     assert "Start facility complaint review." not in html
-    assert "Select the facility/license number." not in html
+    assert "Select the Facility ID." not in html
     assert "Choose the complaint date range." not in html
     assert_no_buttons_inside_list_items(html)
 
@@ -200,7 +217,7 @@ def test_home_orientation_uses_shared_facility_start_experience() -> None:
     assert "2. Request records" not in normalized_html
     assert "3. Review complaints" not in normalized_html
     assert "Facility intake" in html
-    assert "Find the facility/license number" in html
+    assert "Find the Facility ID" in html
     assert "Search CCLD facilities" in html
     assert "Continue to Request Records" in html
     assert "Change selected facility" in html
@@ -229,7 +246,7 @@ def test_home_and_facility_routes_share_find_facility_start_workflow() -> None:
     for html in (root_html, facility_html):
         assert "Find a Facility" in html
         assert "Facility intake" in html
-        assert "Find the facility/license number" in html
+        assert "Find the Facility ID" in html
         assert "Search CCLD facilities" in html
         assert "Continue to Request Records" in html
         assert "Change selected facility" in html
@@ -265,7 +282,7 @@ def test_guided_attorney_review_workflow_acceptance_route_markers(
             (
                 "Find a Facility",
                 "Facility intake",
-                "Find the facility/license number",
+                "Find the Facility ID",
                 "Search CCLD facilities",
                 "Continue to Request Records",
             ),
@@ -365,6 +382,23 @@ def test_polished_shared_layout_navigation_on_key_pages() -> None:
         assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
         assert 'class="shell page-main app-page-main"' in html
         assert "CCLD RecordsTracker" in html
+        assert '<a class="product-name" href="/">Records<span>Tracker</span></a>' in html
+        assert '<span class="workspace-label">Reviewer Workspace</span>' in html
+        assert (
+            '<form class="shell-lookup" action="/ccld/facilities" method="get" role="search">'
+            in html
+        )
+        assert (
+            '<label class="sr-only" for="shell-facility-search">'
+            "Search complaint, facility, Facility ID, or source record</label>"
+            in html
+        )
+        assert (
+            '<label class="sr-only" for="shell-facility-search">Search facilities</label>'
+            not in html
+        )
+        assert 'placeholder="Search complaint, facility, Facility ID, or source record..."' in html
+        assert "Search complaint, facility, license, or source record" not in html
         if path != "/ccld/help":
             assert "Attorney workflow" not in html
             assert "Current step" not in html
@@ -375,6 +409,7 @@ def test_polished_shared_layout_navigation_on_key_pages() -> None:
             assert "Current step" not in html
         assert "Future step" not in html
         assert 'href="/ccld/facilities">Facility</a>' not in html
+        assert 'href="/ccld/facilities">Facilities</a>' in html
         assert 'href="/">Home</a>' in html
         assert 'href="/ccld/records/request">Request Records</a>' in html
         assert 'href="/ccld/records/request">Retrieve</a>' not in html
@@ -430,15 +465,69 @@ def test_representative_hosted_pages_do_not_render_shared_footer_disclaimer() ->
 def test_final_product_shell_uses_compact_unboxed_workflow_design() -> None:
     html = render_app_shell()
 
-    assert "--ds-page-bg: #F5F7FA" in html
+    assert "--ds-page-bg: #F2F4F7" in html
     assert "--ds-surface: #ffffff" in html
     assert "--ds-text: #17212B" in html
-    assert "--ds-primary: #006B5F" in html
+    assert "--ds-primary: #0D6E6E" in html
     assert "--ds-link: #2457A6" in html
     assert "--ds-nav-active-bg: #EEF3FA" in html
     assert "--ds-nav-active-border: #9DB4D6" in html
+    assert '--ds-font-display: "Libre Baskerville", Georgia' in html
+    assert '--ds-font-ui: "DM Sans", "Segoe UI"' in html
+    assert '--ds-font-mono: "DM Mono", "SFMono-Regular"' in html
+    assert "--teal: var(--ds-primary)" in html
     assert ".app-shell" in html
+    assert ".app-shell-compact" in html
     assert ".brand-title-block" in html
+    assert ".workspace-label" in html
+    assert ".shell-lookup" in html
+    assert ".shell-nav-cluster" in html
+    shell_row_start = html.index('class="brand-title-row site-title-row"')
+    shell_row_end = html.index("</header>", shell_row_start)
+    shell_row_html = html[shell_row_start:shell_row_end]
+    shell_regions = (
+        'class="brand-title-block brand-block"',
+        'class="shell-lookup"',
+        'class="shell-nav-cluster"',
+        'class="primary-nav site-nav"',
+        'class="mode-panel"',
+    )
+    previous_region_index = -1
+    for region in shell_regions:
+        region_index = shell_row_html.index(region)
+        assert region_index > previous_region_index
+        previous_region_index = region_index
+    assert (
+        "grid-template-columns: minmax(10rem, 12rem) minmax(16rem, 30rem) max-content"
+        in html
+    )
+    assert "min-width: max-content" in html
+    facts_bar_css = (
+        ".top-fact-strip {\n"
+        "      background: #F8FAFB;\n"
+        "      border: 1px solid var(--line-soft);\n"
+        "      border-radius: 8px;\n"
+        "      display: grid;"
+    )
+    assert facts_bar_css in html
+    assert (
+        "grid-template-columns: minmax(7.5rem, 0.8fr) minmax(18rem, 2.3fr)"
+        in html
+    )
+    assert ".compact-fact--name" in html
+    assert "-webkit-line-clamp: 2" in html
+    assert ".compact-fact--status dd" in html
+    assert ".rt-timeline {" in html
+    assert "--timeline-line-top: calc(1rem + (var(--timeline-marker-size) / 2));" in html
+    assert ".rt-timeline__line {" in html
+    assert ".rt-timeline.has-gap .rt-timeline__line::after" in html
+    assert "left: 25%;" in html
+    assert "top: calc(var(--timeline-line-top) - 0.68rem);" in html
+    assert "transform: translateX(-50%);" in html
+    assert "width: max-content;" in html
+    assert "border-radius: 5px;" in html
+    assert "top: 0;\n      width: 25%;" not in html
+    assert "top: calc(var(--timeline-line-top) - (var(--timeline-marker-size) / 2)" not in html
     assert ".app-page-main" in html
     assert ".ds-card--neutral" in html
     assert ".ds-card--info" in html
@@ -473,9 +562,9 @@ def test_decorative_kickers_are_muted_and_navigation_uses_blue_neutral_states() 
     assert "a {\n      color: var(--ds-link);" in html
     nav_active_css = (
         ".site-nav a.is-active {\n"
-        "      background: var(--ds-nav-active-bg);\n"
-        "      border-color: var(--ds-nav-active-border);\n"
-        "      box-shadow: inset 0 -3px 0 var(--ds-link);"
+        "      background: transparent;\n"
+        "      border-color: transparent;\n"
+        "      box-shadow: inset 0 -2px 0 var(--ds-link);"
     )
     assert nav_active_css in html
     assert ".site-nav a:hover, .site-nav a.is-active" not in html
@@ -499,7 +588,7 @@ def test_routes_return_shell_health_and_not_found() -> None:
     assert root_status == 200
     assert root_content_type == "text/html; charset=utf-8"
     assert b"CCLD-only public-record review workspace" in root_body
-    assert b"Find the facility/license number" in root_body
+    assert b"Find the Facility ID" in root_body
     assert health_status == 200
     assert health_content_type == "application/json; charset=utf-8"
     assert json.loads(health_body)["status"] == "ok"
@@ -575,7 +664,8 @@ def test_explicit_local_dev_auth_mode_allows_default_workflow_actor() -> None:
     ccld_html = ccld_body.decode("utf-8")
 
     assert reviewer_status == 200
-    assert "Signed in as Local Test Reviewer" in reviewer_html
+    assert "Signed in as Local Test Reviewer" not in reviewer_html
+    assert "Source-traceable complaint review." not in reviewer_html
     assert "provider_subject" not in reviewer_html
     assert "provider_issuer" not in reviewer_html
     assert ccld_status == 200
@@ -1111,7 +1201,7 @@ def test_route_active_nav_highlights_correct_item() -> None:
     # (path, expected_active_href, expected_active_label)
     route_active_specs = (
         ("/", "/", "Home"),
-        ("/ccld/facilities", "/", "Home"),
+        ("/ccld/facilities", "/ccld/facilities", "Facilities"),
         ("/ccld/records/request", "/ccld/records/request", "Request Records"),
         ("/ccld/help", "/ccld/help", "Help"),
         ("/reviewer", "/reviewer", "Review"),
@@ -1396,7 +1486,7 @@ def test_live_mode_facility_lookup_not_configured_shows_safe_fallback_messaging(
     normalized_html = " ".join(html.split()).lower()
 
     assert "Facility directory lookup is not configured" in html
-    assert "Enter a known CCLD facility/license number" in html
+    assert "Enter a known CCLD Facility ID" in html
     assert "Open Request Records" in html
     # Synthetic fixture names must not appear
     assert "Synthetic Orchard" not in html

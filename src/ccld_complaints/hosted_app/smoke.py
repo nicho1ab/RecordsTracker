@@ -212,7 +212,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if b"Skip to main CCLD facility lookup content" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return skip navigation.")
     if (
-        b"Find the facility/license number"
+        b"Find the Facility ID"
         not in root_body
     ):
         raise RuntimeError("Hosted scaffold app shell did not return review session orientation.")
@@ -234,8 +234,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b'for="facility-search-input"' not in ccld_body
         or b"facility-suggestion-list" not in ccld_body
         or b"Which facility should be reviewed?" not in ccld_body
-        or b"Use this number" not in ccld_body
-        or b"Search by name, license number, city, county, ZIP" not in ccld_body
+        or b"Use this Facility ID" not in ccld_body
+        or b"Search by name, Facility ID, city, county, ZIP" not in ccld_body
         or b"Review aids only" not in ccld_body
         or b"Skip to main CCLD request content" not in ccld_body
     ):
