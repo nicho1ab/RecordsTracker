@@ -120,7 +120,10 @@ def test_retrieval_form_renders_record_type_and_safe_setup_state() -> None:
     assert "facility-suggestion-list" in html
     assert "Use this Facility ID" in html
     assert "Search by name, Facility ID, city, county, ZIP" in html
-    assert "facility type, program type, or status code" in html
+    assert "or facility type" in html
+    assert "facility type, program type, or status code" not in html
+    assert "facility/license" not in html
+    assert "license number" not in html.casefold()
     assert "Use this Facility ID" in html
     assert "Search CCLD facilities" in html
     assert "Which facility should be reviewed?" in html
