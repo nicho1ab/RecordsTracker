@@ -760,13 +760,13 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert "Skip to main CCLD facility lookup content" in html
     assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
     assert "Find a facility" in html
-    assert "Start review by finding the CCLD facility/license number" in html
+    assert "Start review by finding the CCLD Facility ID" in html
     assert "preloaded facility directory" in html
     assert "Lookup or manual entry?" not in html
     assert "<summary>When to use lookup vs. manual entry</summary>" in html
     assert "Use facility lookup when you know a facility name" in html
     assert "facility type, program type, or status code" in html
-    assert "Use manual entry when you already know the digit facility/license number" in html
+    assert "Use manual entry when you already know the digit Facility ID" in html
     assert "Lookup rows are public facility-directory data" in html
     assert "for facility lookup assistance before Request Records" in html
     assert 'for="facility-search-input"' in html
@@ -778,7 +778,7 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert form_index < disclosure_index
     assert "Use facility lookup when you know a facility name" not in pre_form_html
     assert (
-        "Use manual entry when you already know the digit facility/license number"
+        "Use manual entry when you already know the digit Facility ID"
         not in pre_form_html
     )
     assert "Lookup rows are public facility-directory data" not in pre_form_html
@@ -802,13 +802,13 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert 'id="lookup_start_date" name="start_date" type="date"' in html
     assert 'id="lookup_end_date" name="end_date" type="date"' in html
     assert "Continue to Request Records" in html
-    assert "Search by name, license number, city, county, ZIP" in (
+    assert "Search by name, Facility ID, city, county, ZIP" in (
         normalized_html
     )
     assert "facility type, program type, or status code" in normalized_html
     assert "Keyboard flow: type a search, use arrow keys or Tab" not in html
     assert "selected facility link to continue to the request page" not in html
-    assert "Enter a facility/license number directly" in html
+    assert "Enter a Facility ID directly" in html
     assert "Open Request Records" in html
     assert "Lookup rows are public facility-directory data" in html
     assert_no_secret_html(html)
@@ -828,7 +828,7 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
     assert "Facility matches" in html
     assert "Facility-directory results" in html
     assert (
-        "Choose a facility to carry its facility/license number and name into Request Records"
+        "Choose a facility to carry its Facility ID and name into Request Records"
         in html
     )
     assert "Date controls appear as soon as a facility is selected" in html
@@ -982,7 +982,7 @@ def test_ccld_facility_review_hub_not_found_state_is_safe() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Facility-directory result not found" in html
     assert "999999999" in html
-    assert "Try a different search, enter the facility/license number directly" in normalized_html
+    assert "Try a different search, enter the Facility ID directly" in normalized_html
     assert "report an issue if the lookup result is confusing" in normalized_html
     assert "Back to search" in html
     assert "Start complaint request" in html
@@ -1864,7 +1864,7 @@ def test_ccld_facility_lookup_page_shows_no_match_guidance() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "No facility-directory results matched" in html
-    assert "Try a shorter name, license number, city, county, ZIP" in (
+    assert "Try a shorter name, Facility ID, city, county, ZIP" in (
         normalized_html
     )
     assert "facility type, or program type" in normalized_html
@@ -1895,8 +1895,9 @@ def test_ccld_facility_lookup_selection_prefills_request_form_without_mutation()
     assert counts == _empty_reviewer_counts()
     assert "Selected facility context is ready" in html
     assert "No facility selected yet" not in html
-    assert "Prefilled facility/license link" not in html
-    assert "Facility/license number" in html
+    assert "Prefilled Facility ID link" not in html
+    assert "Facility ID" in html
+    assert "Facility/license number" not in html
     assert "value=\"900000001\"" in html
     assert "Choose complaint date range" in html
     assert "Complaint records" in html
@@ -1952,9 +1953,9 @@ def test_ccld_facility_lookup_page_has_concise_placeholder_not_full_helper_sente
 
     assert status == 200
     # Concise placeholder (not the full helper sentence)
-    assert 'placeholder="Name, license number, city, or ZIP"' in html
+    assert 'placeholder="Name, Facility ID, city, or ZIP"' in html
     # Full helper text must appear separately (not inside the placeholder)
-    assert "Search by name, license number, city, county, ZIP" in normalized_html
+    assert "Search by name, Facility ID, city, county, ZIP" in normalized_html
     assert "facility type, program type, or status code" in normalized_html
     assert_no_secret_html(html)
 
@@ -2045,11 +2046,11 @@ def test_live_mode_facility_lookup_page_no_reference_shows_not_configured_messag
     html = render_ccld_facility_lookup_page(reference_source=no_reference_facility_source())
 
     assert "Facility directory lookup is not configured" in html
-    assert "Enter a known CCLD facility/license number" in html
+    assert "Enter a known CCLD Facility ID" in html
     assert "Directory lookup is optional" in html
     assert "does not affect Request Records or review" in html
     # Manual entry is the primary path
-    assert "Enter a facility/license number directly" in html
+    assert "Enter a Facility ID directly" in html
     assert "Open Request Records" in html
     assert f'href="{CCLD_RECORD_REQUEST_PATH}"' in html
     # No synthetic fixture facility names
@@ -2073,15 +2074,15 @@ def test_live_mode_facility_lookup_page_empty_postgres_source_shows_not_configur
         notices=(
             "Facility lookup suggestions are not available. "
             "Source-derived records may not include facility directory rows. "
-            "Enter a facility/license number directly if you know it.",
+            "Enter a Facility ID directly if you know it.",
         ),
     )
     html = render_ccld_facility_lookup_page(reference_source=empty_postgres_source)
 
     assert "Facility directory lookup is not configured" in html
-    assert "Enter a known CCLD facility/license number" in html
+    assert "Enter a known CCLD Facility ID" in html
     # Manual entry is the primary path
-    assert "Enter a facility/license number directly" in html
+    assert "Enter a Facility ID directly" in html
     assert "Open Request Records" in html
     # No synthetic fixture facility names
     assert "Synthetic Orchard" not in html

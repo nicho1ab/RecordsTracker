@@ -595,7 +595,7 @@ def _substantiated_triage_items(
             CcldQueueReturnContext(),
         )
         if facility_name == "unknown":
-            facility_display = f"Facility/license {_display_value(facility_number)}"
+            facility_display = f"Facility ID {_display_value(facility_number)}"
         else:
             facility_display = facility_name
         date_context = _substantiated_date_context(original_values)
@@ -1821,8 +1821,6 @@ def _render_record_list(
         actor_label=actor_label,
         main=f"""
         {_render_reviewer_case_brief(records, state_summaries, export_records, export_context)}
-        {_render_queue_search_filter(records, search_query, state_summaries, returned_count, export_records)}
-        {_render_queue_review_cue_summary(records, export_records)}
                 {no_results_notice}
         <section aria-labelledby="reviewer-list-heading">
                         <div class="dense-section-header">
@@ -1834,6 +1832,7 @@ def _render_record_list(
                 <div class="result-list dense-card-grid" aria-label="Complaint records ready for review">
         {cards}
                 </div>
+            {_render_queue_search_filter(records, search_query, state_summaries, returned_count, export_records)}
         <details class="technical-details dense-table-details">
           <summary>Show table view</summary>
       <table>
@@ -1843,7 +1842,7 @@ def _render_record_list(
                         <th scope="col">Review action</th>
             <th scope="col">Complaint control number</th>
                         <th scope="col">Finding</th>
-                        <th scope="col">Facility/license</th>
+                        <th scope="col">Facility ID</th>
                         <th scope="col">Complaint received date</th>
                         <th scope="col">Visit date</th>
                         <th scope="col">Report date</th>
@@ -1857,6 +1856,7 @@ def _render_record_list(
         </tbody>
       </table>
             </details>
+            {_render_queue_review_cue_summary(records, export_records)}
             {_render_complaint_export_controls(export_context, export_records)}
     </section>""",
     )
@@ -1956,13 +1956,16 @@ def _render_queue_review_cue_summary(
               <strong>{count}</strong><span>{_escape(label)}</span>
             </div>"""
         for label, count in cue_counts
+        if count > 0
     )
-    return f"""        <section class="quiet-section queue-cue-summary" aria-labelledby="queue-cue-summary-heading">
-          <h2 id="queue-cue-summary-heading">Review cue summary</h2>
+    if not cards:
+        return ""
+    return f"""        <details class="technical-details dense-table-details queue-cue-summary">
+          <summary id="queue-cue-summary-heading">Review cue summary</summary>
           <div class="metric-strip" aria-label="Review cue summary">
 {cards}
           </div>
-        </section>"""
+        </details>"""
 
 
 def _queue_review_cue_counts(
@@ -1979,8 +1982,9 @@ def _queue_review_cue_counts(
         ("60+ day gap", sum(1 for values in original_values if values.get("review_delay_over_60_days") is True)),
         ("90+ day gap", sum(1 for values in original_values if values.get("review_delay_over_90_days") is True)),
         ("120+ day gap", sum(1 for values in original_values if values.get("review_delay_over_120_days") is True)),
-        ("Missing first activity", sum(1 for values in original_values if values.get("missing_first_activity_date") is True)),
-        ("Check source", sum(1 for values in original_values if _has_missing_date_flag(values))),
+        ("Missing first activity", sum(1 for values in original_values if _missing_first_activity_warning(values))),
+        ("Missing source date", sum(1 for values in original_values if _has_missing_source_date(values))),
+        ("Source unavailable", sum(1 for item in records if _source_unavailable_for_queue_item(item))),
         ("Priority cue", _serious_review_cue_record_count(all_source_records)),
     )
 
@@ -2197,7 +2201,7 @@ def _render_packet_preview(
                     <h2 id="before-copying-printing-heading">Before copying or printing</h2>
                     <ul>
                         <li>Confirm this is the facility/date range you intended.</li>
-                        <li>Open the source record if a cue says Check source.</li>
+                        <li>Open the source record when a specific source/date cue needs review.</li>
                         <li>Add status or a note if it would help the handoff.</li>
                         <li>Review included records for missing or confusing information.</li>
                         <li>Send feedback if something looks wrong or incomplete.</li>
@@ -2253,7 +2257,7 @@ def _render_packet_preview(
           <ul>
             <li>This packet preview is for preparation.</li>
             <li>Source-derived fields remain separate from saved notes/status.</li>
-            <li>Open the source record if a cue says Check source.</li>
+            <li>Open the source record when a specific source/date cue needs review.</li>
             <li>Add notes/status only when useful.</li>
             <li>Send feedback if something looks wrong or incomplete.</li>
           </ul>
@@ -2325,7 +2329,7 @@ def _render_packet_preview_record(
 {badge_items}
             </ul>
             <dl class="summary-list">
-              <dt>Facility/license</dt>
+              <dt>Facility ID</dt>
               <dd>{_escape(_complaint_export_row_facility_number(source_record, return_context))}</dd>
               <dt>Complaint received</dt>
               <dd>{_escape(_detail_timeline_date(_optional_string(original_values, 'complaint_received_date')))}</dd>
@@ -2367,7 +2371,7 @@ def _packet_record_next_step(
 ) -> str:
     steps: list[str] = []
     if _packet_needs_source_check(item):
-        steps.append("Check source")
+        steps.append("Review source/date cue")
     if _packet_needs_reviewer_attention(state_summary):
         steps.append("add status/note if useful")
     if not steps:
@@ -2583,7 +2587,7 @@ def _packet_preview_copy_ready_brief(
     lines = [
         "Packet preview brief",
         "",
-        f"Facility/license: {_packet_facility_label(records, return_context)}",
+        f"Facility ID: {_packet_facility_label(records, return_context)}",
         f"Date range: {_packet_draft_date_scope(return_context)}",
         f"Records included: {len(records)}",
         f"Packet readiness: {_packet_readiness_summary_text(readiness_counts)}",
@@ -2611,7 +2615,7 @@ def _packet_preview_copy_ready_brief(
         [
             "",
             "Review before use",
-            "- Open the source record if a cue says Check source.",
+            "- Open the source record when a specific source/date cue needs review.",
             "- Add status or a note if it would help the handoff.",
             "- Send feedback if something looks wrong or incomplete.",
             "- This brief is a preparation aid, not a legal report or conclusion.",
@@ -2853,7 +2857,7 @@ def _copy_ready_attorney_review_brief(
         "Copy-ready attorney review brief",
         "",
         "Facility",
-        f"- Facility/license: {_packet_facility_label(records, return_context)}",
+        f"- Facility ID: {_packet_facility_label(records, return_context)}",
         f"- Date range: {_packet_draft_date_scope(return_context)}",
         f"- Loaded record context: {len(records)} complaint record(s) in the current packet context.",
         "- Limited-data note: this brief reflects only records loaded in this current page context.",
@@ -3048,7 +3052,7 @@ def _packet_copy_summary(
     readiness_counts = _packet_readiness_counts(records, state_summaries)
     lines = [
         "Attorney Review Packet Draft",
-        f"Facility/license: {_packet_facility_label(records, return_context)}",
+        f"Facility ID: {_packet_facility_label(records, return_context)}",
         f"Date range: {_packet_draft_date_scope(return_context)}",
         f"Generated: {generated_at}",
         f"Records included: {len(records)}",
@@ -3884,27 +3888,28 @@ def _render_top_facility_fact_strip(
     )
     facts = (
         (
+            "license",
             _glossary_term(
-                "Facility/license number",
+                "Facility ID",
                 "The public licensing identifier used to find the facility in CCLD records.",
-                "detail-facility-license",
+                "detail-facility-id",
             ),
-            "Facility/license number",
+            "Facility ID",
             facility_number,
         ),
-        ("Facility name", "Facility name", _facility_context_value(facility, "facility_name")),
-        ("Facility type", "Facility type", _facility_context_value(facility, "facility_type")),
-        ("Status", "Facility status", _facility_context_value(facility, "license_status")),
-        ("County", "County", _facility_context_value(facility, "county")),
+        ("name", "Facility name", "Facility name", _facility_context_value(facility, "facility_name")),
+        ("type", "Facility type", "Facility type", _facility_context_value(facility, "facility_type")),
+        ("status", "Status", "Facility status", _facility_context_value(facility, "license_status")),
+        ("county", "County", "County", _facility_context_value(facility, "county")),
     )
     items = "\n".join(
-        f"""        <div class="compact-fact">
+        f"""        <div class="compact-fact compact-fact--{fact_key}">
           <dt>{label}</dt>
           <dd>{_copyable_value(copy_label, value)}</dd>
         </div>"""
-        for label, copy_label, value in facts
+        for fact_key, label, copy_label, value in facts
     )
-    return f"""      <dl class="top-fact-strip" aria-label="Facility identity and license facts">
+    return f"""      <dl class="top-fact-strip" aria-label="Facility identity facts">
 {items}
       </dl>"""
 
@@ -3912,23 +3917,29 @@ def _render_top_facility_fact_strip(
 def _copyable_value(label: str, value: str) -> str:
     if not value or value == "unknown":
         return _escape(value or "unknown")
-    if label not in {"Complaint/control number", "Facility/license number"}:
+    if label not in {"Complaint/control number", "Facility ID"}:
         return _escape(value)
     accessible_label = _copy_button_label(label)
     return (
         f'<span class="copyable-value">{_escape(value)}'
+        f'{_copy_icon_button(accessible_label, value)}</span>'
+    )
+
+
+def _copy_icon_button(accessible_label: str, value: str) -> str:
+    return (
         f'<button class="copy-icon-button" type="button" '
         f'data-copy-value="{_escape(value)}" '
         f'aria-label="{_escape(accessible_label)}" title="{_escape(accessible_label)}">'
-        f'{_clipboard_icon_svg()}</button></span>'
+        f'{_clipboard_icon_svg()}</button>'
     )
 
 
 def _copy_button_label(label: str) -> str:
     if label == "Complaint/control number":
-        return "Copy complaint number"
-    if label == "Facility/license number":
-        return "Copy facility number"
+        return "Copy complaint/control number"
+    if label == "Facility ID":
+        return "Copy Facility ID"
     return f"Copy {label}"
 
 
@@ -4147,30 +4158,40 @@ def _render_review_item_card(
         if suggested:
             packet_actions = f"""
                             <a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Open packet preview</a>
-                            <a class="button button-secondary" href="{_escape(_packet_draft_href(return_context))}">Open print draft</a>"""
-        return f"""        <article class="result-card work-item" aria-labelledby="record-{_escape(source_record_key)}-heading">
-                    <div>
+                            <a class="button button-quiet" href="{_escape(_packet_draft_href(return_context))}">Open print draft</a>"""
+        card_class = "result-card work-item is-suggested" if suggested else "result-card work-item"
+        return f"""        <article class="{card_class}" aria-labelledby="record-{_escape(source_record_key)}-heading">
+                    <div class="work-item-main">
                         {suggested_label}
-                        <h3 id="record-{_escape(source_record_key)}-heading">{_escape(control_number)}</h3>
+                        <h3 id="record-{_escape(source_record_key)}-heading">{_copyable_value("Complaint/control number", control_number)}</h3>
                         {_render_queue_record_badges(finding, reviewer_status_text, note_presence_text, original_values)}
-                        <dl>
-                            <dt>Facility/license</dt>
-                            <dd>{_escape(facility_number)}</dd>
+                        <dl class="work-item-facts">
+                          <div class="work-item-fact-pair" data-fact-pair="facility-id">
+                            <dt>Facility ID</dt>
+                            <dd>{_copyable_value("Facility ID", facility_number)}</dd>
+                          </div>
+                          <div class="work-item-fact-pair" data-fact-pair="complaint-received">
                             <dt>Complaint received</dt>
                             <dd>{_escape(_queue_display_date(_optional_string(original_values, 'complaint_received_date')))}</dd>
+                          </div>
+                          <div class="work-item-fact-pair" data-fact-pair="visit">
                             <dt>Visit</dt>
                             <dd>{_escape(_queue_display_date(_optional_string(original_values, 'visit_date')))}</dd>
+                          </div>
+                          <div class="work-item-fact-pair" data-fact-pair="report">
                             <dt>Report</dt>
                             <dd>{_escape(_queue_display_date(_optional_string(original_values, 'report_date')))}</dd>
+                          </div>
+                          <div class="work-item-fact-pair" data-fact-pair="signed">
                             <dt>Signed</dt>
                             <dd>{_escape(_queue_display_date(_optional_string(original_values, 'date_signed')))}</dd>
-                            <dt>Source</dt>
-                            <dd>{_escape(_source_availability_label(source_document))}</dd>
+                          </div>
                         </dl>
-                        <div class="form-actions">
-                            <a class="button" href="{_escape(detail_href)}">Open record</a>
+                        <p class="work-item-source"><span class="review-chip source-chip">{_escape(_source_availability_label(source_document))}</span></p>
+                    </div>
+                    <div class="work-item-actions" aria-label="Record actions">
+                        <a class="button" href="{_escape(detail_href)}">Open record</a>
 {packet_actions}
-                        </div>
                     </div>
                 </article>"""
 
@@ -4184,7 +4205,7 @@ def _render_queue_record_badges(
     labels = [finding, reviewer_status_text, note_presence_text]
     labels.extend(_review_flag_labels(original_values))
     badges = " ".join(
-        f'<span class="{_review_flag_chip_class(label)}">{_escape(label)}</span>'
+        _review_chip_markup(label)
         for label in labels
         if label and label != "unknown"
     )
@@ -4301,6 +4322,31 @@ def _has_missing_date_flag(original_values: Mapping[str, Any]) -> bool:
     )
 
 
+def _has_missing_source_date(original_values: Mapping[str, Any]) -> bool:
+    return any(
+        original_values.get(field_name) is True
+        for field_name in (
+            "missing_visit_date",
+            "missing_report_date",
+            "missing_signed_date",
+        )
+    )
+
+
+def _missing_first_activity_warning(original_values: Mapping[str, Any]) -> bool:
+    return (
+        original_values.get("missing_first_activity_date") is True
+        and not _has_display_value(original_values.get("first_investigation_activity_date"))
+        and not _has_display_value(original_values.get("visit_date"))
+    )
+
+
+def _source_unavailable_for_queue_item(item: Mapping[str, Any]) -> bool:
+    source_record = _mapping(item, "source_record")
+    source_document = _mapping(source_record, "source_document")
+    return not _has_display_value(source_document.get("source_url"))
+
+
 def _render_review_flag_chips(
     original_values: Mapping[str, Any],
     source_document: Mapping[str, Any],
@@ -4331,8 +4377,40 @@ def _review_flag_chip_class(label: str) -> str:
     if label == "CCLD source available":
         return "review-chip source-chip"
     if label.endswith("day gap"):
-        return "review-chip badge-attention"
+        return "review-chip badge-attention badge-attention--warning"
+    workflow_state_labels = (
+        "No status",
+        "No note",
+        "Note added",
+        *_REVIEWER_STATUS_LABELS.values(),
+    )
+    if label in workflow_state_labels:
+        if label == "No note":
+            return "review-chip badge-info badge-info--note"
+        return "review-chip badge-info badge-info--status"
     return "review-chip"
+
+
+def _review_chip_markup(label: str) -> str:
+    marker_class = _review_chip_marker_class(label)
+    marker = (
+        f'<span class="{marker_class}" aria-hidden="true"></span>'
+        if marker_class
+        else ""
+    )
+    return f'<span class="{_review_flag_chip_class(label)}">{marker}{_escape(label)}</span>'
+
+
+def _review_chip_marker_class(label: str) -> str:
+    if label.strip().casefold() in {"substantiated", "unsubstantiated", "inconclusive"}:
+        return "review-chip__marker review-chip__marker--finding"
+    if label.endswith("day gap"):
+        return "review-chip__marker review-chip__marker--warning"
+    if label == "No note":
+        return "review-chip__marker review-chip__marker--note"
+    if label in {"No status", *_REVIEWER_STATUS_LABELS.values()}:
+        return "review-chip__marker review-chip__marker--status"
+    return ""
 
 
 def _review_flag_labels(original_values: Mapping[str, Any]) -> tuple[str, ...]:
@@ -4360,7 +4438,7 @@ def _source_warning_labels(
         warnings.append("Source unavailable")
     if not _has_display_value(source_document.get("source_url")):
         warnings.append("Source link unavailable")
-    if original_values.get("missing_first_activity_date") is True:
+    if _missing_first_activity_warning(original_values):
         warnings.append("Missing first activity")
     if (
         original_values.get("missing_visit_date") is True
@@ -4672,21 +4750,31 @@ def _finding_definition_term(finding: str) -> str:
 
 
 def _finding_badge(finding: str) -> str:
+    marker = (
+        f'<span class="finding-badge__marker finding-badge__marker--{_escape(_finding_badge_marker(finding))}" aria-hidden="true"></span>'
+    )
     return (
         f'<span class="{_finding_badge_class(finding)}">'
-        f"{_finding_definition_term(finding)}</span>"
+        f"{marker}{_finding_definition_term(finding)}</span>"
     )
 
 
 def _finding_badge_class(finding: str) -> str:
     normalized = finding.strip().casefold()
     if normalized == "substantiated":
-        return "finding-badge finding-badge--substantiated"
+        return "finding-badge finding-badge--substantiated finding-badge--status"
     if normalized == "inconclusive":
-        return "finding-badge finding-badge--inconclusive"
+        return "finding-badge finding-badge--inconclusive finding-badge--status"
     if normalized == "unsubstantiated":
-        return "finding-badge finding-badge--unsubstantiated"
-    return "finding-badge finding-badge--unknown"
+        return "finding-badge finding-badge--unsubstantiated finding-badge--status"
+    return "finding-badge finding-badge--unknown finding-badge--status"
+
+
+def _finding_badge_marker(finding: str) -> str:
+    normalized = finding.strip().casefold()
+    if normalized in {"substantiated", "inconclusive", "unsubstantiated"}:
+        return normalized
+    return "unknown"
 
 
 def _render_overview_review_cues(
@@ -4696,10 +4784,7 @@ def _render_overview_review_cues(
 ) -> str:
     original_values = _mapping(source_record, "original_values")
     summary = _mapping(detail, "associated_reviewer_created_state_summary")
-    review_flags = [
-        label for label in _review_flag_labels(original_values)
-        if not label.endswith("day gap")
-    ]
+    review_flags = list(_review_flag_labels(original_values))
     if _current_reviewer_status_text(summary) == "No status":
         review_flags.append("No status")
     if _detail_note_presence_text(summary) == "No note":
@@ -4713,6 +4798,7 @@ def _render_overview_review_cues(
         _source_warning_labels(source_record, related_records),
         aria_label="Specific source warnings",
         empty_label="No source warning badges",
+        show_empty=False,
     )
     return f"""<section class="overview-review-cues" aria-labelledby="overview-review-cues-heading">
         <h3 id="overview-review-cues-heading">Why this may need closer review</h3>
@@ -4726,11 +4812,14 @@ def _badge_list_markup(
     *,
     aria_label: str,
     empty_label: str,
+    show_empty: bool = True,
 ) -> str:
     if not labels:
+        if not show_empty:
+            return ""
         return f'<p class="sr-note">{_escape(empty_label)}</p>'
     items = "\n".join(
-        f'          <li><span class="{_review_flag_chip_class(label)}">{_escape(label)}</span></li>'
+        f"          <li>{_review_chip_markup(label)}</li>"
         for label in labels
     )
     return f"""        <ul class="flag-list" aria-label="{_escape(aria_label)}">
@@ -4758,7 +4847,10 @@ def _render_overview_source_narrative(
         else ""
     )
     return f"""<section class="overview-source-narrative" aria-labelledby="source-narrative-heading">
-        <h3 id="source-narrative-heading">Source narrative</h3>
+        <div class="section-heading-with-copy">
+          <h3 id="source-narrative-heading">Source narrative</h3>
+          {_copy_icon_button("Copy source narrative", excerpt)}
+        </div>
         <blockquote>{_escape(excerpt)}</blockquote>
 {full_details}
       </section>"""
@@ -4766,34 +4858,42 @@ def _render_overview_source_narrative(
 
 def _render_overview_timeline(source_record: Mapping[str, Any]) -> str:
     original_values = _mapping(source_record, "original_values")
-    first_item = f"""          <li class="timeline-item">
-            <span class="timeline-label">Complaint received</span>
-            <strong>{_escape(_detail_timeline_date(_optional_string(original_values, "complaint_received_date")))}</strong>
+    first_item = f"""          <li class="timeline-item timeline-item--received">
+            <span class="timeline-marker timeline-marker--received rt-timeline__marker rt-timeline__marker--received" aria-hidden="true"></span>
+            <span class="timeline-label rt-timeline__label">Complaint received</span>
+            <strong class="rt-timeline__date">{_escape(_detail_timeline_date(_optional_string(original_values, "complaint_received_date")))}</strong>
           </li>"""
     remaining_rows = (
-        ("Visit/investigation activity", _detail_timeline_date(_optional_string(original_values, "visit_date"))),
-        ("Report", _detail_timeline_date(_optional_string(original_values, "report_date"))),
-        ("Signed", _detail_timeline_date(_optional_string(original_values, "date_signed"))),
+        ("Visit/investigation activity", "visit", _detail_timeline_date(_optional_string(original_values, "visit_date"))),
+        ("Report", "report", _detail_timeline_date(_optional_string(original_values, "report_date"))),
+        ("Signed", "signed", _detail_timeline_date(_optional_string(original_values, "date_signed"))),
     )
     remaining_items = "\n".join(
-        f"""          <li class="timeline-item">
-            <span class="timeline-label">{_escape(label)}</span>
-            <strong>{_escape(value)}</strong>
+        f"""          <li class="timeline-item timeline-item--{_escape(marker)}">
+            <span class="timeline-marker timeline-marker--{_escape(marker)} rt-timeline__marker rt-timeline__marker--{_escape(marker)}" aria-hidden="true"></span>
+            <span class="timeline-label rt-timeline__label">{_escape(label)}</span>
+            <strong class="rt-timeline__date">{_escape(value)}</strong>
           </li>"""
-        for label, value in remaining_rows
+        for label, marker, value in remaining_rows
     )
+    has_delay_badge = original_values.get("review_delay_over_120_days") is True
     delay_badge = (
-        '          <li class="timeline-gap-badge" aria-label="Gap between complaint received and visit or investigation activity"><span class="review-chip badge-attention">120+ day gap</span></li>'
-        if original_values.get("review_delay_over_120_days") is True
+        '        <div class="timeline-gap-badge timeline-gap-badge--between-first-activity rt-timeline__gap-badge" aria-label="Gap between complaint received and visit or investigation activity"><span class="review-chip badge-attention">120+ day gap</span></div>'
+        if has_delay_badge
         else ""
     )
+    timeline_class = "timeline-list timeline-list-linear has-gap" if has_delay_badge else "timeline-list timeline-list-linear"
+    wrapper_class = "rt-timeline rt-timeline--linear has-gap" if has_delay_badge else "rt-timeline rt-timeline--linear"
     return f"""<section class="overview-timeline" aria-labelledby="complaint-timeline-heading">
         <h3 id="complaint-timeline-heading">Key dates</h3>
-        <ol class="timeline-list timeline-list-linear">
+        <div class="{wrapper_class}">
+        <div class="rt-timeline__line" aria-hidden="true"></div>
+        <ol class="{timeline_class} rt-timeline__milestones">
 {first_item}
-{delay_badge}
 {remaining_items}
         </ol>
+{delay_badge}
+        </div>
       </section>"""
 
 
@@ -4948,7 +5048,7 @@ def _render_detail_decision_continuity(
           <details class="technical-details">
             <summary>More actions and request context</summary>
             <dl>
-              <dt>Facility/license number</dt>
+              <dt>Facility ID</dt>
               <dd>{_escape(_display_value(return_context.facility_number))}</dd>
               <dt>Date range</dt>
               <dd>{_escape(_return_context_date_range(return_context))}</dd>
@@ -4978,8 +5078,8 @@ def _request_origin_label(value: str | None) -> str:
     if value == "facility_lookup":
         return "Facility lookup result"
     if value == "prefilled_link":
-        return "Prefilled facility/license link"
-    return "Manual facility/license entry"
+        return "Prefilled Facility ID link"
+    return "Manual Facility ID entry"
 
 
 def _render_detail_facility_context_cues(
@@ -5001,7 +5101,7 @@ def _render_detail_facility_context_cues(
             <dl>
               <dt>Facility context type</dt>
               <dd>{_escape(context_label)}</dd>
-              <dt>Facility/license number</dt>
+              <dt>Facility ID</dt>
               <dd>{_escape(_display_value(facility_number))}</dd>
                               <dt>Request context source</dt>
                               <dd>{_escape(_detail_request_context_label(return_context.context_origin))}</dd>
@@ -5022,7 +5122,7 @@ def _detail_facility_context_status(
     if not facility_number:
         return (
             "manual request context",
-            "No facility/license number is available for a facility hub cue on this detail page. Use the same queue or start a complaint request when a facility/license number is needed.",
+            "No Facility ID is available for a facility hub cue on this detail page. Use the same queue or start a complaint request when a Facility ID is needed.",
             None,
         )
     if _active_directory_has_facility(facility_number):
@@ -5314,7 +5414,7 @@ def _render_detail_navigation(
     return f"""<section aria-labelledby="detail-navigation-heading">
       <h2 id="detail-navigation-heading">Detail navigation</h2>
             <p>Use the same-queue link when you came from CCLD request results; it
-            carries the facility/license number, date range, and lookup or manual-entry
+            carries the Facility ID, date range, and lookup or manual-entry
             context back to the queue so refreshed reviewer-created cues appear there.</p>
             <ul>
                 <li><a href="{_escape(ccld_request_href)}">&larr; Back to queue</a></li>
@@ -5385,7 +5485,7 @@ def _render_record_summary_section(
       <h2 id="record-summary-heading">Facility identity and license facts</h2>
       <dl class="fact-grid">
         {_render_fact_item("Facility name", facility_name)}
-        {_render_fact_item("Facility/license number", facility_number)}
+        {_render_fact_item("Facility ID", facility_number)}
         {_render_fact_item("Facility type", _facility_context_value(facility, "facility_type"))}
         {_render_fact_item("County", _facility_context_value(facility, "county"))}
         {_render_fact_item("License status", _facility_context_value(facility, "license_status"))}
@@ -5667,7 +5767,7 @@ def _render_source_confidence_cues_section(
     rows = "\n".join(
         (
             _render_source_confidence_field_row(
-                "Facility/license number",
+                "Facility ID",
                 None if facility is None else facility.get("external_facility_number"),
                 "Use this to confirm the detail matches the CCLD request context.",
             ),
@@ -6280,7 +6380,7 @@ def _related_activity_context(
         return "Selected complaint record"
     entity_type = _string(record, "entity_type")
     contexts = {
-        "facility": "Same facility/license context",
+        "facility": "Same Facility ID context",
         "source_document": "Source report in this complaint bundle",
         "complaint": "Complaint row in the same facility context",
         "allegation": "Allegation row in the same source report",
@@ -6312,7 +6412,7 @@ def _related_activity_reason(
         return "Keeps the selected complaint visible next to related facility activity."
     entity_type = _string(record, "entity_type")
     reasons = {
-        "facility": "Confirms the facility/license identity tied to the complaint.",
+        "facility": "Confirms the Facility ID tied to the complaint.",
         "source_document": "Points back to the public report context before relying on displayed values.",
         "complaint": "Shows another loaded complaint for the same facility context.",
         "allegation": "Surfaces allegation and finding context without raw narrative text.",
@@ -6561,7 +6661,7 @@ def _return_context_hidden_summary(return_context: CcldQueueReturnContext) -> st
             returning here preserves facility/date context, not assignment, record claiming, or
             persisted workflow state.</p>
             <dl>
-                <dt>Facility/license number to reuse</dt>
+                <dt>Facility ID to reuse</dt>
                 <dd>{_escape(return_context.facility_number)}</dd>
                 <dt>Date range to reuse</dt>
                 <dd>{_escape(_return_context_date_range(return_context))}</dd>
@@ -6986,7 +7086,7 @@ def _render_detail_feedback_guidance(
             <p>Notes and statuses are optional. Send feedback instead when you are unsure what
             the next step should be.</p>
             <dl>
-                <dt>Facility/license number</dt>
+                <dt>Facility ID</dt>
                 <dd>{_escape(_facility_context_value(facility, 'external_facility_number'))}</dd>
                 <dt>Complaint control number</dt>
                 <dd>{_escape(_optional_string(original_values, 'complaint_control_number'))}</dd>
@@ -7037,7 +7137,7 @@ def _detail_feedback_request_context(return_context: CcldQueueReturnContext) -> 
     if return_context.facility_number is None:
         return "not carried from a CCLD request queue"
     return (
-        f"facility/license number {return_context.facility_number}; "
+        f"Facility ID {return_context.facility_number}; "
         f"date range {_return_context_date_range(return_context)}"
     )
 
@@ -7102,7 +7202,7 @@ def _render_notice(
                 <h3 id="queue-return-progress-heading">Next</h3>
                 <p>Return to the same facility queue or open the next flagged record.</p>
                 <dl>
-                    <dt>Same facility/license number</dt>
+                    <dt>Same Facility ID</dt>
                     <dd>{_escape(_display_value(return_context.facility_number))}</dd>
                     <dt>Same date range</dt>
                     <dd>{_escape(_detail_return_context_date_range(return_context))}</dd>
@@ -7186,8 +7286,8 @@ def _page(
                 main=main,
                 skip_label="Skip to main reviewer content",
                 nav_label="Reviewer navigation",
-                eyebrow="Source-traceable complaint review.",
-                actor_label=actor_label,
+                eyebrow=None,
+                actor_label=None,
                 extra_nav_links=(),
                 active_path=REVIEWER_UI_PREFIX,
                 step_id="review_records",

@@ -113,9 +113,9 @@ $encodedSourceRecordKey = [System.Uri]::EscapeDataString('complaint:ccld:complai
 $contextQuery = "facility_number=$ContextFacilityNumber&start_date=$ContextStartDate&end_date=$ContextEndDate&request_context_origin=manual_entry"
 
 $checks = @(
-    @{ Name = "home-start"; Path = "/"; Required = @("Find a Facility", "Find the facility/license number", "Search CCLD facilities", "Continue to Request Records") },
+    @{ Name = "home-start"; Path = "/"; Required = @("Find a Facility", "Find the Facility ID", "Search CCLD facilities", "Continue to Request Records") },
     @{ Name = "ccld-start"; Path = "/ccld/"; Required = @("Request Records", "Request complaint records for a facility", "Which facility should be reviewed?") },
-    @{ Name = "facility-lookup"; Path = "/ccld/facilities"; Required = @("Find a facility", "Find the facility/license number", "Search by name, license number, city, county, ZIP") },
+    @{ Name = "facility-lookup"; Path = "/ccld/facilities"; Required = @("Find a facility", "Find the Facility ID", "Search by name, Facility ID, city, county, ZIP") },
     @{ Name = "facility-priority"; Path = "/ccld/facilities/review-priority"; Required = @("Facility review priority", "review cue", "uploaded public summary fields") },
     @{ Name = "facility-intelligence"; Path = "/ccld/facilities/intelligence"; Required = @("Facility review intelligence", "review cue", "How to use these indicators") },
     @{ Name = "facility-hub"; Path = "/ccld/facilities/detail?facility_number=$PreloadedFacilityNumber"; Required = @("Facility review hub", "Facility-directory details", "Return to facility lookup") },

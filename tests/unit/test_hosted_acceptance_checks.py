@@ -79,7 +79,7 @@ def test_verify_script_checks_complete_tester_readiness_route_set() -> None:
 
     for marker in (
         "Find a Facility",
-        "Find the facility/license number",
+        "Find the Facility ID",
         "PreloadedFacilityNumber",
         "Send RecordsTracker feedback",
         "Open loaded records or request complaint records",
