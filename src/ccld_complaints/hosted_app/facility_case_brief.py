@@ -72,7 +72,8 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
             (brief.flag_count_label, flag_count, True),
             (brief.source_available_label, source_traceability_count, True),
             (brief.reviewer_state_label, reviewer_state_count, True),
-        )
+        ),
+        card_class="brief-metric",
     )
     flag_cards = _metric_cards(
         (
@@ -139,12 +140,12 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
         <p class="helper-text">Findings are source-derived categories, not legal conclusions.</p>
       </section>
       <p class="helper-text">Use this summary to decide what to review first. Review flags are screening aids, not legal conclusions.</p>"""
-    return f"""<section class="hero-card facility-case-brief" aria-labelledby="facility-case-brief-heading">
+    return f"""<section class="facility-case-brief facility-context-band" aria-labelledby="facility-case-brief-heading">
       <div class="case-brief-header">
         <div>
           <p class="launch-kicker">Facility case brief</p>
           <h2 id="facility-case-brief-heading">{_escape(facility_label)}</h2>
-          <p class="helper-text">Facility/license number: {_escape(brief.facility_number or 'unknown')}{_date_range_fragment(brief.date_range)}</p>
+          <p class="helper-text">Facility ID: {_escape(brief.facility_number or 'unknown')}{_date_range_fragment(brief.date_range)}</p>
         </div>
       </div>
       <div class="metric-strip" aria-label="Facility review summary">
@@ -284,15 +285,26 @@ def _reverse_date_key(value: str) -> str:
     return "".join(str(9 - int(ch)) if ch.isdigit() else ch for ch in value)
 
 
-def _metric_cards(metrics: tuple[tuple[str, int, bool], ...]) -> str:
+def _metric_cards(
+    metrics: tuple[tuple[str, int, bool], ...],
+    *,
+    card_class: str = "metric-card",
+) -> str:
     cards = []
     for label, count, show in metrics:
         if not show:
             continue
+        display_label = _count_label(label, count)
         cards.append(
-            f"        <div class=\"metric-card\"><strong>{count}</strong><span>{_escape(label)}</span></div>"
+            f"        <div class=\"{_escape(card_class)}\"><strong>{count}</strong><span>{_escape(display_label)}</span></div>"
         )
     return "\n".join(cards)
+
+
+def _count_label(label: str, count: int) -> str:
+    if label == "Records" and count == 1:
+        return "Record"
+    return label
 
 
 def _date_range_fragment(date_range: str) -> str:

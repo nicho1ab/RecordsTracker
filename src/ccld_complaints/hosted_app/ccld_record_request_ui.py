@@ -69,6 +69,7 @@ from ccld_complaints.hosted_app.reviewer_ui import (
     REVIEWER_UI_RECORDS_PATH,
     REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH,
     ReviewerUiContext,
+    _copy_icon_button,
     default_local_test_reviewer_ui_context,
 )
 from ccld_complaints.hosted_app.source_derived_reads import SourceDerivedRecordRead
@@ -125,9 +126,9 @@ _REQUEST_CONTEXT_ORIGIN_VALUES = (
     "prefilled_link",
 )
 _REQUEST_CONTEXT_ORIGIN_LABELS = {
-    "manual_entry": "Manual facility/license entry",
+    "manual_entry": "Manual Facility ID entry",
     "facility_lookup": "Facility lookup result",
-    "prefilled_link": "Prefilled facility/license link",
+    "prefilled_link": "Prefilled Facility ID link",
 }
 _SECRET_HTML_MARKERS = (
     "authorization",
@@ -330,10 +331,10 @@ def validate_ccld_record_request(
     request_context_origin = _first_form_value(form_values, _REQUEST_CONTEXT_ORIGIN_FIELD)
     errors: list[str] = []
     if not facility_number:
-        errors.append("Facility/license number is required.")
+        errors.append("Facility ID is required.")
     elif not _FACILITY_NUMBER_RE.match(facility_number):
         errors.append(
-            "Facility/license number must contain digits only for this CCLD-only request."
+            "Facility ID must contain digits only for this CCLD-only request."
         )
     for label, raw_value, parsed_value in (
         ("Start date", _first_form_value(form_values, "start_date"), start_date),
@@ -673,14 +674,14 @@ def _render_facility_selection_state(reference_source: CcldFacilityReferenceSour
         return f"""<section class="workflow-panel" aria-labelledby="facility-selector-heading" id="facility-selector-wrap" data-facility-mode="request"{suggest_attr}>
             <p class="stage-kicker">Facility</p>
             <h2 id="facility-selector-heading">Which facility should be reviewed?</h2>
-            <p>Search for a facility when you do not know the exact facility/license number, or type the digit facility/license number directly if you already have it.</p>
+            <p>Search for a facility when you do not know the exact Facility ID, or type the digit Facility ID directly if you already have it.</p>
             <form action="{CCLD_RECORD_REQUEST_PATH}" method="get" id="facility-select-form">
                 <label for="facility-search-input">Facility</label>
-                <p id="facility-search-hint" class="helper-text">Search by name, license number, city, county, ZIP, facility type, program type, or status code.</p>
+                <p id="facility-search-hint" class="helper-text">Search by name, Facility ID, city, county, ZIP, facility type, program type, or status code.</p>
                 <div class="facility-combobox-outer" id="facility-combobox-outer">
                     <input id="facility-search-input" name="facility_number" type="text"
                         inputmode="numeric"
-                        placeholder="Facility/license number"
+                        placeholder="Facility ID"
                         aria-describedby="facility-search-hint" required>
                     <ul id="facility-suggestion-list" class="facility-suggestions" aria-label="Facility suggestions" hidden></ul>
                 </div>
@@ -689,7 +690,7 @@ def _render_facility_selection_state(reference_source: CcldFacilityReferenceSour
 {limited_note_markup}
 {selected_card}
                 <div class="form-actions">
-                    <button type="submit" id="facility-submit-btn" disabled>Use this number</button>
+                    <button type="submit" id="facility-submit-btn" disabled>Use this Facility ID</button>
                     <a class="button button-secondary" href="{CCLD_FACILITY_LOOKUP_PATH}">Search CCLD facilities</a>
                 </div>
             </form>
@@ -801,8 +802,8 @@ def _render_selected_request_context_summary(
                 <dt>Facility name</dt>
                 <dd>{_escape(lookup_facility_name)}</dd>"""
     return f"""            <dl class="summary-list selected-request-context">
-                <dt>Facility/license number</dt>
-                <dd>{_escape(facility_number)}</dd>{lookup_name_markup}
+                <dt>Facility ID</dt>
+                <dd><span class="copyable-value">{_escape(facility_number)}{_copy_icon_button("Copy selected Facility ID", facility_number)}</span></dd>{lookup_name_markup}
                 <dt>Date range</dt>
                 <dd>{_escape(_date_scope_from_values(start_date, end_date))}</dd>
                 <dt>Record type</dt>
@@ -868,15 +869,15 @@ def _render_help_page() -> str:
                 <section class="help-details" aria-label="Help topic details">
                     <details open id="find-facility">
                         <summary id="help-find-facility-heading">Find a facility</summary>
-                        <p>Use Find a facility when you need the public CCLD facility/license number. Choose a
+                        <p>Use Find a facility when you need the public CCLD Facility ID. Choose a
                         matching facility to carry its number and name into Request Records, or enter a known
-                        facility/license number directly.</p>
+                        Facility ID directly.</p>
                         <p>Facility directory rows are lookup assistance only. Complaint records are requested and
                         reviewed separately.</p>
                     </details>
                     <details id="request-records">
                         <summary id="help-request-records-heading">Request or show records</summary>
-                        <p>Request Records searches for complaint records for one facility/license number and an
+                        <p>Request Records searches for complaint records for one Facility ID and an
                         optional date range. Show existing queue searches already-loaded records only. Request
                         Records submits a configured server-side public CCLD request only when that action is
                         available and explicitly submitted.</p>
@@ -913,7 +914,7 @@ def _render_help_page() -> str:
                     </details>
                     <details id="feedback">
                         <summary id="help-feedback-heading">Send feedback</summary>
-                        <p>Include the facility/license number, date range, visible job state, complaint
+                        <p>Include the Facility ID, date range, visible job state, complaint
                         control number when relevant, and what action or wording felt confusing. Do not
                         include private facts, credentials, legal strategy, privileged work product,
                         private URLs, private values, or unrelated sensitive details.</p>
@@ -956,9 +957,9 @@ def _render_workflow_overview() -> str:
         return """    <section aria-labelledby="workflow-overview-heading">
             <h2 id="workflow-overview-heading">Review session path</h2>
             <ol>
-                <li>Start with facility lookup when you need the facility/license number, or
+                <li>Start with facility lookup when you need the Facility ID, or
                 use manual entry when you already know it.</li>
-                <li>Confirm the CCLD request context: facility/license number, optional date
+                <li>Confirm the CCLD request context: Facility ID, optional date
                 range, lookup/manual-entry origin, and active facility reference
                 source.</li>
                 <li>Submit the facility/date request to search loaded CCLD source-derived records.
@@ -983,17 +984,17 @@ def _render_key_terms_section() -> str:
         return """    <section aria-labelledby="key-terms-heading">
             <h2 id="key-terms-heading">Key terms</h2>
             <dl>
-                <dt>Facility/license number</dt>
+                <dt>Facility ID</dt>
                 <dd>The digit identifier CCLD uses for the facility or license record scope.</dd>
                 <dt>Facility lookup</dt>
                 <dd>A search over preloaded public facility-directory fields such
-                as facility/license number, name, city, county, ZIP code, facility type,
+                as Facility ID, name, city, county, ZIP code, facility type,
                 program type, capacity, and status code.</dd>
                 <dt>CCLD request context</dt>
-                <dd>The facility/license number, optional date range, request origin, and active
+                <dd>The Facility ID, optional date range, request origin, and active
                 facility reference source used for this request.</dd>
                 <dt>Facility/date request</dt>
-                <dd>A CCLD request for one facility/license number and optional date range.</dd>
+                <dd>A CCLD request for one Facility ID and optional date range.</dd>
                 <dt>Date range</dt>
                 <dd>An optional filter over dates already extracted into preloaded CCLD source-derived records.
                 It is not a live public-source search.</dd>
@@ -1035,7 +1036,7 @@ def _render_feedback_guidance_section() -> str:
             <p>Use the Feedback page when review is blocked or confusing. When GitHub intake is configured,
             the server creates a GitHub issue; when it is not configured, the page provides a
             safe copyable summary for the agreed support channel.</p>
-            <p>Useful feedback items include the facility/license number, requested
+            <p>Useful feedback items include the Facility ID, requested
             date range, lookup or request criteria that felt unclear, records that seemed
             missing or unexpected, active reviewer-created status filter or count confusion,
             filtered-empty recovery, source traceability cues, note/status confirmation behavior,
@@ -1117,12 +1118,12 @@ def _render_invalid_request(errors: tuple[str, ...]) -> str:
       <ul>
 {error_items}
       </ul>
-        <p>Return to the CCLD-only request page and retry with a facility/license
+        <p>Return to the CCLD-only request page and retry with a Facility ID,
         number, supported record type, and valid bounded dates.</p>
         <section aria-labelledby="request-error-next-heading">
             <h3 id="request-error-next-heading">What to check next</h3>
             <ul>
-                <li>Facility/license number must contain digits only.</li>
+                <li>Facility ID must contain digits only.</li>
                 <li>Record type must be complaint records or all supported record types.</li>
                 <li>All supported record types currently means complaint records only.</li>
                 <li>Start and end dates must use YYYY-MM-DD and stay within the allowed range.</li>
@@ -1233,7 +1234,7 @@ def _render_matched_result(
         <thead>
           <tr>
                         <th scope="col">Review action</th>
-                        <th scope="col">Facility/license number</th>
+                        <th scope="col">Facility ID</th>
                         <th scope="col">Request date range</th>
                         <th scope="col">Complaint and report dates</th>
                         <th scope="col">Source document/report</th>
@@ -1331,7 +1332,7 @@ def _render_result_focus_panel(
                 <div class="metric-card"><strong>{_escape(_date_scope_text(request))}</strong><span>Complaint date range</span></div>
             </div>
             <dl class="summary-list">
-                <dt>Facility/license number</dt>
+                <dt>Facility ID</dt>
                 <dd>{_escape(request.facility_number)}</dd>
                 <dt>Load state</dt>
                 <dd>{_escape(load_text)}</dd>
@@ -1433,7 +1434,7 @@ def _render_no_match_recovery_panel(
       <h2 id="no-local-records-heading">No loaded records found</h2>
             <p>No loaded complaint records matched this facility and date range.</p>
       <dl class="summary-list">
-        <dt>Facility/license number</dt>
+        <dt>Facility ID</dt>
         <dd>{_escape(request.facility_number)}</dd>
         <dt>Facility name</dt>
         <dd>{_escape(_display_value(request.lookup_facility_name))}</dd>
@@ -1548,7 +1549,7 @@ def _render_no_match_guidance(
             <h2 id="no-match-guidance-heading">Support context for this no-match result</h2>
             <p>{_escape(_request_execution_summary_text(retrieval_result))}</p>
             <dl>
-                <dt>Facility/license number searched</dt>
+                <dt>Facility ID searched</dt>
                 <dd>{_escape(request.facility_number)}</dd>
                 <dt>Date range searched</dt>
                 <dd>{_escape(date_scope)}</dd>
@@ -1793,7 +1794,7 @@ def _render_retrieval_job_summary(result: CcldRetrievalJobResult | None) -> str:
                 <dd>{_escape(mode_label)}</dd>
                 <dt>Retrieval job ID</dt>
                 <dd>{_escape(result.retrieval_job_id)}</dd>
-                <dt>Facility/license number</dt>
+                <dt>Facility ID</dt>
                 <dd>{_escape(result.facility_number)}</dd>
                 <dt>Record type</dt>
                 <dd>{_escape(RECORD_TYPE_LABELS.get(result.record_type, result.record_type))}</dd>
@@ -2181,7 +2182,7 @@ def _render_retrieval_history_row(job: CcldRetrievalJobHistoryEntry) -> str:
           </td>
           <td>
             <dl>
-              <dt>Facility/license number</dt>
+              <dt>Facility ID</dt>
               <dd>{_escape(job.facility_number)}</dd>
               <dt>Record type</dt>
               <dd>{_escape(RECORD_TYPE_LABELS.get(job.record_type, job.record_type))}</dd>
@@ -2310,7 +2311,7 @@ def _render_retrieval_job_detail_page(job: CcldRetrievalJobHistoryEntry) -> str:
             <span class="{_mode_badge_class(mode_label)}">{_escape(mode_label)}</span></p>
       <p>{_escape(_retrieval_state_intro_for_history(job))}</p>
     <dl class="summary-list">
-        <dt>Facility/license number</dt>
+        <dt>Facility ID</dt>
         <dd>{_escape(job.facility_number)}</dd>
         <dt>Date range</dt>
         <dd>{_escape(job.start_date)} to {_escape(job.end_date)}</dd>
@@ -3162,7 +3163,7 @@ def _safe_feedback_date(value: str) -> str | None:
 
 
 def _facility_scope_for_summary(request: CcldRecordRequest) -> str:
-    return f"facility/license number {request.facility_number}"
+    return f"Facility ID {request.facility_number}"
 
 
 def _next_record_markup(
@@ -3318,7 +3319,7 @@ def _feedback_checklist_text(
         f"{_request_origin_label(request.request_context_origin)}",
         f"- Selected lookup facility name: {_display_value(request.lookup_facility_name)}",
         f"- Active facility reference source: {_user_facing_source_label(reference_source)}",
-        f"- Facility/license number: {request.facility_number}",
+        f"- Facility ID: {request.facility_number}",
         f"- Date range requested: {_date_scope_text(request)}",
         "- Request criteria that felt unclear:",
         "- Records that seemed outside the requested facility/date scope:",
@@ -4004,7 +4005,7 @@ def _render_request_context_confirmation(
         )
         return f"""    <section class="summary-card" aria-labelledby="request-context-confirmation-heading">
       <h2 id="request-context-confirmation-heading">No facility selected yet</h2>
-      <p>Start by typing a facility/license number or searching by name.</p>
+      <p>Start by typing a Facility ID or searching by name.</p>
       <dl>
         <dt>Retrieval mode</dt>
         <dd>{_escape(_runtime_mode_label())}</dd>
@@ -4052,7 +4053,7 @@ def _render_request_context_confirmation(
             <h2 id="request-context-confirmation-heading">Selected request context</h2>
             <p>Confirm this facility/date context before retrieving or reviewing records.</p>
       <dl>
-        <dt>Facility/license number being requested</dt>
+        <dt>Facility ID being requested</dt>
         <dd>{_escape(facility_display)}</dd>{lookup_name_markup}
         <dt>Date range being requested</dt>
         <dd>{_escape(_date_scope_from_values(start_date, end_date))}</dd>
@@ -4090,12 +4091,12 @@ def _reference_guidance_text(source: CcldFacilityReferenceSource) -> str:
     if source.source_kind == "no_reference":
         return (
             "Facility directory lookup is not configured for this hosted environment. "
-            "Enter a known CCLD facility/license number to continue."
+            "Enter a known CCLD Facility ID to continue."
         )
     if source.source_kind == "postgres_source_derived" and not source.records:
         return (
             "Facility directory lookup is not configured for this hosted environment. "
-            "Enter a known CCLD facility/license number to continue."
+            "Enter a known CCLD Facility ID to continue."
         )
     if source.source_kind == "tiny_fixture_fallback" or len(source.records) <= 2:
         return "Limited reference list: suggestions may not include every CCLD facility."
@@ -4121,7 +4122,7 @@ def _request_change_href(
 
 
 def _request_origin_label(value: str) -> str:
-    return _REQUEST_CONTEXT_ORIGIN_LABELS.get(value, "Manual facility/license entry")
+    return _REQUEST_CONTEXT_ORIGIN_LABELS.get(value, "Manual Facility ID entry")
 
 
 def _request_context_source_label(value: str) -> str:

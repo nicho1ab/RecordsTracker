@@ -118,10 +118,10 @@ def test_retrieval_form_renders_record_type_and_safe_setup_state() -> None:
     assert status == 200
     assert "Request Records" in html
     assert "facility-suggestion-list" in html
-    assert "Use this number" in html
-    assert "Search by name, license number, city, county, ZIP" in html
+    assert "Use this Facility ID" in html
+    assert "Search by name, Facility ID, city, county, ZIP" in html
     assert "facility type, program type, or status code" in html
-    assert "Use this number" in html
+    assert "Use this Facility ID" in html
     assert "Search CCLD facilities" in html
     assert "Which facility should be reviewed?" in html
     assert_no_secret_html(html)
@@ -1362,7 +1362,7 @@ def test_retrieval_job_history_renders_recent_jobs_safely_without_mutation(
     assert "rate-limited-job" in html
     assert f"{CCLD_RETRIEVAL_JOB_DETAIL_PATH}?job_id=completed-job" in html
     assert "View job details" in html
-    assert "Facility/license number" in html
+    assert "Facility ID" in html
     assert "157806098" in html
     assert "Complaint records" in html
     assert "2022-08-01 to 2022-08-31" in html
@@ -1423,7 +1423,7 @@ def test_retrieval_job_detail_renders_completed_job_without_mutation(tmp_path: P
     assert before_counts == after_counts
     assert "Job diagnostics detail" in html
     assert "Request job summary and next step" in html
-    assert "Facility/license number" in html
+    assert "Facility ID" in html
     assert "Request Records completed and imported validated records" in html
     assert "Next action" in html
     assert "Open imported records in the CCLD queue and review source traceability" in html

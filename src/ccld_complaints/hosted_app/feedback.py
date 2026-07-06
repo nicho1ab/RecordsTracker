@@ -446,7 +446,7 @@ def _feedback_issue_starter(context: FeedbackHandoffContext | None) -> str:
     focus = "job diagnostics information" if _has_retrieval_context(context) else "review workflow information"
     lines = [f"I am reporting confusion about the {focus} on {surface}."]
     if context.facility_number:
-        lines.append(f"Facility/license: {context.facility_number}")
+        lines.append(f"Facility ID: {context.facility_number}")
     date_range = _feedback_starter_date_range(context)
     if date_range:
         lines.append(f"Date range: {date_range}")
@@ -487,7 +487,7 @@ def _feedback_context_rows(context: FeedbackHandoffContext | None) -> list[tuple
         return []
     fields = (
         ("Workflow area", context.workflow_area),
-        ("Facility/license number", context.facility_number),
+        ("Facility ID", context.facility_number),
         ("Start date", context.start_date),
         ("End date", context.end_date),
         ("Request origin", context.request_context_origin),
@@ -941,7 +941,7 @@ def _feedback_context_form_controls(context: FeedbackHandoffContext) -> str:
     controls = []
     for name, label, value in (
         ("workflow_area", "Workflow area", context.workflow_area),
-        ("facility_number", "Facility/license number", context.facility_number),
+        ("facility_number", "Facility ID", context.facility_number),
         ("start_date", "Start date", context.start_date),
         ("end_date", "End date", context.end_date),
         ("request_context_origin", "Request origin", context.request_context_origin),

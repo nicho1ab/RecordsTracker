@@ -409,7 +409,7 @@ def test_feedback_page_prefills_editable_starter_from_safe_handoff_context() -> 
     assert starter == "\n".join(
         [
             starter_opening,
-            "Facility/license: 157806098",
+            "Facility ID: 157806098",
             "Date range: 2022-08-01 to 2022-08-31",
             "Job context: controlled-job-detail",
             "Job status: completed_with_warnings",
@@ -457,7 +457,7 @@ def test_feedback_starter_omits_unavailable_handoff_values() -> None:
         "I am reporting confusion about the job diagnostics information on request result."
         in starter
     )
-    assert "Facility/license: 157806098" in starter
+    assert "Facility ID: 157806098" in starter
     assert "Job context: already-loaded-records" in starter
     assert "Date range:" not in starter
     assert "Job status:" not in starter
@@ -691,7 +691,7 @@ def test_feedback_configured_confirmation_escapes_submitted_fields_and_context()
     assert "Feature request" in call["body"]
     assert "## Safe Captured Context" in call["body"]
     assert "- Workflow area: reviewer-detail" in call["body"]
-    assert "- Facility/license number: 157806098" in call["body"]
+    assert "- Facility ID: 157806098" in call["body"]
     assert "- Complaint/control identifier: 32-CR-20220407124448" in call["body"]
     assert "App mode:" not in call["body"]
     assert "<b>Please add</b> & keep keyboard-friendly sorting." in call["body"]

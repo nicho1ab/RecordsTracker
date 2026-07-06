@@ -122,9 +122,9 @@ def test_ccld_record_request_page_renders_from_default_context(
     assert "facility-suggestion-list" in html
     assert "Which facility should be reviewed?" in html
     assert CCLD_FACILITY_LOOKUP_PATH in html
-    assert "Use this number" in html
+    assert "Use this Facility ID" in html
     assert "Use this facility/license number" not in html
-    assert "Search by name, license number, city, county, ZIP" in html
+    assert "Search by name, Facility ID, city, county, ZIP" in html
     assert "facility type, program type, or status code" in html
     assert "Keyboard flow: type a search or digit number" not in html
     assert "Attorney workflow" not in html
@@ -261,7 +261,8 @@ def test_ccld_record_request_prefills_selected_facility_from_lookup() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Selected facility context is ready" in html
-    assert "Facility/license number" in html
+    assert "Facility ID" in html
+    assert "Facility/license number" not in html
     assert "Synthetic Orchard Child Care" in html
     assert "Context source" not in html
     assert "value=\"900000001\"" in html
@@ -330,10 +331,10 @@ def test_ccld_record_request_manual_entry_shows_context_confirmation() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Which facility should be reviewed?" in html
-    assert "type the digit facility/license number directly" in html
+    assert "type the digit Facility ID directly" in html
     assert "See review guidance and next steps." in html
     assert "Live retrieval off" not in html
-    assert "Search by name, license number, city, county, ZIP" in normalized_html
+    assert "Search by name, Facility ID, city, county, ZIP" in normalized_html
     assert "facility type, program type, or status code" in normalized_html
     assert "name=\"request_context_origin\"" in html
     assert "value=\"manual_entry\"" in html
@@ -360,7 +361,7 @@ def test_ccld_record_request_validates_required_facility_and_digits() -> None:
     alpha_html = alpha_body.decode("utf-8")
 
     assert missing_status == 400
-    assert "Facility/license number is required." in missing_html
+    assert "Facility ID is required." in missing_html
     assert alpha_status == 400
     assert "must contain digits only for this CCLD-only request" in alpha_html
     assert counts == _empty_reviewer_counts()
@@ -484,17 +485,17 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Open packet preparation draft for browser copy or print" in html
     assert "/reviewer/packet/draft?facility_number=157806098" in html
     assert "Matching source-derived rows shown" in html
-    assert "facility/license number 157806098" in html
+    assert "Facility ID 157806098" in html
     assert "08/01/2022 to 08/31/2022" in html
     assert "Selected request context" in html
     assert "Request started from" in html
-    assert "Manual facility/license entry" in html
+    assert "Manual Facility ID entry" in html
     assert "Facility context cue" in html
     assert "manual request context" in normalized_html.casefold()
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098" in html
     assert "Facility summary" in html
     assert "Open facility review priority list" in html
-    assert "Facility/license number being requested" in html
+    assert "Facility ID being requested" in html
     assert "Date range being requested" in html
     assert "Active facility reference source" in html
     assert "Change facility/date criteria for this request" in html
@@ -636,7 +637,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "- Reviewer-created notes present: no" in html
     assert "- Reviewer-created statuses present: no" in html
     assert "- Facility lookup used or skipped:" in html
-    assert "- Facility lookup used or skipped: Manual facility/license entry" in html
+    assert "- Facility lookup used or skipped: Manual Facility ID entry" in html
     assert "- Active facility reference source:" in html
     assert "- Original CCLD source link was easy to find:" in html
     assert "- Missing or confusing values to mention:" in html
@@ -945,7 +946,7 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
     assert "same facility/date request context" in blocked_normalized
     assert "does not mean records are missing, deleted, absent" in blocked_normalized
     assert "Active request context" in blocked_html
-    assert "facility/license number 157806098; date range 08/01/2022 to 08/31/2022" in (
+    assert "Facility ID 157806098; date range 08/01/2022 to 08/31/2022" in (
         blocked_normalized
     )
     assert "Active reviewer-created status filter" in blocked_html
@@ -1016,7 +1017,7 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert "did not submit a Request Records job for this request" in normalized_html
     assert "Request job submitted" not in html
     assert "This page searched currently loaded complaint records only" in html
-    assert "Facility/license number searched" in html
+    assert "Facility ID searched" in html
     assert "Date range searched" in html
     assert "Loaded rows for this facility before date filtering" in html
     assert "Load state" in html
@@ -1230,8 +1231,8 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     assert first_checklist == second_checklist
     assert first_checklist.startswith("CCLD feedback details")
     assert "- Source scope: CCLD public complaint records only" in first_checklist
-    assert "- Facility/license number: 157806098" in first_checklist
-    assert "- Facility lookup used or skipped: Manual facility/license entry" in first_checklist
+    assert "- Facility ID: 157806098" in first_checklist
+    assert "- Facility lookup used or skipped: Manual Facility ID entry" in first_checklist
     assert "- Selected lookup facility name: unknown" in first_checklist
     assert "- Active facility reference source:" in first_checklist
     assert "- Date range requested: 08/01/2022 to 08/31/2022" in first_checklist
@@ -1443,9 +1444,9 @@ def test_ccld_request_page_manual_facility_button_disabled_by_default() -> None:
     assert status == 200
     assert (
         '<button type="submit" id="facility-submit-btn" disabled>'
-        "Use this number</button>"
+        "Use this Facility ID</button>"
     ) in html
-    assert html.count("Use this number") == 1
+    assert html.count("Use this Facility ID") == 1
     assert "Use this facility/license number" not in html
     assert_no_secret_html(html)
 
@@ -1477,8 +1478,8 @@ def test_ccld_request_page_facility_selector_has_concise_placeholder() -> None:
     html = body.decode("utf-8")
 
     assert status == 200
-    assert 'placeholder="Facility/license number"' in html
-    assert "Search by name, license number, city, county, ZIP" in html
+    assert 'placeholder="Facility ID"' in html
+    assert "Search by name, Facility ID, city, county, ZIP" in html
     assert "facility type, program type, or status code" in html
     # Placeholder must not be the full helper sentence
     assert 'placeholder="Search facility name' not in html
@@ -1535,7 +1536,7 @@ def test_request_page_with_no_reference_source_shows_not_configured_and_no_synth
     # Manual entry is still available as the primary path
     assert "Which facility should be reviewed?" in html
     assert 'id="facility-search-input"' in html
-    assert "Use this number" in html
+    assert "Use this Facility ID" in html
     assert "Use this facility/license number" not in html
     # No synthetic fixture facility names in the HTML
     assert "Synthetic Orchard" not in html
