@@ -363,11 +363,11 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold reviewer UI shell did not return the seeded list.")
     if (
         reviewer_detail_status != 200
-        or b"Complaint investigation report" not in reviewer_detail_body
-        or b"public source record" not in reviewer_detail_body
+        or b"Complaint overview" not in reviewer_detail_body
+        or b"Why this may need closer review" not in reviewer_detail_body
         or b"inline-glossary-term" not in reviewer_detail_body
-            or b"Review status and note" not in reviewer_detail_body
-        or b"Source timeline" not in reviewer_detail_body
+            or b"Status and note" not in reviewer_detail_body
+        or b"Key dates" not in reviewer_detail_body
         or b"Allegations and findings" not in reviewer_detail_body
         or b"Reviewer-created notes and status history" in reviewer_detail_body
         or b"Source-derived value checks" in reviewer_detail_body
@@ -376,6 +376,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Source traceability" in reviewer_detail_body
         or b"How to read this record" in reviewer_detail_body
         or b"Field-note guidance" in reviewer_detail_body
+        or b"Check source" in reviewer_detail_body
         or b"Open CCLD source record" not in reviewer_detail_body
         or b"Return to review queue" not in reviewer_detail_body
         or b"32-CR-20220407124448" not in reviewer_detail_body

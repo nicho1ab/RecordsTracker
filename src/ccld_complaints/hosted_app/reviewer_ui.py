@@ -3892,9 +3892,10 @@ def _render_top_facility_fact_strip(
             "Facility/license number",
             facility_number,
         ),
+        ("Facility name", "Facility name", _facility_context_value(facility, "facility_name")),
         ("Facility type", "Facility type", _facility_context_value(facility, "facility_type")),
+        ("Status", "Facility status", _facility_context_value(facility, "license_status")),
         ("County", "County", _facility_context_value(facility, "county")),
-        ("License status", "License status", _facility_context_value(facility, "license_status")),
     )
     items = "\n".join(
         f"""        <div class="compact-fact">
@@ -3911,13 +3912,24 @@ def _render_top_facility_fact_strip(
 def _copyable_value(label: str, value: str) -> str:
     if not value or value == "unknown":
         return _escape(value or "unknown")
+    if label not in {"Complaint/control number", "Facility/license number"}:
+        return _escape(value)
+    accessible_label = _copy_button_label(label)
     return (
         f'<span class="copyable-value">{_escape(value)}'
         f'<button class="copy-icon-button" type="button" '
         f'data-copy-value="{_escape(value)}" '
-        f'aria-label="Copy {_escape(label)}" title="Copy {_escape(label)}">'
+        f'aria-label="{_escape(accessible_label)}" title="{_escape(accessible_label)}">'
         f'{_clipboard_icon_svg()}</button></span>'
     )
+
+
+def _copy_button_label(label: str) -> str:
+    if label == "Complaint/control number":
+        return "Copy complaint number"
+    if label == "Facility/license number":
+        return "Copy facility number"
+    return f"Copy {label}"
 
 
 def _clipboard_icon_svg() -> str:
@@ -3926,7 +3938,10 @@ def _clipboard_icon_svg() -> str:
         'width="16" height="16">'
         '<path fill="none" stroke="currentColor" stroke-width="2" '
         'stroke-linecap="round" stroke-linejoin="round" '
-        'd="M9 5h6m-5 4h4m-7 0H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1m-8-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2H9V5Z"/>'
+        'd="M8 8h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z"/>'
+        '<path fill="none" stroke="currentColor" stroke-width="2" '
+        'stroke-linecap="round" stroke-linejoin="round" '
+        'd="M4 15H3a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'
         "</svg>"
     )
 
@@ -3936,7 +3951,11 @@ document.querySelectorAll('[data-copy-value]').forEach(function (button) {
   button.addEventListener('click', function () {
     var value = button.getAttribute('data-copy-value') || '';
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(value);
+      navigator.clipboard.writeText(value).then(function () {
+        button.setAttribute('data-copy-state', 'copied');
+      }).catch(function () {
+        button.setAttribute('data-copy-state', 'unavailable');
+      });
     }
   });
 });
@@ -4300,7 +4319,14 @@ def _render_review_flag_chips(
 
 
 def _review_flag_chip_class(label: str) -> str:
-    if label in {"Check source", "Missing first activity"}:
+    if label in {
+        "Source unavailable",
+        "Missing source date",
+        "Missing first activity",
+        "Date mismatch",
+        "Source narrative missing",
+        "Source link unavailable",
+    }:
         return "review-chip badge-danger"
     if label == "CCLD source available":
         return "review-chip source-chip"
@@ -4320,16 +4346,34 @@ def _review_flag_labels(original_values: Mapping[str, Any]) -> tuple[str, ...]:
         if original_values.get(field_name) is True:
             flags.append(label)
             break
+    return tuple(flags)
+
+
+def _source_warning_labels(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> tuple[str, ...]:
+    original_values = _mapping(source_record, "original_values")
+    source_document = _mapping(source_record, "source_document")
+    warnings: list[str] = []
+    if not _has_visible_traceability_document(source_document):
+        warnings.append("Source unavailable")
+    if not _has_display_value(source_document.get("source_url")):
+        warnings.append("Source link unavailable")
     if original_values.get("missing_first_activity_date") is True:
-        flags.append("Check source")
-    elif (
+        warnings.append("Missing first activity")
+    if (
         original_values.get("missing_visit_date") is True
         or original_values.get("missing_report_date") is True
+        or not _has_display_value(original_values.get("visit_date"))
+        or not _has_display_value(original_values.get("report_date"))
     ):
-        flags.append("Check source")
+        warnings.append("Missing source date")
     if original_values.get("report_date_used_as_proxy") is True:
-        flags.append("Check source")
-    return tuple(flags)
+        warnings.append("Date mismatch")
+    if not _source_narrative_text(source_record, related_records):
+        warnings.append("Source narrative missing")
+    return tuple(dict.fromkeys(warnings))
 
 
 def _has_visible_traceability_document(source_document: Mapping[str, Any]) -> bool:
@@ -4537,7 +4581,7 @@ def _render_detail(
     identity = _mapping(source_record, "identity")
     original_values = _mapping(source_record, "original_values")
     source_record_key = _string(identity, "source_record_key")
-    complaint_heading = _detail_heading(original_values, related_records)
+    complaint_heading = "Complaint overview"
     return _page(
         title=complaint_heading,
         heading=complaint_heading,
@@ -4546,25 +4590,234 @@ def _render_detail(
     {_render_notice(saved_action, saved_value, source_record_key, related_records, return_context)}
         <div class="reviewer-detail-page detail-shell">
             {_render_detail_context_row(source_record, related_records, return_context)}
-            <section class="reviewer-brief-card hero-card" aria-labelledby="complaint-summary-heading">
-                <p class="launch-kicker">Complaint investigation report &middot; {_glossary_term("CCLD", "California Community Care Licensing Division.", "detail-ccld")} public source record</p>
-                <h2 id="complaint-summary-heading">Complaint summary</h2>
-                <p class="complaint-control-line"><strong>Complaint/control number:</strong> {_copyable_value("Complaint/control number", _optional_string(original_values, "complaint_control_number"))}</p>
-                <p class="facility-identity-line">{_escape(_detail_facility_identity_line(related_records, return_context))}</p>
-                {_render_top_facility_fact_strip(related_records, return_context)}
-                <p class="complaint-finding-line"><strong>Finding/status:</strong> {_copyable_value("Finding/status", _optional_string(original_values, "finding"))}</p>
-            </section>
-            {_render_source_narrative_section(source_record, related_records)}
-            {_render_complaint_timeline_section(source_record)}
-            {_render_detail_review_flags_section(original_values)}
-            {_render_detail_page_actions(source_record, related_records, return_context)}
-            {_render_review_actions(source_record_key, detail, return_context)}
+            {_render_detail_heading_context(original_values)}
+            {_render_complaint_overview_card(source_record_key, source_record, detail, related_records, return_context)}
             {_render_allegations_findings_section(source_record, related_records)}
             {_render_citation_poc_section(source_record, related_records)}
             {_render_reviewer_state_section(detail)}
             {_DETAIL_COPY_SCRIPT}
         </div>""",
     )
+
+
+def _render_detail_heading_context(original_values: Mapping[str, Any]) -> str:
+    complaint_number = _optional_string(original_values, "complaint_control_number")
+    finding = _optional_string(original_values, "finding")
+    return (
+        '<p class="detail-heading-context">'
+        f"Complaint {_escape(complaint_number)} &middot; "
+        f'{_glossary_term("Finding", "The outcome or status shown in the public complaint record.", "detail-finding")}: '
+        f"{_finding_definition_term(finding)}"
+        "</p>"
+    )
+
+
+def _render_complaint_overview_card(
+    source_record_key: str,
+    source_record: Mapping[str, Any],
+    detail: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> str:
+    original_values = _mapping(source_record, "original_values")
+    source_document = _mapping(source_record, "source_document")
+    finding = _optional_string(original_values, "finding")
+    return f"""<section class="detail-card complaint-overview-card" aria-labelledby="complaint-overview-card-heading">
+      <div class="overview-card-bar">
+        <p class="launch-kicker">Complaint overview</p>
+        {_source_availability_chip(source_document)}
+      </div>
+      <div class="overview-layout">
+        <div class="overview-main">
+          <div class="overview-primary-row">
+            <div>
+              <h2 id="complaint-overview-card-heading" class="complaint-number-heading"><span class="sr-only">Complaint/control number </span>{_copyable_value("Complaint/control number", _optional_string(original_values, "complaint_control_number"))}</h2>
+              <p class="finding-context-line">{_glossary_term("Finding", "The outcome or status shown in the public complaint record.", "overview-finding")} {_finding_badge(finding)}</p>
+            </div>
+            <div class="overview-source-action">
+              {_source_action_link(source_document)}
+            </div>
+          </div>
+          {_render_top_facility_fact_strip(related_records, return_context)}
+          {_render_overview_review_cues(source_record, detail, related_records)}
+          {_render_overview_source_narrative(source_record, related_records)}
+          {_render_overview_timeline(source_record)}
+        </div>
+        <div class="overview-side-panel">
+          {_render_review_actions(source_record_key, detail, return_context)}
+          {_render_detail_tertiary_actions(source_record, related_records, return_context)}
+        </div>
+      </div>
+    </section>"""
+
+
+def _source_availability_chip(source_document: Mapping[str, Any]) -> str:
+    if _has_display_value(source_document.get("source_url")):
+        return '<span class="review-chip source-chip">CCLD source available</span>'
+    return ""
+
+
+def _finding_definition_term(finding: str) -> str:
+    normalized = finding.strip().casefold()
+    definitions = {
+        "unsubstantiated": "A source-reported finding that the allegation was not substantiated in the public complaint record.",
+        "substantiated": "A source-reported finding that the allegation was substantiated in the public complaint record.",
+        "inconclusive": "A source-reported finding that the public complaint record does not resolve the allegation as substantiated or unsubstantiated.",
+    }
+    definition = definitions.get(normalized)
+    if definition is None:
+        return _escape(finding)
+    term_id = "finding-" + normalized.replace(" ", "-")
+    return _glossary_term(finding, definition, term_id)
+
+
+def _finding_badge(finding: str) -> str:
+    return (
+        f'<span class="{_finding_badge_class(finding)}">'
+        f"{_finding_definition_term(finding)}</span>"
+    )
+
+
+def _finding_badge_class(finding: str) -> str:
+    normalized = finding.strip().casefold()
+    if normalized == "substantiated":
+        return "finding-badge finding-badge--substantiated"
+    if normalized == "inconclusive":
+        return "finding-badge finding-badge--inconclusive"
+    if normalized == "unsubstantiated":
+        return "finding-badge finding-badge--unsubstantiated"
+    return "finding-badge finding-badge--unknown"
+
+
+def _render_overview_review_cues(
+    source_record: Mapping[str, Any],
+    detail: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> str:
+    original_values = _mapping(source_record, "original_values")
+    summary = _mapping(detail, "associated_reviewer_created_state_summary")
+    review_flags = [
+        label for label in _review_flag_labels(original_values)
+        if not label.endswith("day gap")
+    ]
+    if _current_reviewer_status_text(summary) == "No status":
+        review_flags.append("No status")
+    if _detail_note_presence_text(summary) == "No note":
+        review_flags.append("No note")
+    review_items = _badge_list_markup(
+        tuple(review_flags),
+        aria_label="Review badges",
+        empty_label="No active review badges",
+    )
+    source_warnings = _badge_list_markup(
+        _source_warning_labels(source_record, related_records),
+        aria_label="Specific source warnings",
+        empty_label="No source warning badges",
+    )
+    return f"""<section class="overview-review-cues" aria-labelledby="overview-review-cues-heading">
+        <h3 id="overview-review-cues-heading">Why this may need closer review</h3>
+        {review_items}
+        {source_warnings}
+      </section>"""
+
+
+def _badge_list_markup(
+    labels: tuple[str, ...],
+    *,
+    aria_label: str,
+    empty_label: str,
+) -> str:
+    if not labels:
+        return f'<p class="sr-note">{_escape(empty_label)}</p>'
+    items = "\n".join(
+        f'          <li><span class="{_review_flag_chip_class(label)}">{_escape(label)}</span></li>'
+        for label in labels
+    )
+    return f"""        <ul class="flag-list" aria-label="{_escape(aria_label)}">
+{items}
+        </ul>"""
+
+
+def _render_overview_source_narrative(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> str:
+    narrative = _source_narrative_text(source_record, related_records)
+    if not narrative:
+        return """<section class="overview-source-narrative" aria-labelledby="source-narrative-heading">
+        <h3 id="source-narrative-heading">Source narrative</h3>
+        <p>No source narrative excerpt is loaded for this complaint record.</p>
+      </section>"""
+    excerpt, has_more = _excerpt_text(narrative, 360)
+    full_details = (
+        f"""        <details>
+          <summary>Show full source narrative</summary>
+          <p>{_escape(narrative)}</p>
+        </details>"""
+        if has_more
+        else ""
+    )
+    return f"""<section class="overview-source-narrative" aria-labelledby="source-narrative-heading">
+        <h3 id="source-narrative-heading">Source narrative</h3>
+        <blockquote>{_escape(excerpt)}</blockquote>
+{full_details}
+      </section>"""
+
+
+def _render_overview_timeline(source_record: Mapping[str, Any]) -> str:
+    original_values = _mapping(source_record, "original_values")
+    first_item = f"""          <li class="timeline-item">
+            <span class="timeline-label">Complaint received</span>
+            <strong>{_escape(_detail_timeline_date(_optional_string(original_values, "complaint_received_date")))}</strong>
+          </li>"""
+    remaining_rows = (
+        ("Visit/investigation activity", _detail_timeline_date(_optional_string(original_values, "visit_date"))),
+        ("Report", _detail_timeline_date(_optional_string(original_values, "report_date"))),
+        ("Signed", _detail_timeline_date(_optional_string(original_values, "date_signed"))),
+    )
+    remaining_items = "\n".join(
+        f"""          <li class="timeline-item">
+            <span class="timeline-label">{_escape(label)}</span>
+            <strong>{_escape(value)}</strong>
+          </li>"""
+        for label, value in remaining_rows
+    )
+    delay_badge = (
+        '          <li class="timeline-gap-badge" aria-label="Gap between complaint received and visit or investigation activity"><span class="review-chip badge-attention">120+ day gap</span></li>'
+        if original_values.get("review_delay_over_120_days") is True
+        else ""
+    )
+    return f"""<section class="overview-timeline" aria-labelledby="complaint-timeline-heading">
+        <h3 id="complaint-timeline-heading">Key dates</h3>
+        <ol class="timeline-list timeline-list-linear">
+{first_item}
+{delay_badge}
+{remaining_items}
+        </ol>
+      </section>"""
+
+
+def _render_detail_tertiary_actions(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+) -> str:
+    original_values = _mapping(source_record, "original_values")
+    identity = _mapping(source_record, "identity")
+    source_record_key = _string(identity, "source_record_key")
+    feedback_href = _feedback_href(
+        workflow_area="reviewer-detail",
+        page_path=REVIEWER_UI_DETAIL_PATH,
+        return_context=return_context,
+        source_record_key=source_record_key,
+        complaint_control_number=_optional_string(original_values, "complaint_control_number"),
+        prompt="Describe what was confusing about this reviewer detail step.",
+    )
+    queue_href = _ccld_request_href(related_records, return_context)
+    return f"""<div class="overview-tertiary-actions" aria-label="Additional reviewer actions">
+            <a href="{_escape(feedback_href)}">Report an issue</a>
+            <a href="{_escape(queue_href)}">Return to review queue</a>
+          </div>"""
 
 
 def _detail_heading(
@@ -4635,17 +4888,9 @@ def _render_detail_context_row(
     related_records: list[Mapping[str, Any]],
     return_context: CcldQueueReturnContext,
 ) -> str:
-    original_values = _mapping(source_record, "original_values")
-    facility = _facility_context(related_records)
-    facility_name = _facility_context_value(facility, "facility_name")
-    complaint_label = _detail_complaint_label(original_values).replace(":", "")
     queue_href = _ccld_request_href(related_records, return_context)
     return f"""<nav class="reviewer-detail-context" aria-label="Review context">
-            <a href="{_escape(queue_href)}">Review queue</a>
-            <span aria-hidden="true">&gt;</span>
-            <span>{_escape(facility_name)}</span>
-            <span aria-hidden="true">&gt;</span>
-            <span>{_escape(complaint_label)}</span>
+            <a href="{_escape(queue_href)}">Return to review queue</a>
         </nav>"""
 
 
@@ -5237,7 +5482,7 @@ def _render_complaint_timeline_section(
 def _source_action_link(source_document: Mapping[str, Any]) -> str:
     source_url = source_document.get("source_url")
     if _has_display_value(source_url):
-        return f'<a class="button button-secondary" href="{_escape(str(source_url))}">Open CCLD source record</a>'
+        return f'<a class="button" href="{_escape(str(source_url))}">Open CCLD source record</a>'
     return '<span class="button button-disabled" aria-disabled="true">Source not available</span>'
 
 
@@ -5272,8 +5517,9 @@ def _render_allegations_findings_section(
     ]
     rows = "\n".join(_render_allegation_row(record) for record in allegation_rows)
     if not rows:
+        finding = _optional_string(original_values, "finding")
         rows = f"""        <tr>
-          <td>{_escape(_optional_string(original_values, "finding"))}</td>
+          <td>{_finding_badge(finding)}</td>
           <td>Allegation details are not loaded for this complaint record.</td>
         </tr>"""
     return f"""<section class="detail-card" aria-labelledby="allegations-findings-heading">
@@ -5295,8 +5541,9 @@ def _render_allegations_findings_section(
 
 def _render_allegation_row(record: Mapping[str, Any]) -> str:
     original_values = _mapping(record, "original_values")
+    finding = _optional_string(original_values, "finding")
     return f"""        <tr>
-          <td>{_escape(_optional_string(original_values, "finding"))}</td>
+          <td>{_finding_badge(finding)}</td>
           <td>{_escape(_optional_string(original_values, "allegation_text"))}</td>
         </tr>"""
 
@@ -6423,13 +6670,11 @@ def _has_display_value(value: object) -> bool:
 
 
 def _glossary_term(term: str, definition: str, term_id: str) -> str:
-    definition_id = f"{term_id}-definition"
     return (
-        f'<dfn class="inline-glossary-term" tabindex="0" '
-        f'aria-describedby="{_escape(definition_id)}">'
+        f'<dfn class="inline-glossary-term" tabindex="0" role="term" '
+        f'aria-description="{_escape(definition)}" title="{_escape(definition)}" '
+        f'data-definition="{_escape(definition)}" data-term-id="{_escape(term_id)}">'
         f'{_escape(term)}'
-        f'<span class="inline-glossary-definition" role="tooltip" '
-        f'id="{_escape(definition_id)}">{_escape(definition)}</span>'
         f"</dfn>"
     )
 
@@ -6489,16 +6734,15 @@ def _render_review_actions(
     summary = _mapping(detail, "associated_reviewer_created_state_summary")
     current_status = _current_reviewer_status_text(summary)
     note_presence = _detail_note_presence_text(summary)
-    return f"""<section class="review-status-panel action-card" id="review-actions-heading" aria-labelledby="review-actions-title">
-            <p class="launch-kicker">Review</p>
-            <h2 id="review-actions-title">Review status and note</h2>
+    return f"""<section class="review-status-panel" id="review-actions-heading" aria-labelledby="review-actions-title">
+            <h2 id="review-actions-title">Status and note</h2>
             <dl class="summary-list">
                 <dt>Current status</dt>
                 <dd>{_escape(current_status)}</dd>
                 <dt>Current note</dt>
                 <dd>{_escape(note_presence)}</dd>
             </dl>
-            {_render_status_form(source_record_key, return_context)}
+            {_render_status_form(source_record_key, return_context, summary)}
             {_render_note_form(source_record_key, return_context)}
         </section>"""
 
@@ -6581,12 +6825,12 @@ def _render_note_form(
         <input type="hidden" name="source_record_key" value="{_escape(source_record_key)}">
                 {_return_context_hidden_inputs(return_context)}
         <p>
-                    <label for="note_text">Note</label>
+                    <label for="note_text">Reviewer note</label>
                     <textarea id="note_text" name="note_text" rows="4" required
-                        aria-describedby="note-text-help"></textarea>
+                        aria-describedby="note-text-help" placeholder="Add a short note for this record"></textarea>
                                             <span id="note-text-help">Notes do not change the complaint record.</span>
         </p>
-                                <p><button type="submit">Save note</button></p>
+                                <p><button class="secondary" type="submit">Save note</button></p>
       </form>
     </section>"""
 
@@ -6594,9 +6838,13 @@ def _render_note_form(
 def _render_status_form(
     source_record_key: str,
     return_context: CcldQueueReturnContext,
+    summary: Mapping[str, Any],
 ) -> str:
+    statuses = tuple(_string_items(summary.get("reviewer_statuses_present", [])))
+    current_status = statuses[0] if statuses else None
+    placeholder_selected = ' selected="selected"' if current_status is None else ""
     options = "\n".join(
-        _render_status_option(status)
+        _render_status_option(status, selected=status == current_status)
         for status in REVIEWER_STATUS_VALUES
     )
     return f"""<section class="review-form-block">
@@ -6604,14 +6852,15 @@ def _render_status_form(
         <input type="hidden" name="source_record_key" value="{_escape(source_record_key)}">
                 {_return_context_hidden_inputs(return_context)}
         <p>
-          <label for="reviewer_status">Status</label>
+          <label for="reviewer_status">Review status</label>
                     <select id="reviewer_status" name="reviewer_status" required
                         aria-describedby="reviewer-status-help">
+            <option value="" disabled{placeholder_selected}>No status selected</option>
 {options}
           </select>
                     <span id="reviewer-status-help">Status helps track review progress.</span>
         </p>
-                                <p><button type="submit">Save status</button></p>
+                                <p><button class="secondary" type="submit">Save status</button></p>
       </form>
     </section>"""
 
@@ -6793,9 +7042,10 @@ def _detail_feedback_request_context(return_context: CcldQueueReturnContext) -> 
     )
 
 
-def _render_status_option(status: str) -> str:
+def _render_status_option(status: str, *, selected: bool = False) -> str:
     label = _REVIEWER_STATUS_LABELS.get(status, status.replace("_", " "))
-    return f'            <option value="{_escape(status)}">{_escape(label)}</option>'
+    selected_attr = ' selected="selected"' if selected else ""
+    return f'            <option value="{_escape(status)}"{selected_attr}>{_escape(label)}</option>'
 
 
 def _render_scope_notice(workflow: Mapping[str, Any]) -> str:
