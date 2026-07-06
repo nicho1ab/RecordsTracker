@@ -1005,9 +1005,9 @@ SHARED_CSS = r"""
       padding: 0.22rem 0.55rem;
     }
     .source-chip {
-      background: var(--blue-soft);
-      border-color: #83a2d3;
-      color: var(--blue);
+      background: #E8F7F2;
+      border-color: #75C9AE;
+      color: #006B5F;
     }
     .workflow-cards {
       display: grid;
@@ -1142,10 +1142,10 @@ SHARED_CSS = r"""
     }
     .detail-shell {
       display: grid;
-      gap: 1rem;
+      gap: 0.75rem;
     }
     .reviewer-detail-page {
-      gap: 1rem;
+      gap: 0.75rem;
     }
     .reviewer-detail-context {
       align-items: center;
@@ -1154,6 +1154,116 @@ SHARED_CSS = r"""
       flex-wrap: wrap;
       font-size: 0.88rem;
       gap: 0.4rem;
+    }
+    .reviewer-detail-context a {
+      font-weight: 800;
+      text-decoration: none;
+    }
+    .detail-heading-context {
+      color: var(--muted);
+      font-size: 0.98rem;
+      font-weight: 700;
+      margin: -0.25rem 0 0.35rem;
+    }
+    .complaint-overview-card {
+      border-color: #C9DCE0;
+      border-top: 4px solid var(--teal);
+      box-shadow: var(--shadow-strong);
+      padding: 0;
+      overflow: visible;
+    }
+    .overview-card-bar {
+      align-items: center;
+      background: #EEF8F7;
+      border-bottom: 1px solid var(--line-soft);
+      border-radius: 8px 8px 0 0;
+      display: flex;
+      gap: 0.75rem;
+      justify-content: space-between;
+      padding: 0.55rem 0.85rem;
+    }
+    .overview-card-bar .launch-kicker {
+      color: #165F61;
+      margin: 0;
+    }
+    .overview-layout {
+      align-items: start;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem);
+    }
+    .overview-main {
+      display: grid;
+      gap: 0.72rem;
+      padding: 0.8rem 0.9rem 0.9rem;
+    }
+    .overview-primary-row {
+      align-items: start;
+      display: flex;
+      gap: 1rem;
+      justify-content: space-between;
+    }
+    .complaint-number-heading {
+      color: var(--ink);
+      font-size: 1.25rem;
+      line-height: 1.2;
+      margin: 0 0 0.35rem;
+    }
+    .finding-context-line {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin: 0;
+    }
+    .overview-source-action {
+      flex: 0 0 auto;
+    }
+    .overview-source-action .button {
+      box-shadow: 0 1px 2px rgb(23 33 43 / 8%);
+    }
+    .overview-side-panel {
+      background: #F8FBFB;
+      border: 1px solid var(--line-soft);
+      border-radius: 0 0 0 8px;
+      display: grid;
+      gap: 0.62rem;
+      align-content: start;
+      align-self: start;
+      padding: 0.8rem;
+    }
+    .overview-review-cues,
+    .overview-source-narrative,
+    .overview-timeline {
+      display: grid;
+      gap: 0.42rem;
+    }
+    .overview-review-cues h3,
+    .overview-source-narrative h3,
+    .overview-timeline h3 {
+      color: var(--ink);
+      font-size: 0.88rem;
+      font-weight: 900;
+      letter-spacing: 0;
+      margin: 0;
+      text-transform: uppercase;
+    }
+    .overview-source-narrative blockquote {
+      border-left: 3px solid #16B8AC;
+      color: var(--ink);
+      font-weight: 650;
+      margin: 0;
+      padding: 0.25rem 0 0.25rem 0.65rem;
+    }
+    .overview-tertiary-actions {
+      border-top: 1px solid var(--line-soft);
+      display: grid;
+      gap: 0.45rem;
+      padding-top: 0.75rem;
+    }
+    .overview-tertiary-actions a {
+      font-size: 0.92rem;
+      font-weight: 800;
+      text-decoration: none;
     }
     .reviewer-brief-card {
       border-left-color: var(--teal);
@@ -1167,28 +1277,36 @@ SHARED_CSS = r"""
       margin-bottom: 0.35rem;
     }
     .top-fact-strip {
-      display: grid;
-      gap: 0.45rem;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      margin: 0.6rem 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.38rem;
+      margin: 0;
     }
     .compact-fact {
+      align-items: baseline;
       background: #f8fafb;
       border: 1px solid var(--line-soft);
-      border-radius: 6px;
-      padding: 0.5rem 0.6rem;
+      border-radius: 999px;
+      display: inline-flex;
+      gap: 0.35rem;
+      max-width: 100%;
+      padding: 0.28rem 0.55rem;
     }
     .compact-fact dt {
-      color: var(--muted);
-      font-size: 0.78rem;
-      font-weight: 800;
+      color: #425160;
+      font-size: 0.75rem;
+      font-weight: 900;
       line-height: 1.2;
+      white-space: nowrap;
+    }
+    .compact-fact dt::after {
+      content: ":";
     }
     .compact-fact dd {
       color: var(--ink);
-      font-size: 0.92rem;
-      font-weight: 800;
-      margin: 0.15rem 0 0;
+      font-size: 0.84rem;
+      font-weight: 850;
+      margin: 0;
       overflow-wrap: anywhere;
     }
     .reviewer-brief-card .launch-value {
@@ -1243,10 +1361,10 @@ SHARED_CSS = r"""
     }
     .copy-icon-button {
       align-items: center;
-      background: #ffffff;
-      border: 1px solid var(--line);
+      background: #F8FBFF;
+      border: 1px solid #92A8C8;
       border-radius: 4px;
-      color: var(--ds-link);
+      color: #173F78;
       cursor: pointer;
       display: inline-flex;
       font: inherit;
@@ -1268,15 +1386,21 @@ SHARED_CSS = r"""
       width: 1rem;
     }
     .review-status-panel {
-      background: #f8fbfb;
-      border-color: #bdded8;
-      box-shadow: var(--shadow-strong);
+      display: grid;
+      gap: 0.5rem;
     }
     .review-status-panel .summary-list {
       font-size: 0.92rem;
-      gap: 0.35rem 0.75rem;
+      gap: 0.25rem 0.65rem;
       grid-template-columns: minmax(7rem, 9rem) 1fr;
-      margin-bottom: 0.65rem;
+      margin: 0;
+    }
+    .review-status-panel h2 {
+      border-bottom: 1px solid var(--line-soft);
+      font-size: 1rem;
+      font-weight: 900;
+      margin: 0;
+      padding-bottom: 0.45rem;
     }
     .reviewer-panel-actions {
       align-items: stretch;
@@ -1299,7 +1423,15 @@ SHARED_CSS = r"""
       margin: 0.35rem 0 0.65rem;
     }
     .review-status-panel form p {
-      margin: 0.45rem 0;
+      margin: 0.35rem 0;
+    }
+    .review-status-panel select,
+    .review-status-panel textarea,
+    .review-status-panel button {
+      width: 100%;
+    }
+    .review-status-panel textarea {
+      min-height: 5.25rem;
     }
     .review-status-panel h3 {
       font-size: 0.98rem;
@@ -1369,7 +1501,9 @@ SHARED_CSS = r"""
       color: var(--ink);
       cursor: help;
       font-style: normal;
-      font-weight: 800;
+      font-family: inherit;
+      font-size: inherit;
+      font-weight: inherit;
       position: relative;
       text-decoration: none;
       text-underline-offset: 0.18em;
@@ -1380,12 +1514,16 @@ SHARED_CSS = r"""
       outline-offset: 3px;
     }
     .inline-glossary-definition {
+      display: none;
+    }
+    .inline-glossary-term:hover::after,
+    .inline-glossary-term:focus::after {
       background: #ffffff;
       border: 1px solid var(--line);
       border-radius: 6px;
       box-shadow: var(--shadow-strong);
       color: var(--ink);
-      display: none;
+      content: attr(data-definition);
       font-size: 0.86rem;
       font-weight: 600;
       left: 0;
@@ -1397,11 +1535,6 @@ SHARED_CSS = r"""
       top: 1.5em;
       width: max-content;
       z-index: 20;
-    }
-    .inline-glossary-term:hover .inline-glossary-definition,
-    .inline-glossary-term:focus .inline-glossary-definition,
-    .inline-glossary-term:focus-within .inline-glossary-definition {
-      display: block;
     }
     .why-flagged-panel {
       background: #fffaf0;
@@ -1421,6 +1554,85 @@ SHARED_CSS = r"""
       display: grid;
       gap: 0.15rem;
       padding-top: 0.45rem;
+    }
+    .timeline-list-linear {
+      align-items: start;
+      gap: 0;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      position: relative;
+    }
+    .timeline-list-linear::before {
+      background: #6B7F8C;
+      content: "";
+      height: 2px;
+      left: 8%;
+      position: absolute;
+      right: 8%;
+      top: 0.55rem;
+    }
+    .timeline-list-linear .timeline-item {
+      border-top: 0;
+      justify-items: center;
+      min-width: 0;
+      padding-top: 1.2rem;
+      position: relative;
+      text-align: center;
+    }
+    .timeline-list-linear .timeline-item::before {
+      background: #0A6F6A;
+      border: 3px solid #ffffff;
+      border-radius: 999px;
+      box-shadow: 0 0 0 1px #0A6F6A;
+      content: "";
+      height: 0.72rem;
+      position: absolute;
+      top: 0.12rem;
+      width: 0.72rem;
+      z-index: 1;
+    }
+    .timeline-list-linear .timeline-label {
+      color: var(--ink);
+      font-size: 0.84rem;
+      font-weight: 900;
+    }
+    .timeline-gap-badge {
+      grid-column: 1 / 3;
+      justify-self: center;
+      list-style: none;
+      margin-top: -0.15rem;
+    }
+    .finding-badge {
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      display: inline-flex;
+      font-size: 0.82rem;
+      font-weight: 850;
+      line-height: 1.2;
+      padding: 0.24rem 0.55rem;
+    }
+    .finding-badge--unsubstantiated {
+      background: #F1F5F8;
+      border-color: #C7D3DE;
+      color: #34495E;
+    }
+    .finding-badge--substantiated {
+      background: var(--ds-attention-soft);
+      border-color: #D89D2B;
+      color: #704600;
+    }
+    .finding-badge--inconclusive,
+    .finding-badge--unknown {
+      background: var(--ds-info-soft);
+      border-color: #9DB4D6;
+      color: var(--ds-link-hover);
+    }
+    #allegations-findings-heading {
+      color: var(--ink);
+      font-size: 1rem;
+      font-weight: 900;
+      letter-spacing: 0;
+      text-transform: uppercase;
     }
     .timeline-label {
       color: var(--muted);
@@ -1964,8 +2176,29 @@ SHARED_CSS = r"""
       .dense-page-header, .dense-section-header {
         display: block;
       }
+      .overview-layout,
+      .overview-primary-row {
+        display: block;
+      }
+      .overview-side-panel {
+        border-left: 0;
+        border-top: 1px solid var(--line-soft);
+      }
+      .overview-source-action {
+        margin-top: 0.75rem;
+      }
       .top-fact-strip {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .timeline-list-linear {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        row-gap: 0.85rem;
+      }
+      .timeline-list-linear::before {
+        display: none;
+      }
+      .timeline-gap-badge {
+        grid-column: 1 / -1;
       }
       .quick-review-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));

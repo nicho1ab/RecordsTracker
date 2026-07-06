@@ -1249,34 +1249,49 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert parser.tags.count("h1") == 1
-    assert parser.text_for("h1") == "Complaint 32-CR-20220407124448"
-    assert "Review queue" in html
-    assert "Complaint investigation report" in html
-    assert "public source record" in html
-    assert "Complaint summary" in html
+    assert parser.text_for("h1") == "Complaint overview"
+    assert "Return to review queue" in html
+    assert "Complaint overview" in html
+    assert "Complaint 32-CR-20220407124448" in parser.text_for("main")
+    assert (
+        "Complaint 32-CR-20220407124448 &middot; "
+        in html
+    )
+    assert ">Finding<" in html
+    assert ">Unsubstantiated<" in html
+    assert "Facility 157806098" not in parser.text_for("main")
     assert "Complaint/control number" in html
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
     assert "Facility/license number" in html
+    assert html.count("Facility/license number") == 1
+    assert parser.text_for("main").count("157806098") == 1
     assert 'class="top-fact-strip"' in html
-    assert "Finding/status" in html
+    assert "Finding/status" not in html
+    assert 'class="finding-badge finding-badge--unsubstantiated"' in html
     assert 'class="copy-icon-button"' in html
-    assert 'aria-label="Copy Complaint/control number"' in html
-    assert 'aria-label="Copy Facility/license number"' in html
-    assert 'aria-label="Copy Finding/status"' in html
+    assert 'aria-label="Copy complaint number"' in html
+    assert 'aria-label="Copy facility number"' in html
+    assert 'aria-label="Copy Finding/status"' not in html
+    assert 'aria-label="Copy Facility name"' not in html
+    assert 'aria-label="Copy Facility type"' not in html
+    assert 'aria-label="Copy Facility status"' not in html
+    assert 'aria-label="Copy County"' not in html
     assert 'aria-label="Copy Source URL"' not in html
+    assert "navigator.clipboard.writeText" in html
     assert "04/07/2022" in html
     assert "08/24/2022" in html
+    assert "2022-04-07" not in parser.text_for("main")
+    assert "2022-08-24" not in parser.text_for("main")
 
     assert "<aside" not in html
     assert "reviewer-detail-top" not in html
     assert "reviewer-panel-context" not in html
     ordered_sections = [
-        "Complaint summary",
+        "Complaint overview",
+        "Why this may need closer review",
         "Source narrative",
-        "Source timeline",
-        "Review flags",
-        "Actions",
-        "Review status and note",
+        "Key dates",
+        "Status and note",
         "Allegations and findings",
     ]
     previous_index = -1
@@ -1290,26 +1305,37 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert "Save note" in html
     assert "Save status" in html
 
+    assert "CCLD source available" in html
+    review_cues_start = html.index('class="overview-review-cues"')
+    review_cues_end = html.index('class="overview-source-narrative"', review_cues_start)
+    review_cues_html = html[review_cues_start:review_cues_end]
+    assert "CCLD source available" not in review_cues_html
     assert "Open CCLD source record" in html
     assert "Return to review queue" in html
     assert "Return to facility queue" not in html
     assert "Date range: not provided" not in html
-    assert "Open next flagged record" in html
-    assert html.index("Source timeline") < html.index("Open CCLD source record")
+    assert "Open next flagged record" not in html
+    assert html.index("Open CCLD source record") < html.index("Status and note")
     review_panel_start = html.index('id="review-actions-heading"')
-    review_panel_end = html.index('id="allegations-findings-heading"', review_panel_start)
+    review_panel_end = html.index('class="overview-tertiary-actions"', review_panel_start)
     review_panel_html = html[review_panel_start:review_panel_end]
-    assert "Review status and note" in review_panel_html
+    assert "Status and note" in review_panel_html
     assert "Current status" in review_panel_html
     assert "Current note" in review_panel_html
-    assert "Status" in review_panel_html
-    assert "Note" in review_panel_html
+    assert "Review status" in review_panel_html
+    assert "Reviewer note" in review_panel_html
+    assert "No status selected" in review_panel_html
+    assert (
+        '<option value="" disabled selected="selected">No status selected</option>'
+        in review_panel_html
+    )
     assert '<h3 id="status-form-heading">Status</h3>' not in review_panel_html
     assert '<h3 id="note-form-heading">Note</h3>' not in review_panel_html
     assert "Save status" in review_panel_html
     assert "Save note" in review_panel_html
     assert "Status helps track review progress." in review_panel_html
     assert "Notes do not change the complaint record." in review_panel_html
+    assert "Return to review queue" not in review_panel_html
     assert "Return to facility queue" not in review_panel_html
     assert "Open next flagged record" not in review_panel_html
     assert "Cautious reviewer-created note guidance" not in review_panel_html
@@ -1322,10 +1348,13 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert "Save status or a note only when it helps this review" not in html
     assert "Source-derived fields stay unchanged." not in html
 
-    assert "Why this record may need closer review" not in html
+    assert "Why this may need closer review" in html
     assert "Review the badge list above as screening cues only" not in html
     assert "120+ day gap" in html
-    assert "Check source" in html
+    assert "No status" in html
+    assert "No note" in html
+    assert "Check source" not in html
+    assert "Missing first activity" in html
     assert "Possible delay indicator: over" not in html
     assert "Needs source check: first activity date missing locally" not in html
     assert "Source-derived complaint received date" not in html
@@ -1347,21 +1376,48 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     ):
         assert unsafe_phrase not in normalized_html.casefold()
 
-    assert '<dfn class="inline-glossary-term" tabindex="0" aria-describedby=' in html
-    assert 'class="inline-glossary-definition" role="tooltip"' in html
+    assert '<dfn class="inline-glossary-term" tabindex="0" role="term"' in html
+    assert 'aria-description="The outcome or status shown in the public complaint record."' in html
+    assert 'data-definition="The outcome or status shown in the public complaint record."' in html
+    assert 'class="inline-glossary-definition" role="tooltip"' not in html
     assert ".inline-glossary-term" in html
     assert "border-bottom: 1px dotted currentColor" in html
-    assert "California Community Care Licensing Division" in html
-    assert "The public licensing identifier used to find the facility in CCLD records." in html
-    assert "The complaint received date shown in loaded records." in html
+    assert "content: attr(data-definition)" in html
+    assert "The outcome or status shown in the public complaint record." in html
     assert (
-        "The first investigation activity date shown when it is available in loaded records."
+        "A source-reported finding that the allegation was not substantiated "
+        "in the public complaint record."
         in html
     )
-    assert "The visit date shown in loaded records when available." in html
-    assert "The loaded report date. If a proxy flag is present" in html
-    assert "The date signed shown in loaded records when available." in html
-    assert '<a class="timeline-label"' not in html
+    assert "The public licensing identifier used to find the facility in CCLD records." in html
+    assert (
+        "The outcome or status shown in the public complaint record."
+        not in parser.text_for("main")
+    )
+    assert (
+        "A source-reported finding that the allegation was not substantiated "
+        "in the public complaint record."
+        not in parser.text_for("main")
+    )
+    assert (
+        "The public licensing identifier used to find the facility in CCLD records."
+        not in parser.text_for("main")
+    )
+    assert "The complaint received date shown in loaded records." not in html
+    assert "The visit date shown in loaded records when available." not in html
+    assert "The loaded report date. If a proxy flag is present" not in html
+    assert "The date signed shown in loaded records when available." not in html
+    assert "Complaint received" in html
+    assert "Visit" in html
+    assert "Report" in html
+    assert "Signed" in html
+    assert 'class="timeline-list timeline-list-linear"' in html
+    assert html.index("Complaint received") < html.index("120+ day gap")
+    assert html.index("120+ day gap") < html.index("Visit/investigation activity")
+    assert (
+        'aria-label="Gap between complaint received and visit or investigation activity"'
+        in html
+    )
     assert "A value extracted from public source records" not in html
     assert "Local review state added by a tester or reviewer" not in html
     assert "Key terms for this record" not in html
@@ -1391,6 +1447,8 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
         "Loaded allegation and finding values",
         "Allegation text or loaded summary",
         "Extraction confidence",
+        "Complaint summary",
+        "Source timeline",
     ):
         assert removed not in html
     assert "0.95" not in parser.text_for("main")
@@ -1403,6 +1461,44 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert "source is complete" not in normalized_html.casefold()
     assert "verified abuse" not in normalized_html.casefold()
     assert_no_correction_workflow_html(html)
+    assert_no_secret_html(html)
+
+
+@pytest.mark.parametrize(
+    ("finding", "expected_class"),
+    (
+        ("Unsubstantiated", "finding-badge finding-badge--unsubstantiated"),
+        ("Substantiated", "finding-badge finding-badge--substantiated"),
+        ("Inconclusive", "finding-badge finding-badge--inconclusive"),
+    ),
+)
+def test_reviewer_ui_detail_renders_finding_badge_variants(
+    finding: str,
+    expected_class: str,
+) -> None:
+    with _seeded_connection() as connection:
+        complaint_row = connection.execute(
+            select(hosted_source_derived_records.c.original_values).where(
+                hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY
+            )
+        ).scalar_one()
+        updated_values = dict(complaint_row)
+        updated_values["finding"] = finding
+        connection.execute(
+            update(hosted_source_derived_records)
+            .where(hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY)
+            .values(original_values=updated_values)
+        )
+        status, _content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert f'class="{expected_class}"' in html
+    assert f">{finding}<" in html
     assert_no_secret_html(html)
 
 
@@ -1449,7 +1545,7 @@ def test_reviewer_ui_complaint_export_section_smoke_regression() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Complaint summary" in html
+    assert "Complaint overview" in html
     assert "Return to review queue" in html
     assert "Return to facility queue" not in html
     assert "Global complaint exports" not in html
@@ -2252,8 +2348,8 @@ def test_reviewer_ui_detail_missing_traceability_uses_clear_non_conclusive_wordi
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
     }
-    assert "Complaint summary" in html
-    assert "Source timeline" in html
+    assert "Complaint overview" in html
+    assert "Key dates" in html
     assert "Raw artifact preservation" not in html
     assert "Missing: raw artifact reference" not in html
     assert "Show field-level source details" not in html
@@ -2285,7 +2381,7 @@ def test_reviewer_ui_detail_preserves_direct_queue_request_context() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert before_counts == after_counts
-    assert "Complaint summary" in html
+    assert "Complaint overview" in html
     assert "Facility/license number" in html
     assert "157806098" in html
     assert "Date range" not in html
@@ -2294,8 +2390,8 @@ def test_reviewer_ui_detail_preserves_direct_queue_request_context() -> None:
     assert "return_facility_number" in html
     assert "return_start_date" in html
     assert "return_end_date" in html
-    assert "Return to facility queue" in html
-    assert "Return to review queue" not in html
+    assert "Return to facility queue" not in html
+    assert "Return to review queue" in html
     assert "Review packet readiness before copying or printing" not in html
     assert "Open print draft" not in html
     assert "legally sufficient" not in normalized_html.casefold()
@@ -2397,8 +2493,8 @@ def test_reviewer_ui_detail_links_signal_only_facility_context_without_mutation(
     assert "Start complaint request if needed" not in html
     assert f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?facility_number=157806098" not in html
     assert f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098" not in html
-    assert "review flags" in normalized_html
-    assert "review status and note" in normalized_html
+    assert "review badges" in normalized_html
+    assert "status and note" in normalized_html
     assert "reviewer-created note/status" not in normalized_html
     assert "review" in normalized_html
     assert "verified complaint" not in normalized_html
@@ -2525,7 +2621,9 @@ def test_reviewer_ui_detail_source_confidence_proxy_cues_are_non_mutating() -> N
     assert "Review flags and source checks" not in html
     assert "Visit" in html
     assert "Not available" in html
-    assert "Check source" in html
+    assert "Check source" not in html
+    assert "Missing source date" in html
+    assert "Date mismatch" in html
     assert "Visit / inspection" not in html
     assert "Not available in loaded record" not in html
     assert "Review flag: report date used as proxy" not in html
@@ -2561,10 +2659,9 @@ def test_reviewer_ui_detail_render_is_non_mutating() -> None:
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
     }
-    assert "Complaint summary" in html
-    assert "Source timeline" in html
-    assert "Review status and note" in html
-    assert "Actions" in html
+    assert "Complaint overview" in html
+    assert "Key dates" in html
+    assert "Status and note" in html
     assert "Field-note guidance" not in html
     assert "feedback item for this record" not in html
     assert_no_secret_html(html)
