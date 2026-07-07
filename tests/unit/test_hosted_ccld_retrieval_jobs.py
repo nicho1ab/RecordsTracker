@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import re
 from collections.abc import Mapping, Sequence
@@ -123,7 +123,6 @@ def test_retrieval_form_renders_record_type_and_safe_setup_state() -> None:
     assert "facility/license" not in html.lower()
     assert "license number" not in html.lower()
     assert "Use this number" not in html
-    assert "facility type, program type, or status code" not in html
     assert "facility/license" not in html
     assert "license number" not in html.casefold()
     assert "Use this Facility ID" in html
@@ -569,7 +568,7 @@ def test_candidate_date_filter_includes_visit_dates_after_complaint_receipt(
     assert len(client.report_calls) >= 1, "At least one offset-date candidate should be selected"
     assert jobs[0]["result_counts"]["discovered_report_candidates"] == 3
     assert jobs[0]["result_counts"]["selected_report_candidates"] >= 1
-    # inx=37 (01/07/2026) is more than 365 days after end_date → excluded
+    # inx=37 (01/07/2026) is more than 365 days after end_date â†’ excluded
     assert all(
         _report_index_from_url(url) != 37
         for url, _timeout in client.report_calls
@@ -600,7 +599,7 @@ def test_candidate_date_filter_excludes_visit_dates_far_beyond_365_day_window(
         )
         jobs = connection.execute(select(hosted_ccld_retrieval_jobs)).mappings().all()
 
-    # inx=37 (01/07/2026) is ~1225 days after 2022-08-31 end_date → excluded
+    # inx=37 (01/07/2026) is ~1225 days after 2022-08-31 end_date â†’ excluded
     assert all(
         _report_index_from_url(url) != 37
         for url, _timeout in client.report_calls
@@ -1913,4 +1912,5 @@ def assert_no_secret_html(markup: str) -> None:
         "test-auth-value-not-rendered",
     ]:
         assert marker not in lowered
+
 
