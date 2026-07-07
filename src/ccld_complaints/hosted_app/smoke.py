@@ -205,8 +205,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     payload = json.loads(health_body.decode("utf-8"))
     if health_status != 200 or payload.get("status") != "ok":
         raise RuntimeError("Hosted scaffold health check did not return ok.")
-    if root_status != 200 or b"CCLD-only public-record review workspace" not in root_body:
-        raise RuntimeError("Hosted scaffold app shell did not return the guided launch notice.")
+    if root_status != 200 or b"CCLD-only public-record review workspace" in root_body:
+        raise RuntimeError("Hosted scaffold app shell returned removed workspace intro text.")
     if b"Facility intake" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return facility intake label.")
     if b"Skip to main CCLD facility lookup content" not in root_body:

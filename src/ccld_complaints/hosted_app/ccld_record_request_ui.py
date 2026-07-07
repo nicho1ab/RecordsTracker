@@ -615,7 +615,7 @@ def _render_request_form(
                 main=f"""    <section class="hero-card" aria-labelledby="request-hero-heading">
                     <p class="launch-kicker">Start review</p>
                     <h2 id="request-hero-heading">Request complaint records for a facility</h2>
-                    <p class="launch-value">Choose a facility and date range, then open already-loaded records or submit a controlled Request Records job.</p>
+                    <p class="launch-value">Choose a Facility ID and date range, then open already-loaded records or submit a controlled Request Records job.</p>
             <p><a class="helper-link" href="{CCLD_HELP_PATH}#review-guidance">See review guidance and next steps.</a></p>
         </section>
                 {workflow_state}""",
@@ -677,7 +677,7 @@ def _render_facility_selection_state(reference_source: CcldFacilityReferenceSour
             <p>Search for a facility when you do not know the exact Facility ID, or type the digit Facility ID directly if you already have it.</p>
             <form action="{CCLD_RECORD_REQUEST_PATH}" method="get" id="facility-select-form">
                 <label for="facility-search-input">Facility</label>
-                <p id="facility-search-hint" class="helper-text">Search by name, Facility ID, city, county, ZIP, facility type, program type, or status code.</p>
+                <p id="facility-search-hint" class="helper-text">Search by name, Facility ID, city, county, ZIP, or facility type.</p>
                 <div class="facility-combobox-outer" id="facility-combobox-outer">
                     <input id="facility-search-input" name="facility_number" type="text"
                         inputmode="numeric"
@@ -709,7 +709,7 @@ def _render_date_range_state(
         return f"""<section class="workflow-panel" aria-labelledby="date-range-heading">
             <p class="stage-kicker">Date range</p>
             <h2 id="date-range-heading">Choose complaint date range</h2>
-            <p>Selected facility context is ready. Set the complaint review dates now, or change the facility before continuing.</p>
+            <p>Selected Facility ID is ready. Set the complaint review dates now, or change the facility before continuing.</p>
             {_render_selected_request_context_summary(
                 facility_number=facility_number,
                 lookup_facility_name=lookup_facility_name,
@@ -724,7 +724,7 @@ def _render_date_range_state(
                 <div class="fixed-field" aria-labelledby="record-type-heading">
                     <h3 id="record-type-heading">Record type</h3>
                     <p><strong>Complaint records</strong></p>
-                    <p class="helper-text">This pilot currently supports CCLD complaint records only.</p>
+                    <p class="helper-text">This current version supports CCLD complaint records only.</p>
                 </div>
                 <div class="form-row">
                     <p>
@@ -738,7 +738,7 @@ def _render_date_range_state(
                 </div>
                 <p id="date-range-help" class="helper-text">Use the date range to narrow complaint, visit, report, or signed dates in loaded records.</p>
                 <div class="form-actions">
-                    <button type="submit">Use this facility/date context</button>
+                    <button type="submit">Use this Facility ID and date range</button>
                     <a class="button button-secondary" href="{CCLD_RECORD_REQUEST_PATH}">Change facility</a>
                 </div>
             </form>
@@ -760,7 +760,7 @@ def _render_date_ready_state(
         return f"""<section class="workflow-panel workflow-panel-primary" aria-labelledby="retrieve-ready-heading">
             <p class="stage-kicker">Request Records</p>
             <h2 id="retrieve-ready-heading">Open loaded records or request complaint records</h2>
-            <p>Open loaded records, or request records for this facility and date range.</p>
+            <p>Open loaded records, or request records for this Facility ID and date range.</p>
             {_render_selected_request_context_summary(
                 facility_number=facility_number,
                 lookup_facility_name=lookup_facility_name,
@@ -801,7 +801,7 @@ def _render_selected_request_context_summary(
         lookup_name_markup = f"""
                 <dt>Facility name</dt>
                 <dd>{_escape(lookup_facility_name)}</dd>"""
-    return f"""            <dl class="summary-list selected-request-context">
+    return f"""            <dl class="summary-list selected-request-context fixed-field">
                 <dt>Facility ID</dt>
                 <dd><span class="copyable-value">{_escape(facility_number)}{_copy_icon_button("Copy selected Facility ID", facility_number)}</span></dd>{lookup_name_markup}
                 <dt>Date range</dt>

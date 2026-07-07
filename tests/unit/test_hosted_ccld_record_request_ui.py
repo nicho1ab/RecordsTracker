@@ -107,7 +107,7 @@ def test_ccld_record_request_page_renders_from_default_context(
     assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
     assert "Request complaint records for a facility" in html
     assert "Start review" in html
-    assert "Choose a facility and date range, then open already-loaded records" in html
+    assert "Choose a Facility ID and date range, then open already-loaded records" in html
     mode_panel = html.split('<div class="mode-panel" aria-label="Retrieval mode">', 1)[1].split(
         "</div>",
         1,
@@ -125,7 +125,10 @@ def test_ccld_record_request_page_renders_from_default_context(
     assert "Use this Facility ID" in html
     assert "Use this facility/license number" not in html
     assert "Search by name, Facility ID, city, county, ZIP" in html
-    assert "facility type, program type, or status code" in html
+    assert "or facility type" in html
+    assert "program type, or status code" not in html
+    assert "This pilot currently supports CCLD complaint records only" not in html
+    assert "proof of concept" not in html.casefold()
     assert "Keyboard flow: type a search or digit number" not in html
     assert "Attorney workflow" not in html
     assert "Current step:" not in html
@@ -260,10 +263,12 @@ def test_ccld_record_request_prefills_selected_facility_from_lookup() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Selected facility context is ready" in html
+    assert "Selected Facility ID is ready" in html
     assert "Facility ID" in html
     assert "Facility/license number" not in html
     assert "Synthetic Orchard Child Care" in html
+    assert 'aria-label="Copy selected Facility ID"' in html
+    assert 'class="summary-list selected-request-context fixed-field"' in html
     assert "Context source" not in html
     assert "value=\"900000001\"" in html
     assert "name=\"request_context_origin\"" in html
@@ -276,6 +281,11 @@ def test_ccld_record_request_prefills_selected_facility_from_lookup() -> None:
         "Use the date range to narrow complaint, visit, report, or signed dates"
         in html
     )
+    assert "Use this Facility ID and date range" in html
+    assert "Change facility" in html
+    assert "This current version supports CCLD complaint records only" in html
+    assert "This pilot currently supports CCLD complaint records only" not in html
+    assert "proof of concept" not in html.casefold()
     assert_no_secret_html(html)
 
 
@@ -304,7 +314,7 @@ def test_ccld_record_request_prefill_links_signal_only_facility_hub(
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Open loaded records or request complaint records" in html
-    assert "Open loaded records, or request records for this facility and date range." in html
+    assert "Open loaded records, or request records for this Facility ID and date range." in html
     assert "Show existing queue" in html
     assert "Request Records" in html
     assert "Use <strong>Show existing queue</strong>" not in html
@@ -335,7 +345,8 @@ def test_ccld_record_request_manual_entry_shows_context_confirmation() -> None:
     assert "See review guidance and next steps." in html
     assert "Live retrieval off" not in html
     assert "Search by name, Facility ID, city, county, ZIP" in normalized_html
-    assert "facility type, program type, or status code" in normalized_html
+    assert "or facility type" in normalized_html
+    assert "program type, or status code" not in normalized_html
     assert "name=\"request_context_origin\"" in html
     assert "value=\"manual_entry\"" in html
     assert_no_secret_html(html)
@@ -1480,7 +1491,8 @@ def test_ccld_request_page_facility_selector_has_concise_placeholder() -> None:
     assert status == 200
     assert 'placeholder="Facility ID"' in html
     assert "Search by name, Facility ID, city, county, ZIP" in html
-    assert "facility type, program type, or status code" in html
+    assert "or facility type" in html
+    assert "program type, or status code" not in html
     # Placeholder must not be the full helper sentence
     assert 'placeholder="Search facility name' not in html
     assert_no_secret_html(html)

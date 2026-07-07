@@ -173,7 +173,6 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
         == "A. MIRIAM JAMISON CHILDREN'S CENTER"
     )
     assert _text_for_id(html, "facility-case-brief-heading") != "Facility"
-    assert "Facility ID: 157806098" in html
     assert "Facility/license" not in html
     assert "Facility/license number" not in html
     assert "facility/license number" not in html
@@ -185,6 +184,12 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     case_brief_html = html[
         html.index('class="facility-case-brief facility-context-band"') : html.index("Worklist")
     ]
+    assert "Facility ID:" in case_brief_html
+    assert "157806098" in case_brief_html
+    assert 'aria-label="Copy Facility ID"' in case_brief_html
+    assert 'data-copy-value="157806098"' in case_brief_html
+    assert 'aria-label="Copy facility name"' in case_brief_html
+    assert 'data-copy-value="A. MIRIAM JAMISON CHILDREN&#x27;S CENTER"' in case_brief_html
     assert 'class="hero-card facility-case-brief"' not in case_brief_html
     assert 'class="metric-card"' not in case_brief_html
     assert 'class="brief-metric"' in case_brief_html
@@ -415,7 +420,7 @@ def test_reviewer_ui_request_records_selected_facility_uses_facility_id_contract
         )
 
     html = body.decode("utf-8")
-    selected_context_start = html.index('class="summary-list selected-request-context"')
+    selected_context_start = html.index('class="summary-list selected-request-context')
     selected_context_end = html.index("</dl>", selected_context_start)
     selected_context_html = html[selected_context_start:selected_context_end]
 
