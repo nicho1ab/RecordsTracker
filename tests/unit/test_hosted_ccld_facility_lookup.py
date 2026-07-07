@@ -117,6 +117,25 @@ class _DefinitionTermParser(HTMLParser):
             self._in_dt = False
 
 
+class _VisibleTextParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self._hidden_depth = 0
+        self.parts: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in {"script", "style"}:
+            self._hidden_depth += 1
+
+    def handle_data(self, data: str) -> None:
+        if not self._hidden_depth:
+            self.parts.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {"script", "style"} and self._hidden_depth:
+            self._hidden_depth -= 1
+
+
 class _FacilityIntelligenceFilterGridParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
@@ -174,6 +193,12 @@ def _definition_terms(html: str) -> list[str]:
     parser = _DefinitionTermParser()
     parser.feed(html)
     return parser.terms
+
+
+def _visible_text(html: str) -> str:
+    parser = _VisibleTextParser()
+    parser.feed(html)
+    return " ".join(" ".join(parser.parts).split())
 
 
 def _facility_intelligence_filter_grid(html: str) -> _FacilityIntelligenceFilterGridParser:
@@ -752,6 +777,8 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
         page_data_mode="fixture-demo",
     )
     html = body.decode("utf-8")
+    visible_text = _visible_text(html)
+    lowered_visible_text = visible_text.casefold()
     normalized_html = " ".join(html.split())
 
     assert status == 200
@@ -765,10 +792,18 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert "Lookup or manual entry?" not in html
     assert "<summary>When to use lookup vs. manual entry</summary>" in html
     assert "Use facility lookup when you know a facility name" in html
-    assert "facility type, program type, or status code" in html
+    assert "facility type, program type, or status code" not in html
     assert "Use manual entry when you already know the digit Facility ID" in html
     assert "Lookup rows are public facility-directory data" in html
     assert "for facility lookup assistance before Request Records" in html
+    assert "operator reference workflow" not in lowered_visible_text
+    assert "CCLD_FACILITY_REFERENCE_CSV" not in html
+    assert "local reference" not in lowered_visible_text
+    assert "setup" not in lowered_visible_text
+    assert "runtime" not in lowered_visible_text
+    assert "facility/license" not in lowered_visible_text
+    assert "license number" not in lowered_visible_text
+    assert "Use this number" not in visible_text
     assert 'for="facility-search-input"' in html
     form_index = html.index(
         f'<form action="{CCLD_FACILITY_LOOKUP_PATH}" method="get" class="facility-search-form">'
@@ -805,7 +840,8 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert "Search by name, Facility ID, city, county, ZIP" in (
         normalized_html
     )
-    assert "facility type, program type, or status code" in normalized_html
+    assert "or facility type" in normalized_html
+    assert "program type, or status code" not in normalized_html
     assert "Keyboard flow: type a search, use arrow keys or Tab" not in html
     assert "selected facility link to continue to the request page" not in html
     assert "Enter a Facility ID directly" in html
@@ -820,13 +856,16 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
         page_data_mode="fixture-demo",
     )
     html = body.decode("utf-8")
+    lowered_html = html.casefold()
+    visible_text = _visible_text(html)
+    lowered_visible_text = visible_text.casefold()
     normalized_html = " ".join(html.split())
     request_href = f"{CCLD_RECORD_REQUEST_PATH}?facility_number=900000001"
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Facility matches" in html
-    assert "Facility-directory results" in html
+    assert "Facility results" in html
     assert (
         "Choose a facility to carry its Facility ID and name into Request Records"
         in html
@@ -854,6 +893,15 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
     assert "24" in html
     assert "Status" in html
     assert "Licensed" in html
+    assert "Facility number" not in html
+    assert "facility/license" not in lowered_html
+    assert "license number" not in lowered_html
+    assert "Use this number" not in visible_text
+    assert "operator reference workflow" not in lowered_visible_text
+    assert "CCLD_FACILITY_REFERENCE_CSV" not in html
+    assert "local reference" not in lowered_visible_text
+    assert "setup" not in lowered_visible_text
+    assert "runtime" not in lowered_visible_text
     assert "directory field" not in html
     assert "Example Licensee" not in html
     assert "555-0101" not in html
@@ -880,9 +928,8 @@ def test_ccld_facility_review_hub_renders_safe_directory_context() -> None:
     assert html.index("Complaint review context") < html.index("Next actions")
     assert html.index("Next actions") < html.index("Directory and planning details")
     terms = _definition_terms(html)
-    directory_label_start = terms.index("Facility number")
-    assert terms[directory_label_start : directory_label_start + 8] == [
-        "Facility number",
+    expected_directory_terms = [
+        "Facility ID",
         "Name",
         "Program type",
         "Facility type",
@@ -891,6 +938,10 @@ def test_ccld_facility_review_hub_renders_safe_directory_context() -> None:
         "Capacity",
         "Status",
     ]
+    assert any(
+        terms[index : index + len(expected_directory_terms)] == expected_directory_terms
+        for index in range(len(terms) - len(expected_directory_terms) + 1)
+    )
     assert "directory field" not in html
     assert "900000001" in html
     assert "Child Care Center" in html
@@ -1520,8 +1571,12 @@ def test_ccld_facility_review_priority_page_empty_state_is_safe() -> None:
     # Empty state must link back to facility lookup (clear next action)
     assert "Back to search" in normalized_html
     assert CCLD_FACILITY_LOOKUP_PATH in html
-    # Empty state must note it is optional
-    assert "optional feature" in normalized_html
+    # Empty state must note planning views are optional reviewer context.
+    assert (
+        "Optional planning views provide supplemental facility-review context when available"
+        in normalized_html
+    )
+    assert "not required for Request Records or review" in normalized_html
     assert_no_secret_html(html)
 
 
@@ -1532,14 +1587,30 @@ def test_ccld_facility_lookup_page_review_priority_link_is_collapsed_not_primary
         page_data_mode="fixture-demo",
     )
     html = body.decode("utf-8")
+    visible_text = _visible_text(html)
+    lowered_visible_text = visible_text.casefold()
     normalized_html = " ".join(html.split())
 
     assert status == 200
     assert "Optional planning views" in html
     assert "Open optional planning views" in html
     assert "Optional: review-priority and intelligence" not in html
-    assert "These views require uploaded public summary CSVs" in normalized_html
+    assert (
+        "Optional planning views provide supplemental facility-review context when available"
+        in normalized_html
+    )
     assert "not required for Request Records or review" in normalized_html
+    assert "uploaded public summary CSVs" not in visible_text
+    assert "public summary CSVs" not in visible_text
+    assert "CCLD_FACILITY_REFERENCE_CSV" not in html
+    assert "local reference" not in lowered_visible_text
+    assert "operator reference" not in lowered_visible_text
+    assert "operator workflow" not in lowered_visible_text
+    assert "setup" not in lowered_visible_text
+    assert "runtime" not in lowered_visible_text
+    assert "facility/license" not in lowered_visible_text
+    assert "license number" not in lowered_visible_text
+    assert "Use this number" not in visible_text
     assert_no_secret_html(html)
 
 
@@ -1893,7 +1964,7 @@ def test_ccld_facility_lookup_selection_prefills_request_form_without_mutation()
     assert content_type == "text/html; charset=utf-8"
     assert before_source_rows == after_source_rows
     assert counts == _empty_reviewer_counts()
-    assert "Selected facility context is ready" in html
+    assert "Selected Facility ID is ready" in html
     assert "No facility selected yet" not in html
     assert "Prefilled Facility ID link" not in html
     assert "Facility ID" in html
@@ -1901,7 +1972,7 @@ def test_ccld_facility_lookup_selection_prefills_request_form_without_mutation()
     assert "value=\"900000001\"" in html
     assert "Choose complaint date range" in html
     assert "Complaint records" in html
-    assert "Use this facility/date context" in html
+    assert "Use this Facility ID and date range" in html
     assert "Change facility" in html
     assert_no_secret_html(html)
 
@@ -1956,7 +2027,8 @@ def test_ccld_facility_lookup_page_has_concise_placeholder_not_full_helper_sente
     assert 'placeholder="Name, Facility ID, city, or ZIP"' in html
     # Full helper text must appear separately (not inside the placeholder)
     assert "Search by name, Facility ID, city, county, ZIP" in normalized_html
-    assert "facility type, program type, or status code" in normalized_html
+    assert "or facility type" in normalized_html
+    assert "program type, or status code" not in normalized_html
     assert_no_secret_html(html)
 
 
@@ -1982,12 +2054,24 @@ def test_ccld_facility_lookup_page_reference_details_are_collapsed() -> None:
         page_data_mode="fixture-demo",
     )
     html = body.decode("utf-8")
+    visible_text = _visible_text(html)
+    lowered_visible_text = visible_text.casefold()
 
     assert status == 200
     assert "Reference data details" in html
+    assert "Reference data is lookup assistance only and may not include every facility" in html
     assert "<details" in html
+    _assert_collapsed_disclosure(html, "Reference data details")
     # Internal labels must NOT appear prominently (may appear inside collapsed details)
     assert "Facility reference source</h2>" not in html  # old prominent section heading gone
+    assert "CCLD_FACILITY_REFERENCE_CSV" not in html
+    assert "local reference" not in lowered_visible_text
+    assert "operator reference workflow" not in lowered_visible_text
+    assert "setup" not in lowered_visible_text
+    assert "runtime" not in lowered_visible_text
+    assert "facility/license" not in lowered_visible_text
+    assert "license number" not in lowered_visible_text
+    assert "Use this number" not in visible_text
     assert_no_secret_html(html)
 
 
@@ -2045,10 +2129,7 @@ def test_live_mode_facility_lookup_page_no_reference_shows_not_configured_messag
     """In live mode with no_reference, the page must clearly state lookup is not configured."""
     html = render_ccld_facility_lookup_page(reference_source=no_reference_facility_source())
 
-    assert "Facility directory lookup is not configured" in html
     assert "Enter a known CCLD Facility ID" in html
-    assert "Directory lookup is optional" in html
-    assert "does not affect Request Records or review" in html
     # Manual entry is the primary path
     assert "Enter a Facility ID directly" in html
     assert "Open Request Records" in html
@@ -2079,7 +2160,6 @@ def test_live_mode_facility_lookup_page_empty_postgres_source_shows_not_configur
     )
     html = render_ccld_facility_lookup_page(reference_source=empty_postgres_source)
 
-    assert "Facility directory lookup is not configured" in html
     assert "Enter a known CCLD Facility ID" in html
     # Manual entry is the primary path
     assert "Enter a Facility ID directly" in html

@@ -130,7 +130,7 @@ def test_app_shell_labels_placeholder_scope() -> None:
 
     assert "Skip to main CCLD facility lookup content" in html
     assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
-    assert "CCLD-only public-record review workspace." in html
+    assert "CCLD-only public-record review workspace." not in html
     assert "CCLD RecordsTracker" in html
     assert '<a class="product-name" href="/">Records<span>Tracker</span></a>' in html
     assert '<span class="workspace-label">Reviewer Workspace</span>' in html
@@ -375,6 +375,7 @@ def test_polished_shared_layout_navigation_on_key_pages() -> None:
 
         assert status == 200
         assert content_type == "text/html; charset=utf-8"
+        assert "CCLD-only public-record review workspace." not in html
         assert skip_text in html
         assert '<a class="skip-link" href="#main-content">' in html
         assert '<header class="app-shell-header site-header ds-surface">' in html
@@ -587,7 +588,7 @@ def test_routes_return_shell_health_and_not_found() -> None:
 
     assert root_status == 200
     assert root_content_type == "text/html; charset=utf-8"
-    assert b"CCLD-only public-record review workspace" in root_body
+    assert b"CCLD-only public-record review workspace" not in root_body
     assert b"Find the Facility ID" in root_body
     assert health_status == 200
     assert health_content_type == "application/json; charset=utf-8"

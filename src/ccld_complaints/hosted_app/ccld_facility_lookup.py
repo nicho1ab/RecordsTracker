@@ -153,7 +153,7 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
         +'<span class="suggestion-status suggestion-status-'+esc(info.cls)+'" aria-label="Facility status: '+esc(info.title||info.label)+'" title="'+esc(info.title||('Facility status: '+info.label))+'">'+esc(info.label)+'</span>'
         +'<span class="suggestion-name">'+esc(f.n)+'</span>'
         +'</span>'
-        +' <span class="suggestion-badge">Facility '+esc(f.num)+'</span>'
+        +' <span class="suggestion-badge">Facility ID '+esc(f.num)+'</span>'
         +(det?'<span class="suggestion-details">'+esc(det)+'</span>':'')
         +'</button></li>';
     }
@@ -539,20 +539,17 @@ def render_ccld_facility_lookup_page(
     lookup_unavailable = _is_lookup_unavailable(reference_source)
     if lookup_unavailable:
         hero_value = (
-            "Facility directory lookup is not configured for this hosted environment. "
-            "Enter a known CCLD Facility ID to continue. "
-            "Directory lookup is optional and does not affect Request Records or review."
+            "Enter a known CCLD Facility ID, then continue to Request Records to choose a complaint date range."
         )
         primary_action_section = f"""    <section class="workflow-panel" aria-labelledby="facility-manual-entry-primary-heading">
       <h2 id="facility-manual-entry-primary-heading">Enter a Facility ID directly</h2>
-      <p>Facility directory lookup is not configured. Enter a known CCLD Facility ID on Request Records.</p>
-      <p>Use manual entry when lookup is unavailable; complaint record requests still start from Request Records.</p>
+      <p>Use manual entry when lookup is unavailable or when you already know the digit Facility ID.</p>
       {render_action_group(primary=ActionItem("Open Request Records", CCLD_RECORD_REQUEST_PATH), aria_label="Known facility number actions")}
     </section>"""
         lookup_section_label = "Facility directory search (not configured)"
         lookup_section_intro = f"""    <section class="quiet-section" aria-labelledby="facility-start-guidance-heading">
       <h2 id="facility-start-guidance-heading">{_escape(lookup_section_label)}</h2>
-      <p>Facility directory lookup is not configured for this hosted environment. Use Request Records to enter a known Facility ID directly.</p>
+      <p>Use Request Records to enter a known Facility ID directly.</p>
       <p>Lookup rows are public facility-directory data for finding the Facility ID before Request Records.</p>
     </section>"""
     else:
@@ -594,17 +591,17 @@ def render_ccld_facility_lookup_page(
 {primary_action_section}
 {lookup_section_intro}
     {_render_facility_combobox_section(reference_source, query, limited_note)}
+{manual_entry_section}
     {_render_lookup_results(result)}
         <section class="quiet-section" aria-labelledby="facility-priority-link-heading">
             <h2 id="facility-priority-link-heading">Optional planning views</h2>
-            <p>These views require uploaded public summary CSVs. They are not required for Request Records or review.</p>
+            <p>Optional planning views provide supplemental facility-review context when available. They are not required for Request Records or review.</p>
             <details>
                 <summary>Open optional planning views</summary>
                 {optional_planning_actions}
             </details>
         </section>
-    {_render_reference_details_section(reference_source)}
-{manual_entry_section}""",
+    {_render_reference_details_section(reference_source)}""",
     )
 
 
@@ -1445,7 +1442,7 @@ def _render_facility_combobox_section(
             <p class="stage-kicker">Facility lookup</p>
             <h2 id="facility-combobox-heading">Find the Facility ID</h2>
             <label for="facility-search-input">Facility</label>
-            <p id="facility-search-hint" class="helper-text">Search by name, Facility ID, city, county, ZIP, facility type, program type, or status code.</p>
+            <p id="facility-search-hint" class="helper-text">Search by name, Facility ID, city, county, ZIP, or facility type.</p>
             <form action="{CCLD_FACILITY_LOOKUP_PATH}" method="get" class="facility-search-form">
                 <div class="facility-combobox-outer" id="facility-combobox-outer">
                     <input id="facility-search-input" name="q" type="search" autocomplete="off"
@@ -1460,7 +1457,7 @@ def _render_facility_combobox_section(
             </form>
             <details class="technical-details">
                 <summary>When to use lookup vs. manual entry</summary>
-                <p>Use facility lookup when you know a facility name, city, county, ZIP, facility type, program type, or status code but not the exact Facility ID. Use manual entry when you already know the digit Facility ID.</p>
+                <p>Use facility lookup when you know a facility name, city, county, ZIP, or facility type but not the exact Facility ID. Use manual entry when you already know the digit Facility ID.</p>
                 <p>Lookup rows are public facility-directory data for facility lookup assistance before Request Records.</p>
             </details>
 {limited_note_markup}
@@ -1488,7 +1485,7 @@ def _render_facility_combobox_section_unavailable(
             <p class="stage-kicker">Facility lookup</p>
             <h2 id="facility-combobox-heading">Find the Facility ID</h2>
             <label for="facility-search-input">Search facility directory (not configured)</label>
-            <p id="facility-search-hint" class="helper-text">Facility directory lookup is not configured for this hosted environment. Enter a known CCLD Facility ID on Request Records instead. Directory lookup is optional and does not affect Request Records or review.</p>
+            <p id="facility-search-hint" class="helper-text">Enter a known CCLD Facility ID on Request Records instead. Directory lookup is optional and does not affect Request Records or review.</p>
             <form action="{CCLD_FACILITY_LOOKUP_PATH}" method="get" class="facility-search-form">
                 <div>
                     <input id="facility-search-input" name="q" type="search" autocomplete="off"
@@ -1564,11 +1561,9 @@ def _render_reference_source_section(source: CcldFacilityReferenceSource) -> str
 {notice_markup}
         <p>Reference data is lookup assistance only; use it to find a Facility ID before Request Records.</p>
         <details>
-            <summary>Developer reference setup</summary>
-            <p>Full facility CSV support is read-only. Full facility CSV files must stay outside
-            the repository and are not imported or persisted by this app.</p>
-            <p>To use a full facility CSV, set <code>{CCLD_FACILITY_REFERENCE_CSV_ENV}</code>
-            or configure the documented ignored local reference location. Local paths are not shown in the browser.</p>
+            <summary>Reference data note</summary>
+            <p>Reference data is lookup assistance only and may not include every facility.</p>
+            <p>Use a known Facility ID directly when the facility does not appear in lookup results.</p>
         </details>
     </section>"""
 
@@ -1587,12 +1582,9 @@ def _render_reference_details_section(source: CcldFacilityReferenceSource) -> st
     return f"""    <details class="reference-details-section">
             <summary>Reference data details</summary>
             <p>{_escape(user_label)} &mdash; {_source_record_count(source)} record(s) loaded.</p>
-            <p>Reference data is lookup assistance only; use it to find a Facility ID
-            number before Request Records. Open source links from record detail when a source check is needed.</p>
+            <p>Reference data is lookup assistance only and may not include every facility. Use it to find a Facility ID before Request Records. Open source links from record detail when a source check is needed.</p>
 {notice_markup}
-            <p>To use a full facility reference CSV, set
-            <code>{CCLD_FACILITY_REFERENCE_CSV_ENV}</code> or place the file at the documented
-            local reference location. Local paths are not shown here.</p>
+            <p>If the facility does not appear here, enter a known Facility ID directly in Request Records.</p>
     </details>"""
 
 
@@ -1618,7 +1610,7 @@ def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
         more_guidance = f"""      <p class="helper-text">Showing {len(result.returned_records)} of
       {result.total_match_count} matching facilit{"y" if result.total_match_count == 1 else "ies"}.</p>"""
     return f"""    <section aria-labelledby="facility-results-heading">
-        <h2 id="facility-results-heading">Facility-directory results</h2>
+        <h2 id="facility-results-heading">Facility results</h2>
         <p>Choose a facility to carry its Facility ID and name into Request Records. Date controls appear as soon as a facility is selected.</p>
 {more_guidance}
             <div class="result-list" aria-label="Facility matches">
@@ -1665,7 +1657,7 @@ def _render_facility_directory_details(
         concise_labels: bool = False,
 ) -> str:
         labels = (
-                "Facility number",
+                "Facility ID",
                 "Name",
                 "Program type",
                 "Facility type",
@@ -2318,7 +2310,7 @@ def _render_priority_empty_rows(cue_filters: tuple[str, ...]) -> str:
     return f"""          <tr>
             <td colspan="4">
               <p>No facility review priority rows are available{filter_text}.</p>
-              <p>This optional feature requires uploaded public summary CSVs to be configured. It is not required for Request Records or review.</p>
+              <p>Optional planning views provide supplemental facility-review context when available. They are not required for Request Records or review.</p>
               <p>This does not mean facilities have no complaints, visits, citations, POC dates, or public-source records. It only means supported uploaded public summary fields did not produce a visible row for this view.</p>
               <p><a href="{CCLD_FACILITY_LOOKUP_PATH}">Back to search to find a facility and retrieve complaint records.</a></p>
             </td>
