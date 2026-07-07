@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Aligned Facility Lookup and Request Records with the shared hosted shell and
+  component patterns: both pages now use compact reviewer-facing Facility ID
+  workflows, demote optional planning/reference details below the main task,
+  avoid setup/configuration wording in the default path, and keep Request
+  Records selected Facility ID, copy, date range, and action controls clear
+  without changing retrieval/import behavior.
 - Added the shared Figma-aligned hosted shell and applied it first to Review
   Queue: the top shell now uses a compact RecordsTracker workspace bar with
   Figma-derived font variables, teal/slate/amber tokens, explicit brand/search/

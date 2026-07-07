@@ -66,6 +66,12 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
     )
     flag_count = sum(1 for record in brief.records if has_review_flag(record))
     facility_label = brief.facility_name if brief.facility_name and brief.facility_name != "unknown" else "Facility"
+    facility_heading = _copyable_value(
+        "Copy facility name",
+        facility_label,
+    )
+    facility_number = brief.facility_number or "unknown"
+    facility_number_markup = _copyable_value("Copy Facility ID", facility_number)
     metric_cards = _metric_cards(
         (
             (brief.record_count_label, len(brief.records), True),
@@ -144,8 +150,8 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
       <div class="case-brief-header">
         <div>
           <p class="launch-kicker">Facility case brief</p>
-          <h2 id="facility-case-brief-heading">{_escape(facility_label)}</h2>
-          <p class="helper-text">Facility ID: {_escape(brief.facility_number or 'unknown')}{_date_range_fragment(brief.date_range)}</p>
+          <h2 id="facility-case-brief-heading">{facility_heading}</h2>
+          <p class="helper-text">Facility ID: {facility_number_markup}{_date_range_fragment(brief.date_range)}</p>
         </div>
       </div>
       <div class="metric-strip" aria-label="Facility review summary">
@@ -311,6 +317,38 @@ def _date_range_fragment(date_range: str) -> str:
     if not date_range or date_range == "not provided":
         return ""
     return f"; requested date range: {_escape(date_range)}"
+
+
+def _copyable_value(accessible_label: str, value: str) -> str:
+    if not value or value == "unknown" or value == "Facility":
+        return _escape(value or "unknown")
+    return (
+        f'<span class="copyable-value">{_escape(value)}'
+        f'{_copy_icon_button(accessible_label, value)}</span>'
+    )
+
+
+def _copy_icon_button(accessible_label: str, value: str) -> str:
+    return (
+        f'<button class="copy-icon-button" type="button" '
+        f'data-copy-value="{_escape(value)}" '
+        f'aria-label="{_escape(accessible_label)}" title="{_escape(accessible_label)}">'
+        f'{_clipboard_icon_svg()}</button>'
+    )
+
+
+def _clipboard_icon_svg() -> str:
+    return (
+        '<svg aria-hidden="true" viewBox="0 0 24 24" focusable="false" '
+        'width="16" height="16">'
+        '<path fill="none" stroke="currentColor" stroke-width="2" '
+        'stroke-linecap="round" stroke-linejoin="round" '
+        'd="M8 8h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z"/>'
+        '<path fill="none" stroke="currentColor" stroke-width="2" '
+        'stroke-linecap="round" stroke-linejoin="round" '
+        'd="M4 15H3a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'
+        "</svg>"
+    )
 
 
 def _escape(value: object) -> str:

@@ -9,9 +9,7 @@ from dataclasses import dataclass
 
 APP_TITLE = "CCLD RecordsTracker"
 WORKSPACE_LABEL = "Reviewer Workspace"
-EYEBROW_TEXT = (
-  "CCLD-only public-record review workspace."
-)
+EYEBROW_TEXT = ""
 PRIMARY_NAV_LINKS: tuple[tuple[str, str], ...] = (
     ("Home", "/"),
     ("Facilities", "/ccld/facilities"),
