@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Cleaned up Packet Preview and Print Draft terminology so packet pages use
+  reviewer-facing Facility ID, CCLD source/date cue, loaded record value, and
+  reviewer-attention wording while preserving packet actions, source-record
+  links, included records, and browser copy/print behavior. Copy controls now
+  show brief accessible "Copied" feedback, and 120+ day gap cues use warning
+  styling across queue, detail, packet preview, and print draft surfaces.
 - Aligned Facility Lookup and Request Records with the shared hosted shell and
   component patterns: both pages now use compact reviewer-facing Facility ID
   workflows, demote optional planning/reference details below the main task,
