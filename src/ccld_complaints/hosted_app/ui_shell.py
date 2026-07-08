@@ -984,6 +984,12 @@ SHARED_CSS = r"""
       border-color: #d7a529;
       color: var(--amber);
     }
+    .badge-attention--warning {
+      background: #FFF1B8;
+      border-color: #B7791F;
+      color: #7A3E00;
+      box-shadow: inset 0 0 0 1px rgb(183 121 31 / 18%);
+    }
     .badge-danger {
       background: var(--rose-soft);
       border-color: #d88992;
@@ -1293,6 +1299,19 @@ SHARED_CSS = r"""
     .work-item-actions .button {
       margin: 0;
       width: 100%;
+    }
+    .packet-preview-record {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 13.5rem);
+    }
+    .packet-record-actions {
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+    .packet-record-actions .button {
+      line-height: 1.25;
+      max-width: 100%;
+      white-space: normal;
+      word-break: break-word;
     }
     .queue-record-badges {
       display: flex;

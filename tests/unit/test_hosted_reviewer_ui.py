@@ -188,6 +188,10 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert "157806098" in case_brief_html
     assert 'aria-label="Copy Facility ID"' in case_brief_html
     assert 'data-copy-value="157806098"' in case_brief_html
+    assert "function ensureCopyStatus(button)" in html
+    assert "showCopyStatus(button, 'Copied')" in html
+    assert "aria-live', 'polite'" in html
+    assert "1700" in html
     assert 'aria-label="Copy facility name"' in case_brief_html
     assert 'data-copy-value="A. MIRIAM JAMISON CHILDREN&#x27;S CENTER"' in case_brief_html
     assert 'class="hero-card facility-case-brief"' not in case_brief_html
@@ -735,7 +739,7 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Report copy/print preparation concern" not in html
     assert "workflow_area=packet-preview" in html
     assert "Describe+copy%2Fprint+preparation%2C+packet+readiness" in html
-    assert "Facility / license" in html
+    assert "Facility ID" in html
     assert "157806098" in html
     assert "Date range" in html
     assert "08/01/2022 to 08/31/2022" in html
@@ -743,27 +747,27 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Records included" in html
     assert "Review cues" in html
     assert "Notes/status saved" in html
-    assert "Source status" in html
+    assert "Source record" in html
     assert "Packet readiness" in html
     assert "1 record needs review" in html
     assert "1 saved" in html
     assert "1 source available" in html
-    assert "Needs source check" in html
+    assert "Needs date/source review" in html
     primary_start = html.index('<section class="hero-card"')
     primary_end = html.index("Included complaint records", primary_start)
     primary_html = html[primary_start:primary_end]
     assert "Date range: not provided" not in primary_html
     assert "Before copying or printing" in html
     assert "Confirm this is the facility/date range you intended." in html
-    assert "Open the source record when a specific source/date cue needs review." in html
+    assert "Open the CCLD source record if a date or source cue needs review." in html
     assert "Add status or a note if it would help the handoff." in html
     assert "Review included records for missing or confusing information." in html
     assert "Send feedback if something looks wrong or incomplete." in html
     assert "Packet readiness summary" in html
-    assert "Records needing source check" in html
+    assert "Records needing date/source review" in html
     assert "Records without saved status/note" in html
     assert "Ready for packet use" in html
-    assert "Source availability" in html
+    assert "CCLD source availability" in html
     assert "Source available" in html
     assert "Source unavailable" in html
     assert "Notes/status summary" in html
@@ -777,7 +781,7 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     checklist_html = html[checklist_start:checklist_end]
     assert "Loaded records" in checklist_html
     assert "Review cues" in checklist_html
-    assert "Source availability" in checklist_html
+    assert "Source record" in checklist_html
     assert "Saved status/note" in checklist_html
     assert "Follow-up notes" in checklist_html
     assert "Date warnings" in checklist_html
@@ -801,9 +805,10 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Facility ID: 157806098" in brief_html
     assert "Date range: 08/01/2022 to 08/31/2022" in brief_html
     assert "Records included: 1" in brief_html
-    assert "Packet readiness: Needs source check" in brief_html
+    assert "Packet readiness: Needs date/source review" in brief_html
     assert "source: CCLD source available" in brief_html
     assert "This brief is a preparation aid, not a legal report or conclusion." in brief_html
+    assert "Review dates and source link when a date or timing cue needs review." in brief_html
     assert COMPLAINT_KEY not in brief_html
     assert "source_record_key" not in brief_html
     assert "source_document_id" not in brief_html
@@ -814,7 +819,8 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Unsubstantiated" in html
     assert "Note added" in html
     assert "120+ day gap" in html
-    assert "Review source/date cue" in html
+    assert 'class="review-chip badge-attention badge-attention--warning"' in html
+    assert "Review dates and source link" in html
     assert "CCLD source available" in html
     assert "Facility ID" in html
     assert "Complaint received" in html
@@ -824,6 +830,19 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Source" in html
     assert "Next step" in html
     assert "Open record 32-CR-20220407124448" in html
+    assert 'class="result-card work-item packet-preview-record"' in html
+    assert (
+        '<div class="work-item-actions packet-record-actions" '
+        'aria-label="Record actions">'
+        in html
+    )
+    assert ".packet-preview-record" in html
+    assert ".packet-record-actions .button" in html
+    assert "white-space: normal" in html
+    assert ".badge-attention--warning" in html
+    assert "background: #FFF1B8" in html
+    assert "border-color: #B7791F" in html
+    assert "color: #7A3E00" in html
     included_start = html.index("Included complaint records")
     secondary_start = html.index(">Readiness checks</summary>", included_start)
     included_html = html[included_start:secondary_start]
@@ -838,7 +857,8 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
         "Reviewer note",
         "Part of the current loaded facility/date review queue",
         "Possible delay indicator",
-        "Needs source check.",
+        "Needs date/source cue review.",
+        "Review source/date cue",
         "Finding value shown",
         "Missing traceability values",
         "raw SHA-256",
@@ -847,10 +867,22 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
         assert removed not in included_html
     assert "Review packet notes" in html
     assert "This packet preview is for preparation." in html
-    assert "Source-derived fields remain separate from saved notes/status." in html
-    assert "Open the source record when a specific source/date cue needs review." in html
+    assert "Loaded record values remain separate from reviewer notes/status." in html
+    assert "Open the CCLD source record if a date or source cue needs review." in html
     assert "Add notes/status only when useful." in html
     for removed in (
+        "Facility / license",
+        "facility/license",
+        "license number",
+        "source-derived fields",
+        "source-derived values",
+        "source-derived records",
+        "raw artifact",
+        "connector metadata",
+        "raw SHA-256",
+        "source traceability",
+        "source-traceability",
+        "Needs source check",
         "Operator/runtime details",
         "Technical runtime details",
         "Current review scope: current review session.",
@@ -858,11 +890,12 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
         "does not change complaint records, saved notes/status",
         "Review-readiness cue",
         "Why included",
-        "Reviewer note",
-        "reviewer-created",
         "review-created",
         "visible traceability cues",
         "source traceability",
+        "source-derived fields",
+        "source-derived values",
+        "source-derived records",
         "Traceability readiness",
         "raw SHA-256",
         "raw artifact reference",
@@ -874,6 +907,42 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "legal priority" not in normalized_html.casefold()
     assert_no_correction_workflow_html(html)
     assert_no_secret_html(html)
+
+
+def test_reviewer_packet_preview_renders_status_note_readiness_copy() -> None:
+    with _seeded_connection() as connection:
+        before_counts = _table_counts(connection)
+
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?"
+            "facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31"
+            "&request_context_origin=manual_entry",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        after_counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_counts == after_counts
+    assert "Packet readiness" in html
+    assert "Needs date/source review; needs reviewer status/note" in html
+    assert "Records needing date/source review" in html
+    assert "Review dates and source link; add status/note if useful." in html
+    assert "Loaded record values remain separate from reviewer notes/status." in html
+    for removed in (
+        "Facility / license",
+        "Needs source check",
+        "Review source/date cue",
+        "Records needing source check",
+        "Source-derived fields remain separate from saved notes/status.",
+        "source-derived fields",
+    ):
+        assert removed.casefold() not in normalized_html.casefold()
+
 
 def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     monkeypatch: pytest.MonkeyPatch,
@@ -958,22 +1027,20 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     )
     assert "active facility/date context, included record count" in normalized_guidance_html
     assert "Review before copying or printing" in guidance_html
-    assert "Source traceability available means visible source URL" in guidance_html
-    assert "raw SHA-256 hash" in guidance_html
-    assert "source document/report marker cues" in guidance_html
-    assert "missing traceability values" in normalized_guidance_html
+    assert "CCLD source available means a public CCLD source link" in guidance_html
+    assert "unavailable CCLD source links" in normalized_guidance_html
     assert "Correction-readiness before copying or printing" in guidance_html
     assert (
         "capture the possible correction concern in a reviewer-created note or feedback item"
         in guidance_html
     )
     assert (
-        "does not change source-derived records, alter source-derived values"
+        "does not change loaded records, alter loaded values"
         in guidance_html
     )
     assert "If copy/print preparation content seems wrong" in guidance_html
     assert "Packet scope" not in guidance_html
-    assert "Facility / license" in packet_scope_html
+    assert "Facility ID" in packet_scope_html
     assert "157806098" in packet_scope_html
     assert "Date range" in packet_scope_html
     assert "08/01/2022 to 08/31/2022" in packet_scope_html
@@ -987,7 +1054,8 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     assert "Preparation checkpoint" in packet_scope_html
     assert "Summary of included records" in html
     assert "Records ready for preparation review" in html
-    assert "Records needing source check" in html
+    assert "Records needing reviewer attention" in html
+    assert "Records needing date/source review" in html
     assert "Records needing reviewer-created status/note attention" in html
     assert "Review-readiness before copying or printing" in html
     assert "Review before copying or printing" in html
@@ -998,16 +1066,16 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     assert "future correction workflow is not implemented here" in html
     assert "draft does not submit correction decisions" in html
     assert "Findings represented" in html
-    assert "Source traceability readiness" in html
+    assert "CCLD source availability" in html
     assert "Reviewer-created state included in this draft" in html
     assert "They may point to possible correction concerns" in html
-    assert "this draft does not alter source-derived values" in html
+    assert "this draft does not alter loaded record values" in html
     assert "Prioritized records for review" in html
     assert "existing review-next priority order" in html
     assert "Prioritized records available" in html
     assert "Shown first" in html
     assert (
-        "Reasons are source-derived review cues and reviewer-created "
+        "Reasons are loaded review cues and reviewer-created "
         "note/status cues only"
         in html
     )
@@ -1018,7 +1086,9 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     )
     assert "Why prioritized" in html
     assert "Possible delay indicator: over 120 days" in html
-    assert "Needs source check: first activity date missing locally" in html
+    assert "120+ day gap" in html
+    assert 'class="review-chip badge-attention badge-attention--warning"' in html
+    assert "Needs date/source cue review: first activity date missing locally" in html
     assert "Original CCLD source link saved" in html
     assert "Finding value: Unsubstantiated" in html
     assert "Reviewer status: Needs follow-up" in html
@@ -1039,7 +1109,7 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     assert "existing loaded context only" in checklist_html
     assert "Loaded complaint records" in checklist_html
     assert "Prioritized records" in checklist_html
-    assert "Source traceability cues" in checklist_html
+    assert "Source record cues" in checklist_html
     assert "Reviewer-created note/status presence" in checklist_html
     assert "Follow-up questions" in checklist_html
     assert "Ready" in checklist_html
@@ -1066,11 +1136,11 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     assert "Date range: 08/01/2022 to 08/31/2022" in brief_html
     assert "Loaded record context: 1 complaint record(s)" in brief_html
     assert "Packet readiness cues" in brief_html
-    assert "Source traceability cues" in brief_html
+    assert "CCLD source cues" in brief_html
     assert "Prioritized records" in brief_html
     assert "Review reasons:" in brief_html
     assert "Suggested follow-up review questions" in brief_html
-    assert "Which prioritized records need source traceability checked" in brief_html
+    assert "Which prioritized records need the CCLD source record checked" in brief_html
     assert "Limited-data note: this brief reflects only records loaded" in brief_html
     assert "Reviewer-created cue: Needs follow-up; 1 reviewer-created note(s)" in brief_html
     assert (
@@ -1092,28 +1162,25 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     assert "Reviewer-created status" in html
     assert "Reviewer-created note presence" in html
     assert "Why included" in html
-    assert "Source traceability summary" in html
-    assert "Review-readiness cue" in html
-    assert "Missing traceability values" in html
+    assert "CCLD source cue" in html
+    assert "Reviewer attention cue" in html
     assert "Original CCLD source link saved" in html
-    assert "Needs source check before copy/print" in html
+    assert "Needs reviewer attention before copy/print" in html
     assert "Reviewer-created status/note cue present" in html
     assert "Open record 32-CR-20220407124448" in html
     assert "Before using this draft" in html
     assert "Confirm the facility/date context matches the queue you intended to prepare." in html
-    assert "Open reviewer detail for records needing source check." in html
+    assert "Open reviewer detail for records needing date/source cue review." in html
     assert "Send feedback before copying or printing" in html
     assert "Copyable packet summary" in html
     assert "Attorney Review Packet Draft" in html
     assert "Facility ID: 157806098" in html
     assert "Reviewer-created state summary" in html
     assert "Records ready for preparation review" in html
-    assert (
-        "Packet readiness means review readiness for manual browser copy or print"
-        in html
-    )
+    assert "Packet readiness means review readiness for manual browser copy or print" in html
     assert "Review-readiness before copy/print" in html
-    assert "Source traceability readiness" in html
+    assert "CCLD source availability" in html
+    assert "Loaded record values remain separate from reviewer notes/status." in html
     assert "Back to packet preview" in html
     assert "Back to review queue" in html
     assert "Report copy/print preparation concern" in html
@@ -1125,9 +1192,25 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     assert "No export file is generated by this draft" in html
     assert "Return to the queue or reviewer detail" in normalized_html
     assert (
-        "does not mutate source-derived records, reviewer-created state, audit rows"
+        "does not mutate loaded records, reviewer-created state, audit rows"
         in normalized_html
     )
+    for removed in (
+        "Facility / license",
+        "facility/license",
+        "license number",
+        "source-derived fields",
+        "source-derived values",
+        "source-derived records",
+        "raw artifact",
+        "connector metadata",
+        "raw SHA-256",
+        "source traceability",
+        "source-traceability",
+        "Review source/date cue",
+        "Needs source check",
+    ):
+        assert removed.casefold() not in normalized_html.casefold()
     assert "legal priority" not in normalized_html.casefold()
     assert_no_correction_workflow_html(html)
     assert_no_secret_html(html)
@@ -1223,7 +1306,7 @@ def test_reviewer_packet_preview_empty_context_has_limited_data_attorney_brief()
     checklist_html = html[checklist_start:checklist_end]
     assert "Loaded records" in checklist_html
     assert "Review cues" in checklist_html
-    assert "Source availability" in checklist_html
+    assert "Source record" in checklist_html
     assert "Saved status/note" in checklist_html
     assert "Follow-up notes" in checklist_html
     assert "Date warnings" in checklist_html
@@ -1439,6 +1522,8 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert 'class="copy-icon-button"' in html
     assert 'aria-label="Copy complaint/control number"' in html
     assert 'aria-label="Copy Facility ID"' in html
+    assert 'data-copy-feedback="Copied"' in html
+    assert 'data-copy-status hidden aria-live="polite" aria-atomic="true"' in html
     assert 'aria-label="Copy complaint number"' not in html
     assert 'aria-label="Copy facility number"' not in html
     assert 'aria-label="Copy Finding/status"' not in html
@@ -1448,6 +1533,9 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert 'aria-label="Copy County"' not in html
     assert 'aria-label="Copy Source URL"' not in html
     assert "navigator.clipboard.writeText" in html
+    assert "showCopyStatus(button, 'Copied')" in html
+    assert "status.hidden = true" in html
+    assert "1700" in html
     assert "04/07/2022" in html
     assert "08/24/2022" in html
     assert "2022-04-07" not in parser.text_for("main")
@@ -1524,6 +1612,10 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert "No status" in html
     assert "No note" in html
     assert 'class="review-chip badge-attention badge-attention--warning"' in html
+    assert (
+        '<span class="review-chip badge-attention badge-attention--warning">120+ day gap</span>'
+        in html
+    )
     assert 'class="review-chip badge-info badge-info--status"' in html
     assert 'class="review-chip badge-info badge-info--note"' in html
     assert 'class="review-chip__marker review-chip__marker--warning"' in html
