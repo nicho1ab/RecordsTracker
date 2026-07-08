@@ -219,7 +219,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         records_status != 200
         or b"Fixture/sample source record list" not in records_body
-        or b"Sample source traceability summary" not in records_body
+        or b"Jurisdictions represented" not in records_body
     ):
         raise RuntimeError("Hosted scaffold source-record shell did not return the sample list.")
     if (
@@ -371,7 +371,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Allegations and findings" not in reviewer_detail_body
         or b"Reviewer-created notes and status history" in reviewer_detail_body
         or b"Source-derived value checks" in reviewer_detail_body
-        or b"Full source-derived fields" in reviewer_detail_body
+        or b"Full source-derived" + b" fields" in reviewer_detail_body
         or b"Technical and operator details" in reviewer_detail_body
         or b"Source traceability" in reviewer_detail_body
         or b"How to read this record" in reviewer_detail_body
@@ -382,16 +382,36 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"32-CR-20220407124448" not in reviewer_detail_body
     ):
         raise RuntimeError("Hosted scaffold reviewer detail did not return usable guidance.")
+    packet_blocked_terms = (
+        b"Facility" + b" / license",
+        b"Facility" + b"/license",
+        b"Facility" + b"/License",
+        b"facility" + b"/license",
+        b"license" + b" number",
+        b"source-derived" + b" fields",
+        b"source-derived" + b" values",
+        b"source-derived" + b" records",
+        b"raw" + b" artifact",
+        b"connector" + b" metadata",
+        b"raw" + b" SHA-256",
+        b"source" + b" traceability",
+        b"source" + b"-traceability",
+        b"Source" + b" Traceability",
+        b"Full source" + b"-traceability details",
+    )
     if (
         packet_preview_status != 200
         or b"Packet preview" not in packet_preview_body
         or b"Readiness checks" not in packet_preview_body
-        or b"Source availability" not in packet_preview_body
+        or b"CCLD source availability" not in packet_preview_body
         or b"Notes/status summary" not in packet_preview_body
         or b"Copy-ready brief" not in packet_preview_body
         or b"Packet readiness checklist" not in packet_preview_body
         or b"Included complaint records" not in packet_preview_body
         or b"Before copying or printing" not in packet_preview_body
+        or b"Needs date/source review" not in packet_preview_body
+        or b"Review dates and source link" not in packet_preview_body
+        or any(term in packet_preview_body for term in packet_blocked_terms)
         or b"Operator/runtime details" in packet_preview_body
         or b"Technical runtime details" in packet_preview_body
     ):
@@ -405,6 +425,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Attorney review readiness checklist" not in packet_draft_body
         or b"Before using this draft" not in packet_draft_body
         or b"No export file is generated" not in packet_draft_body
+        or b"Facility ID" not in packet_draft_body
+        or any(term in packet_draft_body for term in packet_blocked_terms)
     ):
         raise RuntimeError("Hosted scaffold review packet draft did not return safe guidance.")
     if (
