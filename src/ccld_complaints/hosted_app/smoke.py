@@ -350,7 +350,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
             or b"Send feedback" not in feedback_body
                 or b"Send RecordsTracker feedback" not in feedback_body
             or b"Do not include private material" not in feedback_body
-            or b"GitHub issue intake is not configured" not in feedback_body
+            or b"Feedback cannot be sent directly from this page" not in feedback_body
             or b"Submit feedback" not in feedback_body
         ):
         raise RuntimeError("Hosted scaffold feedback page did not return safe form state.")

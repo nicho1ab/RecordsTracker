@@ -79,6 +79,11 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Send feedback" in html
     assert "Send RecordsTracker feedback" in html
+    assert (
+        "Use this page to report RecordsTracker issues, confusing review steps, "
+        "accessibility problems, or support details"
+        in html
+    )
     assert "What makes feedback actionable" in html
     assert (
         "Actionable tester feedback names the page or route, what you tried first, "
@@ -91,13 +96,18 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
         in html
     )
     assert (
-        "confusing loaded-context cue, source traceability cue, record order, "
-        "note/status action, packet/readiness item, label, or keyboard step"
+        "confusing label, missing expected page context, unclear next step, "
+        "accessibility or keyboard issue, wrong facility/date context, "
+        "reviewer-created note/status action, or review workflow question"
+        in html
+    )
+    assert (
+        "Keep source-derived public record details separate from reviewer-created "
+        "notes, statuses, and feedback."
         in html
     )
     assert "Say what would have helped you continue review." in html
-    assert "packet/readiness" in html
-    assert "job diagnostics" in html
+    assert "wrong facility/date context" in html
     assert "already-loaded records" in html or "loaded-record" in html
     assert "browser copy issue" in normalized_html
     assert "print issue" in normalized_html
@@ -113,8 +123,8 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
     assert "copy" in html.lower()
     assert "Useful feedback examples" in html
     assert (
-        "I was trying to request records from Request Records, but the job diagnostics "
-        "notice did not make the next step clear."
+        "I was trying to request records from Request Records, but the page did not "
+        "make the next step clear."
         in html
     )
     assert (
@@ -130,8 +140,7 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
         in html
     )
     assert (
-        "I was reviewing a complaint detail page and checking source traceability "
-        "before adding a note."
+        "I was reviewing a complaint detail page before adding a reviewer-created note."
         in html
     )
     assert (
@@ -139,17 +148,23 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
         in html
     )
     assert (
-        "I was preparing packet/readiness review and one prioritized record looked "
-        "missing or unexpected in the packet content."
+        "I expected the review page to keep the same facility/date context, but the "
+        "next screen looked like a different queue."
         in html
     )
     assert (
-        "The visible context showed the packet preview step and facility/date context."
+        "The visible context showed the facility number, date range, and active "
+        "reviewer-status filter."
         in html
     )
     assert (
         "The transition from facility lookup to Request Records and loaded records "
         "was confusing."
+        in html
+    )
+    assert (
+        "I could not reach the expected action by keyboard, or the label did not "
+        "explain what the control would do."
         in html
     )
     assert (
@@ -165,9 +180,13 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
         in html
     )
     assert (
-        "<p>Note: Server-side GitHub issue intake is not configured on this deployment."
+        "<p>Feedback cannot be sent directly from this page in this environment."
         in html
     )
+    assert "GITHUB_FEEDBACK_TOKEN" not in html
+    assert "GITHUB_FEEDBACK_REPO" not in html
+    assert "GitHub issue intake is configured" not in html
+    assert "Server-side GitHub issue intake" not in html
     assert (
         '<section class="helper-text" aria-labelledby="feedback-unconfigured-heading">'
         not in html
@@ -178,9 +197,9 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
         "that was confusing.</p>"
     ) in html
     assert (
-        "Describe the page, action, expected result, actual result, loaded-context cue, "
-        "source traceability cue, packet/readiness concern, browser copy issue, or print issue "
-        "without private material."
+        "Describe the page, action, expected result, actual result, confusing label, "
+        "missing expected page context, unclear next step, accessibility or keyboard issue, "
+        "wrong facility/date context, browser copy issue, or print issue without private material."
         in normalized_html
     )
     assert '<label for="page_path">Submitted page path</label>' not in html
@@ -195,12 +214,13 @@ def test_feedback_page_renders_accessible_form_and_exact_type_options() -> None:
             '<p id="feedback-type-help" class="helper-text">Choose the category that best fits '
             "the route, action, loaded-context cue, packet/readiness cue, or keyboard step "
             "that was confusing.</p>",
-            '<label for="description">Description</label>',
             '<h3 id="feedback-safety-heading">Do not include private material</h3>',
+            "Leave out PHI, private details, credentials, tokens, private URLs, cookies,",
+            '<label for="description">Description</label>',
             '<button type="submit">Submit feedback</button>',
             '<h2 id="actionable-feedback-heading">What makes feedback actionable</h2>',
             '<h2 id="feedback-unconfigured-heading">How feedback is submitted</h2>',
-            "<p>Note: Server-side GitHub issue intake is not configured on this deployment.",
+            "<p>Feedback cannot be sent directly from this page in this environment.",
         ),
     )
 
@@ -216,10 +236,10 @@ def test_feedback_examples_use_safe_actionable_wording() -> None:
         "I was trying to",
         "I was on the reviewer queue",
         "I was reviewing a complaint detail page",
-        "I was preparing packet/readiness review",
+        "I expected the review page to keep the same facility/date context",
+        "I could not reach the expected action by keyboard",
         "I expected",
         "looked wrong or incomplete",
-        "looked missing or unexpected",
         "The visible context showed",
     ):
         assert required_fragment in html
@@ -227,6 +247,7 @@ def test_feedback_examples_use_safe_actionable_wording() -> None:
     unsafe_example_wording = (
         "raw source",
         "raw sha",
+        "job diagnostics",
         "source url",
         "connector metadata",
         "retrieval timestamp",
@@ -290,26 +311,28 @@ def test_feedback_page_renders_safe_optional_handoff_context() -> None:
     assert "manual_entry" in html
     assert "Reviewer-status filter" in html
     assert "blocked" in html
-    assert "active reviewer-created status filter confusion" in normalized_html
     assert "shown-count or total-count confusion" in normalized_html
-    assert "filtered-empty recovery problems" in normalized_html
+    assert "filtered-empty recovery problem" in normalized_html
+    assert "confusing label" in normalized_html
+    assert "missing expected page context" in normalized_html
+    assert "unclear next step" in normalized_html
+    assert "accessibility or keyboard issue" in normalized_html
+    assert "wrong facility/date context" in normalized_html
     assert "complaint:ccld:complaint:32-CR-20220407124448" not in html
     assert "32-CR-20220407124448" in html
     assert "Describe packet readiness confusion." in html
-    assert "packet/readiness confusion" in normalized_html
     assert "browser copy or print confusion" in normalized_html
-    assert "missing or unexpected records in packet content" in normalized_html
-    assert "missing or unexpected records in packet content" in normalized_html
     assert (
-        "possible correction concerns where a source-derived value looked wrong"
+        "source-derived value that looked wrong or incomplete"
         in normalized_html
     )
-    assert "source-confidence next-step confusion for missing source values" in (
-        normalized_html
-    )
-    assert "proxy-related cues, or cautious note/status wording" in normalized_html
+    assert "cautious reviewer-created note/status wording" in normalized_html
     assert "uncertainty about whether to use a reviewer-created note or feedback" in normalized_html
     assert "raw source narrative" in html
+    assert "raw SHA-256" not in html
+    assert "connector metadata" not in html
+    assert "retrieval timestamp" not in html
+    assert "source document/report marker" not in html
     assert 'action="/feedback"' in html
     assert 'action="/ccld/correction' not in normalized_html
     assert 'name="correction_status"' not in normalized_html
@@ -366,7 +389,8 @@ def test_feedback_page_renders_safe_retrieval_handoff_context() -> None:
     assert "completed_with_warnings" in html
     assert "Job ID" in html
     assert "ccld-retrieval-157806098-20260615T120000Z" in html
-    assert "job diagnostics history/detail context" in normalized_html
+    assert "support context" in normalized_html
+    assert "job diagnostics history/detail context" not in normalized_html
     assert "Describe retrieval status confusion." in html
     assert "C:/server/private/raw/artifact.html" not in html
     assert_no_secret_html(html)
@@ -398,12 +422,13 @@ def test_feedback_page_prefills_editable_starter_from_safe_handoff_context() -> 
     assert "Edit this before submitting" in html
     assert "This starter uses only safe handoff context from the screen you came from." in html
     assert (
-        "Do not paste secrets, private URLs, stack traces, raw source narrative, or "
-        "unrelated personal information."
+        "Do not paste PHI, private details, credentials, tokens, private URLs, "
+        "cookies, stack traces, raw source narrative, or unrelated personal "
+        "information unless specifically approved."
         in html
     )
     starter_opening = (
-        "I am reporting confusion about the job diagnostics information on "
+        "I am reporting confusion about the support context on "
         "retrieval job detail."
     )
     assert starter == "\n".join(
@@ -454,7 +479,7 @@ def test_feedback_starter_omits_unavailable_handoff_values() -> None:
     assert status == 200
     assert "Suggested feedback starter" in html
     assert (
-        "I am reporting confusion about the job diagnostics information on request result."
+        "I am reporting confusion about the support context on request result."
         in starter
     )
     assert "Facility ID: 157806098" in starter
@@ -990,7 +1015,8 @@ def assert_no_secret_html(markup: str) -> None:
         "provider_issuer",
         "test-auth-value-not-rendered",
         "authorization",
-        "cookie",
+        "cookie=",
+        "set-cookie",
         "private_header",
     ]:
         assert marker not in lowered
