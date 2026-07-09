@@ -146,11 +146,10 @@ _SECRET_HTML_MARKERS = (
 )
 _HELP_TOPICS: tuple[tuple[str, str], ...] = (
     ("find-facility", "Find a facility"),
-    ("request-records", "Request or show records"),
-    ("review-records", "Review complaint records"),
-    ("review-flags", "Understand review flags"),
-    ("reviewer-created-notes-status", "Add reviewer status/note"),
-    ("packet-preparation", "Prepare packet content"),
+    ("request-records", "Request Records"),
+    ("review-queue", "Review Queue"),
+    ("reviewer-detail", "Reviewer Detail"),
+    ("packet-preparation", "Packet preview and preparation draft"),
     ("feedback", "Send feedback"),
 )
 
@@ -863,77 +862,62 @@ def _render_help_page() -> str:
                                 main=f"""    <section class="hero-card" aria-labelledby="help-purpose-heading">
                         <p class="launch-kicker">Product help</p>
                             <h2 id="help-purpose-heading">Use RecordsTracker for facility complaint review</h2>
-                            <p>Learn how to retrieve complaint records, review source-derived values, and add reviewer-created notes/status safely.</p>
+                            <p>Use this guide to move through the tester workflow: find or enter a facility, request complaint records for a CCLD request context, review loaded CCLD records, prepare packet notes when useful, and send feedback with safe context.</p>
+                            <p>The public CCLD portal remains the source of record. RecordsTracker helps you organize review work and check available source links; it does not make legal findings or prove that every public source record is loaded.</p>
                 </section>
                 {_render_help_topics_toc()}
                 <section class="help-details" aria-label="Help topic details">
                     <details open id="find-facility">
                         <summary id="help-find-facility-heading">Find a facility</summary>
-                        <p>Use Find a facility when you need the public CCLD Facility ID. Choose a
-                        matching facility to carry its number and name into Request Records, or enter a known
-                        Facility ID directly.</p>
-                        <p>Facility directory rows are lookup assistance only. Complaint records are requested and
-                        reviewed separately.</p>
+                        <p>Use Facility lookup when you need the facility/license number. Choose a matching
+                        facility to carry its number into Request Records, or enter a known facility/license
+                        number directly.</p>
+                        <p>Facility lookup helps set the CCLD request context. It is not a complaint search by
+                        itself, and it does not decide whether records exist for that facility.</p>
                     </details>
                     <details id="request-records">
-                        <summary id="help-request-records-heading">Request or show records</summary>
-                        <p>Request Records searches for complaint records for one Facility ID and an
-                        optional date range. Show existing queue searches already-loaded records only. Request
-                        Records submits a configured server-side public CCLD request only when that action is
-                        available and explicitly submitted.</p>
-                        <p>If no records match, confirm the facility and dates, then adjust the request or send
-                        feedback when the result is confusing.</p>
+                        <summary id="help-request-records-heading">Request Records</summary>
+                        <p>Request complaint records for one facility/date request. Confirm the facility/license
+                        number, date range, and whether the request came from lookup or manual entry before you
+                        review results.</p>
+                        <p>When loaded CCLD records are available, continue to the review queue. If no records
+                        match, confirm the facility/date request before treating the result as meaningful, then
+                        adjust the request or send feedback if the next step is unclear.</p>
                     </details>
-                    <details id="review-records">
-                        <summary id="help-review-records-heading">Review complaint records</summary>
-                        <p>Open the suggested queue record first. On detail, check the complaint/control number,
-                        facility identity, key dates, finding/status, original source link/status, and current
-                        reviewer-created status before deciding whether a note or status helps the review.</p>
-                        <p>Return to the same queue after saving so the progress cues reflect the reviewer-created
-                        state.</p>
+                    <details id="review-queue">
+                        <summary id="help-review-queue-heading">Review Queue</summary>
+                        <p>Use the review queue to scan loaded CCLD records for the same facility/date request.
+                        Start with the suggested next record when it helps, or use the visible queue counts and
+                        reviewer-status filter to choose another record.</p>
+                        <p>Queue summaries are review aids. Open a record before relying on dates, findings,
+                        review flags, missing-value cues, or CCLD source available indicators.</p>
                     </details>
-                    <details id="review-flags">
-                        <summary id="help-flags-heading">Understand review flags</summary>
-                        <p>Review flags are source-derived screening aids. They
-                        identify records needing attorney review; they are not legal conclusions.</p>
-                    </details>
-                    <details id="reviewer-created-notes-status">
-                        <summary id="help-separation-heading">Add reviewer status/note</summary>
-                        <p>Imported public-source-derived values remain source-derived records. Notes and
-                        status are reviewer-created state and do not edit source-derived fields.</p>
+                    <details id="reviewer-detail">
+                        <summary id="help-reviewer-detail-heading">Reviewer Detail</summary>
+                        <p>Open a complaint review workspace to check the complaint/control number, facility
+                        identity, key dates, finding/status wording, review flags, source link or source record
+                        availability, reviewer notes/status, and the next action.</p>
+                        <p>Use reviewer notes/status for your review observations when helpful. Notes and status
+                        do not change the loaded CCLD record or create a legal conclusion.</p>
                     </details>
                     <details id="packet-preparation">
-                        <summary id="help-packet-heading">Prepare packet content</summary>
-                        <p>Packet preview and packet draft summarize loaded source-derived complaint records,
-                        source link/status cues, reviewer-created status/note cues, and review-readiness
-                        concerns for browser copy or print preparation.</p>
-                        <p>Packet readiness means review readiness for manual review, browser copy, or browser
-                        print after checking facility/date context, included records, source-derived values,
-                        source links, and reviewer-created note/status cues. Send feedback when packet
-                        readiness wording is confusing.</p>
+                        <summary id="help-packet-heading">Packet preview and preparation draft</summary>
+                        <p>Use packet preview when you need a compact review of the active facility/date request,
+                        included complaint records, source link availability, reviewer notes/status, and items
+                        that may need another look before copying or printing.</p>
+                        <p>Use the preparation draft as a browser copy/print aid after checking the source record
+                        where needed. It is not a final export, certified report, legal finding, or proof of
+                        source completeness.</p>
                     </details>
                     <details id="feedback">
                         <summary id="help-feedback-heading">Send feedback</summary>
-                        <p>Include the Facility ID, date range, visible job state, complaint
-                        control number when relevant, and what action or wording felt confusing. Do not
-                        include private facts, credentials, legal strategy, privileged work product,
-                        private URLs, private values, or unrelated sensitive details.</p>
+                        <p>Send feedback when a facility lookup, facility/date request, review queue, reviewer
+                        detail, packet preview, preparation draft, or label/keyboard step is confusing.</p>
+                        <p>Include safe context such as the facility/license number, date range, complaint/control
+                        number when relevant, visible workflow state, and what you expected to happen. Do not
+                        include private facts, credentials, legal strategy, privileged work product, private URLs,
+                        private values, or unrelated sensitive details.</p>
                         <p><a href="{_FEEDBACK_PATH}">Send feedback</a></p>
-                    </details>
-                </section>
-                <section aria-labelledby="help-support-heading">
-                    <h2 id="help-support-heading">Support notes</h2>
-                    <details class="technical-details dense-table-details" id="support-operator-help">
-                        <summary>Support and runtime notes</summary>
-                        <p>Imported records retain safe source support values when available, including source
-                        URL, raw SHA-256 hash, raw artifact reference, connector metadata, retrieval timestamp,
-                        source document/report markers, import batch context, and report index cues.</p>
-                        <p>Job diagnostics pages show controlled Request Records state, counts, notices, errors,
-                        and support actions. Loaded records can be ready for review even when no retrieval job
-                        was submitted for the current request.</p>
-                        <p>Request Records requires server setup, including migrations, hosted page
-                        data mode, retrieval enablement, raw artifact storage, and schema files. No connector
-                        credentials or server-side private values are shown to the browser.</p>
                     </details>
                 </section>
                 """,

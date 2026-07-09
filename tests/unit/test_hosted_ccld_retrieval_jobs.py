@@ -107,7 +107,17 @@ class MockGitHubIssueClient:
         return {"number": 42}
 
 
-def test_retrieval_form_renders_record_type_and_safe_setup_state() -> None:
+def test_retrieval_form_renders_record_type_and_safe_setup_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for key in (
+        CCLD_RETRIEVAL_DEMO_MODE_ENV,
+        CCLD_RETRIEVAL_ENABLED_ENV,
+        CCLD_RETRIEVAL_RAW_DIR_ENV,
+        "CCLD_HOSTED_PAGE_DATA_MODE",
+    ):
+        monkeypatch.delenv(key, raising=False)
+
     status, _content_type, body = route_response(
         CCLD_RECORD_REQUEST_PATH,
         auth_runtime_config=_local_dev_auth_config(),
@@ -1912,5 +1922,4 @@ def assert_no_secret_html(markup: str) -> None:
         "test-auth-value-not-rendered",
     ]:
         assert marker not in lowered
-
 
