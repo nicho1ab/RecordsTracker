@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Cleaned up `/ccld/help` terminology so Help now teaches the tester workflow in
+  reviewer-facing terms across Facility lookup, Request Records, Review Queue,
+  Reviewer Detail, packet preview/preparation draft, and Feedback while keeping
+  raw/debug/operator wording out of normal Help copy and preserving existing
+  route behavior.
 - Refined the Feedback page as a tester support channel: it now leads with
   issue/support reporting purpose, shows privacy guidance before the description
   field, uses reviewer-facing examples and safe page-context wording, and keeps

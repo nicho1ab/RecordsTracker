@@ -205,39 +205,39 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     status, content_type, body = route_response("/ccld/help")
     html = body.decode("utf-8")
     normalized_html = " ".join(html.split())
+    lowered_html = normalized_html.casefold()
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Help" in html
+    assert "Use RecordsTracker for facility complaint review" in html
     assert "Find a facility" in html
-    assert "Request or show records" in html
-    assert "Review complaint records" in html
-    assert "Understand review flags" in html
-    assert "Add reviewer status/note" in html
-    assert "do not edit source-derived fields" in html
-    assert "Prepare packet content" in html
+    assert "Request Records" in html
+    assert "Review Queue" in html
+    assert "Reviewer Detail" in html
+    assert "Packet preview and preparation draft" in html
     assert "Send feedback" in html
-    assert "Show existing queue searches already-loaded records only" in normalized_html
-    assert "Request Records submits a configured server-side public CCLD request" in (
-        normalized_html
-    )
-    assert "Open the suggested queue record first" in normalized_html
-    assert "original source link/status" in normalized_html
-    assert "Return to the same queue after saving" in normalized_html
-    assert "Packet readiness means review readiness" in html
-    assert "source links, and reviewer-created note/status cues" in normalized_html
-    assert (
-        "Packet preview and packet draft summarize loaded source-derived complaint records"
-        in html
-    )
+    assert "facility/license number" in normalized_html
+    assert "CCLD request context" in normalized_html
+    assert "facility/date request" in normalized_html
+    assert "loaded CCLD records" in normalized_html
+    assert "review queue" in lowered_html
+    assert "suggested next record" in normalized_html
+    assert "complaint review workspace" in normalized_html
+    assert "review flags" in normalized_html
+    assert "source link or source record availability" in normalized_html
+    assert "CCLD source available indicators" in normalized_html
+    assert "reviewer notes/status" in normalized_html
+    assert "next action" in normalized_html
+    assert "packet preview" in normalized_html
+    assert "preparation draft" in normalized_html
+    assert "public CCLD portal remains the source of record" in normalized_html
+    assert "check available source links" in normalized_html
+    assert "does not make legal findings" in normalized_html
+    assert "proof of source completeness" in normalized_html
     assert "How reviewer-created status filters work" not in html
-    assert "Support notes" in html
-    assert "Support and runtime notes" in html
-    assert "source URL, raw SHA-256 hash" in normalized_html
-    assert "source document/report markers" in normalized_html
-    assert "Loaded records can be ready for review" in normalized_html
-    assert "source-derived records" in normalized_html.casefold()
-    assert "reviewer-created notes/status" in normalized_html
+    assert "Support notes" not in html
+    assert "Support and runtime notes" not in html
     assert "How source traceability works" not in html
     assert "What to do with source-confidence cues" not in html
     assert "Operator setup: enabling live Request Records" not in html
@@ -248,6 +248,32 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert "correction applied" not in normalized_html
     assert "corrected source record" not in normalized_html
     assert "Open Request Records" not in html
+    for forbidden_term in (
+        "raw SHA-256",
+        "raw artifact reference",
+        "connector metadata",
+        "source-derived fields",
+        "source-derived values",
+        "source-derived records",
+        "source traceability internals",
+        "extraction audit",
+        "bundle rows",
+        "operator diagnostics",
+        "runtime details",
+        "production readiness",
+        "live browser crawling",
+        "connector execution",
+        "schema changes",
+        "auth",
+        "exports",
+        "persistence changes",
+        "harm",
+        "abuse",
+        "neglect",
+        "liability",
+        "rights-deprivation",
+    ):
+        assert forbidden_term.casefold() not in lowered_html
     assert_no_secret_html(html)
 
 
