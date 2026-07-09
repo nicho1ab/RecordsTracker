@@ -107,7 +107,10 @@ def test_ccld_record_request_page_renders_from_default_context(
     assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
     assert "Request complaint records for a facility" in html
     assert "Start review" in html
-    assert "Choose a Facility ID and date range, then open already-loaded records" in html
+    assert (
+        "Choose a Facility ID and date range, then decide whether to review "
+        "already-loaded records or request missing records"
+    ) in html
     mode_panel = html.split('<div class="mode-panel" aria-label="Retrieval mode">', 1)[1].split(
         "</div>",
         1,
@@ -118,6 +121,12 @@ def test_ccld_record_request_page_renders_from_default_context(
     assert "Keyboard flow: move from facility selection to date range" not in html
     assert '<details class="quiet-section orientation-details" open>' not in html
     assert "Choose complaint date range" in html or "Which facility should be reviewed?" in html
+    assert "Current request context" in html
+    assert "Request stage" in html
+    assert "Current step" not in html
+    assert "Choose Facility ID" in html
+    assert "Date range" in html
+    assert "Set after facility selection" in html
     assert 'for="facility-search-input"' in html
     assert "facility-suggestion-list" in html
     assert "Which facility should be reviewed?" in html
@@ -131,7 +140,6 @@ def test_ccld_record_request_page_renders_from_default_context(
     assert "proof of concept" not in html.casefold()
     assert "Keyboard flow: type a search or digit number" not in html
     assert "Attorney workflow" not in html
-    assert "Current step:" not in html
     assert "See review guidance and next steps." in html
     assert "Live retrieval off" not in html
     assert "Search CCLD facilities" in html
@@ -290,6 +298,7 @@ def test_ccld_record_request_prefills_selected_facility_from_lookup() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Selected Facility ID is ready" in html
+    assert "Set date context" in html
     assert "Facility ID" in html
     assert "Facility/license number" not in html
     assert "Synthetic Orchard Child Care" in html
@@ -340,7 +349,12 @@ def test_ccld_record_request_prefill_links_signal_only_facility_hub(
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Open loaded records or request complaint records" in html
-    assert "Open loaded records, or request records for this Facility ID and date range." in html
+    assert (
+        "This Facility ID/date context is ready. Show existing queue opens "
+        "already-loaded records"
+    ) in html
+    assert "Use Show existing queue first when records are already loaded" in html
+    assert "Review loaded records or request missing records" in html
     assert "Show existing queue" in html
     assert "Request Records" in html
     assert "Use <strong>Show existing queue</strong>" not in html
@@ -367,7 +381,8 @@ def test_ccld_record_request_manual_entry_shows_context_confirmation() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Which facility should be reviewed?" in html
-    assert "type the digit Facility ID directly" in html
+    assert "Start the request context by choosing a Facility ID" in html
+    assert "Search by facility name or enter the digit Facility ID" in html
     assert "See review guidance and next steps." in html
     assert "Live retrieval off" not in html
     assert "Search by name, Facility ID, city, county, ZIP" in normalized_html
@@ -1046,6 +1061,7 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert "<dd>6</dd>" in html
     normalized_html = " ".join(html.split())
     assert "No loaded complaint records matched this facility and date range" in html
+    assert "A no-match result is not proof that no public CCLD record exists" in html
     assert "Try one next step" not in html
     assert "Adjust date range" in html
     assert "did not submit a Request Records job for this request" in normalized_html

@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Focused `/ccld/records/request` as the facility/date request starting point:
+  the page now shows the current request step by default, makes selected
+  Facility ID/date context clearer, distinguishes loaded-queue review from
+  configured Request Records retrieval, and keeps setup-required and no-match
+  states reviewer-facing without changing retrieval behavior.
 - Cleaned up `/ccld/help` terminology so Help now teaches the tester workflow in
   reviewer-facing terms across Facility lookup, Request Records, Review Queue,
   Reviewer Detail, packet preview/preparation draft, and Feedback while keeping

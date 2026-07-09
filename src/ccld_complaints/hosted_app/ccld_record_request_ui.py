@@ -614,7 +614,7 @@ def _render_request_form(
                 main=f"""    <section class="hero-card" aria-labelledby="request-hero-heading">
                     <p class="launch-kicker">Start review</p>
                     <h2 id="request-hero-heading">Request complaint records for a facility</h2>
-                    <p class="launch-value">Choose a Facility ID and date range, then open already-loaded records or submit a controlled Request Records job.</p>
+                    <p class="launch-value">Choose a Facility ID and date range, then decide whether to review already-loaded records or request missing records where retrieval is configured.</p>
             <p><a class="helper-link" href="{CCLD_HELP_PATH}#review-guidance">See review guidance and next steps.</a></p>
         </section>
                 {workflow_state}""",
@@ -673,7 +673,17 @@ def _render_facility_selection_state(reference_source: CcldFacilityReferenceSour
         return f"""<section class="workflow-panel" aria-labelledby="facility-selector-heading" id="facility-selector-wrap" data-facility-mode="request"{suggest_attr}>
             <p class="stage-kicker">Facility</p>
             <h2 id="facility-selector-heading">Which facility should be reviewed?</h2>
-            <p>Search for a facility when you do not know the exact Facility ID, or type the digit Facility ID directly if you already have it.</p>
+            <p>Start the request context by choosing a Facility ID. Dates and record actions come next.</p>
+            <dl class="summary-list selected-request-context fixed-field" aria-label="Current request context">
+                <dt>Request stage</dt>
+                <dd>Choose Facility ID</dd>
+                <dt>Facility ID</dt>
+                <dd>Not selected</dd>
+                <dt>Date range</dt>
+                <dd>Set after facility selection</dd>
+                <dt>Next</dt>
+                <dd>Search by facility name or enter the digit Facility ID.</dd>
+            </dl>
             <form action="{CCLD_RECORD_REQUEST_PATH}" method="get" id="facility-select-form">
                 <label for="facility-search-input">Facility</label>
                 <p id="facility-search-hint" class="helper-text">Search by name, Facility ID, city, county, ZIP, or facility type.</p>
@@ -708,8 +718,9 @@ def _render_date_range_state(
         return f"""<section class="workflow-panel" aria-labelledby="date-range-heading">
             <p class="stage-kicker">Date range</p>
             <h2 id="date-range-heading">Choose complaint date range</h2>
-            <p>Selected Facility ID is ready. Set the complaint review dates now, or change the facility before continuing.</p>
+            <p>Selected Facility ID is ready. Set the complaint review dates, then choose whether to open loaded records or request missing records.</p>
             {_render_selected_request_context_summary(
+                current_step="Set date context",
                 facility_number=facility_number,
                 lookup_facility_name=lookup_facility_name,
                 request_context_origin=request_context_origin,
@@ -759,8 +770,9 @@ def _render_date_ready_state(
         return f"""<section class="workflow-panel workflow-panel-primary" aria-labelledby="retrieve-ready-heading">
             <p class="stage-kicker">Request Records</p>
             <h2 id="retrieve-ready-heading">Open loaded records or request complaint records</h2>
-            <p>Open loaded records, or request records for this Facility ID and date range.</p>
+            <p>This Facility ID/date context is ready. Show existing queue opens already-loaded records; Request Records starts a controlled retrieval job only where configured.</p>
             {_render_selected_request_context_summary(
+                current_step="Review loaded records or request missing records",
                 facility_number=facility_number,
                 lookup_facility_name=lookup_facility_name,
                 request_context_origin=request_context_origin,
@@ -775,6 +787,7 @@ def _render_date_ready_state(
                 <input type="hidden" name="start_date" value="{_escape(selected_start_date)}">
                 <input type="hidden" name="end_date" value="{_escape(selected_end_date)}">
                 <input type="hidden" name="reviewer_status_filter" value="all">
+                <p id="retrieve-actions-help" class="helper-text">Use Show existing queue first when records are already loaded. Use Request Records when the expected complaint records are missing and retrieval is available.</p>
                 <div class="form-actions action-group">
                     <button type="submit">Show existing queue</button>
                     <button class="secondary" type="submit" name="{_RETRIEVAL_ACTION_FIELD}" value="{_RETRIEVAL_ACTION_VALUE}">Request Records</button>
@@ -789,6 +802,7 @@ def _render_date_ready_state(
 
 def _render_selected_request_context_summary(
     *,
+    current_step: str,
     facility_number: str,
     lookup_facility_name: str | None,
     request_context_origin: str,
@@ -801,6 +815,8 @@ def _render_selected_request_context_summary(
                 <dt>Facility name</dt>
                 <dd>{_escape(lookup_facility_name)}</dd>"""
     return f"""            <dl class="summary-list selected-request-context fixed-field">
+                <dt>Request stage</dt>
+                <dd>{_escape(current_step)}</dd>
                 <dt>Facility ID</dt>
                 <dd><span class="copyable-value">{_escape(facility_number)}{_copy_icon_button("Copy selected Facility ID", facility_number)}</span></dd>{lookup_name_markup}
                 <dt>Date range</dt>
@@ -1041,22 +1057,23 @@ def _render_retrieval_setup_required_page(values: Mapping[str, list[str]]) -> st
             next_action="Configure Request Records or show the current queue",
                 main=f"""    <section aria-labelledby="retrieval-setup-heading">
             <h2 id="retrieval-setup-heading">No Request Records job was created</h2>
-            <p>Request Records needs a database-backed request context, retrieval
-            enablement, and configured server-side raw source storage before the browser can
-            trigger a job.</p>
+            <p>Request Records is not ready in this hosted environment yet. RecordsTracker kept
+            this facility/date request safe and did not start a retrieval job.</p>
             <dl>
                 <dt>What you entered</dt>
-                <dd>The browser submitted a CCLD facility/date/type request.</dd>
+                <dd>A CCLD Facility ID, date range, and complaint-record request.</dd>
                 <dt>What happened</dt>
-                <dd>The server blocked the request before creating a job because setup is
-                incomplete.</dd>
+                <dd>No controlled Request Records job started.</dd>
                 <dt>Current state</dt>
-                <dd>No controlled Request Records job exists for this request.</dd>
+                <dd>No Request Records job exists for this request.</dd>
+                <dt>Current review path</dt>
+                <dd>Return to this Facility ID/date context to review already-loaded records,
+                adjust criteria, or send feedback if expected records are missing.</dd>
                 <dt>Records imported</dt>
                 <dd>none</dd>
                 <dt>Next action</dt>
-                <dd>Return to the request page to review already-loaded source-derived records, or
-                ask an operator to configure Request Records before submitting a job.</dd>
+                <dd>Show the existing queue for loaded records, or ask an operator to finish
+                Request Records setup before submitting a retrieval job.</dd>
             </dl>
         </section>
         <details class="technical-details">
@@ -1064,8 +1081,8 @@ def _render_retrieval_setup_required_page(values: Mapping[str, list[str]]) -> st
             <ul>
                 <li>Run PostgreSQL migrations, including the retrieval job metadata migration.</li>
                 <li>Use PostgreSQL-backed page data for the hosted runtime.</li>
-                <li>Enable controlled Request Records in host configuration.</li>
-                <li>Configure a server-side raw artifact directory on persistent storage.</li>
+                <li>Confirm retrieval enablement for controlled Request Records in host configuration.</li>
+                <li>Configure server-side raw source storage on persistent storage.</li>
                 <li>Keep Request Records CCLD-only, complaint-only for now, and server-executed.</li>
             </ul>
             <p>No connector credentials or server-side private values are shown to the browser.</p>
@@ -1073,8 +1090,8 @@ def _render_retrieval_setup_required_page(values: Mapping[str, list[str]]) -> st
         <section aria-labelledby="retrieval-setup-next-heading">
             <h2 id="retrieval-setup-next-heading">What to do next</h2>
             <p>Return to the request page to review records that are already loaded, or ask an
-            operator to configure Request Records. If this message is confusing, send a bug
-            report from the Feedback page and include the facility/date/type request.</p>
+            operator to configure Request Records. If this message is confusing, send feedback
+            with the Facility ID and date range you tried.</p>
             <p><a href="{CCLD_RECORD_REQUEST_PATH}">Return to CCLD request</a></p>
             <p><a href="{_escape(feedback_href)}">Send feedback</a></p>
         </section>""",
@@ -1417,6 +1434,7 @@ def _render_no_match_recovery_panel(
       <p class="stage-kicker">Recovery</p>
       <h2 id="no-local-records-heading">No loaded records found</h2>
             <p>No loaded complaint records matched this facility and date range.</p>
+            <p class="helper-text">A no-match result is not proof that no public CCLD record exists; it only reflects records loaded for this Facility ID/date range.</p>
       <dl class="summary-list">
         <dt>Facility ID</dt>
         <dd>{_escape(request.facility_number)}</dd>

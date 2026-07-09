@@ -153,10 +153,12 @@ def test_retrieval_form_renders_record_type_and_safe_setup_state(
     assert blocked_status == 503
     assert "Request Records setup required" in blocked_html
     assert "No Request Records job was created" in blocked_html
-    assert "No controlled Request Records job exists for this request" in blocked_html
-    assert "Return to the request page to review already-loaded source-derived records" in (
+    assert "Request Records is not ready in this hosted environment yet" in blocked_html
+    assert "No Request Records job exists for this request" in blocked_html
+    assert "Return to this Facility ID/date context to review already-loaded records" in (
         blocked_normalized
     )
+    assert "Show the existing queue for loaded records" in blocked_normalized
     assert "Operator setup checklist" in blocked_html
     assert "retrieval enablement" in blocked_normalized
     assert "server-side raw source storage" in blocked_normalized
@@ -1922,4 +1924,3 @@ def assert_no_secret_html(markup: str) -> None:
         "test-auth-value-not-rendered",
     ]:
         assert marker not in lowered
-
