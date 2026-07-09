@@ -292,6 +292,8 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"No loaded records found" not in ccld_no_match_body
         or b"No loaded complaint records matched this facility and date range"
         not in ccld_no_match_body
+        or b"A no-match result is not proof that no public CCLD record exists"
+        not in ccld_no_match_body
         or b"Adjust date range" not in ccld_no_match_body
         or b"Send feedback" not in ccld_no_match_body
     ):
