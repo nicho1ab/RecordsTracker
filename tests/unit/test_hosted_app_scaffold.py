@@ -5,6 +5,8 @@ import re
 from html.parser import HTMLParser
 from pathlib import Path
 
+from pytest import MonkeyPatch
+
 from ccld_complaints.hosted_app.app import (
     SourceRecordFilters,
     build_source_traceability_summary,
@@ -21,6 +23,19 @@ from ccld_complaints.hosted_app.auth import load_hosted_auth_runtime_config
 from ccld_complaints.hosted_app.smoke import run_scaffold_smoke_check
 
 ROOT = Path(__file__).resolve().parents[2]
+HOSTED_RUNTIME_ENV_KEYS = (
+    "CCLD_HOSTED_TESTER_AUTH_MODE",
+    "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH",
+    "CCLD_HOSTED_PAGE_DATA_MODE",
+    "CCLD_RETRIEVAL_DEMO_MODE",
+    "CCLD_RETRIEVAL_ENABLED",
+    "CCLD_RETRIEVAL_RAW_DIR",
+)
+
+
+def clear_hosted_runtime_env(monkeypatch: MonkeyPatch) -> None:
+    for key in HOSTED_RUNTIME_ENV_KEYS:
+        monkeypatch.delenv(key, raising=False)
 
 
 class HtmlStructureParser(HTMLParser):
@@ -123,7 +138,9 @@ def test_health_response_marks_scaffold_only() -> None:
     assert "source_data_loaded" in payload
 
 
-def test_app_shell_labels_placeholder_scope() -> None:
+def test_app_shell_labels_placeholder_scope(monkeypatch: MonkeyPatch) -> None:
+    clear_hosted_runtime_env(monkeypatch)
+
     html = render_app_shell()
     normalized_html = " ".join(html.split())
     parser = parse_html_structure(html)
@@ -601,7 +618,9 @@ def test_routes_return_shell_health_and_not_found() -> None:
     assert missing_body == b"Not found"
 
 
-def test_auth_placeholders_and_status_are_no_secret() -> None:
+def test_auth_placeholders_and_status_are_no_secret(monkeypatch: MonkeyPatch) -> None:
+    clear_hosted_runtime_env(monkeypatch)
+
     login_status, login_content_type, login_body = route_response("/auth/login")
     logout_status, logout_content_type, logout_body = route_response("/auth/logout")
     status_status, status_content_type, status_body = route_response("/auth/status")
@@ -626,7 +645,11 @@ def test_auth_placeholders_and_status_are_no_secret() -> None:
     assert "client_secret" not in serialized
 
 
-def test_production_mode_blocks_anonymous_workflow_routes() -> None:
+def test_production_mode_blocks_anonymous_workflow_routes(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    clear_hosted_runtime_env(monkeypatch)
+
     reviewer_status, reviewer_content_type, reviewer_body = route_response("/reviewer")
     ccld_status, ccld_content_type, ccld_body = route_response("/ccld")
     help_status, help_content_type, help_body = route_response("/ccld/help")
@@ -1277,11 +1300,10 @@ def test_help_page_topics_toc_links_to_every_help_section_in_order() -> None:
 
     expected_topics = [
         ("find-facility", "Find a facility"),
-        ("request-records", "Request or show records"),
-        ("review-records", "Review complaint records"),
-        ("review-flags", "Understand review flags"),
-        ("reviewer-created-notes-status", "Add reviewer status/note"),
-        ("packet-preparation", "Prepare packet content"),
+        ("request-records", "Request Records"),
+        ("review-queue", "Review Queue"),
+        ("reviewer-detail", "Reviewer Detail"),
+        ("packet-preparation", "Packet preview and preparation draft"),
         ("feedback", "Send feedback"),
     ]
     expected_hrefs = [f"#{topic_id}" for topic_id, _label in expected_topics]
@@ -1304,14 +1326,14 @@ def test_help_page_topics_toc_links_to_every_help_section_in_order() -> None:
     assert detail_ids[: len(expected_topics)] == [
         topic_id for topic_id, _label in expected_topics
     ]
-    assert "support-operator-help" in detail_ids
+    assert "support-operator-help" not in detail_ids
     assert "#support-operator-help" not in toc_html
     assert len(detail_ids) == len(set(detail_ids))
     assert all(detail_ids)
     assert parser.summary_texts[: len(expected_topics)] == [
         label for _topic_id, label in expected_topics
     ]
-    assert "Support and runtime notes" in parser.summary_texts
+    assert "Support and runtime notes" not in parser.summary_texts
 
 
 def test_retrieval_job_detail_route_highlights_support_diagnostics_nav() -> None:
@@ -1474,10 +1496,14 @@ def test_tester_facing_pages_do_not_expose_developer_wording() -> None:
     )
 
 
-def test_live_mode_facility_lookup_not_configured_shows_safe_fallback_messaging() -> None:
+def test_live_mode_facility_lookup_not_configured_shows_safe_fallback_messaging(
+    monkeypatch: MonkeyPatch,
+) -> None:
     """When no real facility reference is available in live mode, the facility lookup page
     must clearly state directory lookup is not configured and not expose synthetic data.
     """
+    clear_hosted_runtime_env(monkeypatch)
+
     from ccld_complaints.hosted_app.ccld_facility_lookup import (
         no_reference_facility_source,
         render_ccld_facility_lookup_page,
