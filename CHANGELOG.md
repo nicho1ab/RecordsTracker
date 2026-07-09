@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Refined the Feedback page as a tester support channel: it now leads with
+  issue/support reporting purpose, shows privacy guidance before the description
+  field, uses reviewer-facing examples and safe page-context wording, and keeps
+  GitHub configuration mechanics out of the normal tester workflow while
+  preserving existing submission behavior.
 - Cleaned up Packet Preview and Print Draft terminology so packet pages use
   reviewer-facing Facility ID, CCLD source/date cue, loaded record value, and
   reviewer-attention wording while preserving packet actions, source-record
