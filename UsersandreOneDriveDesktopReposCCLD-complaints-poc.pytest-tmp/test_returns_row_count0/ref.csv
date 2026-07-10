@@ -1,0 +1,4 @@
+FacilityNumber,FacilityName,FacilityType,ProgramType,Status,City,County,Capacity,LicenseFirstDate,ClosedDate,LastVisitDate,SourceFile
+1,Test Facility,DAY CARE CENTER,,LICENSED,Sacramento,Sacramento,22,1/1/2010,,6/1/2023,source.csv
+2,Test Facility,DAY CARE CENTER,,LICENSED,Sacramento,Sacramento,22,1/1/2010,,6/1/2023,source.csv
+3,Test Facility,DAY CARE CENTER,,LICENSED,Sacramento,Sacramento,22,1/1/2010,,6/1/2023,source.csv

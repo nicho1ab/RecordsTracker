@@ -1,0 +1,2 @@
+FacilityNumber,FacilityName,FacilityType,ProgramType,Status,City,County,Capacity,LicenseFirstDate,ClosedDate,LastVisitDate,SourceFile
+200001,Multi-Complaint Facility,DAY CARE CENTER,,LICENSED,Los Angeles,Los Angeles,22,1/1/2010,,6/1/2023,download.csv

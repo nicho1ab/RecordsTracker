@@ -1,0 +1,1146 @@
+{
+  "creates_canonical_fields": false,
+  "facility_source_registry": {
+    "needs_confirmation_resources": [
+      {
+        "confirmation_status": "needs official CHHS resource ID confirmation",
+        "local_filename_aliases": [
+          "CDSS_CCL_Facilities_2065342970436235361.csv"
+        ],
+        "resource_id": null,
+        "resource_name": "Statewide facility master/local facility-directory example"
+      }
+    ],
+    "parent_dataset": {
+      "name": "Community Care Licensing Facilities",
+      "official_dataset_url": "https://data.chhs.ca.gov/dataset/ccl-facilities",
+      "publisher": "CHHS/CDSS / California Community Care Licensing Division",
+      "slug": "ccl-facilities"
+    },
+    "target_resources": [
+      {
+        "local_filename_aliases": [
+          "ChildCareCenters06072026.csv"
+        ],
+        "resource_id": "7aed8063-cea7-4367-8651-c81643164ae0",
+        "resource_name": "Child Care Centers"
+      },
+      {
+        "local_filename_aliases": [
+          "CHILDCAREHOMEmorethan806072026.csv"
+        ],
+        "resource_id": "4b5cc48d-03b1-4f42-a7d1-b9816903eb2b",
+        "resource_name": "Family Child Care Homes"
+      },
+      {
+        "local_filename_aliases": [
+          "HomeCare06072026.csv"
+        ],
+        "resource_id": "b4d78b7f-12df-4b0c-a81a-ff40b949bc75",
+        "resource_name": "Home Care Organization"
+      },
+      {
+        "local_filename_aliases": [
+          "FosterFamilyAgencies06072026.csv"
+        ],
+        "resource_id": "5f5f7124-1a38-4b61-93b9-4e4be3b3b07d",
+        "resource_name": "Foster Family Agencies"
+      },
+      {
+        "local_filename_aliases": [
+          "24HourResidentialCareforChildren06072026.csv"
+        ],
+        "resource_id": "c9df723a-437f-4dcd-be37-ec73ae518bb9",
+        "resource_name": "24-Hour Residential Care for Children"
+      }
+    ]
+  },
+  "generated_at": "2026-07-10T18:39:34Z",
+  "imports_data": false,
+  "outputs_are_local_only": true,
+  "profiles": [
+    {
+      "blank_column_names": [],
+      "blank_header_indexes": [
+        2
+      ],
+      "column_count": 5,
+      "columns": [
+        {
+          "blank_column": false,
+          "county_geography_candidate": false,
+          "date_like_candidate": false,
+          "duplicate_non_missing_value_count": 0,
+          "facility_number_source_identifier_candidate": true,
+          "header_name": "facility_number",
+          "identifier_like_candidate": true,
+          "index": 1,
+          "missing_value_count": 0,
+          "non_missing_value_count": 3,
+          "sample_safe_type_hint": "integer-like",
+          "sample_values": [
+            "123456789",
+            "456789123",
+            "789123456"
+          ]
+        },
+        {
+          "blank_column": false,
+          "county_geography_candidate": false,
+          "date_like_candidate": false,
+          "duplicate_non_missing_value_count": 0,
+          "facility_number_source_identifier_candidate": false,
+          "header_name": "",
+          "identifier_like_candidate": false,
+          "index": 2,
+          "missing_value_count": 0,
+          "non_missing_value_count": 3,
+          "sample_safe_type_hint": "text-like",
+          "sample_values": [
+            "Synthetic Home",
+            "Synthetic Center",
+            "Synthetic Agency"
+          ]
+        },
+        {
+          "blank_column": false,
+          "county_geography_candidate": true,
+          "date_like_candidate": false,
+          "duplicate_non_missing_value_count": 0,
+          "facility_number_source_identifier_candidate": false,
+          "header_name": "county",
+          "identifier_like_candidate": false,
+          "index": 3,
+          "missing_value_count": 0,
+          "non_missing_value_count": 3,
+          "sample_safe_type_hint": "text-like",
+          "sample_values": [
+            "Los Angeles",
+            "Orange",
+            "San Diego"
+          ]
+        },
+        {
+          "blank_column": false,
+          "county_geography_candidate": true,
+          "date_like_candidate": false,
+          "duplicate_non_missing_value_count": 0,
+          "facility_number_source_identifier_candidate": false,
+          "header_name": "county",
+          "identifier_like_candidate": false,
+          "index": 4,
+          "missing_value_count": 1,
+          "non_missing_value_count": 2,
+          "sample_safe_type_hint": "text-like",
+          "sample_values": [
+            "LA",
+            "SD"
+          ]
+        },
+        {
+          "blank_column": false,
+          "county_geography_candidate": false,
+          "date_like_candidate": true,
+          "duplicate_non_missing_value_count": 0,
+          "facility_number_source_identifier_candidate": false,
+          "header_name": "updated_date",
+          "identifier_like_candidate": true,
+          "index": 5,
+          "missing_value_count": 1,
+          "non_missing_value_count": 2,
+          "sample_safe_type_hint": "date-like",
+          "sample_values": [
+            "2026-06-01",
+            "2026-06-03"
+          ]
+        }
+      ],
+      "date_like_column_candidates": [
+        "updated_date"
+      ],
+      "duplicate_facility_number_candidate_columns": [],
+      "duplicate_headers": [
+        "county"
+      ],
+      "encoding": "utf-8-sig",
+      "file_name": "irregular.csv",
+      "file_size_bytes": 188,
+      "file_snapshot_date_candidates": [],
+      "has_blank_headers": true,
+      "has_duplicate_headers": true,
+      "header_names": [
+        "facility_number",
+        "",
+        "county",
+        "county",
+        "updated_date"
+      ],
+      "identifier_like_column_candidates": [
+        "facility_number",
+        "updated_date"
+      ],
+      "likely_county_geography_candidates": [
+        "county",
+        "county"
+      ],
+      "likely_facility_number_source_identifier_candidates": [
+        "facility_number"
+      ],
+      "malformed_row_count": 2,
+      "parser_warning_count": 0,
+      "parser_warnings": [],
+      "row_count": 3,
+      "rows_with_unexpected_column_count": [
+        {
+          "actual_column_count": 3,
+          "expected_column_count": 5,
+          "row_number": 3
+        },
+        {
+          "actual_column_count": 6,
+          "expected_column_count": 5,
+          "row_number": 4
+        }
+      ],
+      "sha256": "972c036669599cbfe18caa3f4fc78898f65d45954e02c0933fc4c15c4a76ec7a",
+      "source_file_path": "source-profiling/downloads/irregular.csv",
+      "source_relative_path": "downloads/irregular.csv",
+      "source_resource": {
+        "match_status": "unmatched_local_csv",
+        "official_dataset_url": null,
+        "parent_dataset": null,
+        "resource_id": null,
+        "resource_name": null
+      },
+      "source_to_app_gap_assessment": {
+        "database_fit": {
+          "fit_limitations": [
+            "Search/filter fields remain inside JSON original_values rather than typed indexed columns.",
+            "Facility-reference rows would share generic source-derived complaint import structures.",
+            "Program-specific duplicate facility numbers need explicit reference identity rules."
+          ],
+          "recommended_next_step": "A narrow facility-reference migration is recommended.",
+          "recommended_reasons": [
+            "Typed lookup columns can support real facility search/filtering without JSON-field coupling.",
+            "A dedicated table can keep facility reference identity, resource ID, snapshot, and preload batch metadata explicit.",
+            "The preload can avoid treating facility directory rows as complaint/report source documents."
+          ],
+          "supporting_reasons": [
+            "hosted_source_derived_records supports entity_type='facility'.",
+            "stable_source_id can hold the facility-reference identity.",
+            "original_values and source_traceability can preserve source columns and resource metadata.",
+            "hosted_import_batches can preserve local preload batch metadata and validation status.",
+            "facility lookup already has a postgres_source_derived adapter."
+          ],
+          "supports_first_preload": true,
+          "tables": [
+            "hosted_import_batches",
+            "hosted_source_derived_records"
+          ]
+        },
+        "mapped_current_records_tracker_facility_fields": [
+          {
+            "app_field": "source_id",
+            "concept": "Source identity",
+            "mapping_note": "Derived from the configured dataset slug and resource ID.",
+            "source_columns_present": []
+          }
+        ],
+        "mapped_hosted_facility_search_filter_fields": [],
+        "required_hosted_search_filtering_fields": [
+          {
+            "app_field": "external_facility_number",
+            "concept": "Facility/license number",
+            "required_for_first_search": true,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": false
+          },
+          {
+            "app_field": "facility_name",
+            "concept": "Facility name",
+            "required_for_first_search": true,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": false
+          },
+          {
+            "app_field": "facility_type",
+            "concept": "Facility type",
+            "required_for_first_search": false,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": true
+          },
+          {
+            "app_field": "county",
+            "concept": "County",
+            "required_for_first_search": false,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": true
+          },
+          {
+            "app_field": "status",
+            "concept": "Facility status",
+            "required_for_first_search": false,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": true
+          },
+          {
+            "app_field": "capacity",
+            "concept": "Capacity",
+            "required_for_first_search": false,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": true
+          },
+          {
+            "app_field": "city",
+            "concept": "City",
+            "required_for_first_search": false,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": true
+          },
+          {
+            "app_field": "state",
+            "concept": "State",
+            "required_for_first_search": false,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": true
+          },
+          {
+            "app_field": "zip_code",
+            "concept": "ZIP code",
+            "required_for_first_search": false,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": true
+          },
+          {
+            "app_field": "program_type",
+            "concept": "Program type",
+            "required_for_first_search": false,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": true
+          },
+          {
+            "app_field": "closed_date",
+            "concept": "Closed date",
+            "required_for_first_search": false,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": true
+          }
+        ],
+        "unmapped_source_columns": [
+          "facility_number",
+          "county",
+          "county",
+          "updated_date"
+        ],
+        "useful_source_columns_not_currently_represented": []
+      },
+      "suitability_reasons": [],
+      "suitable_for_tiny_fixture_creation": true
+    },
+    {
+      "blank_column_names": [],
+      "blank_header_indexes": [],
+      "column_count": 6,
+      "columns": [
+        {
+          "blank_column": false,
+          "county_geography_candidate": false,
+          "date_like_candidate": false,
+          "duplicate_non_missing_value_count": 0,
+          "facility_number_source_identifier_candidate": true,
+          "header_name": "facility_number",
+          "identifier_like_candidate": true,
+          "index": 1,
+          "missing_value_count": 1,
+          "non_missing_value_count": 2,
+          "sample_safe_type_hint": "integer-like",
+          "sample_values": [
+            "123456789",
+            "987654321"
+          ]
+        },
+        {
+          "blank_column": false,
+          "county_geography_candidate": false,
+          "date_like_candidate": false,
+          "duplicate_non_missing_value_count": 0,
+          "facility_number_source_identifier_candidate": false,
+          "header_name": "facility_name",
+          "identifier_like_candidate": false,
+          "index": 2,
+          "missing_value_count": 1,
+          "non_missing_value_count": 2,
+          "sample_safe_type_hint": "text-like",
+          "sample_values": [
+            "Synthetic Family Home",
+            "Synthetic Center"
+          ]
+        },
+        {
+          "blank_column": false,
+          "county_geography_candidate": true,
+          "date_like_candidate": false,
+          "duplicate_non_missing_value_count": 0,
+          "facility_number_source_identifier_candidate": false,
+          "header_name": "county",
+          "identifier_like_candidate": false,
+          "index": 3,
+          "missing_value_count": 1,
+          "non_missing_value_count": 2,
+          "sample_safe_type_hint": "text-like",
+          "sample_values": [
+            "Alameda",
+            "Contra Costa"
+          ]
+        },
+        {
+          "blank_column": false,
+          "county_geography_candidate": false,
+          "date_like_candidate": true,
+          "duplicate_non_missing_value_count": 0,
+          "facility_number_source_identifier_candidate": false,
+          "header_name": "inspection_date",
+          "identifier_like_candidate": false,
+          "index": 4,
+          "missing_value_count": 0,
+          "non_missing_value_count": 3,
+          "sample_safe_type_hint": "text-like",
+          "sample_values": [
+            "2026-06-07",
+            "06/08/2026",
+            "not a date"
+          ]
+        },
+        {
+          "blank_column": false,
+          "county_geography_candidate": false,
+          "date_like_candidate": false,
+          "duplicate_non_missing_value_count": 0,
+          "facility_number_source_identifier_candidate": true,
+          "header_name": "license_id",
+          "identifier_like_candidate": true,
+          "index": 5,
+          "missing_value_count": 1,
+          "non_missing_value_count": 2,
+          "sample_safe_type_hint": "text-like",
+          "sample_values": [
+            "LIC-001",
+            "LIC-002"
+          ]
+        },
+        {
+          "blank_column": false,
+          "county_geography_candidate": false,
+          "date_like_candidate": false,
+          "duplicate_non_missing_value_count": 0,
+          "facility_number_source_identifier_candidate": false,
+          "header_name": "status",
+          "identifier_like_candidate": false,
+          "index": 6,
+          "missing_value_count": 1,
+          "non_missing_value_count": 2,
+          "sample_safe_type_hint": "text-like",
+          "sample_values": [
+            "Active",
+            "Inactive"
+          ]
+        }
+      ],
+      "date_like_column_candidates": [
+        "inspection_date"
+      ],
+      "duplicate_facility_number_candidate_columns": [],
+      "duplicate_headers": [],
+      "encoding": "utf-8-sig",
+      "file_name": "normal.csv",
+      "file_size_bytes": 223,
+      "file_snapshot_date_candidates": [],
+      "has_blank_headers": false,
+      "has_duplicate_headers": false,
+      "header_names": [
+        "facility_number",
+        "facility_name",
+        "county",
+        "inspection_date",
+        "license_id",
+        "status"
+      ],
+      "identifier_like_column_candidates": [
+        "facility_number",
+        "license_id"
+      ],
+      "likely_county_geography_candidates": [
+        "county"
+      ],
+      "likely_facility_number_source_identifier_candidates": [
+        "facility_number",
+        "license_id"
+      ],
+      "malformed_row_count": 0,
+      "parser_warning_count": 0,
+      "parser_warnings": [],
+      "row_count": 3,
+      "rows_with_unexpected_column_count": [],
+      "sha256": "0b2d3f3be24166e7e615c0187199f8f6313581721ef96cd164766633ef4d6863",
+      "source_file_path": "source-profiling/normal.csv",
+      "source_relative_path": "normal.csv",
+      "source_resource": {
+        "match_status": "unmatched_local_csv",
+        "official_dataset_url": null,
+        "parent_dataset": null,
+        "resource_id": null,
+        "resource_name": null
+      },
+      "source_to_app_gap_assessment": {
+        "database_fit": {
+          "fit_limitations": [
+            "Search/filter fields remain inside JSON original_values rather than typed indexed columns.",
+            "Facility-reference rows would share generic source-derived complaint import structures.",
+            "Program-specific duplicate facility numbers need explicit reference identity rules."
+          ],
+          "recommended_next_step": "A narrow facility-reference migration is recommended.",
+          "recommended_reasons": [
+            "Typed lookup columns can support real facility search/filtering without JSON-field coupling.",
+            "A dedicated table can keep facility reference identity, resource ID, snapshot, and preload batch metadata explicit.",
+            "The preload can avoid treating facility directory rows as complaint/report source documents."
+          ],
+          "supporting_reasons": [
+            "hosted_source_derived_records supports entity_type='facility'.",
+            "stable_source_id can hold the facility-reference identity.",
+            "original_values and source_traceability can preserve source columns and resource metadata.",
+            "hosted_import_batches can preserve local preload batch metadata and validation status.",
+            "facility lookup already has a postgres_source_derived adapter."
+          ],
+          "supports_first_preload": true,
+          "tables": [
+            "hosted_import_batches",
+            "hosted_source_derived_records"
+          ]
+        },
+        "mapped_current_records_tracker_facility_fields": [
+          {
+            "app_field": "source_id",
+            "concept": "Source identity",
+            "mapping_note": "Derived from the configured dataset slug and resource ID.",
+            "source_columns_present": []
+          }
+        ],
+        "mapped_hosted_facility_search_filter_fields": [],
+        "required_hosted_search_filtering_fields": [
+          {
+            "app_field": "external_facility_number",
+            "concept": "Facility/license number",
+            "required_for_first_search": true,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": false
+          },
+          {
+            "app_field": "facility_name",
+            "concept": "Facility name",
+            "required_for_first_search": true,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": false
+          },
+          {
+            "app_field": "facility_type",
+            "concept": "Facility type",
+            "required_for_first_search": false,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": true
+          },
+          {
+            "app_field": "county",
+            "concept": "County",
+            "required_for_first_search": false,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": true
+          },
+          {
+            "app_field": "status",
+            "concept": "Facility status",
+            "required_for_first_search": false,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": true
+          },
+          {
+            "app_field": "capacity",
+            "concept": "Capacity",
+            "required_for_first_search": false,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": true
+          },
+          {
+            "app_field": "city",
+            "concept": "City",
+            "required_for_first_search": false,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": true
+          },
+          {
+            "app_field": "state",
+            "concept": "State",
+            "required_for_first_search": false,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": true
+          },
+          {
+            "app_field": "zip_code",
+            "concept": "ZIP code",
+            "required_for_first_search": false,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": true
+          },
+          {
+            "app_field": "program_type",
+            "concept": "Program type",
+            "required_for_first_search": false,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": true
+          },
+          {
+            "app_field": "closed_date",
+            "concept": "Closed date",
+            "required_for_first_search": false,
+            "source_columns_present": [],
+            "status": "missing",
+            "useful_for_filtering": true
+          }
+        ],
+        "unmapped_source_columns": [
+          "facility_number",
+          "facility_name",
+          "county",
+          "inspection_date",
+          "license_id",
+          "status"
+        ],
+        "useful_source_columns_not_currently_represented": []
+      },
+      "suitability_reasons": [],
+      "suitable_for_tiny_fixture_creation": true
+    }
+  ],
+  "raw_files_modified": false,
+  "source_root": "C:/Users/andre/OneDrive/Desktop/Repos/CCLD-complaints-poc/UsersandreOneDriveDesktopReposCCLD-complaints-poc.pytest-tmp/test_profile_tree_writes_json_0/source-profiling",
+  "source_to_app_gap_assessment": {
+    "aggregate_source_to_app_mapping": {
+      "database_fit": {
+        "fit_limitations": [
+          "Search/filter fields remain inside JSON original_values rather than typed indexed columns.",
+          "Facility-reference rows would share generic source-derived complaint import structures.",
+          "Program-specific duplicate facility numbers need explicit reference identity rules."
+        ],
+        "recommended_next_step": "A narrow facility-reference migration is recommended.",
+        "recommended_reasons": [
+          "Typed lookup columns can support real facility search/filtering without JSON-field coupling.",
+          "A dedicated table can keep facility reference identity, resource ID, snapshot, and preload batch metadata explicit.",
+          "The preload can avoid treating facility directory rows as complaint/report source documents."
+        ],
+        "supporting_reasons": [
+          "hosted_source_derived_records supports entity_type='facility'.",
+          "stable_source_id can hold the facility-reference identity.",
+          "original_values and source_traceability can preserve source columns and resource metadata.",
+          "hosted_import_batches can preserve local preload batch metadata and validation status.",
+          "facility lookup already has a postgres_source_derived adapter."
+        ],
+        "supports_first_preload": true,
+        "tables": [
+          "hosted_import_batches",
+          "hosted_source_derived_records"
+        ]
+      },
+      "mapped_current_records_tracker_facility_fields": [
+        {
+          "app_field": "source_id",
+          "concept": "Source identity",
+          "mapping_note": "Derived from the configured dataset slug and resource ID.",
+          "source_columns_present": []
+        }
+      ],
+      "mapped_hosted_facility_search_filter_fields": [],
+      "required_hosted_search_filtering_fields": [
+        {
+          "app_field": "external_facility_number",
+          "concept": "Facility/license number",
+          "required_for_first_search": true,
+          "source_columns_present": [],
+          "status": "missing",
+          "useful_for_filtering": false
+        },
+        {
+          "app_field": "facility_name",
+          "concept": "Facility name",
+          "required_for_first_search": true,
+          "source_columns_present": [],
+          "status": "missing",
+          "useful_for_filtering": false
+        },
+        {
+          "app_field": "facility_type",
+          "concept": "Facility type",
+          "required_for_first_search": false,
+          "source_columns_present": [],
+          "status": "missing",
+          "useful_for_filtering": true
+        },
+        {
+          "app_field": "county",
+          "concept": "County",
+          "required_for_first_search": false,
+          "source_columns_present": [],
+          "status": "missing",
+          "useful_for_filtering": true
+        },
+        {
+          "app_field": "status",
+          "concept": "Facility status",
+          "required_for_first_search": false,
+          "source_columns_present": [],
+          "status": "missing",
+          "useful_for_filtering": true
+        },
+        {
+          "app_field": "capacity",
+          "concept": "Capacity",
+          "required_for_first_search": false,
+          "source_columns_present": [],
+          "status": "missing",
+          "useful_for_filtering": true
+        },
+        {
+          "app_field": "city",
+          "concept": "City",
+          "required_for_first_search": false,
+          "source_columns_present": [],
+          "status": "missing",
+          "useful_for_filtering": true
+        },
+        {
+          "app_field": "state",
+          "concept": "State",
+          "required_for_first_search": false,
+          "source_columns_present": [],
+          "status": "missing",
+          "useful_for_filtering": true
+        },
+        {
+          "app_field": "zip_code",
+          "concept": "ZIP code",
+          "required_for_first_search": false,
+          "source_columns_present": [],
+          "status": "missing",
+          "useful_for_filtering": true
+        },
+        {
+          "app_field": "program_type",
+          "concept": "Program type",
+          "required_for_first_search": false,
+          "source_columns_present": [],
+          "status": "missing",
+          "useful_for_filtering": true
+        },
+        {
+          "app_field": "closed_date",
+          "concept": "Closed date",
+          "required_for_first_search": false,
+          "source_columns_present": [],
+          "status": "missing",
+          "useful_for_filtering": true
+        }
+      ],
+      "unmapped_source_columns": [
+        "county",
+        "facility_name",
+        "facility_number",
+        "inspection_date",
+        "license_id",
+        "status",
+        "updated_date"
+      ],
+      "useful_source_columns_not_currently_represented": []
+    },
+    "database_fit_conclusion": "A narrow facility-reference migration is recommended.",
+    "database_fit_reasons": [
+      "Typed lookup columns can support real facility search/filtering without JSON-field coupling.",
+      "A dedicated table can keep facility reference identity, resource ID, snapshot, and preload batch metadata explicit.",
+      "The preload can avoid treating facility directory rows as complaint/report source documents."
+    ],
+    "facility_source_registry": {
+      "needs_confirmation_resources": [
+        {
+          "confirmation_status": "needs official CHHS resource ID confirmation",
+          "local_filename_aliases": [
+            "CDSS_CCL_Facilities_2065342970436235361.csv"
+          ],
+          "resource_id": null,
+          "resource_name": "Statewide facility master/local facility-directory example"
+        }
+      ],
+      "parent_dataset": {
+        "name": "Community Care Licensing Facilities",
+        "official_dataset_url": "https://data.chhs.ca.gov/dataset/ccl-facilities",
+        "publisher": "CHHS/CDSS / California Community Care Licensing Division",
+        "slug": "ccl-facilities"
+      },
+      "target_resources": [
+        {
+          "local_filename_aliases": [
+            "ChildCareCenters06072026.csv"
+          ],
+          "resource_id": "7aed8063-cea7-4367-8651-c81643164ae0",
+          "resource_name": "Child Care Centers"
+        },
+        {
+          "local_filename_aliases": [
+            "CHILDCAREHOMEmorethan806072026.csv"
+          ],
+          "resource_id": "4b5cc48d-03b1-4f42-a7d1-b9816903eb2b",
+          "resource_name": "Family Child Care Homes"
+        },
+        {
+          "local_filename_aliases": [
+            "HomeCare06072026.csv"
+          ],
+          "resource_id": "b4d78b7f-12df-4b0c-a81a-ff40b949bc75",
+          "resource_name": "Home Care Organization"
+        },
+        {
+          "local_filename_aliases": [
+            "FosterFamilyAgencies06072026.csv"
+          ],
+          "resource_id": "5f5f7124-1a38-4b61-93b9-4e4be3b3b07d",
+          "resource_name": "Foster Family Agencies"
+        },
+        {
+          "local_filename_aliases": [
+            "24HourResidentialCareforChildren06072026.csv"
+          ],
+          "resource_id": "c9df723a-437f-4dcd-be37-ec73ae518bb9",
+          "resource_name": "24-Hour Residential Care for Children"
+        }
+      ]
+    },
+    "generated_for": "facility source profiling and database-fit assessment",
+    "per_file_source_to_app_mapping": [
+      {
+        "file_name": "irregular.csv",
+        "source_resource": {
+          "match_status": "unmatched_local_csv",
+          "official_dataset_url": null,
+          "parent_dataset": null,
+          "resource_id": null,
+          "resource_name": null
+        },
+        "source_to_app_gap_assessment": {
+          "database_fit": {
+            "fit_limitations": [
+              "Search/filter fields remain inside JSON original_values rather than typed indexed columns.",
+              "Facility-reference rows would share generic source-derived complaint import structures.",
+              "Program-specific duplicate facility numbers need explicit reference identity rules."
+            ],
+            "recommended_next_step": "A narrow facility-reference migration is recommended.",
+            "recommended_reasons": [
+              "Typed lookup columns can support real facility search/filtering without JSON-field coupling.",
+              "A dedicated table can keep facility reference identity, resource ID, snapshot, and preload batch metadata explicit.",
+              "The preload can avoid treating facility directory rows as complaint/report source documents."
+            ],
+            "supporting_reasons": [
+              "hosted_source_derived_records supports entity_type='facility'.",
+              "stable_source_id can hold the facility-reference identity.",
+              "original_values and source_traceability can preserve source columns and resource metadata.",
+              "hosted_import_batches can preserve local preload batch metadata and validation status.",
+              "facility lookup already has a postgres_source_derived adapter."
+            ],
+            "supports_first_preload": true,
+            "tables": [
+              "hosted_import_batches",
+              "hosted_source_derived_records"
+            ]
+          },
+          "mapped_current_records_tracker_facility_fields": [
+            {
+              "app_field": "source_id",
+              "concept": "Source identity",
+              "mapping_note": "Derived from the configured dataset slug and resource ID.",
+              "source_columns_present": []
+            }
+          ],
+          "mapped_hosted_facility_search_filter_fields": [],
+          "required_hosted_search_filtering_fields": [
+            {
+              "app_field": "external_facility_number",
+              "concept": "Facility/license number",
+              "required_for_first_search": true,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": false
+            },
+            {
+              "app_field": "facility_name",
+              "concept": "Facility name",
+              "required_for_first_search": true,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": false
+            },
+            {
+              "app_field": "facility_type",
+              "concept": "Facility type",
+              "required_for_first_search": false,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": true
+            },
+            {
+              "app_field": "county",
+              "concept": "County",
+              "required_for_first_search": false,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": true
+            },
+            {
+              "app_field": "status",
+              "concept": "Facility status",
+              "required_for_first_search": false,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": true
+            },
+            {
+              "app_field": "capacity",
+              "concept": "Capacity",
+              "required_for_first_search": false,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": true
+            },
+            {
+              "app_field": "city",
+              "concept": "City",
+              "required_for_first_search": false,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": true
+            },
+            {
+              "app_field": "state",
+              "concept": "State",
+              "required_for_first_search": false,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": true
+            },
+            {
+              "app_field": "zip_code",
+              "concept": "ZIP code",
+              "required_for_first_search": false,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": true
+            },
+            {
+              "app_field": "program_type",
+              "concept": "Program type",
+              "required_for_first_search": false,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": true
+            },
+            {
+              "app_field": "closed_date",
+              "concept": "Closed date",
+              "required_for_first_search": false,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": true
+            }
+          ],
+          "unmapped_source_columns": [
+            "facility_number",
+            "county",
+            "county",
+            "updated_date"
+          ],
+          "useful_source_columns_not_currently_represented": []
+        }
+      },
+      {
+        "file_name": "normal.csv",
+        "source_resource": {
+          "match_status": "unmatched_local_csv",
+          "official_dataset_url": null,
+          "parent_dataset": null,
+          "resource_id": null,
+          "resource_name": null
+        },
+        "source_to_app_gap_assessment": {
+          "database_fit": {
+            "fit_limitations": [
+              "Search/filter fields remain inside JSON original_values rather than typed indexed columns.",
+              "Facility-reference rows would share generic source-derived complaint import structures.",
+              "Program-specific duplicate facility numbers need explicit reference identity rules."
+            ],
+            "recommended_next_step": "A narrow facility-reference migration is recommended.",
+            "recommended_reasons": [
+              "Typed lookup columns can support real facility search/filtering without JSON-field coupling.",
+              "A dedicated table can keep facility reference identity, resource ID, snapshot, and preload batch metadata explicit.",
+              "The preload can avoid treating facility directory rows as complaint/report source documents."
+            ],
+            "supporting_reasons": [
+              "hosted_source_derived_records supports entity_type='facility'.",
+              "stable_source_id can hold the facility-reference identity.",
+              "original_values and source_traceability can preserve source columns and resource metadata.",
+              "hosted_import_batches can preserve local preload batch metadata and validation status.",
+              "facility lookup already has a postgres_source_derived adapter."
+            ],
+            "supports_first_preload": true,
+            "tables": [
+              "hosted_import_batches",
+              "hosted_source_derived_records"
+            ]
+          },
+          "mapped_current_records_tracker_facility_fields": [
+            {
+              "app_field": "source_id",
+              "concept": "Source identity",
+              "mapping_note": "Derived from the configured dataset slug and resource ID.",
+              "source_columns_present": []
+            }
+          ],
+          "mapped_hosted_facility_search_filter_fields": [],
+          "required_hosted_search_filtering_fields": [
+            {
+              "app_field": "external_facility_number",
+              "concept": "Facility/license number",
+              "required_for_first_search": true,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": false
+            },
+            {
+              "app_field": "facility_name",
+              "concept": "Facility name",
+              "required_for_first_search": true,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": false
+            },
+            {
+              "app_field": "facility_type",
+              "concept": "Facility type",
+              "required_for_first_search": false,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": true
+            },
+            {
+              "app_field": "county",
+              "concept": "County",
+              "required_for_first_search": false,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": true
+            },
+            {
+              "app_field": "status",
+              "concept": "Facility status",
+              "required_for_first_search": false,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": true
+            },
+            {
+              "app_field": "capacity",
+              "concept": "Capacity",
+              "required_for_first_search": false,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": true
+            },
+            {
+              "app_field": "city",
+              "concept": "City",
+              "required_for_first_search": false,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": true
+            },
+            {
+              "app_field": "state",
+              "concept": "State",
+              "required_for_first_search": false,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": true
+            },
+            {
+              "app_field": "zip_code",
+              "concept": "ZIP code",
+              "required_for_first_search": false,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": true
+            },
+            {
+              "app_field": "program_type",
+              "concept": "Program type",
+              "required_for_first_search": false,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": true
+            },
+            {
+              "app_field": "closed_date",
+              "concept": "Closed date",
+              "required_for_first_search": false,
+              "source_columns_present": [],
+              "status": "missing",
+              "useful_for_filtering": true
+            }
+          ],
+          "unmapped_source_columns": [
+            "facility_number",
+            "facility_name",
+            "county",
+            "inspection_date",
+            "license_id",
+            "status"
+          ],
+          "useful_source_columns_not_currently_represented": []
+        }
+      }
+    ],
+    "profiled_file_count": 2
+  },
+  "totals": {
+    "csv_file_count": 2,
+    "skipped_non_csv_file_count": 1,
+    "suitable_file_count": 2,
+    "total_file_size_bytes": 411,
+    "total_malformed_row_count": 2,
+    "total_parser_warning_count": 0,
+    "total_row_count": 6
+  }
+}

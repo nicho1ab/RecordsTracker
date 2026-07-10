@@ -1,0 +1,10 @@
+Source profiling run
+Generated at: 2026-07-10T18:39:34Z
+Source root: C:/Users/andre/OneDrive/Desktop/Repos/CCLD-complaints-poc/UsersandreOneDriveDesktopReposCCLD-complaints-poc.pytest-tmp/test_profile_tree_writes_json_0/source-profiling
+CSV files profiled: 2
+Non-CSV files skipped: 1
+Total rows: 6
+Parser warnings: 0
+Malformed or irregular rows: 2
+Suitable for later tiny fixture creation: 2
+Local-only boundary: no raw files modified, no import, no schema changes, no connectors.

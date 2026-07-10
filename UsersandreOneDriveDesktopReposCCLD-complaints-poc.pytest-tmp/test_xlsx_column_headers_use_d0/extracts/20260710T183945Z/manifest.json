@@ -1,0 +1,22 @@
+{
+  "generated_at": "20260710T183945Z",
+  "script_name": "export-stakeholder-facility-overview.ps1",
+  "input_source": "C:/Users/andre/OneDrive/Desktop/Repos/CCLD-complaints-poc/UsersandreOneDriveDesktopReposCCLD-complaints-poc.pytest-tmp/test_xlsx_column_headers_use_d0/test.sqlite",
+  "output_files": [
+    "facility-overview.csv",
+    "substantiated-complaints.csv",
+    "complaint-records.csv",
+    "README.md",
+    "manifest.json",
+    "stakeholder-facility-overview-20260710T183945Z.xlsx"
+  ],
+  "facility_row_count": 1,
+  "substantiated_complaint_row_count": 1,
+  "complaint_record_row_count": 2,
+  "git_commit": "9e0f570",
+  "facility_reference_csv": "none",
+  "facility_reference_row_count": 0,
+  "facility_reference_matched_count": 0,
+  "only_facility_reference_rows": false,
+  "limitations": "Review aid over loaded source-derived records only. Does not make legal conclusions, facility-wide conclusions, source-completeness claims, verified severity claims, or abuse/neglect findings. Public CCLD portal remains the source of record."
+}
