@@ -52,8 +52,9 @@ tenant IDs, app registrations, callback URLs, hosted URLs, private URLs, tokens,
 and account-specific configuration must not be committed.
 
 The current hosted auth boundary scaffold validates only the accepted managed
-OIDC/OAuth2 provider class through `CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS` and
-models authenticated actor identity, account status, role assignments,
+OIDC/OAuth2 or Cloudflare Access provider class through
+`CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS` and models authenticated actor identity,
+account status, role assignments,
 project/corpus scopes, authorization targets, and audit-ready actor context for
 local/test use. The current runtime auth boundary also reads
 `CCLD_HOSTED_TESTER_AUTH_MODE`, `CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH`,
@@ -73,6 +74,19 @@ tester label when available; it must not render provider subjects, issuers, raw
 claims, tokens, cookies, private headers, or secrets. Protected service helpers must reject
 unauthenticated, disabled or revoked, role-denied, and out-of-scope actors
 before future reviewer-created workflows are enabled.
+
+For the QNAP pilot feedback path, `cloudflare-access` is a narrow bridge rather
+than an app login system. Cloudflare Access protects the public hostname, and
+RecordsTracker validates only the `Cf-Access-Jwt-Assertion` header using the
+configured team-domain JWKS, issuer, AUD tag, expiration/not-before, and
+configured email allowlists before creating a minimal feedback actor. The app
+must not trust cookies, query string tokens, arbitrary email headers, or
+caller-provided actor fields for that bridge. It must not render raw JWTs, raw
+claims, provider subjects or issuers, real team domains, AUD tags, tester
+allowlists, cookies, GitHub tokens, private URLs, tunnel tokens, or other
+secrets in HTML, JSON, logs, tests, docs, screenshots, or GitHub issue bodies.
+The bridge does not add app passwords, sessions, user tables, migrations, or a
+full OIDC login UI.
 
 The current page-data seam defaults production-style runtime to
 `CCLD_HOSTED_PAGE_DATA_MODE=postgres`. PostgreSQL-backed pages must use the

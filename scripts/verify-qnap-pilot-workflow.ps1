@@ -267,6 +267,7 @@ $requiredKeys = @(
     "CCLD_HOSTED_PORT",
     "CCLD_HOSTED_PAGE_DATA_MODE",
     "CCLD_HOSTED_TESTER_AUTH_MODE",
+    "CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS",
     "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH",
     "CCLD_RETRIEVAL_ENABLED"
 )
@@ -275,12 +276,17 @@ Write-CheckPass "Required QNAP pilot env keys are present."
 
 $pageDataMode = Get-EnvValue -Values $envValues -Key "CCLD_HOSTED_PAGE_DATA_MODE"
 $authMode = Get-EnvValue -Values $envValues -Key "CCLD_HOSTED_TESTER_AUTH_MODE"
+$authProviderClass = Get-EnvValue -Values $envValues -Key "CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS"
 $localDevAuth = Get-EnvValue -Values $envValues -Key "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH"
 $retrievalDemoMode = Get-EnvValue -Values $envValues -Key "CCLD_RETRIEVAL_DEMO_MODE"
 $retrievalEnabled = Get-EnvValue -Values $envValues -Key "CCLD_RETRIEVAL_ENABLED"
 $retrievalRawDir = Get-EnvValue -Values $envValues -Key "CCLD_RETRIEVAL_RAW_DIR"
 $githubFeedbackRepo = Get-EnvValue -Values $envValues -Key "GITHUB_FEEDBACK_REPO"
 $githubFeedbackToken = Get-EnvValue -Values $envValues -Key "GITHUB_FEEDBACK_TOKEN"
+
+if ($authProviderClass -notin @("managed-oidc-oauth2", "cloudflare-access")) {
+    Stop-CheckFail "CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS must be managed-oidc-oauth2 or cloudflare-access."
+}
 
 if ($retrievalDemoMode -eq "mock-success") {
     if (-not $AllowLocalDevDemo) {
@@ -299,6 +305,24 @@ else {
         Stop-CheckFail "QNAP pilot mode should use production auth mode; local-dev auth disabled is required."
     }
     Write-CheckPass "QNAP pilot mode keeps PostgreSQL page data and production auth boundary defaults."
+}
+
+if ($authProviderClass -eq "cloudflare-access") {
+    foreach ($key in @(
+        "CCLD_CLOUDFLARE_ACCESS_TEAM_DOMAIN",
+        "CCLD_CLOUDFLARE_ACCESS_AUD"
+    )) {
+        Test-PilotEnvValue -Values $envValues -Key $key
+    }
+    $allowedDomains = Get-EnvValue -Values $envValues -Key "CCLD_CLOUDFLARE_ACCESS_ALLOWED_EMAIL_DOMAINS"
+    $allowedEmails = Get-EnvValue -Values $envValues -Key "CCLD_CLOUDFLARE_ACCESS_ALLOWED_EMAILS"
+    if ([string]::IsNullOrWhiteSpace($allowedDomains) -and [string]::IsNullOrWhiteSpace($allowedEmails)) {
+        Stop-CheckFail "Cloudflare Access auth requires an allowed email domain or exact email allowlist."
+    }
+    Write-CheckPass "Cloudflare Access auth provider has required team, audience, and email allowlist settings."
+}
+else {
+    Write-CheckPass "Managed OIDC/OAuth2 provider placeholder remains recognized for future auth readiness."
 }
 
 if ($retrievalEnabled -eq "enabled") {
@@ -328,7 +352,17 @@ else {
     Write-CheckPass "GitHub feedback intake has both repo and token values present."
 }
 
-foreach ($key in @("CCLD_POSTGRES_PASSWORD", "CCLD_HOSTED_TESTER_OIDC_ISSUER", "CCLD_HOSTED_TESTER_OIDC_CLIENT_ID", "GITHUB_FEEDBACK_REPO", "GITHUB_FEEDBACK_TOKEN")) {
+foreach ($key in @(
+    "CCLD_POSTGRES_PASSWORD",
+    "CCLD_HOSTED_TESTER_OIDC_ISSUER",
+    "CCLD_HOSTED_TESTER_OIDC_CLIENT_ID",
+    "CCLD_CLOUDFLARE_ACCESS_TEAM_DOMAIN",
+    "CCLD_CLOUDFLARE_ACCESS_AUD",
+    "CCLD_CLOUDFLARE_ACCESS_ALLOWED_EMAIL_DOMAINS",
+    "CCLD_CLOUDFLARE_ACCESS_ALLOWED_EMAILS",
+    "GITHUB_FEEDBACK_REPO",
+    "GITHUB_FEEDBACK_TOKEN"
+)) {
     $value = Get-EnvValue -Values $envValues -Key $key
     if (Test-SecretLikeExampleValue -Value $value) {
         Stop-CheckFail "$key looks like a committed real secret or token. Keep real values only in untracked host configuration."

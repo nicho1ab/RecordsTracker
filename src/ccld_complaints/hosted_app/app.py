@@ -9,6 +9,7 @@ import json
 import os
 from collections import Counter
 from dataclasses import dataclass
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -28,8 +29,12 @@ from ccld_complaints.hosted_app.audit_event_routes import (
     route_audit_events_api_response,
 )
 from ccld_complaints.hosted_app.auth import (
+    CLOUDFLARE_ACCESS_PROVIDER_CLASS,
+    CloudflareAccessAuthError,
     HostedAuthConfigError,
     HostedAuthRuntimeConfig,
+    JwksFetcher,
+    authenticate_cloudflare_access_request,
     load_hosted_auth_runtime_config,
 )
 from ccld_complaints.hosted_app.auth_provider_integration_plan import (
@@ -74,6 +79,8 @@ from ccld_complaints.hosted_app.facility_reference_preload import (
 from ccld_complaints.hosted_app.feedback import (
     FEEDBACK_PATH,
     FeedbackContext,
+    GitHubFeedbackConfig,
+    GitHubIssueClient,
     GitHubRestIssueClient,
     load_github_feedback_config,
     route_feedback_response,
@@ -1049,6 +1056,7 @@ def route_response(
     *,
   method: str = "GET",
     request_body: bytes | None = None,
+    request_headers: dict[str, str] | None = None,
     audit_coverage_plan_context: AuditCoveragePlanContext | None = None,
     auth_provider_integration_plan_context: (
         AuthProviderIntegrationPlanContext | None
@@ -1067,6 +1075,10 @@ def route_response(
     auth_runtime_config: HostedAuthRuntimeConfig | None = None,
     page_data_mode: str | None = None,
     feedback_context: FeedbackContext | None = None,
+    github_feedback_config: GitHubFeedbackConfig | None = None,
+    github_feedback_client: GitHubIssueClient | None = None,
+    cloudflare_jwks_fetcher: JwksFetcher | None = None,
+    cloudflare_auth_now: datetime | None = None,
     reviewer_ui_context: ReviewerUiContext | None = None,
     ccld_record_request_ui_context: CcldRecordRequestUiContext | None = None,
 ) -> tuple[int, str, bytes]:
@@ -1079,9 +1091,18 @@ def route_response(
     if parsed_path == AUTH_STATUS_PATH:
         return _auth_status_response(active_auth_config)
     if parsed_path == FEEDBACK_PATH:
-        active_feedback_context = feedback_context or _default_feedback_context(
-            active_auth_config
-        )
+        try:
+            active_feedback_context = feedback_context or _default_feedback_context(
+                active_auth_config,
+                request_headers=request_headers or {},
+                method=method,
+                cloudflare_jwks_fetcher=cloudflare_jwks_fetcher,
+                cloudflare_auth_now=cloudflare_auth_now,
+                github_feedback_config=github_feedback_config,
+                github_feedback_client=github_feedback_client,
+            )
+        except CloudflareAccessAuthError as error:
+            return _cloudflare_access_auth_blocked_response(error)
         return route_feedback_response(
             path,
             active_feedback_context,
@@ -1380,13 +1401,34 @@ def _default_retrieval_context_for_reviewer_context(
 
 def _default_feedback_context(
     auth_runtime_config: HostedAuthRuntimeConfig,
+    *,
+    request_headers: dict[str, str],
+    method: str,
+    cloudflare_jwks_fetcher: JwksFetcher | None,
+    cloudflare_auth_now: datetime | None,
+    github_feedback_config: GitHubFeedbackConfig | None,
+    github_feedback_client: GitHubIssueClient | None,
 ) -> FeedbackContext:
-    actor = local_test_reviewer_actor() if auth_runtime_config.local_dev_actor_allowed else None
+    actor = None
+    if auth_runtime_config.local_dev_actor_allowed:
+        actor = local_test_reviewer_actor()
+    elif (
+        method == "POST"
+        and auth_runtime_config.production_mode
+        and auth_runtime_config.provider_class == CLOUDFLARE_ACCESS_PROVIDER_CLASS
+    ):
+        actor = authenticate_cloudflare_access_request(
+            request_headers,
+            auth_runtime_config.cloudflare_access,
+            scope=LOCAL_REVIEWER_UI_SCOPE,
+            now=cloudflare_auth_now,
+            jwks_fetcher=cloudflare_jwks_fetcher,
+        )
     return FeedbackContext(
         actor=actor,
         scope=LOCAL_REVIEWER_UI_SCOPE,
-        github_config=load_github_feedback_config(),
-        github_client=GitHubRestIssueClient(),
+        github_config=github_feedback_config or load_github_feedback_config(),
+        github_client=github_feedback_client or GitHubRestIssueClient(),
     )
 
 
@@ -1955,6 +1997,17 @@ def _auth_required_response(heading: str, message: str) -> tuple[int, str, bytes
     return _auth_html_response(401, heading, message)
 
 
+def _cloudflare_access_auth_blocked_response(
+    error: CloudflareAccessAuthError,
+) -> tuple[int, str, bytes]:
+    heading = (
+        "Cloudflare Access sign-in required"
+        if error.status == 401
+        else "Cloudflare Access authentication blocked"
+    )
+    return _auth_html_response(error.status, heading, str(error))
+
+
 def _auth_html_response(status: int, heading: str, message: str) -> tuple[int, str, bytes]:
     body = render_page_shell(
         title=heading,
@@ -1976,7 +2029,11 @@ class HostedScaffoldHandler(BaseHTTPRequestHandler):
     server_version = "CCLDHostedScaffold/0.1"
 
     def do_GET(self) -> None:
-        status, content_type, body = route_response(self.path, method="GET")
+        status, content_type, body = route_response(
+            self.path,
+            method="GET",
+            request_headers={key: value for key, value in self.headers.items()},
+        )
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         disposition = _content_disposition_header(self.path, status, content_type)
@@ -1993,6 +2050,7 @@ class HostedScaffoldHandler(BaseHTTPRequestHandler):
             self.path,
             method="POST",
             request_body=request_body,
+            request_headers={key: value for key, value in self.headers.items()},
         )
         self.send_response(status)
         self.send_header("Content-Type", content_type)

@@ -99,8 +99,9 @@ Use the full operator checklist in
 before inviting early testers.
 Use
 [docs/developer/qnap-pilot-auth-readiness.md](docs/developer/qnap-pilot-auth-readiness.md)
-to capture the current production-mode auth readiness, deferred login/OIDC work,
-and no-secret host-local provider settings before inviting testers.
+to capture the Cloudflare Access feedback bridge readiness, deferred
+login/session/OIDC work, and no-secret host-local provider settings before
+inviting testers.
 Use
 [docs/developer/qnap-pilot-access-method-decision.md](docs/developer/qnap-pilot-access-method-decision.md)
 to record the temporary access method, scope, expiration, and revocation path
@@ -125,12 +126,17 @@ operator review; generated packets must not be committed.
 3. Keep `CCLD_HOSTED_PAGE_DATA_MODE=postgres`.
 4. Keep `CCLD_HOSTED_TESTER_AUTH_MODE=production` and
 	`CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH=disabled`.
-5. Keep `CCLD_RETRIEVAL_DEMO_MODE=` blank for QNAP pilot mode.
-6. Keep `CCLD_RETRIEVAL_ENABLED=disabled` until live retrieval is intentionally
+5. Set `CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS=cloudflare-access` and configure
+	`CCLD_CLOUDFLARE_ACCESS_TEAM_DOMAIN`,
+	`CCLD_CLOUDFLARE_ACCESS_AUD`, and at least one of
+	`CCLD_CLOUDFLARE_ACCESS_ALLOWED_EMAIL_DOMAINS` or
+	`CCLD_CLOUDFLARE_ACCESS_ALLOWED_EMAILS` in the untracked host `.env`.
+6. Keep `CCLD_RETRIEVAL_DEMO_MODE=` blank for QNAP pilot mode.
+7. Keep `CCLD_RETRIEVAL_ENABLED=disabled` until live retrieval is intentionally
 	configured, or set it to `enabled` only with persistent raw artifact storage.
-7. Leave both `GITHUB_FEEDBACK_REPO` and `GITHUB_FEEDBACK_TOKEN` blank to disable
+8. Leave both `GITHUB_FEEDBACK_REPO` and `GITHUB_FEEDBACK_TOKEN` blank to disable
 	GitHub feedback, or configure both values server-side to enable it.
-8. Run the verifier:
+9. Run the verifier:
 
 ```powershell
 .\scripts\verify-qnap-pilot-workflow.ps1 -EnvFile .env
@@ -142,7 +148,8 @@ GitHub feedback configuration state, and Docker Compose configuration before
 containers are started. It warns about placeholder values that must be replaced
 before inviting testers.
 Record `/auth/status` output only as a safe capability summary; do not treat it
-as real login/session evidence, and do not capture provider secrets or callback
+as real login/session evidence, and do not capture provider secrets, Cloudflare
+Access JWTs, team domains, AUD tags, tester allowlists, or callback
 URLs in readiness notes.
 
 ```powershell
