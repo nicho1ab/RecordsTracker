@@ -1,4 +1,4 @@
-# Cloudflare Tunnel + Cloudflare Access Setup
+﻿# Cloudflare Tunnel + Cloudflare Access Setup
 
 Use this runbook to configure Cloudflare Tunnel and Cloudflare Access for the
 QNAP-hosted CCLD pilot after the access-layer identity decision has been
@@ -65,8 +65,8 @@ Read these before any Cloudflare step:
 2. Confirm the zone (domain) that will host the pilot subdomain is active.
 3. Note the Cloudflare account ID. Keep it in a password manager or local notes;
    do not commit it.
-4. Confirm the account has access to **Zero Trust → Tunnels** and
-   **Zero Trust → Access → Applications**.
+4. Confirm the account has access to **Zero Trust â†’ Tunnels** and
+   **Zero Trust â†’ Access â†’ Applications**.
 
 ---
 
@@ -85,7 +85,7 @@ The subdomain must:
 
 Using the Cloudflare dashboard:
 
-1. Go to **Zero Trust → Network → Tunnels**.
+1. Go to **Zero Trust â†’ Network â†’ Tunnels**.
 2. Click **Create a tunnel**.
 3. Select **Cloudflared** as the connector type.
 4. Give the tunnel a name such as `recordstracker-qnap-pilot`.
@@ -101,7 +101,7 @@ Using the Cloudflare dashboard:
 ### Option A: Docker container (recommended for QNAP Container Station)
 
 On the QNAP host, run `cloudflared` as a detached container. Replace
-`<tunnel-token>` with the actual token from step 5 — keep it in the QNAP
+`<tunnel-token>` with the actual token from step 5 â€” keep it in the QNAP
 host's environment or Container Station secret configuration, not in committed
 files:
 
@@ -120,13 +120,13 @@ using a `.env`-style file for the token, keep that file untracked.
 If a native QNAP binary is available:
 
 ```bash
-cloudflared tunnel run --token <tunnel-token>
+Start the Cloudflare tunnel using host-local Cloudflare-managed configuration or a host-local service definition. Do not place tunnel tokens in repository files, examples, scripts, logs, screenshots, or copied terminal output.
 ```
 
 ### Confirming the connector is active
 
 After starting the connector, return to the Cloudflare dashboard
-(**Zero Trust → Tunnels**) and confirm the tunnel shows **Healthy** with at
+(**Zero Trust â†’ Tunnels**) and confirm the tunnel shows **Healthy** with at
 least one connected connector. A **Healthy** state confirms the QNAP host can
 reach Cloudflare.
 
@@ -136,7 +136,7 @@ reach Cloudflare.
 
 In the Cloudflare dashboard, configure the tunnel's **Public Hostname**:
 
-1. Go to **Zero Trust → Tunnels**, select the tunnel, then **Configure →
+1. Go to **Zero Trust â†’ Tunnels**, select the tunnel, then **Configure â†’
    Public Hostnames**.
 2. Add a public hostname:
    - **Subdomain**: `<pilot-subdomain>` (the placeholder chosen in section 4).
@@ -158,8 +158,8 @@ app HTTP service on `CCLD_HOSTED_PORT` should have a public hostname entry.
 Cloudflare Access must be configured and confirmed blocking before the pilot
 URL is shared with any tester.
 
-1. Go to **Zero Trust → Access → Applications**.
-2. Click **Add an application** → **Self-hosted**.
+1. Go to **Zero Trust â†’ Access â†’ Applications**.
+2. Click **Add an application** â†’ **Self-hosted**.
 3. Configure:
    - **Application name**: `RecordsTracker Pilot` (or similar).
    - **Application domain**: `<pilot-subdomain>.<your-zone-domain>`.
@@ -168,7 +168,7 @@ URL is shared with any tester.
 4. Add an **Access policy**:
    - **Policy name**: `Tester allowlist`.
    - **Action**: Allow.
-   - **Include rule**: Emails — list the individually approved tester email
+   - **Include rule**: Emails â€” list the individually approved tester email
      addresses. Keep this list in local operator notes only.
    - Add a second policy with **Action: Block** and no include rules, or rely
      on Cloudflare Access's default deny for all non-matching requests.
@@ -211,7 +211,7 @@ be reachable.
 Using the allowlisted test email, complete the Cloudflare Access authentication
 flow. After verification, the app landing page should load and `/health` should
 return `200`. Confirm the app shows the CCLD review shell (not a provider login
-page — the app's own OIDC auth is not yet implemented and protected routes will
+page â€” the app's own OIDC auth is not yet implemented and protected routes will
 show sign-in-required state).
 
 ### 9.4 Confirm no QNAP management service is reachable
@@ -273,7 +273,7 @@ addresses, or private hostnames in committed files:
 
 To take the app back to LAN-only at any time:
 
-1. In the Cloudflare dashboard, go to **Zero Trust → Tunnels**, select the
+1. In the Cloudflare dashboard, go to **Zero Trust â†’ Tunnels**, select the
    tunnel, and delete the public hostname for the pilot subdomain. This removes
    the public route and the CNAME DNS record. The QNAP LAN service and
    containers are not affected.
@@ -300,8 +300,8 @@ app's authentication, authorization, or session layer.
 |---|---|
 | Who can reach the pilot URL from the internet | Cloudflare Access (email allowlist) |
 | App production auth mode (blocks anonymous workflow routes) | `CCLD_HOSTED_TESTER_AUTH_MODE=production` in `.env` |
-| Real OIDC login, sessions, user tables, role enforcement | Deferred — not yet implemented |
-| Raw source data, reviewer-created state, audit boundaries | App data model (ADRs 0008–0015) |
+| Real OIDC login, sessions, user tables, role enforcement | Deferred â€” not yet implemented |
+| Raw source data, reviewer-created state, audit boundaries | App data model (ADRs 0008â€“0015) |
 | QNAP host, containers, volumes, database | QNAP operator responsibility |
 
 Do not tell testers that Cloudflare Access is their login. Testers should
@@ -326,3 +326,4 @@ until the app's own OIDC login is implemented.
   deployment.
 - Do not make public-source completeness, legal, facility-wide, harm, abuse,
   neglect, liability, or rights-deprivation conclusions from pilot evidence.
+

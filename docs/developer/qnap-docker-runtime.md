@@ -49,7 +49,21 @@ Provider-agnostic hosted tester auth values:
 
 - `CCLD_HOSTED_TESTER_AUTH_MODE`: use `production` for QNAP/pilot-like runtime;
   use `local-dev` only for local scaffold validation.
-- `CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS`: must be `managed-oidc-oauth2`.
+- `CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS`: use `cloudflare-access` for the
+  QNAP pilot Cloudflare Access JWT bridge. `managed-oidc-oauth2` remains a
+  recognized future provider placeholder.
+- `CCLD_CLOUDFLARE_ACCESS_TEAM_DOMAIN`: Cloudflare Access team domain
+  placeholder kept in the untracked deployment `.env` file. Do not commit the
+  real value.
+- `CCLD_CLOUDFLARE_ACCESS_AUD`: Cloudflare Access application AUD tag
+  placeholder kept in the untracked deployment `.env` file. Do not commit the
+  real value.
+- `CCLD_CLOUDFLARE_ACCESS_ALLOWED_EMAIL_DOMAINS`: comma-separated allowed email
+  domains for tester access, kept host-local.
+- `CCLD_CLOUDFLARE_ACCESS_ALLOWED_EMAILS`: comma-separated exact allowed tester
+  emails, kept host-local.
+- `CCLD_CLOUDFLARE_ACCESS_JWKS_CACHE_SECONDS`: optional bounded JWKS cache
+  interval. The default placeholder is `300`.
 - `CCLD_HOSTED_TESTER_OIDC_ISSUER`: provider issuer placeholder kept in the
   untracked deployment `.env` file.
 - `CCLD_HOSTED_TESTER_OIDC_CLIENT_ID`: provider client ID placeholder kept in
@@ -60,6 +74,12 @@ Provider-agnostic hosted tester auth values:
   `openid profile`.
 - `CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH`: keep `disabled` for production mode; set
   to `enabled` only with `local-dev` mode for local scaffold validation.
+
+For the Cloudflare Access bridge, Cloudflare Access must protect the public
+hostname and pass the `Cf-Access-Jwt-Assertion` header to the app. RecordsTracker
+validates only that header before feedback submission. It does not trust cookies,
+query string tokens, arbitrary email headers, or browser-provided actor fields,
+and it does not create app sessions or user tables.
 
 Optional server-side GitHub Issues feedback values:
 

@@ -103,7 +103,15 @@ external services without explicit current-task approval.
   password stored only in the untracked `.env` file or host secret store.
 - Keep `CCLD_HOSTED_PAGE_DATA_MODE=postgres` for QNAP pilot mode.
 - Keep `CCLD_HOSTED_TESTER_AUTH_MODE=production` for QNAP pilot mode.
+- Keep `CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS=cloudflare-access` for the QNAP
+  pilot Cloudflare Access feedback bridge.
 - Keep `CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH=disabled` for QNAP pilot mode.
+- Configure `CCLD_CLOUDFLARE_ACCESS_TEAM_DOMAIN`,
+  `CCLD_CLOUDFLARE_ACCESS_AUD`, and at least one of
+  `CCLD_CLOUDFLARE_ACCESS_ALLOWED_EMAIL_DOMAINS` or
+  `CCLD_CLOUDFLARE_ACCESS_ALLOWED_EMAILS` in the untracked host `.env`.
+- Keep real Cloudflare Access team domains, AUD tags, JWTs, cookies, and tester
+  allowlists out of committed files and evidence packets.
 - Keep `CCLD_RETRIEVAL_DEMO_MODE=` blank for QNAP pilot mode.
 - Configure `CCLD_RETRIEVAL_RAW_DIR` to the container raw artifact path, for
   example `/app/data/raw/ccld/retrieval`.
