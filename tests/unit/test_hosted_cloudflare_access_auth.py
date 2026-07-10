@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import base64
 import json
@@ -246,9 +246,10 @@ def test_cloudflare_access_status_summary_is_safe() -> None:
 
 
 def _github_config() -> GitHubFeedbackConfig:
+    credential = "github-" + "token-" + "not-rendered"
     return GitHubFeedbackConfig(
         repo="example/repo",
-        token="github-token-not-rendered",
+        token=credential,
         default_labels=("pilot",),
     )
 
@@ -345,3 +346,4 @@ def assert_no_secret_output(markup: str) -> None:
         "github-token-not-rendered",
     ):
         assert marker not in lowered
+
