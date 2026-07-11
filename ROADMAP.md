@@ -261,6 +261,14 @@ the governed primary future review experience.
 	unless forced, and reuses the existing controlled Request Records
 	retrieval/import path without adding browser automation, statewide crawling,
 	non-CCLD sources, reviewer UI redesign, or raw artifact viewing.
+- Added a read-only representative multi-facility coverage report over hosted
+	PostgreSQL facility-reference, source-derived complaint, and retrieval-job
+	metadata so operators can measure loaded facility types, source files, source
+	URLs, snapshot/retrieval dates, provenance classification, traceability
+	completeness, source-document linkage, duplicate source-derived identities,
+	import-batch differences, and retrieval failure/rejection counts without
+	running live CCLD calls, mutating reviewer-created state, or treating
+	PostgreSQL rows alone as validated production/QNAP coverage.
 - Added an explicit local-dev mock-success retrieval demo path so the hosted
 	scaffold can validate the successful browser-triggered job/import/status/
 	history/detail/queue flow using committed fixtures only, without live CCLD calls,

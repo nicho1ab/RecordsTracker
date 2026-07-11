@@ -874,6 +874,26 @@ alembic upgrade head
 python -m ccld_complaints.cli.import_hosted_seeded_corpus tests\fixtures\hosted_seeded_corpus\validated_seeded_corpus.json
 ```
 
+To measure loaded representative multi-facility coverage after facility-reference
+preload and complaint import/retrieval, run the read-only coverage report:
+
+```powershell
+.\scripts\report-representative-coverage.ps1 -OutputJson data\processed\representative-coverage\coverage-report.json
+```
+
+The report reads `hosted_facility_reference_records`,
+`hosted_import_batches`, `hosted_source_derived_records`, and
+`hosted_ccld_retrieval_jobs` only. It
+documents loaded facility types, source files, source URLs, snapshot/retrieval
+dates, persisted provenance classification, traceability completeness,
+source-document linkage, duplicate source-derived identity checks, import-batch
+differences, retrieval failure/rejection/skipped/duplicate metadata, and
+not-ready/partial/candidate status. It does not run public web requests, import
+rows, mutate reviewer-created state, or treat PostgreSQL rows alone as
+validated production/QNAP coverage. Clearly identified fixture/demo/test rows
+and unknown-provenance rows are reported separately and excluded from
+representative counts.
+
 Do not commit connection strings, usernames, passwords, provider settings,
 private URLs, hosted URLs, tokens, or deployment-specific configuration.
 
@@ -1014,6 +1034,12 @@ Run the focused hosted audit history route tests:
 pytest tests/unit/test_hosted_audit_event_routes.py
 ```
 
+Run the focused representative coverage report tests:
+
+```powershell
+pytest tests/unit/test_representative_coverage.py
+```
+
 These tests include local-only semantic/accessibility validation for the sample
 source view shell and facility master sample view. They use Python standard-library HTML parsing
 to verify one page-level heading, meaningful page titles, semantic main content,
@@ -1104,6 +1130,13 @@ missing-event responses, explicit route-context requirements, unauthenticated,
 disabled or revoked, role-denied, and out-of-scope rejections, non-secret JSON
 payloads, and before/after row counts proving reads do not mutate seeded import,
 reviewer-created scaffold, or audit scaffold tables.
+The representative coverage report tests verify empty/not-ready status,
+real-public, fixture/demo/test, and unknown provenance classification, candidate
+versus partial status, source-derived complaint traceability counts,
+source-document exact/missing/conflicting linkage, duplicate source-derived
+identity checks, retrieval failure/rejection/skipped/duplicate count separation,
+import-batch declared-minus-current differences, deterministic ordering, and
+read-only behavior without live CCLD or GitHub calls.
 The reset/reload dry-run tests verify local/test authenticated planning payloads,
 seeded import batch, source-derived record, reviewer-created scaffold, and audit
 scaffold impact counts, reviewer-created state handling options, invalid mode rejection,

@@ -223,6 +223,22 @@
     source-derived rows, or preserving raw artifacts. It is not a scheduler,
     statewide crawl, completeness check, reviewer-facing redesign, non-CCLD
     source path, production auth implementation, or raw artifact viewer.
+- The representative multi-facility coverage report is a read-only measurement
+    over already-loaded hosted PostgreSQL facility-reference, source-derived
+    complaint, import-batch, and retrieval-job metadata. It classifies rows as
+    real public-source, clearly identified fixture/demo/test, or unknown from
+    persisted provenance, and excludes non-real/unknown rows from representative
+    counts. It documents loaded facility types, source files, source URLs,
+    snapshot/retrieval dates, traceability counts, source-document linkage,
+    duplicate source-derived identity checks, import-batch differences, and job
+    failure/rejection counts. It does not run live CCLD calls, preload facility
+    CSVs, import data, mutate reviewer-created state, infer missing values,
+    persist skipped-row counts, prove production/QNAP coverage from PostgreSQL
+    rows alone, prove statewide coverage, prove public-source completeness,
+    reconcile every displayed result to original source records by itself, or
+    replace manual browser evidence, source reconciliation, and acceptance.
+    Facility-reference skipped-row counts remain in the preload command output
+    and are not persisted in the current table.
 - `CCLD_RETRIEVAL_DEMO_MODE=mock-success` is an explicit local-dev scaffold
     validation mode only. It uses committed fixtures to demonstrate successful
     job/import/history/detail/queue behavior without live CCLD calls. It is not
