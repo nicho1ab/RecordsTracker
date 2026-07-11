@@ -130,6 +130,39 @@ without exposing raw rows. This support does not commit raw CSVs, import data,
 add connectors, change schemas or migrations, populate source-derived records,
 verify sources, prove complaint coverage, or make source-completeness claims.
 
+## Representative multi-facility coverage validation
+
+The reproducible validation path for representative multi-facility CCLD coverage
+now uses existing approved local/test pieces rather than a new connector or
+schema:
+
+1. Preload ignored local CHHS/CDSS Community Care Licensing Facilities CSV rows
+   into `hosted_facility_reference_records` with
+   `scripts/load-facility-reference-preload.ps1`.
+2. Load or retrieve CCLD complaint records through the existing hosted
+   source-derived import path, controlled Request Records retrieval, or
+   operator batch retrieval path.
+3. Run `scripts/report-representative-coverage.ps1` to generate a read-only JSON
+   report over the hosted PostgreSQL tables.
+
+The report records the exact loaded source files, source resource names, source
+dataset URLs, source-access timestamps, snapshot dates when available, facility
+types, facility row counts, CCLD complaint row counts, complaint source URLs,
+retrieval timestamps, source-document linkage counts, required traceability
+field counts, source-derived duplicate-identity counts, retrieval
+failure/rejection counts from job metadata, and representative status as
+not-ready, partial, or candidate.
+
+This report does not download public sources, crawl statewide, infer public
+source completeness, transform missing values into conclusions, mutate
+reviewer-created state, or prove production/QNAP coverage from PostgreSQL rows
+alone. It classifies clearly identified fixture/demo/test rows and
+unknown-provenance rows separately and excludes them from representative counts.
+Facility-reference skipped-row counts remain in the preload command output;
+they are not persisted in the current facility-reference table. Manual browser
+evidence, selected-source reconciliation, and acceptance remain required before
+the representative coverage requirement can be marked complete.
+
 Recommended local profiling before implementation:
 
 - Run `scripts/profile_public_source_csvs.py` or

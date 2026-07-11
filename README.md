@@ -199,6 +199,23 @@ retrieval/import seam. Add `--max-facilities 1 --max-windows 1` for a first
 operator test, and use `--resume --manifest-path <manifest.jsonl>` to continue a
 manifest while skipping succeeded or already-skipped windows.
 
+## Representative Coverage Report
+
+After preloading facility-reference rows and loading or retrieving CCLD complaint
+records into the hosted PostgreSQL tables, generate a read-only coverage report:
+
+```powershell
+.\scripts\report-representative-coverage.ps1 -OutputJson data\processed\representative-coverage\coverage-report.json
+```
+
+The report summarizes and classifies currently loaded facility and complaint
+rows by persisted provenance. Eligible representative counts include only rows
+classified as real public-source rows; clearly identified fixture/demo/test rows
+and unknown-provenance rows are reported separately and excluded from those
+counts. The report reads only hosted PostgreSQL tables and does not run live
+CCLD calls, import rows, mutate reviewer-created state, prove production/QNAP
+coverage, or replace manual source reconciliation and acceptance.
+
 ## Local Datasette And CSV Review
 
 Datasette remains a validation and export-support layer. To populate a sample
