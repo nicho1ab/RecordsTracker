@@ -23,3 +23,4 @@ CCLD RecordsTracker ADR Compendium.md
 # Local pytest temp output
 .pytest-tmp/
 *pytest-tmp/
+.private/
