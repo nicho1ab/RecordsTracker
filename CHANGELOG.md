@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Added a read-only representative multi-facility coverage report over hosted
+  PostgreSQL facility-reference, source-derived complaint, and retrieval-job
+  metadata. The report classifies persisted provenance, summarizes loaded
+  facility types, source files, source URLs, snapshot/retrieval dates,
+  traceability completeness, source-document linkage, duplicate checks, and
+  reconciliation counts, and returns not-ready/partial/candidate status without
+  running live CCLD calls, mutating data, or treating PostgreSQL rows alone as
+  validated production/QNAP coverage.
 - Focused `/ccld/records/request` as the facility/date request starting point:
   the page now shows the current request step by default, makes selected
   Facility ID/date context clearer, distinguishes loaded-queue review from
