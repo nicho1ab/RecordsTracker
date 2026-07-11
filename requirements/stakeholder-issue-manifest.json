@@ -1,0 +1,70 @@
+{
+    "generated_at":  "2026-07-11T15:08:38.7370715Z",
+    "repository":  "nicho1ab/RecordsTracker",
+    "privacy":  "No stakeholder personal name, organization name, or organization domain is included.",
+    "issues":  [
+                   {
+                       "requirement_id":  "STAKEHOLDER-EPIC",
+                       "title":  "Stakeholder requirements: facility intelligence and attorney review",
+                       "number":  413,
+                       "url":  "https://github.com/nicho1ab/RecordsTracker/issues/413",
+                       "state":  "OPEN"
+                   },
+                   {
+                       "requirement_id":  "STAKEHOLDER-001",
+                       "title":  "Establish representative multi-facility data coverage",
+                       "number":  414,
+                       "url":  "https://github.com/nicho1ab/RecordsTracker/issues/414",
+                       "state":  "OPEN"
+                   },
+                   {
+                       "requirement_id":  "STAKEHOLDER-002",
+                       "title":  "Add a source-traceable substantiated complaint worklist",
+                       "number":  415,
+                       "url":  "https://github.com/nicho1ab/RecordsTracker/issues/415",
+                       "state":  "OPEN"
+                   },
+                   {
+                       "requirement_id":  "STAKEHOLDER-003",
+                       "title":  "Add facility monitoring and review prioritization",
+                       "number":  416,
+                       "url":  "https://github.com/nicho1ab/RecordsTracker/issues/416",
+                       "state":  "OPEN"
+                   },
+                   {
+                       "requirement_id":  "STAKEHOLDER-004",
+                       "title":  "Add serious-complaint review categories",
+                       "number":  417,
+                       "url":  "https://github.com/nicho1ab/RecordsTracker/issues/417",
+                       "state":  "OPEN"
+                   },
+                   {
+                       "requirement_id":  "STAKEHOLDER-005",
+                       "title":  "Add complaint trend and anomaly review",
+                       "number":  418,
+                       "url":  "https://github.com/nicho1ab/RecordsTracker/issues/418",
+                       "state":  "OPEN"
+                   },
+                   {
+                       "requirement_id":  "STAKEHOLDER-006",
+                       "title":  "Build the cross-facility intelligence dashboard",
+                       "number":  419,
+                       "url":  "https://github.com/nicho1ab/RecordsTracker/issues/419",
+                       "state":  "OPEN"
+                   },
+                   {
+                       "requirement_id":  "STAKEHOLDER-007",
+                       "title":  "Expand the facility review hub",
+                       "number":  420,
+                       "url":  "https://github.com/nicho1ab/RecordsTracker/issues/420",
+                       "state":  "OPEN"
+                   },
+                   {
+                       "requirement_id":  "STAKEHOLDER-008",
+                       "title":  "Complete stakeholder requirements acceptance",
+                       "number":  421,
+                       "url":  "https://github.com/nicho1ab/RecordsTracker/issues/421",
+                       "state":  "OPEN"
+                   }
+               ]
+}
