@@ -1,7 +1,7 @@
 # QNAP Pilot Seeded Import Evidence
 
 Use this evidence guide after the QNAP pilot stack is configured and before
-inviting early ylc.org testers. It helps an operator prove that PostgreSQL-backed
+inviting early external testers. It helps an operator prove that PostgreSQL-backed
 hosted CCLD source-derived records are available to the app, rather than relying
 only on fixture-demo or scaffold assumptions.
 

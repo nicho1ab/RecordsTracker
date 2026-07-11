@@ -1,6 +1,6 @@
 # QNAP Pilot Tester Invitation Decision
 
-Use this guide before inviting early ylc.org testers to the QNAP-hosted CCLD
+Use this guide before inviting early external testers to the QNAP-hosted CCLD
 pilot. It records the access-control decision that must exist before tester
 accounts, links, or credentials are shared.
 
@@ -11,7 +11,7 @@ Record the temporary access method first in the
 any external tester link, credential, network rule, VPN rule, or reverse proxy
 route is shared.
 
-This decision is required before inviting early ylc.org testers.
+This decision is required before inviting early external testers.
 
 This is an operator decision gate, not an implementation of access control. The
 current QNAP pilot can be configured, verified, and documented, but real external
@@ -19,10 +19,9 @@ tester authentication is not implemented yet.
 
 ## 1. Purpose
 
-- Confirm that tester invitation is an explicit decision before early ylc.org
+- Confirm that tester invitation is an explicit decision before external testers
   users are invited.
-- Confirm that the pilot remains a public-interest hobby project, not a DSCC
-  project.
+- Confirm that the pilot remains an independent public-interest project.
 - Confirm that the current runtime has production-mode auth readiness, but no
   real login, OIDC/OAuth2 callback handling, sessions, cookies, user tables, or
   invitation workflow.

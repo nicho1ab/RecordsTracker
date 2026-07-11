@@ -9,7 +9,7 @@ container settings, named volumes, and environment variables so the same model
 can move later to AWS, Azure, DigitalOcean, Render, Fly.io, or another host
 without hard-coding QNAP paths into application code.
 
-This runtime includes the first provider-agnostic auth readiness path for the YLC pilot
+This runtime includes the first provider-agnostic auth readiness path for the external tester pilot
 direction: production mode blocks anonymous workflow routes unless an
 authenticated route context exists, and explicit local-dev mode is available only
 for local scaffold validation. It does not add a real OIDC login flow, token

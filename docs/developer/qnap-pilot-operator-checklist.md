@@ -1,6 +1,6 @@
 # QNAP Pilot Operator Checklist
 
-Use this checklist before inviting early ylc.org testers to the hosted CCLD
+Use this checklist before inviting early external testers to the hosted CCLD
 tester pilot. It complements `.env.example`,
 `scripts/verify-qnap-pilot-workflow.ps1`, `RUNBOOK.md`, and
 `docs/developer/qnap-docker-runtime.md`. Start with the
@@ -65,8 +65,8 @@ external services without explicit current-task approval.
 
 ## 1. Pilot Purpose And Scope
 
-- Confirm this is a public-interest hobby project for early ylc.org tester
-  validation, not a DSCC project.
+- Confirm this is a public-interest project for early external tester
+  validation for an independent public-interest project.
 - Confirm QNAP Docker is the first pilot runtime, not a permanent platform
   lock-in. Keep app runtime, PostgreSQL, raw files, processed files, logs,
   secrets, and backups separable for later AWS, Azure, DigitalOcean, Render,

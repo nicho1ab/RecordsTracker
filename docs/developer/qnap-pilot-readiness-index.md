@@ -11,8 +11,8 @@ routes, auth, retrieval, imports, database schema, or deployment.
 ## 1. Confirm Pilot Scope
 
 - QNAP Docker is the first pilot runtime, not a permanent platform lock-in.
-- Early tester scope is ylc.org-oriented pilot validation for this public-interest
-  hobby project, not a DSCC project.
+- Early tester scope is external tester pilot validation for this public-interest
+  project independent of the user's employer.
 - The pilot is CCLD-only and uses a seeded or imported test corpus with
   PostgreSQL-backed hosted page data.
 - Route source-completeness, public-source absence, legal findings,
