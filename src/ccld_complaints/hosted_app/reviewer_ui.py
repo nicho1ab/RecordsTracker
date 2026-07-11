@@ -1743,16 +1743,51 @@ def _related_source_derived_context(
 ) -> tuple[int, list[Mapping[str, Any]] | bytes]:
     detail = _mapping(payload, "detail")
     source_record = _mapping(detail, "source_record")
-    source_status, _content_type, source_body = route_source_derived_api_response(
-        f"{SOURCE_DERIVED_API_PREFIX}?limit=100",
-        context.workflow_shell_context.source_derived_api_context,
+    import_batch = _mapping(source_record, "import_batch")
+    source_status, records_or_body = _source_derived_records_for_import_batch(
+        context,
+        import_batch_id=_string(import_batch, "import_batch_id"),
     )
     if source_status != 200:
-        return source_status, source_body
-    source_payload = _json_object(source_body)
-    records = _record_list(source_payload, "records")
-    related_records = _related_source_records(source_record, records)
+        if not isinstance(records_or_body, bytes):
+            raise ValueError("Expected source-derived API error body to be bytes.")
+        return source_status, records_or_body
+    if isinstance(records_or_body, bytes):
+        raise ValueError("Expected source-derived records.")
+    related_records = _related_source_records(source_record, records_or_body)
     return 200, related_records
+
+
+def _source_derived_records_for_import_batch(
+    context: ReviewerUiContext,
+    *,
+    import_batch_id: str,
+) -> tuple[int, list[Mapping[str, Any]] | bytes]:
+    records: list[Mapping[str, Any]] = []
+    limit = 100
+    offset = 0
+    while True:
+        query = urlencode(
+            {
+                "limit": str(limit),
+                "offset": str(offset),
+                "import_batch_id": import_batch_id,
+            }
+        )
+        source_status, _content_type, source_body = route_source_derived_api_response(
+            f"{SOURCE_DERIVED_API_PREFIX}?{query}",
+            context.workflow_shell_context.source_derived_api_context,
+        )
+        if source_status != 200:
+            return source_status, source_body
+        source_payload = _json_object(source_body)
+        page_records = _record_list(source_payload, "records")
+        records.extend(page_records)
+        pagination = _mapping(source_payload, "pagination")
+        returned_count = _int_value(pagination, "returned_count")
+        if returned_count < limit:
+            return 200, records
+        offset += limit
 
 
 def _workflow_detail_path(source_record_key: str) -> str:
@@ -6632,12 +6667,26 @@ def _facility_context_value(
 ) -> str:
     if facility is None:
         return "unknown"
-    value = facility.get(key)
-    if value is None:
-        return "unknown"
-    if isinstance(value, str) and not value.strip():
-        return "unknown"
-    return _display_value(value)
+    for candidate_key in _facility_context_keys(key):
+        value = facility.get(candidate_key)
+        if _has_display_value(value):
+            return _display_value(value)
+    return "unknown"
+
+
+def _facility_context_keys(key: str) -> tuple[str, ...]:
+    aliases = {
+        "external_facility_number": (
+            "external_facility_number",
+            "facility_number",
+            "license_number",
+        ),
+        "facility_name": ("facility_name", "name"),
+        "facility_type": ("facility_type", "facility_type_description", "type"),
+        "license_status": ("license_status", "facility_status", "status"),
+        "county": ("county", "county_name"),
+    }
+    return aliases.get(key, (key,))
 
 
 def _ccld_request_href(

@@ -31,6 +31,10 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     ccld_record_request_context_for_reviewer_context,
 )
+from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
+    hosted_ccld_retrieval_jobs,
+    retrieval_import_batch_id,
+)
 from ccld_complaints.hosted_app.facility_case_brief import (
     FacilityCaseBrief,
     FacilityCaseBriefRecord,
@@ -1841,6 +1845,134 @@ def test_reviewer_ui_detail_collapses_long_source_narrative() -> None:
     _assert_collapsed_disclosure(html, "Show full source narrative")
     assert_no_secret_html(html)
 
+
+@pytest.mark.parametrize(
+    "representative",
+    (
+        {
+            "facility_number": "107207198",
+            "facility_name": "Representative Foster Family Agency",
+            "facility_type": "Foster Family Agency",
+            "status": "Licensed",
+            "county": "Los Angeles",
+            "complaint_control_number": "24-CR-20260508083927",
+            "complaint_key": "complaint:ccld-complaint-24-CR-20260508083927",
+            "source_document_id": "ccld-107207198-inx-25",
+            "report_index": "25",
+            "finding": "Substantiated",
+            "allegation_text": "Facility staff did not follow the written placement plan.",
+            "narrative": (
+                "The public report states the allegation was investigated and "
+                "substantiated."
+            ),
+            "received_date": "2026-05-08",
+            "visit_date": "2026-05-15",
+            "report_date": "2026-05-30",
+            "signed_date": "2026-06-02",
+        },
+        {
+            "facility_number": "425802141",
+            "facility_name": "Representative Short Term Residential Therapeutic Program",
+            "facility_type": "Short Term Residential Therapeutic Program",
+            "status": "Licensed",
+            "county": "Santa Barbara",
+            "complaint_control_number": "31-CR-20240425094018",
+            "complaint_key": "complaint:ccld-complaint-31-CR-20240425094018",
+            "source_document_id": "ccld-425802141-inx-33",
+            "report_index": "33",
+            "finding": "Unsubstantiated",
+            "allegation_text": "Facility staff did not provide adequate supervision.",
+            "narrative": "The investigation finding states the allegation was unsubstantiated.",
+            "received_date": "2024-04-25",
+            "visit_date": "2024-05-02",
+            "report_date": "2024-05-21",
+            "signed_date": "2024-05-23",
+        },
+    ),
+)
+def test_reviewer_ui_detail_renders_representative_live_public_related_facts(
+    representative: dict[str, str],
+) -> None:
+    with _seeded_connection() as connection:
+        _insert_representative_live_public_retrieval_batch(connection, representative)
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(representative['complaint_key'])}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    parser = ElementTextByTagParser()
+    parser.feed(html)
+    main_text = parser.text_for("main")
+    source_url = _ccld_source_url(
+        representative["facility_number"],
+        representative["report_index"],
+    )
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert representative["facility_number"] in main_text
+    assert representative["facility_name"] in html
+    assert representative["facility_type"] in html
+    assert representative["status"] in html
+    assert representative["county"] in html
+    assert representative["allegation_text"] in html
+    assert representative["narrative"] in html
+    assert "Allegation details are not loaded for this complaint record." not in html
+    assert "No source narrative excerpt is loaded for this complaint record." not in html
+    assert f'href="{source_url.replace("&", "&amp;")}"' in html
+    assert _mmddyyyy(representative["received_date"]) in main_text
+    assert representative["received_date"] not in main_text
+    fact_strip_start = html.index('class="top-fact-strip"')
+    fact_strip_html = html[
+        fact_strip_start : html.index("</dl>", fact_strip_start)
+    ]
+    assert "unknown" not in fact_strip_html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_detail_blocks_representative_live_public_scope_mismatch() -> None:
+    representative = {
+        "facility_number": "107207198",
+        "facility_name": "Representative Foster Family Agency",
+        "facility_type": "Foster Family Agency",
+        "status": "Licensed",
+        "county": "Los Angeles",
+        "complaint_control_number": "24-CR-20260508083927",
+        "complaint_key": "complaint:ccld-complaint-24-CR-20260508083927",
+        "source_document_id": "ccld-107207198-inx-25",
+        "report_index": "25",
+        "finding": "Substantiated",
+        "allegation_text": "Facility staff did not follow the written placement plan.",
+        "narrative": (
+            "The public report states the allegation was investigated and "
+            "substantiated."
+        ),
+        "received_date": "2026-05-08",
+        "visit_date": "2026-05-15",
+        "report_date": "2026-05-30",
+        "signed_date": "2026-06-02",
+    }
+    with _seeded_connection() as connection:
+        _insert_representative_live_public_retrieval_batch(connection, representative)
+        status, _content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(representative['complaint_key'])}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(roles=("tester_reviewer",), scopes=(OTHER_SCOPE,)),
+                scope=OTHER_SCOPE,
+            ),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 403
+    assert "outside the authorized scope" in html
+    assert representative["facility_name"] not in html
+    assert representative["allegation_text"] not in html
+    assert_no_secret_html(html)
+
+
 def test_reviewer_ui_complaint_export_section_smoke_regression() -> None:
     with _seeded_connection() as connection:
         status, content_type, body = route_response(
@@ -3642,6 +3774,273 @@ def _insert_substantiated_complaint_for_facility(
     )
 
     return complaint_key
+
+
+def _insert_representative_live_public_retrieval_batch(
+    connection: Connection,
+    representative: dict[str, str],
+) -> None:
+    job_id = f"fixture-job-{representative['facility_number']}-{representative['report_index']}"
+    import_batch_id = retrieval_import_batch_id(job_id)
+    source_url = _ccld_source_url(
+        representative["facility_number"],
+        representative["report_index"],
+    )
+    raw_sha256 = (representative["facility_number"] * 8)[:64]
+    artifact_identity = f"fixture-live-public-artifact:{job_id}"
+    now = "2026-07-01T12:00:00+00:00"
+    connection.execute(
+        hosted_ccld_retrieval_jobs.insert().values(
+            retrieval_job_id=job_id,
+            created_at=now,
+            updated_at=now,
+            job_state="completed",
+            facility_number=representative["facility_number"],
+            record_type="complaints",
+            start_date=representative["received_date"],
+            end_date=representative["signed_date"],
+            source_scope_type=TEST_SCOPE.scope_type,
+            source_scope_id=TEST_SCOPE.scope_id,
+            actor_provider_subject="fixture-ui-reviewer",
+            actor_provider_issuer="fixture-managed-oidc-provider",
+            actor_display_name="Fixture UI Reviewer",
+            actor_category="tester",
+            authorization_permission="retrieval_job_trigger",
+            request_limit="10",
+            retry_limit="1",
+            timeout_seconds="20",
+            raw_storage_path="data/raw/ccld/fixture-live-public",
+            source_artifact_identity=artifact_identity,
+            result_counts={
+                "retrieved_record_bundles": 1,
+                "imported_source_derived_records": 109,
+                "report_failures": 0,
+            },
+            warnings=[],
+            errors=[],
+            safe_message="Fixture retrieval completed.",
+            data_mutations_performed=True,
+        )
+    )
+    connection.execute(
+        hosted_import_batches.insert().values(
+            import_batch_id=import_batch_id,
+            imported_at=now,
+            source_artifact_identity=artifact_identity,
+            source_pipeline_version="fixture-live-public",
+            validation_status="validated",
+            raw_hash_validation_status="validated",
+            record_counts={
+                "facility": 106,
+                "source_document": 1,
+                "complaint": 1,
+                "allegation": 1,
+                "event": 1,
+                "extraction_audit": 0,
+            },
+            warnings=[],
+            errors=[],
+        )
+    )
+    for index in range(105):
+        filler_facility_number = f"9009{index:05d}"
+        connection.execute(
+            hosted_source_derived_records.insert().values(
+                **_representative_source_record_values(
+                    import_batch_id=import_batch_id,
+                    source_artifact_identity=artifact_identity,
+                    entity_type="facility",
+                    stable_source_id=f"aaa-filler-facility-{index:03d}",
+                    source_document_id=f"aaa-filler-document-{index:03d}",
+                    facility_id=f"aaa-filler-facility-{index:03d}",
+                    source_url=_ccld_source_url(filler_facility_number, "1"),
+                    raw_sha256="a" * 64,
+                    original_values={
+                        "facility_id": f"aaa-filler-facility-{index:03d}",
+                        "facility_number": filler_facility_number,
+                        "facility_name": f"Unrelated Facility {index:03d}",
+                    },
+                )
+            )
+        )
+
+    facility_id = f"ccld-facility-{representative['facility_number']}"
+    source_document_id = representative["source_document_id"]
+    complaint_stable_id = representative["complaint_key"].split(":", 1)[1]
+    connection.execute(
+        hosted_source_derived_records.insert().values(
+            **_representative_source_record_values(
+                import_batch_id=import_batch_id,
+                source_artifact_identity=artifact_identity,
+                entity_type="facility",
+                stable_source_id=facility_id,
+                source_document_id=source_document_id,
+                facility_id=facility_id,
+                source_url=source_url,
+                raw_sha256=raw_sha256,
+                original_values={
+                    "facility_id": facility_id,
+                    "facility_number": representative["facility_number"],
+                    "name": representative["facility_name"],
+                    "facility_type": representative["facility_type"],
+                    "status": representative["status"],
+                    "county": representative["county"],
+                },
+            )
+        )
+    )
+    connection.execute(
+        hosted_source_derived_records.insert().values(
+            **_representative_source_record_values(
+                import_batch_id=import_batch_id,
+                source_artifact_identity=artifact_identity,
+                entity_type="source_document",
+                stable_source_id=source_document_id,
+                source_document_id=source_document_id,
+                facility_id=facility_id,
+                source_url=source_url,
+                raw_sha256=raw_sha256,
+                original_values={
+                    "document_id": source_document_id,
+                    "facility_id": facility_id,
+                    "source_url": source_url,
+                    "raw_sha256": raw_sha256,
+                    "connector_name": "ccld_facility_reports",
+                    "connector_version": "fixture-live-public",
+                    "retrieved_at": now,
+                    "document_type": "complaint_investigation_report",
+                    "report_index": representative["report_index"],
+                },
+            )
+        )
+    )
+    connection.execute(
+        hosted_source_derived_records.insert().values(
+            **_representative_source_record_values(
+                import_batch_id=import_batch_id,
+                source_artifact_identity=artifact_identity,
+                entity_type="complaint",
+                stable_source_id=complaint_stable_id,
+                source_record_key=representative["complaint_key"],
+                source_document_id=source_document_id,
+                facility_id=facility_id,
+                source_url=source_url,
+                raw_sha256=raw_sha256,
+                original_values={
+                    "complaint_id": complaint_stable_id,
+                    "facility_id": facility_id,
+                    "document_id": source_document_id,
+                    "complaint_control_number": representative[
+                        "complaint_control_number"
+                    ],
+                    "complaint_received_date": representative["received_date"],
+                    "visit_date": representative["visit_date"],
+                    "report_date": representative["report_date"],
+                    "date_signed": representative["signed_date"],
+                    "finding": representative["finding"],
+                    "source_text": representative["narrative"],
+                },
+            )
+        )
+    )
+    connection.execute(
+        hosted_source_derived_records.insert().values(
+            **_representative_source_record_values(
+                import_batch_id=import_batch_id,
+                source_artifact_identity=artifact_identity,
+                entity_type="allegation",
+                stable_source_id=f"{complaint_stable_id}:1",
+                source_document_id=source_document_id,
+                facility_id=facility_id,
+                source_url=source_url,
+                raw_sha256=raw_sha256,
+                original_values={
+                    "allegation_id": f"{complaint_stable_id}:1",
+                    "complaint_id": complaint_stable_id,
+                    "facility_id": facility_id,
+                    "document_id": source_document_id,
+                    "finding": representative["finding"],
+                    "allegation_text": representative["allegation_text"],
+                },
+            )
+        )
+    )
+    connection.execute(
+        hosted_source_derived_records.insert().values(
+            **_representative_source_record_values(
+                import_batch_id=import_batch_id,
+                source_artifact_identity=artifact_identity,
+                entity_type="event",
+                stable_source_id=f"{complaint_stable_id}:finding",
+                source_document_id=source_document_id,
+                facility_id=facility_id,
+                source_url=source_url,
+                raw_sha256=raw_sha256,
+                original_values={
+                    "event_id": f"{complaint_stable_id}:finding",
+                    "complaint_id": complaint_stable_id,
+                    "facility_id": facility_id,
+                    "document_id": source_document_id,
+                    "event_type": "investigation_finding",
+                    "event_date": representative["report_date"],
+                    "event_text": representative["narrative"],
+                },
+            )
+        )
+    )
+
+
+def _representative_source_record_values(
+    *,
+    import_batch_id: str,
+    source_artifact_identity: str,
+    entity_type: str,
+    stable_source_id: str,
+    source_document_id: str,
+    facility_id: str,
+    source_url: str,
+    raw_sha256: str,
+    original_values: dict[str, Any],
+    source_record_key: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "source_record_key": source_record_key or f"{entity_type}:{stable_source_id}",
+        "entity_type": entity_type,
+        "stable_source_id": stable_source_id,
+        "import_batch_id": import_batch_id,
+        "source_document_id": source_document_id,
+        "facility_id": facility_id,
+        "source_url": source_url,
+        "raw_sha256": raw_sha256,
+        "raw_path": "data/raw/ccld/fixture-live-public/report.html",
+        "connector_name": "ccld_facility_reports",
+        "connector_version": "fixture-live-public",
+        "retrieved_at": "2026-07-01T12:00:00+00:00",
+        "original_values": original_values,
+        "source_traceability": {
+            "source_document_id": source_document_id,
+            "source_url": source_url,
+            "raw_sha256": raw_sha256,
+            "raw_path": "data/raw/ccld/fixture-live-public/report.html",
+            "connector_name": "ccld_facility_reports",
+            "connector_version": "fixture-live-public",
+            "retrieved_at": "2026-07-01T12:00:00+00:00",
+            "source_artifact_identity": source_artifact_identity,
+        },
+    }
+
+
+def _ccld_source_url(facility_number: str, report_index: str) -> str:
+    return (
+        "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports"
+        f"?facNum={facility_number}&inx={report_index}"
+    )
+
+
+def _mmddyyyy(iso_date: str) -> str:
+    year, month, day = iso_date.split("-")
+    return f"{month}/{day}/{year}"
+
 
 def _seeded_connection() -> Connection:
     engine = create_engine("sqlite+pysqlite:///:memory:")
