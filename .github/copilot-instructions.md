@@ -173,3 +173,13 @@ When working from an issue containing `recordstracker-requirement-id`:
 - Do not close the requirement merely because code or a PR exists.
 - End with a concise handoff listing files changed, behavior added, tests run/results, limitations, and remaining human evidence or stakeholder validation.
 <!-- END STAKEHOLDER REQUIREMENTS AUTOMATION -->
+
+Specific prohibited identity values include:
+
+- stakeholder personal names;
+- stakeholder organization names, abbreviations, and domains;
+- the user's employer and institutional affiliations, including their acronyms;
+- personal or institutional email addresses;
+- private or test hostnames.
+
+The repository identity check must treat organization acronyms as standalone terms so ordinary words and code identifiers containing the same letters are not false positives.

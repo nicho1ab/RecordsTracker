@@ -877,7 +877,7 @@
 	operator decision gate for who may be invited to the QNAP pilot, role/scope
 	limits, approval and revocation expectations, deferred real auth/invitation
 	implementation, required evidence packet contents, and no-secret/no-conclusion
-	guardrails before inviting early ylc.org testers.
+	guardrails before inviting early external testers.
 - Added `scripts/summarize-qnap-pilot-route-evidence.ps1`, an optional GET-only
 	QNAP pilot route evidence command that probes expected hosted routes, accepts
 	expected protected/setup-required/safe-empty states, and avoids imports,
@@ -903,7 +903,7 @@
 	checklist for QNAP pilot scope, preflight, `.env` setup, verifier and Compose
 	checks, startup, migrations, raw artifact storage, route verification,
 	local-dev-only mock-success validation, readiness evidence, backups, rollback,
-	and do-not-do guardrails before inviting early ylc.org testers.
+	and do-not-do guardrails before inviting early external testers.
 - Hardened the QNAP pilot environment template and verifier. `.env.example` now
 	uses clearer QNAP pilot sections, keeps GitHub feedback intentionally disabled
 	by default, keeps mock-success retrieval blank by default, and the verifier now
@@ -988,7 +988,7 @@
 	mutating source-derived records, exposing raw narrative fields, or adding live
 	crawling, cloud-specific code, retrieval jobs, data dumps, or secrets.
 - Added the first provider-agnostic hosted tester auth runtime boundary for the
-	YLC pilot direction: production mode now blocks anonymous browser workflow
+	external tester pilot direction: production mode now blocks anonymous browser workflow
 	routes, explicit local-dev mode enables the fixture tester actor for local
 	scaffold testing, `/auth/login`, `/auth/logout`, and `/auth/status` expose safe
 	placeholders/status only, reviewer pages show a safe signed-in tester label,
@@ -996,7 +996,7 @@
 	production blocking, local-dev opt-in, role/scope permissions, disabled or
 	revoked actors, out-of-scope actors, and no-secret output without adding custom
 	password storage, sessions, cookies, token handling, raw provider claims,
-	provider secrets, hosted URLs, or DSCC-specific assumptions.
+	provider secrets, hosted URLs, or organization-specific assumptions.
 - Added a portable QNAP-first Docker Compose runtime envelope for the hosted CCLD
 	scaffold with a Python app container, PostgreSQL container, named volumes,
 	health checks, Alembic startup migration guidance, no-secret `.env.example`,

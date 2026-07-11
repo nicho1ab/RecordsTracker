@@ -18,8 +18,8 @@ Docker. Application configuration and persistence boundaries must remain
 portable enough to move later to AWS, Azure, DigitalOcean, Render, Fly.io, or
 another host without hard-coding QNAP-specific paths into application code.
 
-This is a public-interest hobby project, not a DSCC project. The first expected
-tester audience is ylc.org users reviewing the hosted CCLD workflow.
+This is an independent public-interest project. The first expected
+tester audience is a small group of external reviewers evaluating the hosted CCLD workflow.
 
 Earlier project work proved ingestion, deterministic extraction, raw source
 preservation, source traceability, local review, and source-traceable exports.
