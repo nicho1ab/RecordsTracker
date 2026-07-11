@@ -57,6 +57,7 @@ DEFAULT_RATE_LIMIT_PER_ACTOR = 3
 DEFAULT_RETRY_LIMIT = 1
 CCLD_SOURCE_HOST = "www.ccld.dss.ca.gov"
 CCLD_CONNECTOR_NAME = "ccld_facility_reports"
+CCLD_RETRIEVAL_IMPORT_BATCH_PREFIX = "ccld-retrieval-batch:"
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _DEMO_FACILITY_DETAIL_FIXTURE = (
     _REPO_ROOT / "tests/fixtures/ccld/raw/157806098_facility_detail.html"
@@ -691,7 +692,7 @@ def _retrieval_artifact(
 ) -> SeededCorpusArtifact:
     source_artifact_identity = f"ccld-retrieval-job:{retrieval_job_id}"
     raw_data = {
-        "import_batch_id": context.scope.scope_id,
+        "import_batch_id": retrieval_import_batch_id(retrieval_job_id),
         "imported_at": context.now().replace(microsecond=0).isoformat(),
         "source_artifact_identity": source_artifact_identity,
         "source_pipeline_version": "ccld-controlled-retrieval-job-0.1.0",
@@ -705,6 +706,10 @@ def _retrieval_artifact(
     artifact = parse_seeded_corpus_artifact(raw_data)
     flatten_seeded_corpus_records(artifact)
     return artifact
+
+
+def retrieval_import_batch_id(retrieval_job_id: str) -> str:
+    return f"{CCLD_RETRIEVAL_IMPORT_BATCH_PREFIX}{retrieval_job_id}"
 
 
 def _record_counts(records: Sequence[Mapping[str, Any]]) -> Mapping[str, int]:

@@ -4,7 +4,7 @@ import base64
 import hashlib
 import json
 import os
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Literal, cast
@@ -14,6 +14,7 @@ from urllib.request import urlopen
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from sqlalchemy import select
 from sqlalchemy.engine import Connection
 
 from ccld_complaints.hosted_app.seeded_import import SourceDerivedEntityType
@@ -860,22 +861,50 @@ def find_authorized_ccld_source_derived_records_for_request(
     end_date: str | None = None,
     import_batch_id: str | None = None,
 ) -> CcldSourceDerivedRequestLookup:
-    scoped_import_batch_id = _scoped_import_batch_id(scope, import_batch_id)
+    if import_batch_id is not None:
+        scoped_import_batch_id = _scoped_import_batch_id_for_read(
+            connection,
+            scope,
+            import_batch_id,
+        )
+        require_permission(
+            actor,
+            permission=SOURCE_DERIVED_READ_PERMISSION,
+            scope=scope,
+            target=AuthorizationTarget(
+                "source_derived_record_list",
+                scoped_import_batch_id,
+            ),
+        )
+        return find_ccld_source_derived_records_for_request(
+            connection,
+            facility_number=facility_number,
+            start_date=start_date,
+            end_date=end_date,
+            import_batch_id=scoped_import_batch_id,
+        )
+
     require_permission(
         actor,
         permission=SOURCE_DERIVED_READ_PERMISSION,
         scope=scope,
         target=AuthorizationTarget(
             "source_derived_record_list",
-            scoped_import_batch_id,
+            scope.scope_id,
         ),
     )
-    return find_ccld_source_derived_records_for_request(
-        connection,
-        facility_number=facility_number,
-        start_date=start_date,
-        end_date=end_date,
-        import_batch_id=scoped_import_batch_id,
+    return _merge_ccld_request_lookups(
+        find_ccld_source_derived_records_for_request(
+            connection,
+            facility_number=facility_number,
+            start_date=start_date,
+            end_date=end_date,
+            import_batch_id=authorized_import_batch_id,
+        )
+        for authorized_import_batch_id in _authorized_source_import_batch_ids(
+            connection,
+            scope,
+        )
     )
 
 
@@ -893,7 +922,7 @@ def get_authorized_source_derived_record_by_key(
         target=AuthorizationTarget("source_derived_record", source_record_key),
     )
     record = get_source_derived_record_by_key(connection, source_record_key)
-    _require_record_in_scope(record, scope)
+    _require_record_in_scope(connection, record, scope)
     return record
 
 
@@ -919,8 +948,19 @@ def get_authorized_source_derived_record_by_identity(
         entity_type=entity_type,
         stable_source_id=stable_source_id,
     )
-    _require_record_in_scope(record, scope)
+    _require_record_in_scope(connection, record, scope)
     return record
+
+
+def source_record_is_in_scope(
+    connection: Connection,
+    record: SourceDerivedRecordRead,
+    scope: HostedAccessScope,
+) -> bool:
+    return record.import_batch.import_batch_id in _authorized_source_import_batch_ids(
+        connection,
+        scope,
+    )
 
 
 def _require_active_actor(actor: AuthenticatedActor | None) -> AuthenticatedActor:
@@ -946,13 +986,77 @@ def _scoped_import_batch_id(
     return scope.scope_id
 
 
+def _scoped_import_batch_id_for_read(
+    connection: Connection,
+    scope: HostedAccessScope,
+    import_batch_id: str,
+) -> str:
+    if import_batch_id not in _authorized_source_import_batch_ids(connection, scope):
+        raise HostedScopeDeniedError(
+            "Requested source-derived import batch is outside the authorized scope."
+        )
+    return import_batch_id
+
+
+def _authorized_source_import_batch_ids(
+    connection: Connection,
+    scope: HostedAccessScope,
+) -> tuple[str, ...]:
+    from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
+        hosted_ccld_retrieval_jobs,
+        retrieval_import_batch_id,
+    )
+
+    rows = connection.execute(
+        select(
+            hosted_ccld_retrieval_jobs.c.retrieval_job_id,
+        ).where(
+            hosted_ccld_retrieval_jobs.c.source_scope_type == scope.scope_type,
+            hosted_ccld_retrieval_jobs.c.source_scope_id == scope.scope_id,
+            hosted_ccld_retrieval_jobs.c.source_artifact_identity.is_not(None),
+        )
+    ).mappings()
+    retrieval_batch_ids = tuple(
+        sorted(
+            {
+                retrieval_import_batch_id(str(row["retrieval_job_id"]))
+                for row in rows
+                if str(row["retrieval_job_id"]).strip()
+            }
+        )
+    )
+    return (scope.scope_id, *retrieval_batch_ids)
+
+
+def _merge_ccld_request_lookups(
+    lookups: Iterable[CcldSourceDerivedRequestLookup],
+) -> CcldSourceDerivedRequestLookup:
+    matched_records: dict[str, SourceDerivedRecordRead] = {}
+    all_facility_records: dict[str, SourceDerivedRecordRead] = {}
+    matched_complaint_keys: list[str] = []
+    for lookup in lookups:
+        for record in lookup.matched_records:
+            matched_records.setdefault(record.source_record_key, record)
+        for record in lookup.all_facility_records:
+            all_facility_records.setdefault(record.source_record_key, record)
+        for key in lookup.matched_complaint_keys:
+            if key not in matched_complaint_keys:
+                matched_complaint_keys.append(key)
+    return CcldSourceDerivedRequestLookup(
+        matched_records=tuple(matched_records.values()),
+        matched_complaint_keys=tuple(matched_complaint_keys),
+        all_facility_records=tuple(all_facility_records.values()),
+    )
+
+
 def _require_record_in_scope(
+    connection: Connection,
     record: SourceDerivedRecordRead | None,
     scope: HostedAccessScope,
 ) -> None:
     if record is None:
         return
-    if record.import_batch.import_batch_id != scope.scope_id:
+    if not source_record_is_in_scope(connection, record, scope):
         raise HostedScopeDeniedError(
             "Requested source-derived record is outside the authorized scope."
         )
