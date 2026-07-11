@@ -80,6 +80,7 @@ def _list_source_derived_records(
     context: SourceDerivedApiContext,
 ) -> tuple[int, str, bytes]:
     entity_type = _optional_entity_type(query_values)
+    import_batch_id = _optional_query_value(query_values, "import_batch_id")
     limit = _bounded_int_query_value(query_values, "limit", default=100, minimum=1)
     offset = _bounded_int_query_value(query_values, "offset", default=0, minimum=0)
     records = list_authorized_source_derived_records(
@@ -87,14 +88,18 @@ def _list_source_derived_records(
         context.actor,
         scope=context.scope,
         entity_type=entity_type,
+        import_batch_id=import_batch_id,
         limit=limit,
         offset=offset,
     )
+    filters: dict[str, str | None] = {"entity_type": entity_type}
+    if import_batch_id is not None:
+        filters["import_batch_id"] = import_batch_id
     return _json_response(
         200,
         {
             "records": [_record_payload(record) for record in records],
-            "filters": {"entity_type": entity_type},
+            "filters": filters,
             "pagination": {
                 "limit": limit,
                 "offset": offset,

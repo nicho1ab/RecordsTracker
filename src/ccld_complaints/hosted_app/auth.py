@@ -832,7 +832,11 @@ def list_authorized_source_derived_records(
     limit: int = 100,
     offset: int = 0,
 ) -> tuple[SourceDerivedRecordRead, ...]:
-    scoped_import_batch_id = _scoped_import_batch_id(scope, import_batch_id)
+    scoped_import_batch_id = (
+        _scoped_import_batch_id(scope, import_batch_id)
+        if import_batch_id is None
+        else _scoped_import_batch_id_for_read(connection, scope, import_batch_id)
+    )
     require_permission(
         actor,
         permission=SOURCE_DERIVED_READ_PERMISSION,
