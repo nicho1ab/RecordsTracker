@@ -156,3 +156,20 @@ roadmap backlog unless validation failed or documentation is stale.
 All user-facing docs, exports, and presentation layers must meet `ACCESSIBILITY_REQUIREMENTS.md`.
 Public repository hygiene:
 Do not include personal local paths, usernames, personal email addresses, organization account details, private URLs, tokens, secrets, screenshots containing private account details, or machine-specific configuration in committed documentation, examples, fixtures, comments, or tests. Use placeholders such as <repo-root>, <local-project-path>, <your-github-org-or-user>, and <repository-name>.
+
+<!-- BEGIN STAKEHOLDER REQUIREMENTS AUTOMATION -->
+## External stakeholder requirement issues
+
+When working from an issue containing `recordstracker-requirement-id`:
+
+- Treat the issue body as the approved implementation prompt and acceptance contract.
+- Never add the stakeholder's personal name, organization name, or organization domain to code, docs, issues, PRs, commits, branches, screenshots, fixtures, evidence, or generated output.
+- Read `requirements/stakeholder-requirements.json`, `AGENTS.md` when present, and directly affected governance files before editing.
+- Keep scope limited to one child requirement unless dependencies make a combined change unavoidable.
+- Preserve source traceability and source-derived versus reviewer-created state separation.
+- Do not introduce hidden risk scores or unsupported legal, source-completeness, or facility-wide conclusions.
+- Add focused tests for deterministic behavior, reconciliation, missing values, duplicates, accessibility, and no-secret output.
+- Update directly impacted documentation.
+- Do not close the requirement merely because code or a PR exists.
+- End with a concise handoff listing files changed, behavior added, tests run/results, limitations, and remaining human evidence or stakeholder validation.
+<!-- END STAKEHOLDER REQUIREMENTS AUTOMATION -->

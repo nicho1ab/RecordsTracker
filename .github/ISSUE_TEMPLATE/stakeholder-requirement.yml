@@ -1,0 +1,54 @@
+name: External stakeholder requirement
+description: Create a traceable facility-intelligence requirement without identifying the stakeholder or organization.
+title: "[Requirement] "
+labels:
+  - "initiative:facility-intelligence"
+  - "needs:stakeholder-validation"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not enter the stakeholder's personal name, organization name, or organization domain.
+  - type: input
+    id: requirement_id
+    attributes:
+      label: Requirement ID
+      placeholder: STAKEHOLDER-009
+    validations:
+      required: true
+  - type: textarea
+    id: intended_outcome
+    attributes:
+      label: Intended attorney-review outcome
+      description: Describe what the reviewer must be able to do and why it matters.
+    validations:
+      required: true
+  - type: textarea
+    id: current_gap
+    attributes:
+      label: Current gap
+      description: Explain what RecordsTracker does today and why it does not satisfy the requirement.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Functional acceptance criteria
+      description: Use testable checklist items, including source reconciliation and edge states.
+      value: |
+        - [ ] 
+        - [ ] 
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Required evidence and stakeholder confirmation
+      value: |
+        - [ ] Automated validation complete
+        - [ ] Exact route or output reviewed
+        - [ ] Representative results reconciled to sources
+        - [ ] Stakeholder scenario completed
+        - [ ] Remaining gaps recorded
+    validations:
+      required: true
