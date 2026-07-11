@@ -894,6 +894,24 @@ validated production/QNAP coverage. Clearly identified fixture/demo/test rows
 and unknown-provenance rows are reported separately and excluded from
 representative counts.
 
+If older retrieval rows were imported under a reused seeded/fixture import batch,
+dry-run the bounded provenance repair before re-running coverage:
+
+```powershell
+.\scripts\repair-live-retrieval-provenance.ps1
+```
+
+Apply it only after the dry-run reports the expected candidate row count:
+
+```powershell
+.\scripts\repair-live-retrieval-provenance.ps1 -Apply
+```
+
+The repair relinks only source-derived rows whose own persisted
+`source_traceability.source_artifact_identity` points to a completed live public
+CCLD retrieval job. Fixture/mock jobs, missing retrieval jobs, unknown
+provenance, and conflicting target batches remain untouched.
+
 Do not commit connection strings, usernames, passwords, provider settings,
 private URLs, hosted URLs, tokens, or deployment-specific configuration.
 
@@ -1131,12 +1149,14 @@ disabled or revoked, role-denied, and out-of-scope rejections, non-secret JSON
 payloads, and before/after row counts proving reads do not mutate seeded import,
 reviewer-created scaffold, or audit scaffold tables.
 The representative coverage report tests verify empty/not-ready status,
-real-public, fixture/demo/test, and unknown provenance classification, candidate
-versus partial status, source-derived complaint traceability counts,
-source-document exact/missing/conflicting linkage, duplicate source-derived
-identity checks, retrieval failure/rejection/skipped/duplicate count separation,
-import-batch declared-minus-current differences, deterministic ordering, and
-read-only behavior without live CCLD or GitHub calls.
+real-public, fixture/demo/test, mock retrieval, mixed fixture/live, and unknown
+provenance classification, repair of rows proven by persisted live retrieval
+metadata, candidate versus partial status, source-derived complaint traceability
+counts, source-document exact/missing/conflicting linkage, duplicate
+source-derived identity checks, retrieval failure/rejection/skipped/duplicate
+count separation, import-batch declared-minus-current differences,
+deterministic ordering, and read-only behavior without live CCLD or GitHub
+calls.
 The reset/reload dry-run tests verify local/test authenticated planning payloads,
 seeded import batch, source-derived record, reviewer-created scaffold, and audit
 scaffold impact counts, reviewer-created state handling options, invalid mode rejection,

@@ -28,6 +28,7 @@ from ccld_complaints.hosted_app.auth import (
     HostedAccessScope,
     HostedScopeDeniedError,
     require_permission,
+    source_record_is_in_scope,
 )
 from ccld_complaints.hosted_app.seeded_import import (
     hosted_seeded_import_metadata,
@@ -186,7 +187,7 @@ def create_reviewer_created_state_scaffold(
         raise ReviewerCreatedStateReferenceError(
             "Reviewer-created state must reference an existing staged source-derived record."
         )
-    if source_record.import_batch.import_batch_id != scope.scope_id:
+    if not source_record_is_in_scope(connection, source_record, scope):
         raise HostedScopeDeniedError(
             "Reviewer-created state source-derived reference is outside the authorized scope."
         )

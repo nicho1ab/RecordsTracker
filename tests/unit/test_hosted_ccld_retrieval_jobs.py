@@ -41,6 +41,7 @@ from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
     CcldRetrievalContext,
     CcldRetrievalJobResult,
     hosted_ccld_retrieval_jobs,
+    retrieval_import_batch_id,
     validate_ccld_source_url,
 )
 from ccld_complaints.hosted_app.feedback import FeedbackContext, GitHubFeedbackConfig
@@ -229,6 +230,7 @@ def test_controlled_retrieval_imports_records_and_links_queue(tmp_path: Path) ->
         )
         after_counts = _table_counts(connection)
         jobs = connection.execute(select(hosted_ccld_retrieval_jobs)).mappings().all()
+        batches = connection.execute(select(hosted_import_batches)).mappings().all()
 
     html = body.decode("utf-8")
     normalized = " ".join(html.split())
@@ -248,6 +250,11 @@ def test_controlled_retrieval_imports_records_and_links_queue(tmp_path: Path) ->
     assert raw_files[0].read_bytes() == RAW_FIXTURE.read_bytes()
     assert jobs[0]["job_state"] == "completed"
     assert jobs[0]["authorization_permission"] == "retrieval_job_trigger"
+    assert batches[0]["import_batch_id"] == retrieval_import_batch_id(
+        jobs[0]["retrieval_job_id"]
+    )
+    assert batches[0]["import_batch_id"] != TEST_SCOPE.scope_id
+    assert batches[0]["source_artifact_identity"] == jobs[0]["source_artifact_identity"]
     assert "Complaint records ready for attorney review" in html
     assert "Job state" in html
     assert "Completed" in html
@@ -443,7 +450,7 @@ def test_duplicate_retrieval_rerun_does_not_duplicate_visible_source_rows(
     assert first_status == 200
     assert second_status == 200
     assert counts["retrieval_jobs"] == 2
-    assert counts["import_batches"] == 1
+    assert counts["import_batches"] == 2
     assert counts["source_records"] == 26
     assert "1 complaint queue record(s) are visible now" in first_html
     assert "1 complaint queue record(s) are visible now" in second_html
