@@ -12,7 +12,7 @@ The scaffold is local-first and must run on a Windows development workstation
 for ordinary development. A separate QNAP-first Docker Compose runtime now exists
 for production-like validation with PostgreSQL in Docker, but it packages the
 same scaffold and does not approve public hosting. The first provider-agnostic
-auth runtime boundary exists for external stakeholder organization pilot planning: production mode blocks
+auth runtime boundary exists for external tester pilot planning: production mode blocks
 anonymous workflow routes, and explicit local-dev mode supplies the fixture
 tester actor for local validation only. It uses Python standard-library HTTP
 tooling to avoid creating a final production frontend, API, database,

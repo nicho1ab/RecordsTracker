@@ -6,8 +6,8 @@ Accepted
 
 ## Context
 
-The project is a public-interest hobby project for early external stakeholder organization testers. It is
-not a the user's employer project. The hosted CCLD path now has a QNAP-first Docker/PostgreSQL
+The project is a public-interest project for early external testers. It is
+independent of the user's employer. The hosted CCLD path now has a QNAP-first Docker/PostgreSQL
 runtime envelope, provider-agnostic auth boundary, PostgreSQL-backed hosted page
 data mode, cloud portability guidance, and server-side GitHub Issues tester
 feedback intake.

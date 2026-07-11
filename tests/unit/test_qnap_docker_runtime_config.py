@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import re
 import shutil
@@ -820,7 +820,7 @@ def test_qnap_pilot_operator_checklist_exists_and_covers_required_steps() -> Non
 
     for required_text in (
         "QNAP Docker is the first pilot runtime, not a permanent platform lock-in",
-        "early external stakeholder organization tester validation",
+        "early external tester validation",
         "source-completeness review uses dedicated source-review paths",
         "legal, facility-wide, harm, abuse, neglect, liability",
         "Confirm the repository checkout is current",
@@ -945,7 +945,7 @@ def test_qnap_pilot_tester_invitation_decision_doc_covers_required_steps() -> No
 
     for required_text in (
         "QNAP Pilot Tester Invitation Decision",
-        "required before inviting early external stakeholder organization testers",
+        "required before inviting early external testers",
         "real external tester authentication is not implemented yet",
         "operator decision gate, not an implementation of access control",
         "explicitly approved named individuals or a small approved group",
@@ -1145,7 +1145,7 @@ def test_qnap_pilot_readiness_index_exists_and_covers_ordered_path() -> None:
         "QNAP Pilot Readiness Index",
         "ordered pre-invite path",
         "QNAP Docker is the first pilot runtime, not a permanent platform lock-in",
-        "external stakeholder organization-oriented pilot validation",
+        "external tester pilot validation",
         "CCLD-only",
         "PostgreSQL-backed hosted page data",
         "Route source-completeness, public-source absence",

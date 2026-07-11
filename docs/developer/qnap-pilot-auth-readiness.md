@@ -1,6 +1,6 @@
 # QNAP Pilot Auth Readiness
 
-Use this guide before inviting early external stakeholder organization testers to a QNAP-hosted pilot. It
+Use this guide before inviting early external testers to a QNAP-hosted pilot. It
 explains the current hosted auth readiness path, what is intentionally not implemented
 yet, which host-local settings must stay safe, and what auth evidence operators
 should capture.
