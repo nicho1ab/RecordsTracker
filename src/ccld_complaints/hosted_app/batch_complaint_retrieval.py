@@ -34,7 +34,7 @@ from ccld_complaints.hosted_app.persistence import (
     load_hosted_database_config,
 )
 from ccld_complaints.hosted_app.reviewer_ui import (
-    LOCAL_REVIEWER_UI_SCOPE,
+    POSTGRES_REVIEWER_UI_SCOPE,
     local_test_reviewer_actor,
 )
 from ccld_complaints.hosted_app.source_derived_reads import (
@@ -550,11 +550,11 @@ def create_retrieval_context(connection: Connection) -> CcldRetrievalContext | N
         if config.mock_success_demo_enabled
         else CcldHttpRetrievalClient()
     )
-    actor = local_test_reviewer_actor()
+    actor = local_test_reviewer_actor(scopes=(POSTGRES_REVIEWER_UI_SCOPE,))
     return CcldRetrievalContext(
         connection=connection,
         actor=actor,
-        scope=LOCAL_REVIEWER_UI_SCOPE,
+        scope=POSTGRES_REVIEWER_UI_SCOPE,
         config=config,
         client=client,
     )

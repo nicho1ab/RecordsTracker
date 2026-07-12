@@ -20,6 +20,7 @@ from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.pool import StaticPool
 
 from ccld_complaints.hosted_app.auth import (
+    CCLD_RETRIEVAL_CORPUS_SCOPE,
     AuthenticatedActor,
     HostedAccessScope,
     HostedAccountStatus,
@@ -83,6 +84,7 @@ LOCAL_REVIEWER_UI_SCOPE = HostedAccessScope(
     "seeded_corpus",
     "seeded-ccld-fixture-2026-06-13",
 )
+POSTGRES_REVIEWER_UI_SCOPE = CCLD_RETRIEVAL_CORPUS_SCOPE
 LOCAL_REVIEWER_UI_FIXTURE = Path(
     "tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json"
 )

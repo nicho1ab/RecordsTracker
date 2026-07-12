@@ -7,6 +7,7 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from html.parser import HTMLParser
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, cast
 from urllib.parse import parse_qs, quote, urlencode, urlparse
 
@@ -14,6 +15,7 @@ import pytest
 from sqlalchemy import create_engine, func, select, update
 from sqlalchemy.engine import Connection
 
+from ccld_complaints.hosted_app import app as hosted_app
 from ccld_complaints.hosted_app import reviewer_ui
 from ccld_complaints.hosted_app.app import route_response
 from ccld_complaints.hosted_app.audit_events import hosted_audit_events
@@ -57,6 +59,7 @@ from ccld_complaints.hosted_app.reviewer_created_state import (
 )
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
+    POSTGRES_REVIEWER_UI_SCOPE,
     REVIEWER_UI_DETAIL_PATH,
     REVIEWER_UI_MATRIX_EXPORT_PATH,
     REVIEWER_UI_NOTE_PATH,
@@ -1047,6 +1050,98 @@ def test_reviewer_ui_substantiated_worklist_uses_live_related_finding_shape() ->
     assert "24-CR-20260508083927" not in out_of_scope_html
     assert_no_secret_html(html)
     assert_no_secret_html(out_of_scope_html)
+
+
+def test_postgres_corpus_substantiated_worklist_uses_authorized_retrieval_batches() -> None:
+    substantiated = _representative_retrieval_record(
+        facility_number="107207198",
+        facility_name="Representative Foster Family Agency",
+        facility_type="Foster Family Agency",
+        county="Los Angeles",
+        complaint_control_number="24-CR-20260508083927",
+        report_index="25",
+        finding="Substantiated",
+        narrative=(
+            "The public report states the allegation was investigated and "
+            "substantiated."
+        ),
+        received_date="2026-05-08",
+    )
+    unsubstantiated = _representative_retrieval_record(
+        facility_number="425802141",
+        facility_name="Representative Short Term Residential Therapeutic Program",
+        facility_type="Short Term Residential Therapeutic Program",
+        county="Santa Barbara",
+        complaint_control_number="31-CR-20240425094018",
+        report_index="33",
+        finding="Unsubstantiated",
+        narrative="The investigation finding states the allegation was unsubstantiated.",
+        received_date="2024-04-25",
+    )
+    with _seeded_connection() as connection:
+        _insert_representative_live_public_retrieval_batch(
+            connection,
+            substantiated,
+            scope=POSTGRES_REVIEWER_UI_SCOPE,
+        )
+        _insert_representative_live_public_retrieval_batch(
+            connection,
+            unsubstantiated,
+            scope=POSTGRES_REVIEWER_UI_SCOPE,
+        )
+        context = reviewer_ui_context_for_connection(
+            connection,
+            actor=_actor(
+                roles=("tester_reviewer",),
+                scopes=(POSTGRES_REVIEWER_UI_SCOPE,),
+            ),
+            scope=POSTGRES_REVIEWER_UI_SCOPE,
+        )
+        source_status, source_result = reviewer_ui._all_source_derived_records_response(
+            context
+        )
+        status, content_type, body = route_response(
+            REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH
+            + "?facility=107207198&facility_type=Foster%20Family%20Agency",
+            reviewer_ui_context=context,
+        )
+        future_status, _content_type, future_body = route_response(
+            REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH
+            + "?start_date=2099-01-01&end_date=2099-12-31",
+            reviewer_ui_context=context,
+        )
+
+    assert source_status == 200
+    assert not isinstance(source_result, bytes)
+    assert len(source_result) > reviewer_ui._SOURCE_DERIVED_PAGE_LIMIT
+
+    html = body.decode("utf-8")
+    future_html = future_body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert (
+        "Showing 1-1 of 1 matching qualifying complaint record(s); "
+        "1 total qualifying authorized source-derived complaint record(s)."
+        in html
+    )
+    assert "Representative Foster Family Agency" in html
+    assert "107207198" in html
+    assert "Foster Family Agency" in html
+    assert "24-CR-20260508083927" in html
+    assert ">Substantiated<" in html
+    assert "425802141" not in html
+    assert "Unsubstantiated" not in html
+
+    assert future_status == 200
+    assert "No loaded substantiated/equivalent complaint records matched." in future_html
+    assert (
+        "Showing 0 of 0 matching qualifying complaint record(s); "
+        "1 total qualifying authorized source-derived complaint record(s)."
+        in future_html
+    )
+    assert_no_secret_html(html)
+    assert_no_secret_html(future_html)
 
 
 def test_substantiated_event_finding_evidence_normalizes_public_event_text() -> None:
@@ -4181,6 +4276,43 @@ def test_reviewer_ui_default_route_context_is_browser_accessible() -> None:
     assert "32-CR-20220407124448" in html
     assert_no_secret_html(html)
 
+
+def test_fixture_demo_reviewer_context_keeps_seeded_fixture_scope() -> None:
+    context = reviewer_ui.default_local_test_reviewer_ui_context()
+    source_context = context.workflow_shell_context.source_derived_api_context
+
+    assert source_context.scope == LOCAL_REVIEWER_UI_SCOPE
+    assert source_context.actor is not None
+    assert source_context.actor.scopes == (LOCAL_REVIEWER_UI_SCOPE,)
+    assert source_context.scope.scope_id == "seeded-ccld-fixture-2026-06-13"
+
+
+def test_default_postgres_reviewer_context_uses_loaded_ccld_corpus_scope(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+    monkeypatch.setattr(hosted_app, "_DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT", None)
+    monkeypatch.setattr(
+        hosted_app,
+        "load_hosted_database_config",
+        lambda: SimpleNamespace(database_url="postgresql://example.invalid/records"),
+    )
+    monkeypatch.setattr(hosted_app, "create_engine", lambda _url: engine)
+
+    try:
+        context = hosted_app._default_postgres_reviewer_context()
+        assert context is not None
+        source_context = context.workflow_shell_context.source_derived_api_context
+
+        assert source_context.scope == POSTGRES_REVIEWER_UI_SCOPE
+        assert source_context.scope.scope_id != "seeded-ccld-fixture-2026-06-13"
+        assert source_context.actor is not None
+        assert source_context.actor.scopes == (POSTGRES_REVIEWER_UI_SCOPE,)
+    finally:
+        monkeypatch.setattr(hosted_app, "_DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT", None)
+        engine.dispose()
+
 def _local_dev_auth_config() -> Any:
     return load_hosted_auth_runtime_config(
         environ={
@@ -4698,6 +4830,8 @@ def _insert_live_shape_related_finding_records(
 def _insert_representative_live_public_retrieval_batch(
     connection: Connection,
     representative: dict[str, str],
+    *,
+    scope: HostedAccessScope = TEST_SCOPE,
 ) -> None:
     job_id = f"fixture-job-{representative['facility_number']}-{representative['report_index']}"
     import_batch_id = retrieval_import_batch_id(job_id)
@@ -4718,8 +4852,8 @@ def _insert_representative_live_public_retrieval_batch(
             record_type="complaints",
             start_date=representative["received_date"],
             end_date=representative["signed_date"],
-            source_scope_type=TEST_SCOPE.scope_type,
-            source_scope_id=TEST_SCOPE.scope_id,
+            source_scope_type=scope.scope_type,
+            source_scope_id=scope.scope_id,
             actor_provider_subject="fixture-ui-reviewer",
             actor_provider_issuer="fixture-managed-oidc-provider",
             actor_display_name="Fixture UI Reviewer",
@@ -4908,6 +5042,38 @@ def _insert_representative_live_public_retrieval_batch(
             )
         )
     )
+
+
+def _representative_retrieval_record(
+    *,
+    facility_number: str,
+    facility_name: str,
+    facility_type: str,
+    county: str,
+    complaint_control_number: str,
+    report_index: str,
+    finding: str,
+    narrative: str,
+    received_date: str,
+) -> dict[str, str]:
+    return {
+        "facility_number": facility_number,
+        "facility_name": facility_name,
+        "facility_type": facility_type,
+        "status": "Licensed",
+        "county": county,
+        "complaint_control_number": complaint_control_number,
+        "complaint_key": f"complaint:ccld-complaint-{complaint_control_number}",
+        "source_document_id": f"ccld-{facility_number}-inx-{report_index}",
+        "report_index": report_index,
+        "finding": finding,
+        "allegation_text": "Facility staff did not follow the written placement plan.",
+        "narrative": narrative,
+        "received_date": received_date,
+        "visit_date": received_date,
+        "report_date": received_date,
+        "signed_date": received_date,
+    }
 
 
 def _representative_source_record_values(
