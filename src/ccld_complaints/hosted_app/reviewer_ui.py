@@ -1649,11 +1649,11 @@ def _serious_topic_evidence(
             continue
         evidence.append(
             {
-                "category_label": "Possible serious-topic cue",
+                "category_label": "Possible keyword cue",
                 "source_category": "",
                 "matched_field": "keyword-assisted allegation_text",
                 "matched_term": cue_term,
-                "match_basis": "Keyword-assisted cue",
+                "match_basis": "Possible keyword cue",
             }
         )
     return evidence
@@ -1729,7 +1729,7 @@ def _serious_topic_item_matches_filters(
         return False
     if filters.match_basis == "source-category" and "Source category" not in item["match_bases"]:
         return False
-    if filters.match_basis == "keyword-cue" and "Keyword-assisted cue" not in item["match_bases"]:
+    if filters.match_basis == "keyword-cue" and "Possible keyword cue" not in item["match_bases"]:
         return False
     return True
 
@@ -1761,6 +1761,7 @@ def _render_serious_topics_worklist(
     actor_label: str | None,
 ) -> str:
     filter_markup = _render_serious_topics_filter_form(filters, all_items)
+    filter_basis_markup = _render_serious_topics_filter_basis(filters)
     summary = _render_serious_topics_count_summary(
         result_count,
         total_qualifying_count,
@@ -1770,7 +1771,7 @@ def _render_serious_topics_worklist(
         list_markup = f"""        <section class="hero-card" aria-labelledby="serious-topics-empty-heading">
           <h2 id="serious-topics-empty-heading">No serious-topic complaint records matched.</h2>
           {summary}
-          <p>No loaded authorized complaint records matched these source category or keyword-cue filters. Adjust the filters or clear them to return to all qualifying loaded records.</p>
+          <p>Adjust the filters or clear them to return to all qualifying loaded records.</p>
         </section>"""
     else:
         rows = "\n".join(_render_serious_topic_row(item) for item in items)
@@ -1778,14 +1779,14 @@ def _render_serious_topics_worklist(
           <h2 id="serious-topics-results-heading">Loaded serious-topic complaint records</h2>
           {summary}
           <table>
-            <caption>Governed serious-topic complaint worklist with source category and keyword-cue basis</caption>
+            <caption>Governed serious-topic complaint worklist</caption>
             <thead>
               <tr>
                 <th scope="col">Facility</th>
                 <th scope="col">Facility ID</th>
                 <th scope="col">Complaint date</th>
                 <th scope="col">Finding</th>
-                <th scope="col">Review theme</th>
+                <th scope="col">Review topic</th>
                 <th scope="col">Match basis</th>
                 <th scope="col">Matched field and term</th>
                 <th scope="col">Source-derived category</th>
@@ -1807,16 +1808,12 @@ def _render_serious_topics_worklist(
         actor_label=actor_label,
         main=f"""
         <section class="quiet-section" aria-labelledby="serious-topics-purpose-heading">
-          <h2 id="serious-topics-purpose-heading">Filter serious review themes without changing source records</h2>
-          <p>Use this worklist to find loaded public complaint records by governed source-derived allegation categories or, only when the source category is missing or Unknown, a separate keyword-assisted cue from allegation text.</p>
-          <p>Keyword cues are not findings, verified events, legal conclusions, or facility-wide conclusions. Timing and source-date review flags are handled elsewhere.</p>
+          <h2 id="serious-topics-purpose-heading">Filter serious review topics</h2>
+          <p>Source categories come from public records. Review topics and possible keyword cues help narrow records for review.</p>
         </section>
 {filter_markup}
+{filter_basis_markup}
 {list_markup}
-        <details class="technical-details notice-card">
-          <summary>Category and cue rules</summary>
-          <p>Deterministic themes come only from source-derived allegation_category values. Keyword-assisted cues come only from governed allegation_text terms when that allegation category is missing or Unknown. Complaint control numbers are not searched.</p>
-        </details>
         <section class="quiet-section" aria-labelledby="serious-topics-next-heading">
           <h2 id="serious-topics-next-heading">Next steps</h2>
           <ul>
@@ -1848,6 +1845,14 @@ def _render_serious_topic_row(item: Mapping[str, str]) -> str:
           <td>{_serious_topic_source_link(item)}</td>
           <td><a class="button" href="{_escape(item['detail_href'])}">Open complaint review workspace</a></td>
         </tr>"""
+
+
+def _render_serious_topics_filter_basis(filters: SeriousTopicsFilters) -> str:
+    if filters.match_basis == "source-category":
+        return """        <p class="helper-text">Filter basis: Source category.</p>"""
+    if filters.match_basis == "keyword-cue":
+        return """        <p class="helper-text">Filter basis: Possible keyword cue.</p>"""
+    return ""
 
 
 def _render_serious_topics_count_summary(
@@ -1886,7 +1891,7 @@ def _render_serious_topics_filter_form(
         item["geography"] for item in all_items
     )
     topic_options = _substantiated_filter_options(
-        tuple(_SERIOUS_TOPIC_CATEGORY_LABELS.values()) + ("Possible serious-topic cue",)
+        tuple(_SERIOUS_TOPIC_CATEGORY_LABELS.values()) + ("Possible keyword cue",)
     )
     return f"""        <section class="quiet-section" aria-labelledby="serious-topics-filters-heading">
           <h2 id="serious-topics-filters-heading">Filter and sort</h2>
@@ -1920,16 +1925,16 @@ def _render_serious_topics_filter_form(
                 <datalist id="serious-topics-findings">{finding_options}</datalist>
               </p>
               <p>
-                <label for="serious-topics-topic">Review theme</label>
+                <label for="serious-topics-topic">Review topic</label>
                 <input id="serious-topics-topic" name="topic" value="{_escape(filters.topic)}" list="serious-topics-themes">
                 <datalist id="serious-topics-themes">{topic_options}</datalist>
               </p>
               <p>
                 <label for="serious-topics-match-basis">Match basis</label>
                 <select id="serious-topics-match-basis" name="match_basis">
-                  {_serious_topics_basis_option(filters.match_basis, "all", "Source categories and keyword cues")}
+                  {_serious_topics_basis_option(filters.match_basis, "all", "Source categories and possible keyword cues")}
                   {_serious_topics_basis_option(filters.match_basis, "source-category", "Source-derived categories only")}
-                  {_serious_topics_basis_option(filters.match_basis, "keyword-cue", "Keyword-assisted cues only")}
+                  {_serious_topics_basis_option(filters.match_basis, "keyword-cue", "Possible keyword cues only")}
                 </select>
               </p>
               <p>
