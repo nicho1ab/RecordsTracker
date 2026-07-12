@@ -139,9 +139,8 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         assert issue_417_route in script
     for issue_417_assertion in (
         "issue417 h1",
-        "issue417 concepts labeled",
+        "issue417 semantic contract",
         "issue417 no unsupported conclusions",
-        "issue417 category/cue wording",
         "issue417 source category basis",
         "issue417 keyword cue basis",
         "issue417 filtered controls",
@@ -149,6 +148,159 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "issue417 no narrative leak",
     ):
         assert issue_417_assertion in script
+
+
+def issue_417_assertion_function() -> str:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    start = script.index("function Test-Issue417RouteAssertions")
+    end = script.index("\nfunction Get-SafeDynamicHref", start)
+    return script[start:end]
+
+
+def run_issue_417_assertions(
+    kind: str,
+    text: str,
+    *,
+    matching: int = 1,
+    html: str | None = None,
+) -> list[dict[str, object]]:
+    html_text = html or (
+        "<html><body><h1>Serious-topic complaint worklist</h1>"
+        '<label>Review topic</label><input name="topic">'
+        '<label>Match basis</label><select name="match_basis"></select>'
+        '<input name="finding"><input name="facility"><input name="geography">'
+        '<input name="start_date"></body></html>'
+    )
+    ps_script = f"""
+$script:Issue417Matching = {matching}
+function Get-Issue417CountSummary {{
+    param([string]$Text)
+    [pscustomobject]@{{ Found = $true; Matching = $script:Issue417Matching; Total = 1 }}
+}}
+function Get-Issue417Rows {{
+    param([string]$Html)
+    @()
+}}
+function Add-Issue417PassFail {{
+    param(
+        [System.Collections.ArrayList]$Assertions,
+        [string]$RouteName,
+        [string]$Check,
+        [bool]$Pass,
+        [string]$PassMessage,
+        [string]$FailMessage
+    )
+    [void]$Assertions.Add([pscustomobject]@{{
+        route = $RouteName
+        check = $Check
+        passed = $Pass
+        failMessage = $FailMessage
+    }})
+}}
+{issue_417_assertion_function()}
+$assertions = [System.Collections.ArrayList]::new()
+$route = @{{ Name = 'issue-417-{kind}'; Issue417Kind = '{kind}' }}
+$html = @'
+{html_text}
+'@
+$text = @'
+{text}
+'@
+Test-Issue417RouteAssertions -Route $route -Html $html -Text $text -Assertions $assertions
+$assertions | ConvertTo-Json -Compress
+"""
+    result = subprocess.run(
+        [powershell(), "-NoProfile", "-Command", ps_script],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, plain_output(result)
+    payload = json.loads(result.stdout)
+    if isinstance(payload, dict):
+        return [payload]
+    return payload
+
+
+def issue_417_base_text(*, links: bool = False) -> str:
+    parts = [
+        "Serious-topic complaint worklist",
+        "Source categories come from public records.",
+        "Review topics and possible keyword cues help narrow records for review.",
+    ]
+    if links:
+        parts.extend(
+            [
+                "Open original public report",
+                "Open complaint review workspace",
+            ]
+        )
+    return " ".join(parts)
+
+
+def failed_issue_417_checks(assertions: list[dict[str, object]]) -> set[str]:
+    return {str(row["check"]) for row in assertions if row["passed"] is not True}
+
+
+def test_issue_417_assertions_accept_shared_semantic_explanation_without_row_labels() -> None:
+    assertions = run_issue_417_assertions(
+        "default",
+        issue_417_base_text(links=True),
+    )
+
+    assert failed_issue_417_checks(assertions) == set()
+    assert "Source category" not in issue_417_base_text()
+    assert "Possible keyword cue" not in issue_417_base_text()
+
+
+def test_issue_417_assertions_accept_keyword_filtered_and_empty_shared_explanation() -> None:
+    keyword_assertions = run_issue_417_assertions(
+        "keyword-cue",
+        issue_417_base_text() + " Filter basis: Possible keyword cue.",
+        matching=1,
+    )
+    filtered_assertions = run_issue_417_assertions(
+        "filtered",
+        issue_417_base_text(),
+    )
+    empty_assertions = run_issue_417_assertions(
+        "empty",
+        issue_417_base_text() + " No serious-topic complaint records matched. Clear filters",
+        matching=0,
+    )
+
+    assert failed_issue_417_checks(keyword_assertions) == set()
+    assert failed_issue_417_checks(filtered_assertions) == set()
+    assert failed_issue_417_checks(empty_assertions) == set()
+
+
+def test_issue_417_assertions_keep_route_specific_basis_checks() -> None:
+    source_assertions = run_issue_417_assertions(
+        "source-category",
+        issue_417_base_text(),
+    )
+    keyword_assertions = run_issue_417_assertions(
+        "keyword-cue",
+        issue_417_base_text(),
+        matching=1,
+    )
+
+    assert failed_issue_417_checks(source_assertions) == {
+        "issue417 source category basis"
+    }
+    assert failed_issue_417_checks(keyword_assertions) == {
+        "issue417 keyword cue basis"
+    }
+
+
+def test_issue_417_assertions_keep_unsupported_conclusion_check() -> None:
+    assertions = run_issue_417_assertions(
+        "default",
+        issue_417_base_text(links=True) + " Keyword cues are findings.",
+    )
+
+    assert "issue417 no unsupported conclusions" in failed_issue_417_checks(assertions)
 
 
 def test_capture_script_review_context_is_get_only_and_non_mutating() -> None:
