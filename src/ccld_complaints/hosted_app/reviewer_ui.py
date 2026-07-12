@@ -289,6 +289,12 @@ class SubstantiatedWorklistFilters:
 
 
 @dataclass(frozen=True)
+class SubstantiatedFindingEvidence:
+    label: str
+    value: str
+
+
+@dataclass(frozen=True)
 class SourceRecordIndexes:
     by_import_batch_id: Mapping[str, tuple[Mapping[str, Any], ...]]
     by_facility_id: Mapping[str, tuple[Mapping[str, Any], ...]]
@@ -630,27 +636,32 @@ def _substantiated_triage_items(
         if _queue_source_record_entity_type(source_record) != "complaint":
             continue
         original_values = _mapping(source_record, "original_values")
-        finding_label = _substantiated_finding_label(original_values)
-        if finding_label is None:
-            continue
         identity = _mapping(source_record, "identity")
         source_record_key = _string(identity, "source_record_key")
-        stable_complaint_id = _stable_complaint_identity(source_record)
-        if stable_complaint_id in seen_stable_complaint_ids:
-            continue
-        seen_stable_complaint_ids.add(stable_complaint_id)
         related_records = _related_source_records_from_indexes(
             source_record,
             source_indexes,
         )
+        finding_evidence = _substantiated_finding_evidence(
+            source_record,
+            related_records,
+        )
+        if finding_evidence is None:
+            continue
+        stable_complaint_id = _stable_complaint_identity(source_record)
+        if stable_complaint_id in seen_stable_complaint_ids:
+            continue
+        seen_stable_complaint_ids.add(stable_complaint_id)
         facility = _facility_context(related_records)
         facility_name = _facility_context_value(facility, "facility_name")
         facility_type = _facility_context_value(facility, "facility_type")
         geography = _substantiated_geography_label(facility)
-        facility_number = _complaint_export_row_facility_number(
+        facility_number = _facility_context_value(facility, "external_facility_number")
+        if facility_number == "unknown":
+            facility_number = _complaint_export_row_facility_number(
             source_record,
             CcldQueueReturnContext(),
-        )
+            )
         if facility_name == "unknown":
             facility_display = f"Facility ID {_display_value(facility_number)}"
         else:
@@ -684,8 +695,8 @@ def _substantiated_triage_items(
                 "date_context": date_context,
                 "complaint_date": complaint_date,
                 "complaint_date_display": _substantiated_date_display(complaint_date),
-                "finding_label": finding_label,
-                "finding_value": _substantiated_finding_value(finding_label),
+                "finding_label": finding_evidence.label,
+                "finding_value": finding_evidence.value,
                 "category_or_summary": category_or_summary,
                 "complaint_control_number": complaint_control_number,
                 "detail_href": detail_href,
@@ -696,14 +707,133 @@ def _substantiated_triage_items(
 
 
 def _substantiated_finding_label(values: Mapping[str, Any]) -> str | None:
-    for key in ("finding", "resolution", "status"):
-        raw_value = values.get(key)
-        if not _has_display_value(raw_value):
+    evidence = _substantiated_finding_evidence_from_values(
+        "complaint",
+        values,
+    )
+    return evidence.label if evidence is not None else None
+
+
+def _substantiated_finding_evidence(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> SubstantiatedFindingEvidence | None:
+    complaint_values = _mapping(source_record, "original_values")
+    complaint_evidence = _substantiated_finding_evidence_from_values(
+        "complaint",
+        complaint_values,
+    )
+    if complaint_evidence is not None:
+        return complaint_evidence
+    for record in related_records:
+        if _string(record, "entity_type") != "allegation":
             continue
-        value = _display_value(raw_value)
-        if _is_substantiated_equivalent(value):
-            return f"{key}: {value}"
+        evidence = _substantiated_finding_evidence_from_values(
+            "allegation",
+            _mapping(record, "original_values"),
+        )
+        if evidence is not None:
+            return evidence
+    for record in related_records:
+        if _string(record, "entity_type") != "event":
+            continue
+        evidence = _substantiated_event_finding_evidence(record)
+        if evidence is not None:
+            return evidence
     return None
+
+
+def _substantiated_finding_evidence_from_values(
+    source_label: str,
+    values: Mapping[str, Any],
+) -> SubstantiatedFindingEvidence | None:
+    candidate_keys = {
+        "finding",
+        "finding_status",
+        "investigation_finding",
+        "normalized_finding",
+        "resolution",
+        "status",
+    }
+    for key, raw_value in values.items():
+        key_text = str(key)
+        if key_text.strip().casefold() not in candidate_keys:
+            continue
+        display_value = _substantiated_finding_display_value(raw_value)
+        if display_value is None:
+            continue
+        return SubstantiatedFindingEvidence(
+            label=f"{source_label} {key_text}: {display_value}",
+            value=display_value,
+        )
+    return None
+
+
+def _substantiated_event_finding_evidence(
+    record: Mapping[str, Any],
+) -> SubstantiatedFindingEvidence | None:
+    values = _mapping(record, "original_values")
+    direct_evidence = _substantiated_finding_evidence_from_values(
+        "event",
+        values,
+    )
+    if direct_evidence is not None:
+        return direct_evidence
+    context_values = tuple(
+        _display_value(values[key])
+        for key in (
+            "event_type",
+            "field_name",
+            "field",
+            "source_field",
+            "source_section",
+            "type",
+        )
+        if key in values and _has_display_value(values[key])
+    )
+    normalized_context = " ".join(context_values).casefold()
+    if not any(
+        marker in normalized_context
+        for marker in ("finding", "investigation", "resolution", "status")
+    ):
+        return None
+    for key in ("event_text", "summary", "description", "text"):
+        raw_value = values.get(key)
+        display_value = _substantiated_normalized_finding_value(raw_value)
+        if display_value is None:
+            continue
+        context_label = context_values[0] if context_values else key
+        return SubstantiatedFindingEvidence(
+            label=f"event {context_label}: {display_value}",
+            value=display_value,
+        )
+    return None
+
+
+def _substantiated_finding_display_value(value: object) -> str | None:
+    if not _has_display_value(value):
+        return None
+    text = _display_value(value)
+    if not _is_substantiated_equivalent(text):
+        return None
+    compact_text = " ".join(text.split())
+    if len(compact_text) <= 80:
+        return compact_text
+    return _substantiated_normalized_finding_value(compact_text)
+
+
+def _substantiated_normalized_finding_value(value: object) -> str | None:
+    if not _has_display_value(value):
+        return None
+    text = _display_value(value)
+    if not _is_substantiated_equivalent(text):
+        return None
+    normalized = " ".join(text.split()).casefold()
+    if "founded" in normalized:
+        return "Founded"
+    if "sustained" in normalized:
+        return "Sustained"
+    return "Substantiated"
 
 
 def _stable_complaint_identity(source_record: Mapping[str, Any]) -> str:

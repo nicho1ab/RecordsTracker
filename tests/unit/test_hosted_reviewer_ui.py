@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from html.parser import HTMLParser
 from pathlib import Path
@@ -944,6 +945,138 @@ def test_substantiated_worklist_blocks_partial_results_after_source_paging_failu
     assert "PARTIAL FAILURE FACILITY" not in html
     assert "32-CR-20220713000000" not in html
     assert_no_secret_html(html)
+
+
+def test_reviewer_ui_substantiated_worklist_uses_live_related_finding_shape() -> None:
+    with _seeded_connection() as connection:
+        substantiated_key = _insert_substantiated_complaint_for_facility(
+            connection,
+            facility_number="107207198",
+            facility_name="Representative Foster Family Agency",
+            facility_type="FOSTER FAMILY AGENCY",
+            complaint_control_number="24-CR-20260508083927",
+            complaint_received_date="2026-05-08",
+            report_date="2026-05-30",
+            source_value_key="finding",
+            source_value="Substantiated",
+            source_url=_ccld_source_url("107207198", "25"),
+        )
+        unsubstantiated_key = _insert_substantiated_complaint_for_facility(
+            connection,
+            facility_number="425802141",
+            facility_name="Representative Short Term Residential Therapeutic Program",
+            facility_type="SHORT TERM RESIDENTIAL THERAPEUTIC PROGRAM",
+            complaint_control_number="31-CR-20240425094018",
+            complaint_received_date="2024-04-25",
+            report_date="2024-05-21",
+            source_value_key="finding",
+            source_value="Unsubstantiated",
+            source_url=_ccld_source_url("425802141", "33"),
+        )
+        _set_source_record_original_values(
+            connection,
+            substantiated_key,
+            {"finding": None},
+        )
+        _set_source_record_original_values(
+            connection,
+            unsubstantiated_key,
+            {"finding": None},
+        )
+        _insert_live_shape_related_finding_records(
+            connection,
+            substantiated_key,
+            finding="Substantiated",
+            event_text=(
+                "The public report states the allegation was investigated and "
+                "substantiated."
+            ),
+        )
+        _insert_live_shape_related_finding_records(
+            connection,
+            substantiated_key,
+            finding="Sustained",
+            event_text="A duplicate allegation-level finding was sustained.",
+            suffix="duplicate",
+        )
+        _insert_live_shape_related_finding_records(
+            connection,
+            unsubstantiated_key,
+            finding="Unsubstantiated",
+            event_text="The investigation finding states the allegation was unsubstantiated.",
+        )
+        expected_count = _independent_distinct_substantiated_count(connection)
+
+        status, content_type, body = route_response(
+            (
+                REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH
+                + "?facility=107207198&facility_type=FOSTER%20FAMILY%20AGENCY"
+            ),
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+        out_of_scope_status, _content_type, out_of_scope_body = route_response(
+            REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(roles=("tester_reviewer",), scopes=(OTHER_SCOPE,)),
+                scope=OTHER_SCOPE,
+            ),
+        )
+
+    html = body.decode("utf-8")
+    out_of_scope_html = out_of_scope_body.decode("utf-8")
+
+    assert expected_count == 1
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert (
+        "Showing 1-1 of 1 matching qualifying complaint record(s); "
+        "1 total qualifying"
+        in html
+    )
+    assert html.count("Open complaint review workspace") == 1
+    assert "107207198" in html
+    assert "FOSTER FAMILY AGENCY" in html
+    assert "24-CR-20260508083927" in html
+    assert ">Substantiated<" in html
+    assert "425802141" not in html
+    assert "31-CR-20240425094018" not in html
+    assert "Unsubstantiated" not in html
+    assert out_of_scope_status in {200, 403}
+    assert "Representative Foster Family Agency" not in out_of_scope_html
+    assert "24-CR-20260508083927" not in out_of_scope_html
+    assert_no_secret_html(html)
+    assert_no_secret_html(out_of_scope_html)
+
+
+def test_substantiated_event_finding_evidence_normalizes_public_event_text() -> None:
+    event_record = {
+        "entity_type": "event",
+        "original_values": {
+            "event_type": "investigation_finding",
+            "event_text": (
+                "The public report states the allegation was investigated and "
+                "substantiated."
+            ),
+        },
+    }
+    unsubstantiated_event_record = {
+        "entity_type": "event",
+        "original_values": {
+            "event_type": "investigation_finding",
+            "event_text": "The investigation finding states the allegation was unsubstantiated.",
+        },
+    }
+
+    evidence = reviewer_ui._substantiated_event_finding_evidence(event_record)
+
+    assert evidence is not None
+    assert evidence.value == "Substantiated"
+    assert "public report states" not in evidence.value
+    assert (
+        reviewer_ui._substantiated_event_finding_evidence(unsubstantiated_event_record)
+        is None
+    )
 
 
 def test_substantiated_worklist_sort_dates_and_facility_desc_are_deterministic() -> None:
@@ -4127,23 +4260,85 @@ def _set_complaint_original_values(
 
 
 def _independent_distinct_substantiated_count(connection: Connection) -> int:
-    rows = connection.execute(
-        select(
-            hosted_source_derived_records.c.source_record_key,
-            hosted_source_derived_records.c.stable_source_id,
-            hosted_source_derived_records.c.original_values,
-        ).where(hosted_source_derived_records.c.entity_type == "complaint")
-    ).mappings()
+    rows = list(
+        connection.execute(
+            select(
+                hosted_source_derived_records.c.source_record_key,
+                hosted_source_derived_records.c.stable_source_id,
+                hosted_source_derived_records.c.import_batch_id,
+                hosted_source_derived_records.c.source_document_id,
+                hosted_source_derived_records.c.facility_id,
+                hosted_source_derived_records.c.entity_type,
+                hosted_source_derived_records.c.original_values,
+            )
+        ).mappings()
+    )
     qualifying_stable_ids: set[str] = set()
     for row in rows:
+        if row["entity_type"] != "complaint":
+            continue
         original_values = row["original_values"]
         assert isinstance(original_values, dict)
         if any(
             _test_is_substantiated_equivalent(original_values.get(key))
-            for key in ("finding", "resolution", "status")
+            for key in (
+                "finding",
+                "finding_status",
+                "investigation_finding",
+                "normalized_finding",
+                "resolution",
+                "status",
+            )
+        ) or _test_related_finding_qualifies(
+            row,
+            rows,
         ):
-            qualifying_stable_ids.add(str(row["stable_source_id"] or row["source_record_key"]))
+            qualifying_stable_ids.add(
+                str(row["stable_source_id"] or row["source_record_key"])
+            )
     return len(qualifying_stable_ids)
+
+
+def _test_related_finding_qualifies(
+    complaint_row: Mapping[str, Any],
+    rows: list[Mapping[str, Any]],
+) -> bool:
+    complaint_values = complaint_row["original_values"]
+    assert isinstance(complaint_values, dict)
+    complaint_id = str(
+        complaint_values.get("complaint_id") or complaint_row["stable_source_id"]
+    )
+    for row in rows:
+        if row["import_batch_id"] != complaint_row["import_batch_id"]:
+            continue
+        if row["entity_type"] not in {"allegation", "event"}:
+            continue
+        values = row["original_values"]
+        assert isinstance(values, dict)
+        related_by_document = row["source_document_id"] == complaint_row["source_document_id"]
+        related_by_complaint = str(values.get("complaint_id") or "") == complaint_id
+        if not (related_by_document or related_by_complaint):
+            continue
+        if any(
+            _test_is_substantiated_equivalent(values.get(key))
+            for key in (
+                "finding",
+                "finding_status",
+                "investigation_finding",
+                "normalized_finding",
+                "resolution",
+                "status",
+            )
+        ):
+            return True
+        event_context = str(values.get("event_type") or "").casefold()
+        if (
+            row["entity_type"] == "event"
+            and "finding" in event_context
+            and _test_is_substantiated_equivalent(values.get("event_text"))
+        ):
+            return True
+    return False
 
 
 def _test_is_substantiated_equivalent(value: object) -> bool:
@@ -4321,6 +4516,7 @@ def _insert_substantiated_complaint_for_facility(
     source_value_key: str,
     source_value: str,
     source_url: str,
+    facility_type: str = "Children's Center",
 ) -> str:
     batch_id = connection.execute(
         select(hosted_import_batches.c.import_batch_id)
@@ -4363,7 +4559,7 @@ def _insert_substantiated_complaint_for_facility(
                 "source_id": "ccld",
                 "external_facility_number": facility_number,
                 "facility_name": facility_name,
-                "facility_type": "Children's Center",
+                "facility_type": facility_type,
                 "county": "Kern",
             },
             source_traceability=source_traceability,
@@ -4431,6 +4627,72 @@ def _insert_substantiated_complaint_for_facility(
     )
 
     return complaint_key
+
+
+def _insert_live_shape_related_finding_records(
+    connection: Connection,
+    complaint_key: str,
+    *,
+    finding: str,
+    event_text: str,
+    suffix: str = "1",
+) -> None:
+    complaint_row = connection.execute(
+        select(hosted_source_derived_records).where(
+            hosted_source_derived_records.c.source_record_key == complaint_key
+        )
+    ).mappings().one()
+    original_values = complaint_row["original_values"]
+    source_traceability = complaint_row["source_traceability"]
+    assert isinstance(original_values, dict)
+    assert isinstance(source_traceability, dict)
+    complaint_id = str(original_values["complaint_id"])
+    facility_id = str(complaint_row["facility_id"])
+    document_id = str(complaint_row["source_document_id"])
+    common_values = {
+        "import_batch_id": str(complaint_row["import_batch_id"]),
+        "source_document_id": document_id,
+        "facility_id": facility_id,
+        "source_url": str(complaint_row["source_url"]),
+        "raw_sha256": str(complaint_row["raw_sha256"]),
+        "raw_path": str(complaint_row["raw_path"]),
+        "connector_name": str(complaint_row["connector_name"]),
+        "connector_version": str(complaint_row["connector_version"]),
+        "retrieved_at": str(complaint_row["retrieved_at"]),
+        "source_traceability": source_traceability,
+    }
+    connection.execute(
+        hosted_source_derived_records.insert().values(
+            source_record_key=f"allegation:{complaint_id}:{suffix}",
+            entity_type="allegation",
+            stable_source_id=f"{complaint_id}:allegation:{suffix}",
+            original_values={
+                "allegation_id": f"{complaint_id}:allegation:{suffix}",
+                "complaint_id": complaint_id,
+                "facility_id": facility_id,
+                "document_id": document_id,
+                "finding": finding,
+                "allegation_text": "Loaded public allegation text.",
+            },
+            **common_values,
+        )
+    )
+    connection.execute(
+        hosted_source_derived_records.insert().values(
+            source_record_key=f"event:{complaint_id}:finding:{suffix}",
+            entity_type="event",
+            stable_source_id=f"{complaint_id}:event:finding:{suffix}",
+            original_values={
+                "event_id": f"{complaint_id}:event:finding:{suffix}",
+                "complaint_id": complaint_id,
+                "facility_id": facility_id,
+                "document_id": document_id,
+                "event_type": "investigation_finding",
+                "event_text": event_text,
+            },
+            **common_values,
+        )
+    )
 
 
 def _insert_representative_live_public_retrieval_batch(
@@ -4501,19 +4763,20 @@ def _insert_representative_live_public_retrieval_batch(
     )
     for index in range(105):
         filler_facility_number = f"9009{index:05d}"
+        filler_stable_prefix = f"aaa-filler-{representative['facility_number']}-{index:03d}"
         connection.execute(
             hosted_source_derived_records.insert().values(
                 **_representative_source_record_values(
                     import_batch_id=import_batch_id,
                     source_artifact_identity=artifact_identity,
                     entity_type="facility",
-                    stable_source_id=f"aaa-filler-facility-{index:03d}",
-                    source_document_id=f"aaa-filler-document-{index:03d}",
-                    facility_id=f"aaa-filler-facility-{index:03d}",
+                    stable_source_id=f"{filler_stable_prefix}-facility",
+                    source_document_id=f"{filler_stable_prefix}-document",
+                    facility_id=f"{filler_stable_prefix}-facility",
                     source_url=_ccld_source_url(filler_facility_number, "1"),
                     raw_sha256="a" * 64,
                     original_values={
-                        "facility_id": f"aaa-filler-facility-{index:03d}",
+                        "facility_id": f"{filler_stable_prefix}-facility",
                         "facility_number": filler_facility_number,
                         "facility_name": f"Unrelated Facility {index:03d}",
                     },
