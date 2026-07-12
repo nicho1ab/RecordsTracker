@@ -25,6 +25,7 @@ from ccld_complaints.hosted_app.source_derived_reads import (
     get_source_derived_record_by_identity,
     get_source_derived_record_by_key,
     list_source_derived_records,
+    list_source_derived_records_by_entity_types,
 )
 
 AUTH_PROVIDER_CLASS_ENV = "CCLD_HOSTED_TESTER_AUTH_PROVIDER_CLASS"
@@ -834,6 +835,7 @@ def list_authorized_source_derived_records(
     *,
     scope: HostedAccessScope,
     entity_type: SourceDerivedEntityType | None = None,
+    entity_types: tuple[SourceDerivedEntityType, ...] | None = None,
     import_batch_id: str | None = None,
     limit: int = 100,
     offset: int = 0,
@@ -857,6 +859,7 @@ def list_authorized_source_derived_records(
         return list_source_derived_records(
             connection,
             entity_type=entity_type,
+            entity_types=entity_types,
             import_batch_ids=_authorized_source_import_batch_ids(connection, scope),
             limit=limit,
             offset=offset,
@@ -864,9 +867,46 @@ def list_authorized_source_derived_records(
     return list_source_derived_records(
         connection,
         entity_type=entity_type,
+        entity_types=entity_types,
         import_batch_id=scoped_import_batch_id,
         limit=limit,
         offset=offset,
+    )
+
+
+def list_authorized_source_derived_records_by_entity_types(
+    connection: Connection,
+    actor: AuthenticatedActor | None,
+    *,
+    scope: HostedAccessScope,
+    entity_types: tuple[SourceDerivedEntityType, ...],
+    import_batch_id: str | None = None,
+) -> tuple[SourceDerivedRecordRead, ...]:
+    scoped_import_batch_id = (
+        None
+        if import_batch_id is None
+        else _scoped_import_batch_id_for_read(connection, scope, import_batch_id)
+    )
+    target_id = scoped_import_batch_id or scope.scope_id
+    require_permission(
+        actor,
+        permission=SOURCE_DERIVED_READ_PERMISSION,
+        scope=scope,
+        target=AuthorizationTarget(
+            "source_derived_record_list",
+            target_id,
+        ),
+    )
+    if scoped_import_batch_id is None:
+        return list_source_derived_records_by_entity_types(
+            connection,
+            entity_types=entity_types,
+            import_batch_ids=_authorized_source_import_batch_ids(connection, scope),
+        )
+    return list_source_derived_records_by_entity_types(
+        connection,
+        entity_types=entity_types,
+        import_batch_id=scoped_import_batch_id,
     )
 
 
