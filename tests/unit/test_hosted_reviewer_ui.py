@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 from datetime import UTC, datetime
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, cast
-from urllib.parse import quote, urlencode
+from urllib.parse import parse_qs, quote, urlencode, urlparse
 
 import pytest
 from sqlalchemy import create_engine, func, select, update
@@ -540,7 +541,9 @@ def test_reviewer_ui_substantiated_triage_lists_cross_facility_matches() -> None
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
     }
-    assert "Cross-facility substantiated complaint triage" in html
+    assert "Source-traceable substantiated complaint worklist" in html
+    assert "Find substantiated complaint records that need source review" in html
+    assert "Counts are reconciled to authorized loaded source-derived complaint records." in html
     assert '<details class="technical-details notice-card">' in html
     assert '<details class="technical-details">' not in html
     _assert_collapsed_disclosure(
@@ -550,21 +553,490 @@ def test_reviewer_ui_substantiated_triage_lists_cross_facility_matches() -> None
     assert html.index("Loaded substantiated/equivalent complaint records") < html.index(
         "How to use this triage view"
     )
+    assert "Showing 1-2 of 2 matching qualifying complaint record(s); 2 total qualifying" in html
+    assert "Page 1 of 1." in html
+    assert "Filter and sort" in html
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
     assert "SECOND FIXTURE FACILITY" in html
-    assert "Complaint received: 2022-04-07" in html
-    assert "Report date: 2022-06-14" in html
-    assert "finding: Substantiated" in html
-    assert "status: Founded" in html
+    assert "04/07/2022" in html
+    assert "06/11/2022" in html
+    assert "Substantiated" in html
+    assert "Founded" in html
+    assert "Facility ID" in html
+    assert "Normalized finding" in html
+    assert "Category or summary" in html
+    assert "Facility type" in html
+    assert "Geography" in html
+    assert "Original public report" in html
+    assert "Open complaint review workspace" in html
     assert (
-        "Start with records whose source-derived finding/resolution/status needs attorney review."
+        "Start with records whose source-derived finding/resolution/status indicates "
+        "substantiated or equivalent."
         in html
     )
     assert "Open the source report and reviewer detail before using a value" in html
     assert f"source_record_key={quote(COMPLAINT_KEY)}" in html
     assert f"source_record_key={quote(second_key)}" in html
-    assert "Open source report" in html
+    assert "Open original public report for 32-CR-20220407124448" in html
+    assert "Open original public report for 32-CR-20220611112233" in html
     assert_no_secret_html(html)
+
+
+def test_reviewer_ui_substantiated_worklist_filters_sorts_paginates_and_counts() -> None:
+    with _seeded_connection() as connection:
+        _set_complaint_original_values(
+            connection,
+            COMPLAINT_KEY,
+            {
+                "finding": "Substantiated",
+                "complaint_received_date": "2022-04-07",
+            },
+        )
+        _insert_substantiated_complaint_for_facility(
+            connection,
+            facility_number="157806097",
+            facility_name="SECOND FIXTURE FACILITY",
+            complaint_control_number="32-CR-20220611112233",
+            complaint_received_date="2022-06-11",
+            report_date="2022-06-14",
+            source_value_key="status",
+            source_value="Founded",
+            source_url="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806097&inx=1",
+        )
+        missing_source_key = _insert_substantiated_complaint_for_facility(
+            connection,
+            facility_number="157806096",
+            facility_name="ALPHA FIXTURE FACILITY",
+            complaint_control_number="32-CR-20220301000000",
+            complaint_received_date="2022-03-01",
+            report_date="2022-03-04",
+            source_value_key="finding",
+            source_value="Sustained",
+            source_url="",
+        )
+
+        status, content_type, body = route_response(
+            (
+                REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH
+                +
+                "?facility=157806097&facility_type=children&geography=kern"
+                "&finding=Founded&sort=facility_asc&page_size=1"
+            ),
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+        missing_status, _content_type, missing_body = route_response(
+            (
+                REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH
+                +
+                "?facility=ALPHA&sort=complaint_date_asc&page_size=1"
+            ),
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+        page_status, _content_type, page_body = route_response(
+            (
+                REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH
+                +
+                "?sort=complaint_date_desc&page_size=1&page=2"
+            ),
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    missing_html = missing_body.decode("utf-8")
+    page_html = page_body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Showing 1-1 of 1 matching qualifying complaint record(s); 3 total qualifying" in html
+    assert "SECOND FIXTURE FACILITY" in html
+    assert "32-CR-20220611112233" in html
+    assert "Founded" in html
+    assert "Children&#x27;s Center" in html
+    assert "Kern" in html
+    assert "A. MIRIAM JAMISON" not in html
+    assert "ALPHA FIXTURE FACILITY" not in html
+    assert 'value="157806097"' in html
+    assert 'value="children"' in html
+    assert 'value="kern"' in html
+    assert 'value="Founded"' in html
+    assert "Open complaint review workspace" in html
+    assert_no_secret_html(html)
+
+    assert missing_status == 200
+    assert (
+        "Showing 1-1 of 1 matching qualifying complaint record(s); "
+        "3 total qualifying"
+        in missing_html
+    )
+    assert "ALPHA FIXTURE FACILITY" in missing_html
+    assert "Original public report link not available for this loaded complaint." in missing_html
+    assert f"source_record_key={quote(missing_source_key)}" in missing_html
+    assert_no_secret_html(missing_html)
+
+    assert page_status == 200
+    assert (
+        "Showing 2-2 of 3 matching qualifying complaint record(s); "
+        "3 total qualifying"
+        in page_html
+    )
+    assert "Page 2 of 3." in page_html
+    assert "Previous page" in page_html
+    assert "Next page" in page_html
+    assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in page_html
+    assert "SECOND FIXTURE FACILITY" not in page_html
+    assert_no_secret_html(page_html)
+
+
+def test_reviewer_ui_substantiated_worklist_reconciles_distinct_qualifying_count() -> None:
+    with _seeded_connection() as connection:
+        _set_complaint_original_values(
+            connection,
+            COMPLAINT_KEY,
+            {
+                "finding": "Substantiated",
+                "complaint_received_date": "2022-04-07",
+            },
+        )
+        second_key = _insert_substantiated_complaint_for_facility(
+            connection,
+            facility_number="157806097",
+            facility_name="SECOND FIXTURE FACILITY",
+            complaint_control_number="32-CR-20220611112233",
+            complaint_received_date="2022-06-11",
+            report_date="2022-06-14",
+            source_value_key="status",
+            source_value="Founded",
+            source_url=_ccld_source_url("157806097", "1"),
+        )
+        missing_source_key = _insert_substantiated_complaint_for_facility(
+            connection,
+            facility_number="157806096",
+            facility_name="ALPHA FIXTURE FACILITY",
+            complaint_control_number="32-CR-20220301000000",
+            complaint_received_date="2022-03-01",
+            report_date="2022-03-04",
+            source_value_key="finding",
+            source_value="Sustained",
+            source_url="",
+        )
+        nonqualifying_key = _insert_substantiated_complaint_for_facility(
+            connection,
+            facility_number="157806095",
+            facility_name="NONQUALIFYING FIXTURE FACILITY",
+            complaint_control_number="32-CR-20220101000000",
+            complaint_received_date="2022-01-01",
+            report_date="2022-01-02",
+            source_value_key="finding",
+            source_value="Unsubstantiated",
+            source_url=_ccld_source_url("157806095", "1"),
+        )
+        expected_count = _independent_distinct_substantiated_count(connection)
+
+        status, content_type, body = route_response(
+            REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert expected_count == 3
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert (
+        "Showing 1-3 of 3 matching qualifying complaint record(s); "
+        "3 total qualifying"
+        in html
+    )
+    assert html.count("Open complaint review workspace") == expected_count
+    for source_record_key in (COMPLAINT_KEY, second_key, missing_source_key):
+        assert f"source_record_key={quote(source_record_key)}" in html
+    assert f"source_record_key={quote(nonqualifying_key)}" not in html
+    assert "NONQUALIFYING FIXTURE FACILITY" not in html
+    assert "Original public report link not available for this loaded complaint." in html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_substantiated_worklist_dedupes_duplicate_stable_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    records = _fake_substantiated_source_bundle(
+        facility_number="157806101",
+        facility_name="DUPLICATE IDENTITY FACILITY",
+        complaint_control_number="32-CR-20220714000000",
+        complaint_received_date="2022-07-14",
+        source_url=_ccld_source_url("157806101", "1"),
+    )
+    duplicate = dict(records[-1])
+    duplicate["source_record_key"] = "complaint:ccld:duplicate:32-CR-20220714000000"
+    duplicate["original_values"] = dict(duplicate["original_values"])
+    duplicate["original_values"]["complaint_control_number"] = "DUPLICATE SHOULD NOT SHOW"
+
+    def fake_source_route(
+        path: str,
+        context: object,
+    ) -> tuple[int, str, bytes]:
+        return _json_source_records_response((*records, duplicate))
+
+    monkeypatch.setattr(reviewer_ui, "route_source_derived_api_response", fake_source_route)
+
+    with _seeded_connection() as connection:
+        status, content_type, body = route_response(
+            REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Showing 1-1 of 1 matching qualifying complaint record(s); 1 total qualifying" in html
+    assert "32-CR-20220714000000" in html
+    assert "DUPLICATE SHOULD NOT SHOW" not in html
+    assert "complaint%3Accld%3Aduplicate%3A32-CR-20220714000000" not in html
+    assert html.count("Open complaint review workspace") == 1
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_substantiated_worklist_reads_beyond_first_source_page() -> None:
+    with _seeded_connection() as connection:
+        _set_complaint_original_values(
+            connection,
+            COMPLAINT_KEY,
+            {
+                "finding": "Substantiated",
+                "complaint_received_date": "2022-04-07",
+            },
+        )
+        for index in range(101):
+            facility_number = f"200{index:06d}"
+            _insert_substantiated_complaint_for_facility(
+                connection,
+                facility_number=facility_number,
+                facility_name=f"BULK FACILITY {index:03d}",
+                complaint_control_number=f"32-CR-202207{index:06d}",
+                complaint_received_date="2022-07-01",
+                report_date="2022-07-02",
+                source_value_key="finding",
+                source_value="Substantiated",
+                source_url=(
+                    "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports"
+                    f"?facNum={facility_number}&inx=1"
+                ),
+            )
+
+        status, content_type, body = route_response(
+            (
+                REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH
+                +
+                "?sort=facility_asc&page_size=100&page=2"
+            ),
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert (
+        "Showing 101-102 of 102 matching qualifying complaint record(s); "
+        "102 total qualifying"
+        in html
+    )
+    assert "Page 2 of 2." in html
+    assert "Previous page" in html
+    assert "BULK FACILITY 099" in html
+    assert "BULK FACILITY 100" in html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_substantiated_worklist_includes_record_after_20000_source_rows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target_records = _fake_substantiated_source_bundle(
+        facility_number="157806099",
+        facility_name="AFTER CAP FIXTURE FACILITY",
+        complaint_control_number="32-CR-20220712000000",
+        complaint_received_date="2022-07-12",
+        source_url=_ccld_source_url("157806099", "1"),
+    )
+
+    def fake_source_route(
+        path: str,
+        context: object,
+    ) -> tuple[int, str, bytes]:
+        offset = _offset_from_source_route(path)
+        if offset < 20000:
+            return _json_source_records_response(
+                _fake_filler_source_records(offset, reviewer_ui._SOURCE_DERIVED_PAGE_LIMIT)
+            )
+        if offset == 20000:
+            return _json_source_records_response(target_records)
+        return _json_source_records_response(())
+
+    monkeypatch.setattr(reviewer_ui, "route_source_derived_api_response", fake_source_route)
+
+    with _seeded_connection() as connection:
+        status, content_type, body = route_response(
+            REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "AFTER CAP FIXTURE FACILITY" in html
+    assert "32-CR-20220712000000" in html
+    assert "Showing 1-1 of 1 matching qualifying complaint record(s); 1 total qualifying" in html
+    assert "Open original public report for 32-CR-20220712000000" in html
+    assert_no_secret_html(html)
+
+
+def test_substantiated_worklist_blocks_partial_results_after_source_paging_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    first_page_records = (
+        *_fake_filler_source_records(0, reviewer_ui._SOURCE_DERIVED_PAGE_LIMIT - 3),
+        *_fake_substantiated_source_bundle(
+            facility_number="157806100",
+            facility_name="PARTIAL FAILURE FACILITY",
+            complaint_control_number="32-CR-20220713000000",
+            complaint_received_date="2022-07-13",
+            source_url=_ccld_source_url("157806100", "1"),
+        ),
+    )
+
+    def fake_source_route(
+        path: str,
+        context: object,
+    ) -> tuple[int, str, bytes]:
+        offset = _offset_from_source_route(path)
+        if offset == 0:
+            return _json_source_records_response(first_page_records)
+        return (
+            503,
+            "application/json; charset=utf-8",
+            json.dumps(
+                {
+                    "error": {
+                        "code": "synthetic_source_page_failure",
+                        "message": "Synthetic source page failure.",
+                    }
+                },
+                sort_keys=True,
+            ).encode("utf-8"),
+        )
+
+    monkeypatch.setattr(reviewer_ui, "route_source_derived_api_response", fake_source_route)
+
+    with _seeded_connection() as connection:
+        status, content_type, body = route_response(
+            REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 503
+    assert content_type == "text/html; charset=utf-8"
+    assert "Synthetic source page failure." in html
+    assert "Loaded substantiated/equivalent complaint records" not in html
+    assert "PARTIAL FAILURE FACILITY" not in html
+    assert "32-CR-20220713000000" not in html
+    assert_no_secret_html(html)
+
+
+def test_substantiated_worklist_sort_dates_and_facility_desc_are_deterministic() -> None:
+    with _seeded_connection() as connection:
+        _set_complaint_original_values(
+            connection,
+            COMPLAINT_KEY,
+            {
+                "finding": "Substantiated",
+                "complaint_received_date": "2022-04-07",
+            },
+        )
+        same_facility_old = _insert_substantiated_complaint_for_facility(
+            connection,
+            facility_number="157806097",
+            facility_name="SAME SORT FACILITY",
+            complaint_control_number="32-CR-20220101000000",
+            complaint_received_date="2022-01-01",
+            report_date="2022-01-02",
+            source_value_key="finding",
+            source_value="Substantiated",
+            source_url=_ccld_source_url("157806097", "1"),
+        )
+        same_facility_new = _insert_substantiated_complaint_for_facility(
+            connection,
+            facility_number="157806096",
+            facility_name="SAME SORT FACILITY",
+            complaint_control_number="32-CR-20220201000000",
+            complaint_received_date="2022-02-01",
+            report_date="2022-02-02",
+            source_value_key="finding",
+            source_value="Substantiated",
+            source_url=_ccld_source_url("157806096", "1"),
+        )
+        unknown_date_key = _insert_substantiated_complaint_for_facility(
+            connection,
+            facility_number="157806095",
+            facility_name="ZZZ UNKNOWN DATE FACILITY",
+            complaint_control_number="32-CR-UNKNOWNDATE",
+            complaint_received_date="",
+            report_date="",
+            source_value_key="finding",
+            source_value="Substantiated",
+            source_url=_ccld_source_url("157806095", "1"),
+        )
+
+        asc_status, _content_type, asc_body = route_response(
+            REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH
+            + "?sort=complaint_date_asc&page_size=100",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+        desc_status, _content_type, desc_body = route_response(
+            REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH
+            + "?sort=complaint_date_desc&page_size=100",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+        facility_status, _content_type, facility_body = route_response(
+            REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH
+            + "?sort=facility_desc&page_size=100",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    asc_html = asc_body.decode("utf-8")
+    desc_html = desc_body.decode("utf-8")
+    facility_html = facility_body.decode("utf-8")
+
+    assert asc_status == 200
+    assert desc_status == 200
+    assert facility_status == 200
+    assert asc_html.index(f"source_record_key={quote(same_facility_old)}") < asc_html.index(
+        f"source_record_key={quote(same_facility_new)}"
+    )
+    assert asc_html.index(f"source_record_key={quote(same_facility_new)}") < asc_html.index(
+        f"source_record_key={quote(COMPLAINT_KEY)}"
+    )
+    assert asc_html.index(f"source_record_key={quote(COMPLAINT_KEY)}") < asc_html.index(
+        f"source_record_key={quote(unknown_date_key)}"
+    )
+    assert desc_html.index(f"source_record_key={quote(COMPLAINT_KEY)}") < desc_html.index(
+        f"source_record_key={quote(same_facility_new)}"
+    )
+    assert desc_html.index(f"source_record_key={quote(same_facility_new)}") < desc_html.index(
+        f"source_record_key={quote(same_facility_old)}"
+    )
+    assert desc_html.index(f"source_record_key={quote(same_facility_old)}") < desc_html.index(
+        f"source_record_key={quote(unknown_date_key)}"
+    )
+    assert facility_html.index(f"source_record_key={quote(same_facility_old)}") < (
+        facility_html.index(f"source_record_key={quote(same_facility_new)}")
+    )
+    assert_no_secret_html(asc_html)
+    assert_no_secret_html(desc_html)
+    assert_no_secret_html(facility_html)
 
 
 def test_reviewer_ui_substantiated_triage_empty_state_is_cautious() -> None:
@@ -647,8 +1119,9 @@ def test_reviewer_ui_substantiated_triage_uses_safe_fallbacks() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Facility ID 157806098" in html
-    assert "No complaint/report date context available in currently loaded records." in html
-    assert "resolution: Substantiated" in html
+    assert "Not available" in html
+    assert "Substantiated" in html
+    assert "Not available in loaded record" in html
     assert_no_secret_html(html)
 
 
@@ -3651,6 +4124,190 @@ def _set_complaint_original_values(
     updates: dict[str, Any],
 ) -> None:
     _set_source_record_original_values(connection, source_record_key, updates)
+
+
+def _independent_distinct_substantiated_count(connection: Connection) -> int:
+    rows = connection.execute(
+        select(
+            hosted_source_derived_records.c.source_record_key,
+            hosted_source_derived_records.c.stable_source_id,
+            hosted_source_derived_records.c.original_values,
+        ).where(hosted_source_derived_records.c.entity_type == "complaint")
+    ).mappings()
+    qualifying_stable_ids: set[str] = set()
+    for row in rows:
+        original_values = row["original_values"]
+        assert isinstance(original_values, dict)
+        if any(
+            _test_is_substantiated_equivalent(original_values.get(key))
+            for key in ("finding", "resolution", "status")
+        ):
+            qualifying_stable_ids.add(str(row["stable_source_id"] or row["source_record_key"]))
+    return len(qualifying_stable_ids)
+
+
+def _test_is_substantiated_equivalent(value: object) -> bool:
+    if value is None:
+        return False
+    normalized = " ".join(str(value).strip().casefold().split())
+    if not normalized:
+        return False
+    if "unsubstantiated" in normalized or "not substantiated" in normalized:
+        return False
+    return any(keyword in normalized for keyword in ("substantiated", "founded", "sustained"))
+
+
+def _offset_from_source_route(path: str) -> int:
+    query_values = parse_qs(urlparse(path).query, keep_blank_values=True)
+    return int(query_values.get("offset", ["0"])[0])
+
+
+def _json_source_records_response(records: tuple[dict[str, Any], ...]) -> tuple[int, str, bytes]:
+    return (
+        200,
+        "application/json; charset=utf-8",
+        json.dumps(
+            {
+                "records": list(records),
+                "filters": {"entity_type": None},
+                "pagination": {
+                    "limit": reviewer_ui._SOURCE_DERIVED_PAGE_LIMIT,
+                    "offset": 0,
+                    "returned_count": len(records),
+                },
+            },
+            sort_keys=True,
+        ).encode("utf-8"),
+    )
+
+
+def _fake_filler_source_records(
+    offset: int,
+    count: int,
+) -> tuple[dict[str, Any], ...]:
+    return tuple(
+        _fake_source_record(
+            entity_type="facility",
+            source_record_key=f"facility:filler:{offset + index:05d}",
+            stable_source_id=f"ccld:facility:filler:{offset + index:05d}",
+            source_document_id=f"ccld:document:filler:{offset + index:05d}",
+            facility_id=f"ccld:facility:filler:{offset + index:05d}",
+            source_url=_ccld_source_url(f"9{offset + index:08d}", "1"),
+            original_values={
+                "facility_id": f"ccld:facility:filler:{offset + index:05d}",
+                "external_facility_number": f"9{offset + index:08d}",
+                "facility_name": f"FILLER FACILITY {offset + index:05d}",
+            },
+        )
+        for index in range(count)
+    )
+
+
+def _fake_substantiated_source_bundle(
+    *,
+    facility_number: str,
+    facility_name: str,
+    complaint_control_number: str,
+    complaint_received_date: str,
+    source_url: str,
+) -> tuple[dict[str, Any], ...]:
+    facility_id = f"ccld:facility:{facility_number}"
+    source_document_id = f"ccld:document:{facility_number}:1"
+    complaint_id = f"ccld:complaint:{complaint_control_number}"
+    return (
+        _fake_source_record(
+            entity_type="facility",
+            source_record_key=f"facility:{facility_id}",
+            stable_source_id=facility_id,
+            source_document_id=source_document_id,
+            facility_id=facility_id,
+            source_url=source_url,
+            original_values={
+                "facility_id": facility_id,
+                "external_facility_number": facility_number,
+                "facility_name": facility_name,
+                "facility_type": "Children's Center",
+                "county": "Kern",
+            },
+        ),
+        _fake_source_record(
+            entity_type="source_document",
+            source_record_key=f"source_document:{source_document_id}",
+            stable_source_id=source_document_id,
+            source_document_id=source_document_id,
+            facility_id=facility_id,
+            source_url=source_url,
+            original_values={
+                "document_id": source_document_id,
+                "facility_id": facility_id,
+                "source_url": source_url,
+                "document_type": "complaint_investigation_report",
+            },
+        ),
+        _fake_source_record(
+            entity_type="complaint",
+            source_record_key=f"complaint:{complaint_id}",
+            stable_source_id=complaint_id,
+            source_document_id=source_document_id,
+            facility_id=facility_id,
+            source_url=source_url,
+            original_values={
+                "complaint_id": complaint_id,
+                "facility_id": facility_id,
+                "document_id": source_document_id,
+                "complaint_control_number": complaint_control_number,
+                "complaint_received_date": complaint_received_date,
+                "finding": "Substantiated",
+            },
+        ),
+    )
+
+
+def _fake_source_record(
+    *,
+    entity_type: str,
+    source_record_key: str,
+    stable_source_id: str,
+    source_document_id: str,
+    facility_id: str,
+    source_url: str,
+    original_values: dict[str, Any],
+) -> dict[str, Any]:
+    traceability = {
+        "source_url": source_url,
+        "raw_sha256": "e" * 64,
+        "raw_path": "data/raw/ccld/fake-source.html",
+        "connector_name": "ccld_facility_reports",
+        "connector_version": "fake-test",
+        "retrieved_at": "2026-07-01T12:00:00+00:00",
+        "source_artifact_identity": "fake-source-artifact",
+    }
+    return {
+        "source_record_key": source_record_key,
+        "entity_type": entity_type,
+        "stable_source_id": stable_source_id,
+        "source_document_id": source_document_id,
+        "facility_id": facility_id,
+        "source_url": source_url,
+        "raw_sha256": "e" * 64,
+        "raw_path": "data/raw/ccld/fake-source.html",
+        "connector_name": "ccld_facility_reports",
+        "connector_version": "fake-test",
+        "retrieved_at": "2026-07-01T12:00:00+00:00",
+        "original_values": original_values,
+        "source_traceability": traceability,
+        "import_batch": {
+            "import_batch_id": TEST_SCOPE.scope_id,
+            "imported_at": "2026-07-01T12:00:00+00:00",
+            "source_artifact_identity": "fake-source-artifact",
+            "source_pipeline_version": "fake-test",
+            "validation_status": "validated",
+            "raw_hash_validation_status": "validated",
+            "record_counts": {},
+            "warnings": [],
+            "errors": [],
+        },
+    }
 
 
 def _insert_substantiated_complaint_for_facility(

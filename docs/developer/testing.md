@@ -239,7 +239,16 @@ Reviewer UI tests should prove attorney-review hierarchy: queue pages lead with
 source traceability cues, and secondary/collapsed table views; detail pages lead
 with complaint overview, finding, key dates, review flags/source checks, source
 traceability, and visibly separate reviewer-created notes/status before full
-technical source-derived details.
+technical source-derived details. The substantiated complaint worklist should
+prove all authorized loaded complaint records are considered beyond the first
+source-derived API page, non-substantiated records are excluded, counts reconcile
+to qualifying authorized source-derived complaint records, filters cover date
+range, facility identity, facility type, geography, and finding, sorting covers
+complaint date and facility, pagination is deterministic, missing source links
+remain visible, source-derived fields stay separate from reviewer-created state,
+source-derived pagination failures do not render partial results, no silent
+fixed-row cap can omit records, and the review action opens the existing
+complaint review workspace.
 Final hosted product-design tests should also prove ordinary sections are not
 globally rendered as stacked cards, the workflow rail is compact and non-card-
 like, technical recovery/job details and full table views are collapsed or

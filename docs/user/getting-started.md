@@ -170,12 +170,19 @@ detail observations, including filter confusion, source-confidence questions,
 note/status confirmation behavior, return-to-queue refresh behavior, and next-
 record navigation confusion.
 From reviewer queue export controls, open
-`http://127.0.0.1:8000/reviewer/records/substantiated` for a cross-facility
-triage list of currently loaded complaint records whose source-derived
-finding/resolution/status indicates substantiated or an equivalent source-derived
-value. Use this page as a triage aid only: values are source-derived and not
-independently verified by RecordsTracker, and an empty list means no currently
-loaded records matched (not that no substantiated public reports exist).
+`http://127.0.0.1:8000/reviewer/records/substantiated` for a source-traceable
+cross-facility worklist of authorized loaded complaint records whose source-
+derived finding/resolution/status indicates substantiated or an equivalent
+source-derived value. The worklist shows facility identity, complaint date,
+finding, available category/summary, facility type, geography, original public
+report access, and an action into the complaint review workspace. Use the date,
+facility, facility type, geography, finding, sort, and rows-per-page controls to
+narrow the list. Counts reconcile the filtered page to the qualifying authorized
+loaded complaint records, and missing original public report links are called out
+on the row instead of silently hiding the record. Use this page as a triage aid
+only: values are source-derived and not independently verified by
+RecordsTracker, and an empty list means no currently loaded records matched (not
+that no substantiated public reports exist).
 Missing local/test values should be described as not available in the local/test
 record, not as public-source absence, record incompleteness, or data loss. After adding a note or status in reviewer detail, return to the
 CCLD request page and submit the same request to see updated progress.

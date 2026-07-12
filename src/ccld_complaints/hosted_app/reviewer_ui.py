@@ -255,6 +255,9 @@ _RETURN_CONTEXT_FIELDS = (
     "return_context_origin",
     "return_lookup_facility_name",
 )
+_SOURCE_DERIVED_PAGE_LIMIT = 100
+_SUBSTANTIATED_DEFAULT_PAGE_SIZE = 50
+_SUBSTANTIATED_MAX_PAGE_SIZE = 100
 
 
 @dataclass(frozen=True)
@@ -270,6 +273,29 @@ class CcldQueueReturnContext:
     end_date: str | None = None
     context_origin: str | None = None
     lookup_facility_name: str | None = None
+
+
+@dataclass(frozen=True)
+class SubstantiatedWorklistFilters:
+    start_date: str | None = None
+    end_date: str | None = None
+    facility: str = ""
+    facility_type: str = ""
+    geography: str = ""
+    finding: str = ""
+    sort: str = "complaint_date_desc"
+    page: int = 1
+    page_size: int = _SUBSTANTIATED_DEFAULT_PAGE_SIZE
+
+
+@dataclass(frozen=True)
+class SourceRecordIndexes:
+    by_import_batch_id: Mapping[str, tuple[Mapping[str, Any], ...]]
+    by_facility_id: Mapping[str, tuple[Mapping[str, Any], ...]]
+    by_source_document_id: Mapping[str, tuple[Mapping[str, Any], ...]]
+    by_complaint_id: Mapping[str, tuple[Mapping[str, Any], ...]]
+    by_stable_source_id: Mapping[str, tuple[Mapping[str, Any], ...]]
+    by_source_record_key: Mapping[str, Mapping[str, Any]]
 
 
 _DEFAULT_REVIEWER_UI_CONTEXT: ReviewerUiContext | None = None
@@ -391,7 +417,7 @@ def route_reviewer_ui_response(
     if parsed_url.path in {REVIEWER_UI_PREFIX, REVIEWER_UI_RECORDS_PATH}:
         return _record_list_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH:
-        return _substantiated_triage_response(context)
+        return _substantiated_triage_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_MATRIX_EXPORT_PATH:
         return _matrix_export_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH:
@@ -550,23 +576,44 @@ def _matrix_export_response(
 
 
 def _substantiated_triage_response(
+    query: str,
     context: ReviewerUiContext,
 ) -> tuple[int, str, bytes]:
-    status, _content_type, body = route_reviewer_workflow_shell_response(
-        f"{REVIEWER_WORKFLOW_API_PREFIX}/queue?limit=100",
-        context.workflow_shell_context,
+    query_values = parse_qs(query, keep_blank_values=True)
+    filters = _substantiated_worklist_filters(query_values)
+    source_status, source_result = _all_source_derived_records_response(context)
+    if source_status != 200:
+        if not isinstance(source_result, bytes):
+            raise ValueError("Expected source-derived error body to be bytes.")
+        return _workflow_error_page(source_status, source_result)
+    if isinstance(source_result, bytes):
+        raise ValueError("Expected source-derived records.")
+    source_records = source_result
+    complaint_items = [
+        _review_item_from_source_record(record)
+        for record in source_records
+        if _string(record, "entity_type") == "complaint"
+    ]
+    source_indexes = _source_record_indexes(source_records)
+    substantiated_items = _substantiated_triage_items(
+        complaint_items,
+        source_indexes,
     )
-    if status != 200:
-        return _workflow_error_page(status, body)
-    payload = _json_object(body)
-    queue = _mapping(payload, "queue")
-    records = _record_list(queue, "records")
-    source_records = _all_source_derived_records(context)
-    substantiated_items = _substantiated_triage_items(records, source_records)
+    filtered_items = _filter_substantiated_worklist_items(substantiated_items, filters)
+    sorted_items = _sort_substantiated_worklist_items(filtered_items, filters.sort)
+    paged_items, pagination = _paginate_substantiated_worklist_items(
+        sorted_items,
+        filters,
+    )
     return _html_response(
         200,
         _render_substantiated_triage(
-            substantiated_items,
+            paged_items,
+            filters=filters,
+            result_count=len(filtered_items),
+            total_qualifying_count=len(substantiated_items),
+            all_items=substantiated_items,
+            pagination=pagination,
             actor_label=_signed_in_actor_label(context),
         ),
     )
@@ -574,9 +621,10 @@ def _substantiated_triage_response(
 
 def _substantiated_triage_items(
     records: list[Mapping[str, Any]],
-    source_records: list[Mapping[str, Any]],
+    source_indexes: SourceRecordIndexes,
 ) -> list[dict[str, str]]:
     items: list[dict[str, str]] = []
+    seen_stable_complaint_ids: set[str] = set()
     for record in records:
         source_record = _mapping(record, "source_record")
         if _queue_source_record_entity_type(source_record) != "complaint":
@@ -587,9 +635,18 @@ def _substantiated_triage_items(
             continue
         identity = _mapping(source_record, "identity")
         source_record_key = _string(identity, "source_record_key")
-        related_records = _related_source_records(source_record, source_records)
+        stable_complaint_id = _stable_complaint_identity(source_record)
+        if stable_complaint_id in seen_stable_complaint_ids:
+            continue
+        seen_stable_complaint_ids.add(stable_complaint_id)
+        related_records = _related_source_records_from_indexes(
+            source_record,
+            source_indexes,
+        )
         facility = _facility_context(related_records)
         facility_name = _facility_context_value(facility, "facility_name")
+        facility_type = _facility_context_value(facility, "facility_type")
+        geography = _substantiated_geography_label(facility)
         facility_number = _complaint_export_row_facility_number(
             source_record,
             CcldQueueReturnContext(),
@@ -599,6 +656,7 @@ def _substantiated_triage_items(
         else:
             facility_display = facility_name
         date_context = _substantiated_date_context(original_values)
+        complaint_date = _substantiated_complaint_date(original_values)
         detail_href = _reviewer_detail_href(
             source_record_key,
             CcldQueueReturnContext(
@@ -608,26 +666,32 @@ def _substantiated_triage_items(
         source_document = _mapping(source_record, "source_document")
         source_url = _optional_string(source_document, "source_url")
         source_url_href = source_url if _has_display_value(source_url) and source_url != "unknown" else ""
+        category_or_summary = _substantiated_category_or_summary(
+            source_record,
+            related_records,
+        )
+        complaint_control_number = _optional_string(
+            original_values,
+            "complaint_control_number",
+        )
         items.append(
             {
                 "source_record_key": source_record_key,
                 "facility_display": facility_display,
                 "facility_number": facility_number,
+                "facility_type": facility_type,
+                "geography": geography,
                 "date_context": date_context,
+                "complaint_date": complaint_date,
+                "complaint_date_display": _substantiated_date_display(complaint_date),
                 "finding_label": finding_label,
+                "finding_value": _substantiated_finding_value(finding_label),
+                "category_or_summary": category_or_summary,
+                "complaint_control_number": complaint_control_number,
                 "detail_href": detail_href,
                 "source_url_href": source_url_href,
             }
         )
-
-    items.sort(
-        key=lambda item: (
-            item["date_context"],
-            item["facility_display"].casefold(),
-            item["source_record_key"],
-        ),
-        reverse=True,
-    )
     return items
 
 
@@ -640,6 +704,18 @@ def _substantiated_finding_label(values: Mapping[str, Any]) -> str | None:
         if _is_substantiated_equivalent(value):
             return f"{key}: {value}"
     return None
+
+
+def _stable_complaint_identity(source_record: Mapping[str, Any]) -> str:
+    identity = _mapping(source_record, "identity")
+    stable_source_id = _optional_string(identity, "stable_source_id")
+    if stable_source_id != "unknown":
+        return stable_source_id
+    original_values = _mapping(source_record, "original_values")
+    complaint_id = _optional_string(original_values, "complaint_id")
+    if complaint_id != "unknown":
+        return complaint_id
+    return _string(identity, "source_record_key")
 
 
 def _is_substantiated_equivalent(value: str) -> bool:
@@ -668,50 +744,337 @@ def _substantiated_date_context(values: Mapping[str, Any]) -> str:
     return "No complaint/report date context available in currently loaded records."
 
 
+def _substantiated_complaint_date(values: Mapping[str, Any]) -> str:
+    for key in (
+        "complaint_received_date",
+        "report_date",
+        "visit_date",
+        "date_signed",
+    ):
+        raw_value = values.get(key)
+        if _has_display_value(raw_value):
+            parsed = _validated_iso_date_or_none(_display_value(raw_value)[:10])
+            if parsed is not None:
+                return parsed
+    return "unknown"
+
+
+def _substantiated_date_display(value: str) -> str:
+    if not value or value == "unknown":
+        return "Not available in loaded record"
+    return _queue_display_date(value)
+
+
+def _substantiated_finding_value(finding_label: str) -> str:
+    _field, separator, value = finding_label.partition(":")
+    return value.strip() if separator else finding_label
+
+
+def _substantiated_geography_label(facility: Mapping[str, Any] | None) -> str:
+    if facility is None:
+        return "unknown"
+    parts = []
+    for key in ("county", "city", "state"):
+        value = _facility_context_value(facility, key)
+        if value != "unknown" and value not in parts:
+            parts.append(value)
+    return ", ".join(parts) if parts else "unknown"
+
+
+def _substantiated_category_or_summary(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> str:
+    original_values = _mapping(source_record, "original_values")
+    for key in (
+        "allegation_category",
+        "category",
+        "complaint_category",
+        "summary",
+        "source_summary",
+    ):
+        value = original_values.get(key)
+        if _has_display_value(value):
+            return _display_value(value)
+    categories: list[str] = []
+    for record in related_records:
+        if _string(record, "entity_type") != "allegation":
+            continue
+        values = _mapping(record, "original_values")
+        for key in ("allegation_category", "category"):
+            value = values.get(key)
+            if _has_display_value(value):
+                label = _display_value(value)
+                if label not in categories:
+                    categories.append(label)
+    if categories:
+        return "; ".join(categories[:3])
+    return "Not available in loaded record"
+
+
+def _substantiated_worklist_filters(
+    query_values: Mapping[str, list[str]],
+) -> SubstantiatedWorklistFilters:
+    start_date, end_date = _complaint_export_date_filters(query_values)
+    return SubstantiatedWorklistFilters(
+        start_date=start_date,
+        end_date=end_date,
+        facility=_first_form_value(query_values, "facility"),
+        facility_type=_first_form_value(query_values, "facility_type"),
+        geography=_first_form_value(query_values, "geography"),
+        finding=_first_form_value(query_values, "finding"),
+        sort=_substantiated_sort_value(_first_form_value(query_values, "sort")),
+        page=_positive_int_query_value(
+            _first_form_value(query_values, "page"),
+            default=1,
+            maximum=10000,
+        ),
+        page_size=_positive_int_query_value(
+            _first_form_value(query_values, "page_size"),
+            default=_SUBSTANTIATED_DEFAULT_PAGE_SIZE,
+            maximum=_SUBSTANTIATED_MAX_PAGE_SIZE,
+        ),
+    )
+
+
+def _substantiated_sort_value(value: str) -> str:
+    if value in {
+        "complaint_date_desc",
+        "complaint_date_asc",
+        "facility_asc",
+        "facility_desc",
+    }:
+        return value
+    return "complaint_date_desc"
+
+
+def _positive_int_query_value(value: str, *, default: int, maximum: int) -> int:
+    try:
+        parsed = int(value)
+    except ValueError:
+        return default
+    if parsed < 1:
+        return default
+    return min(parsed, maximum)
+
+
+def _filter_substantiated_worklist_items(
+    items: list[dict[str, str]],
+    filters: SubstantiatedWorklistFilters,
+) -> list[dict[str, str]]:
+    return [
+        item
+        for item in items
+        if _substantiated_item_matches_filters(item, filters)
+    ]
+
+
+def _substantiated_item_matches_filters(
+    item: Mapping[str, str],
+    filters: SubstantiatedWorklistFilters,
+) -> bool:
+    if filters.start_date and (
+        item["complaint_date"] == "unknown"
+        or item["complaint_date"] < filters.start_date
+    ):
+        return False
+    if filters.end_date and (
+        item["complaint_date"] == "unknown"
+        or item["complaint_date"] > filters.end_date
+    ):
+        return False
+    if filters.facility and not _text_filter_matches(
+        filters.facility,
+        (
+            item["facility_display"],
+            item["facility_number"],
+            item["complaint_control_number"],
+        ),
+    ):
+        return False
+    if filters.facility_type and not _text_filter_matches(
+        filters.facility_type,
+        (item["facility_type"],),
+    ):
+        return False
+    if filters.geography and not _text_filter_matches(
+        filters.geography,
+        (item["geography"],),
+    ):
+        return False
+    if filters.finding and not _text_filter_matches(
+        filters.finding,
+        (item["finding_value"], item["finding_label"]),
+    ):
+        return False
+    return True
+
+
+def _text_filter_matches(query: str, values: tuple[str, ...]) -> bool:
+    normalized_query = " ".join(query.casefold().split())
+    if not normalized_query:
+        return True
+    return any(normalized_query in value.casefold() for value in values if value)
+
+
+def _sort_substantiated_worklist_items(
+    items: list[dict[str, str]],
+    sort_value: str,
+) -> list[dict[str, str]]:
+    if sort_value == "complaint_date_asc":
+        return sorted(items, key=_substantiated_date_asc_sort_key)
+    if sort_value == "facility_asc":
+        return sorted(items, key=_substantiated_facility_sort_key)
+    if sort_value == "facility_desc":
+        return _sort_substantiated_by_facility_desc(items)
+    return sorted(items, key=_substantiated_date_desc_sort_key)
+
+
+def _substantiated_date_asc_sort_key(
+    item: Mapping[str, str],
+) -> tuple[bool, str, str, str]:
+    date_value = item["complaint_date"]
+    return (
+        date_value == "unknown",
+        "" if date_value == "unknown" else date_value,
+        item["facility_display"].casefold(),
+        item["source_record_key"],
+    )
+
+
+def _substantiated_date_desc_sort_key(
+    item: Mapping[str, str],
+) -> tuple[bool, str, str, str]:
+    date_value = item["complaint_date"]
+    return (
+        date_value == "unknown",
+        _reverse_iso_date_key(date_value),
+        item["facility_display"].casefold(),
+        item["source_record_key"],
+    )
+
+
+def _substantiated_facility_sort_key(
+    item: Mapping[str, str],
+) -> tuple[str, bool, str, str]:
+    date_key = _substantiated_date_asc_sort_key(item)
+    return (
+        item["facility_display"].casefold(),
+        date_key[0],
+        date_key[1],
+        item["source_record_key"],
+    )
+
+
+def _sort_substantiated_by_facility_desc(
+    items: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    secondary_sorted = sorted(items, key=_substantiated_facility_sort_key)
+    return sorted(
+        secondary_sorted,
+        key=lambda item: item["facility_display"].casefold(),
+        reverse=True,
+    )
+
+
+def _reverse_iso_date_key(value: str) -> str:
+    if value == "unknown":
+        return "9999-99-99"
+    return "".join(str(9 - int(ch)) if ch.isdigit() else ch for ch in value)
+
+
+def _paginate_substantiated_worklist_items(
+    items: list[dict[str, str]],
+    filters: SubstantiatedWorklistFilters,
+) -> tuple[list[dict[str, str]], Mapping[str, int]]:
+    total_pages = max((len(items) + filters.page_size - 1) // filters.page_size, 1)
+    page = min(filters.page, total_pages)
+    start = (page - 1) * filters.page_size
+    end = start + filters.page_size
+    return items[start:end], {
+        "page": page,
+        "page_size": filters.page_size,
+        "total_pages": total_pages,
+        "offset": start,
+    }
+
+
 def _render_substantiated_triage(
     items: list[dict[str, str]],
     *,
+    filters: SubstantiatedWorklistFilters,
+    result_count: int,
+    total_qualifying_count: int,
+    all_items: list[dict[str, str]],
+    pagination: Mapping[str, int],
     actor_label: str | None,
 ) -> str:
+    filter_markup = _render_substantiated_filter_form(filters, all_items)
+    summary = _render_substantiated_count_summary(
+        result_count,
+        total_qualifying_count,
+        pagination,
+    )
     if not items:
-        list_markup = """        <section class=\"hero-card\" aria-labelledby=\"substantiated-empty-heading\">
+        list_markup = f"""        <section class=\"hero-card\" aria-labelledby=\"substantiated-empty-heading\">
           <h2 id=\"substantiated-empty-heading\">No loaded substantiated/equivalent complaint records matched.</h2>
+          {summary}
+          <p>Adjust the filters or clear them to return to all qualifying loaded records.</p>
         </section>"""
     else:
         rows = "\n".join(
             f"""        <tr>
           <th scope=\"row\">{_escape(item['facility_display'])}</th>
-          <td>{_escape(item['date_context'])}</td>
-          <td>{_escape(item['finding_label'])}</td>
+          <td>{_copyable_value("Facility ID", item['facility_number'])}</td>
+          <td>{_escape(item['complaint_date_display'])}</td>
+          <td>{_escape(item['finding_value'])}</td>
+          <td>{_escape(item['category_or_summary'])}</td>
+          <td>{_escape(item['facility_type'])}</td>
+          <td>{_escape(item['geography'])}</td>
           <td>
-            <a href=\"{_escape(item['detail_href'])}\">Open reviewer detail</a>{_substantiated_source_link(item['source_url_href'])}
+            {_substantiated_source_link(item)}
+          </td>
+          <td>
+            <a class=\"button\" href=\"{_escape(item['detail_href'])}\">Open complaint review workspace</a>
           </td>
         </tr>"""
             for item in items
         )
         list_markup = f"""        <section aria-labelledby=\"substantiated-results-heading\">
           <h2 id=\"substantiated-results-heading\">Loaded substantiated/equivalent complaint records</h2>
-          <p>Showing {len(items)} loaded complaint record(s) across currently loaded facilities.</p>
+          {summary}
           <table>
-            <caption>Cross-facility substantiated complaint triage</caption>
+            <caption>Source-traceable substantiated complaint worklist</caption>
             <thead>
               <tr>
                 <th scope=\"col\">Facility</th>
-                <th scope=\"col\">Complaint/report date context</th>
-                <th scope=\"col\">Source-derived finding/resolution/status</th>
-                <th scope=\"col\">Review links</th>
+                <th scope=\"col\">Facility ID</th>
+                <th scope=\"col\">Complaint date</th>
+                <th scope=\"col\">Normalized finding</th>
+                <th scope=\"col\">Category or summary</th>
+                <th scope=\"col\">Facility type</th>
+                <th scope=\"col\">Geography</th>
+                <th scope=\"col\">Original public report</th>
+                <th scope=\"col\">Review action</th>
               </tr>
             </thead>
             <tbody>
 {rows}
             </tbody>
           </table>
+          {_render_substantiated_pagination(filters, pagination, result_count)}
         </section>"""
     return _page(
-        title="Cross-facility substantiated complaint triage",
-        heading="Cross-facility substantiated complaint triage",
+        title="Source-traceable substantiated complaint worklist",
+        heading="Source-traceable substantiated complaint worklist",
         actor_label=actor_label,
         main=f"""
+        <section class=\"quiet-section\" aria-labelledby=\"substantiated-decision-heading\">
+          <h2 id=\"substantiated-decision-heading\">Find substantiated complaint records that need source review</h2>
+          <p>Use this worklist to find loaded public complaint records whose source-reported finding indicates substantiated or an equivalent value, open the original public report, and continue in the complaint review workspace.</p>
+          <p>Counts are reconciled to authorized loaded source-derived complaint records. This page does not claim source completeness or make legal conclusions.</p>
+        </section>
+{filter_markup}
 {list_markup}
         {_render_substantiated_triage_guidance_disclosure()}
         <section class=\"quiet-section\" aria-labelledby=\"substantiated-next-heading\">
@@ -725,34 +1088,252 @@ def _render_substantiated_triage(
     )
 
 
+def _render_substantiated_count_summary(
+    result_count: int,
+    total_qualifying_count: int,
+    pagination: Mapping[str, int],
+) -> str:
+    page = pagination["page"]
+    page_size = pagination["page_size"]
+    offset = pagination["offset"]
+    if result_count == 0:
+        shown_range = "Showing 0"
+    else:
+        first = offset + 1
+        last = min(offset + page_size, result_count)
+        shown_range = f"Showing {first}-{last}"
+    return (
+        f"<p>{shown_range} of {result_count} matching qualifying complaint "
+        f"record(s); {total_qualifying_count} total qualifying authorized "
+        "source-derived complaint record(s).</p>"
+        f"<p class=\"helper-text\">Page {page} of {pagination['total_pages']}.</p>"
+    )
+
+
+def _render_substantiated_filter_form(
+    filters: SubstantiatedWorklistFilters,
+    all_items: list[dict[str, str]],
+) -> str:
+    finding_options = _substantiated_filter_options(
+        item["finding_value"] for item in all_items
+    )
+    facility_type_options = _substantiated_filter_options(
+        item["facility_type"] for item in all_items
+    )
+    geography_options = _substantiated_filter_options(
+        item["geography"] for item in all_items
+    )
+    return f"""        <section class="quiet-section" aria-labelledby="substantiated-filters-heading">
+          <h2 id="substantiated-filters-heading">Filter and sort</h2>
+          <form class="compact-filter-form" method="get" action="{REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH}">
+            <div class="facility-intelligence-filter-grid">
+              <p>
+                <label for="substantiated-start-date">From complaint date</label>
+                <input id="substantiated-start-date" name="start_date" type="date" value="{_escape(filters.start_date or '')}">
+              </p>
+              <p>
+                <label for="substantiated-end-date">To complaint date</label>
+                <input id="substantiated-end-date" name="end_date" type="date" value="{_escape(filters.end_date or '')}">
+              </p>
+              <p>
+                <label for="substantiated-facility">Facility name, ID, or complaint ID</label>
+                <input id="substantiated-facility" name="facility" value="{_escape(filters.facility)}" autocomplete="off">
+              </p>
+              <p>
+                <label for="substantiated-facility-type">Facility type</label>
+                <input id="substantiated-facility-type" name="facility_type" value="{_escape(filters.facility_type)}" list="substantiated-facility-types">
+                <datalist id="substantiated-facility-types">{facility_type_options}</datalist>
+              </p>
+              <p>
+                <label for="substantiated-geography">Geography</label>
+                <input id="substantiated-geography" name="geography" value="{_escape(filters.geography)}" list="substantiated-geographies">
+                <datalist id="substantiated-geographies">{geography_options}</datalist>
+              </p>
+              <p>
+                <label for="substantiated-finding">Finding</label>
+                <input id="substantiated-finding" name="finding" value="{_escape(filters.finding)}" list="substantiated-findings">
+                <datalist id="substantiated-findings">{finding_options}</datalist>
+              </p>
+              <p>
+                <label for="substantiated-sort">Sort</label>
+                <select id="substantiated-sort" name="sort">
+                  {_substantiated_sort_option(filters.sort, "complaint_date_desc", "Complaint date, newest first")}
+                  {_substantiated_sort_option(filters.sort, "complaint_date_asc", "Complaint date, oldest first")}
+                  {_substantiated_sort_option(filters.sort, "facility_asc", "Facility, A to Z")}
+                  {_substantiated_sort_option(filters.sort, "facility_desc", "Facility, Z to A")}
+                </select>
+              </p>
+              <p>
+                <label for="substantiated-page-size">Rows per page</label>
+                <select id="substantiated-page-size" name="page_size">
+                  {_substantiated_page_size_option(filters.page_size, 25)}
+                  {_substantiated_page_size_option(filters.page_size, 50)}
+                  {_substantiated_page_size_option(filters.page_size, 100)}
+                </select>
+              </p>
+            </div>
+            <div class="form-actions">
+              <button class="button" type="submit">Apply filters</button>
+              <a class="button button-secondary" href="{REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH}">Clear filters</a>
+            </div>
+          </form>
+        </section>"""
+
+
+def _substantiated_filter_options(values: object) -> str:
+    if not isinstance(values, list | tuple | set):
+        values = tuple(values)  # type: ignore[arg-type]
+    options = []
+    seen: set[str] = set()
+    for value in values:
+        if not value or value == "unknown" or value == "Not available in loaded record":
+            continue
+        text = str(value)
+        key = text.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        options.append(text)
+    return "".join(
+        f'<option value="{_escape(value)}"></option>'
+        for value in sorted(options, key=str.casefold)
+    )
+
+
+def _substantiated_sort_option(current: str, value: str, label: str) -> str:
+    selected = ' selected="selected"' if current == value else ""
+    return f'<option value="{_escape(value)}"{selected}>{_escape(label)}</option>'
+
+
+def _substantiated_page_size_option(current: int, value: int) -> str:
+    selected = ' selected="selected"' if current == value else ""
+    return f'<option value="{value}"{selected}>{value}</option>'
+
+
+def _render_substantiated_pagination(
+    filters: SubstantiatedWorklistFilters,
+    pagination: Mapping[str, int],
+    result_count: int,
+) -> str:
+    if result_count <= filters.page_size:
+        return ""
+    page = pagination["page"]
+    total_pages = pagination["total_pages"]
+    links = []
+    if page > 1:
+        links.append(
+            f'<a class="button button-secondary" href="{_escape(_substantiated_page_href(filters, page - 1))}">Previous page</a>'
+        )
+    if page < total_pages:
+        links.append(
+            f'<a class="button button-secondary" href="{_escape(_substantiated_page_href(filters, page + 1))}">Next page</a>'
+        )
+    return f"""          <nav class="form-actions" aria-label="Substantiated worklist pagination">
+            {"".join(links)}
+          </nav>"""
+
+
+def _substantiated_page_href(
+    filters: SubstantiatedWorklistFilters,
+    page: int,
+) -> str:
+    query_values = {
+        "start_date": filters.start_date or "",
+        "end_date": filters.end_date or "",
+        "facility": filters.facility,
+        "facility_type": filters.facility_type,
+        "geography": filters.geography,
+        "finding": filters.finding,
+        "sort": filters.sort,
+        "page_size": str(filters.page_size),
+        "page": str(page),
+    }
+    return f"{REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH}?{urlencode(query_values)}"
+
+
 def _render_substantiated_triage_guidance_disclosure() -> str:
     return """        <details class=\"technical-details notice-card\">
           <summary>How to use this triage view</summary>
           <ul>
-            <li>Start with records whose source-derived finding/resolution/status needs attorney review.</li>
+            <li>Start with records whose source-derived finding/resolution/status indicates substantiated or equivalent.</li>
             <li>Open the source report and reviewer detail before using a value in notes or packet preparation.</li>
             <li>Use the review queue when no currently loaded records match this triage view.</li>
           </ul>
         </details>"""
 
 
-def _substantiated_source_link(source_url_href: str) -> str:
+def _substantiated_source_link(item: Mapping[str, str]) -> str:
+    source_url_href = item["source_url_href"]
     if not source_url_href:
-        return ""
+        return "Original public report link not available for this loaded complaint."
+    control_number = item["complaint_control_number"]
+    suffix = (
+        f" for {control_number}"
+        if control_number and control_number != "unknown"
+        else ""
+    )
     return (
-        f"<br><a href=\"{_escape(source_url_href)}\">Open source report</a>"
+        f"<a href=\"{_escape(source_url_href)}\">Open original public report{_escape(suffix)}</a>"
     )
 
 
-def _all_source_derived_records(context: ReviewerUiContext) -> list[Mapping[str, Any]]:
-    source_status, _content_type, source_body = route_source_derived_api_response(
-        f"{SOURCE_DERIVED_API_PREFIX}?limit=100",
-        context.workflow_shell_context.source_derived_api_context,
-    )
-    if source_status != 200:
+def _all_source_derived_records(
+    context: ReviewerUiContext,
+) -> list[Mapping[str, Any]]:
+    status, result = _all_source_derived_records_response(context)
+    if status != 200 or isinstance(result, bytes):
         return []
-    source_payload = _json_object(source_body)
-    return _record_list(source_payload, "records")
+    return result
+
+
+def _all_source_derived_records_response(
+    context: ReviewerUiContext,
+) -> tuple[int, list[Mapping[str, Any]] | bytes]:
+    records: list[Mapping[str, Any]] = []
+    offset = 0
+    while True:
+        source_status, _content_type, source_body = route_source_derived_api_response(
+            (
+                f"{SOURCE_DERIVED_API_PREFIX}?"
+                f"{urlencode({'limit': str(_SOURCE_DERIVED_PAGE_LIMIT), 'offset': str(offset)})}"
+            ),
+            context.workflow_shell_context.source_derived_api_context,
+        )
+        if source_status != 200:
+            return source_status, source_body
+        source_payload = _json_object(source_body)
+        page_records = _record_list(source_payload, "records")
+        records.extend(page_records)
+        if len(page_records) < _SOURCE_DERIVED_PAGE_LIMIT:
+            break
+        offset += _SOURCE_DERIVED_PAGE_LIMIT
+    return 200, records
+
+
+def _review_item_from_source_record(record: Mapping[str, Any]) -> Mapping[str, Any]:
+    return {
+        "review_item_id": f"source-derived-review-shell:{_string(record, 'source_record_key')}",
+        "source_record": {
+            "identity": {
+                "source_record_key": _string(record, "source_record_key"),
+                "entity_type": _string(record, "entity_type"),
+                "stable_source_id": _string(record, "stable_source_id"),
+                "facility_id": _optional_string(record, "facility_id"),
+            },
+            "source_document": {
+                "source_document_id": _string(record, "source_document_id"),
+                "source_url": _optional_string(record, "source_url"),
+                "raw_sha256": _optional_string(record, "raw_sha256"),
+                "raw_path": _optional_string(record, "raw_path"),
+                "connector_name": _optional_string(record, "connector_name"),
+                "connector_version": _optional_string(record, "connector_version"),
+                "retrieved_at": _optional_string(record, "retrieved_at"),
+            },
+            "original_values": _mapping(record, "original_values"),
+            "source_traceability": _mapping(record, "source_traceability"),
+            "import_batch": _mapping(record, "import_batch"),
+        },
+    }
 
 
 def _render_complaint_review_matrix_csv(
@@ -6621,6 +7202,174 @@ def _is_related_source_record(
     if selected_facility_id != "unknown":
         return _optional_string(record, "facility_id") == selected_facility_id
     return False
+
+
+def _source_record_indexes(records: list[Mapping[str, Any]]) -> SourceRecordIndexes:
+    by_import_batch_id: dict[str, list[Mapping[str, Any]]] = {}
+    by_facility_id: dict[str, list[Mapping[str, Any]]] = {}
+    by_source_document_id: dict[str, list[Mapping[str, Any]]] = {}
+    by_complaint_id: dict[str, list[Mapping[str, Any]]] = {}
+    by_stable_source_id: dict[str, list[Mapping[str, Any]]] = {}
+    by_source_record_key: dict[str, Mapping[str, Any]] = {}
+    for record in records:
+        source_record_key = _string(record, "source_record_key")
+        by_source_record_key[source_record_key] = record
+        _append_source_index_value(
+            by_import_batch_id,
+            _flat_record_import_batch_id(record),
+            record,
+        )
+        _append_source_index_value(
+            by_facility_id,
+            _optional_string(record, "facility_id"),
+            record,
+        )
+        _append_source_index_value(
+            by_source_document_id,
+            _optional_string(record, "source_document_id"),
+            record,
+        )
+        _append_source_index_value(
+            by_stable_source_id,
+            _optional_string(record, "stable_source_id"),
+            record,
+        )
+        for complaint_id in _flat_record_complaint_ids(record):
+            _append_source_index_value(by_complaint_id, complaint_id, record)
+    return SourceRecordIndexes(
+        by_import_batch_id=_freeze_source_index(by_import_batch_id),
+        by_facility_id=_freeze_source_index(by_facility_id),
+        by_source_document_id=_freeze_source_index(by_source_document_id),
+        by_complaint_id=_freeze_source_index(by_complaint_id),
+        by_stable_source_id=_freeze_source_index(by_stable_source_id),
+        by_source_record_key=by_source_record_key,
+    )
+
+
+def _related_source_records_from_indexes(
+    selected_source_record: Mapping[str, Any],
+    indexes: SourceRecordIndexes,
+) -> list[Mapping[str, Any]]:
+    identity = _mapping(selected_source_record, "identity")
+    selected_source_record_key = _string(identity, "source_record_key")
+    selected_source_document = _mapping(selected_source_record, "source_document")
+    selected_source_document_id = _string(selected_source_document, "source_document_id")
+    selected_facility_id = _optional_string(identity, "facility_id")
+    selected_import_batch_id = _selected_source_import_batch_id(selected_source_record)
+    selected_batch_record_keys = _selected_batch_record_keys(
+        indexes,
+        selected_import_batch_id,
+    )
+    related_by_key: dict[str, Mapping[str, Any]] = {}
+    selected_record = indexes.by_source_record_key.get(selected_source_record_key)
+    if selected_record is not None:
+        related_by_key[selected_source_record_key] = selected_record
+    for record in indexes.by_source_document_id.get(selected_source_document_id, ()):
+        _add_indexed_related_record(related_by_key, record, selected_batch_record_keys)
+    if selected_facility_id != "unknown":
+        for record in indexes.by_facility_id.get(selected_facility_id, ()):
+            _add_indexed_related_record(related_by_key, record, selected_batch_record_keys)
+    for complaint_id in _selected_source_complaint_ids(selected_source_record):
+        for record in indexes.by_complaint_id.get(complaint_id, ()):
+            _add_indexed_related_record(related_by_key, record, selected_batch_record_keys)
+        for record in indexes.by_stable_source_id.get(complaint_id, ()):
+            _add_indexed_related_record(related_by_key, record, selected_batch_record_keys)
+    return _sort_related_source_records(tuple(related_by_key.values()))
+
+
+def _add_indexed_related_record(
+    related_by_key: dict[str, Mapping[str, Any]],
+    record: Mapping[str, Any],
+    selected_batch_record_keys: frozenset[str] | None,
+) -> None:
+    source_record_key = _string(record, "source_record_key")
+    if (
+        selected_batch_record_keys is not None
+        and source_record_key not in selected_batch_record_keys
+    ):
+        return
+    related_by_key[source_record_key] = record
+
+
+def _selected_source_import_batch_id(source_record: Mapping[str, Any]) -> str:
+    import_batch = _mapping(source_record, "import_batch")
+    return _optional_string(import_batch, "import_batch_id")
+
+
+def _selected_batch_record_keys(
+    indexes: SourceRecordIndexes,
+    selected_import_batch_id: str,
+) -> frozenset[str] | None:
+    if selected_import_batch_id == "unknown":
+        return None
+    return frozenset(
+        _string(record, "source_record_key")
+        for record in indexes.by_import_batch_id.get(selected_import_batch_id, ())
+    )
+
+
+def _flat_record_import_batch_id(record: Mapping[str, Any]) -> str:
+    import_batch = _mapping(record, "import_batch")
+    return _optional_string(import_batch, "import_batch_id")
+
+
+def _flat_record_complaint_ids(record: Mapping[str, Any]) -> tuple[str, ...]:
+    values = _mapping(record, "original_values")
+    candidate_values = [
+        _optional_string(values, "complaint_id"),
+    ]
+    if _string(record, "entity_type") == "complaint":
+        candidate_values.append(_optional_string(record, "stable_source_id"))
+    return tuple(_unique_display_values(candidate_values))
+
+
+def _selected_source_complaint_ids(
+    selected_source_record: Mapping[str, Any],
+) -> tuple[str, ...]:
+    identity = _mapping(selected_source_record, "identity")
+    values = _mapping(selected_source_record, "original_values")
+    candidate_values = [
+        _optional_string(identity, "stable_source_id"),
+        _optional_string(values, "complaint_id"),
+    ]
+    return tuple(_unique_display_values(candidate_values))
+
+
+def _append_source_index_value(
+    index: dict[str, list[Mapping[str, Any]]],
+    value: str,
+    record: Mapping[str, Any],
+) -> None:
+    if value == "unknown":
+        return
+    index.setdefault(value, []).append(record)
+
+
+def _freeze_source_index(
+    index: Mapping[str, list[Mapping[str, Any]]],
+) -> Mapping[str, tuple[Mapping[str, Any], ...]]:
+    return {key: tuple(value) for key, value in index.items()}
+
+
+def _unique_display_values(values: list[str]) -> list[str]:
+    unique: list[str] = []
+    for value in values:
+        if value == "unknown" or value in unique:
+            continue
+        unique.append(value)
+    return unique
+
+
+def _sort_related_source_records(
+    records: tuple[Mapping[str, Any], ...],
+) -> list[Mapping[str, Any]]:
+    return sorted(
+        records,
+        key=lambda record: (
+            _SOURCE_CONTEXT_ENTITY_ORDER.get(_string(record, "entity_type"), 99),
+            _string(record, "stable_source_id"),
+        ),
+    )
 
 
 def _related_entity_counts(records: list[Mapping[str, Any]]) -> dict[str, int]:
