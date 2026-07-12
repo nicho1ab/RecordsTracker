@@ -46,12 +46,14 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "AllowUnavailable",
         "Issue415",
         "Issue416",
+        "Issue417",
         "manifest.json",
         "route-status.csv",
         "route-assertions.csv",
         "issue-415-count-summaries.csv",
         "issue-415-href-inventory.csv",
         "issue-416-count-summaries.csv",
+        "issue-417-count-summaries.csv",
         "route-text-markers.txt",
         "keyboard flow text",
         "accessibility",
@@ -80,6 +82,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "/reviewer",
         "/reviewer/facilities/priorities",
         "/reviewer/records/substantiated",
+        "/reviewer/records/serious-topics",
         "/reviewer/records/matrix.csv",
         "/feedback",
         "/ccld/help",
@@ -95,6 +98,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     assert "complaint export" in script.lower()
     assert "-Issue415" in script
     assert "-Issue416" in script
+    assert "-Issue417" in script
     for issue_415_route in (
         "/reviewer/records/substantiated?facility=107207198",
         "/reviewer/records/substantiated?facility_type=FOSTER%20FAMILY%20AGENCY",
@@ -126,6 +130,22 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "issue416 filtered empty",
     ):
         assert issue_416_assertion in script
+    for issue_417_route in (
+        "/reviewer/records/serious-topics?match_basis=source-category",
+        "/reviewer/records/serious-topics?match_basis=keyword-cue",
+        "/reviewer/records/serious-topics?topic=Supervision%20topic",
+        "/reviewer/records/serious-topics?topic=Runaway%2FAWOL%20topic",
+    ):
+        assert issue_417_route in script
+    for issue_417_assertion in (
+        "issue417 h1",
+        "issue417 category/cue wording",
+        "issue417 keyword cue basis",
+        "issue417 filtered controls",
+        "issue417 filtered empty",
+        "issue417 no narrative leak",
+    ):
+        assert issue_417_assertion in script
 
 
 def test_capture_script_review_context_is_get_only_and_non_mutating() -> None:
@@ -358,6 +378,67 @@ def test_capture_script_issue_416_mode_writes_focused_artifacts() -> None:
         assert "issue416 h1" in assertions_csv
         assert "-Issue416" in capture_command
         assert "Focused issue #416 facility prioritization evidence" in manifest[
+            "evidencePurpose"
+        ]
+    finally:
+        shutil.rmtree(output_dir, ignore_errors=True)
+
+
+def test_capture_script_issue_417_mode_writes_focused_artifacts() -> None:
+    output_dir = ROOT / "data" / "processed" / "ui-evidence-test"
+    shutil.rmtree(output_dir, ignore_errors=True)
+    try:
+        result = subprocess.run(
+            [
+                powershell(),
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(CAPTURE_SCRIPT),
+                "-BaseUrl",
+                "http://127.0.0.1:9",
+                "-Mode",
+                "live",
+                "-OutputDir",
+                "data/processed/ui-evidence-test",
+                "-TimeoutSeconds",
+                "1",
+                "-IncludeScreenshots:$false",
+                "-Issue417",
+                "-AllowUnavailable",
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        output = plain_output(result)
+
+        assert result.returncode == 0, output
+        packets = sorted(output_dir.glob("*-live-issue-417"))
+        assert packets, output
+        packet = packets[-1]
+        manifest = json.loads((packet / "manifest.json").read_text(encoding="utf-8-sig"))
+        count_csv = (packet / "issue-417-count-summaries.csv").read_text(
+            encoding="utf-8-sig"
+        )
+        assertions_csv = (packet / "route-assertions.csv").read_text(
+            encoding="utf-8-sig"
+        )
+        capture_command = (packet / "diagnostics" / "capture-command.txt").read_text(
+            encoding="utf-8-sig"
+        )
+
+        assert (packet / "issue-417-count-summaries.csv").exists()
+        assert manifest["issue417"]["enabled"] is True
+        assert manifest["issue417"]["routeCount"] == 5
+        assert manifest["output"]["counts"]["issue417"] == 1
+        assert len(manifest["routeList"]) == 5
+        assert "/reviewer/records/serious-topics?match_basis=keyword-cue" in count_csv
+        assert "issue417 h1" in assertions_csv
+        assert "-Issue417" in capture_command
+        assert "Focused issue #417 serious-topic complaint worklist evidence" in manifest[
             "evidencePurpose"
         ]
     finally:

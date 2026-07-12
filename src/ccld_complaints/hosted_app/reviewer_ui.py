@@ -7,6 +7,7 @@ import html
 import io
 import json
 import os
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -80,6 +81,7 @@ REVIEWER_UI_DETAIL_PATH = f"{REVIEWER_UI_RECORDS_PATH}/detail"
 REVIEWER_UI_MATRIX_EXPORT_PATH = f"{REVIEWER_UI_RECORDS_PATH}/matrix.csv"
 REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH = f"{REVIEWER_UI_RECORDS_PATH}/substantiated"
 REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH = f"{REVIEWER_UI_RECORDS_PATH}/substantiated.csv"
+REVIEWER_UI_SERIOUS_TOPICS_PATH = f"{REVIEWER_UI_RECORDS_PATH}/serious-topics"
 REVIEWER_UI_FACILITY_PRIORITIES_PATH = f"{REVIEWER_UI_PREFIX}/facilities/priorities"
 REVIEWER_UI_NOTE_PATH = f"{REVIEWER_UI_RECORDS_PATH}/note"
 REVIEWER_UI_STATUS_PATH = f"{REVIEWER_UI_RECORDS_PATH}/status"
@@ -121,6 +123,40 @@ _SERIOUS_REVIEW_TOPIC_KEYWORDS: tuple[str, ...] = (
     "awol",
     "medication",
     "staff misconduct",
+)
+_SERIOUS_TOPIC_CATEGORY_LABELS: Mapping[str, str] = {
+    "Abuse or mistreatment": "Mistreatment-topic",
+    "Neglect": "Care-omission topic",
+    "Inadequate supervision": "Supervision topic",
+    "Medication or medical care": "Medication/medical-care topic",
+    "Runaway or AWOL": "Runaway/AWOL topic",
+    "Staff conduct": "Staff-conduct topic",
+}
+_SERIOUS_TOPIC_CATEGORY_BY_NORMALIZED = {
+    key.casefold(): value for key, value in _SERIOUS_TOPIC_CATEGORY_LABELS.items()
+}
+_SERIOUS_TOPIC_CUE_TERMS: tuple[str, ...] = (
+    "sexual assault",
+    "abuse",
+    "mistreatment",
+    "neglect",
+    "supervision",
+    "unsupervised",
+    "unattended",
+    "medication",
+    "medical care",
+    "runaway",
+    "awol",
+    "staff misconduct",
+    "injury",
+    "restraint",
+)
+_SERIOUS_TOPIC_CUE_EXCLUDED_PHRASES: tuple[str, ...] = (
+    "substance abuse",
+    "abuse prevention",
+    "injury prevention",
+    "restraint policy",
+    "restraint training",
 )
 _SUBSTANTIATED_EQUIVALENT_KEYWORDS: tuple[str, ...] = (
     "substantiated",
@@ -302,6 +338,21 @@ class SubstantiatedWorklistFilters:
     facility_type: str = ""
     geography: str = ""
     finding: str = ""
+    sort: str = "complaint_date_desc"
+    page: int = 1
+    page_size: int = _SUBSTANTIATED_DEFAULT_PAGE_SIZE
+
+
+@dataclass(frozen=True)
+class SeriousTopicsFilters:
+    start_date: str | None = None
+    end_date: str | None = None
+    facility: str = ""
+    facility_type: str = ""
+    geography: str = ""
+    finding: str = ""
+    topic: str = ""
+    match_basis: str = "all"
     sort: str = "complaint_date_desc"
     page: int = 1
     page_size: int = _SUBSTANTIATED_DEFAULT_PAGE_SIZE
@@ -502,6 +553,8 @@ def route_reviewer_ui_response(
         return _facility_priorities_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH:
         return _substantiated_triage_response(parsed_url.query, context)
+    if parsed_url.path == REVIEWER_UI_SERIOUS_TOPICS_PATH:
+        return _serious_topics_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_MATRIX_EXPORT_PATH:
         return _matrix_export_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH:
@@ -1398,6 +1451,571 @@ def _render_facility_priority_rules_disclosure() -> str:
           <p>This page uses deterministic contributing factors only: deduplicated loaded complaint count, substantiated/equivalent finding count, existing timing review flags, missing local date context, source-link availability, supported recent activity, and low-data status.</p>
           <p>Rows are ordered by substantiated/equivalent count descending, complaint count descending, strongest timing review flag descending, recent activity descending, facility name ascending, then stable facility identity ascending. These rules are visible ordering rules, not a stored or hidden risk score.</p>
         </details>"""
+
+
+def _serious_topics_response(
+    query: str,
+    context: ReviewerUiContext,
+) -> tuple[int, str, bytes]:
+    query_values = parse_qs(query, keep_blank_values=True)
+    filters = _serious_topics_filters(query_values)
+    source_status, source_result = _substantiated_source_records_response(context)
+    if source_status != 200:
+        if not isinstance(source_result, bytes):
+            raise ValueError("Expected source-derived error body to be bytes.")
+        return _workflow_error_page(source_status, source_result)
+    if isinstance(source_result, bytes):
+        raise ValueError("Expected source-derived records.")
+    source_records = source_result
+    complaint_items = [
+        _review_item_from_source_record(record)
+        for record in source_records
+        if _string(record, "entity_type") == "complaint"
+    ]
+    source_indexes = _source_record_indexes(source_records)
+    serious_items = _serious_topic_items(complaint_items, source_indexes)
+    filtered_items = _filter_serious_topic_items(serious_items, filters)
+    sorted_items = _sort_substantiated_worklist_items(filtered_items, filters.sort)
+    paged_items, pagination = _paginate_serious_topic_items(sorted_items, filters)
+    return _html_response(
+        200,
+        _render_serious_topics_worklist(
+            paged_items,
+            filters=filters,
+            result_count=len(filtered_items),
+            total_qualifying_count=len(serious_items),
+            all_items=serious_items,
+            pagination=pagination,
+            actor_label=_signed_in_actor_label(context),
+        ),
+    )
+
+
+def _serious_topics_filters(
+    query_values: Mapping[str, list[str]],
+) -> SeriousTopicsFilters:
+    start_date, end_date = _complaint_export_date_filters(query_values)
+    return SeriousTopicsFilters(
+        start_date=start_date,
+        end_date=end_date,
+        facility=_first_form_value(query_values, "facility"),
+        facility_type=_first_form_value(query_values, "facility_type"),
+        geography=_first_form_value(query_values, "geography"),
+        finding=_first_form_value(query_values, "finding"),
+        topic=_first_form_value(query_values, "topic"),
+        match_basis=_serious_topics_match_basis(
+            _first_form_value(query_values, "match_basis")
+        ),
+        sort=_substantiated_sort_value(_first_form_value(query_values, "sort")),
+        page=_positive_int_query_value(
+            _first_form_value(query_values, "page"),
+            default=1,
+            maximum=10000,
+        ),
+        page_size=_positive_int_query_value(
+            _first_form_value(query_values, "page_size"),
+            default=_SUBSTANTIATED_DEFAULT_PAGE_SIZE,
+            maximum=_SUBSTANTIATED_MAX_PAGE_SIZE,
+        ),
+    )
+
+
+def _serious_topics_match_basis(value: str) -> str:
+    normalized = value.strip().casefold().replace("_", "-")
+    if normalized in {"source-category", "keyword-cue"}:
+        return normalized
+    return "all"
+
+
+def _serious_topic_items(
+    records: list[Mapping[str, Any]],
+    source_indexes: SourceRecordIndexes,
+) -> list[dict[str, str]]:
+    items: list[dict[str, str]] = []
+    seen_stable_complaint_ids: set[str] = set()
+    for record in records:
+        source_record = _mapping(record, "source_record")
+        if _queue_source_record_entity_type(source_record) != "complaint":
+            continue
+        related_records = _related_source_records_from_indexes(
+            source_record,
+            source_indexes,
+        )
+        evidence = _serious_topic_evidence(related_records)
+        if not evidence:
+            continue
+        stable_complaint_id = _stable_complaint_identity(source_record)
+        if stable_complaint_id in seen_stable_complaint_ids:
+            continue
+        seen_stable_complaint_ids.add(stable_complaint_id)
+        original_values = _mapping(source_record, "original_values")
+        identity = _mapping(source_record, "identity")
+        source_record_key = _string(identity, "source_record_key")
+        facility = _facility_context(related_records)
+        facility_name = _facility_context_value(facility, "facility_name")
+        facility_type = _facility_context_value(facility, "facility_type")
+        geography = _substantiated_geography_label(facility)
+        facility_number = _facility_context_value(facility, "external_facility_number")
+        if facility_number == "unknown":
+            facility_number = _complaint_export_row_facility_number(
+                source_record,
+                CcldQueueReturnContext(),
+            )
+        facility_display = (
+            f"Facility ID {_display_value(facility_number)}"
+            if facility_name == "unknown"
+            else facility_name
+        )
+        complaint_date = _substantiated_complaint_date(original_values)
+        source_document = _mapping(source_record, "source_document")
+        source_url = _optional_string(source_document, "source_url")
+        category_labels = _joined_unique(
+            item["category_label"]
+            for item in evidence
+            if item["category_label"]
+        )
+        source_categories = _joined_unique(
+            item["source_category"]
+            for item in evidence
+            if item["source_category"]
+        )
+        matched_fields = _joined_unique(item["matched_field"] for item in evidence)
+        matched_terms = _joined_unique(item["matched_term"] for item in evidence)
+        match_bases = _joined_unique(item["match_basis"] for item in evidence)
+        items.append(
+            {
+                "source_record_key": source_record_key,
+                "facility_display": facility_display,
+                "facility_number": facility_number,
+                "facility_type": facility_type,
+                "geography": geography,
+                "complaint_date": complaint_date,
+                "complaint_date_display": _substantiated_date_display(complaint_date),
+                "finding_value": _optional_string(original_values, "finding"),
+                "complaint_control_number": _optional_string(
+                    original_values,
+                    "complaint_control_number",
+                ),
+                "category_labels": category_labels,
+                "source_categories": source_categories or "Not available in loaded record",
+                "matched_fields": matched_fields,
+                "matched_terms": matched_terms,
+                "match_bases": match_bases,
+                "detail_href": _reviewer_detail_href(
+                    source_record_key,
+                    CcldQueueReturnContext(
+                        facility_number=facility_number
+                        if facility_number != "unknown"
+                        else None,
+                    ),
+                ),
+                "source_url_href": (
+                    source_url
+                    if _has_display_value(source_url) and source_url != "unknown"
+                    else ""
+                ),
+            }
+        )
+    return items
+
+
+def _serious_topic_evidence(
+    related_records: list[Mapping[str, Any]],
+) -> list[dict[str, str]]:
+    evidence: list[dict[str, str]] = []
+    for record in related_records:
+        if _string(record, "entity_type") != "allegation":
+            continue
+        values = _mapping(record, "original_values")
+        category = _optional_string(values, "allegation_category")
+        category_label = _SERIOUS_TOPIC_CATEGORY_BY_NORMALIZED.get(category.casefold())
+        if category_label is not None:
+            evidence.append(
+                {
+                    "category_label": category_label,
+                    "source_category": category,
+                    "matched_field": "source-derived allegation_category",
+                    "matched_term": category,
+                    "match_basis": "Source category",
+                }
+            )
+            continue
+        if category not in {"unknown", "Unknown", ""}:
+            continue
+        cue_term = _serious_topic_keyword_term(
+            _optional_string(values, "allegation_text")
+        )
+        if cue_term is None:
+            continue
+        evidence.append(
+            {
+                "category_label": "Possible serious-topic cue",
+                "source_category": "",
+                "matched_field": "keyword-assisted allegation_text",
+                "matched_term": cue_term,
+                "match_basis": "Keyword-assisted cue",
+            }
+        )
+    return evidence
+
+
+def _serious_topic_keyword_term(value: str) -> str | None:
+    if value == "unknown":
+        return None
+    normalized = " ".join(value.casefold().split())
+    if not normalized:
+        return None
+    if any(phrase in normalized for phrase in _SERIOUS_TOPIC_CUE_EXCLUDED_PHRASES):
+        return None
+    for term in _SERIOUS_TOPIC_CUE_TERMS:
+        if _bounded_text_term_matches(normalized, term.casefold()):
+            return term
+    return None
+
+
+def _bounded_text_term_matches(text: str, term: str) -> bool:
+    return re.search(rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])", text) is not None
+
+
+def _joined_unique(values: object) -> str:
+    if not isinstance(values, list | tuple | set):
+        values = tuple(values)  # type: ignore[arg-type]
+    result: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value).strip()
+        if not text:
+            continue
+        key = text.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(text)
+    return "; ".join(result)
+
+
+def _filter_serious_topic_items(
+    items: list[dict[str, str]],
+    filters: SeriousTopicsFilters,
+) -> list[dict[str, str]]:
+    return [item for item in items if _serious_topic_item_matches_filters(item, filters)]
+
+
+def _serious_topic_item_matches_filters(
+    item: Mapping[str, str],
+    filters: SeriousTopicsFilters,
+) -> bool:
+    substantiated_filter_item = dict(item)
+    substantiated_filter_item["finding_label"] = item["finding_value"]
+    if not _substantiated_item_matches_filters(
+        substantiated_filter_item,
+        SubstantiatedWorklistFilters(
+            start_date=filters.start_date,
+            end_date=filters.end_date,
+            facility=filters.facility,
+            facility_type=filters.facility_type,
+            geography=filters.geography,
+            finding=filters.finding,
+            sort=filters.sort,
+            page=filters.page,
+            page_size=filters.page_size,
+        ),
+    ):
+        return False
+    if filters.topic and not _text_filter_matches(
+        filters.topic,
+        (item["category_labels"], item["source_categories"], item["matched_terms"]),
+    ):
+        return False
+    if filters.match_basis == "source-category" and "Source category" not in item["match_bases"]:
+        return False
+    if filters.match_basis == "keyword-cue" and "Keyword-assisted cue" not in item["match_bases"]:
+        return False
+    return True
+
+
+def _paginate_serious_topic_items(
+    items: list[dict[str, str]],
+    filters: SeriousTopicsFilters,
+) -> tuple[list[dict[str, str]], Mapping[str, int]]:
+    total_pages = max((len(items) + filters.page_size - 1) // filters.page_size, 1)
+    page = min(filters.page, total_pages)
+    start = (page - 1) * filters.page_size
+    end = start + filters.page_size
+    return items[start:end], {
+        "page": page,
+        "page_size": filters.page_size,
+        "total_pages": total_pages,
+        "offset": start,
+    }
+
+
+def _render_serious_topics_worklist(
+    items: list[dict[str, str]],
+    *,
+    filters: SeriousTopicsFilters,
+    result_count: int,
+    total_qualifying_count: int,
+    all_items: list[dict[str, str]],
+    pagination: Mapping[str, int],
+    actor_label: str | None,
+) -> str:
+    filter_markup = _render_serious_topics_filter_form(filters, all_items)
+    summary = _render_serious_topics_count_summary(
+        result_count,
+        total_qualifying_count,
+        pagination,
+    )
+    if not items:
+        list_markup = f"""        <section class="hero-card" aria-labelledby="serious-topics-empty-heading">
+          <h2 id="serious-topics-empty-heading">No serious-topic complaint records matched.</h2>
+          {summary}
+          <p>No loaded authorized complaint records matched these source category or keyword-cue filters. Adjust the filters or clear them to return to all qualifying loaded records.</p>
+        </section>"""
+    else:
+        rows = "\n".join(_render_serious_topic_row(item) for item in items)
+        list_markup = f"""        <section aria-labelledby="serious-topics-results-heading">
+          <h2 id="serious-topics-results-heading">Loaded serious-topic complaint records</h2>
+          {summary}
+          <table>
+            <caption>Governed serious-topic complaint worklist with source category and keyword-cue basis</caption>
+            <thead>
+              <tr>
+                <th scope="col">Facility</th>
+                <th scope="col">Facility ID</th>
+                <th scope="col">Complaint date</th>
+                <th scope="col">Finding</th>
+                <th scope="col">Review theme</th>
+                <th scope="col">Match basis</th>
+                <th scope="col">Matched field and term</th>
+                <th scope="col">Source-derived category</th>
+                <th scope="col">Facility type</th>
+                <th scope="col">Geography</th>
+                <th scope="col">Original public report</th>
+                <th scope="col">Review action</th>
+              </tr>
+            </thead>
+            <tbody>
+{rows}
+            </tbody>
+          </table>
+          {_render_serious_topics_pagination(filters, pagination, result_count)}
+        </section>"""
+    return _page(
+        title="Serious-topic complaint worklist",
+        heading="Serious-topic complaint worklist",
+        actor_label=actor_label,
+        main=f"""
+        <section class="quiet-section" aria-labelledby="serious-topics-purpose-heading">
+          <h2 id="serious-topics-purpose-heading">Filter serious review themes without changing source records</h2>
+          <p>Use this worklist to find loaded public complaint records by governed source-derived allegation categories or, only when the source category is missing or Unknown, a separate keyword-assisted cue from allegation text.</p>
+          <p>Keyword cues are not findings, verified events, legal conclusions, or facility-wide conclusions. Timing and source-date review flags are handled elsewhere.</p>
+        </section>
+{filter_markup}
+{list_markup}
+        <details class="technical-details notice-card">
+          <summary>Category and cue rules</summary>
+          <p>Deterministic themes come only from source-derived allegation_category values. Keyword-assisted cues come only from governed allegation_text terms when that allegation category is missing or Unknown. Complaint control numbers are not searched.</p>
+        </details>
+        <section class="quiet-section" aria-labelledby="serious-topics-next-heading">
+          <h2 id="serious-topics-next-heading">Next steps</h2>
+          <ul>
+            <li><a href="{REVIEWER_UI_RECORDS_PATH}">Return to review queue</a></li>
+            <li><a href="{REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH}">Open substantiated complaint worklist</a></li>
+          </ul>
+        </section>
+""",
+    )
+
+
+def _render_serious_topic_row(item: Mapping[str, str]) -> str:
+    matched = (
+        f"{item['matched_fields']}: {item['matched_terms']}"
+        if item["matched_terms"]
+        else item["matched_fields"]
+    )
+    return f"""        <tr>
+          <th scope="row">{_escape(item['facility_display'])}</th>
+          <td>{_copyable_value("Facility ID", item['facility_number'])}</td>
+          <td>{_escape(item['complaint_date_display'])}</td>
+          <td>{_escape(item['finding_value'])}</td>
+          <td>{_escape(item['category_labels'])}</td>
+          <td>{_escape(item['match_bases'])}</td>
+          <td>{_escape(matched)}</td>
+          <td>{_escape(item['source_categories'])}</td>
+          <td>{_escape(item['facility_type'])}</td>
+          <td>{_escape(item['geography'])}</td>
+          <td>{_serious_topic_source_link(item)}</td>
+          <td><a class="button" href="{_escape(item['detail_href'])}">Open complaint review workspace</a></td>
+        </tr>"""
+
+
+def _render_serious_topics_count_summary(
+    result_count: int,
+    total_qualifying_count: int,
+    pagination: Mapping[str, int],
+) -> str:
+    page = pagination["page"]
+    page_size = pagination["page_size"]
+    offset = pagination["offset"]
+    if result_count == 0:
+        shown_range = "Showing 0"
+    else:
+        first = offset + 1
+        last = min(offset + page_size, result_count)
+        shown_range = f"Showing {first}-{last}"
+    return (
+        f"<p>{shown_range} of {result_count} matching serious-topic complaint "
+        f"record(s); {total_qualifying_count} total qualifying authorized "
+        "source-derived complaint record(s).</p>"
+        f"<p class=\"helper-text\">Page {page} of {pagination['total_pages']}.</p>"
+    )
+
+
+def _render_serious_topics_filter_form(
+    filters: SeriousTopicsFilters,
+    all_items: list[dict[str, str]],
+) -> str:
+    finding_options = _substantiated_filter_options(
+        item["finding_value"] for item in all_items
+    )
+    facility_type_options = _substantiated_filter_options(
+        item["facility_type"] for item in all_items
+    )
+    geography_options = _substantiated_filter_options(
+        item["geography"] for item in all_items
+    )
+    topic_options = _substantiated_filter_options(
+        tuple(_SERIOUS_TOPIC_CATEGORY_LABELS.values()) + ("Possible serious-topic cue",)
+    )
+    return f"""        <section class="quiet-section" aria-labelledby="serious-topics-filters-heading">
+          <h2 id="serious-topics-filters-heading">Filter and sort</h2>
+          <form class="compact-filter-form" method="get" action="{REVIEWER_UI_SERIOUS_TOPICS_PATH}">
+            <div class="facility-intelligence-filter-grid">
+              <p>
+                <label for="serious-topics-start-date">From complaint date</label>
+                <input id="serious-topics-start-date" name="start_date" type="date" value="{_escape(filters.start_date or '')}">
+              </p>
+              <p>
+                <label for="serious-topics-end-date">To complaint date</label>
+                <input id="serious-topics-end-date" name="end_date" type="date" value="{_escape(filters.end_date or '')}">
+              </p>
+              <p>
+                <label for="serious-topics-facility">Facility name, ID, or complaint ID</label>
+                <input id="serious-topics-facility" name="facility" value="{_escape(filters.facility)}" autocomplete="off">
+              </p>
+              <p>
+                <label for="serious-topics-facility-type">Facility type</label>
+                <input id="serious-topics-facility-type" name="facility_type" value="{_escape(filters.facility_type)}" list="serious-topics-facility-types">
+                <datalist id="serious-topics-facility-types">{facility_type_options}</datalist>
+              </p>
+              <p>
+                <label for="serious-topics-geography">Geography</label>
+                <input id="serious-topics-geography" name="geography" value="{_escape(filters.geography)}" list="serious-topics-geographies">
+                <datalist id="serious-topics-geographies">{geography_options}</datalist>
+              </p>
+              <p>
+                <label for="serious-topics-finding">Finding</label>
+                <input id="serious-topics-finding" name="finding" value="{_escape(filters.finding)}" list="serious-topics-findings">
+                <datalist id="serious-topics-findings">{finding_options}</datalist>
+              </p>
+              <p>
+                <label for="serious-topics-topic">Review theme</label>
+                <input id="serious-topics-topic" name="topic" value="{_escape(filters.topic)}" list="serious-topics-themes">
+                <datalist id="serious-topics-themes">{topic_options}</datalist>
+              </p>
+              <p>
+                <label for="serious-topics-match-basis">Match basis</label>
+                <select id="serious-topics-match-basis" name="match_basis">
+                  {_serious_topics_basis_option(filters.match_basis, "all", "Source categories and keyword cues")}
+                  {_serious_topics_basis_option(filters.match_basis, "source-category", "Source-derived categories only")}
+                  {_serious_topics_basis_option(filters.match_basis, "keyword-cue", "Keyword-assisted cues only")}
+                </select>
+              </p>
+              <p>
+                <label for="serious-topics-sort">Sort</label>
+                <select id="serious-topics-sort" name="sort">
+                  {_substantiated_sort_option(filters.sort, "complaint_date_desc", "Complaint date, newest first")}
+                  {_substantiated_sort_option(filters.sort, "complaint_date_asc", "Complaint date, oldest first")}
+                  {_substantiated_sort_option(filters.sort, "facility_asc", "Facility, A to Z")}
+                  {_substantiated_sort_option(filters.sort, "facility_desc", "Facility, Z to A")}
+                </select>
+              </p>
+              <p>
+                <label for="serious-topics-page-size">Rows per page</label>
+                <select id="serious-topics-page-size" name="page_size">
+                  {_substantiated_page_size_option(filters.page_size, 25)}
+                  {_substantiated_page_size_option(filters.page_size, 50)}
+                  {_substantiated_page_size_option(filters.page_size, 100)}
+                </select>
+              </p>
+            </div>
+            <div class="form-actions">
+              <button class="button" type="submit">Apply filters</button>
+              <a class="button button-secondary" href="{REVIEWER_UI_SERIOUS_TOPICS_PATH}">Clear filters</a>
+            </div>
+          </form>
+        </section>"""
+
+
+def _serious_topics_basis_option(current: str, value: str, label: str) -> str:
+    selected = ' selected="selected"' if current == value else ""
+    return f'<option value="{_escape(value)}"{selected}>{_escape(label)}</option>'
+
+
+def _render_serious_topics_pagination(
+    filters: SeriousTopicsFilters,
+    pagination: Mapping[str, int],
+    result_count: int,
+) -> str:
+    if result_count <= filters.page_size:
+        return ""
+    page = pagination["page"]
+    total_pages = pagination["total_pages"]
+    links = []
+    if page > 1:
+        links.append(
+            f'<a class="button button-secondary" href="{_escape(_serious_topics_page_href(filters, page - 1))}">Previous page</a>'
+        )
+    if page < total_pages:
+        links.append(
+            f'<a class="button button-secondary" href="{_escape(_serious_topics_page_href(filters, page + 1))}">Next page</a>'
+        )
+    return f"""          <nav class="form-actions" aria-label="Serious-topic worklist pagination">
+            {"".join(links)}
+          </nav>"""
+
+
+def _serious_topics_page_href(filters: SeriousTopicsFilters, page: int) -> str:
+    query_values = {
+        "start_date": filters.start_date or "",
+        "end_date": filters.end_date or "",
+        "facility": filters.facility,
+        "facility_type": filters.facility_type,
+        "geography": filters.geography,
+        "finding": filters.finding,
+        "topic": filters.topic,
+        "match_basis": filters.match_basis,
+        "sort": filters.sort,
+        "page_size": str(filters.page_size),
+        "page": str(page),
+    }
+    return f"{REVIEWER_UI_SERIOUS_TOPICS_PATH}?{urlencode(query_values)}"
+
+
+def _serious_topic_source_link(item: Mapping[str, str]) -> str:
+    source_url_href = item["source_url_href"]
+    if not source_url_href:
+        return "Original public report link not available for this loaded complaint."
+    control_number = item["complaint_control_number"]
+    suffix = (
+        f" for {control_number}"
+        if control_number and control_number != "unknown"
+        else ""
+    )
+    return (
+        f"<a href=\"{_escape(source_url_href)}\">Open original public report{_escape(suffix)}</a>"
+    )
 
 
 def _substantiated_triage_response(
@@ -5139,6 +5757,17 @@ def _matrix_export_href(return_context: CcldQueueReturnContext) -> str:
     return f"{REVIEWER_UI_MATRIX_EXPORT_PATH}?{urlencode(query_values)}"
 
 
+def _serious_topics_href(return_context: CcldQueueReturnContext) -> str:
+    if return_context.facility_number is None:
+        return REVIEWER_UI_SERIOUS_TOPICS_PATH
+    query_values = {
+        "facility": return_context.facility_number,
+        "start_date": return_context.start_date or "",
+        "end_date": return_context.end_date or "",
+    }
+    return f"{REVIEWER_UI_SERIOUS_TOPICS_PATH}?{urlencode(query_values)}"
+
+
 def _substantiated_export_href(return_context: CcldQueueReturnContext) -> str:
     return _complaint_export_href(return_context, "substantiated")
 
@@ -6917,6 +7546,7 @@ def _render_complaint_export_controls(
               <p class="helper-text">Download complaint CSVs for review or comparison.</p>
               <div class="form-actions" aria-label="Complaint CSV exports">
               <a class="button button-secondary" href="{_escape(_matrix_export_href(return_context))}">Matrix</a>
+              <a class="button button-secondary" href="{_escape(_serious_topics_href(return_context))}">Serious topics</a>
               <a class="button button-secondary" href="{_escape(_all_complaints_export_href(return_context))}">All complaints</a>
               <a class="button button-secondary" href="{_escape(_substantiated_export_href(return_context))}">Substantiated</a>
               <a class="button button-secondary" href="{_escape(_unsubstantiated_export_href(return_context))}">Unsubstantiated</a>
