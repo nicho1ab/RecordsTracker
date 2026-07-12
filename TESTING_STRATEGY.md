@@ -221,6 +221,16 @@ language terms for CCLD request context, facility/date request, loaded local/tes
 CCLD records, source-derived records, reviewer-created notes/status, reviewer-
 status filter, suggested next record, and manual feedback checklist on the
 changed pages without changing behavior.
+Hosted facility-priorities tests must prove `/reviewer/facilities/priorities`
+aggregates deduplicated complaint records by stable source-derived facility
+identity, orders rows by visible deterministic factors with stable tie-breaking,
+filters by facility type, geography, activity date window, minimum complaint
+count, minimum substantiated/equivalent count, and supported indicators, renders
+missing values, low-data rows, empty results, bounded pagination, complaint
+queue/detail links, and original-source link availability accessibly, preserves
+authorization and import-batch scope, excludes fixture/demo fallback data in
+production mode, and does not mutate source-derived, reviewer-created, audit,
+import, feedback, retrieval-job, or operational rows.
 Hosted CCLD record request UI tests must prove the browser-accessible local/test
 request page accepts only CCLD digit facility/license numbers plus optional
 valid date ranges, returns accessible validation guidance for missing or invalid

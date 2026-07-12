@@ -80,6 +80,7 @@ REVIEWER_UI_DETAIL_PATH = f"{REVIEWER_UI_RECORDS_PATH}/detail"
 REVIEWER_UI_MATRIX_EXPORT_PATH = f"{REVIEWER_UI_RECORDS_PATH}/matrix.csv"
 REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH = f"{REVIEWER_UI_RECORDS_PATH}/substantiated"
 REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH = f"{REVIEWER_UI_RECORDS_PATH}/substantiated.csv"
+REVIEWER_UI_FACILITY_PRIORITIES_PATH = f"{REVIEWER_UI_PREFIX}/facilities/priorities"
 REVIEWER_UI_NOTE_PATH = f"{REVIEWER_UI_RECORDS_PATH}/note"
 REVIEWER_UI_STATUS_PATH = f"{REVIEWER_UI_RECORDS_PATH}/status"
 REVIEWER_UI_PACKET_PREVIEW_PATH = f"{REVIEWER_UI_PREFIX}/packet/preview"
@@ -267,6 +268,8 @@ _RETURN_CONTEXT_FIELDS = (
 _SOURCE_DERIVED_PAGE_LIMIT = 100
 _SUBSTANTIATED_DEFAULT_PAGE_SIZE = 50
 _SUBSTANTIATED_MAX_PAGE_SIZE = 100
+_FACILITY_PRIORITIES_DEFAULT_PAGE_SIZE = 25
+_FACILITY_PRIORITIES_MAX_PAGE_SIZE = 100
 _SUBSTANTIATED_SOURCE_ENTITY_TYPES: tuple[SourceDerivedEntityType, ...] = (
     "facility",
     "source_document",
@@ -308,6 +311,51 @@ class SubstantiatedWorklistFilters:
 class SubstantiatedFindingEvidence:
     label: str
     value: str
+
+
+@dataclass(frozen=True)
+class FacilityPrioritiesFilters:
+    start_date: str | None = None
+    end_date: str | None = None
+    facility_type: str = ""
+    geography: str = ""
+    min_complaints: int = 1
+    min_substantiated: int = 0
+    indicator: str = "all"
+    page: int = 1
+    page_size: int = _FACILITY_PRIORITIES_DEFAULT_PAGE_SIZE
+
+
+@dataclass(frozen=True)
+class FacilityPriorityComplaint:
+    source_record_key: str
+    stable_complaint_id: str
+    complaint_control_number: str
+    activity_date: str
+    finding: str
+    detail_href: str
+    source_url_href: str
+
+
+@dataclass(frozen=True)
+class FacilityPrioritySummary:
+    facility_identity: str
+    facility_number: str
+    facility_name: str
+    facility_type: str
+    geography: str
+    complaint_count: int
+    substantiated_count: int
+    recent_activity_date: str
+    strongest_delay_days: int
+    delay_flag_count: int
+    missing_date_count: int
+    source_available_count: int
+    source_missing_count: int
+    low_data: bool
+    indicators: tuple[str, ...]
+    factors: tuple[str, ...]
+    complaints: tuple[FacilityPriorityComplaint, ...]
 
 
 @dataclass(frozen=True)
@@ -450,6 +498,8 @@ def route_reviewer_ui_response(
         )
     if parsed_url.path in {REVIEWER_UI_PREFIX, REVIEWER_UI_RECORDS_PATH}:
         return _record_list_response(parsed_url.query, context)
+    if parsed_url.path == REVIEWER_UI_FACILITY_PRIORITIES_PATH:
+        return _facility_priorities_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH:
         return _substantiated_triage_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_MATRIX_EXPORT_PATH:
@@ -607,6 +657,747 @@ def _matrix_export_response(
         return_context,
     )
     return 200, "text/csv; charset=utf-8", csv_text.encode("utf-8-sig")
+
+
+def _facility_priorities_response(
+    query: str,
+    context: ReviewerUiContext,
+) -> tuple[int, str, bytes]:
+    query_values = parse_qs(query, keep_blank_values=True)
+    filters = _facility_priorities_filters(query_values)
+    source_status, source_result = _substantiated_source_records_response(context)
+    if source_status != 200:
+        if not isinstance(source_result, bytes):
+            raise ValueError("Expected source-derived error body to be bytes.")
+        return _workflow_error_page(
+            source_status,
+            source_result,
+            title="Facility priorities blocked",
+            heading="Facility priorities blocked",
+            guidance=(
+                "Retry with an authenticated actor that can read the loaded "
+                "source-derived corpus."
+            ),
+            links=(("Return to reviewer records", REVIEWER_UI_RECORDS_PATH),),
+        )
+    if isinstance(source_result, bytes):
+        raise ValueError("Expected source-derived records.")
+    all_summaries = _facility_priority_summaries(source_result)
+    filtered_summaries = _filter_facility_priority_summaries(all_summaries, filters)
+    sorted_summaries = _sort_facility_priority_summaries(filtered_summaries)
+    paged_summaries, pagination = _paginate_facility_priority_summaries(
+        sorted_summaries,
+        filters,
+    )
+    return _html_response(
+        200,
+        _render_facility_priorities(
+            paged_summaries,
+            filters=filters,
+            result_count=len(filtered_summaries),
+            total_facility_count=len(all_summaries),
+            all_summaries=all_summaries,
+            pagination=pagination,
+            actor_label=_signed_in_actor_label(context),
+        ),
+    )
+
+
+def _facility_priorities_filters(
+    query_values: Mapping[str, list[str]],
+) -> FacilityPrioritiesFilters:
+    return FacilityPrioritiesFilters(
+        start_date=_validated_iso_date_or_none(_first_form_value(query_values, "start_date")),
+        end_date=_validated_iso_date_or_none(_first_form_value(query_values, "end_date")),
+        facility_type=_first_form_value(query_values, "facility_type"),
+        geography=_first_form_value(query_values, "geography"),
+        min_complaints=_bounded_query_int(
+            query_values,
+            "min_complaints",
+            default=1,
+            minimum=0,
+            maximum=9999,
+        ),
+        min_substantiated=_bounded_query_int(
+            query_values,
+            "min_substantiated",
+            default=0,
+            minimum=0,
+            maximum=9999,
+        ),
+        indicator=_facility_priority_indicator_value(
+            _first_form_value(query_values, "indicator")
+        ),
+        page=_bounded_query_int(query_values, "page", default=1, minimum=1, maximum=9999),
+        page_size=_bounded_query_int(
+            query_values,
+            "page_size",
+            default=_FACILITY_PRIORITIES_DEFAULT_PAGE_SIZE,
+            minimum=1,
+            maximum=_FACILITY_PRIORITIES_MAX_PAGE_SIZE,
+        ),
+    )
+
+
+def _facility_priority_indicator_value(value: str) -> str:
+    normalized = value.strip().casefold()
+    if normalized in {
+        "all",
+        "substantiated",
+        "delay",
+        "missing_dates",
+        "source_available",
+        "source_link_missing",
+        "recent_activity",
+        "low_data",
+    }:
+        return normalized
+    return "all"
+
+
+def _bounded_query_int(
+    query_values: Mapping[str, list[str]],
+    key: str,
+    *,
+    default: int,
+    minimum: int,
+    maximum: int,
+) -> int:
+    raw_value = _first_form_value(query_values, key)
+    if not raw_value:
+        return default
+    try:
+        value = int(raw_value)
+    except ValueError:
+        return default
+    if value < minimum:
+        return minimum
+    if value > maximum:
+        return maximum
+    return value
+
+
+def _facility_priority_summaries(
+    source_records: list[Mapping[str, Any]],
+) -> list[FacilityPrioritySummary]:
+    source_indexes = _source_record_indexes(source_records)
+    grouped: dict[str, list[tuple[Mapping[str, Any], list[Mapping[str, Any]]]]] = {}
+    seen_complaint_ids: set[str] = set()
+    for record in source_records:
+        if _string(record, "entity_type") != "complaint":
+            continue
+        stable_complaint_id = _string(record, "stable_source_id")
+        if stable_complaint_id in seen_complaint_ids:
+            continue
+        seen_complaint_ids.add(stable_complaint_id)
+        review_item = _review_item_from_source_record(record)
+        source_record = _mapping(review_item, "source_record")
+        related_records = _related_source_records_from_indexes(
+            source_record,
+            source_indexes,
+        )
+        facility_identity = _facility_priority_identity(source_record, related_records)
+        grouped.setdefault(facility_identity, []).append((source_record, related_records))
+    summaries = [
+        _facility_priority_summary(facility_identity, grouped_records)
+        for facility_identity, grouped_records in grouped.items()
+    ]
+    return _sort_facility_priority_summaries(summaries)
+
+
+def _facility_priority_summary(
+    facility_identity: str,
+    grouped_records: list[tuple[Mapping[str, Any], list[Mapping[str, Any]]]],
+) -> FacilityPrioritySummary:
+    representative_source_record, representative_related = grouped_records[0]
+    facility = _facility_context(representative_related)
+    facility_number = _facility_priority_facility_number(
+        representative_source_record,
+        facility,
+    )
+    facility_name = _facility_context_value(facility, "facility_name")
+    if facility_name == "unknown":
+        facility_name = f"Facility ID {facility_number}" if facility_number != "unknown" else "Unknown facility"
+    facility_type = _facility_context_value(facility, "facility_type")
+    geography = _substantiated_geography_label(facility)
+    complaints = tuple(
+        _facility_priority_complaint(source_record, related_records)
+        for source_record, related_records in grouped_records
+    )
+    sorted_complaints = tuple(sorted(complaints, key=_facility_priority_complaint_sort_key))
+    complaint_count = len(sorted_complaints)
+    substantiated_count = sum(
+        1
+        for source_record, related_records in grouped_records
+        if _substantiated_finding_evidence(source_record, related_records) is not None
+    )
+    strongest_delay_days = max(
+        (_source_priority_strongest_delay(_mapping(source_record, "original_values")) for source_record, _related in grouped_records),
+        default=0,
+    )
+    delay_flag_count = sum(
+        1
+        for source_record, _related in grouped_records
+        if _source_priority_strongest_delay(_mapping(source_record, "original_values")) > 0
+    )
+    missing_date_count = sum(
+        1
+        for source_record, _related in grouped_records
+        if _facility_priority_missing_dates(_mapping(source_record, "original_values"))
+    )
+    source_available_count = sum(
+        1
+        for source_record, _related in grouped_records
+        if _has_display_value(_mapping(source_record, "source_document").get("source_url"))
+    )
+    source_missing_count = complaint_count - source_available_count
+    recent_activity_date = max(
+        (complaint.activity_date for complaint in sorted_complaints if complaint.activity_date != "unknown"),
+        default="",
+    )
+    low_data = complaint_count == 1
+    indicators = _facility_priority_indicators(
+        substantiated_count=substantiated_count,
+        delay_flag_count=delay_flag_count,
+        missing_date_count=missing_date_count,
+        source_available_count=source_available_count,
+        source_missing_count=source_missing_count,
+        recent_activity_date=recent_activity_date,
+        low_data=low_data,
+    )
+    factors = _facility_priority_factors(
+        complaint_count=complaint_count,
+        substantiated_count=substantiated_count,
+        strongest_delay_days=strongest_delay_days,
+        delay_flag_count=delay_flag_count,
+        missing_date_count=missing_date_count,
+        source_available_count=source_available_count,
+        source_missing_count=source_missing_count,
+        recent_activity_date=recent_activity_date,
+        low_data=low_data,
+    )
+    return FacilityPrioritySummary(
+        facility_identity=facility_identity,
+        facility_number=facility_number,
+        facility_name=facility_name,
+        facility_type=facility_type,
+        geography=geography,
+        complaint_count=complaint_count,
+        substantiated_count=substantiated_count,
+        recent_activity_date=recent_activity_date,
+        strongest_delay_days=strongest_delay_days,
+        delay_flag_count=delay_flag_count,
+        missing_date_count=missing_date_count,
+        source_available_count=source_available_count,
+        source_missing_count=source_missing_count,
+        low_data=low_data,
+        indicators=indicators,
+        factors=factors,
+        complaints=sorted_complaints,
+    )
+
+
+def _facility_priority_identity(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> str:
+    facility = _facility_context(related_records)
+    if facility is not None:
+        for key in ("facility_id", "external_facility_number", "facility_number"):
+            value = facility.get(key)
+            if _has_display_value(value):
+                return _display_value(value)
+    identity = _mapping(source_record, "identity")
+    facility_id = _optional_string(identity, "facility_id")
+    if facility_id != "unknown":
+        return facility_id
+    original_values = _mapping(source_record, "original_values")
+    for key in ("facility_id", "external_facility_number", "facility_number"):
+        value = original_values.get(key)
+        if _has_display_value(value):
+            return _display_value(value)
+    return f"unknown:{_string(identity, 'source_record_key')}"
+
+
+def _facility_priority_facility_number(
+    source_record: Mapping[str, Any],
+    facility: Mapping[str, Any] | None,
+) -> str:
+    for value in (
+        _facility_context_value(facility, "external_facility_number"),
+        _facility_context_value(facility, "facility_number"),
+        _complaint_export_row_facility_number(source_record, CcldQueueReturnContext()),
+    ):
+        if value != "unknown":
+            return value.rsplit(":", 1)[-1] if value.startswith("ccld:facility:") else value
+    return "unknown"
+
+
+def _facility_priority_complaint(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> FacilityPriorityComplaint:
+    identity = _mapping(source_record, "identity")
+    original_values = _mapping(source_record, "original_values")
+    source_document = _mapping(source_record, "source_document")
+    source_record_key = _string(identity, "source_record_key")
+    activity_date = _facility_priority_activity_date(original_values)
+    source_url = _optional_string(source_document, "source_url")
+    return FacilityPriorityComplaint(
+        source_record_key=source_record_key,
+        stable_complaint_id=_optional_string(identity, "stable_source_id"),
+        complaint_control_number=_optional_string(original_values, "complaint_control_number"),
+        activity_date=activity_date,
+        finding=_optional_string(original_values, "finding"),
+        detail_href=_reviewer_detail_href(source_record_key, CcldQueueReturnContext()),
+        source_url_href=source_url if _has_display_value(source_url) and source_url != "unknown" else "",
+    )
+
+
+def _facility_priority_activity_date(original_values: Mapping[str, Any]) -> str:
+    dates = [
+        _optional_string(original_values, field_name)
+        for field_name in (
+            "complaint_received_date",
+            "visit_date",
+            "report_date",
+            "date_signed",
+        )
+    ]
+    valid_dates = [value for value in dates if _looks_like_iso_date(value)]
+    return max(valid_dates) if valid_dates else "unknown"
+
+
+def _looks_like_iso_date(value: str) -> bool:
+    return len(value) == 10 and value[4] == "-" and value[7] == "-"
+
+
+def _facility_priority_complaint_sort_key(
+    complaint: FacilityPriorityComplaint,
+) -> tuple[bool, str, str]:
+    return (
+        complaint.activity_date == "unknown",
+        _reverse_iso_date_key(complaint.activity_date),
+        complaint.source_record_key,
+    )
+
+
+def _source_priority_strongest_delay(values: Mapping[str, Any]) -> int:
+    for days in (120, 90, 60, 30):
+        if values.get(f"review_delay_over_{days}_days") is True:
+            return days
+    return 0
+
+
+def _facility_priority_missing_dates(values: Mapping[str, Any]) -> bool:
+    return (
+        values.get("missing_first_activity_date") is True
+        or not _has_display_value(values.get("visit_date"))
+        or not _has_display_value(values.get("report_date"))
+        or not _has_display_value(values.get("date_signed"))
+    )
+
+
+def _facility_priority_indicators(
+    *,
+    substantiated_count: int,
+    delay_flag_count: int,
+    missing_date_count: int,
+    source_available_count: int,
+    source_missing_count: int,
+    recent_activity_date: str,
+    low_data: bool,
+) -> tuple[str, ...]:
+    indicators: list[str] = []
+    if substantiated_count:
+        indicators.append("substantiated")
+    if delay_flag_count:
+        indicators.append("delay")
+    if missing_date_count:
+        indicators.append("missing_dates")
+    if source_available_count:
+        indicators.append("source_available")
+    if source_missing_count:
+        indicators.append("source_link_missing")
+    if recent_activity_date:
+        indicators.append("recent_activity")
+    if low_data:
+        indicators.append("low_data")
+    return tuple(indicators)
+
+
+def _facility_priority_factors(
+    *,
+    complaint_count: int,
+    substantiated_count: int,
+    strongest_delay_days: int,
+    delay_flag_count: int,
+    missing_date_count: int,
+    source_available_count: int,
+    source_missing_count: int,
+    recent_activity_date: str,
+    low_data: bool,
+) -> tuple[str, ...]:
+    factors = [f"{complaint_count} deduplicated loaded complaint record(s)."]
+    if substantiated_count:
+        factors.append(f"{substantiated_count} source-derived substantiated/equivalent finding(s).")
+    if delay_flag_count:
+        factors.append(
+            f"{delay_flag_count} complaint record(s) with timing review flags; strongest available flag is {strongest_delay_days}+ days."
+        )
+    if missing_date_count:
+        factors.append(f"{missing_date_count} complaint record(s) with missing local date context.")
+    if recent_activity_date:
+        factors.append(f"Most recent supported loaded activity: {_detail_display_date(recent_activity_date)}.")
+    if source_available_count:
+        factors.append(f"{source_available_count} complaint record(s) with an original public report link.")
+    if source_missing_count:
+        factors.append(f"{source_missing_count} complaint record(s) missing an original public report link.")
+    if low_data:
+        factors.append("Low-data facility: one loaded complaint record, so review cues are limited.")
+    return tuple(factors)
+
+
+def _filter_facility_priority_summaries(
+    summaries: list[FacilityPrioritySummary],
+    filters: FacilityPrioritiesFilters,
+) -> list[FacilityPrioritySummary]:
+    return [
+        summary
+        for summary in summaries
+        if _facility_priority_matches_filters(summary, filters)
+    ]
+
+
+def _facility_priority_matches_filters(
+    summary: FacilityPrioritySummary,
+    filters: FacilityPrioritiesFilters,
+) -> bool:
+    if not _facility_priority_text_matches(summary.facility_type, filters.facility_type):
+        return False
+    if not _facility_priority_text_matches(summary.geography, filters.geography):
+        return False
+    if summary.complaint_count < filters.min_complaints:
+        return False
+    if summary.substantiated_count < filters.min_substantiated:
+        return False
+    if filters.indicator != "all" and filters.indicator not in summary.indicators:
+        return False
+    if filters.start_date is None and filters.end_date is None:
+        return True
+    return any(
+        complaint.activity_date != "unknown"
+        and (filters.start_date is None or complaint.activity_date >= filters.start_date)
+        and (filters.end_date is None or complaint.activity_date <= filters.end_date)
+        for complaint in summary.complaints
+    )
+
+
+def _facility_priority_text_matches(value: str, filter_value: str) -> bool:
+    normalized_filter = " ".join(filter_value.casefold().split())
+    if not normalized_filter:
+        return True
+    normalized_value = " ".join(value.casefold().split())
+    return normalized_filter in normalized_value
+
+
+def _sort_facility_priority_summaries(
+    summaries: list[FacilityPrioritySummary],
+) -> list[FacilityPrioritySummary]:
+    return sorted(summaries, key=_facility_priority_sort_key)
+
+
+def _facility_priority_sort_key(
+    summary: FacilityPrioritySummary,
+) -> tuple[int, int, int, str, str, str]:
+    return (
+        -summary.substantiated_count,
+        -summary.complaint_count,
+        -summary.strongest_delay_days,
+        _reverse_iso_date_key(summary.recent_activity_date or "unknown"),
+        summary.facility_name.casefold(),
+        summary.facility_identity.casefold(),
+    )
+
+
+def _paginate_facility_priority_summaries(
+    summaries: list[FacilityPrioritySummary],
+    filters: FacilityPrioritiesFilters,
+) -> tuple[list[FacilityPrioritySummary], Mapping[str, int]]:
+    total_pages = max((len(summaries) + filters.page_size - 1) // filters.page_size, 1)
+    page = min(filters.page, total_pages)
+    start = (page - 1) * filters.page_size
+    end = start + filters.page_size
+    return summaries[start:end], {
+        "page": page,
+        "page_size": filters.page_size,
+        "total_pages": total_pages,
+        "offset": start,
+    }
+
+
+def _render_facility_priorities(
+    summaries: list[FacilityPrioritySummary],
+    *,
+    filters: FacilityPrioritiesFilters,
+    result_count: int,
+    total_facility_count: int,
+    all_summaries: list[FacilityPrioritySummary],
+    pagination: Mapping[str, int],
+    actor_label: str | None,
+) -> str:
+    filter_markup = _render_facility_priorities_filter_form(filters, all_summaries)
+    summary = _render_facility_priorities_count_summary(
+        result_count,
+        total_facility_count,
+        pagination,
+    )
+    if not summaries:
+        list_markup = f"""        <section class="hero-card" aria-labelledby="facility-priorities-empty-heading">
+          <h2 id="facility-priorities-empty-heading">No facility priority rows matched.</h2>
+          {summary}
+          <p>Adjust the filters or clear them to return to all authorized loaded facilities with deduplicated complaint records.</p>
+        </section>"""
+    else:
+        rows = "\n".join(_render_facility_priority_row(summary) for summary in summaries)
+        list_markup = f"""        <section aria-labelledby="facility-priorities-results-heading">
+          <h2 id="facility-priorities-results-heading">Facility review priority worklist</h2>
+          {summary}
+          <table>
+            <caption>Explainable facility review prioritization over authorized loaded complaint records</caption>
+            <thead>
+              <tr>
+                <th scope="col">Facility</th>
+                <th scope="col">Facility type</th>
+                <th scope="col">Geography</th>
+                <th scope="col">Complaint count</th>
+                <th scope="col">Substantiated count</th>
+                <th scope="col">Recent activity</th>
+                <th scope="col">Contributing factors</th>
+                <th scope="col">Continue review</th>
+              </tr>
+            </thead>
+            <tbody>
+{rows}
+            </tbody>
+          </table>
+          {_render_facility_priorities_pagination(filters, pagination, result_count)}
+        </section>"""
+    return _page(
+        title="Facility review priorities",
+        heading="Facility review priorities",
+        actor_label=actor_label,
+        main=f"""
+        <section class="quiet-section" aria-labelledby="facility-priorities-decision-heading">
+          <h2 id="facility-priorities-decision-heading">Find facilities that may deserve review first</h2>
+          <p>This reviewer worklist aggregates authorized loaded complaint records by stable source-derived facility identity and shows the source-derived factors that surfaced each facility. It does not use a hidden score, machine learning, or unsupported legal conclusions.</p>
+          <p>Counts are based on deduplicated complaint identities in the loaded corpus available to this reviewer. Missing values are shown as unknown, and missing source links are identified rather than silently omitted.</p>
+        </section>
+{filter_markup}
+{list_markup}
+        {_render_facility_priority_rules_disclosure()}
+        <section class="quiet-section" aria-labelledby="facility-priorities-next-heading">
+          <h2 id="facility-priorities-next-heading">Next steps</h2>
+          <ul>
+            <li><a href="{REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH}">Open substantiated complaint worklist</a></li>
+            <li><a href="{REVIEWER_UI_RECORDS_PATH}">Return to review queue</a></li>
+            <li><a href="{CCLD_RECORD_REQUEST_PATH}">Return to CCLD request queue</a></li>
+          </ul>
+        </section>
+""",
+    )
+
+
+def _render_facility_priorities_filter_form(
+    filters: FacilityPrioritiesFilters,
+    all_summaries: list[FacilityPrioritySummary],
+) -> str:
+    facility_type_options = _substantiated_filter_options(
+        summary.facility_type for summary in all_summaries
+    )
+    geography_options = _substantiated_filter_options(
+        summary.geography for summary in all_summaries
+    )
+    return f"""        <section class="quiet-section" aria-labelledby="facility-priorities-filters-heading">
+          <h2 id="facility-priorities-filters-heading">Filter</h2>
+          <form class="compact-filter-form" method="get" action="{REVIEWER_UI_FACILITY_PRIORITIES_PATH}">
+            <div class="facility-intelligence-filter-grid">
+              <p>
+                <label for="facility-priorities-start-date">From activity date</label>
+                <input id="facility-priorities-start-date" name="start_date" type="date" value="{_escape(filters.start_date or '')}">
+              </p>
+              <p>
+                <label for="facility-priorities-end-date">To activity date</label>
+                <input id="facility-priorities-end-date" name="end_date" type="date" value="{_escape(filters.end_date or '')}">
+              </p>
+              <p>
+                <label for="facility-priorities-facility-type">Facility type</label>
+                <input id="facility-priorities-facility-type" name="facility_type" value="{_escape(filters.facility_type)}" list="facility-priorities-facility-types">
+                <datalist id="facility-priorities-facility-types">{facility_type_options}</datalist>
+              </p>
+              <p>
+                <label for="facility-priorities-geography">Geography</label>
+                <input id="facility-priorities-geography" name="geography" value="{_escape(filters.geography)}" list="facility-priorities-geographies">
+                <datalist id="facility-priorities-geographies">{geography_options}</datalist>
+              </p>
+              <p>
+                <label for="facility-priorities-min-complaints">Minimum complaint count</label>
+                <input id="facility-priorities-min-complaints" name="min_complaints" type="number" min="0" max="9999" value="{filters.min_complaints}">
+              </p>
+              <p>
+                <label for="facility-priorities-min-substantiated">Minimum substantiated count</label>
+                <input id="facility-priorities-min-substantiated" name="min_substantiated" type="number" min="0" max="9999" value="{filters.min_substantiated}">
+              </p>
+              <p>
+                <label for="facility-priorities-indicator">Supported indicator</label>
+                <select id="facility-priorities-indicator" name="indicator">
+                  {_facility_priority_indicator_option(filters.indicator, "all", "All supported indicators")}
+                  {_facility_priority_indicator_option(filters.indicator, "substantiated", "Substantiated/equivalent findings")}
+                  {_facility_priority_indicator_option(filters.indicator, "delay", "Timing review flags")}
+                  {_facility_priority_indicator_option(filters.indicator, "missing_dates", "Missing date context")}
+                  {_facility_priority_indicator_option(filters.indicator, "source_available", "Original report link available")}
+                  {_facility_priority_indicator_option(filters.indicator, "source_link_missing", "Original report link missing")}
+                  {_facility_priority_indicator_option(filters.indicator, "recent_activity", "Supported recent activity")}
+                  {_facility_priority_indicator_option(filters.indicator, "low_data", "Low-data facilities")}
+                </select>
+              </p>
+              <p>
+                <label for="facility-priorities-page-size">Rows per page</label>
+                <select id="facility-priorities-page-size" name="page_size">
+                  {_substantiated_page_size_option(filters.page_size, 10)}
+                  {_substantiated_page_size_option(filters.page_size, 25)}
+                  {_substantiated_page_size_option(filters.page_size, 50)}
+                  {_substantiated_page_size_option(filters.page_size, 100)}
+                </select>
+              </p>
+            </div>
+            <div class="form-actions">
+              <button class="button" type="submit">Apply filters</button>
+              <a class="button button-secondary" href="{REVIEWER_UI_FACILITY_PRIORITIES_PATH}">Clear filters</a>
+            </div>
+          </form>
+        </section>"""
+
+
+def _facility_priority_indicator_option(current: str, value: str, label: str) -> str:
+    selected = ' selected="selected"' if current == value else ""
+    return f'<option value="{_escape(value)}"{selected}>{_escape(label)}</option>'
+
+
+def _render_facility_priorities_count_summary(
+    result_count: int,
+    total_facility_count: int,
+    pagination: Mapping[str, int],
+) -> str:
+    page = pagination["page"]
+    page_size = pagination["page_size"]
+    offset = pagination["offset"]
+    if result_count == 0:
+        shown_range = "Showing 0"
+    else:
+        first = offset + 1
+        last = min(offset + page_size, result_count)
+        shown_range = f"Showing {first}-{last}"
+    return (
+        f"<p>{shown_range} of {result_count} matching facility priority row(s); "
+        f"{total_facility_count} total authorized loaded facility row(s) with "
+        "deduplicated complaint records.</p>"
+        f"<p class=\"helper-text\">Page {page} of {pagination['total_pages']}.</p>"
+    )
+
+
+def _render_facility_priority_row(summary: FacilityPrioritySummary) -> str:
+    factors = "\n".join(f"              <li>{_escape(factor)}</li>" for factor in summary.factors)
+    complaint_queue_href = _facility_priority_queue_href(summary)
+    next_complaint = summary.complaints[0] if summary.complaints else None
+    next_review_link = ""
+    source_link = "Original public report link not available for the first qualifying complaint."
+    if next_complaint is not None:
+        next_review_link = f'<a class="button" href="{_escape(next_complaint.detail_href)}">Open next complaint review workspace</a>'
+        if next_complaint.source_url_href:
+            suffix = (
+                f" for {next_complaint.complaint_control_number}"
+                if next_complaint.complaint_control_number != "unknown"
+                else ""
+            )
+            source_link = f'<a href="{_escape(next_complaint.source_url_href)}">Open original public report{_escape(suffix)}</a>'
+    return f"""        <tr>
+          <th scope="row">{_escape(summary.facility_name)}<br><span class="helper-text">Facility ID: {_escape(summary.facility_number)}</span></th>
+          <td>{_escape(summary.facility_type)}</td>
+          <td>{_escape(summary.geography)}</td>
+          <td>{summary.complaint_count}</td>
+          <td>{summary.substantiated_count}</td>
+          <td>{_escape(_detail_display_date(summary.recent_activity_date) if summary.recent_activity_date else "unknown")}</td>
+          <td>
+            <ul class="compact-list">
+{factors}
+            </ul>
+          </td>
+          <td>
+            <div class="form-actions">
+              <a class="button button-secondary" href="{_escape(complaint_queue_href)}">Open qualifying complaint queue</a>
+              {next_review_link}
+            </div>
+            <p>{source_link}</p>
+          </td>
+        </tr>"""
+
+
+def _facility_priority_queue_href(summary: FacilityPrioritySummary) -> str:
+    query_values = {
+        "facility_number": summary.facility_number if summary.facility_number != "unknown" else summary.facility_identity,
+        "request_context_origin": "facility_priority_worklist",
+    }
+    return f"{CCLD_RECORD_REQUEST_PATH}?{urlencode(query_values)}"
+
+
+def _render_facility_priorities_pagination(
+    filters: FacilityPrioritiesFilters,
+    pagination: Mapping[str, int],
+    result_count: int,
+) -> str:
+    if result_count <= filters.page_size:
+        return ""
+    page = pagination["page"]
+    total_pages = pagination["total_pages"]
+    links = []
+    if page > 1:
+        links.append(
+            f'<a class="button button-secondary" href="{_escape(_facility_priorities_page_href(filters, page - 1))}">Previous page</a>'
+        )
+    if page < total_pages:
+        links.append(
+            f'<a class="button button-secondary" href="{_escape(_facility_priorities_page_href(filters, page + 1))}">Next page</a>'
+        )
+    return f"""          <nav class="form-actions" aria-label="Facility priorities pagination">
+            {"".join(links)}
+          </nav>"""
+
+
+def _facility_priorities_page_href(
+    filters: FacilityPrioritiesFilters,
+    page: int,
+) -> str:
+    query_values = {
+        "start_date": filters.start_date or "",
+        "end_date": filters.end_date or "",
+        "facility_type": filters.facility_type,
+        "geography": filters.geography,
+        "min_complaints": str(filters.min_complaints),
+        "min_substantiated": str(filters.min_substantiated),
+        "indicator": filters.indicator,
+        "page_size": str(filters.page_size),
+        "page": str(page),
+    }
+    return f"{REVIEWER_UI_FACILITY_PRIORITIES_PATH}?{urlencode(query_values)}"
+
+
+def _render_facility_priority_rules_disclosure() -> str:
+    return """        <details class="technical-details notice-card">
+          <summary>Prioritization and tie rules</summary>
+          <p>This page uses deterministic contributing factors only: deduplicated loaded complaint count, substantiated/equivalent finding count, existing timing review flags, missing local date context, source-link availability, supported recent activity, and low-data status.</p>
+          <p>Rows are ordered by substantiated/equivalent count descending, complaint count descending, strongest timing review flag descending, recent activity descending, facility name ascending, then stable facility identity ascending. These rules are visible ordering rules, not a stored or hidden risk score.</p>
+        </details>"""
 
 
 def _substantiated_triage_response(

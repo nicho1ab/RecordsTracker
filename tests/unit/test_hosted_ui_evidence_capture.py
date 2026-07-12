@@ -45,11 +45,13 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "$IncludeScreenshots = $true",
         "AllowUnavailable",
         "Issue415",
+        "Issue416",
         "manifest.json",
         "route-status.csv",
         "route-assertions.csv",
         "issue-415-count-summaries.csv",
         "issue-415-href-inventory.csv",
+        "issue-416-count-summaries.csv",
         "route-text-markers.txt",
         "keyboard flow text",
         "accessibility",
@@ -76,6 +78,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "/ccld/records/request",
         "/ccld/retrieval/jobs",
         "/reviewer",
+        "/reviewer/facilities/priorities",
         "/reviewer/records/substantiated",
         "/reviewer/records/matrix.csv",
         "/feedback",
@@ -91,6 +94,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     assert "#complaint-export-controls" in script
     assert "complaint export" in script.lower()
     assert "-Issue415" in script
+    assert "-Issue416" in script
     for issue_415_route in (
         "/reviewer/records/substantiated?facility=107207198",
         "/reviewer/records/substantiated?facility_type=FOSTER%20FAMILY%20AGENCY",
@@ -108,6 +112,20 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "True browser zoom is not controlled by this script",
     ):
         assert issue_415_assertion in script
+    for issue_416_route in (
+        "/reviewer/facilities/priorities?facility_type=FOSTER%20FAMILY%20AGENCY&geography=Kern&min_complaints=1&min_substantiated=0&indicator=source_available",
+        "/reviewer/facilities/priorities?page_size=10",
+        "/reviewer/facilities/priorities?min_complaints=9999",
+    ):
+        assert issue_416_route in script
+    for issue_416_assertion in (
+        "issue416 h1",
+        "issue416 no hidden score",
+        "issue416 filtered controls",
+        "issue416 page size",
+        "issue416 filtered empty",
+    ):
+        assert issue_416_assertion in script
 
 
 def test_capture_script_review_context_is_get_only_and_non_mutating() -> None:
@@ -281,6 +299,67 @@ def test_capture_script_issue_415_mode_writes_focused_artifacts() -> None:
         assert "True browser zoom is not controlled by this script" in json.dumps(
             manifest
         )
+    finally:
+        shutil.rmtree(output_dir, ignore_errors=True)
+
+
+def test_capture_script_issue_416_mode_writes_focused_artifacts() -> None:
+    output_dir = ROOT / "data" / "processed" / "ui-evidence-test"
+    shutil.rmtree(output_dir, ignore_errors=True)
+    try:
+        result = subprocess.run(
+            [
+                powershell(),
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(CAPTURE_SCRIPT),
+                "-BaseUrl",
+                "http://127.0.0.1:9",
+                "-Mode",
+                "live",
+                "-OutputDir",
+                "data/processed/ui-evidence-test",
+                "-TimeoutSeconds",
+                "1",
+                "-IncludeScreenshots:$false",
+                "-Issue416",
+                "-AllowUnavailable",
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        output = plain_output(result)
+
+        assert result.returncode == 0, output
+        packets = sorted(output_dir.glob("*-live-issue-416"))
+        assert packets, output
+        packet = packets[-1]
+        manifest = json.loads((packet / "manifest.json").read_text(encoding="utf-8-sig"))
+        count_csv = (packet / "issue-416-count-summaries.csv").read_text(
+            encoding="utf-8-sig"
+        )
+        assertions_csv = (packet / "route-assertions.csv").read_text(
+            encoding="utf-8-sig"
+        )
+        capture_command = (packet / "diagnostics" / "capture-command.txt").read_text(
+            encoding="utf-8-sig"
+        )
+
+        assert (packet / "issue-416-count-summaries.csv").exists()
+        assert manifest["issue416"]["enabled"] is True
+        assert manifest["issue416"]["routeCount"] == 4
+        assert manifest["output"]["counts"]["issue416"] == 1
+        assert len(manifest["routeList"]) == 4
+        assert "/reviewer/facilities/priorities?page_size=10" in count_csv
+        assert "issue416 h1" in assertions_csv
+        assert "-Issue416" in capture_command
+        assert "Focused issue #416 facility prioritization evidence" in manifest[
+            "evidencePurpose"
+        ]
     finally:
         shutil.rmtree(output_dir, ignore_errors=True)
 
