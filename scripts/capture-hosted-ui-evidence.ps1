@@ -29,6 +29,8 @@ When set, route failures are recorded in the manifest instead of failing the scr
 Capture the focused issue #415 substantiated-worklist evidence routes and assertions.
 .PARAMETER Issue416
 Capture the focused issue #416 facility-priorities evidence routes and assertions.
+.PARAMETER Issue417
+Capture the focused issue #417 serious-topic worklist evidence routes and assertions.
 .EXAMPLE
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8003 -Mode live
 .EXAMPLE
@@ -37,6 +39,8 @@ Capture the focused issue #416 facility-priorities evidence routes and assertion
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://192.168.1.122:8003 -Mode live -Issue415
 .EXAMPLE
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://192.168.1.122:8003 -Mode live -Issue416
+.EXAMPLE
+.\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://192.168.1.122:8003 -Mode live -Issue417
 .NOTES
 Run from the repository root. Generated packets capture local hosted UI route,
 text, assertion, accessibility, and screenshot evidence for reviewer inspection.
@@ -67,12 +71,17 @@ param(
 
     [switch]$Issue415,
 
-    [switch]$Issue416
+    [switch]$Issue416,
+
+    [switch]$Issue417
 )
 
 $ErrorActionPreference = "Stop"
 
-$evidencePurpose = if ($Issue416) {
+$evidencePurpose = if ($Issue417) {
+    "Focused issue #417 serious-topic complaint worklist evidence for route status, category/cue separation, filters, links, accessibility snapshots, and screenshots."
+}
+elseif ($Issue416) {
     "Focused issue #416 facility prioritization evidence for route status, deterministic factor text, filters, pagination, accessibility snapshots, and screenshots."
 }
 elseif ($Issue415) {
@@ -305,6 +314,7 @@ function Test-RouteOrientationMarker {
         "jobs" = @("Job diagnostics", "Track Request Records jobs")
         "reviewer" = @("Complaint records ready for review", "Worklist")
         "substantiated-triage" = @("substantiated complaint triage", "Source-derived finding")
+        "serious-topics" = @("Serious-topic complaint worklist", "Filter serious review themes")
         "facility-priorities" = @("Facility review priorities", "Find facilities that may deserve review first")
         "packet-preview-empty" = @("Review packet preview", "No facility/date packet context was supplied.")
         "packet-preview-context" = @("Review packet preview", "Packet preparation preview")
@@ -574,6 +584,87 @@ function Test-Issue416RouteAssertions {
     }
 }
 
+function Get-Issue417CountSummary {
+    param([string]$Text)
+    $summary = [pscustomobject]@{ Found = $false; First = 0; Last = 0; Matching = 0; Total = 0; Raw = "" }
+    $pattern = "Showing\s+(?<first>\d+)(?:-(?<last>\d+))?\s+of\s+(?<matching>\d+)\s+matching\s+serious-topic\s+complaint\s+record\(s\);\s+(?<total>\d+)\s+total\s+qualifying"
+    $match = [regex]::Match($Text, $pattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    if (-not $match.Success) { return $summary }
+    $first = [int]$match.Groups["first"].Value
+    $last = if ($match.Groups["last"].Success) { [int]$match.Groups["last"].Value } else { $first }
+    if ($first -eq 0) { $last = 0 }
+    return [pscustomobject]@{
+        Found    = $true
+        First    = $first
+        Last     = $last
+        Matching = [int]$match.Groups["matching"].Value
+        Total    = [int]$match.Groups["total"].Value
+        Raw      = $match.Value
+    }
+}
+
+function Get-Issue417Rows {
+    param([string]$Html)
+    $rows = @()
+    foreach ($match in [regex]::Matches($Html, "(?is)<tbody[^>]*>.*?</tbody>")) {
+        foreach ($rowMatch in [regex]::Matches($match.Value, "(?is)<tr[^>]*>(.*?)</tr>")) {
+            $rowHtml = $rowMatch.Groups[1].Value
+            $rowText = ConvertFrom-HtmlText -Html $rowHtml
+            $facilityName = Get-FirstHtmlMatch -Html $rowHtml -Pattern "<th[^>]*>(.*?)</th>"
+            $facilityIdMatch = [regex]::Match($rowText, "Facility ID:?\s+(?<value>[A-Za-z0-9:._-]+)", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+            $dateMatch = [regex]::Match($rowText, "\b\d{2}/\d{2}/\d{4}\b")
+            $keyMatch = [regex]::Match($rowHtml, "source_record_key=([^""'&]+)", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+            $rows += [pscustomobject]@{
+                facilityName    = $facilityName
+                facilityId      = if ($facilityIdMatch.Success) { $facilityIdMatch.Groups["value"].Value } else { "" }
+                date            = if ($dateMatch.Success) { $dateMatch.Value } else { "" }
+                sourceRecordKey = if ($keyMatch.Success) { [System.Net.WebUtility]::UrlDecode($keyMatch.Groups[1].Value) } else { "" }
+                text            = $rowText
+            }
+        }
+    }
+    return @($rows)
+}
+
+function Add-Issue417PassFail {
+    param([System.Collections.ArrayList]$Assertions, [string]$RouteName, [string]$Check, [bool]$Pass, [string]$PassMessage, [string]$FailMessage)
+    if ($Pass) { Add-AssertionResult -Target $Assertions -RouteName $RouteName -Check $Check -Status "PASS" -Message $PassMessage }
+    else { Add-AssertionResult -Target $Assertions -RouteName $RouteName -Check $Check -Status "FAIL" -Message $FailMessage }
+}
+
+function Test-Issue417RouteAssertions {
+    param([hashtable]$Route, [string]$Html, [string]$Text, [System.Collections.ArrayList]$Assertions)
+    if (-not $Route.ContainsKey("Issue417Kind")) { return }
+    $name = [string]$Route.Name
+    $kind = [string]$Route.Issue417Kind
+    $counts = Get-Issue417CountSummary -Text $Text
+    $rows = @(Get-Issue417Rows -Html $Html)
+    Add-Issue417PassFail -Assertions $Assertions -RouteName $name -Check "issue417 count summary" -Pass $counts.Found -PassMessage "Serious-topic count summary found." -FailMessage "Serious-topic count summary missing."
+    Add-Issue417PassFail -Assertions $Assertions -RouteName $name -Check "issue417 h1" -Pass ($Html.Contains("<h1") -and $Text.Contains("Serious-topic complaint worklist")) -PassMessage "Expected serious-topic worklist H1 found." -FailMessage "Expected serious-topic worklist H1 missing."
+    Add-Issue417PassFail -Assertions $Assertions -RouteName $name -Check "issue417 cautious wording" -Pass ($Text.Contains("Keyword cues are not findings") -and -not ($Text -match "(?i)verified abuse|legal finding|facility-wide conclusion")) -PassMessage "Cautious serious-topic wording found." -FailMessage "Cautious wording missing or unsupported conclusion found."
+    Add-Issue417PassFail -Assertions $Assertions -RouteName $name -Check "issue417 controls labeled" -Pass (($Html -match "(?is)<label[^>]*>.*?</label>") -and $Html.Contains('name="topic"') -and $Html.Contains('name="match_basis"')) -PassMessage "Expected labeled topic and basis controls found." -FailMessage "Expected topic or basis controls missing."
+    Add-Issue417PassFail -Assertions $Assertions -RouteName $name -Check "issue417 semantic table" -Pass (($rows.Count -eq 0) -or (($Html -match "(?is)<caption[^>]*>.*?</caption>") -and ($Html -match "(?is)<th\b"))) -PassMessage "Semantic table caption/headings found when rows are rendered." -FailMessage "Semantic table caption/headings missing."
+    Add-Issue417PassFail -Assertions $Assertions -RouteName $name -Check "issue417 no narrative leak" -Pass (-not ($Text -match "(?i)DO NOT SHOW|raw_path|provider_subject|connection string|token")) -PassMessage "No raw narrative or private marker found." -FailMessage "Raw narrative or private marker found."
+    if ($kind -eq "default") {
+        Add-Issue417PassFail -Assertions $Assertions -RouteName $name -Check "issue417 default total" -Pass ($counts.Found -and $counts.Total -ge 0) -PassMessage "Default route count summary parsed." -FailMessage "Default route count summary did not parse."
+        Add-Issue417PassFail -Assertions $Assertions -RouteName $name -Check "issue417 category/cue wording" -Pass ($Text.Contains("Source category") -and $Text.Contains("Keyword-assisted cue")) -PassMessage "Source category and keyword cue wording found." -FailMessage "Category/cue separation wording missing."
+        Add-Issue417PassFail -Assertions $Assertions -RouteName $name -Check "issue417 links" -Pass ($Text.Contains("Open original public report") -and $Text.Contains("Open complaint review workspace")) -PassMessage "Original-source and complaint workspace links found." -FailMessage "Original-source or workspace link missing."
+    }
+    elseif ($kind -eq "source-category") {
+        Add-Issue417PassFail -Assertions $Assertions -RouteName $name -Check "issue417 source category basis" -Pass ($Text.Contains("Source category")) -PassMessage "Source-category basis text found." -FailMessage "Source-category basis text missing."
+    }
+    elseif ($kind -eq "keyword-cue") {
+        Add-Issue417PassFail -Assertions $Assertions -RouteName $name -Check "issue417 keyword cue basis" -Pass ($Text.Contains("Keyword-assisted cue") -or $counts.Matching -eq 0) -PassMessage "Keyword-cue basis text found or no matching rows." -FailMessage "Keyword-cue basis text missing."
+    }
+    elseif ($kind -eq "filtered") {
+        Add-Issue417PassFail -Assertions $Assertions -RouteName $name -Check "issue417 filtered controls" -Pass ($Html.Contains('name="finding"') -and $Html.Contains('name="facility"') -and $Html.Contains('name="geography"') -and $Html.Contains('name="start_date"')) -PassMessage "Expected combined filter controls found." -FailMessage "One or more combined filter controls missing."
+    }
+    elseif ($kind -eq "empty") {
+        Add-Issue417PassFail -Assertions $Assertions -RouteName $name -Check "issue417 filtered empty" -Pass ($counts.Found -and $counts.Matching -eq 0 -and $Text.Contains("No serious-topic complaint records matched.")) -PassMessage "Filtered-empty state found." -FailMessage "Filtered-empty state missing."
+        Add-Issue417PassFail -Assertions $Assertions -RouteName $name -Check "issue417 clear filters" -Pass $Text.Contains("Clear filters") -PassMessage "Clear filters action found." -FailMessage "Clear filters action missing."
+    }
+}
+
 function Get-SafeDynamicHref {
     param([string]$Html, [string]$Pattern)
     $match = [regex]::Match($Html, $Pattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
@@ -609,7 +700,7 @@ try {
     $baseUri = [System.Uri]::new($BaseUrl)
     $normalizedBaseUrl = $baseUri.GetLeftPart([System.UriPartial]::Authority).TrimEnd("/")
     $timestamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmssZ")
-    $packetName = if ($Issue416) { "$timestamp-$Mode-issue-416" } elseif ($Issue415) { "$timestamp-$Mode-issue-415" } else { "$timestamp-$Mode" }
+    $packetName = if ($Issue417) { "$timestamp-$Mode-issue-417" } elseif ($Issue416) { "$timestamp-$Mode-issue-416" } elseif ($Issue415) { "$timestamp-$Mode-issue-415" } else { "$timestamp-$Mode" }
     $outputRoot = Join-Path $PWD $OutputDir
     $packetDir = Join-Path $outputRoot $packetName
     $zipPath = Join-Path $outputRoot "$packetName.zip"
@@ -631,6 +722,7 @@ try {
         @{ Name = "reviewer"; Path = "/reviewer"; Label = "05-reviewer"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
         @{ Name = "facility-priorities"; Path = "/reviewer/facilities/priorities"; Label = "05-facility-priorities"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
         @{ Name = "substantiated-triage"; Path = "/reviewer/records/substantiated"; Label = "05-substantiated-triage"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
+        @{ Name = "serious-topics"; Path = "/reviewer/records/serious-topics"; Label = "05-serious-topics"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
         @{ Name = "matrix-export"; Path = "/reviewer/records/matrix.csv?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry"; Label = "05-matrix-export" },
         @{ Name = "packet-preview-empty"; Path = "/reviewer/packet/preview"; Label = "06-packet-preview-empty"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
         @{ Name = "packet-preview-context"; Path = "/reviewer/packet/preview?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry"; Label = "06-packet-preview-context"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
@@ -653,7 +745,14 @@ try {
         @{ Name = "issue-416-pagination"; Path = "/reviewer/facilities/priorities?page_size=10"; Label = "issue-416-03-pagination"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue416Kind = "pagination" },
         @{ Name = "issue-416-empty"; Path = "/reviewer/facilities/priorities?min_complaints=9999"; Label = "issue-416-04-empty"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue416Kind = "empty" }
     )
-    $routesToCapture = if ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
+    $issue417Routes = @(
+        @{ Name = "issue-417-default"; Path = "/reviewer/records/serious-topics"; Label = "issue-417-01-default"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue417Kind = "default" },
+        @{ Name = "issue-417-source-category"; Path = "/reviewer/records/serious-topics?match_basis=source-category"; Label = "issue-417-02-source-category"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue417Kind = "source-category" },
+        @{ Name = "issue-417-keyword-cue"; Path = "/reviewer/records/serious-topics?match_basis=keyword-cue"; Label = "issue-417-03-keyword-cue"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue417Kind = "keyword-cue" },
+        @{ Name = "issue-417-filtered"; Path = "/reviewer/records/serious-topics?topic=Supervision%20topic&finding=Unsubstantiated&facility=157806098&geography=Kern&start_date=2022-04-01&end_date=2022-04-30"; Label = "issue-417-04-filtered"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue417Kind = "filtered" },
+        @{ Name = "issue-417-empty"; Path = "/reviewer/records/serious-topics?topic=Runaway%2FAWOL%20topic&start_date=2099-01-01&end_date=2099-12-31"; Label = "issue-417-05-empty"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue417Kind = "empty" }
+    )
+    $routesToCapture = if ($Issue417) { $issue417Routes } elseif ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
 
     $routeResults = [System.Collections.ArrayList]::new()
     $assertions = [System.Collections.ArrayList]::new()
@@ -698,6 +797,9 @@ try {
         if ($Issue416) {
             Test-Issue416RouteAssertions -Route $Route -Html $safeHtml -Text $plainText -Assertions $assertions
         }
+        if ($Issue417) {
+            Test-Issue417RouteAssertions -Route $Route -Html $safeHtml -Text $plainText -Assertions $assertions
+        }
         if (($response.StatusCode -ge 400 -or $response.StatusCode -eq 0) -and -not $AllowUnavailable) { $failure = if ($failure) { $failure } else { "Route returned HTTP $($response.StatusCode)." } }
         [void]$routeResults.Add([pscustomobject]@{ name = $Route.Name; path = $Route.Path; label = $Route.Label; url = $url; statusCode = $response.StatusCode; title = $title; h1 = $h1; htmlPath = $htmlPath; textPath = $textPath; screenshotPath = $screenshotPath; failure = $failure })
         $routeHtmlByName[$Route.Name] = $safeHtml
@@ -721,7 +823,7 @@ try {
         }
     }
 
-    if (-not $Issue415 -and -not $Issue416) {
+    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417) {
         $jobDetailHref = Get-SafeDynamicHref -Html ([string]$routeHtmlByName["jobs"]) -Pattern 'href\s*=\s*["'']([^"'']*/ccld/retrieval/jobs/detail\?job_id=[A-Za-z0-9_.:%-]+)["'']'
         if ($jobDetailHref) { $dynamicLinks.jobDetail = $jobDetailHref; Capture-Route -Route @{ Name = "job-detail"; Path = $jobDetailHref; Label = "08-job-detail"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Status" } }
         else { Add-AssertionResult -Target $assertions -RouteName "jobs" -Check "dynamic job detail" -Status "WARN" -Message "No safe retrieval job detail link discovered." }
@@ -733,7 +835,7 @@ try {
 
     # Capture a supplemental screenshot anchored to the complaint export section from the
     # reliable reviewer queue route. This avoids depending on reviewer-detail availability.
-    if (-not $Issue415 -and -not $Issue416 -and $IncludeScreenshots -and $null -ne $screenshotTool) {
+    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and $IncludeScreenshots -and $null -ne $screenshotTool) {
         $reviewerExportAnchorUrl = (Join-RouteUrl -Base $normalizedBaseUrl -Path "/reviewer") + "#complaint-export-controls"
         $reviewerExportShotFile = Join-Path $screenshotDir "05-reviewer-complaint-exports.png"
         $reviewerExportShotError = Invoke-RouteScreenshot -Tool $screenshotTool -Url $reviewerExportAnchorUrl -ScreenshotPath $reviewerExportShotFile
@@ -809,6 +911,7 @@ try {
     $issue415CountSummaries = @()
     $issue415HrefInventory = @()
     $issue416CountSummaries = @()
+    $issue417CountSummaries = @()
     if ($Issue415) {
         foreach ($result in $routeResults) {
             $htmlText = [string]$routeHtmlByName[$result.name]
@@ -879,6 +982,38 @@ try {
         }
         Set-Content -LiteralPath (Join-Path $packetDir "route-assertions.csv") -Value ($assertionRows -join "`n") -Encoding UTF8
     }
+    if ($Issue417) {
+        foreach ($result in $routeResults) {
+            $htmlText = [string]$routeHtmlByName[$result.name]
+            $plainText = ConvertFrom-HtmlText -Html $htmlText
+            $countSummary = Get-Issue417CountSummary -Text $plainText
+            $displayedRows = @(Get-Issue417Rows -Html $htmlText)
+            $issue417CountSummaries += [pscustomobject]@{
+                route         = $result.name
+                path          = $result.path
+                found         = $countSummary.Found
+                first         = $countSummary.First
+                last          = $countSummary.Last
+                matching      = $countSummary.Matching
+                total         = $countSummary.Total
+                displayedRows = $displayedRows.Count
+                raw           = $countSummary.Raw
+            }
+        }
+        $countRows = @("route,path,found,first,last,matching,total,displayedRows,raw")
+        foreach ($summaryRow in $issue417CountSummaries) {
+            $values = @($summaryRow.route, $summaryRow.path, $summaryRow.found, $summaryRow.first, $summaryRow.last, $summaryRow.matching, $summaryRow.total, $summaryRow.displayedRows, $summaryRow.raw)
+            $countRows += (($values | ForEach-Object { '"' + ([string]$_).Replace('"', '""') + '"' }) -join ",")
+        }
+        Set-Content -LiteralPath (Join-Path $packetDir "issue-417-count-summaries.csv") -Value ($countRows -join "`n") -Encoding UTF8
+        $assertionRows = @("route,check,status,message")
+        foreach ($assertion in $assertions) {
+            $values = @($assertion.route, $assertion.check, $assertion.status, $assertion.message)
+            $escaped = $values | ForEach-Object { '"' + ([string]$_).Replace('"', '""') + '"' }
+            $assertionRows += ($escaped -join ",")
+        }
+        Set-Content -LiteralPath (Join-Path $packetDir "route-assertions.csv") -Value ($assertionRows -join "`n") -Encoding UTF8
+    }
 
     $gitBranch = (git branch --show-current 2>$null) -join ""
     $gitCommit = (git rev-parse HEAD 2>$null) -join ""
@@ -887,7 +1022,7 @@ try {
     $gitStatusText = if ($workingTreeClean) { "clean" } else { $gitStatus }
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-status.txt") -Value $gitStatusText -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-log.txt") -Value ((git log --oneline -n 5 2>$null) -join "`n") -Encoding UTF8
-    $focusedCommandSuffix = if ($Issue416) { " -Issue416" } elseif ($Issue415) { " -Issue415" } else { "" }
+    $focusedCommandSuffix = if ($Issue417) { " -Issue417" } elseif ($Issue416) { " -Issue416" } elseif ($Issue415) { " -Issue415" } else { "" }
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "capture-command.txt") -Value "capture-hosted-ui-evidence.ps1 -BaseUrl $normalizedBaseUrl -Mode $Mode -OutputDir $OutputDir -ViewportWidth $ViewportWidth -ViewportHeight $ViewportHeight -TimeoutSeconds $TimeoutSeconds$focusedCommandSuffix" -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "environment-summary.txt") -Value @(
         "mode=$Mode",
@@ -898,6 +1033,7 @@ try {
         "fullPageScreenshots=$(if ($screenshotTool) { $screenshotTool.FullPage } else { $false })",
         "issue415FocusedCapture=$([bool]$Issue415)",
         "issue416FocusedCapture=$([bool]$Issue416)",
+        "issue417FocusedCapture=$([bool]$Issue417)",
         "browserZoomControl=not controlled by this script; use ViewportWidth/ViewportHeight for supplemental narrow-width or 200-percent-review approximation only",
         "evidencePurpose=$evidencePurpose"
     ) -Encoding UTF8
@@ -945,6 +1081,7 @@ explicitly says to do so.
         accessibility = Get-EvidenceFileCount -Path $accessibilityDir
         issue415      = if ($Issue415) { Get-EvidenceFileCount -Path $packetDir -Filter "issue-415-*.csv" } else { 0 }
         issue416      = if ($Issue416) { Get-EvidenceFileCount -Path $packetDir -Filter "issue-416-*.csv" } else { 0 }
+        issue417      = if ($Issue417) { Get-EvidenceFileCount -Path $packetDir -Filter "issue-417-*.csv" } else { 0 }
     }
     $manifest = [ordered]@{
         generatedAt            = (Get-Date).ToUniversalTime().ToString("o")
@@ -966,6 +1103,7 @@ explicitly says to do so.
         captureToolUsed        = if ($screenshotTool) { $screenshotTool.Name } else { "http-get-html-text-only" }
         issue415               = [ordered]@{ enabled = [bool]$Issue415; countSummaries = @($issue415CountSummaries); hrefInventory = @($issue415HrefInventory); zoomLimitation = "True browser zoom is not controlled by this script; reduced viewport captures are supplemental evidence only." }
         issue416               = [ordered]@{ enabled = [bool]$Issue416; routeCount = @($routesToCapture).Count; countSummaries = @($issue416CountSummaries); zoomLimitation = "True browser zoom is not controlled by this script; reduced viewport captures are supplemental evidence only." }
+        issue417               = [ordered]@{ enabled = [bool]$Issue417; routeCount = @($routesToCapture).Count; countSummaries = @($issue417CountSummaries); zoomLimitation = "True browser zoom is not controlled by this script; reduced viewport captures are supplemental evidence only." }
         git                    = [ordered]@{ branch = $gitBranch; commit = $gitCommit; workingTreeClean = [bool]$workingTreeClean; notice = if ($workingTreeClean) { "" } else { "Working tree was not clean when evidence was captured." } }
         output                 = [ordered]@{ packetDirectory = ConvertTo-RelativeEvidencePath -Path $packetDir -Root $PWD; zipPacket = ConvertTo-RelativeEvidencePath -Path $zipPath -Root $PWD; manifest = "manifest.json"; routeStatusCsv = "route-status.csv"; routeAssertionsCsv = "route-assertions.csv"; textMarkers = "route-text-markers.txt"; counts = $outputCounts }
         evidencePurpose        = $evidencePurpose

@@ -23,11 +23,13 @@ through the CCLD-only review path in plain language:
 3. Choose a complaint date range and retrieve or show loaded local/test records.
 4. Work a facility/date-scoped review queue with progress counts, status
    filters, source-traceability cues, and suggested next-record guidance.
-5. Open reviewer detail to check source-derived values, source traceability,
+5. Use the serious-topic worklist when attorney reviewers need governed
+   source-category and keyword-cue filters across loaded complaint records.
+6. Open reviewer detail to check source-derived values, source traceability,
    source-confidence cues, and reviewer-created notes/statuses.
-6. Prepare a local/test packet preview or draft for manual review, browser copy,
+7. Prepare a local/test packet preview or draft for manual review, browser copy,
    or browser print after the reviewer confirms readiness cues.
-7. Send feedback when retrieval, queue order, source traceability, wording,
+8. Send feedback when retrieval, queue order, source traceability, wording,
    keyboard flow, packet readiness, or copy/print preparation is confusing.
 
 The local/test packet pages are preparation aids only. They are not legal
@@ -168,6 +170,7 @@ http://127.0.0.1:8000/ccld/records/request
 http://127.0.0.1:8000/ccld/retrieval/jobs
 http://127.0.0.1:8000/reviewer
 http://127.0.0.1:8000/reviewer/facilities/priorities
+http://127.0.0.1:8000/reviewer/records/serious-topics
 http://127.0.0.1:8000/reviewer/records/matrix.csv?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry
 http://127.0.0.1:8000/reviewer/packet/preview
 http://127.0.0.1:8000/feedback

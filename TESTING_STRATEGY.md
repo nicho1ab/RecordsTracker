@@ -231,6 +231,19 @@ queue/detail links, and original-source link availability accessibly, preserves
 authorization and import-batch scope, excludes fixture/demo fallback data in
 production mode, and does not mutate source-derived, reviewer-created, audit,
 import, feedback, retrieval-job, or operational rows.
+Hosted serious-topic worklist tests must prove `/reviewer/records/serious-topics`
+uses only governed deterministic source categories and governed keyword cues,
+labels official allegation categories as source-derived, allows keyword-assisted
+cues only when the source category is missing or unknown, excludes complaint
+control numbers from keyword matching, keeps category and cue filters separate,
+combines those filters with finding, facility, geography, and complaint date,
+deduplicates by stable complaint identity, reconciles counts, renders bounded
+pagination, MM/DD/YYYY dates, cautious wording, accessible controls,
+descriptive complaint and original-report links, empty states, and no raw
+allegation narrative in the primary worklist, preserves authorization and
+import-batch scope, and does not mutate source-derived, reviewer-created, audit,
+import, feedback, retrieval-job, or operational rows. Hosted route evidence for
+this slice should use the focused `-Issue417` capture mode.
 Hosted CCLD record request UI tests must prove the browser-accessible local/test
 request page accepts only CCLD digit facility/license numbers plus optional
 valid date ranges, returns accessible validation guidance for missing or invalid

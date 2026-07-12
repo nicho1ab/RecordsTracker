@@ -40,3 +40,9 @@ Use `delay_review_flags` and the saved delay query as triage aids only. Delay fl
 Use `public_record_allegation_search` as a discovery aid only. A keyword match means the term appears in the local derived dataset fields searched by the query; it is not a legal conclusion and it is not a complete public portal search.
 
 Use `complaint_timeline_by_facility` when date sequence matters. Missing timeline dates are unknown in the derived dataset; absence from the timeline does not prove an event did not occur.
+
+## Hosted serious-topic worklist
+
+The hosted reviewer route `/reviewer/records/serious-topics` filters authorized loaded complaint records by governed serious-review themes. Source-derived rows show the official allegation category verbatim and label the match as `Source category`. When the official category is missing or unknown, the route can show a separate `Keyword-assisted cue` from governed allegation-text terms. Keyword cues are not findings, verified events, legal conclusions, or facility-wide conclusions.
+
+The serious-topic filters can be combined with finding, facility, geography, and complaint received date. Use the reviewer detail link and original public report link before relying on a row; the worklist intentionally does not show raw allegation narrative text in the primary table.

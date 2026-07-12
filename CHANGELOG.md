@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Added `/reviewer/records/serious-topics`, a read-only attorney-facing
+  serious-topic complaint worklist over authorized loaded complaint records. It
+  maps governed source-derived allegation categories to reviewer topics,
+  separates keyword-assisted cues for missing or unknown categories, supports
+  combined finding, facility, geography, and complaint-date filters, deduplicates
+  by stable complaint identity, links to reviewer detail and original public
+  reports, and adds focused issue #417 hosted evidence capture without adding
+  schemas, retrieval changes, persisted classifications, reviewer-state writes,
+  or legal/facility-wide conclusions.
 - Added `/reviewer/facilities/priorities`, a read-only attorney-facing facility
   review prioritization worklist over authorized loaded complaint records. It
   deduplicates complaints by stable source identity, groups by source-derived
