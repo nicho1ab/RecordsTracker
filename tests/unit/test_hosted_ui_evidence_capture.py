@@ -44,9 +44,12 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "$IncludeHtml = $true",
         "$IncludeScreenshots = $true",
         "AllowUnavailable",
+        "Issue415",
         "manifest.json",
         "route-status.csv",
         "route-assertions.csv",
+        "issue-415-count-summaries.csv",
+        "issue-415-href-inventory.csv",
         "route-text-markers.txt",
         "keyboard flow text",
         "accessibility",
@@ -87,6 +90,24 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     assert 'Join-RouteUrl -Base $normalizedBaseUrl -Path "/reviewer"' in script
     assert "#complaint-export-controls" in script
     assert "complaint export" in script.lower()
+    assert "-Issue415" in script
+    for issue_415_route in (
+        "/reviewer/records/substantiated?facility=107207198",
+        "/reviewer/records/substantiated?facility_type=FOSTER%20FAMILY%20AGENCY",
+        "/reviewer/records/substantiated?sort=facility_asc&page_size=25",
+        "/reviewer/records/substantiated?start_date=2099-01-01&end_date=2099-12-31",
+    ):
+        assert issue_415_route in script
+    for issue_415_assertion in (
+        "issue415 default total nonzero",
+        "issue415 facility ids",
+        "issue415 facility type rows",
+        "issue415 facility sort az",
+        "issue415 future empty",
+        "issue415 original and workspace href inventory",
+        "True browser zoom is not controlled by this script",
+    ):
+        assert issue_415_assertion in script
 
 
 def test_capture_script_review_context_is_get_only_and_non_mutating() -> None:
@@ -199,6 +220,67 @@ def test_capture_script_allow_unavailable_writes_manifest() -> None:
         assert manifest["output"]["counts"]["diagnostics"] >= 3
         assert manifest["output"]["counts"]["accessibility"] >= 4
         assert zips[-1].exists()
+    finally:
+        shutil.rmtree(output_dir, ignore_errors=True)
+
+
+def test_capture_script_issue_415_mode_writes_focused_artifacts() -> None:
+    output_dir = ROOT / "data" / "processed" / "ui-evidence-test"
+    shutil.rmtree(output_dir, ignore_errors=True)
+    try:
+        result = subprocess.run(
+            [
+                powershell(),
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(CAPTURE_SCRIPT),
+                "-BaseUrl",
+                "http://127.0.0.1:9",
+                "-Mode",
+                "live",
+                "-OutputDir",
+                "data/processed/ui-evidence-test",
+                "-TimeoutSeconds",
+                "1",
+                "-IncludeScreenshots:$false",
+                "-Issue415",
+                "-AllowUnavailable",
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        output = plain_output(result)
+
+        assert result.returncode == 0, output
+        packets = sorted(output_dir.glob("*-live-issue-415"))
+        assert packets, output
+        packet = packets[-1]
+        manifest = json.loads((packet / "manifest.json").read_text(encoding="utf-8-sig"))
+        count_csv = (packet / "issue-415-count-summaries.csv").read_text(
+            encoding="utf-8-sig"
+        )
+        href_csv = (packet / "issue-415-href-inventory.csv").read_text(
+            encoding="utf-8-sig"
+        )
+        assertions_csv = (packet / "route-assertions.csv").read_text(
+            encoding="utf-8-sig"
+        )
+
+        assert (packet / "issue-415-count-summaries.csv").exists()
+        assert (packet / "issue-415-href-inventory.csv").exists()
+        assert manifest["issue415"]["enabled"] is True
+        assert manifest["output"]["counts"]["issue415"] == 2
+        assert len(manifest["routeList"]) == 5
+        assert "/reviewer/records/substantiated?facility=107207198" in count_csv
+        assert "sourceRecordKey,facilityId,complaintId,finding,date" in href_csv
+        assert "issue415 count summary" in assertions_csv
+        assert "True browser zoom is not controlled by this script" in json.dumps(
+            manifest
+        )
     finally:
         shutil.rmtree(output_dir, ignore_errors=True)
 
