@@ -139,7 +139,10 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         assert issue_417_route in script
     for issue_417_assertion in (
         "issue417 h1",
+        "issue417 concepts labeled",
+        "issue417 no unsupported conclusions",
         "issue417 category/cue wording",
+        "issue417 source category basis",
         "issue417 keyword cue basis",
         "issue417 filtered controls",
         "issue417 filtered empty",

@@ -66,7 +66,12 @@ def test_serious_topics_worklist_lists_deterministic_categories_without_narrativ
     assert content_type == "text/html; charset=utf-8"
     assert before_counts == after_counts == {"import_batches": 1, "source_records": 24}
     assert "Serious-topic complaint worklist" in html
+    assert (
+        "Source categories come from public records. Review topics and possible "
+        "keyword cues help narrow records for review."
+    ) in html
     assert "Source category" in html
+    assert "Review topic" in html
     assert "source-derived allegation_category" in html
     for expected in (
         "Mistreatment-topic",
@@ -90,8 +95,9 @@ def test_serious_topics_worklist_lists_deterministic_categories_without_narrativ
     assert "raw_path" not in html
     assert "provider_subject" not in html
     assert "token" not in html.casefold()
-    assert "legal conclusion" in html
-    assert "facility-wide conclusions" in html
+    assert "legal conclusion" not in html.casefold()
+    assert "facility-wide" not in html.casefold()
+    assert "verified event" not in html.casefold()
 
 
 def test_serious_topics_keyword_cues_require_missing_or_unknown_category() -> None:
@@ -141,8 +147,8 @@ def test_serious_topics_keyword_cues_require_missing_or_unknown_category() -> No
 
     assert status == 200
     assert "Showing 1-2 of 2 matching serious-topic complaint record(s); 2 total qualifying" in html
-    assert "Possible serious-topic cue" in html
-    assert "Keyword-assisted cue" in html
+    assert "Possible keyword cue" in html
+    assert "Filter basis: Possible keyword cue." in html
     assert "keyword-assisted allegation_text: injury" in html
     assert "keyword-assisted allegation_text: restraint" in html
     assert "32-CR-20240201000000" in html
@@ -179,6 +185,7 @@ def test_serious_topics_structured_category_takes_precedence_over_keyword_text()
     assert source_status == 200
     assert "Care-omission topic" in source_html
     assert "Source category" in source_html
+    assert "Review topic" in source_html
     assert "keyword-assisted allegation_text" not in source_html
     assert "injury text" not in source_html
     assert cue_status == 200
@@ -232,6 +239,31 @@ def test_serious_topics_combined_filters_links_and_dates() -> None:
     assert "Open original public report for 32-CR-20240401000000" in html
     assert "source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20240401000000" in html
     assert "Other Facility" not in html
+    assert "DO NOT SHOW" not in html
+
+
+def test_serious_topics_source_category_filter_identifies_basis_concisely() -> None:
+    with _connection() as connection:
+        _insert_bundle(
+            connection,
+            control_number="32-CR-20240502000000",
+            facility_number="417300003",
+            allegation_category="Inadequate supervision",
+            allegation_text="DO NOT SHOW source category basis narrative.",
+        )
+
+        status, _content_type, body = route_response(
+            f"{REVIEWER_UI_SERIOUS_TOPICS_PATH}?match_basis=source-category",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert "Filter basis: Source category." in html
+    assert html.count("Source categories come from public records.") == 1
+    assert "legal conclusion" not in html.casefold()
+    assert "facility-wide" not in html.casefold()
     assert "DO NOT SHOW" not in html
 
 
@@ -366,12 +398,15 @@ def test_serious_topics_empty_state_is_cautious_and_accessible() -> None:
 
     assert status == 200
     assert "No serious-topic complaint records matched." in html
-    assert "No loaded authorized complaint records matched" in html
+    assert "Adjust the filters or clear them" in html
     assert "Clear filters" in html
-    assert '<label for="serious-topics-topic">Review theme</label>' in html
+    assert '<label for="serious-topics-topic">Review topic</label>' in html
     assert '<label for="serious-topics-match-basis">Match basis</label>' in html
     assert "no complaints found" not in html.casefold()
     assert "verified abuse" not in html.casefold()
+    assert "legal conclusion" not in html.casefold()
+    assert "facility-wide" not in html.casefold()
+    assert html.count("Source categories come from public records.") == 1
     assert "DO NOT SHOW" not in html
 
 
