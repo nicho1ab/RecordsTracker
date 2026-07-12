@@ -68,6 +68,7 @@ def list_source_derived_records(
     *,
     entity_type: SourceDerivedEntityType | None = None,
     import_batch_id: str | None = None,
+    import_batch_ids: tuple[str, ...] | None = None,
     limit: int = 100,
     offset: int = 0,
 ) -> tuple[SourceDerivedRecordRead, ...]:
@@ -75,6 +76,10 @@ def list_source_derived_records(
         raise ValueError("Source-derived record list limit must be at least 1.")
     if offset < 0:
         raise ValueError("Source-derived record list offset must be at least 0.")
+    if import_batch_id is not None and import_batch_ids is not None:
+        raise ValueError(
+            "Source-derived record list accepts one import batch filter mode."
+        )
 
     query = _source_derived_read_query()
     filters = []
@@ -82,6 +87,10 @@ def list_source_derived_records(
         filters.append(hosted_source_derived_records.c.entity_type == entity_type)
     if import_batch_id is not None:
         filters.append(hosted_source_derived_records.c.import_batch_id == import_batch_id)
+    if import_batch_ids is not None:
+        if not import_batch_ids:
+            return ()
+        filters.append(hosted_source_derived_records.c.import_batch_id.in_(import_batch_ids))
     if filters:
         query = query.where(and_(*filters))
     query = query.order_by(

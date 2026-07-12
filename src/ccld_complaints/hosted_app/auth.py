@@ -302,6 +302,12 @@ class HostedAccessScope:
         )
 
 
+CCLD_RETRIEVAL_CORPUS_SCOPE = HostedAccessScope(
+    "corpus",
+    "ccld-retrieval-corpus",
+)
+
+
 @dataclass(frozen=True)
 class AuthorizationTarget:
     target_type: AuthorizationTargetType
@@ -833,19 +839,28 @@ def list_authorized_source_derived_records(
     offset: int = 0,
 ) -> tuple[SourceDerivedRecordRead, ...]:
     scoped_import_batch_id = (
-        _scoped_import_batch_id(scope, import_batch_id)
+        None
         if import_batch_id is None
         else _scoped_import_batch_id_for_read(connection, scope, import_batch_id)
     )
+    target_id = scoped_import_batch_id or scope.scope_id
     require_permission(
         actor,
         permission=SOURCE_DERIVED_READ_PERMISSION,
         scope=scope,
         target=AuthorizationTarget(
             "source_derived_record_list",
-            scoped_import_batch_id,
+            target_id,
         ),
     )
+    if scoped_import_batch_id is None:
+        return list_source_derived_records(
+            connection,
+            entity_type=entity_type,
+            import_batch_ids=_authorized_source_import_batch_ids(connection, scope),
+            limit=limit,
+            offset=offset,
+        )
     return list_source_derived_records(
         connection,
         entity_type=entity_type,
@@ -979,17 +994,6 @@ def _require_active_actor(actor: AuthenticatedActor | None) -> AuthenticatedActo
     return actor
 
 
-def _scoped_import_batch_id(
-    scope: HostedAccessScope,
-    import_batch_id: str | None,
-) -> str:
-    if import_batch_id is not None and import_batch_id != scope.scope_id:
-        raise HostedScopeDeniedError(
-            "Requested source-derived import batch is outside the authorized scope."
-        )
-    return scope.scope_id
-
-
 def _scoped_import_batch_id_for_read(
     connection: Connection,
     scope: HostedAccessScope,
@@ -1007,9 +1011,11 @@ def _authorized_source_import_batch_ids(
     scope: HostedAccessScope,
 ) -> tuple[str, ...]:
     from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
+        CCLD_RETRIEVAL_IMPORT_BATCH_PREFIX,
         hosted_ccld_retrieval_jobs,
         retrieval_import_batch_id,
     )
+    from ccld_complaints.hosted_app.seeded_import import hosted_import_batches
 
     rows = connection.execute(
         select(
@@ -1029,7 +1035,21 @@ def _authorized_source_import_batch_ids(
             }
         )
     )
-    return (scope.scope_id, *retrieval_batch_ids)
+    authorized_ids = {scope.scope_id, *retrieval_batch_ids}
+    if scope.matches(CCLD_RETRIEVAL_CORPUS_SCOPE):
+        corpus_rows = connection.execute(
+            select(hosted_import_batches.c.import_batch_id).where(
+                hosted_import_batches.c.import_batch_id.like(
+                    f"{CCLD_RETRIEVAL_IMPORT_BATCH_PREFIX}%"
+                )
+            )
+        ).scalars()
+        authorized_ids.update(
+            str(import_batch_id)
+            for import_batch_id in corpus_rows
+            if str(import_batch_id).strip()
+        )
+    return tuple(sorted(authorized_ids))
 
 
 def _merge_ccld_request_lookups(

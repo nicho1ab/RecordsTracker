@@ -111,6 +111,7 @@ from ccld_complaints.hosted_app.reviewer_created_state_routes import (
 )
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
+    POSTGRES_REVIEWER_UI_SCOPE,
     REVIEWER_UI_DETAIL_PATH,
     REVIEWER_UI_PREFIX,
     REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH,
@@ -1446,8 +1447,8 @@ def _default_postgres_reviewer_context() -> ReviewerUiContext | None:
     connection = engine.connect()
     _DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT = reviewer_ui_context_for_connection(
         connection,
-        actor=local_test_reviewer_actor(),
-        scope=LOCAL_REVIEWER_UI_SCOPE,
+        actor=local_test_reviewer_actor(scopes=(POSTGRES_REVIEWER_UI_SCOPE,)),
+        scope=POSTGRES_REVIEWER_UI_SCOPE,
     )
     return _DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT
 

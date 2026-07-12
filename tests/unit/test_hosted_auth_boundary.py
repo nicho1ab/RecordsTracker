@@ -9,6 +9,7 @@ from sqlalchemy.engine import Connection
 
 from ccld_complaints.hosted_app.auth import (
     AUTH_PROVIDER_CLASS_ENV,
+    CCLD_RETRIEVAL_CORPUS_SCOPE,
     IMPORT_RELOAD_PERMISSION,
     MANAGED_OIDC_OAUTH2_PROVIDER_CLASS,
     REVIEWER_STATE_READ_PERMISSION,
@@ -32,8 +33,11 @@ from ccld_complaints.hosted_app.auth import (
     load_hosted_auth_runtime_config,
     require_permission,
 )
+from ccld_complaints.hosted_app.ccld_retrieval_jobs import retrieval_import_batch_id
 from ccld_complaints.hosted_app.seeded_import import (
+    hosted_import_batches,
     hosted_seeded_import_metadata,
+    hosted_source_derived_records,
     import_seeded_corpus_artifact,
     load_seeded_corpus_artifact,
 )
@@ -41,6 +45,8 @@ from ccld_complaints.hosted_app.seeded_import import (
 FIXTURE = Path("tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json")
 TEST_SCOPE = HostedAccessScope("seeded_corpus", "seeded-ccld-fixture-2026-06-13")
 OTHER_SCOPE = HostedAccessScope("seeded_corpus", "different-seeded-corpus")
+POSTGRES_SCOPE = CCLD_RETRIEVAL_CORPUS_SCOPE
+COMPLAINT_KEY = "complaint:ccld:complaint:32-CR-20220407124448"
 SOURCE_LIST_TARGET = AuthorizationTarget(
     "source_derived_record_list",
     "seeded-ccld-fixture-2026-06-13",
@@ -274,6 +280,64 @@ def test_authorized_source_derived_read_service_returns_staged_records_only() ->
     assert "annotation" not in records[0].original_values
 
 
+def test_postgres_corpus_authorizes_multiple_loaded_retrieval_batches() -> None:
+    with _seeded_connection() as connection:
+        first_key = _insert_corpus_complaint(
+            connection,
+            job_id="corpus-job-001",
+            facility_number="107207198",
+            complaint_control_number="24-CR-20260508083927",
+            finding="Substantiated",
+        )
+        second_key = _insert_corpus_complaint(
+            connection,
+            job_id="corpus-job-002",
+            facility_number="425802141",
+            complaint_control_number="31-CR-20240425094018",
+            finding="Substantiated",
+        )
+
+        records = list_authorized_source_derived_records(
+            connection,
+            _read_only_actor(scopes=(POSTGRES_SCOPE,)),
+            scope=POSTGRES_SCOPE,
+            entity_type="complaint",
+        )
+
+    keys = {record.source_record_key for record in records}
+    assert first_key in keys
+    assert second_key in keys
+    assert COMPLAINT_KEY not in keys
+    assert {
+        record.import_batch.import_batch_id
+        for record in records
+    } == {
+        retrieval_import_batch_id("corpus-job-001"),
+        retrieval_import_batch_id("corpus-job-002"),
+    }
+
+
+def test_postgres_corpus_denies_unauthorized_batch_and_record() -> None:
+    with _seeded_connection() as connection:
+        unauthorized_key = _insert_non_corpus_complaint(connection)
+
+        with pytest.raises(HostedScopeDeniedError, match="import batch"):
+            list_authorized_source_derived_records(
+                connection,
+                _read_only_actor(scopes=(POSTGRES_SCOPE,)),
+                scope=POSTGRES_SCOPE,
+                import_batch_id="outside-corpus-batch",
+            )
+
+        with pytest.raises(HostedScopeDeniedError, match="source-derived record"):
+            get_authorized_source_derived_record_by_key(
+                connection,
+                _read_only_actor(scopes=(POSTGRES_SCOPE,)),
+                scope=POSTGRES_SCOPE,
+                source_record_key=unauthorized_key,
+            )
+
+
 def test_authorized_source_derived_fetch_rejects_unauthenticated_actor() -> None:
     with _seeded_connection() as connection:
         with pytest.raises(HostedAuthenticationRequiredError):
@@ -367,3 +431,96 @@ def _seeded_connection() -> Connection:
     import_seeded_corpus_artifact(connection, artifact)
     transaction.commit()
     return connection
+
+
+def _insert_corpus_complaint(
+    connection: Connection,
+    *,
+    job_id: str,
+    facility_number: str,
+    complaint_control_number: str,
+    finding: str,
+) -> str:
+    return _insert_complaint_batch(
+        connection,
+        import_batch_id=retrieval_import_batch_id(job_id),
+        facility_number=facility_number,
+        complaint_control_number=complaint_control_number,
+        finding=finding,
+    )
+
+
+def _insert_non_corpus_complaint(connection: Connection) -> str:
+    return _insert_complaint_batch(
+        connection,
+        import_batch_id="outside-corpus-batch",
+        facility_number="999999999",
+        complaint_control_number="99-CR-OUTSIDE",
+        finding="Substantiated",
+    )
+
+
+def _insert_complaint_batch(
+    connection: Connection,
+    *,
+    import_batch_id: str,
+    facility_number: str,
+    complaint_control_number: str,
+    finding: str,
+) -> str:
+    now = "2026-07-01T12:00:00+00:00"
+    facility_id = f"ccld:facility:{facility_number}"
+    document_id = f"ccld:document:{facility_number}:1"
+    complaint_id = f"ccld:complaint:{complaint_control_number}"
+    source_url = (
+        "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports"
+        f"?facNum={facility_number}&inx=1"
+    )
+    connection.execute(
+        hosted_import_batches.insert().values(
+            import_batch_id=import_batch_id,
+            imported_at=now,
+            source_artifact_identity=f"fixture-artifact:{import_batch_id}",
+            source_pipeline_version="fixture-corpus",
+            validation_status="validated",
+            raw_hash_validation_status="validated",
+            record_counts={"complaint": 1},
+            warnings=[],
+            errors=[],
+        )
+    )
+    source_record_key = f"complaint:{complaint_id}"
+    connection.execute(
+        hosted_source_derived_records.insert().values(
+            source_record_key=source_record_key,
+            entity_type="complaint",
+            stable_source_id=complaint_id,
+            import_batch_id=import_batch_id,
+            source_document_id=document_id,
+            facility_id=facility_id,
+            source_url=source_url,
+            raw_sha256="a" * 64,
+            raw_path="data/raw/ccld/fixture/report.html",
+            connector_name="ccld_facility_reports",
+            connector_version="fixture-corpus",
+            retrieved_at=now,
+            original_values={
+                "complaint_id": complaint_id,
+                "facility_id": facility_id,
+                "document_id": document_id,
+                "facility_number": facility_number,
+                "complaint_control_number": complaint_control_number,
+                "complaint_received_date": "2026-05-08",
+                "report_date": "2026-05-09",
+                "finding": finding,
+            },
+            source_traceability={
+                "source_document_id": document_id,
+                "source_url": source_url,
+                "raw_sha256": "a" * 64,
+                "connector_name": "ccld_facility_reports",
+                "retrieved_at": now,
+            },
+        )
+    )
+    return source_record_key
