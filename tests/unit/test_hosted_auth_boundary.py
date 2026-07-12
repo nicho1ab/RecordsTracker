@@ -29,6 +29,7 @@ from ccld_complaints.hosted_app.auth import (
     HostedTesterRole,
     get_authorized_source_derived_record_by_key,
     list_authorized_source_derived_records,
+    list_authorized_source_derived_records_by_entity_types,
     load_hosted_auth_config,
     load_hosted_auth_runtime_config,
     require_permission,
@@ -315,6 +316,31 @@ def test_postgres_corpus_authorizes_multiple_loaded_retrieval_batches() -> None:
         retrieval_import_batch_id("corpus-job-001"),
         retrieval_import_batch_id("corpus-job-002"),
     }
+
+
+def test_authorized_source_derived_entity_type_bulk_read_preserves_scope() -> None:
+    with _seeded_connection() as connection:
+        corpus_key = _insert_corpus_complaint(
+            connection,
+            job_id="corpus-job-entity-bulk",
+            facility_number="107207198",
+            complaint_control_number="24-CR-20260508083927",
+            finding="Substantiated",
+        )
+        unauthorized_key = _insert_non_corpus_complaint(connection)
+
+        records = list_authorized_source_derived_records_by_entity_types(
+            connection,
+            _read_only_actor(scopes=(POSTGRES_SCOPE,)),
+            scope=POSTGRES_SCOPE,
+            entity_types=("complaint", "allegation", "facility", "source_document"),
+        )
+
+    keys = {record.source_record_key for record in records}
+    assert corpus_key in keys
+    assert unauthorized_key not in keys
+    assert COMPLAINT_KEY not in keys
+    assert {record.entity_type for record in records} == {"complaint"}
 
 
 def test_postgres_corpus_denies_unauthorized_batch_and_record() -> None:

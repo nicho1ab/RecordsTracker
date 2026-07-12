@@ -12,7 +12,7 @@ from typing import Any, cast
 from urllib.parse import parse_qs, quote, urlencode, urlparse
 
 import pytest
-from sqlalchemy import create_engine, func, select, update
+from sqlalchemy import create_engine, event, func, select, update
 from sqlalchemy.engine import Connection
 
 from ccld_complaints.hosted_app import app as hosted_app
@@ -24,6 +24,7 @@ from ccld_complaints.hosted_app.auth import (
     HostedAccessScope,
     HostedAccountStatus,
     HostedActorCategory,
+    HostedScopeDeniedError,
     HostedTesterRole,
     load_hosted_auth_runtime_config,
 )
@@ -761,7 +762,6 @@ def test_reviewer_ui_substantiated_worklist_reconciles_distinct_qualifying_count
 
 
 def test_reviewer_ui_substantiated_worklist_dedupes_duplicate_stable_identity(
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     records = _fake_substantiated_source_bundle(
         facility_number="157806101",
@@ -774,31 +774,20 @@ def test_reviewer_ui_substantiated_worklist_dedupes_duplicate_stable_identity(
     duplicate["source_record_key"] = "complaint:ccld:duplicate:32-CR-20220714000000"
     duplicate["original_values"] = dict(duplicate["original_values"])
     duplicate["original_values"]["complaint_control_number"] = "DUPLICATE SHOULD NOT SHOW"
+    source_records = [*records, duplicate]
+    complaint_items = [
+        reviewer_ui._review_item_from_source_record(record)
+        for record in source_records
+        if record["entity_type"] == "complaint"
+    ]
 
-    def fake_source_route(
-        path: str,
-        context: object,
-    ) -> tuple[int, str, bytes]:
-        return _json_source_records_response((*records, duplicate))
+    items = reviewer_ui._substantiated_triage_items(
+        complaint_items,
+        reviewer_ui._source_record_indexes(source_records),
+    )
 
-    monkeypatch.setattr(reviewer_ui, "route_source_derived_api_response", fake_source_route)
-
-    with _seeded_connection() as connection:
-        status, content_type, body = route_response(
-            REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH,
-            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
-        )
-
-    html = body.decode("utf-8")
-
-    assert status == 200
-    assert content_type == "text/html; charset=utf-8"
-    assert "Showing 1-1 of 1 matching qualifying complaint record(s); 1 total qualifying" in html
-    assert "32-CR-20220714000000" in html
-    assert "DUPLICATE SHOULD NOT SHOW" not in html
-    assert "complaint%3Accld%3Aduplicate%3A32-CR-20220714000000" not in html
-    assert html.count("Open complaint review workspace") == 1
-    assert_no_secret_html(html)
+    assert len(items) == 1
+    assert items[0]["complaint_control_number"] == "32-CR-20220714000000"
 
 
 def test_reviewer_ui_substantiated_worklist_reads_beyond_first_source_page() -> None:
@@ -864,20 +853,32 @@ def test_reviewer_ui_substantiated_worklist_includes_record_after_20000_source_r
         source_url=_ccld_source_url("157806099", "1"),
     )
 
+    route_calls = 0
+
     def fake_source_route(
         path: str,
         context: object,
     ) -> tuple[int, str, bytes]:
-        offset = _offset_from_source_route(path)
-        if offset < 20000:
-            return _json_source_records_response(
-                _fake_filler_source_records(offset, reviewer_ui._SOURCE_DERIVED_PAGE_LIMIT)
-            )
-        if offset == 20000:
-            return _json_source_records_response(target_records)
+        nonlocal route_calls
+        route_calls += 1
         return _json_source_records_response(())
 
+    def fake_authorized_bulk_read(*args: object, **kwargs: object) -> tuple[object, ...]:
+        assert kwargs["entity_types"] == reviewer_ui._SUBSTANTIATED_SOURCE_ENTITY_TYPES
+        return tuple(
+            _read_model_from_source_payload(record)
+            for record in (
+                *_fake_filler_source_records(0, 20000),
+                *target_records,
+            )
+        )
+
     monkeypatch.setattr(reviewer_ui, "route_source_derived_api_response", fake_source_route)
+    monkeypatch.setattr(
+        reviewer_ui,
+        "list_authorized_source_derived_records_by_entity_types",
+        fake_authorized_bulk_read,
+    )
 
     with _seeded_connection() as connection:
         status, content_type, body = route_response(
@@ -893,45 +894,21 @@ def test_reviewer_ui_substantiated_worklist_includes_record_after_20000_source_r
     assert "32-CR-20220712000000" in html
     assert "Showing 1-1 of 1 matching qualifying complaint record(s); 1 total qualifying" in html
     assert "Open original public report for 32-CR-20220712000000" in html
+    assert route_calls == 0
     assert_no_secret_html(html)
 
 
-def test_substantiated_worklist_blocks_partial_results_after_source_paging_failure(
+def test_substantiated_worklist_blocks_partial_results_after_authorized_read_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    first_page_records = (
-        *_fake_filler_source_records(0, reviewer_ui._SOURCE_DERIVED_PAGE_LIMIT - 3),
-        *_fake_substantiated_source_bundle(
-            facility_number="157806100",
-            facility_name="PARTIAL FAILURE FACILITY",
-            complaint_control_number="32-CR-20220713000000",
-            complaint_received_date="2022-07-13",
-            source_url=_ccld_source_url("157806100", "1"),
-        ),
+    def fake_authorized_bulk_read(*args: object, **kwargs: object) -> tuple[object, ...]:
+        raise HostedScopeDeniedError("Synthetic source read failure.")
+
+    monkeypatch.setattr(
+        reviewer_ui,
+        "list_authorized_source_derived_records_by_entity_types",
+        fake_authorized_bulk_read,
     )
-
-    def fake_source_route(
-        path: str,
-        context: object,
-    ) -> tuple[int, str, bytes]:
-        offset = _offset_from_source_route(path)
-        if offset == 0:
-            return _json_source_records_response(first_page_records)
-        return (
-            503,
-            "application/json; charset=utf-8",
-            json.dumps(
-                {
-                    "error": {
-                        "code": "synthetic_source_page_failure",
-                        "message": "Synthetic source page failure.",
-                    }
-                },
-                sort_keys=True,
-            ).encode("utf-8"),
-        )
-
-    monkeypatch.setattr(reviewer_ui, "route_source_derived_api_response", fake_source_route)
 
     with _seeded_connection() as connection:
         status, content_type, body = route_response(
@@ -941,9 +918,9 @@ def test_substantiated_worklist_blocks_partial_results_after_source_paging_failu
 
     html = body.decode("utf-8")
 
-    assert status == 503
+    assert status == 403
     assert content_type == "text/html; charset=utf-8"
-    assert "Synthetic source page failure." in html
+    assert "Synthetic source read failure." in html
     assert "Loaded substantiated/equivalent complaint records" not in html
     assert "PARTIAL FAILURE FACILITY" not in html
     assert "32-CR-20220713000000" not in html
@@ -1050,6 +1027,78 @@ def test_reviewer_ui_substantiated_worklist_uses_live_related_finding_shape() ->
     assert "24-CR-20260508083927" not in out_of_scope_html
     assert_no_secret_html(html)
     assert_no_secret_html(out_of_scope_html)
+
+
+def test_reviewer_ui_substantiated_worklist_uses_bounded_direct_source_reads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    route_calls = 0
+
+    def fake_source_route(
+        path: str,
+        context: object,
+    ) -> tuple[int, str, bytes]:
+        nonlocal route_calls
+        route_calls += 1
+        return _json_source_records_response(())
+
+    monkeypatch.setattr(reviewer_ui, "route_source_derived_api_response", fake_source_route)
+
+    with _seeded_connection() as connection:
+        _set_complaint_original_values(
+            connection,
+            COMPLAINT_KEY,
+            {
+                "finding": "Substantiated",
+                "complaint_received_date": "2022-04-07",
+            },
+        )
+        _insert_extraction_audit_marker(connection)
+        select_statements: list[tuple[str, object]] = []
+
+        def capture_select(
+            conn: object,
+            cursor: object,
+            statement: str,
+            parameters: object,
+            context: object,
+            executemany: bool,
+        ) -> None:
+            if statement.lstrip().upper().startswith("SELECT"):
+                select_statements.append((statement, parameters))
+
+        event.listen(connection, "before_cursor_execute", capture_select)
+        try:
+            status, content_type, body = route_response(
+                REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH,
+                reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+            )
+        finally:
+            event.remove(connection, "before_cursor_execute", capture_select)
+
+    html = body.decode("utf-8")
+    source_selects = [
+        (statement, parameters)
+        for statement, parameters in select_statements
+        if "hosted_source_derived_records" in statement
+    ]
+    source_params = {
+        str(value)
+        for _statement, parameters in source_selects
+        for value in _flatten_sql_parameters(parameters)
+    }
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert route_calls == 0
+    assert len(source_selects) == 1
+    assert {"facility", "source_document", "complaint", "allegation", "event"}.issubset(
+        source_params
+    )
+    assert "extraction_audit" not in source_params
+    assert "AUDIT SHOULD NOT LOAD" not in html
+    assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
+    assert_no_secret_html(html)
 
 
 def test_postgres_corpus_substantiated_worklist_uses_authorized_retrieval_batches() -> None:
@@ -2834,7 +2883,18 @@ def test_reviewer_ui_matrix_export_returns_excel_ready_csv_without_mutation() ->
     assert "source complete" not in csv_text.casefold()
     assert "export approved" not in csv_text.casefold()
 
-def test_reviewer_ui_substantiated_export_returns_excel_ready_csv_without_mutation() -> None:
+def test_reviewer_ui_substantiated_export_returns_excel_ready_csv_without_mutation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_whole_corpus_helper(context: object) -> list[Mapping[str, Any]]:
+        raise AssertionError("substantiated export must not enumerate the whole corpus")
+
+    monkeypatch.setattr(
+        reviewer_ui,
+        "_all_source_derived_records",
+        fail_whole_corpus_helper,
+    )
+
     with _seeded_connection() as connection:
         create_reviewer_note_scaffold(
             connection,
@@ -4508,6 +4568,36 @@ def _json_source_records_response(records: tuple[dict[str, Any], ...]) -> tuple[
     )
 
 
+def _read_model_from_source_payload(record: Mapping[str, Any]) -> object:
+    import_batch = record["import_batch"]
+    return SimpleNamespace(
+        source_record_key=record["source_record_key"],
+        entity_type=record["entity_type"],
+        stable_source_id=record["stable_source_id"],
+        source_document_id=record["source_document_id"],
+        facility_id=record["facility_id"],
+        source_url=record["source_url"],
+        raw_sha256=record["raw_sha256"],
+        raw_path=record["raw_path"],
+        connector_name=record["connector_name"],
+        connector_version=record["connector_version"],
+        retrieved_at=record["retrieved_at"],
+        original_values=record["original_values"],
+        source_traceability=record["source_traceability"],
+        import_batch=SimpleNamespace(
+            import_batch_id=import_batch["import_batch_id"],
+            imported_at=import_batch["imported_at"],
+            source_artifact_identity=import_batch["source_artifact_identity"],
+            source_pipeline_version=import_batch["source_pipeline_version"],
+            validation_status=import_batch["validation_status"],
+            raw_hash_validation_status=import_batch["raw_hash_validation_status"],
+            record_counts=import_batch["record_counts"],
+            warnings=import_batch["warnings"],
+            errors=import_batch["errors"],
+        ),
+    )
+
+
 def _fake_filler_source_records(
     offset: int,
     count: int,
@@ -4825,6 +4915,52 @@ def _insert_live_shape_related_finding_records(
             **common_values,
         )
     )
+
+
+def _insert_extraction_audit_marker(connection: Connection) -> None:
+    template = connection.execute(
+        select(hosted_source_derived_records).where(
+            hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY
+        )
+    ).mappings().one()
+    connection.execute(
+        hosted_source_derived_records.insert().values(
+            source_record_key="extraction_audit:ccld:audit:ui-do-not-load",
+            entity_type="extraction_audit",
+            stable_source_id="ccld:audit:ui-do-not-load",
+            import_batch_id=template["import_batch_id"],
+            source_document_id=template["source_document_id"],
+            facility_id=template["facility_id"],
+            source_url=template["source_url"],
+            raw_sha256=template["raw_sha256"],
+            raw_path=template["raw_path"],
+            connector_name=template["connector_name"],
+            connector_version=template["connector_version"],
+            retrieved_at=template["retrieved_at"],
+            original_values={
+                "audit_id": "ccld:audit:ui-do-not-load",
+                "finding": "Substantiated",
+                "complaint_control_number": "AUDIT SHOULD NOT LOAD",
+            },
+            source_traceability=template["source_traceability"],
+        )
+    )
+
+
+def _flatten_sql_parameters(parameters: object) -> tuple[object, ...]:
+    if isinstance(parameters, Mapping):
+        return tuple(parameters.values())
+    if isinstance(parameters, tuple):
+        flattened: list[object] = []
+        for value in parameters:
+            if isinstance(value, (tuple, list)):
+                flattened.extend(value)
+            else:
+                flattened.append(value)
+        return tuple(flattened)
+    if isinstance(parameters, list):
+        return tuple(parameters)
+    return (parameters,)
 
 
 def _insert_representative_live_public_retrieval_batch(

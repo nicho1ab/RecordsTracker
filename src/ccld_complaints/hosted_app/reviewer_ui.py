@@ -23,8 +23,13 @@ from ccld_complaints.hosted_app.auth import (
     CCLD_RETRIEVAL_CORPUS_SCOPE,
     AuthenticatedActor,
     HostedAccessScope,
+    HostedAccountDisabledError,
     HostedAccountStatus,
+    HostedAuthenticationRequiredError,
+    HostedRoleDeniedError,
+    HostedScopeDeniedError,
     HostedTesterRole,
+    list_authorized_source_derived_records_by_entity_types,
 )
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_LOOKUP_PATH,
@@ -56,10 +61,12 @@ from ccld_complaints.hosted_app.reviewer_workflow_shell import (
     route_reviewer_workflow_shell_response,
 )
 from ccld_complaints.hosted_app.seeded_import import (
+    SourceDerivedEntityType,
     hosted_seeded_import_metadata,
     import_seeded_corpus_artifact,
     load_seeded_corpus_artifact,
 )
+from ccld_complaints.hosted_app.source_derived_reads import SourceDerivedRecordRead
 from ccld_complaints.hosted_app.source_derived_routes import (
     SOURCE_DERIVED_API_PREFIX,
     SourceDerivedApiContext,
@@ -260,6 +267,13 @@ _RETURN_CONTEXT_FIELDS = (
 _SOURCE_DERIVED_PAGE_LIMIT = 100
 _SUBSTANTIATED_DEFAULT_PAGE_SIZE = 50
 _SUBSTANTIATED_MAX_PAGE_SIZE = 100
+_SUBSTANTIATED_SOURCE_ENTITY_TYPES: tuple[SourceDerivedEntityType, ...] = (
+    "facility",
+    "source_document",
+    "complaint",
+    "allegation",
+    "event",
+)
 
 
 @dataclass(frozen=True)
@@ -589,7 +603,7 @@ def _substantiated_triage_response(
 ) -> tuple[int, str, bytes]:
     query_values = parse_qs(query, keep_blank_values=True)
     filters = _substantiated_worklist_filters(query_values)
-    source_status, source_result = _all_source_derived_records_response(context)
+    source_status, source_result = _substantiated_source_records_response(context)
     if source_status != 200:
         if not isinstance(source_result, bytes):
             raise ValueError("Expected source-derived error body to be bytes.")
@@ -1442,6 +1456,68 @@ def _all_source_derived_records_response(
     return 200, records
 
 
+def _substantiated_source_records_response(
+    context: ReviewerUiContext,
+) -> tuple[int, list[Mapping[str, Any]] | bytes]:
+    source_context = context.workflow_shell_context.source_derived_api_context
+    try:
+        records = list_authorized_source_derived_records_by_entity_types(
+            source_context.connection,
+            source_context.actor,
+            scope=source_context.scope,
+            entity_types=_SUBSTANTIATED_SOURCE_ENTITY_TYPES,
+        )
+    except HostedAuthenticationRequiredError as error:
+        return 401, _source_derived_error_body("authentication_required", str(error))
+    except HostedAccountDisabledError as error:
+        return 403, _source_derived_error_body("account_disabled_or_revoked", str(error))
+    except HostedRoleDeniedError as error:
+        return 403, _source_derived_error_body("role_denied", str(error))
+    except HostedScopeDeniedError as error:
+        return 403, _source_derived_error_body("scope_denied", str(error))
+    except ValueError as error:
+        return 400, _source_derived_error_body("invalid_request", str(error))
+    return 200, [_source_derived_read_payload(record) for record in records]
+
+
+def _source_derived_error_body(code: str, message: str) -> bytes:
+    return json.dumps(
+        {"error": {"code": code, "message": message}},
+        sort_keys=True,
+    ).encode("utf-8")
+
+
+def _source_derived_read_payload(record: SourceDerivedRecordRead) -> dict[str, Any]:
+    return {
+        "source_record_key": record.source_record_key,
+        "entity_type": record.entity_type,
+        "stable_source_id": record.stable_source_id,
+        "source_document_id": record.source_document_id,
+        "facility_id": record.facility_id,
+        "source_url": record.source_url,
+        "raw_sha256": record.raw_sha256,
+        "raw_path": record.raw_path,
+        "connector_name": record.connector_name,
+        "connector_version": record.connector_version,
+        "retrieved_at": record.retrieved_at,
+        "original_values": dict(record.original_values),
+        "source_traceability": dict(record.source_traceability),
+        "import_batch": {
+            "import_batch_id": record.import_batch.import_batch_id,
+            "imported_at": record.import_batch.imported_at,
+            "source_artifact_identity": record.import_batch.source_artifact_identity,
+            "source_pipeline_version": record.import_batch.source_pipeline_version,
+            "validation_status": record.import_batch.validation_status,
+            "raw_hash_validation_status": (
+                record.import_batch.raw_hash_validation_status
+            ),
+            "record_counts": dict(record.import_batch.record_counts),
+            "warnings": list(record.import_batch.warnings),
+            "errors": list(record.import_batch.errors),
+        },
+    }
+
+
 def _review_item_from_source_record(record: Mapping[str, Any]) -> Mapping[str, Any]:
     return {
         "review_item_id": f"source-derived-review-shell:{_string(record, 'source_record_key')}",
@@ -1678,7 +1754,14 @@ def _substantiated_export_response(
     if isinstance(state_body, bytes):
         raise ValueError("Expected reviewer-created state records.")
     state_summaries = _state_summaries_by_source_record(state_body)
-    related_records = _all_source_derived_records(context)
+    related_status, related_result = _substantiated_source_records_response(context)
+    if related_status != 200:
+        if not isinstance(related_result, bytes):
+            raise ValueError("Expected source-derived error body to be bytes.")
+        return _workflow_error_page(related_status, related_result)
+    if isinstance(related_result, bytes):
+        raise ValueError("Expected source-derived records.")
+    related_records = related_result
     # Let the renderer filter records for substantiated findings to avoid
     # mismatches between queue item shapes and source-derived records.
     csv_text = _render_substantiated_complaint_csv(

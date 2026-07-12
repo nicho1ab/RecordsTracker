@@ -15,6 +15,7 @@ from ccld_complaints.hosted_app.source_derived_reads import (
     get_source_derived_record_by_identity,
     get_source_derived_record_by_key,
     list_source_derived_records,
+    list_source_derived_records_by_entity_types,
 )
 
 FIXTURE = Path("tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json")
@@ -73,6 +74,27 @@ def test_list_source_derived_records_supports_limit_and_offset() -> None:
 
     assert len(records) == 1
     assert records[0].entity_type == "complaint"
+
+
+def test_list_source_derived_records_by_entity_types_is_uncapped_and_excludes_audit() -> None:
+    with _seeded_connection() as connection:
+        _insert_extraction_audit_row(connection)
+        records = list_source_derived_records_by_entity_types(
+            connection,
+            entity_types=("facility", "source_document", "complaint", "allegation"),
+        )
+
+    assert {record.entity_type for record in records} == {
+        "facility",
+        "source_document",
+        "complaint",
+        "allegation",
+    }
+    assert "AUDIT SHOULD NOT LOAD" not in {
+        str(value)
+        for record in records
+        for value in record.original_values.values()
+    }
 
 
 def test_fetch_source_derived_record_by_staged_key() -> None:
@@ -137,3 +159,43 @@ def _seeded_connection() -> Connection:
     import_seeded_corpus_artifact(connection, artifact)
     transaction.commit()
     return connection
+
+
+def _insert_extraction_audit_row(connection: Connection) -> None:
+    from ccld_complaints.hosted_app.seeded_import import (
+        hosted_import_batches,
+        hosted_source_derived_records,
+    )
+
+    batch_id = connection.execute(
+        hosted_import_batches.select().with_only_columns(
+            hosted_import_batches.c.import_batch_id
+        )
+    ).scalar_one()
+    template = connection.execute(
+        hosted_source_derived_records.select().where(
+            hosted_source_derived_records.c.entity_type == "complaint"
+        )
+    ).mappings().one()
+    connection.execute(
+        hosted_source_derived_records.insert().values(
+            source_record_key="extraction_audit:ccld:audit:do-not-load",
+            entity_type="extraction_audit",
+            stable_source_id="ccld:audit:do-not-load",
+            import_batch_id=batch_id,
+            source_document_id=template["source_document_id"],
+            facility_id=template["facility_id"],
+            source_url=template["source_url"],
+            raw_sha256=template["raw_sha256"],
+            raw_path=template["raw_path"],
+            connector_name=template["connector_name"],
+            connector_version=template["connector_version"],
+            retrieved_at=template["retrieved_at"],
+            original_values={
+                "audit_id": "ccld:audit:do-not-load",
+                "finding": "Substantiated",
+                "complaint_control_number": "AUDIT SHOULD NOT LOAD",
+            },
+            source_traceability=template["source_traceability"],
+        )
+    )

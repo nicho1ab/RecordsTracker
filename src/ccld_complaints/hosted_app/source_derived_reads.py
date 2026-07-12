@@ -67,6 +67,7 @@ def list_source_derived_records(
     connection: Connection,
     *,
     entity_type: SourceDerivedEntityType | None = None,
+    entity_types: tuple[SourceDerivedEntityType, ...] | None = None,
     import_batch_id: str | None = None,
     import_batch_ids: tuple[str, ...] | None = None,
     limit: int = 100,
@@ -80,11 +81,17 @@ def list_source_derived_records(
         raise ValueError(
             "Source-derived record list accepts one import batch filter mode."
         )
+    if entity_type is not None and entity_types is not None:
+        raise ValueError("Source-derived record list accepts one entity filter mode.")
 
     query = _source_derived_read_query()
     filters = []
     if entity_type is not None:
         filters.append(hosted_source_derived_records.c.entity_type == entity_type)
+    if entity_types is not None:
+        if not entity_types:
+            return ()
+        filters.append(hosted_source_derived_records.c.entity_type.in_(entity_types))
     if import_batch_id is not None:
         filters.append(hosted_source_derived_records.c.import_batch_id == import_batch_id)
     if import_batch_ids is not None:
@@ -98,6 +105,38 @@ def list_source_derived_records(
         hosted_source_derived_records.c.stable_source_id,
     ).limit(limit).offset(offset)
 
+    return tuple(
+        _read_model_from_row(row) for row in connection.execute(query).mappings().all()
+    )
+
+
+def list_source_derived_records_by_entity_types(
+    connection: Connection,
+    *,
+    entity_types: tuple[SourceDerivedEntityType, ...],
+    import_batch_id: str | None = None,
+    import_batch_ids: tuple[str, ...] | None = None,
+) -> tuple[SourceDerivedRecordRead, ...]:
+    if import_batch_id is not None and import_batch_ids is not None:
+        raise ValueError(
+            "Source-derived record list accepts one import batch filter mode."
+        )
+    if not entity_types:
+        return ()
+
+    query = _source_derived_read_query().where(
+        hosted_source_derived_records.c.entity_type.in_(entity_types)
+    )
+    if import_batch_id is not None:
+        query = query.where(hosted_source_derived_records.c.import_batch_id == import_batch_id)
+    if import_batch_ids is not None:
+        if not import_batch_ids:
+            return ()
+        query = query.where(hosted_source_derived_records.c.import_batch_id.in_(import_batch_ids))
+    query = query.order_by(
+        hosted_source_derived_records.c.entity_type,
+        hosted_source_derived_records.c.stable_source_id,
+    )
     return tuple(
         _read_model_from_row(row) for row in connection.execute(query).mappings().all()
     )
