@@ -311,6 +311,18 @@ class SubstantiatedFindingEvidence:
 
 
 @dataclass(frozen=True)
+class FacilityTypeClassification:
+    value: str
+    is_source_provided: bool
+
+    @property
+    def display_value(self) -> str:
+        if self.is_source_provided:
+            return self.value
+        return f"{self.value} (derived from facility name)"
+
+
+@dataclass(frozen=True)
 class SourceRecordIndexes:
     by_import_batch_id: Mapping[str, tuple[Mapping[str, Any], ...]]
     by_facility_id: Mapping[str, tuple[Mapping[str, Any], ...]]
@@ -7631,11 +7643,50 @@ def _facility_context_value(
 ) -> str:
     if facility is None:
         return "unknown"
+    if key == "facility_type":
+        return _facility_type_classification(facility).display_value
     for candidate_key in _facility_context_keys(key):
         value = facility.get(candidate_key)
         if _has_display_value(value):
             return _display_value(value)
     return "unknown"
+
+
+def _facility_type_classification(
+    facility: Mapping[str, Any] | None,
+) -> FacilityTypeClassification:
+    if facility is None:
+        return FacilityTypeClassification("unknown", is_source_provided=True)
+    for candidate_key in _facility_context_keys("facility_type"):
+        value = facility.get(candidate_key)
+        if _has_display_value(value):
+            return FacilityTypeClassification(
+                _display_value(value),
+                is_source_provided=True,
+            )
+    derived_value = _facility_type_from_facility_name(
+        _facility_context_value(facility, "facility_name")
+    )
+    if derived_value is not None:
+        return FacilityTypeClassification(derived_value, is_source_provided=False)
+    return FacilityTypeClassification("unknown", is_source_provided=True)
+
+
+def _facility_type_from_facility_name(facility_name: str) -> str | None:
+    normalized = _normalized_facility_name_phrase(facility_name)
+    if not normalized:
+        return None
+    if " FOSTER FAMILY AGENCY " in f" {normalized} ":
+        return "Foster Family Agency"
+    return None
+
+
+def _normalized_facility_name_phrase(value: object) -> str:
+    if not _has_display_value(value):
+        return ""
+    text = _display_value(value).casefold()
+    normalized_chars = [char.upper() if char.isalnum() else " " for char in text]
+    return " ".join("".join(normalized_chars).split())
 
 
 def _facility_context_keys(key: str) -> tuple[str, ...]:

@@ -1029,6 +1029,135 @@ def test_reviewer_ui_substantiated_worklist_uses_live_related_finding_shape() ->
     assert_no_secret_html(out_of_scope_html)
 
 
+def test_facility_type_classification_preserves_explicit_source_value() -> None:
+    facility = {
+        "facility_name": "4EVERGREEN FOSTER FAMILY AGENCY, INC.",
+        "facility_type": "Children's Center",
+    }
+
+    classification = reviewer_ui._facility_type_classification(facility)
+
+    assert classification.value == "Children's Center"
+    assert classification.is_source_provided is True
+    assert classification.display_value == "Children's Center"
+    assert reviewer_ui._facility_context_value(facility, "facility_type") == "Children's Center"
+
+
+def test_facility_type_classification_derives_foster_family_agency_from_name() -> None:
+    facility = {
+        "facility_name": "4EVERGREEN FOSTER FAMILY AGENCY, INC.",
+        "facility_type": "",
+    }
+
+    classification = reviewer_ui._facility_type_classification(facility)
+
+    assert classification.value == "Foster Family Agency"
+    assert classification.is_source_provided is False
+    assert classification.display_value == "Foster Family Agency (derived from facility name)"
+    assert (
+        reviewer_ui._facility_context_value(facility, "facility_type")
+        == "Foster Family Agency (derived from facility name)"
+    )
+
+
+def test_facility_type_classification_leaves_ambiguous_names_unknown() -> None:
+    for facility_name in (
+        "Foster Support Services",
+        "FFA Resource Center",
+        "Family Agency Services",
+    ):
+        classification = reviewer_ui._facility_type_classification(
+            {
+                "facility_name": facility_name,
+                "facility_type": None,
+            }
+        )
+        assert classification.value == "unknown"
+        assert classification.is_source_provided is True
+        assert classification.display_value == "unknown"
+
+
+def test_reviewer_ui_substantiated_worklist_facility_type_filter_uses_derived_ffa() -> None:
+    with _seeded_connection() as connection:
+        derived_key = _insert_substantiated_complaint_for_facility(
+            connection,
+            facility_number="157806111",
+            facility_name="4EVERGREEN FOSTER FAMILY AGENCY, INC.",
+            facility_type="",
+            complaint_control_number="32-CR-20260701000001",
+            complaint_received_date="2026-07-01",
+            report_date="2026-07-02",
+            source_value_key="finding",
+            source_value="Substantiated",
+            source_url=_ccld_source_url("157806111", "1"),
+        )
+        ambiguous_key = _insert_substantiated_complaint_for_facility(
+            connection,
+            facility_number="157806112",
+            facility_name="EVERGREEN FFA RESOURCE CENTER",
+            facility_type="",
+            complaint_control_number="32-CR-20260701000002",
+            complaint_received_date="2026-07-01",
+            report_date="2026-07-02",
+            source_value_key="finding",
+            source_value="Substantiated",
+            source_url=_ccld_source_url("157806112", "1"),
+        )
+        explicit_nonmatch_key = _insert_substantiated_complaint_for_facility(
+            connection,
+            facility_number="157806113",
+            facility_name="SOURCE VALUE PRECEDENCE FOSTER FAMILY AGENCY",
+            facility_type="Children's Center",
+            complaint_control_number="32-CR-20260701000003",
+            complaint_received_date="2026-07-01",
+            report_date="2026-07-02",
+            source_value_key="finding",
+            source_value="Substantiated",
+            source_url=_ccld_source_url("157806113", "1"),
+        )
+        null_type_key = _insert_substantiated_complaint_for_facility(
+            connection,
+            facility_number="157806114",
+            facility_name="CLEAR FOSTER FAMILY AGENCY",
+            facility_type="placeholder",
+            complaint_control_number="32-CR-20260701000004",
+            complaint_received_date="2026-07-01",
+            report_date="2026-07-02",
+            source_value_key="finding",
+            source_value="Substantiated",
+            source_url=_ccld_source_url("157806114", "1"),
+        )
+        _set_source_record_original_values(
+            connection,
+            "facility:ccld:facility:157806114",
+            {"facility_type": None},
+        )
+
+        status, content_type, body = route_response(
+            REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH
+            + "?facility_type=FOSTER%20FAMILY%20AGENCY&sort=facility_asc",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert f"source_record_key={quote(derived_key)}" in html
+    assert f"source_record_key={quote(null_type_key)}" in html
+    assert f"source_record_key={quote(ambiguous_key)}" not in html
+    assert f"source_record_key={quote(explicit_nonmatch_key)}" not in html
+    assert "4EVERGREEN FOSTER FAMILY AGENCY, INC." in html
+    assert "CLEAR FOSTER FAMILY AGENCY" in html
+    assert "EVERGREEN FFA RESOURCE CENTER" not in html
+    assert "SOURCE VALUE PRECEDENCE FOSTER FAMILY AGENCY" not in html
+    assert "Foster Family Agency (derived from facility name)" in html
+    assert "Facility type Children&#x27;s Center" not in html
+    assert "Open original public report for 32-CR-20260701000001" in html
+    assert "Open complaint review workspace" in html
+    assert_no_secret_html(html)
+
+
 def test_reviewer_ui_substantiated_worklist_uses_bounded_direct_source_reads(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1104,8 +1233,8 @@ def test_reviewer_ui_substantiated_worklist_uses_bounded_direct_source_reads(
 def test_postgres_corpus_substantiated_worklist_uses_authorized_retrieval_batches() -> None:
     substantiated = _representative_retrieval_record(
         facility_number="107207198",
-        facility_name="Representative Foster Family Agency",
-        facility_type="Foster Family Agency",
+        facility_name="4EVERGREEN FOSTER FAMILY AGENCY, INC.",
+        facility_type="",
         county="Los Angeles",
         complaint_control_number="24-CR-20260508083927",
         report_index="25",
@@ -1174,9 +1303,9 @@ def test_postgres_corpus_substantiated_worklist_uses_authorized_retrieval_batche
         "1 total qualifying authorized source-derived complaint record(s)."
         in html
     )
-    assert "Representative Foster Family Agency" in html
+    assert "4EVERGREEN FOSTER FAMILY AGENCY, INC." in html
     assert "107207198" in html
-    assert "Foster Family Agency" in html
+    assert "Foster Family Agency (derived from facility name)" in html
     assert "24-CR-20260508083927" in html
     assert ">Substantiated<" in html
     assert "425802141" not in html
