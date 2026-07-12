@@ -30,6 +30,10 @@ The capture command performs GET-only requests against an already-running local 
 - a matrix-export route capture that exercises `/reviewer/records/matrix.csv`
 	as a GET-only CSV export over loaded local/test complaint records for the
 	stable sample facility/date context.
+- a reviewer facility-priorities route capture that exercises
+  `/reviewer/facilities/priorities` as a GET-only worklist over authorized
+  loaded complaint records with deterministic factors, filters, pagination,
+  complaint-review links, and original-source link states.
 - `diagnostics/` git state, recent log, capture command, and non-secret capture settings.
 - `screenshots/` route screenshots when local screenshot tooling is available.
 - a sibling `.zip` packet after successful capture, suitable for local review
@@ -68,6 +72,13 @@ Capture evidence from another terminal:
 
 Live mode may make public CCLD HTTP requests only if a browser user submits a controlled retrieval form. The capture command itself is GET-only and does not submit retrieval.
 
+For focused issue #416 facility-priorities evidence after the hosted app is
+already running, capture only the required reviewer route states:
+
+```powershell
+.\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8003 -Mode live -Issue416
+```
+
 ## Fixture/Mock Evidence
 
 Start fixture/mock mode in one terminal:
@@ -83,6 +94,12 @@ Capture evidence from another terminal:
 ```
 
 Fixture/mock mode uses committed fixtures and does not make live CCLD calls.
+
+Focused issue #416 fixture evidence uses the same route set and assertions:
+
+```powershell
+.\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture -Issue416
+```
 
 ## One-Command Convenience Wrapper
 

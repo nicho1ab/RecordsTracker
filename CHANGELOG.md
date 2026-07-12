@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Added `/reviewer/facilities/priorities`, a read-only attorney-facing facility
+  review prioritization worklist over authorized loaded complaint records. It
+  deduplicates complaints by stable source identity, groups by source-derived
+  facility identity, exposes deterministic contributing factors and tie rules,
+  supports reviewer filters and pagination, links onward to complaint queues,
+  reviewer detail, and original public reports, and adds focused issue #416
+  hosted evidence capture routes without adding schemas, persisted scores,
+  retrieval changes, reviewer-state writes, or legal conclusions.
 - Added a read-only representative multi-facility coverage report over hosted
   PostgreSQL facility-reference, source-derived complaint, and retrieval-job
   metadata. The report classifies persisted provenance, summarizes loaded
