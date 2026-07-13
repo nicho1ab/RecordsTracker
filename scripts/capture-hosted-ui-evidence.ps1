@@ -735,7 +735,10 @@ function Test-Issue418RouteAssertions {
         Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 incomplete period" -Pass ($Html -match "(?is)<span[^>]*>Incomplete current period</span>.*?<strong>No anomaly cue</strong>") -PassMessage "Incomplete current period has no anomaly cue." -FailMessage "Incomplete current period state or no-cue behavior missing."
     }
     elseif ($kind -eq "zero") {
-        Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 zero qualifying" -Pass ($Text.Contains("Zero qualifying records") -and -not ($Html -match "(?is)Zero qualifying records.*?<strong>Decreased activity</strong>")) -PassMessage "Zero qualifying state found without unsupported decrease cue." -FailMessage "Zero qualifying state missing or described as decreased activity."
+        $zeroStateSupported = $Text.Contains("Zero qualifying records") -or $Text.Contains("Coverage unavailable")
+        $hasDecreasedActivity = $Html -match "(?is)<strong>Decreased activity</strong>"
+        $hasNoAnomalyCue = $Html -match "(?is)<strong>No anomaly cue</strong>"
+        Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 zero qualifying" -Pass ($counts.Found -and $counts.Qualifying -eq 0 -and $zeroStateSupported -and -not $hasDecreasedActivity -and $hasNoAnomalyCue) -PassMessage "Zero qualifying count has a supported coverage state and no anomaly cue." -FailMessage "Zero route count, coverage state, or anomaly cue behavior is unsupported."
     }
 }
 
