@@ -32,6 +32,37 @@ active server.
 Generated packets are ignored under `data/processed/ui-evidence/` and capture
 local UI route, screenshot, text, and accessibility evidence for review.
 
+## Generate SQLite/PostgreSQL store-parity evidence
+
+Run the deterministic local comparison with a new ignored output directory:
+
+```powershell
+.\.venv\Scripts\python.exe -m ccld_complaints.store_parity_evidence --mode local --output-dir <path>
+```
+
+The local command performs actual temporary SQLite execution, executes the
+hosted SQLAlchemy import/preload mapping path on a temporary local adapter, and
+compiles the exercised table and statement shapes with the PostgreSQL dialect.
+It does not claim that a live PostgreSQL server was tested. Generated output is
+aggregate-safe and must not be committed.
+
+For an operator-configured runtime, use:
+
+```powershell
+python -m ccld_complaints.store_parity_evidence --mode runtime --output-dir <path>
+```
+
+Runtime mode remains read-only. It reports whether an actual PostgreSQL
+connection was used and stops aggregate inspection on an Alembic revision
+mismatch. Without configured PostgreSQL it still reports implementation
+capability and explicitly records that runtime inspection did not occur.
+
+No complete safe refresh/backfill command is currently available. Existing
+source-derived PostgreSQL rows still require governed artifact regeneration and
+operator-controlled reimport. Existing facility-reference rows require the
+additive migration followed by the documented preload dry-run and apply steps.
+Do not substitute a reset, startup backfill, or partial ad hoc update.
+
 For changes to Docker runtime files, validate the static Docker/env tests and,
 when Docker is available, run a bounded Compose configuration check against the
 no-secret example environment before relying on the runtime.

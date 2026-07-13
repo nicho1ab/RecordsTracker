@@ -379,8 +379,12 @@ null-preserving: they do not erase an already populated value for the same
 stable facility identity, while an explicit source zero for `capacity` remains
 zero and a later non-null value remains eligible to update the record. This is
 an idempotent import safeguard, not a general cross-source precedence engine.
-SQLite/PostgreSQL parity and a canonical bridge from facility-reference rows are
-intentionally deferred to issue #448.
+Issue #448 parity evidence now enforces equivalent canonical SQLite and hosted
+PostgreSQL-style import counts, field presence/population/null semantics,
+explicit zero, source linkage, ordering, duplicate suppression, and idempotent
+reimport. Facility-reference fields remain source-reference-only: their parser,
+additive migration, and preload are covered separately and do not create a
+canonical bridge into SQLite or hosted canonical facility entities.
 
 Complaint-report facility address and city retain the present-but-blank audit
 semantics established in issue #446; issue #447 does not allocate them to new

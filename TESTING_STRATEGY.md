@@ -318,6 +318,22 @@ safe and writes only `manifest.json`, `allocation-results.csv`,
 `import-results.csv`, `null-semantics-results.csv`, `migration-results.csv`,
 `gap-status.csv`, and `summary.md` under an ignored output directory.
 
+Issue #448 store-parity evidence tests must compare equivalent governed
+canonical inputs through actual temporary SQLite execution and the hosted
+SQLAlchemy mapping path, compile the exercised hosted table and statement shapes
+with the PostgreSQL dialect, and clearly state that this is not a live
+PostgreSQL service test. Coverage must include entity counts, canonical field
+presence/population/null counts, explicit numeric zero, present-but-blank and
+source-unavailable audit states, source-document/raw-hash linkage, event and
+date-array ordering, duplicate suppression, idempotent reimport, additive
+migration, facility-reference preload, reviewer-created-state preservation,
+production fixture-fallback guards, schema-version mismatch, local/runtime
+inspection status, refresh readiness, and forced mismatch failure. Evidence is
+aggregate-safe and writes only `manifest.json`, `store-results.csv`,
+`field-parity-results.csv`, `null-semantics-results.csv`,
+`idempotency-results.csv`, `refresh-readiness-results.csv`, `gap-status.csv`,
+and `summary.md` under an ignored output directory.
+
 QNAP-first Docker runtime tests must statically validate `Dockerfile`,
 `docker-compose.qnap.yml`, and `.env.example` for the production-like
 PostgreSQL runtime envelope. They must prove the examples use placeholder-only

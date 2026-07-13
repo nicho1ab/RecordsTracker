@@ -14,13 +14,22 @@
   the extractor preserves that distinction in audit evidence, but canonical
   storage allocation remains deferred.
 - Existing hosted PostgreSQL source-derived rows do not change when extractor
-  code changes. Regeneration and reimport are required, and no safe automated
-  in-place refresh command is currently implemented.
+  or allocation code changes. Regeneration and reimport are required. The
+  controlled importer is idempotent and preserves source traceability and
+  reviewer-created state, but no complete safe refresh command currently adds
+  schema-version gating, aggregate dry-run changed/unchanged/skipped/failed
+  planning, governed artifact regeneration, and a production recovery contract.
 - Existing facility-reference rows require an Alembic upgrade and a deliberate
   preload rerun before the issue #447 visit-date arrays or `CLIENT_SERVED`
   projection are populated. Those reference-only fields are not canonical
   complaint events or facility attributes, and no cross-source canonical bridge
-  is implemented.
+  is implemented. The existing preload supports explicit dry-run/apply and
+  counted idempotent updates, but it is not the missing complete canonical-plus-
+  reference refresh workflow.
+- Local store-parity evidence executes SQLite and the hosted SQLAlchemy mapping
+  path on a temporary SQLite adapter and separately compiles PostgreSQL-dialect
+  SQL. It does not claim a disposable PostgreSQL service or production runtime
+  inspection; runtime mode makes that distinction explicit.
 - Default and PostgreSQL hosted modes do not fall back to committed tiny fixture
   records. Fixture/sample routes and the committed seeded artifact require an
   explicit local `fixture-demo` or fixture-import opt-in.
