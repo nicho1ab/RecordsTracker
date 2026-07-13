@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Added `/reviewer/facilities/trends`, a read-only attorney-facing monthly or
+  quarterly complaint activity comparison over authorized loaded records. It
+  deduplicates stable complaint identities, reconciles complaint,
+  substantiated/equivalent, and governed serious-topic counts, distinguishes
+  complete, incomplete-current, zero, unavailable-coverage, and unavailable-date
+  states, applies only visible adjacent-period anomaly rules, links contributing
+  complaint records to reviewer detail, and adds focused issue #418 evidence
+  capture without schemas, retrieval changes, reviewer-state writes, hidden
+  scores, machine learning, or legal/facility-wide conclusions.
 - Added `/reviewer/records/serious-topics`, a read-only attorney-facing
   serious-topic complaint worklist over authorized loaded complaint records. It
   maps governed source-derived allegation categories to reviewer topics,

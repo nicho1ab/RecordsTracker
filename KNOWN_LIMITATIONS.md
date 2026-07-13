@@ -133,6 +133,14 @@
     automation, or audit coverage for reset/reload, exports, feedback,
     annotations, corrections, provider login, role changes, or operational
     actions.
+- The read-only `/reviewer/facilities/trends` page compares only authorized
+    loaded complaint records. Period availability is bounded by the first and
+    last loaded complaint-received-date period for the selected facility group;
+    `Coverage unavailable` does not mean no public records exist. Complaint rows
+    without a complaint received date remain in the separate `Date unavailable`
+    count and are never used for anomaly comparisons. The page does not persist
+    scores, predict future activity, mutate reviewer state, or make legal,
+    facility-wide, or source-completeness conclusions.
 - The local hosted scaffold `/ccld/records/request` page accepts a CCLD
     facility/license number and optional date range, reads only existing seeded
     source-derived rows, can load or refresh matching rows from local validated

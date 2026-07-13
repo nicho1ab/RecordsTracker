@@ -34,6 +34,10 @@ The capture command performs GET-only requests against an already-running local 
   `/reviewer/facilities/priorities` as a GET-only worklist over authorized
   loaded complaint records with deterministic factors, filters, pagination,
   complaint-review links, and original-source link states.
+- a reviewer facility-trends route capture that exercises
+  `/reviewer/facilities/trends` as a GET-only monthly/quarterly comparison over
+  authorized loaded complaint records with coverage states, visible anomaly
+  rules and contributing counts, filters, and complaint-detail links.
 - `diagnostics/` git state, recent log, capture command, and non-secret capture settings.
 - `screenshots/` route screenshots when local screenshot tooling is available.
 - a sibling `.zip` packet after successful capture, suitable for local review
@@ -77,6 +81,13 @@ already running, capture only the required reviewer route states:
 
 ```powershell
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8003 -Mode live -Issue416
+```
+
+For focused issue #418 complaint-trend evidence after the hosted app is already
+running with the governed local records being reviewed:
+
+```powershell
+.\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8003 -Mode live -Issue418
 ```
 
 ## Fixture/Mock Evidence

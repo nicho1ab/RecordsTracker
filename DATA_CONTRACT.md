@@ -136,6 +136,13 @@ state only. They are not complaint records, not source-derived canonical fields,
 not source verification, not complaint-coverage determinations, not source-
 completeness proof, and do not require schemas, migrations, imports, connectors,
 or persistence in this scaffold.
+A read-only local/test facility trend page can aggregate authorized loaded
+complaint records by stable complaint identity and complaint received date for
+monthly or quarterly reviewer comparison. Its filters, period rows, coverage
+states, substantiated/equivalent and governed serious-topic counts, and visible
+adjacent-period anomaly cues are derived presentation state only; they are not
+canonical fields, persisted scores, reviewer-created state, legal conclusions,
+or source-completeness determinations and require no schema or migration.
 The page can also render a guided facility/date-scoped request result queue,
 first-time help, contextual field/action guidance, reviewer-state indicators,
 progress counts, reviewer-status filters, reviewer note/status cues,

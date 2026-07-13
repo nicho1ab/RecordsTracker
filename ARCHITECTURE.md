@@ -148,6 +148,10 @@ the existing reviewer-created state scaffold, a narrow local/test workflow-shell
 note action and status action over the selected source-derived detail context,
 a thin browser-accessible local/test reviewer UI shell at `/reviewer` and
 `/reviewer/records` over those existing seams, a thin browser-accessible
+read-only facility trend route at `/reviewer/facilities/trends` over authorized
+loaded source-derived records with deterministic monthly/quarterly aggregation,
+coverage labels, anomaly cues, and complaint-detail links,
+a thin browser-accessible
 local/test CCLD facility lookup page at `/ccld/facilities` that reads committed
 or configured full local/test CCLD program facility reference CSV rows, searches
 safe scalar fields, shows the active reference source, falls back to the committed

@@ -411,6 +411,13 @@ the governed primary future review experience.
 	schemas or migrations, adding production auth, exports, reset/reload
 	execution, hosted live crawling, connector execution, deployment, hosted URLs,
 	or a frontend build pipeline.
+- Added the read-only `/reviewer/facilities/trends` reviewer workflow for
+  comparing authorized loaded complaint activity by month or quarter across one
+  facility or a filtered facility group. The workflow deduplicates stable
+  complaint identity, reconciles complaint, finding, and governed serious-topic
+  counts, labels coverage states, applies transparent adjacent-period anomaly
+  rules, and links contributing complaint records without adding schemas,
+  retrieval, reviewer-state mutation, hidden scoring, or legal conclusions.
 - Added the first browser-accessible local/test CCLD record request page at
 	`/ccld/records/request`, letting a local tester enter a CCLD facility/license
 	number and optional date range, read matching records from the seeded source-

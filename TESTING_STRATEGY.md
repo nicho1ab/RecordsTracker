@@ -231,6 +231,17 @@ queue/detail links, and original-source link availability accessibly, preserves
 authorization and import-batch scope, excludes fixture/demo fallback data in
 production mode, and does not mutate source-derived, reviewer-created, audit,
 import, feedback, retrieval-job, or operational rows.
+Hosted facility-trends tests must prove `/reviewer/facilities/trends` groups
+authorized loaded complaints by month and quarter using stable complaint
+identity, honors inclusive date boundaries and combined facility, facility type,
+geography, finding/status, and governed serious-topic filters, reconciles total,
+substantiated/equivalent, serious-topic, and unavailable-date counts, and orders
+periods and complaint links deterministically. Tests must cover complete,
+incomplete-current, zero-qualifying, unavailable-coverage, and unavailable-date
+states; increased, new, decreased, and no-cue rules with both contributing
+counts; semantic tables and labeled controls; reviewer-detail/source access;
+authorization and import-batch separation; no raw narrative or private output;
+and no mutation. Focused hosted evidence for this slice uses `-Issue418`.
 Hosted serious-topic worklist tests must prove `/reviewer/records/serious-topics`
 uses only governed deterministic source categories and governed keyword cues,
 labels official allegation categories as source-derived, allows keyword-assisted

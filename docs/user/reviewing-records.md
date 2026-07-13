@@ -26,6 +26,8 @@ Search matches from `public_record_allegation_search` are screening aids over th
 
 In the hosted reviewer workflow, use `/reviewer/records/serious-topics` to filter loaded complaint records by governed serious-review themes. Treat `Source category` rows as official source-derived categories and `Keyword-assisted cue` rows as separate review prompts when the source category is missing or unknown. Do not summarize keyword cues as findings or verified events.
 
+Use `/reviewer/facilities/trends` when the review task is to compare loaded complaint and finding activity over time. Coverage and anomaly labels describe only the displayed, qualifying loaded records; open the contributing complaint record and its existing public-report action before relying on an individual complaint.
+
 Facility pattern counts summarize the local derived dataset only. Use them to choose records for closer source review, not as findings about a facility or the public source record.
 
 Facility comparison rows summarize local derived facility/category/finding groups only. Use same-category/finding facility counts to find records for closer source review, not as findings about a facility or facility-wide conduct.

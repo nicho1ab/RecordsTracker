@@ -46,3 +46,9 @@ Use `complaint_timeline_by_facility` when date sequence matters. Missing timelin
 The hosted reviewer route `/reviewer/records/serious-topics` filters authorized loaded complaint records by governed serious-review themes. Source-derived rows show the official allegation category verbatim and label the match as `Source category`. When the official category is missing or unknown, the route can show a separate `Keyword-assisted cue` from governed allegation-text terms. Keyword cues are not findings, verified events, legal conclusions, or facility-wide conclusions.
 
 The serious-topic filters can be combined with finding, facility, geography, and complaint received date. Use the reviewer detail link and original public report link before relying on a row; the worklist intentionally does not show raw allegation narrative text in the primary table.
+
+## Hosted complaint trends
+
+Use `/reviewer/facilities/trends` to compare deduplicated loaded complaint activity by month or quarter for one facility or a filtered facility group. Filters cover facility, facility type, geography, finding/status, supported serious review topic, start date, end date, time grain, and a bounded period count.
+
+Each period shows total complaints, substantiated/equivalent findings, serious-topic qualifying complaints, a compact coverage state, and direct links to contributing complaint records. An anomaly cue appears only when adjacent periods are complete and comparable: new activity is at least 3 complaints after 0; increased activity is at least 3 and at least twice the preceding count; decreased activity follows at least 3 complaints and is no more than half the preceding count. Incomplete, unavailable, partial, or otherwise non-comparable periods receive no anomaly cue.
