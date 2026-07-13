@@ -502,16 +502,23 @@ def test_ccld_facility_report_extracts_required_fields() -> None:
     ]
     assert extracted["finding"] == "Unsubstantiated"
     assert extracted["visit_date"] == "2022-08-24"
-    assert extracted["days_received_to_first_activity"] is None
+    assert extracted["facility_address"] is None
+    assert extracted["facility_capacity"] == 48
+    assert extracted["facility_city"] is None
+    assert extracted["regional_office"] == "CCLD Regional Office"
+    assert extracted["first_investigation_activity_date"] == "2022-04-14"
+    assert extracted["days_received_to_first_activity"] == 7
     assert extracted["days_received_to_visit"] == 139
     assert extracted["days_received_to_report"] == 139
     assert extracted["days_report_to_signed"] == 2
-    assert extracted["review_delay_over_30_days"] is True
-    assert extracted["review_delay_over_60_days"] is True
-    assert extracted["review_delay_over_90_days"] is True
-    assert extracted["review_delay_over_120_days"] is True
-    assert extracted["missing_first_activity_date"] is True
+    assert extracted["review_delay_over_30_days"] is False
+    assert extracted["review_delay_over_60_days"] is False
+    assert extracted["review_delay_over_90_days"] is False
+    assert extracted["review_delay_over_120_days"] is False
+    assert extracted["missing_first_activity_date"] is False
     assert extracted["report_date_used_as_proxy"] is False
+    extracted_events = cast(list[dict[str, object]], extracted["events"])
+    assert [event["event_date"] for event in extracted_events] == ["2022-04-14"]
 
 
 def test_ccld_facility_report_normalizes_to_expected_fixture() -> None:
@@ -959,6 +966,7 @@ def test_ccld_facility_ingestion_can_emit_records_to_sqlite(tmp_path: Path) -> N
                 "source_documents",
                 "complaints",
                 "allegations",
+                "events",
                 "extraction_audit",
             )
         }
@@ -983,9 +991,10 @@ def test_ccld_facility_ingestion_can_emit_records_to_sqlite(tmp_path: Path) -> N
         "source_documents": 1,
         "complaints": 1,
         "allegations": 2,
-        "extraction_audit": 21,
+        "events": 1,
+        "extraction_audit": 28,
     }
-    assert complaint_delay_fields == (None, 139, 139, 2, 1, 1, 1, 1, 1, 0)
+    assert complaint_delay_fields == (7, 139, 139, 2, 0, 0, 0, 0, 0, 0)
 
 
 def _extract_fixture() -> dict[str, object]:

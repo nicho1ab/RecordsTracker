@@ -30,6 +30,11 @@ the governed primary future review experience.
 - Preserved raw source files and SHA-256 hashes before extraction.
 - Normalized extracted records into facility, source document, complaint,
 	allegation, event, and extraction audit records.
+- Added governed complaint-report extraction for the earliest deterministic
+  investigation activity, one bounded activity event, facility capacity,
+  regional-office labeling, present-but-blank address/city states, and bounded
+  field-level source section/text evidence, with aggregate-safe local/runtime
+  evidence output.
 - Wrote normalized records to SQLite with idempotent upsert behavior.
 - Added controlled live fetch for explicitly provided facility numbers.
 - Added multi-facility input for live fetch workflows scoped to user-provided

@@ -68,6 +68,14 @@ The extractor reads the public FacilityReports HTML response, preserves the raw 
 - Facility number and facility name
 - Report type, report date, date signed, and visit date, including split label/value date layouts
 - Complaint received date, including inline narrative phrase variants, and complaint control number
+- The earliest deterministic investigation activity date from a bounded
+  investigation-findings sentence, without substituting report date
+- One bounded `investigation_activity` event for the governed activity sentence,
+  including event date, type, text, and source section
+- Facility capacity and the literal regional-office label from the complaint
+  report facility/header sections
+- Present-but-blank facility address and city elements as explicit extraction
+  audit states; these fields remain unallocated canonically pending separate work
 - Allegation text, including allegation and investigation finding heading variants and lowercase continuation lines in wrapped layouts
 - Normalized finding, including explicit `Finding:` labels, `Finding -` inline labels, split `Finding` label/value layouts, and source punctuation variants
 - Deterministic delay metrics for received-to-visit, received-to-report, and report-to-signed dates when both dates are available
@@ -75,4 +83,36 @@ The extractor reads the public FacilityReports HTML response, preserves the raw 
 
 The normalized output uses the canonical entities in `DATA_CONTRACT.md`; the CCLD facility number is stored as `external_facility_number` on the facility record.
 
-The connector does not infer `first_investigation_activity_date` from report date. If no first activity date is available, the normalized complaint record marks `missing_first_activity_date`. Report date is used as a delay review proxy only when no first activity date or visit date is available.
+The connector does not infer `first_investigation_activity_date` from report date.
+It normalizes a narrative date only when governed investigation wording contains
+a deterministic activity cue and parseable date. If no first activity date is
+available, the normalized complaint record marks `missing_first_activity_date`.
+Report date is used as a delay review proxy only when no first activity date or
+visit date is available.
+
+Target extraction audit rows link to the retained source document and preserve a
+bounded source section plus source text. Generated evidence hashes that source
+text instead of emitting it.
+
+## Focused extraction-gap evidence
+
+From `<Repo Path>\`, run the local governed-fixture adapter:
+
+```powershell
+.\.venv\Scripts\python.exe -m ccld_complaints.extraction_gap_evidence --mode local --output-dir <path>
+```
+
+In the configured runtime, run the aggregate-only PostgreSQL adapter:
+
+```powershell
+python -m ccld_complaints.extraction_gap_evidence --mode runtime --output-dir <path>
+```
+
+The command writes `manifest.json`, `field-results.csv`,
+`artifact-results.csv`, `gap-status.csv`, `traceability-results.csv`, and
+`summary.md`. It does not emit complaint narratives, raw artifact bodies,
+connection strings, private URLs, secrets, synthetic facility records, or
+user-specific paths. Runtime population is reported separately from governed
+extractor capability. Existing imported PostgreSQL rows require regeneration
+and reimport before newly extracted values appear; no safe automated in-place
+refresh command is currently implemented.

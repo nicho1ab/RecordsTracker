@@ -8,8 +8,8 @@
     "licensee_name": null,
     "county": null,
     "status": null,
-    "capacity": null,
-    "regional_office": null
+    "capacity": 48,
+    "regional_office": "CCLD Regional Office"
   },
   "source_document": {
     "document_id": "ccld-157806098-inx-3",
@@ -32,20 +32,20 @@
     "document_id": "ccld-157806098-inx-3",
     "complaint_control_number": "32-CR-20220407124448",
     "complaint_received_date": "2022-04-07",
-    "first_investigation_activity_date": null,
+    "first_investigation_activity_date": "2022-04-14",
     "visit_date": "2022-08-24",
     "report_date": "2022-08-24",
     "date_signed": "2022-08-26",
     "finding": "Unsubstantiated",
-    "days_received_to_first_activity": null,
+    "days_received_to_first_activity": 7,
     "days_received_to_visit": 139,
     "days_received_to_report": 139,
     "days_report_to_signed": 2,
-    "review_delay_over_30_days": true,
-    "review_delay_over_60_days": true,
-    "review_delay_over_90_days": true,
-    "review_delay_over_120_days": true,
-    "missing_first_activity_date": true,
+    "review_delay_over_30_days": false,
+    "review_delay_over_60_days": false,
+    "review_delay_over_90_days": false,
+    "review_delay_over_120_days": false,
+    "missing_first_activity_date": false,
     "report_date_used_as_proxy": false,
     "extraction_confidence": 1.0
   },
@@ -64,6 +64,17 @@
       "allegation_text": "Facility staff do not provide adequate supervision to the facility clients",
       "allegation_category": null,
       "finding": "Unsubstantiated",
+      "extraction_confidence": 1.0
+    }
+  ],
+  "events": [
+    {
+      "event_id": "ccld-complaint-32-CR-20220407124448-event-1",
+      "complaint_id": "ccld-complaint-32-CR-20220407124448",
+      "event_date": "2022-04-14",
+      "event_type": "investigation_activity",
+      "event_text": "During the course of the investigation, LPA interviewed facility clients on 4/14/22, 5/12/22, 6/15/22, 6/24/22, and facility staff on 4/14/22, 6/15/22, 6/24/22 (see Confidential Names Form dated August 23, 2022).",
+      "extracted_from_section": "investigation findings",
       "extraction_confidence": 1.0
     }
   ]

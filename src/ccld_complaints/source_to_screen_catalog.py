@@ -345,9 +345,9 @@ QUERY_COVERAGE_GAPS: tuple[QueryCoverageGap, ...] = (
         ownership="complaint",
         gap_classification="STORED_QUERY_OMISSION",
         priority="P1",
-        disposition="address after first-activity extraction coverage is available",
+        disposition="retain for separately scoped request-date query work",
         recommended_display_location="complaint request date filtering",
-        dependencies="first investigation activity extraction and import",
+        dependencies="runtime population assessment and query behavior approval",
         evidence_reference_location=(
             "src/ccld_complaints/hosted_app/source_derived_reads.py#"
             "CCLD_REVIEW_DATE_FIELDS"
@@ -532,7 +532,7 @@ _PRESENTATION_REGISTRY: Mapping[tuple[str, str], _Presentation] = {
         "complaint detail source timeline", "date with unavailable state",
     ),
     ("complaint", "first_investigation_activity_date"): _Presentation(
-        "complaint detail", "",
+        "complaint detail", "/reviewer/records/detail source timeline",
         "complaint detail source timeline", "date with extraction-coverage qualifier",
     ),
     ("complaint", "visit_date"): _Presentation(
@@ -567,15 +567,15 @@ _PRESENTATION_REGISTRY: Mapping[tuple[str, str], _Presentation] = {
         "serious-topic review", "source-category label distinct from keyword cue",
     ),
     ("event", "event_date"): _Presentation(
-        "activity and narrative helpers", "not populated in current connector output",
+        "activity and narrative helpers", "/reviewer/records/detail source timeline",
         "complaint detail source timeline", "dated event row",
     ),
     ("event", "event_type"): _Presentation(
-        "activity helper", "not populated in current connector output",
+        "activity helper", "/reviewer/records/detail source timeline",
         "complaint detail source timeline", "event-type label",
     ),
     ("event", "event_text"): _Presentation(
-        "source narrative helper", "not populated in current connector output",
+        "source narrative helper", "/reviewer/records/detail bounded event excerpt",
         "complaint detail narrative", "source excerpt with traceability",
     ),
 }
@@ -633,18 +633,18 @@ _TIMING_DISPLAY_OMISSIONS = (
 
 _KNOWN_GAPS: Mapping[tuple[str, str], _KnownGap] = {
     ("complaint", "first_investigation_activity_date"): _KnownGap(
-        "RAW_PRESENT_EXTRACTION_MISSING", "investigation narrative may be present",
-        "connector currently assigns null", "add deterministic event/date extraction first",
-        "P0", "src/ccld_complaints/connectors/ccld/facility_reports.py#extract",
-        "representative raw investigation wording",
-        "Add fixture regressions for each supported first-activity wording.",
+        "NOT_APPLICABLE", "governed investigation activity wording is present",
+        "deterministically extracted with bounded source evidence", "retain and measure",
+        "P2", "src/ccld_complaints/connectors/ccld/facility_reports.py#extract",
+        "governed investigation activity wording",
+        "Keep fixture regressions for supported first-activity wording and malformed dates.",
     ),
     ("complaint", "days_received_to_first_activity"): _KnownGap(
-        "CANONICAL_IMPORT_NOT_POPULATED", "derived after both dates are available",
-        "derivation exists but prerequisite is always null",
-        "populate only after first-activity extraction is reliable", "P1",
+        "NOT_APPLICABLE", "derived after both dates are available",
+        "deterministically populated when governed first-activity extraction succeeds",
+        "retain and measure", "P2",
         "src/ccld_complaints/connectors/ccld/facility_reports.py#_delay_metrics",
-        "first investigation activity extraction",
+        "governed first investigation activity extraction",
         "Test null prerequisite, verified zero-day interval, and positive interval.",
     ),
     ("allegation", "allegation_category"): _KnownGap(
@@ -655,15 +655,15 @@ _KNOWN_GAPS: Mapping[tuple[str, str], _KnownGap] = {
         "Keep source categories distinct from keyword-assisted cues.",
     ),
     ("extraction_audit", "source_text"): _KnownGap(
-        "RAW_PRESENT_EXTRACTION_MISSING", "raw source body retained",
-        "audit record assigns null", "capture bounded source evidence without audit exports", "P1",
+        "NOT_APPLICABLE", "raw source body retained",
+        "target audit rows capture bounded source evidence", "retain without audit exports", "P2",
         "src/ccld_complaints/connectors/ccld/facility_reports.py#_audit_records",
         "privacy-safe source evidence design",
         "Assert audit output never exports source text values.",
     ),
     ("extraction_audit", "source_section"): _KnownGap(
-        "RAW_PRESENT_EXTRACTION_MISSING", "raw report sections may be identifiable",
-        "audit record assigns null", "capture a safe section label", "P1",
+        "NOT_APPLICABLE", "raw report sections are deterministically identified",
+        "target audit rows capture safe section labels", "retain and measure", "P2",
         "src/ccld_complaints/connectors/ccld/facility_reports.py#_audit_records",
         "section-label extraction",
         "Use label-only fixture assertions without narrative values.",
@@ -681,11 +681,12 @@ _KNOWN_GAPS: Mapping[tuple[str, str], _KnownGap] = {
     },
     **{
         ("event", field): _KnownGap(
-            "RAW_PRESENT_EXTRACTION_MISSING", "investigation narrative may be present",
-            "current connector emits no event records", "add deterministic event extraction",
-            "P1", "src/ccld_complaints/connectors/ccld/facility_reports.py",
-            "event boundary and date rules",
-            "Add governed event fixtures before enabling reviewer display.",
+            "NOT_APPLICABLE", "governed investigation activity wording is present",
+            "connector emits a bounded deterministic investigation activity event",
+            "retain and measure", "P2",
+            "src/ccld_complaints/connectors/ccld/facility_reports.py",
+            "governed event boundary and date rules",
+            "Keep governed event, malformed-date, and missing-date regressions.",
         )
         for field in ("event_date", "event_type", "event_text")
     },
@@ -1000,6 +1001,7 @@ def _raw_only_specs() -> tuple[ElementSpec, ...]:
     specs: list[ElementSpec] = []
     for field, name, ownership, canonical_column, location, method in _RAW_ONLY_FIELDS:
         is_narrative = field == "investigation_findings_narrative"
+        canonical_deferred = field in {"facility_address", "facility_city"}
         canonical_entity = "facility" if canonical_column is not None else None
         specs.append(
             ElementSpec(
@@ -1016,7 +1018,7 @@ def _raw_only_specs() -> tuple[ElementSpec, ...]:
                 extraction_status=(
                     "extracted into hosted original values"
                     if is_narrative
-                    else "not extracted by the current complaint connector"
+                    else "deterministically extracted with field-level audit evidence"
                 ),
                 canonical_entity=canonical_entity,
                 canonical_column=canonical_column,
@@ -1035,19 +1037,28 @@ def _raw_only_specs() -> tuple[ElementSpec, ...]:
                 ),
                 recommended_display_location=location,
                 recommended_display_method=method,
-                traceability_availability="raw document identity and hash; no raw value output",
-                validation_coverage="representative raw-artifact allowlist detection",
+                traceability_availability=(
+                    "raw document identity and hash plus field-level source section and text; "
+                    "aggregate evidence excludes raw values"
+                ),
+                validation_coverage=(
+                    "governed fixture extraction and aggregate-safe evidence assertions"
+                ),
                 gap_classification=(
-                    "NOT_APPLICABLE" if is_narrative else "RAW_PRESENT_EXTRACTION_MISSING"
+                    "EXTRACTED_CANONICAL_MAPPING_MISSING"
+                    if canonical_deferred
+                    else "NOT_APPLICABLE"
                 ),
                 disposition=(
                     "retain current hosted original-values presentation"
                     if is_narrative
-                    else "add deterministic extraction before presentation"
+                    else "defer canonical allocation to issue 447"
+                    if canonical_deferred
+                    else "retain deterministic extraction and traceability"
                 ),
-                priority="P2" if is_narrative else "P0",
+                priority="P1" if canonical_deferred else "P2",
                 evidence_reference_location=(
-                    "src/ccld_complaints/source_to_screen_audit.py#_RAW_FIELD_PATTERNS"
+                    "src/ccld_complaints/connectors/ccld/facility_reports.py#extract"
                 ),
                 source_observation_field=field,
                 source_observation_sources=(
@@ -1060,8 +1071,14 @@ def _raw_only_specs() -> tuple[ElementSpec, ...]:
                 reviewer_relevant=True,
                 facility_hub_relevant=ownership == "facility",
                 complaint_detail_relevant=ownership == "complaint",
-                dependencies="deterministic raw label/section extraction",
-                validation_requirement="Detect field identity without retaining source value.",
+                dependencies=(
+                    "canonical storage allocation in issue 447"
+                    if canonical_deferred
+                    else "none"
+                ),
+                validation_requirement=(
+                    "Prove extraction, present-blank semantics, traceability, and safe evidence."
+                ),
             )
         )
     return tuple(specs)
