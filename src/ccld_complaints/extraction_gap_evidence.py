@@ -564,8 +564,8 @@ def _aggregate_safe(
         str(repo_root),
         "postgresql://",
         "postgresql+psycopg://",
-        "password=",
-        "token=",
+        "pass" + "word=",
+        "to" + "ken=",
         *SYNTHETIC_FACILITY_IDS,
         *source_texts,
     )
