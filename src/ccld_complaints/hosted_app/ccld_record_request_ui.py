@@ -206,7 +206,8 @@ def default_ccld_record_request_ui_context() -> CcldRecordRequestUiContext:
         _DEFAULT_CCLD_RECORD_REQUEST_CONTEXT = CcldRecordRequestUiContext(
             reviewer_ui_context=reviewer_ui_context,
             import_reload_context=_import_reload_context_for_reviewer_ui_context(
-                reviewer_ui_context
+                reviewer_ui_context,
+                allow_committed_fixture=True,
             ),
         )
     return _DEFAULT_CCLD_RECORD_REQUEST_CONTEXT
@@ -231,11 +232,14 @@ def ccld_record_request_context_for_reviewer_context(
 
 def _import_reload_context_for_reviewer_ui_context(
     reviewer_ui_context: ReviewerUiContext,
+    *,
+    allow_committed_fixture: bool = False,
 ) -> CcldImportReloadContext:
     source_context = reviewer_ui_context.workflow_shell_context.source_derived_api_context
     return ccld_import_reload_context_for_connection(
         source_context.connection,
         scope=source_context.scope,
+        allow_committed_fixture=allow_committed_fixture,
     )
 
 

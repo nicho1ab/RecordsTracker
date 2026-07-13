@@ -746,6 +746,23 @@ PRIMARY_KEYS = {
     "extraction_audit": "audit_id",
 }
 
+# A facility row is repeated for every normalized complaint document.  Missing
+# values in one document must not erase a usable facility value populated by a
+# different governed document or initializer.  Non-null incoming values still
+# refresh the current canonical projection, including an explicit numeric zero.
+NULL_PRESERVING_UPSERT_COLUMNS = {
+    "facilities": frozenset(
+        {
+            "facility_type",
+            "licensee_name",
+            "county",
+            "status",
+            "capacity",
+            "regional_office",
+        }
+    )
+}
+
 COMPLAINT_COLUMN_DEFINITIONS = {
     "days_received_to_visit": "INTEGER",
     "days_report_to_signed": "INTEGER",
@@ -822,8 +839,17 @@ def _upsert(
     primary_key = PRIMARY_KEYS[table_name]
     column_names = ", ".join(columns)
     placeholders = ", ".join("?" for _column in columns)
+    null_preserving_columns = NULL_PRESERVING_UPSERT_COLUMNS.get(
+        table_name, frozenset()
+    )
     assignments = ", ".join(
-        f"{column} = excluded.{column}" for column in columns if column != primary_key
+        (
+            f"{column} = COALESCE(excluded.{column}, {table_name}.{column})"
+            if column in null_preserving_columns
+            else f"{column} = excluded.{column}"
+        )
+        for column in columns
+        if column != primary_key
     )
     values = [_sqlite_value(record.get(column)) for column in columns]
 

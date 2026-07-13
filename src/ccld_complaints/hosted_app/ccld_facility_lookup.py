@@ -1219,7 +1219,11 @@ def _facility_lookup_record_from_source_record(
 
 def _source_value(values: Mapping[str, Any], key: str) -> str:
     value = values.get(key)
-    return value.strip() if isinstance(value, str) else ""
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, int | float) and not isinstance(value, bool):
+        return str(value)
+    return ""
 
 
 def _record_from_row(row: dict[str, str]) -> CcldFacilityLookupRecord:

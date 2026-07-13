@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import csv
 import importlib.util
@@ -47,6 +47,7 @@ def test_facility_reference_table_shape_includes_lookup_columns_and_indexes() ->
         "facility_name",
         "facility_type",
         "program_type",
+        "client_served",
         "licensee_name",
         "facility_administrator",
         "telephone",
@@ -60,6 +61,9 @@ def test_facility_reference_table_shape_includes_lookup_columns_and_indexes() ->
         "status",
         "license_first_date",
         "closed_date",
+        "all_visit_dates",
+        "inspection_visit_dates",
+        "other_visit_dates",
         "snapshot_date",
         "source_resource_id",
         "source_resource_name",
@@ -105,7 +109,10 @@ def test_parser_normalizes_program_facility_rows_and_preserves_source_metadata(
                 "Facility Capacity": "24",
                 "Facility Status": "Licensed",
                 "License First Date": "6/7/2020",
-                "Closed Date": "",
+                "Closed Date": "07/01/2026",
+                "All Visit Dates": "2026-06-15; 06/07/2026; 2026-06-15",
+                "Inspection Visit Dates": "06-08-2026; 2026-06-07",
+                "Other Visit Dates": "",
             },
             {
                 "Facility Number": "",
@@ -126,8 +133,18 @@ def test_parser_normalizes_program_facility_rows_and_preserves_source_metadata(
     assert result.warnings[0].row_number == 3
     assert record.facility_number == "900000123"
     assert record.facility_name == "Orchard Child Care"
+    assert record.facility_type == "Child Care Center"
+    assert record.county == "Los Angeles"
+    assert record.regional_office == "Regional Office"
     assert record.capacity == 24
+    assert record.status == "Licensed"
     assert record.license_first_date == "2020-06-07"
+    assert record.closed_date == "2026-07-01"
+    assert record.all_visit_dates == ("2026-06-07", "2026-06-15")
+    assert record.inspection_visit_dates == ("2026-06-07", "2026-06-08")
+    assert record.other_visit_dates is None
+    assert record.values()["all_visit_dates"] == ["2026-06-07", "2026-06-15"]
+    assert record.values()["other_visit_dates"] is None
     assert record.snapshot_date == "2026-06-07"
     assert record.source_dataset_slug == "ccl-facilities"
     assert record.source_file_name == "ChildCareCenters06072026.csv"
@@ -144,6 +161,7 @@ def test_parser_normalizes_chhs_facility_master_shape(tmp_path: Path) -> None:
                 "NAME": "SUSD- TOMALES PRESCHOOL",
                 "PROGRAM_TYPE": "CHILD CARE",
                 "STATUS": "3",
+                "CLIENT_SERVED": "Children",
                 "CAPACITY": "24",
                 "RES_STREET_ADDR": "40 JOHN STREET",
                 "RES_CITY": "TOMALES",
@@ -164,10 +182,103 @@ def test_parser_normalizes_chhs_facility_master_shape(tmp_path: Path) -> None:
     assert record.facility_number == "214005552"
     assert record.facility_name == "SUSD- TOMALES PRESCHOOL"
     assert record.program_type == "CHILD CARE"
+    assert record.client_served == "Children"
     assert record.facility_type == "DAY CARE CENTER"
     assert record.regional_office == "North Bay"
     assert record.capacity == 24
+    assert record.closed_date is None
+    assert record.all_visit_dates is None
+    assert record.inspection_visit_dates is None
+    assert record.other_visit_dates is None
     assert result.warnings == ()
+
+
+def test_parser_keeps_chhs_numeric_type_as_provenance_only(tmp_path: Path) -> None:
+    csv_path = tmp_path / "CDSS_CCL_Facilities_2065342970436235361.csv"
+    _write_master_csv(
+        csv_path,
+        (
+            {
+                "FAC_NBR": "214005553",
+                "NAME": "CHHS TYPE CODE FACILITY",
+                "TYPE": "850",
+                "FAC_TYPE_DESC": "",
+            },
+        ),
+    )
+
+    result = parse_facility_reference_csv(csv_path)
+    [record] = result.records
+
+    assert record.facility_type is None
+    assert record.original_row_json["TYPE"] == "850"
+
+
+def test_parser_keeps_invalid_and_blank_reference_dates_null_with_warnings(
+    tmp_path: Path,
+) -> None:
+    csv_path = tmp_path / "HomeCare.csv"
+    _write_program_csv(
+        csv_path,
+        (
+            {
+                "Facility Number": "920000009",
+                "Facility Name": "Invalid Date Home Care",
+                "Closed Date": "not-a-date",
+                "All Visit Dates": "2026-06-07; not-a-date",
+                "Inspection Visit Dates": "",
+                "Other Visit Dates": "invalid",
+            },
+        ),
+    )
+
+    result = parse_facility_reference_csv(csv_path)
+    [record] = result.records
+
+    assert record.closed_date is None
+    assert record.all_visit_dates is None
+    assert record.inspection_visit_dates is None
+    assert record.other_visit_dates is None
+    assert record.values()["all_visit_dates"] is None
+    assert record.values()["inspection_visit_dates"] is None
+    assert record.values()["other_visit_dates"] is None
+    assert [(warning.row_number, warning.message) for warning in result.warnings] == [
+        (2, "Closed Date was not a valid date."),
+        (2, "All Visit Dates contained a value that was not a valid date."),
+        (2, "Other Visit Dates contained a value that was not a valid date."),
+    ]
+
+
+def test_parser_preserves_declared_complaint_info_and_overflow_as_provenance(
+    tmp_path: Path,
+) -> None:
+    csv_path = tmp_path / "ChildCareCenters.csv"
+    complaint_info_header = (
+        "Complaint Info- Date, #Sub Aleg, # Inc Aleg, # Uns Aleg, # TypeA, # TypeB ..."
+    )
+    _write_program_csv_with_overflow(
+        csv_path,
+        {
+            "Facility Number": "900000777",
+            "Facility Name": "Overflow Child Care",
+            complaint_info_header: "2026-06-07: 0 sub; 1 inc; 0 uns",
+        },
+        ("2026-06-14", "2", "1", "0", "1", "0"),
+    )
+
+    result = parse_facility_reference_csv(csv_path)
+    [record] = result.records
+
+    assert record.original_row_json[complaint_info_header] == ("2026-06-07: 0 sub; 1 inc; 0 uns")
+    assert record.original_row_json[preload_module.SOURCE_CSV_OVERFLOW_PROVENANCE_KEY] == [
+        "2026-06-14",
+        "2",
+        "1",
+        "0",
+        "1",
+        "0",
+    ]
+    assert "complaint_info" not in record.values()
 
 
 def test_preload_dry_run_apply_and_refresh_are_idempotent(tmp_path: Path) -> None:
@@ -181,6 +292,7 @@ def test_preload_dry_run_apply_and_refresh_are_idempotent(tmp_path: Path) -> Non
                 "Facility Type": "Family Child Care Home",
                 "Facility Capacity": "8",
                 "Facility Status": "Licensed",
+                "All Visit Dates": "2026-06-15; 2026-06-07; 2026-06-15",
             },
         ),
     )
@@ -213,6 +325,7 @@ def test_preload_dry_run_apply_and_refresh_are_idempotent(tmp_path: Path) -> Non
                     "Facility Type": "Family Child Care Home",
                     "Facility Capacity": "8",
                     "Facility Status": "Licensed",
+                    "All Visit Dates": "2026-06-15; 2026-06-07; 2026-06-15",
                 },
             ),
         )
@@ -223,6 +336,12 @@ def test_preload_dry_run_apply_and_refresh_are_idempotent(tmp_path: Path) -> Non
             source_accessed_at="2026-07-01T12:00:00+00:00",
         )
         row = connection.execute(select(hosted_facility_reference_records)).mappings().one()
+        null_date_columns = connection.execute(
+            select(
+                hosted_facility_reference_records.c.inspection_visit_dates.is_(None),
+                hosted_facility_reference_records.c.other_visit_dates.is_(None),
+            )
+        ).one()
 
     assert dry_run.inserted_row_count == 1
     assert after_dry_run_count == 0
@@ -230,6 +349,8 @@ def test_preload_dry_run_apply_and_refresh_are_idempotent(tmp_path: Path) -> Non
     assert second_apply.unchanged_row_count == 1
     assert refresh.updated_row_count == 1
     assert row["facility_name"] == "Family Home One Updated"
+    assert row["all_visit_dates"] == ["2026-06-07", "2026-06-15"]
+    assert tuple(null_date_columns) == (True, True)
     assert row["original_row_json"]["Facility Name"] == "Family Home One Updated"
 
 
@@ -476,7 +597,11 @@ def _facility_reference_count(connection: Connection) -> int:
 
 
 def _write_program_csv(path: Path, rows: tuple[dict[str, str], ...]) -> None:
-    fieldnames = (
+    _write_csv(path, _program_fieldnames(), rows)
+
+
+def _program_fieldnames() -> tuple[str, ...]:
+    return (
         "Facility Type",
         "Facility Number",
         "Facility Name",
@@ -494,16 +619,35 @@ def _write_program_csv(path: Path, rows: tuple[dict[str, str], ...]) -> None:
         "Facility Status",
         "License First Date",
         "Closed Date",
+        "All Visit Dates",
+        "Inspection Visit Dates",
+        "Other Visit Dates",
+        "Complaint Info- Date, #Sub Aleg, # Inc Aleg, # Uns Aleg, # TypeA, # TypeB ...",
     )
-    _write_csv(path, fieldnames, rows)
+
+
+def _write_program_csv_with_overflow(
+    path: Path,
+    row: dict[str, str],
+    overflow_values: tuple[str, ...],
+) -> None:
+    fieldnames = _program_fieldnames()
+    with path.open("w", encoding="utf-8", newline="") as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerow(fieldnames)
+        writer.writerow(
+            [row.get(fieldname, "") for fieldname in fieldnames] + list(overflow_values)
+        )
 
 
 def _write_master_csv(path: Path, rows: tuple[dict[str, str], ...]) -> None:
     fieldnames = (
         "FAC_NBR",
         "NAME",
+        "TYPE",
         "PROGRAM_TYPE",
         "STATUS",
+        "CLIENT_SERVED",
         "CAPACITY",
         "RES_STREET_ADDR",
         "RES_CITY",
@@ -580,6 +724,7 @@ def _load_preload_cli_module() -> Any:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
 
 def test_value_lookup_ignores_extra_csv_fields_without_headers() -> None:
     row = {

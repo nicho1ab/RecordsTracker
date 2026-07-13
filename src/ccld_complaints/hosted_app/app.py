@@ -52,6 +52,7 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CcldFacilityReviewContext,
     CcldReviewNextRecommendation,
     facility_reference_from_source_derived_records,
+    no_reference_facility_source,
     render_ccld_facility_lookup_page,
     route_ccld_facility_lookup_response,
     route_ccld_facility_lookup_response_with_source,
@@ -774,8 +775,13 @@ def render_related_facility_context(record: SampleSourceRecord) -> str:
     </section>"""
 
 
-def render_app_shell() -> str:
-        return render_ccld_facility_lookup_page(active_path="/")
+def render_app_shell(
+    reference_source: CcldFacilityReferenceSource | None = None,
+) -> str:
+    return render_ccld_facility_lookup_page(
+        reference_source=reference_source,
+        active_path="/",
+    )
 
 
 def render_source_record_list(filters: SourceRecordFilters | None = None) -> str:
@@ -1278,7 +1284,28 @@ def route_response(
     if parsed_path.startswith("/api/source-derived-records"):
         return route_source_derived_api_response(path, source_derived_api_context)
     if parsed_path == "/":
-        return 200, "text/html; charset=utf-8", render_app_shell().encode("utf-8")
+        if active_page_data_mode == FIXTURE_DEMO_PAGE_DATA_MODE:
+            body = render_app_shell().encode("utf-8")
+        else:
+            active_ccld_context = _default_ccld_context_for_mode(
+                active_auth_config,
+                active_page_data_mode,
+                ccld_record_request_ui_context,
+            )
+            reference_source = (
+                _facility_reference_from_context(active_ccld_context)
+                if active_ccld_context is not None
+                else no_reference_facility_source()
+            )
+            body = render_app_shell(reference_source).encode("utf-8")
+        return 200, "text/html; charset=utf-8", body
+    if (
+        parsed_path == "/source-records"
+        or parsed_path.startswith("/source-records/")
+        or parsed_path == "/facilities"
+        or parsed_path.startswith("/facilities/")
+    ) and active_page_data_mode != FIXTURE_DEMO_PAGE_DATA_MODE:
+        return 404, "text/plain; charset=utf-8", b"Not found"
     if parsed_path == "/source-records":
         filters = source_record_filters_from_query(parsed_url.query)
         body = render_source_record_list(filters).encode("utf-8")

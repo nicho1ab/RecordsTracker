@@ -57,7 +57,7 @@ def test_reset_reload_dry_run_reports_seeded_corpus_impact_without_mutation() ->
     assert content_type == "application/json; charset=utf-8"
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
@@ -72,13 +72,13 @@ def test_reset_reload_dry_run_reports_seeded_corpus_impact_without_mutation() ->
     assert payload["authorization"]["actor"]["roles"] == ["developer_operator"]
     assert payload["source_derived_impact"] == {
         "existing_import_batch_count": 1,
-        "existing_source_derived_record_count": 6,
+        "existing_source_derived_record_count": 7,
         "counts_by_entity": {
             "facility": 1,
             "source_document": 1,
             "complaint": 1,
             "allegation": 2,
-            "event": 0,
+            "event": 1,
             "extraction_audit": 1,
         },
         "import_batches": [
@@ -94,7 +94,7 @@ def test_reset_reload_dry_run_reports_seeded_corpus_impact_without_mutation() ->
                     "source_document": 1,
                     "complaint": 1,
                     "allegation": 2,
-                    "event": 0,
+                    "event": 1,
                     "extraction_audit": 1,
                 },
                 "warnings": [

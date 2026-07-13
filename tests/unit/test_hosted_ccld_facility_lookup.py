@@ -95,6 +95,24 @@ class _ButtonClassParser(HTMLParser):
             self.buttons.append((text, attrs.get("class", "")))
 
 
+def test_source_derived_facility_lookup_preserves_integer_capacity() -> None:
+    source = facility_lookup.facility_reference_from_source_derived_records(
+        (
+            {
+                "entity_type": "facility",
+                "original_values": {
+                    "facility_id": "ccld-facility-157806098",
+                    "external_facility_number": "157806098",
+                    "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+                    "capacity": 48,
+                },
+            },
+        )
+    )
+
+    assert source.records[0].capacity == "48"
+
+
 class _DefinitionTermParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
@@ -1141,8 +1159,8 @@ def test_ccld_facility_review_hub_renders_signal_only_context_without_mutation(
     assert "Facility pattern review summary" in html
     assert "Review signals below use source-derived loaded records" in html
     assert "1</strong><span>Loaded complaint records" in html
-    assert "1</strong><span>Delay-review records" in html
-    assert "1</strong><span>Missing-date records" in html
+    assert "0</strong><span>Delay-review records" in html
+    assert "0</strong><span>Missing-date records" in html
     assert "1</strong><span>Records with source traceability" in html
     assert "Unsubstantiated: 1" in html
     assert "Not started: 1" in html
@@ -1152,8 +1170,6 @@ def test_ccld_facility_review_hub_renders_signal_only_context_without_mutation(
     assert "Finding: Unsubstantiated; reviewer status: Not started" in html
     assert "Recent activity 2022-08-26" in html
     assert "No reviewer-created status recorded yet." in html
-    assert "Possible delay indicator: over 120 days." in html
-    assert "Needs source check: first activity date not available locally." in html
     assert "Source traceability available for detail review." in html
     assert "Open reviewer detail for 32-CR-20220407124448" in html
     assert "/reviewer/records/detail?source%5Frecord%5Fkey=" in html
@@ -1237,8 +1253,8 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
     assert "not legal conclusions or source-completeness findings" in html
     assert "1 loaded complaint record(s)" in html
     assert "1</strong><span>Loaded complaint records" in html
-    assert "1</strong><span>Delay-review records" in html
-    assert "1</strong><span>Missing-date records" in html
+    assert "0</strong><span>Delay-review records" in html
+    assert "0</strong><span>Missing-date records" in html
     assert "1</strong><span>Records with source traceability" in html
     assert "Recent complaint/report/visit activity in loaded records" in html
     assert "2022-08-26" in html
@@ -1271,8 +1287,6 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
     assert "Finding: Unsubstantiated; reviewer status: Not started" in html
     assert "Recent activity 2022-08-26" in html
     assert "No reviewer-created status recorded yet." in html
-    assert "Possible delay indicator: over 120 days." in html
-    assert "Needs source check: first activity date not available locally." in html
     assert "Source traceability available for detail review." in html
     assert "Open reviewer detail for 32-CR-20220407124448" in html
     assert "/reviewer/records/detail?source%5Frecord%5Fkey=" in html
@@ -2593,7 +2607,7 @@ def _table_counts(connection: Connection) -> dict[str, int]:
 def _empty_reviewer_counts() -> dict[str, int]:
     return {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,

@@ -253,16 +253,6 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
         "No note",
     ):
         assert suggestion in html
-    assert "Review cue summary" in html
-    for label in (
-        "Possible delay",
-        "30+ day gap",
-        "60+ day gap",
-        "90+ day gap",
-        "120+ day gap",
-        "Priority cue",
-    ):
-        assert label in html
     assert "Missing first activity" not in html
     assert "Missing source date" not in html
     assert "Source unavailable" not in html
@@ -303,7 +293,6 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     ]
     assert "source-chip" not in badges_html
     assert 'class="review-chip__marker review-chip__marker--finding"' in badges_html
-    assert 'class="review-chip__marker review-chip__marker--warning"' in badges_html
     assert 'class="review-chip__marker review-chip__marker--status"' in badges_html
     assert 'class="review-chip__marker review-chip__marker--note"' in badges_html
     assert work_item_html.index(">Open record</a>") < work_item_html.index(
@@ -317,7 +306,6 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert "Keyboard flow: search filters this queue" not in html
     assert "Show table view" in html
     assert "Exports" in html
-    _assert_collapsed_disclosure(html, "Review cue summary")
     _assert_collapsed_disclosure(html, "Show table view")
     _assert_collapsed_disclosure(html, "Exports")
     _assert_collapsed_disclosure(html, "Facility exports")
@@ -330,7 +318,6 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
         "Worklist",
         "Search records",
         "Show table view",
-        "Review cue summary",
         "Exports",
     ]
     previous_index = -1
@@ -370,7 +357,6 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert "Report" in html
     assert "No status" in html
     assert "No note" in html
-    assert "120+ day gap" in html
     assert "CCLD source available" in html
     assert "04/07/2022" in html
     assert "08/24/2022" in html
@@ -541,7 +527,7 @@ def test_reviewer_ui_substantiated_triage_lists_cross_facility_matches() -> None
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 9,
+        "source_records": 10,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
@@ -1465,7 +1451,7 @@ def test_reviewer_ui_substantiated_triage_empty_state_is_cautious() -> None:
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
@@ -1604,7 +1590,7 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 2,
         "audit_events": 2,
         "reset_reload_planning_metadata": 0,
@@ -1632,7 +1618,7 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Notes/status saved" in html
     assert "Source record" in html
     assert "Packet readiness" in html
-    assert "1 record needs review" in html
+    assert "0 records need review" in html
     assert "1 saved" in html
     assert "1 source available" in html
     assert "Needs date/source review" in html
@@ -1669,7 +1655,7 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Follow-up notes" in checklist_html
     assert "Date warnings" in checklist_html
     assert "Ready" in checklist_html
-    assert "Needs review" in checklist_html
+    assert "Needs review" not in checklist_html
     assert "Back to review queue" in checklist_html
     assert "send feedback" in checklist_html
     assert COMPLAINT_KEY not in checklist_html
@@ -1688,7 +1674,7 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Facility ID: 157806098" in brief_html
     assert "Date range: 08/01/2022 to 08/31/2022" in brief_html
     assert "Records included: 1" in brief_html
-    assert "Packet readiness: Needs date/source review" in brief_html
+    assert "Packet readiness: Ready for packet use" in brief_html
     assert "source: CCLD source available" in brief_html
     assert "This brief is a preparation aid, not a legal report or conclusion." in brief_html
     assert "Review dates and source link when a date or timing cue needs review." in brief_html
@@ -1701,8 +1687,6 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "32-CR-20220407124448" in html
     assert "Unsubstantiated" in html
     assert "Note added" in html
-    assert "120+ day gap" in html
-    assert 'class="review-chip badge-attention badge-attention--warning"' in html
     assert "Review dates and source link" in html
     assert "CCLD source available" in html
     assert "Facility ID" in html
@@ -1812,9 +1796,9 @@ def test_reviewer_packet_preview_renders_status_note_readiness_copy() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert before_counts == after_counts
     assert "Packet readiness" in html
-    assert "Needs date/source review; needs reviewer status/note" in html
+    assert "needs reviewer status/note" in html
     assert "Records needing date/source review" in html
-    assert "Review dates and source link; add status/note if useful." in html
+    assert "add status/note if useful." in html
     assert "Loaded record values remain separate from reviewer notes/status." in html
     for removed in (
         "Facility / license",
@@ -1878,7 +1862,7 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 2,
         "audit_events": 2,
         "reset_reload_planning_metadata": 0,
@@ -1968,10 +1952,6 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
         in html
     )
     assert "Why prioritized" in html
-    assert "Possible delay indicator: over 120 days" in html
-    assert "120+ day gap" in html
-    assert 'class="review-chip badge-attention badge-attention--warning"' in html
-    assert "Needs date/source cue review: first activity date missing locally" in html
     assert "Original CCLD source link saved" in html
     assert "Finding value: Unsubstantiated" in html
     assert "Reviewer status: Needs follow-up" in html
@@ -1996,7 +1976,7 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     assert "Reviewer-created note/status presence" in checklist_html
     assert "Follow-up questions" in checklist_html
     assert "Ready" in checklist_html
-    assert "Needs review" in checklist_html
+    assert "Needs review" not in checklist_html
     assert "Use the suggested follow-up questions in the copy-ready brief" in checklist_html
     assert "No limited-data warning is visible" in checklist_html
     assert COMPLAINT_KEY not in checklist_html
@@ -2048,7 +2028,6 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     assert "CCLD source cue" in html
     assert "Reviewer attention cue" in html
     assert "Original CCLD source link saved" in html
-    assert "Needs reviewer attention before copy/print" in html
     assert "Reviewer-created status/note cue present" in html
     assert "Open record 32-CR-20220407124448" in html
     assert "Before using this draft" in html
@@ -2115,7 +2094,7 @@ def test_reviewer_packet_draft_without_context_shows_context_needed_state() -> N
     assert content_type == "text/html; charset=utf-8"
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
@@ -2145,7 +2124,7 @@ def test_reviewer_packet_preview_without_context_shows_context_needed() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
@@ -2177,7 +2156,7 @@ def test_reviewer_packet_preview_empty_context_has_limited_data_attorney_brief()
     assert content_type == "text/html; charset=utf-8"
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
@@ -2491,17 +2470,10 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
 
     assert "Why this may need closer review" in html
     assert "Review the badge list above as screening cues only" not in html
-    assert "120+ day gap" in html
     assert "No status" in html
     assert "No note" in html
-    assert 'class="review-chip badge-attention badge-attention--warning"' in html
-    assert (
-        '<span class="review-chip badge-attention badge-attention--warning">120+ day gap</span>'
-        in html
-    )
     assert 'class="review-chip badge-info badge-info--status"' in html
     assert 'class="review-chip badge-info badge-info--note"' in html
-    assert 'class="review-chip__marker review-chip__marker--warning"' in html
     assert 'class="review-chip__marker review-chip__marker--status"' in html
     assert 'class="review-chip__marker review-chip__marker--note"' in html
     assert 'class="review-chip badge-attention badge-info--status"' not in html
@@ -2566,9 +2538,9 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert "Visit" in html
     assert "Report" in html
     assert "Signed" in html
-    assert 'class="rt-timeline rt-timeline--linear has-gap"' in html
+    assert 'class="rt-timeline rt-timeline--linear"' in html
     assert 'class="rt-timeline__line" aria-hidden="true"' in html
-    assert 'class="timeline-list timeline-list-linear has-gap rt-timeline__milestones"' in html
+    assert 'class="timeline-list timeline-list-linear rt-timeline__milestones"' in html
     expected_timeline_markers = (
         "received",
         "visit",
@@ -2582,11 +2554,6 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
             in html
         )
     assert 'class="rt-timeline__date"' in html
-    assert (
-        'class="timeline-gap-badge timeline-gap-badge--between-first-activity '
-        'rt-timeline__gap-badge"'
-        in html
-    )
     assert ".rt-timeline.has-gap .rt-timeline__line::after" in html
     assert "left: 25%;" in html
     assert "top: calc(var(--timeline-line-top) - 0.68rem);" in html
@@ -2609,12 +2576,11 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert timeline_html.index('class="rt-timeline__line"') < timeline_html.index(
         "Complaint received"
     )
-    assert timeline_html.index("</ol>") < timeline_html.index("120+ day gap")
     assert "right: 12.5%;" in html
     assert "width: 33.333%;" in html
     assert (
         'aria-label="Gap between complaint received and visit or investigation activity"'
-        in html
+        not in html
     )
     assert "A value extracted from public source records" not in html
     assert "Local review state added by a tester or reviewer" not in html
@@ -2973,7 +2939,7 @@ def test_reviewer_ui_matrix_export_returns_excel_ready_csv_without_mutation() ->
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 2,
         "audit_events": 2,
         "reset_reload_planning_metadata": 0,
@@ -3075,7 +3041,7 @@ def test_reviewer_ui_substantiated_export_returns_excel_ready_csv_without_mutati
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 2,
         "audit_events": 2,
         "reset_reload_planning_metadata": 0,
@@ -3164,7 +3130,7 @@ def test_reviewer_ui_complaint_export_status_query_filters_without_mutation(
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 2,
         "audit_events": 2,
         "reset_reload_planning_metadata": 0,
@@ -3276,7 +3242,7 @@ def test_reviewer_ui_complaint_export_date_query_filters_without_mutation(
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 2,
         "audit_events": 2,
         "reset_reload_planning_metadata": 0,
@@ -3381,7 +3347,7 @@ def test_reviewer_ui_complaint_export_serious_review_cue_without_mutation(
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 2,
         "audit_events": 2,
         "reset_reload_planning_metadata": 0,
@@ -3583,7 +3549,7 @@ def test_reviewer_ui_complaint_export_review_cue_query_filter_without_mutation(
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 2,
         "audit_events": 2,
         "reset_reload_planning_metadata": 0,
@@ -3644,7 +3610,7 @@ def test_reviewer_ui_matrix_export_empty_context_is_safe() -> None:
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
@@ -3680,7 +3646,7 @@ def test_reviewer_ui_detail_missing_traceability_uses_clear_non_conclusive_wordi
     assert content_type == "text/html; charset=utf-8"
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
@@ -3816,7 +3782,7 @@ def test_reviewer_ui_detail_links_signal_only_facility_context_without_mutation(
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
@@ -3902,7 +3868,7 @@ def test_reviewer_ui_detail_shows_manual_context_when_facility_hub_unavailable(
     assert content_type == "text/html; charset=utf-8"
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
@@ -3950,7 +3916,7 @@ def test_reviewer_ui_detail_source_confidence_proxy_cues_are_non_mutating() -> N
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
@@ -3992,7 +3958,7 @@ def test_reviewer_ui_detail_render_is_non_mutating() -> None:
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
@@ -4043,7 +4009,7 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert before_source_rows == after_source_rows
     assert counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 1,
         "audit_events": 1,
         "reset_reload_planning_metadata": 0,
@@ -4174,7 +4140,7 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert before_source_rows == after_source_rows
     assert counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 1,
         "audit_events": 1,
         "reset_reload_planning_metadata": 0,
@@ -4328,7 +4294,7 @@ def test_reviewer_ui_note_status_writes_are_visible_on_list_after_write() -> Non
     assert before_source_rows == after_source_rows
     assert counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 2,
         "audit_events": 2,
         "reset_reload_planning_metadata": 0,
@@ -4446,7 +4412,7 @@ def test_reviewer_ui_rejects_note_write_without_reviewer_state_write() -> None:
     assert "reviewer_state_write" in html
     assert "What you can do next" in html
     assert "Return to selected record detail" in html
-    assert counts["source_records"] == 6
+    assert counts["source_records"] == 7
     assert counts["reviewer_created_state"] == 0
     assert counts["audit_events"] == 0
     assert_no_secret_html(html)

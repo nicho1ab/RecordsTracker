@@ -74,12 +74,11 @@ def test_persistence_boundaries_cover_required_adr_0010_table_groups() -> None:
     assert boundary_by_id["reviewer_created_state"].domain == "reviewer-created"
     assert "source URL" in boundary_by_id["source_derived_records"].preserves
     assert "raw SHA-256 hash" in boundary_by_id["source_derived_records"].preserves
-    assert "authenticated actor attribution" in boundary_by_id[
-        "reviewer_created_state"
-    ].preserves
-    assert "overwrite source-derived canonical values" in boundary_by_id[
-        "reviewer_created_state"
-    ].must_not
+    assert "authenticated actor attribution" in boundary_by_id["reviewer_created_state"].preserves
+    assert (
+        "overwrite source-derived canonical values"
+        in boundary_by_id["reviewer_created_state"].must_not
+    )
 
 
 def test_api_scopes_keep_source_records_and_reviewer_state_separate() -> None:
@@ -95,106 +94,101 @@ def test_api_scopes_keep_source_records_and_reviewer_state_separate() -> None:
         "seeded_corpus_reset_reload_operations_api",
     }
     assert scope_by_id["auth_provider_integration_plan_api"].domain == "auth"
-    assert "managed OpenID Connect/OAuth 2.0 provider integration" in scope_by_id[
-        "auth_provider_integration_plan_api"
-    ].intended_future_use
-    assert "non-secret configuration readiness inputs" in scope_by_id[
-        "auth_provider_integration_plan_api"
-    ].preserves
-    assert "real login flow" in scope_by_id[
-        "auth_provider_integration_plan_api"
-    ].deferred
-    assert "token exchange or validation" in scope_by_id[
-        "auth_provider_integration_plan_api"
-    ].deferred
+    assert (
+        "managed OpenID Connect/OAuth 2.0 provider integration"
+        in scope_by_id["auth_provider_integration_plan_api"].intended_future_use
+    )
+    assert (
+        "non-secret configuration readiness inputs"
+        in scope_by_id["auth_provider_integration_plan_api"].preserves
+    )
+    assert "real login flow" in scope_by_id["auth_provider_integration_plan_api"].deferred
+    assert (
+        "token exchange or validation" in scope_by_id["auth_provider_integration_plan_api"].deferred
+    )
     assert scope_by_id["source_derived_records_api"].domain == "source-derived"
     assert scope_by_id["reviewer_created_state_api"].domain == "reviewer-created"
-    assert "controlled snapshot imports from validated pipeline output" in scope_by_id[
-        "source_derived_records_api"
-    ].intended_future_use
-    assert scope_by_id[
-        "reviewer_created_state_api"
-    ].requires_authenticated_actor_before_write is True
+    assert (
+        "controlled snapshot imports from validated pipeline output"
+        in scope_by_id["source_derived_records_api"].intended_future_use
+    )
+    assert (
+        scope_by_id["reviewer_created_state_api"].requires_authenticated_actor_before_write is True
+    )
     assert "auth middleware" in scope_by_id["reviewer_created_state_api"].deferred
-    assert "listing or fetching those rows" in scope_by_id[
-        "reviewer_created_state_api"
-    ].intended_future_use
-    assert "workflow-shell note action" in scope_by_id[
-        "reviewer_created_state_api"
-    ].intended_future_use
-    assert "status action" in scope_by_id[
-        "reviewer_created_state_api"
-    ].intended_future_use
-    assert "read-only access to persisted reviewer-created scaffold rows" in scope_by_id[
-        "reviewer_created_state_api"
-    ].preserves
-    assert "bounded reviewer status payloads under the existing state kind" in scope_by_id[
-        "reviewer_created_state_api"
-    ].preserves
+    assert (
+        "listing or fetching those rows"
+        in scope_by_id["reviewer_created_state_api"].intended_future_use
+    )
+    assert (
+        "workflow-shell note action"
+        in scope_by_id["reviewer_created_state_api"].intended_future_use
+    )
+    assert "status action" in scope_by_id["reviewer_created_state_api"].intended_future_use
+    assert (
+        "read-only access to persisted reviewer-created scaffold rows"
+        in scope_by_id["reviewer_created_state_api"].preserves
+    )
+    assert (
+        "bounded reviewer status payloads under the existing state kind"
+        in scope_by_id["reviewer_created_state_api"].preserves
+    )
     assert any(
         "workflow-shell source-record binding" in preserved
         for preserved in scope_by_id["reviewer_created_state_api"].preserves
     )
-    assert "production API framework" in scope_by_id[
-        "source_derived_records_api"
-    ].deferred
-    assert "stateful reviewer workflows" in scope_by_id[
-        "reviewer_created_state_api"
-    ].deferred
+    assert "production API framework" in scope_by_id["source_derived_records_api"].deferred
+    assert "stateful reviewer workflows" in scope_by_id["reviewer_created_state_api"].deferred
     assert scope_by_id["audit_events_api"].domain == "audit"
-    assert "successful reviewer-created state scaffold writes" in scope_by_id[
-        "audit_events_api"
-    ].intended_future_use
-    assert "listing or fetching those rows" in scope_by_id[
-        "audit_events_api"
-    ].intended_future_use
-    assert "production audit API framework" in scope_by_id[
-        "audit_events_api"
-    ].deferred
+    assert (
+        "successful reviewer-created state scaffold writes"
+        in scope_by_id["audit_events_api"].intended_future_use
+    )
+    assert "listing or fetching those rows" in scope_by_id["audit_events_api"].intended_future_use
+    assert "production audit API framework" in scope_by_id["audit_events_api"].deferred
     assert "full audit policy coverage" in scope_by_id["audit_events_api"].deferred
     assert scope_by_id["audit_coverage_plan_api"].domain == "audit"
-    assert "summarizes current scaffold audit coverage" in scope_by_id[
-        "audit_coverage_plan_api"
-    ].intended_future_use
-    assert "no-persistence planning behavior" in scope_by_id[
-        "audit_coverage_plan_api"
-    ].preserves
-    assert "new audit event write behavior" in scope_by_id[
-        "audit_coverage_plan_api"
-    ].deferred
-    assert "audit schema changes or migrations" in scope_by_id[
-        "audit_coverage_plan_api"
-    ].deferred
-    assert scope_by_id["seeded_corpus_reset_reload_operations_api"].domain == (
-        "operational"
+    assert (
+        "summarizes current scaffold audit coverage"
+        in scope_by_id["audit_coverage_plan_api"].intended_future_use
     )
-    assert "dry-run route seam" in scope_by_id[
-        "seeded_corpus_reset_reload_operations_api"
-    ].intended_future_use
-    assert "execution-plan route seam" in scope_by_id[
-        "seeded_corpus_reset_reload_operations_api"
-    ].intended_future_use
-    assert "operational planning metadata" in scope_by_id[
-        "seeded_corpus_reset_reload_operations_api"
-    ].intended_future_use
-    assert "list or fetch those persisted planning records" in scope_by_id[
-        "seeded_corpus_reset_reload_operations_api"
-    ].intended_future_use
-    assert "read-only access to persisted planning metadata" in scope_by_id[
-        "seeded_corpus_reset_reload_operations_api"
-    ].preserves
-    assert "ordered non-destructive execution-plan steps" in scope_by_id[
-        "seeded_corpus_reset_reload_operations_api"
-    ].preserves
-    assert "destructive reset execution" in scope_by_id[
-        "seeded_corpus_reset_reload_operations_api"
-    ].deferred
-    assert "production reset/reload operational framework" in scope_by_id[
-        "seeded_corpus_reset_reload_operations_api"
-    ].deferred
-    assert "database-backed API reads" not in scope_by_id[
-        "source_derived_records_api"
-    ].deferred
+    assert "no-persistence planning behavior" in scope_by_id["audit_coverage_plan_api"].preserves
+    assert "new audit event write behavior" in scope_by_id["audit_coverage_plan_api"].deferred
+    assert "audit schema changes or migrations" in scope_by_id["audit_coverage_plan_api"].deferred
+    assert scope_by_id["seeded_corpus_reset_reload_operations_api"].domain == ("operational")
+    assert (
+        "dry-run route seam"
+        in scope_by_id["seeded_corpus_reset_reload_operations_api"].intended_future_use
+    )
+    assert (
+        "execution-plan route seam"
+        in scope_by_id["seeded_corpus_reset_reload_operations_api"].intended_future_use
+    )
+    assert (
+        "operational planning metadata"
+        in scope_by_id["seeded_corpus_reset_reload_operations_api"].intended_future_use
+    )
+    assert (
+        "list or fetch those persisted planning records"
+        in scope_by_id["seeded_corpus_reset_reload_operations_api"].intended_future_use
+    )
+    assert (
+        "read-only access to persisted planning metadata"
+        in scope_by_id["seeded_corpus_reset_reload_operations_api"].preserves
+    )
+    assert (
+        "ordered non-destructive execution-plan steps"
+        in scope_by_id["seeded_corpus_reset_reload_operations_api"].preserves
+    )
+    assert (
+        "destructive reset execution"
+        in scope_by_id["seeded_corpus_reset_reload_operations_api"].deferred
+    )
+    assert (
+        "production reset/reload operational framework"
+        in scope_by_id["seeded_corpus_reset_reload_operations_api"].deferred
+    )
+    assert "database-backed API reads" not in scope_by_id["source_derived_records_api"].deferred
 
 
 def test_schema_api_scaffold_summary_reflects_seeded_import_without_reviewer_workflows() -> None:
@@ -253,4 +247,5 @@ def test_alembic_scaffold_has_seeded_import_domain_migration_only() -> None:
         "20260614_0004_reset_reload_operational_metadata.py",
         "20260615_0005_ccld_retrieval_jobs.py",
         "20260701_0006_facility_reference_preload.py",
+        "20260714_0007_canonical_allocation.py",
     ]

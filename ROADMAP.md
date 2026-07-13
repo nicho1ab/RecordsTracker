@@ -35,6 +35,10 @@ the governed primary future review experience.
   regional-office labeling, present-but-blank address/city states, and bounded
   field-level source section/text evidence, with aggregate-safe local/runtime
   evidence output.
+- Added governed canonical allocation for the first-activity interval and
+  existing facility fields, nullable source-reference storage for visit-date
+  collections and client-served context, raw-only composite provenance,
+  additive migration coverage, and explicit production fixture-fallback guards.
 - Wrote normalized records to SQLite with idempotent upsert behavior.
 - Added controlled live fetch for explicitly provided facility numbers.
 - Added multi-facility input for live fetch workflows scoped to user-provided

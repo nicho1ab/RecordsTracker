@@ -16,7 +16,7 @@ The generated audit under `data/processed/source-to-screen-audit/` is the author
 | `data.complaint.complaint.complaint_id` | complaint | complaint normalizer: complaint_id | `complaints.complaint_id` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.complaint.complaint.complaint_received_date` | complaint | COMPLAINT RECEIVED | `complaints.complaint_received_date` | /reviewer/records/detail source timeline | `NOT_APPLICABLE` | P2 |
 | `data.complaint.complaint.date_signed` | complaint | Date Signed | `complaints.date_signed` | /reviewer/records/detail source timeline | `NOT_APPLICABLE` | P2 |
-| `data.complaint.complaint.days_received_to_first_activity` | complaint | complaint normalizer: days_received_to_first_activity | `complaints.days_received_to_first_activity` | not displayed | `NOT_APPLICABLE` | P2 |
+| `data.complaint.complaint.days_received_to_first_activity` | complaint | derived from COMPLAINT RECEIVED and governed investigation activity date | `complaints.days_received_to_first_activity` | not displayed | `NOT_APPLICABLE` | P2 |
 | `data.complaint.complaint.days_received_to_report` | complaint | complaint normalizer: days_received_to_report | `complaints.days_received_to_report` | not displayed | `UI_DISPLAY_OMISSION` | P1 |
 | `data.complaint.complaint.days_received_to_visit` | complaint | complaint normalizer: days_received_to_visit | `complaints.days_received_to_visit` | not displayed | `UI_DISPLAY_OMISSION` | P1 |
 | `data.complaint.complaint.days_report_to_signed` | complaint | complaint normalizer: days_report_to_signed | `complaints.days_report_to_signed` | not displayed | `UI_DISPLAY_OMISSION` | P1 |
@@ -41,70 +41,70 @@ The generated audit under `data/processed/source-to-screen-audit/` is the author
 | `data.complaint.event.extracted_from_section` | complaint | event normalizer: extracted_from_section | `events.extracted_from_section` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.complaint.event.extraction_confidence` | complaint | event normalizer: extraction_confidence | `events.extraction_confidence` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.complaint.raw_complaint_report.investigation_findings_narrative` | complaint | allowlisted raw label pattern: investigation_findings_narrative | `not allocated` | /reviewer/records/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
-| `data.facility.facility.capacity` | facility | facility normalizer: capacity | `facilities.capacity` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
-| `data.facility.facility.county` | facility | facility normalizer: county | `facilities.county` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
+| `data.facility.facility.capacity` | facility | FACILITY CAPACITY / Facility Capacity / CAPACITY | `facilities.capacity` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
+| `data.facility.facility.county` | facility | County Name / COUNTY | `facilities.county` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
 | `data.facility.facility.external_facility_number` | facility | FACILITY NUMBER / Facility Number / FAC_NBR | `facilities.external_facility_number` | /ccld/facilities; /ccld/facilities/detail; /reviewer/records/detail | `NOT_APPLICABLE` | P2 |
 | `data.facility.facility.facility_id` | facility | facility normalizer: facility_id | `facilities.facility_id` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.facility.facility.facility_name` | facility | FACILITY NAME / Facility Name / NAME | `facilities.facility_name` | /ccld/facilities; /ccld/facilities/detail; /reviewer/records/detail | `NOT_APPLICABLE` | P2 |
-| `data.facility.facility.facility_type` | facility | facility normalizer: facility_type | `facilities.facility_type` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
+| `data.facility.facility.facility_type` | facility | Facility Type / FAC_TYPE_DESC | `facilities.facility_type` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
 | `data.facility.facility.licensee_name` | facility | facility normalizer: licensee_name | `facilities.licensee_name` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
-| `data.facility.facility.regional_office` | facility | facility normalizer: regional_office | `facilities.regional_office` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
+| `data.facility.facility.regional_office` | facility | regional-office report field / Regional Office / FAC_DO_DESC | `facilities.regional_office` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
 | `data.facility.facility.source_id` | facility | facility normalizer: source_id | `facilities.source_id` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
-| `data.facility.facility.status` | facility | facility normalizer: status | `facilities.status` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
-| `data.facility.facility_fixture_ccld_program_facilities_tiny.all_visit_dates` | facility | CSV header: All Visit Dates | `not allocated` | not displayed | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P1 |
+| `data.facility.facility.status` | facility | Facility Status / STATUS | `facilities.status` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
+| `data.facility.facility_fixture_ccld_program_facilities_tiny.all_visit_dates` | facility | CSV header: All Visit Dates | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.citation_numbers` | facility | CSV header: Citation Numbers | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.closed_date` | facility | CSV header: Closed Date | `not allocated` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
-| `data.facility.facility_fixture_ccld_program_facilities_tiny.complaint_info_date_sub_aleg_inc_aleg_uns_aleg_typea_typeb` | facility | CSV header: Complaint Info- Date, #Sub Aleg, # Inc Aleg, # Uns Aleg, # TypeA, # TypeB ... | `not allocated` | not displayed | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P1 |
+| `data.facility.facility_fixture_ccld_program_facilities_tiny.complaint_info_date_sub_aleg_inc_aleg_uns_aleg_typea_typeb` | facility | CSV header: Complaint Info- Date, #Sub Aleg, # Inc Aleg, # Uns Aleg, # TypeA, # TypeB ... | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.complaint_visits` | facility | CSV header: Complaint Visits | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.county_name` | facility | CSV header: County Name | `facilities.county` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.facility_address` | facility | CSV header: Facility Address | `not allocated` | not displayed | `STORED_QUERY_OMISSION` | P1 |
-| `data.facility.facility_fixture_ccld_program_facilities_tiny.facility_administrator` | facility | CSV header: Facility Administrator | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P1 |
+| `data.facility.facility_fixture_ccld_program_facilities_tiny.facility_administrator` | facility | CSV header: Facility Administrator | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.facility_capacity` | facility | CSV header: Facility Capacity | `facilities.capacity` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.facility_city` | facility | CSV header: Facility City | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.facility_name` | facility | CSV header: Facility Name | `facilities.facility_name` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.facility_number` | facility | CSV header: Facility Number | `facilities.external_facility_number` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.facility_state` | facility | CSV header: Facility State | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.facility_status` | facility | CSV header: Facility Status | `facilities.status` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
-| `data.facility.facility_fixture_ccld_program_facilities_tiny.facility_telephone_number` | facility | CSV header: Facility Telephone Number | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P1 |
+| `data.facility.facility_fixture_ccld_program_facilities_tiny.facility_telephone_number` | facility | CSV header: Facility Telephone Number | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.facility_type` | facility | CSV header: Facility Type | `facilities.facility_type` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.facility_zip` | facility | CSV header: Facility Zip | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.inspect_typea` | facility | CSV header: Inspect TypeA | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.inspect_typeb` | facility | CSV header: Inspect TypeB | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
-| `data.facility.facility_fixture_ccld_program_facilities_tiny.inspection_visit_dates` | facility | CSV header: Inspection Visit Dates | `not allocated` | not displayed | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P1 |
+| `data.facility.facility_fixture_ccld_program_facilities_tiny.inspection_visit_dates` | facility | CSV header: Inspection Visit Dates | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.inspection_visits` | facility | CSV header: Inspection Visits | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.last_visit_date` | facility | CSV header: Last Visit Date | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.license_first_date` | facility | CSV header: License First Date | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
-| `data.facility.facility_fixture_ccld_program_facilities_tiny.licensee` | facility | CSV header: Licensee | `facilities.licensee_name` | not displayed | `INTENTIONALLY_INTERNAL` | P1 |
+| `data.facility.facility_fixture_ccld_program_facilities_tiny.licensee` | facility | CSV header: Licensee | `facilities.licensee_name` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.other_typea` | facility | CSV header: Other TypeA | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.other_typeb` | facility | CSV header: Other TypeB | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
-| `data.facility.facility_fixture_ccld_program_facilities_tiny.other_visit_dates` | facility | CSV header: Other Visit Dates | `not allocated` | not displayed | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P1 |
+| `data.facility.facility_fixture_ccld_program_facilities_tiny.other_visit_dates` | facility | CSV header: Other Visit Dates | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.other_visits` | facility | CSV header: Other Visits | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.poc_dates` | facility | CSV header: POC Dates | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.regional_office` | facility | CSV header: Regional Office | `facilities.regional_office` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
 | `data.facility.facility_fixture_ccld_program_facilities_tiny.total_visits` | facility | CSV header: Total Visits | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
 | `data.facility.facility_fixture_chhs_facility_master_tiny.capacity` | facility | CSV header: CAPACITY | `facilities.capacity` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
-| `data.facility.facility_fixture_chhs_facility_master_tiny.client_served` | facility | CSV header: CLIENT_SERVED | `not allocated` | not displayed | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P1 |
+| `data.facility.facility_fixture_chhs_facility_master_tiny.client_served` | facility | CSV header: CLIENT_SERVED | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.facility.facility_fixture_chhs_facility_master_tiny.county` | facility | CSV header: COUNTY | `facilities.county` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
-| `data.facility.facility_fixture_chhs_facility_master_tiny.fac_co_nbr` | facility | CSV header: FAC_CO_NBR | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P1 |
-| `data.facility.facility_fixture_chhs_facility_master_tiny.fac_do_desc` | facility | CSV header: FAC_DO_DESC | `not allocated` | not displayed | `STORED_QUERY_OMISSION` | P1 |
-| `data.facility.facility_fixture_chhs_facility_master_tiny.fac_latitude` | facility | CSV header: FAC_LATITUDE | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P1 |
-| `data.facility.facility_fixture_chhs_facility_master_tiny.fac_longitude` | facility | CSV header: FAC_LONGITUDE | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P1 |
+| `data.facility.facility_fixture_chhs_facility_master_tiny.fac_co_nbr` | facility | CSV header: FAC_CO_NBR | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
+| `data.facility.facility_fixture_chhs_facility_master_tiny.fac_do_desc` | facility | CSV header: FAC_DO_DESC | `facilities.regional_office` | not displayed | `STORED_QUERY_OMISSION` | P1 |
+| `data.facility.facility_fixture_chhs_facility_master_tiny.fac_latitude` | facility | CSV header: FAC_LATITUDE | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
+| `data.facility.facility_fixture_chhs_facility_master_tiny.fac_longitude` | facility | CSV header: FAC_LONGITUDE | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.facility.facility_fixture_chhs_facility_master_tiny.fac_nbr` | facility | CSV header: FAC_NBR | `facilities.external_facility_number` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
-| `data.facility.facility_fixture_chhs_facility_master_tiny.fac_phone_nbr` | facility | CSV header: FAC_PHONE_NBR | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P1 |
+| `data.facility.facility_fixture_chhs_facility_master_tiny.fac_phone_nbr` | facility | CSV header: FAC_PHONE_NBR | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.facility.facility_fixture_chhs_facility_master_tiny.fac_type_desc` | facility | CSV header: FAC_TYPE_DESC | `facilities.facility_type` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
-| `data.facility.facility_fixture_chhs_facility_master_tiny.id` | facility | CSV header: _id | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P1 |
+| `data.facility.facility_fixture_chhs_facility_master_tiny.id` | facility | CSV header: _id | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.facility.facility_fixture_chhs_facility_master_tiny.name` | facility | CSV header: NAME | `facilities.facility_name` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
-| `data.facility.facility_fixture_chhs_facility_master_tiny.objectid` | facility | CSV header: ObjectId | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P1 |
+| `data.facility.facility_fixture_chhs_facility_master_tiny.objectid` | facility | CSV header: ObjectId | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.facility.facility_fixture_chhs_facility_master_tiny.program_type` | facility | CSV header: PROGRAM_TYPE | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
 | `data.facility.facility_fixture_chhs_facility_master_tiny.res_city` | facility | CSV header: RES_CITY | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
 | `data.facility.facility_fixture_chhs_facility_master_tiny.res_state` | facility | CSV header: RES_STATE | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
 | `data.facility.facility_fixture_chhs_facility_master_tiny.res_street_addr` | facility | CSV header: RES_STREET_ADDR | `not allocated` | not displayed | `STORED_QUERY_OMISSION` | P1 |
 | `data.facility.facility_fixture_chhs_facility_master_tiny.res_zip_code` | facility | CSV header: RES_ZIP_CODE | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
 | `data.facility.facility_fixture_chhs_facility_master_tiny.status` | facility | CSV header: STATUS | `facilities.status` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
-| `data.facility.facility_fixture_chhs_facility_master_tiny.type` | facility | CSV header: TYPE | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
-| `data.facility.facility_fixture_chhs_facility_master_tiny.x` | facility | CSV header: x | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P1 |
-| `data.facility.facility_fixture_chhs_facility_master_tiny.y` | facility | CSV header: y | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P1 |
-| `data.facility.facility_reference.closed_date_allocation_gap` | facility | Closed Date / closed_date | `not allocated` | /ccld/facilities/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P1 |
+| `data.facility.facility_fixture_chhs_facility_master_tiny.type` | facility | CSV header: TYPE | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
+| `data.facility.facility_fixture_chhs_facility_master_tiny.x` | facility | CSV header: x | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
+| `data.facility.facility_fixture_chhs_facility_master_tiny.y` | facility | CSV header: y | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
+| `data.facility.facility_reference.closed_date_allocation_gap` | facility | Closed Date / closed_date | `not allocated` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
 | `data.facility.facility_signal.blank_to_zero_risk` | facility | _safe_int and _count_list_values | `not allocated` | /ccld/facilities/detail | `UNEXPLAINED_BLANK` | P0 |
 | `data.facility.raw_complaint_report.facility_address` | facility | allowlisted raw label pattern: facility_address | `not allocated` | not displayed | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P1 |
 | `data.facility.raw_complaint_report.facility_capacity` | facility | allowlisted raw label pattern: facility_capacity | `facilities.capacity` | not displayed | `NOT_APPLICABLE` | P2 |

@@ -48,7 +48,7 @@ def test_source_derived_api_lists_authorized_staged_records() -> None:
 
     assert status == 200
     assert content_type == "application/json; charset=utf-8"
-    assert payload["pagination"] == {"limit": 100, "offset": 0, "returned_count": 6}
+    assert payload["pagination"] == {"limit": 100, "offset": 0, "returned_count": 7}
     assert payload["filters"] == {"entity_type": None}
     complaint = next(
         record for record in payload["records"] if record["entity_type"] == "complaint"

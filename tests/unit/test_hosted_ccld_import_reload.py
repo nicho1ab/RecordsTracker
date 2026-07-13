@@ -6,6 +6,7 @@ import pytest
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.engine import Connection
 
+from ccld_complaints.hosted_app import ccld_import_reload as ccld_import_reload_module
 from ccld_complaints.hosted_app.ccld_import_reload import (
     CcldImportReloadContext,
     CcldImportReloadRequest,
@@ -20,6 +21,58 @@ from ccld_complaints.hosted_app.seeded_import import (
 )
 
 FIXTURE = Path("tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json")
+
+
+def test_default_reload_context_does_not_fall_back_to_committed_seeded_fixture(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    missing_generated_artifact = tmp_path / "missing-generated-ccld-corpus.json"
+    monkeypatch.setattr(
+        ccld_import_reload_module,
+        "DEFAULT_GENERATED_CCLD_HOSTED_ARTIFACT",
+        missing_generated_artifact,
+    )
+
+    with _empty_connection() as connection:
+        context = ccld_import_reload_context_for_connection(
+            connection,
+            scope=LOCAL_REVIEWER_UI_SCOPE,
+        )
+        result = import_reload_validated_ccld_records(
+            context,
+            CcldImportReloadRequest(facility_number="900000001"),
+        )
+        counts = _table_counts(connection)
+
+    assert context.artifact_paths == ()
+    assert FIXTURE not in context.artifact_paths
+    assert result.import_executed is False
+    assert result.available_after_count == 0
+    assert result.source_artifact_identities == ()
+    assert "900000001" not in " ".join(result.source_artifact_identities)
+    assert "900000002" not in " ".join(result.source_artifact_identities)
+    assert counts == {"import_batches": 0, "source_records": 0}
+
+
+def test_explicit_local_fixture_reload_context_preserves_fixture_demo_behavior(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(
+        ccld_import_reload_module,
+        "DEFAULT_GENERATED_CCLD_HOSTED_ARTIFACT",
+        tmp_path / "missing-generated-ccld-corpus.json",
+    )
+
+    with _empty_connection() as connection:
+        context = ccld_import_reload_context_for_connection(
+            connection,
+            scope=LOCAL_REVIEWER_UI_SCOPE,
+            allow_committed_fixture=True,
+        )
+
+    assert context.artifact_paths == (FIXTURE,)
 
 
 def test_ccld_import_reload_loads_validated_fixture_into_empty_hosted_records() -> None:
@@ -45,14 +98,14 @@ def test_ccld_import_reload_loads_validated_fixture_into_empty_hosted_records() 
 
     assert result.import_executed is True
     assert result.available_before_count == 0
-    assert result.available_after_count == 6
-    assert result.imported_source_record_count == 6
+    assert result.available_after_count == 7
+    assert result.imported_source_record_count == 7
     assert result.refreshed_source_record_count == 0
     assert result.skipped_duplicate_source_record_count == 0
     assert result.skipped_non_matching_source_record_count == 0
     assert result.source_artifact_identities == (FIXTURE.as_posix(),)
     assert result.deferred_reasons == ()
-    assert counts == {"import_batches": 1, "source_records": 6}
+    assert counts == {"import_batches": 1, "source_records": 7}
     assert complaint["source_url"].startswith("https://www.ccld.dss.ca.gov/")
     assert complaint["raw_sha256"] == (
         "6088c9627374baac647e2f2a54f6e389cb68c1b92db42da00020aaf508a853bd"
@@ -74,14 +127,14 @@ def test_ccld_import_reload_refreshes_existing_rows_without_duplicates() -> None
         )
         counts = _table_counts(connection)
 
-    assert first_result.imported_source_record_count == 6
+    assert first_result.imported_source_record_count == 7
     assert second_result.import_executed is True
-    assert second_result.available_before_count == 6
-    assert second_result.available_after_count == 6
+    assert second_result.available_before_count == 7
+    assert second_result.available_after_count == 7
     assert second_result.imported_source_record_count == 0
-    assert second_result.refreshed_source_record_count == 6
-    assert second_result.skipped_duplicate_source_record_count == 6
-    assert counts == {"import_batches": 1, "source_records": 6}
+    assert second_result.refreshed_source_record_count == 7
+    assert second_result.skipped_duplicate_source_record_count == 7
+    assert counts == {"import_batches": 1, "source_records": 7}
 
 
 def test_ccld_import_reload_defers_when_validated_output_does_not_match_date() -> None:
@@ -101,7 +154,7 @@ def test_ccld_import_reload_defers_when_validated_output_does_not_match_date() -
     assert result.available_after_count == 0
     assert result.imported_source_record_count == 0
     assert result.refreshed_source_record_count == 0
-    assert result.skipped_non_matching_source_record_count == 6
+    assert result.skipped_non_matching_source_record_count == 7
     assert "No local validated CCLD records matched" in result.deferred_reasons[0]
     assert counts == {"import_batches": 0, "source_records": 0}
 

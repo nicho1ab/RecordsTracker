@@ -484,7 +484,7 @@ def test_reviewer_workflow_shell_note_action_creates_note_from_selected_detail()
     assert before_source_rows == after_source_rows
     assert counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 1,
         "audit_events": 1,
         "reset_reload_planning_metadata": 0,
@@ -600,7 +600,7 @@ def test_reviewer_workflow_shell_status_action_creates_status_from_selected_deta
     assert before_source_rows == after_source_rows
     assert counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 1,
         "audit_events": 1,
         "reset_reload_planning_metadata": 0,
@@ -707,7 +707,7 @@ def test_reviewer_workflow_shell_status_action_rejects_permission_failures(
     assert payload["error"]["code"] == expected_code
     assert counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
@@ -824,7 +824,7 @@ def test_reviewer_workflow_shell_note_action_rejects_permission_failures(
     assert payload["error"]["code"] == expected_code
     assert counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
@@ -1036,7 +1036,7 @@ def test_reviewer_workflow_shell_detail_reads_do_not_mutate_persisted_tables() -
     assert status == 200
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 1,
         "audit_events": 1,
         "reset_reload_planning_metadata": 0,

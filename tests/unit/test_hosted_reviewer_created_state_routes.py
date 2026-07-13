@@ -301,7 +301,7 @@ def test_reviewer_created_state_api_creates_reviewer_note() -> None:
     assert before_source_rows == after_source_rows
     assert counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 1,
         "audit_events": 1,
         "reset_reload_planning_metadata": 0,
@@ -559,7 +559,7 @@ def test_reviewer_created_state_api_creates_reviewer_status() -> None:
     assert before_source_rows == after_source_rows
     assert counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 1,
         "audit_events": 1,
         "reset_reload_planning_metadata": 0,
@@ -783,7 +783,7 @@ def test_reviewer_created_state_api_reads_do_not_mutate_persisted_tables() -> No
     assert fetch_status == 200
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 1,
         "audit_events": 1,
         "reset_reload_planning_metadata": 0,

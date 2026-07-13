@@ -49,6 +49,7 @@ def test_export_review_bundle_writes_source_traceable_csvs(tmp_path: Path) -> No
     assert complaint_rows[0]["retrieved_at"] == "2026-06-10T00:00:00+00:00"
     assert complaint_rows[0]["report_index"] == "3"
     assert complaint_rows[0]["first_investigation_activity_date"] == "2022-04-14"
+    assert complaint_rows[0]["days_received_to_first_activity"] == "7"
 
     delay_rows = _read_csv(output_dir / "delay_review_flags_with_source_traceability.csv")
     assert delay_rows == []

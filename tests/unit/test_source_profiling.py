@@ -156,6 +156,17 @@ def test_profiles_configured_facility_resource_and_source_to_app_mapping(
     assert {"Facility Administrator", "Facility Telephone Number", "Last Visit Date"}.issubset(
         useful_gaps
     )
+    source_reference_fields = {
+        entry["app_field"]
+        for entry in gap["mapped_facility_reference_source_only_fields"]
+    }
+    assert {
+        "all_visit_dates",
+        "inspection_visit_dates",
+        "other_visit_dates",
+        "complaint_info_composite",
+        "closed_date",
+    }.issubset(source_reference_fields)
     required_status = {
         entry["app_field"]: entry["status"]
         for entry in gap["required_hosted_search_filtering_fields"]
@@ -165,10 +176,7 @@ def test_profiles_configured_facility_resource_and_source_to_app_mapping(
         "external_facility_number": "present",
         "facility_name": "present",
     }
-    assert (
-        gap["database_fit"]["recommended_next_step"]
-        == "A narrow facility-reference migration is recommended."
-    )
+    assert "issue #448" in gap["database_fit"]["recommended_next_step"]
 
 
 def test_profiles_duplicate_facility_number_candidates() -> None:
@@ -224,10 +232,7 @@ def test_profile_tree_writes_json_csv_and_log_outputs(tmp_path: Path) -> None:
         (output_dir / "facility-source-gap-assessment.json").read_text(encoding="utf-8")
     )
     assert gap_assessment["profiled_file_count"] == 2
-    assert (
-        gap_assessment["database_fit_conclusion"]
-        == "A narrow facility-reference migration is recommended."
-    )
+    assert "issue #448" in gap_assessment["database_fit_conclusion"]
 
     with (output_dir / "csv-profile-summary.csv").open(encoding="utf-8", newline="") as csv_file:
         rows = list(csv.DictReader(csv_file))

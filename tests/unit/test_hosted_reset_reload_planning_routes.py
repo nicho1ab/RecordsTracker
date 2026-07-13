@@ -96,7 +96,7 @@ def test_reset_reload_planning_metadata_api_lists_authorized_records() -> None:
         "actor_category": "operator",
     }
     assert archive_record["authorization_permission"] == "import_reload"
-    assert archive_record["source_derived_summary"]["existing_source_derived_record_count"] == 6
+    assert archive_record["source_derived_summary"]["existing_source_derived_record_count"] == 7
     assert archive_record["reviewer_created_state_summary"]["selected_handling_mode"] == (
         "archive"
     )
@@ -330,7 +330,7 @@ def test_reset_reload_planning_metadata_api_reads_do_not_mutate_persisted_tables
     assert fetch_status == 200
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 1,

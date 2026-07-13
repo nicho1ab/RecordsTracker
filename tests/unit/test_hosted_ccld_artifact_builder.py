@@ -50,6 +50,7 @@ def test_ccld_hosted_artifact_builder_converts_fixture_sqlite_to_validated_seede
     )
     artifact = parse_seeded_corpus_artifact(result.artifact)
     flattened = flatten_seeded_corpus_records(artifact)
+    facility = cast(dict[str, Any], artifact.records[0]["facility"])
     source_document = cast(dict[str, Any], artifact.records[0]["source_document"])
     complaint = cast(dict[str, Any], artifact.records[0]["complaint"])
 
@@ -77,8 +78,13 @@ def test_ccld_hosted_artifact_builder_converts_fixture_sqlite_to_validated_seede
     assert source_document["raw_path"] == RAW_FIXTURE.as_posix()
     assert source_document["connector_name"] == "ccld_facility_reports"
     assert source_document["connector_version"] == "0.1.0"
+    assert facility["facility_type"] is None
+    assert facility["county"] is None
+    assert facility["capacity"] == 48
+    assert facility["regional_office"] == "CCLD Regional Office"
     assert complaint["complaint_control_number"] == "32-CR-20220407124448"
     assert complaint["first_investigation_activity_date"] == "2022-04-14"
+    assert complaint["days_received_to_first_activity"] == 7
     assert complaint["review_delay_over_120_days"] is False
     assert {record.entity_type for record in flattened} == {
         "facility",

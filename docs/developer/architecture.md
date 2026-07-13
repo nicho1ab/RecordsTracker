@@ -173,7 +173,12 @@ Alembic script location, a narrow domain migration for import batch metadata and
 source-derived record staging, a second narrow domain migration for one
 reviewer-created state scaffold table, a third narrow domain migration for one
 audit event scaffold table, a fourth narrow domain migration for one reset/reload
-operational planning metadata scaffold table, a local validated JSON artifact importer,
+operational planning metadata scaffold table, later additive migrations for
+controlled CCLD retrieval jobs and the separate facility-reference preload,
+and nullable issue #447 source-reference columns for deterministic visit-date
+arrays and client-served context. The reference projection does not silently
+merge into canonical facility entities or reviewer-created state. The scaffold
+also includes a local validated JSON artifact importer,
 and scaffold/API boundary descriptors for future source-derived API routes and
 reviewer-created state. It also includes a narrow database-backed
 source-derived read service for local/test list and fetch access to staged

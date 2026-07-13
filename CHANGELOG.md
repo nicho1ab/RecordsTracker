@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Allocated all issue #447 governed elements: populated the existing complaint
+  first-activity interval and facility canonical fields without null erasure,
+  added nullable typed facility-reference storage for three deterministic date
+  collections and `CLIENT_SERVED`, retained the complaint-information composite
+  unflattened in source provenance, kept `closed_date` reference-only, added an
+  additive migration, and removed production/PostgreSQL fixture fallbacks.
 - Closed the governed complaint-report extraction gaps for deterministic first
   investigation activity, bounded event records, complaint-report capacity and
   regional-office values, present-but-blank facility address/city states, and
