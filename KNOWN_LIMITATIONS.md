@@ -8,6 +8,12 @@
   A caller-requested limit reports eligible count, returned count, and
   truncation status. Ordinary reviewer pagination remains presentation paging,
   not an aggregate completeness claim.
+- The presentation-value contract can distinguish explicit source literals,
+  present blank fields, absent keys, typed invalid values, and preserved raw
+  facility-reference values. When an older stored row contains only SQL null
+  and no field-level/raw provenance, the original cause of that null cannot be
+  reconstructed; the reviewer label remains `Not provided` rather than
+  inventing unavailable or not-applicable semantics.
 - Complaint received date and first investigation activity date are distinct
   range dimensions. Existing PostgreSQL rows still require governed artifact
   regeneration and reimport to receive newly populated issue #447 values. No

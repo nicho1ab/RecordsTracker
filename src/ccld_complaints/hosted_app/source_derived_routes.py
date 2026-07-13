@@ -169,6 +169,10 @@ def _record_payload(record: SourceDerivedRecordRead) -> dict[str, Any]:
         "connector_version": record.connector_version,
         "retrieved_at": record.retrieved_at,
         "original_values": dict(record.original_values),
+        "original_value_presentations": {
+            key: value.to_dict()
+            for key, value in record.original_value_presentations.items()
+        },
         "source_traceability": dict(record.source_traceability),
         "import_batch": _import_batch_payload(record.import_batch),
     }

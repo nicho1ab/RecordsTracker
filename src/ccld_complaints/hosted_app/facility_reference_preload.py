@@ -743,6 +743,18 @@ def _csv_paths(input_path: Path) -> tuple[Path, ...]:
 def _lookup_record_from_reference_row(row: Mapping[str, Any]) -> CcldFacilityLookupRecord:
     original_row = row.get("original_row_json")
     original_values = original_row if isinstance(original_row, Mapping) else {}
+    capacity_present, raw_capacity = _raw_reference_value(
+        original_values,
+        "Facility Capacity",
+        "CAPACITY",
+    )
+    closed_date_present, raw_closed_date = _raw_reference_value(
+        original_values,
+        "Closed Date",
+        "CLOSED_DATE",
+    )
+    capacity = _row_str(row, "capacity") or raw_capacity
+    closed_date = _row_str(row, "closed_date") or raw_closed_date
     return CcldFacilityLookupRecord(
         facility_number=_row_str(row, "facility_number"),
         facility_name=_row_str(row, "facility_name"),
@@ -752,14 +764,16 @@ def _lookup_record_from_reference_row(row: Mapping[str, Any]) -> CcldFacilityLoo
         zip_code=_row_str(row, "zip"),
         facility_type=_row_str(row, "facility_type"),
         program_type=_row_str(row, "program_type"),
-        capacity=_row_str(row, "capacity"),
+        capacity=capacity,
         status=_row_str(row, "status"),
-        closed_date=_row_str(row, "closed_date"),
+        closed_date=closed_date,
         address=_row_str(row, "address"),
         regional_office=_row_str(row, "regional_office"),
         facility_address=_raw_reference_field(original_values, "Facility Address"),
         fac_do_desc=_raw_reference_field(original_values, "FAC_DO_DESC"),
         res_street_addr=_raw_reference_field(original_values, "RES_STREET_ADDR"),
+        capacity_source_present=capacity_present,
+        closed_date_source_present=closed_date_present,
     )
 
 
@@ -768,6 +782,17 @@ def _raw_reference_field(values: Mapping[str, Any], key: str) -> str | None:
         return None
     value = values.get(key)
     return "" if value is None else str(value).strip()
+
+
+def _raw_reference_value(
+    values: Mapping[str, Any],
+    *keys: str,
+) -> tuple[bool, str]:
+    for key in keys:
+        if key in values:
+            value = values.get(key)
+            return True, "" if value is None else str(value).strip()
+    return False, ""
 
 
 def _address_diagnostic_from_row(

@@ -1537,9 +1537,9 @@ def test_reviewer_ui_substantiated_triage_uses_safe_fallbacks() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Facility ID 157806098" in html
-    assert "Not available" in html
+    assert "Not provided" in html
     assert "Substantiated" in html
-    assert "Not available in loaded record" in html
+    assert "Date not provided" in html
     assert_no_secret_html(html)
 
 
@@ -3161,10 +3161,10 @@ def test_reviewer_ui_complaint_export_status_query_filters_without_mutation(
         assert record["Reviewer-created status"] == "Reviewed"
         assert record["Reviewer-created note present"] == "yes"
     else:
-        assert record["Facility Name"] == ""
-        assert record["Facility/License Number"] == ""
-        assert record["Finding/Status"] == ""
-        assert record["Complaint Control Number"] == ""
+        assert record["Facility Name"] == "Not applicable"
+        assert record["Facility/License Number"] == "Not applicable"
+        assert record["Finding/Status"] == "Not applicable"
+        assert record["Complaint Control Number"] == "Not applicable"
     assert "Status query export note" not in csv_text
     assert "raw_path" not in csv_text
     assert "C:\\" not in csv_text
@@ -3270,10 +3270,10 @@ def test_reviewer_ui_complaint_export_date_query_filters_without_mutation(
         assert record["Reviewer-created status"] == "Reviewed"
         assert record["Reviewer-created note present"] == "yes"
     else:
-        assert record["Facility Name"] == ""
-        assert record["Facility/License Number"] == ""
-        assert record["Finding/Status"] == ""
-        assert record["Complaint Control Number"] == ""
+        assert record["Facility Name"] == "Not applicable"
+        assert record["Facility/License Number"] == "Not applicable"
+        assert record["Finding/Status"] == "Not applicable"
+        assert record["Complaint Control Number"] == "Not applicable"
     assert "Date query export note" not in csv_text
     assert "raw_path" not in csv_text
     assert "C:\\" not in csv_text
@@ -3284,7 +3284,7 @@ def test_reviewer_ui_complaint_export_date_query_filters_without_mutation(
     ("finding_value", "allegation_category", "expect_cue"),
     (
         ("Unsubstantiated", "staff misconduct concern", "Possible serious allegation topic"),
-        ("Unsubstantiated", "licensing paperwork", ""),
+        ("Unsubstantiated", "licensing paperwork", "No serious review cue"),
     ),
 )
 def test_reviewer_ui_complaint_export_serious_review_cue_without_mutation(
@@ -3561,10 +3561,10 @@ def test_reviewer_ui_complaint_export_review_cue_query_filter_without_mutation(
         assert record["Complaint Received Date"] == "2022-04-07"
         assert record["Finding/Status"] == "Substantiated"
     else:
-        assert record["Facility Name"] == ""
-        assert record["Facility/License Number"] == ""
-        assert record["Complaint Received Date"] == ""
-        assert record["Finding/Status"] == ""
+        assert record["Facility Name"] == "Not applicable"
+        assert record["Facility/License Number"] == "Not applicable"
+        assert record["Complaint Received Date"] == "Not applicable"
+        assert record["Finding/Status"] == "Not applicable"
     assert "Cue filter export note." not in csv_text
     assert "raw_path" not in csv_text
     assert "C:\\" not in csv_text
@@ -3908,7 +3908,7 @@ def test_reviewer_ui_detail_source_confidence_proxy_cues_are_non_mutating() -> N
     assert "Source-derived value checks" not in html
     assert "Review flags and source checks" not in html
     assert "Visit" in html
-    assert "Not available" in html
+    assert "Date not provided" in html
     assert "Check source" not in html
     assert "Missing source date" in html
     assert "Date mismatch" in html
@@ -3921,6 +3921,104 @@ def test_reviewer_ui_detail_source_confidence_proxy_cues_are_non_mutating() -> N
     assert "cue marks report date as a proxy" not in normalized_html
     assert "do not use it as a source-confidence score" not in normalized_html
     assert_no_secret_html(html)
+
+
+def test_reviewer_value_states_render_explicit_accessible_labels() -> None:
+    html = reviewer_ui._render_key_date_cards(  # noqa: SLF001
+        {
+            "complaint_received_date": "2026-07-13",
+            "visit_date": "",
+            "report_date": "not-a-date",
+            "date_signed": "undated",
+        }
+    )
+    zero_markup = reviewer_ui._reviewer_value_markup(  # noqa: SLF001
+        0,
+        kind="number",
+        term_id="verified-zero",
+    )
+    null_markup = reviewer_ui._reviewer_value_markup(  # noqa: SLF001
+        None,
+        term_id="missing-finding",
+    )
+    unavailable_markup = reviewer_ui._reviewer_value_markup(  # noqa: SLF001
+        "unavailable",
+        term_id="source-unavailable",
+    )
+
+    assert "07/13/2026" in html
+    assert "Date not provided" in html
+    assert "Invalid source value" in html
+    assert "Date not available" in html
+    assert "not-a-date" not in html
+    assert 'class="inline-glossary-term"' in html
+    assert 'tabindex="0"' in html
+    assert 'aria-description="' in html
+    assert zero_markup == "0"
+    assert "Not provided" in null_markup
+    assert "Not available from source" in unavailable_markup
+    for internal_state in (
+        "present_blank",
+        "source_unavailable",
+        "not_applicable",
+        "verified_zero",
+    ):
+        assert internal_state not in html
+        assert internal_state not in null_markup
+        assert internal_state not in unavailable_markup
+    assert "database null" not in (html + null_markup).casefold()
+
+
+def test_reviewer_matrix_export_preserves_blank_null_undated_and_malformed_states() -> None:
+    with _seeded_connection() as connection:
+        complaint_values = connection.execute(
+            select(hosted_source_derived_records.c.original_values).where(
+                hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY
+            )
+        ).scalar_one()
+        updated_values = dict(complaint_values)
+        updated_values.update(
+            {
+                "first_investigation_activity_date": "",
+                "visit_date": None,
+                "report_date": "not-a-date",
+                "date_signed": "undated",
+            }
+        )
+        connection.execute(
+            update(hosted_source_derived_records)
+            .where(hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY)
+            .values(original_values=updated_values)
+        )
+
+        detail_status, detail_content_type, detail_body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_MATRIX_EXPORT_PATH}?facility_number=157806098",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    [row] = list(csv.DictReader(io.StringIO(body.decode("utf-8-sig"))))
+    detail_html = detail_body.decode("utf-8")
+
+    assert detail_status == 200
+    assert detail_content_type == "text/html; charset=utf-8"
+    assert "Date not provided" in detail_html
+    assert "Invalid source value" in detail_html
+    assert "Date not available" in detail_html
+    assert "not-a-date" not in detail_html
+    assert 'class="inline-glossary-term"' in detail_html
+    assert status == 200
+    assert content_type == "text/csv; charset=utf-8"
+    assert row["first_investigation_activity_date"] == "Date not provided"
+    assert row["visit_date"] == "Date not provided"
+    assert row["report_date"] == "Invalid source value"
+    assert row["date_signed"] == "Date not available"
+    assert "not-a-date" not in body.decode("utf-8-sig")
+    assert "\r\n,," not in body.decode("utf-8-sig")
 
 def test_reviewer_ui_detail_render_is_non_mutating() -> None:
     with _seeded_connection() as connection:
@@ -4662,6 +4760,7 @@ def _read_model_from_source_payload(record: Mapping[str, Any]) -> object:
         connector_version=record["connector_version"],
         retrieved_at=record["retrieved_at"],
         original_values=record["original_values"],
+        original_value_presentations={},
         source_traceability=record["source_traceability"],
         import_batch=SimpleNamespace(
             import_batch_id=import_batch["import_batch_id"],

@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Added a shared governed presentation-value contract from source-derived reads
+  through reviewer HTML and CSV output. Reviewer surfaces now distinguish
+  verified zero, present values, present blank, missing, source unavailable,
+  governed not-applicable, undated, invalid, and not-collected states with
+  field-aware labels and accessible definitions while retaining raw stored
+  values, ISO export dates, aggregate causes, and source traceability.
 - Added a shared reviewer aggregate/export result contract with explicit
   denominator, range, source coverage, zero, unavailable, partial, and
   truncation semantics; removed the implicit source-derived 100-row cap; added

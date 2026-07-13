@@ -132,6 +132,7 @@ from ccld_complaints.hosted_app.source_derived_routes import (
     route_source_derived_api_response,
 )
 from ccld_complaints.hosted_app.ui_shell import render_page_shell
+from ccld_complaints.presentation_values import presentation_value
 
 APP_NAME = "CCLD Records Review"
 SCAFFOLD_NOTICE = "Local/test scaffold only: not a production reviewer workflow."
@@ -1962,7 +1963,11 @@ def _source_recent_activity_date(record: object) -> str:
 
 def _facility_review_next_date_label(record: object) -> str:
     recent_date = _source_recent_activity_date(record)
-    return f"Recent activity {recent_date}" if recent_date else "not listed"
+    return (
+        f"Recent activity {presentation_value(recent_date, kind='date').display_text}"
+        if recent_date
+        else "not listed"
+    )
 
 
 def _reverse_date_key(value: str) -> str:

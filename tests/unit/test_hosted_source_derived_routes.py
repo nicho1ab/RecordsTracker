@@ -70,6 +70,24 @@ def test_source_derived_api_lists_authorized_staged_records() -> None:
     assert complaint["connector_name"] == "ccld_facility_reports"
     assert complaint["retrieved_at"] == "2026-06-10T00:00:00+00:00"
     assert complaint["original_values"]["finding"] == "Unsubstantiated"
+    assert complaint["original_value_presentations"]["finding"] == {
+        "stored_value": "Unsubstantiated",
+        "stored": True,
+        "state": "present",
+        "display": "Unsubstantiated",
+        "export": "Unsubstantiated",
+        "explanation": "A source value is present.",
+    }
+    assert complaint["original_values"]["days_received_to_first_activity"] == 7
+    assert complaint["original_value_presentations"][
+        "days_received_to_first_activity"
+    ]["state"] == "present"
+    facility = next(
+        record for record in payload["records"] if record["entity_type"] == "facility"
+    )
+    assert facility["original_values"]["capacity"] == 48
+    assert facility["original_value_presentations"]["capacity"]["state"] == "present"
+    assert facility["original_value_presentations"]["closed_date"]["state"] == "absent"
     assert complaint["source_traceability"]["source_artifact_identity"] == FIXTURE.as_posix()
     assert complaint["import_batch"]["import_batch_id"] == TEST_SCOPE.scope_id
     assert "review_status" not in complaint["original_values"]

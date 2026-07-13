@@ -1,5 +1,16 @@
 # Data Dictionary
 
+## How missing and special values are shown
+
+RecordsTracker keeps the stored source value separate from its reviewer-facing
+label. A verified numeric zero is shown as `0`. A source field that is present
+but blank is shown as `Not provided`; a field not supplied for that record type
+is shown as `Not collected`; source-unavailable, governed not-applicable,
+undated, and invalid values use `Not available from source`, `Not applicable`,
+`Date not available`, and `Invalid source value`. Missing or invalid numeric
+values never become zero. Reviewer dates display as `MM/DD/YYYY`; stored and CSV
+dates remain ISO `YYYY-MM-DD`.
+
 ## facility_name
 
 Name of the facility as shown in the source data.

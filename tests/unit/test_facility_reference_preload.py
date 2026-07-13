@@ -224,6 +224,7 @@ def test_parser_keeps_invalid_and_blank_reference_dates_null_with_warnings(
             {
                 "Facility Number": "920000009",
                 "Facility Name": "Invalid Date Home Care",
+                "Facility Capacity": "not-a-number",
                 "Closed Date": "not-a-date",
                 "All Visit Dates": "2026-06-07; not-a-date",
                 "Inspection Visit Dates": "",
@@ -235,6 +236,7 @@ def test_parser_keeps_invalid_and_blank_reference_dates_null_with_warnings(
     result = parse_facility_reference_csv(csv_path)
     [record] = result.records
 
+    assert record.capacity is None
     assert record.closed_date is None
     assert record.all_visit_dates is None
     assert record.inspection_visit_dates is None
@@ -242,7 +244,9 @@ def test_parser_keeps_invalid_and_blank_reference_dates_null_with_warnings(
     assert record.values()["all_visit_dates"] is None
     assert record.values()["inspection_visit_dates"] is None
     assert record.values()["other_visit_dates"] is None
+    assert record.original_row_json["Facility Capacity"] == "not-a-number"
     assert [(warning.row_number, warning.message) for warning in result.warnings] == [
+        (2, "Capacity was not numeric."),
         (2, "Closed Date was not a valid date."),
         (2, "All Visit Dates contained a value that was not a valid date."),
         (2, "Other Visit Dates contained a value that was not a valid date."),
