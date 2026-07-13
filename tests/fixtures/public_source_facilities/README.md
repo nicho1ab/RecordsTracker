@@ -3,9 +3,9 @@
 ## Purpose
 
 This directory contains tiny, synthetic fixture candidates selected from local
-CSV profiling results. They prepare future fixture-backed hosted source/facility
-view work without importing data into SQLite, the hosted scaffold, or any app
-workflow.
+CSV profiling results. They support governed parser, preload, catalog, and
+explicit local fixture-demo tests; default and PostgreSQL modes must not use
+them as runtime fallback data.
 
 The fixtures are intentionally small and representative. They are not raw source
 files, not generated profiling outputs, not large extracts, and not complete
@@ -31,7 +31,13 @@ read-only source/facility view work:
   name, facility type, county, status, capacity, visit/date fields, and
   complaint-summary-like columns.
 - CHHS/CDSS facility-master CSVs with `FAC_NBR`, `PROGRAM_TYPE`, `STATUS`,
-  `CAPACITY`, `COUNTY`, and location fields.
+  `CLIENT_SERVED`, `CAPACITY`, `COUNTY`, `FAC_DO_DESC`, `FAC_TYPE_DESC`, and
+  location fields. Numeric `TYPE` remains provenance-only.
+
+Issue #447 uses the CCLD fixture to verify sorted/deduplicated visit-date arrays
+and raw complaint-information provenance, and the CHHS fixture to verify the
+nullable source-reference-only client-served allocation. These allocations do
+not turn the fixture rows into production records or canonical complaint events.
 
 The profiled metadata CSV is not represented as a committed tiny fixture in this
 directory because the profiler marked it unsuitable for immediate tiny fixture
@@ -45,8 +51,8 @@ These fixtures must not be used as:
 - Complete public record datasets.
 - Official facility lists.
 - Evidence that a public source is complete, current, or authoritative.
-- Approval for production import, connector implementation, schemas,
-  migrations, hosted app behavior, or canonical field changes.
+- Approval for production import, connector implementation, live retrieval, or
+  production fixture fallback.
 - A basis for legal, facility-wide, delay, harm, abuse, neglect, liability, or
   rights-deprivation conclusions.
 

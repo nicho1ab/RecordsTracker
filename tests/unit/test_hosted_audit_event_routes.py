@@ -314,7 +314,7 @@ def test_audit_events_api_reads_do_not_mutate_persisted_tables() -> None:
     assert fetch_status == 200
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 1,
         "audit_events": 1,
     }

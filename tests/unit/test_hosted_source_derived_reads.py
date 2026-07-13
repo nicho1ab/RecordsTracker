@@ -27,7 +27,7 @@ def test_list_source_derived_records_preserves_traceability_and_batch_context() 
 
     complaint = next(record for record in records if record.entity_type == "complaint")
 
-    assert len(records) == 6
+    assert len(records) == 7
     assert complaint.source_record_key == "complaint:ccld:complaint:32-CR-20220407124448"
     assert complaint.stable_source_id == "ccld:complaint:32-CR-20220407124448"
     assert complaint.source_document_id == "ccld:document:157806098:3"

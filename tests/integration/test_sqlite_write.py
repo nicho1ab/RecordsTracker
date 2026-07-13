@@ -6,11 +6,19 @@ from typing import cast
 
 from ccld_complaints.connectors.base import SourceDocument
 from ccld_complaints.connectors.ccld import CcldFacilityReportsConnector
+from ccld_complaints.hosted_app.facility_reference_preload import (
+    parse_facility_reference_csv,
+)
 from ccld_complaints.storage.sqlite import write_normalized_records
 from ccld_complaints.utils.hash import sha256_bytes
 
-FIXTURE_URL = "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=3"
+FIXTURE_URL = (
+    "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=3"
+)
 RAW_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_inx3.html")
+FACILITY_REFERENCE_FIXTURE = Path(
+    "tests/fixtures/public_source_facilities/ccld_program_facilities_tiny.csv"
+)
 RETRIEVED_AT = "2026-06-10T00:00:00+00:00"
 
 
@@ -97,9 +105,7 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
         "retrieved_at": RETRIEVED_AT,
         "report_index": 3,
     }
-    allegation_summary = _view_value(
-        db_path, "complaint_review_summary", "allegation_summary"
-    )
+    allegation_summary = _view_value(db_path, "complaint_review_summary", "allegation_summary")
     assert "Facility clients are being mistreated while in care" in allegation_summary
     assert (
         "Facility staff do not provide adequate supervision to the facility clients"
@@ -314,6 +320,71 @@ def test_write_normalized_ccld_report_is_idempotent(tmp_path: Path) -> None:
     assert _row_count(db_path, "extraction_audit") == 28
 
 
+def test_facility_upsert_preserves_governed_values_when_later_record_is_null(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "ccld.sqlite"
+    normalized = _normalized_fixture()
+    reference_record = parse_facility_reference_csv(
+        FACILITY_REFERENCE_FIXTURE,
+        source_accessed_at=RETRIEVED_AT,
+    ).records[0]
+    governed_optional_values = {
+        "facility_type": reference_record.facility_type,
+        "county": reference_record.county,
+        "status": reference_record.status,
+        "capacity": reference_record.capacity,
+        "regional_office": reference_record.regional_office,
+    }
+    assert all(value is not None for value in governed_optional_values.values())
+    facility = {
+        **cast(dict[str, object], normalized["facility"]),
+        **governed_optional_values,
+    }
+    normalized["facility"] = facility
+
+    write_normalized_records(db_path, [normalized])
+    write_normalized_records(
+        db_path,
+        [
+            {
+                "facility": {
+                    **facility,
+                    "facility_type": None,
+                    "county": None,
+                    "status": None,
+                    "capacity": None,
+                    "regional_office": None,
+                }
+            }
+        ],
+    )
+
+    with sqlite3.connect(db_path) as conn:
+        row = conn.execute(
+            "SELECT facility_type, county, status, capacity, regional_office FROM facilities"
+        ).fetchone()
+
+    assert row == tuple(governed_optional_values.values())
+
+
+def test_facility_upsert_preserves_explicit_capacity_zero(tmp_path: Path) -> None:
+    db_path = tmp_path / "ccld.sqlite"
+    normalized = _normalized_fixture()
+    facility = cast(dict[str, object], normalized["facility"])
+
+    write_normalized_records(db_path, [normalized])
+    write_normalized_records(
+        db_path,
+        [{"facility": {**facility, "capacity": 0}}],
+    )
+
+    with sqlite3.connect(db_path) as conn:
+        capacity = conn.execute("SELECT capacity FROM facilities").fetchone()[0]
+
+    assert capacity == 0
+
+
 def test_written_complaint_and_allegations_link_to_parent_rows(tmp_path: Path) -> None:
     db_path = tmp_path / "ccld.sqlite"
     normalized = _normalized_fixture()
@@ -335,9 +406,7 @@ def test_written_complaint_and_allegations_link_to_parent_rows(tmp_path: Path) -
             "SELECT document_id FROM source_documents WHERE document_id = ?",
             (complaint[2],),
         ).fetchone()
-        allegation_links = conn.execute(
-            "SELECT DISTINCT complaint_id FROM allegations"
-        ).fetchall()
+        allegation_links = conn.execute("SELECT DISTINCT complaint_id FROM allegations").fetchall()
 
     assert facility_id == (complaint[1],)
     assert document_id == (complaint[2],)

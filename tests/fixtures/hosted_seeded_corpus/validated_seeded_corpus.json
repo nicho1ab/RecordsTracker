@@ -10,7 +10,7 @@
         "source_document": 1,
         "complaint": 1,
         "allegation": 2,
-        "event": 0,
+        "event": 1,
         "extraction_audit": 1
     },
     "warnings": [
@@ -24,8 +24,12 @@
                 "source_id": "ccld",
                 "external_facility_number": "157806098",
                 "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
-                "facility_type": "Children's Center",
-                "county": "Kern"
+                "facility_type": null,
+                "licensee_name": null,
+                "county": null,
+                "status": null,
+                "capacity": 48,
+                "regional_office": "CCLD Regional Office"
             },
             "source_document": {
                 "document_id": "ccld:document:157806098:3",
@@ -47,18 +51,20 @@
                 "document_id": "ccld:document:157806098:3",
                 "complaint_control_number": "32-CR-20220407124448",
                 "complaint_received_date": "2022-04-07",
+                "first_investigation_activity_date": "2022-04-14",
                 "visit_date": "2022-08-24",
                 "report_date": "2022-08-24",
                 "date_signed": "2022-08-26",
                 "finding": "Unsubstantiated",
+                "days_received_to_first_activity": 7,
                 "days_received_to_visit": 139,
                 "days_received_to_report": 139,
                 "days_report_to_signed": 2,
-                "review_delay_over_30_days": true,
-                "review_delay_over_60_days": true,
-                "review_delay_over_90_days": true,
-                "review_delay_over_120_days": true,
-                "missing_first_activity_date": true,
+                "review_delay_over_30_days": false,
+                "review_delay_over_60_days": false,
+                "review_delay_over_90_days": false,
+                "review_delay_over_120_days": false,
+                "missing_first_activity_date": false,
                 "report_date_used_as_proxy": false,
                 "extraction_confidence": 0.95
             },
@@ -80,7 +86,17 @@
                     "extraction_confidence": 0.9
                 }
             ],
-            "events": [],
+            "events": [
+                {
+                    "event_id": "ccld:event:32-CR-20220407124448:1",
+                    "complaint_id": "ccld:complaint:32-CR-20220407124448",
+                    "event_date": "2022-04-14",
+                    "event_type": "investigation_activity",
+                    "event_text": null,
+                    "extracted_from_section": "investigation findings",
+                    "extraction_confidence": 1.0
+                }
+            ],
             "extraction_audit": [
                 {
                     "audit_id": "ccld:audit:32-CR-20220407124448:facility_number",

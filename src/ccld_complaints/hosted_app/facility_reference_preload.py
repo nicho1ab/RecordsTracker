@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import csv
 import re
@@ -40,14 +40,12 @@ from ccld_complaints.source_profiling import DEFAULT_SOURCE_ROOT, FACILITY_SOURC
 DEFAULT_FACILITY_REFERENCE_PRELOAD_INPUT_PATH = DEFAULT_SOURCE_ROOT
 FACILITY_REFERENCE_TABLE_NAME = "hosted_facility_reference_records"
 FACILITY_REFERENCE_DATASET_SLUG = FACILITY_SOURCE_REGISTRY["parent_dataset"]["slug"]
-FACILITY_REFERENCE_DATASET_URL = FACILITY_SOURCE_REGISTRY["parent_dataset"][
-    "official_dataset_url"
-]
+FACILITY_REFERENCE_DATASET_URL = FACILITY_SOURCE_REGISTRY["parent_dataset"]["official_dataset_url"]
+# Provenance-only original_row_json key for DictReader cells beyond the declared header.
+SOURCE_CSV_OVERFLOW_PROVENANCE_KEY = "_source_csv_overflow_values"
 _FILENAME_DATE_PATTERN = re.compile(r"(?<!\d)(\d{2})(\d{2})(\d{4})(?!\d)")
 _HEADER_NORMALIZE_PATTERN = re.compile(r"[^a-z0-9]+")
-_UNUSABLE_ADDRESS_VALUES = frozenset(
-    ("", "unavailable", "not listed", "unknown", "n/a", "na")
-)
+_UNUSABLE_ADDRESS_VALUES = frozenset(("", "unavailable", "not listed", "unknown", "n/a", "na"))
 
 hosted_facility_reference_metadata = MetaData()
 
@@ -59,6 +57,7 @@ hosted_facility_reference_records = Table(
     Column("facility_name", Text, nullable=False),
     Column("facility_type", Text, nullable=True),
     Column("program_type", Text, nullable=True),
+    Column("client_served", Text, nullable=True),
     Column("licensee_name", Text, nullable=True),
     Column("facility_administrator", Text, nullable=True),
     Column("telephone", String(64), nullable=True),
@@ -72,6 +71,9 @@ hosted_facility_reference_records = Table(
     Column("status", Text, nullable=True),
     Column("license_first_date", String(10), nullable=True),
     Column("closed_date", String(10), nullable=True),
+    Column("all_visit_dates", JSON(none_as_null=True), nullable=True),
+    Column("inspection_visit_dates", JSON(none_as_null=True), nullable=True),
+    Column("other_visit_dates", JSON(none_as_null=True), nullable=True),
     Column("snapshot_date", String(10), nullable=True),
     Column("source_resource_name", Text, nullable=False),
     Column("source_dataset_slug", Text, nullable=False),
@@ -118,6 +120,7 @@ class FacilityReferenceRecord:
     facility_name: str
     facility_type: str | None
     program_type: str | None
+    client_served: str | None
     licensee_name: str | None
     facility_administrator: str | None
     telephone: str | None
@@ -131,6 +134,9 @@ class FacilityReferenceRecord:
     status: str | None
     license_first_date: str | None
     closed_date: str | None
+    all_visit_dates: tuple[str, ...] | None
+    inspection_visit_dates: tuple[str, ...] | None
+    other_visit_dates: tuple[str, ...] | None
     snapshot_date: str | None
     source_resource_id: str
     source_resource_name: str
@@ -138,7 +144,7 @@ class FacilityReferenceRecord:
     source_dataset_url: str
     source_accessed_at: str
     source_file_name: str
-    original_row_json: Mapping[str, str]
+    original_row_json: Mapping[str, Any]
 
     def values(self) -> dict[str, Any]:
         return {
@@ -147,6 +153,7 @@ class FacilityReferenceRecord:
             "facility_name": self.facility_name,
             "facility_type": self.facility_type,
             "program_type": self.program_type,
+            "client_served": self.client_served,
             "licensee_name": self.licensee_name,
             "facility_administrator": self.facility_administrator,
             "telephone": self.telephone,
@@ -160,6 +167,9 @@ class FacilityReferenceRecord:
             "status": self.status,
             "license_first_date": self.license_first_date,
             "closed_date": self.closed_date,
+            "all_visit_dates": _date_collection_json_value(self.all_visit_dates),
+            "inspection_visit_dates": _date_collection_json_value(self.inspection_visit_dates),
+            "other_visit_dates": _date_collection_json_value(self.other_visit_dates),
             "snapshot_date": self.snapshot_date,
             "source_resource_name": self.source_resource_name,
             "source_dataset_slug": self.source_dataset_slug,
@@ -423,9 +433,7 @@ def search_facility_reference_records(
         )
     filters = tuple(_search_token_filter(token) for token in query_tokens)
     total_match_count = connection.execute(
-        select(func.count())
-        .select_from(hosted_facility_reference_records)
-        .where(and_(*filters))
+        select(func.count()).select_from(hosted_facility_reference_records).where(and_(*filters))
     ).scalar_one()
     rows = connection.execute(
         select(hosted_facility_reference_records)
@@ -480,13 +488,16 @@ def _preload_record(
     apply_changes: bool,
 ) -> str:
     values = record.values()
-    existing = connection.execute(
-        select(hosted_facility_reference_records).where(
-            hosted_facility_reference_records.c.source_resource_id
-            == record.source_resource_id,
-            hosted_facility_reference_records.c.facility_number == record.facility_number,
+    existing = (
+        connection.execute(
+            select(hosted_facility_reference_records).where(
+                hosted_facility_reference_records.c.source_resource_id == record.source_resource_id,
+                hosted_facility_reference_records.c.facility_number == record.facility_number,
+            )
         )
-    ).mappings().first()
+        .mappings()
+        .first()
+    )
     if existing is None:
         if apply_changes:
             connection.execute(hosted_facility_reference_records.insert().values(**values))
@@ -498,10 +509,8 @@ def _preload_record(
         connection.execute(
             update(hosted_facility_reference_records)
             .where(
-                hosted_facility_reference_records.c.source_resource_id
-                == record.source_resource_id,
-                hosted_facility_reference_records.c.facility_number
-                == record.facility_number,
+                hosted_facility_reference_records.c.source_resource_id == record.source_resource_id,
+                hosted_facility_reference_records.c.facility_number == record.facility_number,
             )
             .values(**values)
         )
@@ -509,7 +518,7 @@ def _preload_record(
 
 
 def _normalize_facility_row(
-    row: Mapping[str, str],
+    row: Mapping[str | None, Any],
     *,
     row_shape: str,
     source_metadata: Mapping[str, str],
@@ -540,12 +549,43 @@ def _normalize_facility_row(
     if capacity is None and _value(row, "Facility Capacity", "CAPACITY"):
         warnings.append(_warning(source_file_name, row_number, "Capacity was not numeric."))
 
+    closed_date = _date_value(row, "Closed Date", "CLOSED_DATE")
+    if closed_date is None and _value(row, "Closed Date", "CLOSED_DATE"):
+        warnings.append(_warning(source_file_name, row_number, "Closed Date was not a valid date."))
+
+    all_visit_dates = _date_collection_value(
+        row,
+        "All Visit Dates",
+        source_file_name=source_file_name,
+        row_number=row_number,
+        warnings=warnings,
+    )
+    inspection_visit_dates = _date_collection_value(
+        row,
+        "Inspection Visit Dates",
+        source_file_name=source_file_name,
+        row_number=row_number,
+        warnings=warnings,
+    )
+    other_visit_dates = _date_collection_value(
+        row,
+        "Other Visit Dates",
+        source_file_name=source_file_name,
+        row_number=row_number,
+        warnings=warnings,
+    )
+
     return (
         FacilityReferenceRecord(
             facility_number=facility_number,
             facility_name=facility_name,
-            facility_type=_none_if_empty(_value(row, "Facility Type", "FAC_TYPE_DESC", "TYPE")),
+            facility_type=_none_if_empty(
+                _value(row, "Facility Type")
+                if row_shape == "program"
+                else _value(row, "FAC_TYPE_DESC")
+            ),
             program_type=_none_if_empty(_value(row, "Program Type", "PROGRAM_TYPE")),
+            client_served=_none_if_empty(_value(row, "CLIENT_SERVED")),
             licensee_name=_none_if_empty(_value(row, "Licensee", "LICENSEE")),
             facility_administrator=_none_if_empty(
                 _value(row, "Facility Administrator", "ADMINISTRATOR")
@@ -562,7 +602,10 @@ def _normalize_facility_row(
             capacity=capacity,
             status=_none_if_empty(_value(row, "Facility Status", "STATUS")),
             license_first_date=_date_value(row, "License First Date", "LICENSE_FIRST_DATE"),
-            closed_date=_date_value(row, "Closed Date", "CLOSED_DATE"),
+            closed_date=closed_date,
+            all_visit_dates=all_visit_dates,
+            inspection_visit_dates=inspection_visit_dates,
+            other_visit_dates=other_visit_dates,
             snapshot_date=snapshot_date,
             source_resource_id=source_metadata["source_resource_id"],
             source_resource_name=source_metadata["source_resource_name"],
@@ -570,30 +613,31 @@ def _normalize_facility_row(
             source_dataset_url=FACILITY_REFERENCE_DATASET_URL,
             source_accessed_at=source_accessed_at,
             source_file_name=source_file_name,
-            original_row_json={key: value for key, value in row.items() if key is not None},
+            original_row_json=_original_row_json(row),
         ),
         tuple(warnings),
     )
 
 
-def _facility_number(row: Mapping[str, str], row_shape: str) -> str:
+def _facility_number(row: Mapping[str | None, Any], row_shape: str) -> str:
     raw_value = _value(row, "Facility Number") if row_shape == "program" else _value(row, "FAC_NBR")
     cleaned = _clean_value(raw_value)
     return cleaned if cleaned.isdigit() else ""
 
 
-def _capacity_value(row: Mapping[str, str], row_shape: str) -> int | None:
+def _capacity_value(row: Mapping[str | None, Any], row_shape: str) -> int | None:
     raw_value = (
-        _value(row, "Facility Capacity")
-        if row_shape == "program"
-        else _value(row, "CAPACITY")
+        _value(row, "Facility Capacity") if row_shape == "program" else _value(row, "CAPACITY")
     )
     cleaned = _clean_value(raw_value).replace(",", "")
     return int(cleaned) if cleaned.isdigit() else None
 
 
-def _date_value(row: Mapping[str, str], *headers: str) -> str | None:
-    raw_value = _value(row, *headers)
+def _date_value(row: Mapping[str | None, Any], *headers: str) -> str | None:
+    return _normalized_date(_value(row, *headers))
+
+
+def _normalized_date(raw_value: str) -> str | None:
     cleaned = _clean_value(raw_value)
     if not cleaned:
         return None
@@ -603,6 +647,54 @@ def _date_value(row: Mapping[str, str], *headers: str) -> str | None:
         except ValueError:
             continue
     return None
+
+
+def _date_collection_value(
+    row: Mapping[str | None, Any],
+    header: str,
+    *,
+    source_file_name: str,
+    row_number: int,
+    warnings: list[FacilityReferenceParserWarning],
+) -> tuple[str, ...] | None:
+    raw_value = _value(row, header)
+    if not raw_value:
+        return None
+    tokens = tuple(token.strip() for token in raw_value.split(";") if token.strip())
+    normalized_dates: list[str] = []
+    invalid_tokens: list[str] = []
+    for token in tokens:
+        normalized = _normalized_date(token)
+        if normalized is None:
+            invalid_tokens.append(token)
+        else:
+            normalized_dates.append(normalized)
+    if invalid_tokens or not tokens:
+        warnings.append(
+            _warning(
+                source_file_name,
+                row_number,
+                f"{header} contained a value that was not a valid date.",
+            )
+        )
+        return None
+    return tuple(sorted(set(normalized_dates))) or None
+
+
+def _date_collection_json_value(value: tuple[str, ...] | None) -> list[str] | None:
+    return list(value) if value is not None else None
+
+
+def _original_row_json(row: Mapping[str | None, Any]) -> dict[str, Any]:
+    original_row = {key: value for key, value in row.items() if key is not None}
+    overflow_values = row.get(None)
+    if overflow_values is not None:
+        original_row[SOURCE_CSV_OVERFLOW_PROVENANCE_KEY] = (
+            list(overflow_values)
+            if isinstance(overflow_values, (list, tuple))
+            else [str(overflow_values)]
+        )
+    return original_row
 
 
 def _row_shape(fieldnames: Iterable[str]) -> str | None:
@@ -805,21 +897,17 @@ def _is_mappable_address_header(header: str) -> bool:
 
 
 def _header_tokens(header: str) -> tuple[str, ...]:
-    return tuple(
-        token
-        for token in re.split(r"[^a-z0-9]+", header.casefold())
-        if token
-    )
+    return tuple(token for token in re.split(r"[^a-z0-9]+", header.casefold()) if token)
 
 
-def _value(row: Mapping[str, str], *headers: str) -> str:
+def _value(row: Mapping[str | None, Any], *headers: str) -> str:
     normalized_row = {_normalized_header(key): value for key, value in row.items()}
     for header in headers:
         value = row.get(header)
-        if value is not None:
+        if isinstance(value, str):
             return _clean_value(value)
         value = normalized_row.get(_normalized_header(header))
-        if value is not None:
+        if isinstance(value, str):
             return _clean_value(value)
     return ""
 

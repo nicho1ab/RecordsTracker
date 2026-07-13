@@ -392,9 +392,9 @@ _PRELOAD_HEADER_TO_COLUMN: Mapping[str, str] = {
     "NAME": "facility_name",
     "Facility Type": "facility_type",
     "FAC_TYPE_DESC": "facility_type",
-    "TYPE": "facility_type",
     "Program Type": "program_type",
     "PROGRAM_TYPE": "program_type",
+    "CLIENT_SERVED": "client_served",
     "Licensee": "licensee_name",
     "LICENSEE": "licensee_name",
     "Facility Administrator": "facility_administrator",
@@ -426,6 +426,56 @@ _PRELOAD_HEADER_TO_COLUMN: Mapping[str, str] = {
     "LICENSE_FIRST_DATE": "license_first_date",
     "Closed Date": "closed_date",
     "CLOSED_DATE": "closed_date",
+    "All Visit Dates": "all_visit_dates",
+    "Inspection Visit Dates": "inspection_visit_dates",
+    "Other Visit Dates": "other_visit_dates",
+}
+
+_ISSUE_447_SOURCE_REFERENCE_ALLOCATIONS: Mapping[
+    str, tuple[str | None, str, str, bool]
+] = {
+    "All Visit Dates": (
+        "all_visit_dates",
+        "nullable ordered array of ISO dates",
+        "retain as a typed source-reference-only date collection",
+        False,
+    ),
+    "Inspection Visit Dates": (
+        "inspection_visit_dates",
+        "nullable ordered array of ISO dates",
+        "retain as a typed source-reference-only date collection",
+        False,
+    ),
+    "Other Visit Dates": (
+        "other_visit_dates",
+        "nullable ordered array of ISO dates",
+        "retain as a typed source-reference-only date collection",
+        False,
+    ),
+    "Complaint Info- Date, #Sub Aleg, # Inc Aleg, # Uns Aleg, # TypeA, # TypeB ...": (
+        None,
+        "source string or CSV overflow sequence",
+        "retain the unflattened source representation in original-row provenance",
+        False,
+    ),
+    "CLIENT_SERVED": (
+        "client_served",
+        "nullable source string",
+        "retain as typed source-reference-only context pending source confirmation",
+        False,
+    ),
+    "Closed Date": (
+        "closed_date",
+        "nullable ISO date",
+        "retain as a typed facility-reference lifecycle date; do not infer open status",
+        True,
+    ),
+    "CLOSED_DATE": (
+        "closed_date",
+        "nullable ISO date",
+        "retain as a typed facility-reference lifecycle date; do not infer open status",
+        True,
+    ),
 }
 
 _SIGNAL_HEADER_TO_FIELD: Mapping[str, str] = {
@@ -463,6 +513,7 @@ _INTERNAL_FACILITY_HEADERS = frozenset(
         "FAC_LATITUDE",
         "FAC_LONGITUDE",
         "FAC_CO_NBR",
+        "TYPE",
         "Facility Administrator",
         "Facility Telephone Number",
         "FAC_PHONE_NBR",
@@ -881,18 +932,26 @@ def _facility_header_spec(
     is_governed_fixture = relative_path.parts[:2] == ("tests", "fixtures")
     preload_column = _PRELOAD_HEADER_TO_COLUMN.get(header)
     signal_field = _SIGNAL_HEADER_TO_FIELD.get(header)
+    source_reference_allocation = _ISSUE_447_SOURCE_REFERENCE_ALLOCATIONS.get(header)
     canonical_column = profile_field if profile_field in facility_properties else None
     internal = header in _INTERNAL_FACILITY_HEADERS
     is_count = header in _FACILITY_SIGNAL_COUNT_HEADERS
     displayed = signal_field is not None or header in {
         "Facility Number", "FAC_NBR", "Facility Name", "NAME", "Facility Type",
-        "FAC_TYPE_DESC", "TYPE", "Program Type", "PROGRAM_TYPE", "Facility City",
+        "FAC_TYPE_DESC", "Program Type", "PROGRAM_TYPE", "Facility City",
         "RES_CITY", "Facility State", "RES_STATE", "Facility Zip", "RES_ZIP_CODE",
         "County Name", "COUNTY", "Facility Capacity", "CAPACITY", "Facility Status",
         "STATUS", "Closed Date", "License First Date", "Regional Office",
     }
-    stored = preload_column is not None
-    mapped = canonical_column is not None or stored or signal_field is not None
+    if source_reference_allocation is not None:
+        displayed = source_reference_allocation[3]
+    stored = preload_column is not None or source_reference_allocation is not None
+    mapped = (
+        canonical_column is not None
+        or stored
+        or signal_field is not None
+        or source_reference_allocation is not None
+    )
     classification = classify_gap(
         intentionally_internal=internal,
         extracted=True,
@@ -903,6 +962,8 @@ def _facility_header_spec(
     )
     if not internal and not mapped:
         classification = "EXTRACTED_CANONICAL_MAPPING_MISSING"
+    if source_reference_allocation is not None:
+        classification = "NOT_APPLICABLE"
     if header in {"Facility Address", "RES_STREET_ADDR"}:
         classification = "STORED_QUERY_OMISSION"
     mapping_parts = ["original_row_json key preserved"]
@@ -912,13 +973,19 @@ def _facility_header_spec(
         mapping_parts.append(f"typed preload column: {preload_column}")
     if signal_field is not None:
         mapping_parts.append(f"facility signal: {signal_field}")
+    if source_reference_allocation is not None:
+        mapping_parts.append("DATA_CONTRACT.md issue #447 source-reference allocation")
     display_route = "/ccld/facilities/detail" if displayed else ""
     method = "coverage-qualified count" if is_count else "single labeled facility fact"
     disposition = "retain as internal provenance" if internal else "measure and retain mapping"
+    if source_reference_allocation is not None:
+        disposition = source_reference_allocation[2]
     if classification not in {"NOT_APPLICABLE", "INTENTIONALLY_INTERNAL"}:
         disposition = "create focused mapping/query remediation"
     data_type = (
-        "integer-or-list"
+        source_reference_allocation[1]
+        if source_reference_allocation is not None
+        else "integer-or-list"
         if is_count
         else "integer"
         if header in {"Facility Capacity", "CAPACITY"}
@@ -960,7 +1027,11 @@ def _facility_header_spec(
             else "not applicable unless the source field is numeric"
         ),
         query_service_consumer=(
-            "facility reference lookup and facility review signals" if mapped else "none"
+            "facility reference lookup and facility review signals"
+            if mapped and source_reference_allocation is None
+            else "facility lookup lifecycle context"
+            if displayed
+            else "none"
         ),
         current_display_route_or_export=display_route,
         recommended_display_location=(
@@ -977,14 +1048,28 @@ def _facility_header_spec(
         ),
         gap_classification=classification,
         disposition=disposition,
-        priority="P2" if classification == "NOT_APPLICABLE" else "P1",
+        priority=(
+            "P2"
+            if classification in {"NOT_APPLICABLE", "INTENTIONALLY_INTERNAL"}
+            else "P1"
+        ),
         evidence_reference_location=f"{relative_path.as_posix()}#header/{field_id}",
         source_observation_field=field_id,
         source_observation_sources=_FACILITY_SOURCE_IDS,
-        runtime_table=("hosted_facility_reference_records" if preload_column else None),
-        runtime_column=preload_column,
-        reviewer_relevant=not internal,
-        facility_hub_relevant=not internal,
+        runtime_table=(
+            "hosted_facility_reference_records"
+            if preload_column or source_reference_allocation is not None
+            else None
+        ),
+        runtime_column=(
+            source_reference_allocation[0]
+            if source_reference_allocation is not None
+            else preload_column
+        ),
+        reviewer_relevant=displayed if source_reference_allocation is not None else not internal,
+        facility_hub_relevant=(
+            displayed if source_reference_allocation is not None else not internal
+        ),
         complaint_detail_relevant=False,
         dependencies=(
             "facility reference preload and signal semantics"
@@ -1108,9 +1193,12 @@ def _curated_structural_specs() -> tuple[ElementSpec, ...]:
             recommended_display_method="date with explicit unavailable state",
             traceability_availability="facility reference resource metadata",
             validation_coverage="facility reference preload and signal unit tests",
-            gap_classification="EXTRACTED_CANONICAL_MAPPING_MISSING",
-            disposition="decide canonical allocation or document preload-only ownership",
-            priority="P1",
+            gap_classification="NOT_APPLICABLE",
+            disposition=(
+                "retain as a typed facility-reference lifecycle date; do not infer "
+                "open status"
+            ),
+            priority="P2",
             evidence_reference_location=(
                 "src/ccld_complaints/hosted_app/facility_reference_preload.py#closed_date"
             ),
@@ -1121,7 +1209,7 @@ def _curated_structural_specs() -> tuple[ElementSpec, ...]:
             reviewer_relevant=True,
             facility_hub_relevant=True,
             complaint_detail_relevant=False,
-            dependencies="canonical facility schema allocation decision",
+            dependencies="none; canonical facility bridge remains deferred",
             validation_requirement="Test blank, invalid, closed, and unavailable dates.",
         ),
         ElementSpec(
@@ -1266,8 +1354,17 @@ def _source_artifact_type(entity: str) -> str:
 
 def _source_reference(entity: str, column: str) -> str:
     references: Mapping[tuple[str, str], str] = {
-        ("facility", "external_facility_number"): "FACILITY NUMBER / Facility Number / FAC_NBR",
+        ("facility", "external_facility_number"): (
+            "FACILITY NUMBER / Facility Number / FAC_NBR"
+        ),
         ("facility", "facility_name"): "FACILITY NAME / Facility Name / NAME",
+        ("facility", "facility_type"): "Facility Type / FAC_TYPE_DESC",
+        ("facility", "county"): "County Name / COUNTY",
+        ("facility", "status"): "Facility Status / STATUS",
+        ("facility", "capacity"): "FACILITY CAPACITY / Facility Capacity / CAPACITY",
+        ("facility", "regional_office"): (
+            "regional-office report field / Regional Office / FAC_DO_DESC"
+        ),
         ("complaint", "complaint_control_number"): "COMPLAINT CONTROL NUMBER",
         ("complaint", "complaint_received_date"): "COMPLAINT RECEIVED",
         ("complaint", "first_investigation_activity_date"): "investigation narrative",
@@ -1275,6 +1372,9 @@ def _source_reference(entity: str, column: str) -> str:
         ("complaint", "report_date"): "Report Date",
         ("complaint", "date_signed"): "Date Signed",
         ("complaint", "finding"): "Finding / INVESTIGATION FINDING(S)",
+        ("complaint", "days_received_to_first_activity"): (
+            "derived from COMPLAINT RECEIVED and governed investigation activity date"
+        ),
         ("allegation", "allegation_text"): "Allegation(s)",
         ("event", "event_text"): "investigation narrative",
         ("event", "event_date"): "investigation narrative date token",

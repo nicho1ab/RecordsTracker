@@ -73,7 +73,8 @@ download, connector execution, QNAP/deployment behavior, or statewide crawling.
 The target facility resources share a statewide facility export shape. Exact
 source column names must be preserved when known during profiling and mapping;
 known local helper columns already referenced by this inventory include
-`FAC_NBR`, `NAME`, `PROGRAM_TYPE`, `STATUS`, and `CAPACITY`. Intended field
+`FAC_NBR`, `NAME`, `FAC_TYPE_DESC`, `PROGRAM_TYPE`, `STATUS`, `CLIENT_SERVED`,
+`CAPACITY`, and `FAC_DO_DESC`. Intended field
 coverage includes facility type, facility number, facility name, licensee,
 facility administrator, telephone, address, city, state, ZIP, county, regional
 office, capacity, status, license first date, closed date, and file date or
@@ -113,6 +114,16 @@ and request-page type-ahead fields such as `FAC_NBR`, `NAME`, `PROGRAM_TYPE`,
 raw CSVs, run live downloads, add connectors, populate source-derived complaint
 records, verify official facility status, prove complaint coverage, or make
 source-completeness claims.
+
+The PostgreSQL preload also retains the issue #447 governed source-reference
+allocations. `All Visit Dates`, `Inspection Visit Dates`, and `Other Visit
+Dates` are nullable, sorted, deduplicated ISO-date arrays; `CLIENT_SERVED` is
+nullable source-reference text; `Closed Date` remains a nullable typed
+reference date. The composite complaint-information column and any trailing CSV
+cells remain unflattened in original-row provenance. These fields do not create
+canonical complaint events, allegation counts, facility types, or facility
+status, and the preload does not bridge reference rows into canonical facility
+entities.
 
 The hosted CCLD facility hub can also read supported ignored local public summary
 CSV inputs through `CCLD_FACILITY_REVIEW_SIGNALS_CSVS` or the existing ignored

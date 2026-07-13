@@ -518,15 +518,12 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Records with review flags" in html
     assert "Reviewer-created notes/statuses" in html
     assert "Possible delay indicators" in html
-    assert "Missing first activity date" in html
     assert "Missing local key dates" not in html
-    assert "Needs source check" in html
     assert "Findings represented" in html
     assert "Findings are source-derived categories, not legal conclusions" in html
     assert "Suggested first record for review" in html
     assert "Why open this first" in html
     assert "No reviewer-created status recorded yet" in html
-    assert "Needs source check: first activity date missing locally" in html
     assert "Original CCLD source link saved" in html
     assert "Open priority record" in html
     assert "Open full queue" in html
@@ -620,7 +617,6 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Why this record is prioritized" in html
     assert "Prioritized worklist records" in html
     assert "Recommended next record: 32-CR-20220407124448" in html
-    assert "Review need: flagged for review. Check the detail page" in html
     assert "Complaint/control identifier" in html
     assert "Date/finding/flag summary" in html
     assert "Note/status cue" in html
@@ -673,7 +669,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Loaded record context" in html
     assert "No reviewer-created notes/status yet" in html
     assert "1 loaded complaint records in bundle" not in html
-    assert "6 loaded complaint records in bundle" in html
+    assert "7 loaded complaint records in bundle" in html
     assert "Open detail before relying on missing or confusing fields" in html
     assert "Feedback details" in html
     assert "Structured CCLD issue details" in html
@@ -683,7 +679,7 @@ def test_ccld_record_request_matches_seeded_facility_and_links_to_reviewer_detai
     assert "Use these same details for queue observations" in normalized_html
     assert "filtered-empty recovery, no-match/load guidance" in normalized_html
     assert "CCLD feedback details" in html
-    assert "- Matching source-derived rows shown: 6" in html
+    assert "- Matching source-derived rows shown: 7" in html
     assert "- Matching complaint records in queue: 1" in html
     assert "- Not started: 1" in html
     assert "- Reviewer-created notes present: no" in html
@@ -1019,7 +1015,7 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
     assert "reviewer_status_filter=blocked" in blocked_html
     assert counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 2,
         "audit_events": 2,
         "reset_reload_planning_metadata": 0,
@@ -1058,7 +1054,7 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert counts == _empty_reviewer_counts()
     assert "No loaded records found" in html
     assert "Loaded records for this facility before date filtering" in html
-    assert "<dd>6</dd>" in html
+    assert "<dd>7</dd>" in html
     normalized_html = " ".join(html.split())
     assert "No loaded complaint records matched this facility and date range" in html
     assert "A no-match result is not proof that no public CCLD record exists" in html
@@ -1089,7 +1085,7 @@ def test_ccld_record_request_shows_no_match_plan_without_mutation() -> None:
     assert "Advanced local/operator actions" not in html
     assert "- Matching source-derived rows shown: 0" in html
     assert "- Matching complaint records in queue: 0" in html
-    assert "- Local facility rows before date filtering: 6" in html
+    assert "- Local facility rows before date filtering: 7" in html
     assert "- None shown for this request." in html
     assert "Preparation details" in html
     assert "Outside-browser preparation path" not in html
@@ -1217,7 +1213,7 @@ def test_ccld_record_request_loads_local_validated_output_then_shows_matches() -
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert before_source_rows == []
-    assert len(after_source_rows) == 6
+    assert len(after_source_rows) == 7
     assert counts == _empty_reviewer_counts()
     assert "Validated load result" in html
     assert "Load executed: yes." in html
@@ -1232,7 +1228,7 @@ def test_ccld_record_request_loads_local_validated_output_then_shows_matches() -
     assert "Matching source-derived rows shown" in html
     assert "- Load action submitted on this request: yes" in html
     assert "- Local validated records loaded or refreshed: yes" in html
-    assert "- New source-derived rows staged: 6" in html
+    assert "- New source-derived rows staged: 7" in html
     assert "- Existing source-derived rows refreshed: 0" in html
     assert detail_href in html
     assert "Refresh from local validated CCLD output" in html
@@ -1290,7 +1286,7 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     assert "- Active facility reference source:" in first_checklist
     assert "- Date range requested: 08/01/2022 to 08/31/2022" in first_checklist
     assert "- Request criteria that felt unclear:" in first_checklist
-    assert "- Matching source-derived rows shown: 6" in first_checklist
+    assert "- Matching source-derived rows shown: 7" in first_checklist
     assert "- Matching complaint records in queue: 1" in first_checklist
     assert "Queue triage and filters" in first_checklist
     assert "- Local validated records loaded or refreshed: no" in first_checklist
@@ -1439,8 +1435,8 @@ def test_ccld_record_request_load_is_isolated_from_generated_corpus(
     html = body.decode("utf-8")
 
     assert status == 200
-    # Tracked fixture has exactly 6 records - not the large generated corpus count.
-    assert "- New source-derived rows staged: 6" in html
+    # Tracked fixture has exactly 7 records - not the large generated corpus count.
+    assert "- New source-derived rows staged: 7" in html
     assert "validated_seeded_corpus.json" in html
     assert_no_secret_html(html)
 
@@ -1963,7 +1959,7 @@ def _table_counts(connection: Connection) -> dict[str, int]:
 def _empty_reviewer_counts() -> dict[str, int]:
     return {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,

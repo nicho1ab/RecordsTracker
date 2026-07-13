@@ -299,13 +299,24 @@ Hosted CCLD import/reload tests must prove local validated artifacts are
 validated before load, source URL/raw SHA-256/raw path/connector traceability is
 preserved, existing source-derived keys are refreshed without duplicates,
 facility/date no-match requests defer without writes, and browser request paths
-do not invoke live public web requests.
+do not invoke live public web requests. Default and PostgreSQL contexts must
+also prove they neither import nor render the committed tiny seeded corpus; that
+artifact is available only through explicit local fixture-demo/test opt-in.
 Hosted CCLD artifact builder tests must prove fixture-backed validated SQLite
 output converts into deterministic hosted seeded-corpus JSON, validates through
 the existing hosted seeded parser, preserves source-derived bundles and source
 traceability, rejects missing or unsafe traceability fields, remains no-secret,
 and is compatible with the existing hosted seeded import and CCLD import/reload
 path without running live crawling or browser-triggered connector execution.
+
+Issue #447 canonical-allocation evidence tests must cover the exact 12-field
+registry, canonical importer population, null versus verified zero, date-list
+ordering/deduplication, raw composite provenance, additive migration behavior,
+idempotent initialization/reimport, no synthetic production fallback, and
+separate runtime capability versus population reporting. Evidence is aggregate-
+safe and writes only `manifest.json`, `allocation-results.csv`,
+`import-results.csv`, `null-semantics-results.csv`, `migration-results.csv`,
+`gap-status.csv`, and `summary.md` under an ignored output directory.
 
 QNAP-first Docker runtime tests must statically validate `Dockerfile`,
 `docker-compose.qnap.yml`, and `.env.example` for the production-like

@@ -49,6 +49,21 @@ ENTITY_ID_FIELDS: Mapping[SourceDerivedEntityType, str] = {
     "extraction_audit": "audit_id",
 }
 
+FACILITY_CANONICAL_FIELDS = frozenset(
+    {
+        "facility_id",
+        "source_id",
+        "external_facility_number",
+        "facility_name",
+        "facility_type",
+        "licensee_name",
+        "county",
+        "status",
+        "capacity",
+        "regional_office",
+    }
+)
+
 RAW_SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
 hosted_seeded_import_metadata = MetaData()
@@ -404,19 +419,45 @@ def _upsert_source_record(connection: Connection, record: SeededSourceDerivedRec
         "original_values": dict(record.original_values),
         "source_traceability": dict(record.source_traceability),
     }
-    exists = connection.execute(
-        select(hosted_source_derived_records.c.source_record_key).where(
+    existing = connection.execute(
+        select(
+            hosted_source_derived_records.c.source_record_key,
+            hosted_source_derived_records.c.original_values,
+        ).where(
             hosted_source_derived_records.c.source_record_key == record.source_record_key
         )
-    ).first()
-    if exists is None:
+    ).mappings().first()
+    if existing is None:
         connection.execute(hosted_source_derived_records.insert().values(**values))
     else:
+        if record.entity_type == "facility":
+            values["original_values"] = _merge_facility_original_values(
+                existing.get("original_values"), record.original_values
+            )
         connection.execute(
             update(hosted_source_derived_records)
             .where(hosted_source_derived_records.c.source_record_key == record.source_record_key)
             .values(**values)
         )
+
+
+def _merge_facility_original_values(
+    existing: object,
+    incoming: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Keep governed facility values when a repeated bundle supplies null.
+
+    Hosted artifacts repeat a facility object for each complaint bundle.  The
+    merge is deliberately limited to canonical facility fields so unrelated
+    source values keep ordinary snapshot replacement behavior.
+    """
+
+    merged = dict(existing) if isinstance(existing, Mapping) else {}
+    for key, value in incoming.items():
+        if key in FACILITY_CANONICAL_FIELDS and value is None and key in merged:
+            continue
+        merged[key] = value
+    return merged
 
 
 def _required_mapping(data: Mapping[str, Any], field_name: str) -> Mapping[str, Any]:

@@ -264,7 +264,11 @@ location, and a first narrow domain migration for seeded import batch metadata
 and source-derived record staging, plus a second narrow migration for one
 reviewer-created state scaffold table, plus a third narrow migration for one
 audit event scaffold table, plus a fourth narrow migration for one reset/reload
-operational planning metadata scaffold table. The current auth boundary,
+operational planning metadata scaffold table. Later additive migrations add the
+controlled CCLD retrieval-job table, the separate facility-reference preload
+table, and nullable issue #447 source-reference columns for deterministic visit
+date arrays and client-served context. The reference table remains separate from
+canonical source-derived records and reviewer-created state. The current auth boundary,
 source-derived read route seam, reviewer workflow shell with read-only queue/
 detail payloads and narrow note/status actions,
 reviewer-created state scaffold service, reviewer-created state read route seam,

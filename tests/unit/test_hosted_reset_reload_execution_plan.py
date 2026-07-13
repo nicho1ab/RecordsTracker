@@ -62,7 +62,7 @@ def test_reset_reload_execution_plan_returns_ordered_bounded_plan_without_mutati
     assert content_type == "application/json; charset=utf-8"
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 1,
         "audit_events": 1,
         "reset_reload_planning_metadata": 0,
@@ -73,13 +73,13 @@ def test_reset_reload_execution_plan_returns_ordered_bounded_plan_without_mutati
     assert payload["authorization"]["permission"] == "import_reload"
     assert payload["source_derived_summary"] == {
         "existing_import_batch_count": 1,
-        "existing_source_derived_record_count": 6,
+        "existing_source_derived_record_count": 7,
         "counts_by_entity": {
             "facility": 1,
             "source_document": 1,
             "complaint": 1,
             "allegation": 2,
-            "event": 0,
+            "event": 1,
             "extraction_audit": 1,
         },
         "import_batch_ids": [TEST_SCOPE.scope_id],
@@ -147,7 +147,7 @@ def test_reset_reload_execution_plan_persists_metadata_only_when_requested() -> 
         "reset_reload_planning_metadata": 1,
     }
     assert before_counts["import_batches"] == after_counts["import_batches"] == 1
-    assert before_counts["source_records"] == after_counts["source_records"] == 6
+    assert before_counts["source_records"] == after_counts["source_records"] == 7
     assert before_counts["reviewer_created_state"] == after_counts["reviewer_created_state"] == 0
     assert before_counts["audit_events"] == after_counts["audit_events"] == 0
     assert payload["operational_metadata"] == {

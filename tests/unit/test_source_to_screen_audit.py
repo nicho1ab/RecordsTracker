@@ -161,6 +161,41 @@ def test_discovery_identifiers_and_canonical_mappings_are_stable() -> None:
     )
 
 
+def test_issue_447_source_reference_allocations_are_not_canonical_gaps() -> None:
+    specs = discover_element_specs(REPO_ROOT)
+    by_id = {spec.data_element_id: spec for spec in specs}
+    program_scope = "facility_fixture_ccld_program_facilities_tiny"
+    master_scope = "facility_fixture_chhs_facility_master_tiny"
+    program_allocations = {
+        "All Visit Dates": "all_visit_dates",
+        "Inspection Visit Dates": "inspection_visit_dates",
+        "Other Visit Dates": "other_visit_dates",
+        "Closed Date": "closed_date",
+        (
+            "Complaint Info- Date, #Sub Aleg, # Inc Aleg, # Uns Aleg, # TypeA, "
+            "# TypeB ..."
+        ): None,
+    }
+
+    for header, runtime_column in program_allocations.items():
+        spec = by_id[stable_data_element_id("facility", program_scope, header)]
+        assert spec.gap_classification == "NOT_APPLICABLE"
+        assert spec.canonical_entity is None
+        assert spec.canonical_column is None
+        assert spec.runtime_table == "hosted_facility_reference_records"
+        assert spec.runtime_column == runtime_column
+
+    client_served = by_id[
+        stable_data_element_id("facility", master_scope, "CLIENT_SERVED")
+    ]
+    numeric_type = by_id[stable_data_element_id("facility", master_scope, "TYPE")]
+    assert client_served.gap_classification == "NOT_APPLICABLE"
+    assert client_served.runtime_column == "client_served"
+    assert client_served.canonical_column is None
+    assert numeric_type.gap_classification == "INTENTIONALLY_INTERNAL"
+    assert numeric_type.canonical_column is None
+
+
 def test_discovery_uses_an_explicit_reviewer_surface_inventory(tmp_path: Path) -> None:
     repo = tmp_path / "catalog-only-repo"
     schema_dir = repo / "schemas"

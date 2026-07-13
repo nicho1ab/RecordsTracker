@@ -16,6 +16,14 @@
 - Existing hosted PostgreSQL source-derived rows do not change when extractor
   code changes. Regeneration and reimport are required, and no safe automated
   in-place refresh command is currently implemented.
+- Existing facility-reference rows require an Alembic upgrade and a deliberate
+  preload rerun before the issue #447 visit-date arrays or `CLIENT_SERVED`
+  projection are populated. Those reference-only fields are not canonical
+  complaint events or facility attributes, and no cross-source canonical bridge
+  is implemented.
+- Default and PostgreSQL hosted modes do not fall back to committed tiny fixture
+  records. Fixture/sample routes and the committed seeded artifact require an
+  explicit local `fixture-demo` or fixture-import opt-in.
 - Some older reports may have different layouts or missing fields.
 - Live CCLD ingestion can persist normalized records to SQLite for one or more explicitly provided facility numbers when configured with a database path; it does not perform statewide crawling or automatic search expansion.
 - Live facility identifier intake accepts digit-only public facility numbers,
@@ -27,8 +35,8 @@
 - Fixture-backed ingestion only extracts discovered reports when matching raw report content is supplied by the test loader.
 - Live CCLD fetching is explicitly user-invoked through the local script and depends on the public site being available when the command runs.
 - Live fetched raw report files are saved under the local ignored `data/raw/ccld` path by default and should be treated carefully because public narrative content may be sensitive.
-- The local hosted scaffold `/source-records` list uses fixture/sample records
-    and local sample filtering/search plus fixture/sample-only source
+- The explicit local `fixture-demo` hosted scaffold `/source-records` list uses
+    fixture/sample records and local sample filtering/search plus fixture/sample-only source
     traceability summary panels only. It does not load live public-source data,
     read from SQLite or a hosted database through API routes, authenticate
     users, persist reviewer-created state, deploy publicly, or prove source

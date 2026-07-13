@@ -18,7 +18,19 @@
   states in the derived dataset, not conclusions about the public source.
 - Live fetched raw report files are saved under the local ignored `data/raw/ccld` path by default. Treat public narrative content carefully when sharing exports or raw files.
 - Live fetched records reflect the public response at retrieval time. Public reports may later change, be corrected, become unavailable, or use layouts the current extractor does not fully understand.
-- The local hosted scaffold `/facilities` pages are read-only fixture/sample
+- Existing PostgreSQL source-derived rows require regeneration and reimport to
+  receive newly allocated canonical values; no safe automated in-place refresh
+  command exists. Existing facility-reference rows require migrations and a
+  deliberate preload rerun for the new visit-date arrays and client-served
+  context.
+- Facility-reference visit-date arrays, client-served context, and closed date
+  remain source-reference-only. They are not canonical complaint events,
+  facility type, or facility status, and blank closed date does not prove that a
+  facility is open.
+- Default and PostgreSQL hosted modes do not use committed tiny fixture records;
+  sample routes and committed fixture import require an explicit local demo/test
+  opt-in.
+- The explicit local `fixture-demo` scaffold `/facilities` pages are read-only fixture/sample
   pages backed only by committed tiny public-source facility fixtures and
   manifest placeholder metadata. Source coverage panels and related
   source-record links on those pages are fixture/sample display patterns only.

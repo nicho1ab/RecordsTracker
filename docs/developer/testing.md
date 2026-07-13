@@ -324,6 +324,29 @@ artifact, prove deterministic ordering, prove source traceability preservation,
 reject missing or unsafe traceability fields, and prove no live crawling or
 browser-triggered connector execution is required.
 
+## Canonical allocation evidence
+
+Issue #447 has an aggregate-safe local evidence adapter:
+
+```powershell
+.\.venv\Scripts\python.exe -m ccld_complaints.canonical_allocation_evidence --mode local --output-dir data/processed/canonical-allocation-evidence/issue-447-local
+```
+
+Runtime-compatible environments use:
+
+```text
+python -m ccld_complaints.canonical_allocation_evidence --mode runtime --output-dir <path>
+```
+
+The output contains `manifest.json`, `allocation-results.csv`,
+`import-results.csv`, `null-semantics-results.csv`, `migration-results.csv`,
+`gap-status.csv`, and `summary.md`. Runtime evidence reports implementation
+capability separately from populated PostgreSQL row counts. It does not include
+source bodies, narratives, connection details, private URLs, or raw artifact
+contents. Existing PostgreSQL source-derived rows still require regeneration
+and reimport; facility-reference rows require migrations plus a deliberate
+preload rerun.
+
 QNAP seeded import evidence documentation tests should prove the operator guide
 exists, is linked from the QNAP operator/runtime docs, mentions PostgreSQL-backed
 page data mode, migrations, source-derived imported record counts, raw artifact

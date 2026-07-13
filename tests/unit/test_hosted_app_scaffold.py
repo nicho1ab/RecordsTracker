@@ -249,7 +249,10 @@ def test_home_orientation_uses_shared_facility_start_experience() -> None:
 
 
 def test_home_and_facility_routes_share_find_facility_start_workflow() -> None:
-    root_status, root_content_type, root_body = route_response("/")
+    root_status, root_content_type, root_body = route_response(
+        "/",
+        page_data_mode="fixture-demo",
+    )
     facility_status, facility_content_type, facility_body = route_response(
         "/ccld/facilities",
         page_data_mode="fixture-demo",
@@ -271,6 +274,50 @@ def test_home_and_facility_routes_share_find_facility_start_workflow() -> None:
         assert "1. Find the facility" not in html
         assert "Open review queue" not in html
         assert_no_buttons_inside_list_items(html)
+
+
+def test_default_and_postgres_root_never_render_committed_facility_fixtures(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    clear_hosted_runtime_env(monkeypatch)
+
+    for mode in (None, "postgres"):
+        status, content_type, body = route_response("/", page_data_mode=mode)
+        html = body.decode("utf-8")
+
+        assert status == 200
+        assert content_type == "text/html; charset=utf-8"
+        assert "Facility directory lookup not configured" in html
+        assert "900000001" not in html
+        assert "900000002" not in html
+        assert "Synthetic Orchard Child Care" not in html
+        assert "Synthetic Valley Family Agency" not in html
+        assert "ccld_program_facilities_tiny.csv" not in html
+
+
+def test_default_and_postgres_modes_gate_all_legacy_fixture_route_shapes(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    clear_hosted_runtime_env(monkeypatch)
+    legacy_paths = (
+        "/source-records",
+        "/source-records/sample-complaint-001",
+        "/facilities",
+        "/facilities/ccld-program-facilities-tiny-900000001",
+    )
+
+    for mode in (None, "postgres"):
+        for path in legacy_paths:
+            status, content_type, body = route_response(path, page_data_mode=mode)
+            response_text = body.decode("utf-8")
+
+            assert status == 404
+            assert content_type == "text/plain; charset=utf-8"
+            assert response_text == "Not found"
+            assert "900000001" not in response_text
+            assert "900000002" not in response_text
+            assert "Synthetic Orchard Child Care" not in response_text
+            assert "Synthetic Valley Family Agency" not in response_text
 
 
 def test_guided_attorney_review_workflow_acceptance_route_markers(
@@ -319,7 +366,6 @@ def test_guided_attorney_review_workflow_acceptance_route_markers(
             "/reviewer",
             (
                 "Complaint records ready for review",
-                "Review cue summary",
                 "Worklist",
                 "Open record",
             ),
@@ -697,7 +743,10 @@ def test_explicit_local_dev_auth_mode_allows_default_workflow_actor() -> None:
 
 
 def test_source_record_list_route_labels_sample_read_only_scope() -> None:
-    status, content_type, body = route_response("/source-records")
+    status, content_type, body = route_response(
+        "/source-records",
+        page_data_mode="fixture-demo",
+    )
     html = body.decode("utf-8")
     normalized_html = " ".join(html.split())
 
@@ -763,7 +812,10 @@ def test_source_record_filter_query_uses_sample_records_only() -> None:
 
 
 def test_facility_list_route_labels_fixture_read_only_scope() -> None:
-    status, content_type, body = route_response("/facilities")
+    status, content_type, body = route_response(
+        "/facilities",
+        page_data_mode="fixture-demo",
+    )
     html = body.decode("utf-8")
     normalized_html = " ".join(html.split())
 
@@ -794,7 +846,10 @@ def test_facility_list_route_labels_fixture_read_only_scope() -> None:
 
 
 def test_facility_detail_route_displays_manifest_traceability_metadata() -> None:
-    status, content_type, body = route_response("/facilities/chhs-facility-master-tiny-900000001")
+    status, content_type, body = route_response(
+        "/facilities/chhs-facility-master-tiny-900000001",
+        page_data_mode="fixture-demo",
+    )
     html = body.decode("utf-8")
     normalized_html = " ".join(html.split())
 
@@ -839,7 +894,8 @@ def test_facility_detail_route_displays_manifest_traceability_metadata() -> None
 
 def test_facility_detail_route_shows_unmapped_fixture_sample_coverage_state() -> None:
     status, content_type, body = route_response(
-        "/facilities/ccld-program-facilities-tiny-900000001"
+        "/facilities/ccld-program-facilities-tiny-900000001",
+        page_data_mode="fixture-demo",
     )
     html = body.decode("utf-8")
     normalized_html = " ".join(html.split())
@@ -855,7 +911,10 @@ def test_facility_detail_route_shows_unmapped_fixture_sample_coverage_state() ->
 
 
 def test_unknown_facility_detail_returns_not_found() -> None:
-    status, content_type, body = route_response("/facilities/not-found")
+    status, content_type, body = route_response(
+        "/facilities/not-found",
+        page_data_mode="fixture-demo",
+    )
 
     assert get_sample_facility_record("not-found") is None
     assert status == 404
@@ -885,7 +944,10 @@ def test_source_traceability_summary_uses_filtered_sample_records() -> None:
 
 
 def test_source_record_list_route_filters_by_query_parameter() -> None:
-    status, content_type, body = route_response("/source-records?q=valley")
+    status, content_type, body = route_response(
+        "/source-records?q=valley",
+        page_data_mode="fixture-demo",
+    )
     html = body.decode("utf-8")
 
     assert status == 200
@@ -899,7 +961,10 @@ def test_source_record_list_route_filters_by_query_parameter() -> None:
 
 
 def test_source_record_list_route_shows_sample_no_match_state() -> None:
-    status, content_type, body = route_response("/source-records?q=not-a-sample-match")
+    status, content_type, body = route_response(
+        "/source-records?q=not-a-sample-match",
+        page_data_mode="fixture-demo",
+    )
     html = body.decode("utf-8")
 
     assert status == 200
@@ -913,7 +978,10 @@ def test_source_record_list_route_shows_sample_no_match_state() -> None:
 
 
 def test_source_record_detail_route_displays_traceability_fields() -> None:
-    status, content_type, body = route_response("/source-records/sample-complaint-001")
+    status, content_type, body = route_response(
+        "/source-records/sample-complaint-001",
+        page_data_mode="fixture-demo",
+    )
     html = body.decode("utf-8")
     normalized_html = " ".join(html.split())
 
@@ -948,7 +1016,10 @@ def test_source_record_detail_route_displays_traceability_fields() -> None:
 
 
 def test_source_record_list_has_accessible_semantic_structure() -> None:
-    status, _content_type, body = route_response("/source-records")
+    status, _content_type, body = route_response(
+        "/source-records",
+        page_data_mode="fixture-demo",
+    )
     html = body.decode("utf-8")
 
     assert status == 200
@@ -988,7 +1059,10 @@ def test_source_record_list_has_accessible_semantic_structure() -> None:
 
 
 def test_source_record_detail_has_accessible_semantic_structure() -> None:
-    status, _content_type, body = route_response("/source-records/sample-complaint-001")
+    status, _content_type, body = route_response(
+        "/source-records/sample-complaint-001",
+        page_data_mode="fixture-demo",
+    )
     html = body.decode("utf-8")
 
     assert status == 200
@@ -1033,7 +1107,10 @@ def test_source_record_detail_has_accessible_semantic_structure() -> None:
 
 
 def test_facility_list_has_accessible_semantic_structure() -> None:
-    status, _content_type, body = route_response("/facilities")
+    status, _content_type, body = route_response(
+        "/facilities",
+        page_data_mode="fixture-demo",
+    )
     html = body.decode("utf-8")
 
     assert status == 200
@@ -1074,7 +1151,8 @@ def test_facility_list_has_accessible_semantic_structure() -> None:
 
 def test_facility_detail_has_accessible_semantic_structure() -> None:
     status, _content_type, body = route_response(
-        "/facilities/ccld-program-facilities-tiny-900000002"
+        "/facilities/ccld-program-facilities-tiny-900000002",
+        page_data_mode="fixture-demo",
     )
     html = body.decode("utf-8")
 
@@ -1126,7 +1204,10 @@ def test_facility_detail_has_accessible_semantic_structure() -> None:
 
 
 def test_unknown_source_record_detail_returns_not_found() -> None:
-    status, content_type, body = route_response("/source-records/not-found")
+    status, content_type, body = route_response(
+        "/source-records/not-found",
+        page_data_mode="fixture-demo",
+    )
 
     assert get_sample_source_record("not-found") is None
     assert status == 404
@@ -1411,8 +1492,14 @@ def test_auth_pages_do_not_expose_tester_scaffold_strings() -> None:
 
 def test_sample_pages_do_not_expose_scaffold_notice() -> None:
     """Sample/fixture pages must not show the scaffold-only notice string."""
-    src_status, _src_ct, src_body = route_response("/source-records")
-    fac_status, _fac_ct, fac_body = route_response("/facilities")
+    src_status, _src_ct, src_body = route_response(
+        "/source-records",
+        page_data_mode="fixture-demo",
+    )
+    fac_status, _fac_ct, fac_body = route_response(
+        "/facilities",
+        page_data_mode="fixture-demo",
+    )
 
     src_html = src_body.decode("utf-8")
     fac_html = fac_body.decode("utf-8")

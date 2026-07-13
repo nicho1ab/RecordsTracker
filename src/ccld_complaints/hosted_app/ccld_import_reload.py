@@ -26,7 +26,6 @@ DEFAULT_LOCAL_VALIDATED_CCLD_ARTIFACT = Path(
 )
 DEFAULT_LOCAL_VALIDATED_CCLD_ARTIFACT_PATHS = (
     DEFAULT_GENERATED_CCLD_HOSTED_ARTIFACT,
-    DEFAULT_LOCAL_VALIDATED_CCLD_ARTIFACT,
 )
 _FACILITY_NUMBER_RE = re.compile(r"^\d+$")
 _CCLD_CONNECTOR_NAME = "ccld_facility_reports"
@@ -74,19 +73,31 @@ def ccld_import_reload_context_for_connection(
     *,
     scope: HostedAccessScope,
     artifact_paths: tuple[Path, ...] | None = None,
+    allow_committed_fixture: bool = False,
 ) -> CcldImportReloadContext:
     return CcldImportReloadContext(
         connection=connection,
         scope=scope,
-        artifact_paths=artifact_paths or _default_local_validated_ccld_artifact_paths(),
+        artifact_paths=(
+            artifact_paths
+            if artifact_paths is not None
+            else _default_local_validated_ccld_artifact_paths(
+                allow_committed_fixture=allow_committed_fixture
+            )
+        ),
     )
 
 
-def _default_local_validated_ccld_artifact_paths() -> tuple[Path, ...]:
+def _default_local_validated_ccld_artifact_paths(
+    *,
+    allow_committed_fixture: bool = False,
+) -> tuple[Path, ...]:
     generated_path = _resolve_artifact_path(DEFAULT_GENERATED_CCLD_HOSTED_ARTIFACT)
     if generated_path.exists():
         return (DEFAULT_GENERATED_CCLD_HOSTED_ARTIFACT,)
-    return (DEFAULT_LOCAL_VALIDATED_CCLD_ARTIFACT,)
+    if allow_committed_fixture:
+        return (DEFAULT_LOCAL_VALIDATED_CCLD_ARTIFACT,)
+    return ()
 
 
 def import_reload_validated_ccld_records(

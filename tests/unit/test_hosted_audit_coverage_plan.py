@@ -62,7 +62,7 @@ def test_audit_coverage_plan_returns_bounded_non_mutating_plan() -> None:
     assert content_type == "application/json; charset=utf-8"
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 1,
         "audit_events": 1,
         "reset_reload_planning_metadata": 0,

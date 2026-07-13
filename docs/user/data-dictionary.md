@@ -8,6 +8,29 @@ Name of the facility as shown in the source data.
 
 Facility number assigned by the source system.
 
+## facility_type
+
+Descriptive facility type from a governed CCLD `Facility Type` or CHHS
+`FAC_TYPE_DESC` source. The numeric CHHS `TYPE` code is not used as this value.
+
+## county
+
+Source-provided county label, when available.
+
+## status
+
+Source-provided facility status label, when available. It is not inferred from
+closed date.
+
+## capacity
+
+Source-provided facility capacity as an integer, when available. A verified zero
+is distinct from missing or blank source data.
+
+## regional_office
+
+Source-provided CCLD regional-office label, when available.
+
 ## complaint_received_date
 
 Date the complaint was reportedly received by the licensing office.
@@ -75,3 +98,13 @@ Review flag set to true only when report date is used as the delay review basis 
 ## extraction_confidence
 
 Numeric or categorical estimate of extraction confidence. Low-confidence records should be manually reviewed.
+
+## Facility-reference-only fields
+
+`all_visit_dates`, `inspection_visit_dates`, and `other_visit_dates` are nullable,
+sorted, deduplicated ISO-date arrays retained with facility-reference rows. They
+are not canonical complaint events. `client_served` and `closed_date` are also
+nullable source-reference fields; they do not replace facility type or status,
+and missing closed date does not mean that a facility is open. The composite
+complaint-information CSV value remains raw provenance and is not exposed as a
+single complaint or allegation fact.

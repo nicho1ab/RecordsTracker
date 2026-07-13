@@ -158,7 +158,7 @@ FACILITY_SOURCE_COLUMN_MAPPINGS: tuple[dict[str, Any], ...] = (
     {
         "app_field": "regional_office",
         "concept": "Regional office",
-        "source_columns": ("Regional Office",),
+        "source_columns": ("Regional Office", "FAC_DO_DESC"),
         "categories": ("current_records_tracker_facility_field",),
     },
     {
@@ -188,8 +188,50 @@ FACILITY_SOURCE_COLUMN_MAPPINGS: tuple[dict[str, Any], ...] = (
     {
         "app_field": "closed_date",
         "concept": "Closed date",
-        "source_columns": ("Closed Date",),
-        "categories": ("hosted_facility_search_filter_field",),
+        "source_columns": ("Closed Date", "CLOSED_DATE"),
+        "categories": (
+            "hosted_facility_search_filter_field",
+            "facility_reference_source_only",
+        ),
+        "mapping_note": "Typed preload-only lifecycle date; not canonical facility status.",
+    },
+    {
+        "app_field": "client_served",
+        "concept": "Client served",
+        "source_columns": ("CLIENT_SERVED",),
+        "categories": ("facility_reference_source_only",),
+        "mapping_note": "Typed source-reference context; not facility or program type.",
+    },
+    {
+        "app_field": "all_visit_dates",
+        "concept": "All visit dates",
+        "source_columns": ("All Visit Dates",),
+        "categories": ("facility_reference_source_only",),
+        "mapping_note": "Sorted, deduplicated ISO date list; not canonical events.",
+    },
+    {
+        "app_field": "inspection_visit_dates",
+        "concept": "Inspection visit dates",
+        "source_columns": ("Inspection Visit Dates",),
+        "categories": ("facility_reference_source_only",),
+        "mapping_note": "Sorted, deduplicated ISO date list; not canonical events.",
+    },
+    {
+        "app_field": "other_visit_dates",
+        "concept": "Other visit dates",
+        "source_columns": ("Other Visit Dates",),
+        "categories": ("facility_reference_source_only",),
+        "mapping_note": "Sorted, deduplicated ISO date list; not canonical events.",
+    },
+    {
+        "app_field": "complaint_info_composite",
+        "concept": "Complaint information composite",
+        "source_columns": (
+            "Complaint Info- Date, #Sub Aleg, # Inc Aleg, # Uns Aleg, "
+            "# TypeA, # TypeB ...",
+        ),
+        "categories": ("facility_reference_source_only",),
+        "mapping_note": "Raw provenance only; no flattened complaint semantic.",
     },
 )
 
@@ -205,24 +247,18 @@ USEFUL_SOURCE_COLUMNS_NOT_CURRENTLY_REPRESENTED: tuple[dict[str, str], ...] = (
     {"source_column": "Total Visits", "gap_note": "Useful review-planning context."},
     {"source_column": "Citation Numbers", "gap_note": "Useful review-planning context."},
     {"source_column": "POC Dates", "gap_note": "Useful review-planning context."},
-    {"source_column": "All Visit Dates", "gap_note": "Useful review-planning context."},
-    {"source_column": "Inspection Visit Dates", "gap_note": "Useful review-planning context."},
     {"source_column": "Inspect TypeA", "gap_note": "Useful review-planning context."},
     {"source_column": "Inspect TypeB", "gap_note": "Useful review-planning context."},
-    {"source_column": "Other Visit Dates", "gap_note": "Useful review-planning context."},
     {"source_column": "Other TypeA", "gap_note": "Useful review-planning context."},
     {"source_column": "Other TypeB", "gap_note": "Useful review-planning context."},
-    {
-        "source_column": (
-            "Complaint Info- Date, #Sub Aleg, # Inc Aleg, # Uns Aleg, "
-            "# TypeA, # TypeB ..."
-        ),
-        "gap_note": "Summary field that needs separate interpretation before use.",
-    },
 )
 
 HOSTED_SOURCE_DERIVED_IMPORT_STRUCTURES = {
-    "tables": ("hosted_import_batches", "hosted_source_derived_records"),
+    "tables": (
+        "hosted_import_batches",
+        "hosted_source_derived_records",
+        "hosted_facility_reference_records",
+    ),
     "supports_first_preload": True,
     "supporting_reasons": (
         "hosted_source_derived_records supports entity_type='facility'.",
@@ -233,19 +269,20 @@ HOSTED_SOURCE_DERIVED_IMPORT_STRUCTURES = {
         "facility lookup already has a postgres_source_derived adapter.",
     ),
     "fit_limitations": (
-        "Search/filter fields remain inside JSON original_values rather than "
-        "typed indexed columns.",
-        "Facility-reference rows would share generic source-derived complaint import structures.",
+        "Facility-reference rows remain a separate source-reference projection "
+        "rather than canonical facility entities.",
+        "A governed cross-source canonical facility bridge is not implemented.",
         "Program-specific duplicate facility numbers need explicit reference identity rules.",
     ),
-    "recommended_next_step": "A narrow facility-reference migration is recommended.",
+    "recommended_next_step": (
+        "Use the governed facility-reference preload; defer cross-store parity "
+        "enforcement to issue #448."
+    ),
     "recommended_reasons": (
-        "Typed lookup columns can support real facility search/filtering without "
-        "JSON-field coupling.",
-        "A dedicated table can keep facility reference identity, resource ID, "
-        "snapshot, and preload batch metadata explicit.",
-        "The preload can avoid treating facility directory rows as "
-        "complaint/report source documents.",
+        "Typed lookup columns support facility search/filtering without JSON-field coupling.",
+        "The dedicated table keeps reference identity, resource ID, snapshot, "
+        "and preload metadata explicit.",
+        "Issue #448 can test parity without changing issue #447 allocation semantics.",
     ),
 }
 
@@ -674,6 +711,9 @@ def _assess_source_columns(header_names: list[str]) -> dict[str, Any]:
         headers, "current_records_tracker_facility_field"
     )
     mapped_search = _mapping_entries_for_category(headers, "hosted_facility_search_filter_field")
+    mapped_source_reference = _mapping_entries_for_category(
+        headers, "facility_reference_source_only"
+    )
     useful_unrepresented = [
         entry
         for entry in USEFUL_SOURCE_COLUMNS_NOT_CURRENTLY_REPRESENTED
@@ -686,6 +726,7 @@ def _assess_source_columns(header_names: list[str]) -> dict[str, Any]:
     return {
         "mapped_current_records_tracker_facility_fields": mapped_current,
         "mapped_hosted_facility_search_filter_fields": mapped_search,
+        "mapped_facility_reference_source_only_fields": mapped_source_reference,
         "useful_source_columns_not_currently_represented": useful_unrepresented,
         "required_hosted_search_filtering_fields": _required_search_field_statuses(headers),
         "unmapped_source_columns": [

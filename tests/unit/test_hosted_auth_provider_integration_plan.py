@@ -59,7 +59,7 @@ def test_auth_provider_integration_plan_returns_bounded_non_secret_plan() -> Non
     assert content_type == "application/json; charset=utf-8"
     assert before_counts == after_counts == {
         "import_batches": 1,
-        "source_records": 6,
+        "source_records": 7,
         "reviewer_created_state": 0,
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,

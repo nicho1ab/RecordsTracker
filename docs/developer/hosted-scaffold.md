@@ -657,6 +657,12 @@ wiring includes:
   explicitly requested dry-run planning records only.
 - `migrations/versions/20260615_0005_ccld_retrieval_jobs.py` with one separate
   controlled CCLD retrieval job operational metadata table.
+- `migrations/versions/20260701_0006_facility_reference_preload.py` with the
+  separate typed facility-reference preload table.
+- `migrations/versions/20260714_0007_canonical_allocation.py` with nullable,
+  additive source-reference columns for three deterministic visit-date arrays
+  and client-served context. Existing rows remain readable and require a
+  deliberate preload rerun for population.
 - `ccld_complaints.hosted_app.persistence` for no-secret database URL validation
   and ADR-0010 persistence boundary descriptors.
 - `ccld_complaints.hosted_app.auth` for managed OIDC/OAuth2 provider-class
