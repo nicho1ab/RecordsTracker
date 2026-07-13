@@ -39,6 +39,13 @@ the governed primary future review experience.
   existing facility fields, nullable source-reference storage for visit-date
   collections and client-served context, raw-only composite provenance,
   additive migration coverage, and explicit production fixture-fallback guards.
+- Added deterministic SQLite/PostgreSQL import-parity evidence for equivalent
+  governed inputs, including canonical presence/population/null counts,
+  explicit zero, present-but-blank and unavailable audit states, source
+  linkage, ordering, duplicate suppression, idempotent reimport, additive
+  migration, facility-reference preload, and production fallback guards. No
+  adapter divergence was confirmed; existing PostgreSQL data refresh remains an
+  explicit operator task without a complete safe automated command.
 - Wrote normalized records to SQLite with idempotent upsert behavior.
 - Added controlled live fetch for explicitly provided facility numbers.
 - Added multi-facility input for live fetch workflows scoped to user-provided

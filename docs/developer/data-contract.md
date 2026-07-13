@@ -25,5 +25,7 @@ zero remains distinct from null.
 The root contract's issue #447 matrix is authoritative for visit-date arrays,
 `CLIENT_SERVED`, the unflattened complaint-information composite, and
 `closed_date`. These values stay in the facility-reference domain and must not
-be silently promoted into canonical facility or complaint entities. Cross-store
-parity enforcement is deferred to issue #448.
+be silently promoted into canonical facility or complaint entities. Issue #448
+adds deterministic cross-store parity evidence for equivalent canonical inputs
+and separately reconciles facility-reference parser/preload results; it does not
+create a canonical bridge from facility-reference rows.

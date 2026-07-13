@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Added aggregate-safe SQLite/PostgreSQL import-parity evidence for equivalent
+  governed canonical and facility-reference inputs. The evidence exercises
+  actual temporary SQLite storage, the hosted SQLAlchemy mapping path on a
+  local adapter, PostgreSQL-dialect SQL compilation, null/blank/unavailable/zero
+  semantics, ordering, linkage, duplicate suppression, reimport, migration,
+  preload, reviewer-state preservation, runtime-inspection honesty, and refresh
+  readiness without adding a destructive or startup-time backfill.
 - Allocated all issue #447 governed elements: populated the existing complaint
   first-activity interval and facility canonical fields without null erasure,
   added nullable typed facility-reference storage for three deterministic date

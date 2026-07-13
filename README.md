@@ -292,6 +292,17 @@ Do not commit generated evidence folders or ZIPs. Committed README screenshots
 must come only from reviewed safe captures and live under a stable repository
 path such as [docs/assets/readme](docs/assets/readme).
 
+For aggregate-safe SQLite/PostgreSQL import-parity evidence, run:
+
+```powershell
+.\.venv\Scripts\python.exe -m ccld_complaints.store_parity_evidence --mode local --output-dir <path>
+```
+
+This executes actual temporary SQLite storage and the hosted SQLAlchemy mapping
+path on a local adapter, then compiles PostgreSQL-dialect SQL. It is not a claim
+of live PostgreSQL or production runtime validation. See [RUNBOOK.md](RUNBOOK.md)
+for runtime-mode and refresh-readiness boundaries.
+
 ## Developer Documentation
 
 - Start with [docs/user/getting-started.md](docs/user/getting-started.md) for
