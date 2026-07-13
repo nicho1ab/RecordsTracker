@@ -62,8 +62,8 @@ def test_ccld_hosted_artifact_builder_converts_fixture_sqlite_to_validated_seede
         "source_document": 1,
         "complaint": 1,
         "allegation": 2,
-        "event": 0,
-        "extraction_audit": 21,
+        "event": 1,
+        "extraction_audit": 28,
     }
     assert artifact.import_batch_id == LOCAL_REVIEWER_UI_SCOPE.scope_id
     assert artifact.validation_status == "validated"
@@ -78,12 +78,14 @@ def test_ccld_hosted_artifact_builder_converts_fixture_sqlite_to_validated_seede
     assert source_document["connector_name"] == "ccld_facility_reports"
     assert source_document["connector_version"] == "0.1.0"
     assert complaint["complaint_control_number"] == "32-CR-20220407124448"
-    assert complaint["review_delay_over_120_days"] is True
+    assert complaint["first_investigation_activity_date"] == "2022-04-14"
+    assert complaint["review_delay_over_120_days"] is False
     assert {record.entity_type for record in flattened} == {
         "facility",
         "source_document",
         "complaint",
         "allegation",
+        "event",
         "extraction_audit",
     }
 
@@ -160,8 +162,8 @@ def test_ccld_hosted_artifact_builder_output_imports_into_hosted_source_derived_
     complaint_row = next(row for row in rows if row["entity_type"] == "complaint")
 
     assert import_result.import_batch_id == LOCAL_REVIEWER_UI_SCOPE.scope_id
-    assert import_result.imported_record_count == 26
-    assert len(rows) == 26
+    assert import_result.imported_record_count == 34
+    assert len(rows) == 34
     assert complaint_row["source_url"].startswith("https://www.ccld.dss.ca.gov/")
     assert complaint_row["raw_sha256"] == sha256_bytes(RAW_FIXTURE.read_bytes())
     assert complaint_row["raw_path"] == RAW_FIXTURE.as_posix()
@@ -206,8 +208,8 @@ def test_ccld_hosted_artifact_builder_output_is_compatible_with_import_reload(
 
     assert result.import_executed is True
     assert result.available_before_count == 0
-    assert result.available_after_count == 26
-    assert result.imported_source_record_count == 26
+    assert result.available_after_count == 34
+    assert result.imported_source_record_count == 34
     assert result.refreshed_source_record_count == 0
     assert result.skipped_non_matching_source_record_count == 0
     assert result.source_artifact_identities == ("fixture-ccld-sqlite-output",)

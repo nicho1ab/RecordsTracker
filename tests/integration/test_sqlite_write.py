@@ -24,8 +24,8 @@ def test_write_normalized_ccld_report_to_sqlite(tmp_path: Path) -> None:
     assert _row_count(db_path, "source_documents") == 1
     assert _row_count(db_path, "complaints") == 1
     assert _row_count(db_path, "allegations") == 2
-    assert _row_count(db_path, "events") == 0
-    assert _row_count(db_path, "extraction_audit") == 21
+    assert _row_count(db_path, "events") == 1
+    assert _row_count(db_path, "extraction_audit") == 28
     assert _source_traceability(db_path) == {
         "source_url": FIXTURE_URL,
         "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
@@ -36,15 +36,15 @@ def test_write_normalized_ccld_report_to_sqlite(tmp_path: Path) -> None:
         "report_index": 3,
     }
     assert _complaint_delay_fields(db_path) == {
-        "days_received_to_first_activity": None,
+        "days_received_to_first_activity": 7,
         "days_received_to_visit": 139,
         "days_received_to_report": 139,
         "days_report_to_signed": 2,
-        "review_delay_over_30_days": 1,
-        "review_delay_over_60_days": 1,
-        "review_delay_over_90_days": 1,
-        "review_delay_over_120_days": 1,
-        "missing_first_activity_date": 1,
+        "review_delay_over_30_days": 0,
+        "review_delay_over_60_days": 0,
+        "review_delay_over_90_days": 0,
+        "review_delay_over_120_days": 0,
+        "missing_first_activity_date": 0,
         "report_date_used_as_proxy": 0,
     }
 
@@ -60,21 +60,21 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
         "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
         "complaint_control_number": "32-CR-20220407124448",
         "complaint_received_date": "2022-04-07",
-        "first_investigation_activity_date": None,
+        "first_investigation_activity_date": "2022-04-14",
         "visit_date": "2022-08-24",
         "report_date": "2022-08-24",
         "date_signed": "2022-08-26",
         "finding": "Unsubstantiated",
         "allegation_count": 2,
-        "days_received_to_first_activity": None,
+        "days_received_to_first_activity": 7,
         "days_received_to_visit": 139,
         "days_received_to_report": 139,
         "days_report_to_signed": 2,
-        "review_delay_over_30_days": 1,
-        "review_delay_over_60_days": 1,
-        "review_delay_over_90_days": 1,
-        "review_delay_over_120_days": 1,
-        "missing_first_activity_date": 1,
+        "review_delay_over_30_days": 0,
+        "review_delay_over_60_days": 0,
+        "review_delay_over_90_days": 0,
+        "review_delay_over_120_days": 0,
+        "missing_first_activity_date": 0,
         "report_date_used_as_proxy": 0,
         "source_url": FIXTURE_URL,
         "raw_path": RAW_FIXTURE.as_posix(),
@@ -88,10 +88,7 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
         "report_date": "2022-08-24",
         "finding": "Unsubstantiated",
         "allegation_count": 2,
-        "review_flags_summary": (
-            "over 30 days; over 60 days; over 90 days; over 120 days; "
-            "missing first activity date"
-        ),
+        "review_flags_summary": None,
         "source_url": FIXTURE_URL,
         "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
         "raw_path": RAW_FIXTURE.as_posix(),
@@ -115,7 +112,7 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
         "allegation_count": 2,
         "earliest_complaint_received_date": "2022-04-07",
         "latest_complaint_received_date": "2022-04-07",
-        "records_with_delay_review_flags": 1,
+        "records_with_delay_review_flags": 0,
     }
     assert _facility_pattern_review(db_path) == {
         "facility_number": "157806098",
@@ -128,9 +125,9 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
         "unsubstantiated_complaint_count": 1,
         "inconclusive_complaint_count": 0,
         "unknown_finding_complaint_count": 0,
-        "missing_first_activity_count": 1,
+        "missing_first_activity_count": 0,
         "report_date_proxy_count": 0,
-        "records_with_review_flags": 1,
+        "records_with_review_flags": 0,
         "earliest_complaint_received_date": "2022-04-07",
         "latest_complaint_received_date": "2022-04-07",
         "earliest_retrieved_at": RETRIEVED_AT,
@@ -146,7 +143,7 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
         "source_document_count": 1,
         "complete_source_traceability_document_count": 1,
         "missing_source_traceability_document_count": 0,
-        "records_with_review_flags": 1,
+        "records_with_review_flags": 0,
         "earliest_complaint_received_date": "2022-04-07",
         "latest_complaint_received_date": "2022-04-07",
         "earliest_retrieved_at": RETRIEVED_AT,
@@ -178,8 +175,8 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
         "traceability_status": "complete",
         "complaint_count": 1,
         "allegation_count": 2,
-        "event_count": 0,
-        "extraction_audit_field_count": 21,
+        "event_count": 1,
+        "extraction_audit_field_count": 28,
     }
     assert _complaint_timeline_review(db_path) == [
         {
@@ -187,6 +184,24 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
             "timeline_item_type": "complaint received",
             "timeline_source_field": "complaint_received_date",
             "timeline_date": "2022-04-07",
+            "source_url": FIXTURE_URL,
+            "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
+            "connector_name": "ccld_facility_reports",
+        },
+        {
+            "timeline_sequence": 2,
+            "timeline_item_type": "first investigation activity",
+            "timeline_source_field": "first_investigation_activity_date",
+            "timeline_date": "2022-04-14",
+            "source_url": FIXTURE_URL,
+            "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
+            "connector_name": "ccld_facility_reports",
+        },
+        {
+            "timeline_sequence": 6,
+            "timeline_item_type": "extracted event",
+            "timeline_source_field": "investigation_activity",
+            "timeline_date": "2022-04-14",
             "source_url": FIXTURE_URL,
             "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
             "connector_name": "ccld_facility_reports",
@@ -238,23 +253,13 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
     }
 
 
-def test_delay_review_flags_view_exposes_flagged_records(tmp_path: Path) -> None:
+def test_delay_review_flags_view_excludes_record_with_early_activity(tmp_path: Path) -> None:
     db_path = tmp_path / "ccld.sqlite"
     normalized = _normalized_fixture()
 
     write_normalized_records(db_path, [normalized])
 
-    assert _delay_review_flags(db_path) == {
-        "facility_number": "157806098",
-        "complaint_control_number": "32-CR-20220407124448",
-        "days_received_to_visit": 139,
-        "review_delay_over_30_days": 1,
-        "review_delay_over_60_days": 1,
-        "review_delay_over_90_days": 1,
-        "review_delay_over_120_days": 1,
-        "missing_first_activity_date": 1,
-        "report_date_used_as_proxy": 0,
-    }
+    assert _row_count(db_path, "delay_review_flags") == 0
 
 
 def test_review_views_do_not_duplicate_rows_on_rerun(tmp_path: Path) -> None:
@@ -266,12 +271,12 @@ def test_review_views_do_not_duplicate_rows_on_rerun(tmp_path: Path) -> None:
 
     assert _row_count(db_path, "complaint_review_summary") == 1
     assert _row_count(db_path, "complaint_first_pass_review") == 1
-    assert _row_count(db_path, "complaint_timeline_review") == 4
-    assert _row_count(db_path, "field_source_traceability_review") == 21
+    assert _row_count(db_path, "complaint_timeline_review") == 6
+    assert _row_count(db_path, "field_source_traceability_review") == 28
     assert _row_count(db_path, "facility_complaint_summary") == 1
     assert _row_count(db_path, "facility_pattern_review") == 1
     assert _row_count(db_path, "facility_comparison_review") == 1
-    assert _row_count(db_path, "delay_review_flags") == 1
+    assert _row_count(db_path, "delay_review_flags") == 0
     assert _row_count(db_path, "source_traceability_review") == 1
     assert _row_count(db_path, "multi_facility_source_traceability_review") == 1
 
@@ -306,7 +311,7 @@ def test_write_normalized_ccld_report_is_idempotent(tmp_path: Path) -> None:
     assert _row_count(db_path, "source_documents") == 1
     assert _row_count(db_path, "complaints") == 1
     assert _row_count(db_path, "allegations") == 2
-    assert _row_count(db_path, "extraction_audit") == 21
+    assert _row_count(db_path, "extraction_audit") == 28
 
 
 def test_written_complaint_and_allegations_link_to_parent_rows(tmp_path: Path) -> None:

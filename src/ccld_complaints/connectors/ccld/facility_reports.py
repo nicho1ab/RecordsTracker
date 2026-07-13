@@ -5,7 +5,7 @@ import json
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, cast
@@ -43,6 +43,15 @@ NUMBERED_ALLEGATION_PREFIX_RE = re.compile(
 )
 FINDING_INLINE_LABEL_RE = re.compile(r"^finding\s*[-:]\s*(.+)$", re.IGNORECASE)
 SOURCE_DATE_TOKEN_RE = re.compile(r"\b\d{1,2}/\d{1,2}/\d{2,4}\b")
+INVESTIGATION_ACTIVITY_CUE_RE = re.compile(
+    r"\b(?:conducted|interviewed|reviewed|visited|inspected|investigated)\b",
+    re.IGNORECASE,
+)
+FIELD_STATUS_EXTRACTED = "EXTRACTED_VALUE_PRESENT"
+FIELD_STATUS_ABSENT = "SOURCE_ELEMENT_ABSENT"
+FIELD_STATUS_COVERAGE_UNAVAILABLE = "SOURCE_COVERAGE_UNAVAILABLE"
+FIELD_STATUS_BLANK = "SOURCE_ELEMENT_PRESENT_BLANK"
+FIELD_STATUS_FAILED = "EXTRACTION_FAILED"
 
 ReportDocumentLoader = Callable[[SourceDocumentCandidate], SourceDocument | None]
 ReportFetcher = Callable[[str], bytes]
@@ -119,6 +128,15 @@ class FacilityNumberIntakeResult:
     invalid_values: list[str]
 
 
+@dataclass(frozen=True)
+class FieldEvidence:
+    status: str
+    source_section: str | None
+    source_text: str | None
+    source_value: str | None
+    warning: str | None = None
+
+
 class _HtmlTextParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
@@ -129,6 +147,35 @@ class _HtmlTextParser(HTMLParser):
             cleaned = _clean_text(line)
             if cleaned:
                 self.lines.append(cleaned)
+
+
+class _HtmlTableCellParser(HTMLParser):
+    """Capture visible table-cell text while retaining intentionally blank cells."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.cells: list[str] = []
+        self._cell_depth = 0
+        self._cell_parts: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag.casefold() != "td":
+            return
+        self._cell_depth += 1
+        if self._cell_depth == 1:
+            self._cell_parts = []
+
+    def handle_data(self, data: str) -> None:
+        if self._cell_depth:
+            self._cell_parts.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag.casefold() != "td" or not self._cell_depth:
+            return
+        self._cell_depth -= 1
+        if self._cell_depth == 0:
+            self.cells.append(_clean_text(" ".join(self._cell_parts)))
+            self._cell_parts = []
 
 
 class _FacilityDetailReportLinkParser(HTMLParser):
@@ -255,6 +302,7 @@ class CcldFacilityReportsConnector:
     def extract(self, document: SourceDocument) -> dict[str, object]:
         html = _read_raw_text(document.raw_path)
         lines = _html_lines(html)
+        cells = _html_table_cells(html)
         source_url_fields = _source_url_fields(document.source_url)
 
         complaint_received_date = _iso_date(_complaint_received_date(lines))
@@ -276,7 +324,14 @@ class CcldFacilityReportsConnector:
             or _value_after_spaced_colon_label(lines, "Date Signed")
             or _value_after_punctuated_label(lines, "Date Signed")
         )
-        first_activity_date = None
+        facility_address = _table_label_evidence(cells, "ADDRESS", "facility details")
+        facility_city = _table_label_evidence(cells, "CITY", "facility details")
+        facility_capacity = _integer_field_evidence(
+            _table_label_evidence(cells, "CAPACITY", "facility details")
+        )
+        regional_office = _regional_office_evidence(cells)
+        activity_event, first_activity_evidence = _first_investigation_activity(lines)
+        first_activity_date = first_activity_evidence.source_value
         delay_metrics = _delay_metrics(
             complaint_received_date=complaint_received_date,
             first_investigation_activity_date=first_activity_date,
@@ -284,6 +339,17 @@ class CcldFacilityReportsConnector:
             report_date=report_date,
             date_signed=date_signed,
         )
+
+        field_evidence = {
+            "facility_address": facility_address,
+            "facility_capacity": facility_capacity,
+            "facility_city": facility_city,
+            "regional_office": regional_office,
+            "first_investigation_activity_date": first_activity_evidence,
+        }
+        events: list[dict[str, object]] = []
+        if activity_event is not None:
+            events.append(activity_event)
 
         return {
             "source_url": document.source_url,
@@ -301,6 +367,10 @@ class CcldFacilityReportsConnector:
             or _value_after_spaced_colon_label(lines, "FACILITY NAME")
             or _value_after_punctuated_label(lines, "FACILITY NAME"),
             "report_type": _report_type(lines),
+            "facility_address": facility_address.source_value,
+            "facility_capacity": _evidence_int_value(facility_capacity),
+            "facility_city": facility_city.source_value,
+            "regional_office": regional_office.source_value,
             "report_date": report_date,
             "date_signed": date_signed,
             "complaint_received_date": complaint_received_date,
@@ -314,6 +384,8 @@ class CcldFacilityReportsConnector:
             "allegations": _allegations(lines),
             "finding": _finding(lines),
             "visit_date": visit_date,
+            "events": events,
+            "_field_evidence": field_evidence,
             **delay_metrics,
         }
 
@@ -328,6 +400,7 @@ class CcldFacilityReportsConnector:
         complaint_id = f"ccld-complaint-{complaint_control_number or document_id}"
         finding = _optional_str(extracted, "finding") or "Unknown"
         allegations = cast(list[str], extracted.get("allegations", []))
+        extracted_events = cast(list[dict[str, object]], extracted.get("events", []))
 
         normalized_allegations = [
             {
@@ -341,7 +414,22 @@ class CcldFacilityReportsConnector:
             for index, allegation in enumerate(allegations, start=1)
         ]
 
-        return {
+        normalized_events = [
+            {
+                "event_id": f"{complaint_id}-event-{index}",
+                "complaint_id": complaint_id,
+                "event_date": _required_mapping_str(event, "event_date"),
+                "event_type": _required_mapping_str(event, "event_type"),
+                "event_text": _optional_mapping_str(event, "event_text"),
+                "extracted_from_section": _optional_mapping_str(
+                    event, "extracted_from_section"
+                ),
+                "extraction_confidence": 1.0,
+            }
+            for index, event in enumerate(extracted_events, start=1)
+        ]
+
+        normalized: dict[str, object] = {
             "facility": {
                 "facility_id": facility_id,
                 "source_id": SOURCE_ID,
@@ -351,8 +439,8 @@ class CcldFacilityReportsConnector:
                 "licensee_name": None,
                 "county": None,
                 "status": None,
-                "capacity": None,
-                "regional_office": None,
+                "capacity": cast(int | None, extracted.get("facility_capacity")),
+                "regional_office": _optional_str(extracted, "regional_office"),
             },
             "source_document": {
                 "document_id": document_id,
@@ -402,6 +490,9 @@ class CcldFacilityReportsConnector:
             "allegations": normalized_allegations,
             "extraction_audit": _audit_records(document_id, extracted),
         }
+        if normalized_events:
+            normalized["events"] = normalized_events
+        return normalized
 
     def validate(self, normalized: dict[str, object]) -> None:
         validate_schema(
@@ -416,6 +507,8 @@ class CcldFacilityReportsConnector:
         )
         for allegation in cast(list[dict[str, Any]], normalized["allegations"]):
             validate_schema(allegation, self.schema_dir / "allegation.schema.json")
+        for event in cast(list[dict[str, Any]], normalized.get("events", [])):
+            validate_schema(event, self.schema_dir / "event.schema.json")
         for audit_record in cast(list[dict[str, Any]], normalized["extraction_audit"]):
             validate_schema(audit_record, self.schema_dir / "extraction_audit.schema.json")
 
@@ -726,6 +819,176 @@ def _html_lines(html: str) -> list[str]:
     parser = _HtmlTextParser()
     parser.feed(html)
     return parser.lines
+
+
+def _html_table_cells(html: str) -> list[str]:
+    parser = _HtmlTableCellParser()
+    parser.feed(html)
+    return parser.cells
+
+
+def _table_label_evidence(
+    cells: list[str], label: str, source_section: str
+) -> FieldEvidence:
+    normalized_label = label.strip(" .:-").casefold()
+    for index, cell in enumerate(cells):
+        if cell.strip(" .:-").casefold() != normalized_label:
+            continue
+        value = cells[index + 1] if index + 1 < len(cells) else ""
+        source_text = f"{cell} {value}".strip()
+        if not value.strip():
+            return FieldEvidence(
+                status=FIELD_STATUS_BLANK,
+                source_section=source_section,
+                source_text=cell,
+                source_value=None,
+                warning="Source element is present but blank.",
+            )
+        return FieldEvidence(
+            status=FIELD_STATUS_EXTRACTED,
+            source_section=source_section,
+            source_text=source_text,
+            source_value=value,
+        )
+    return FieldEvidence(
+        status=FIELD_STATUS_ABSENT,
+        source_section=source_section,
+        source_text=None,
+        source_value=None,
+        warning="Source element was not found in the retained source report.",
+    )
+
+
+def _integer_field_evidence(evidence: FieldEvidence) -> FieldEvidence:
+    if evidence.status != FIELD_STATUS_EXTRACTED or evidence.source_value is None:
+        return evidence
+    if re.fullmatch(r"\d+", evidence.source_value.strip()):
+        return evidence
+    return FieldEvidence(
+        status=FIELD_STATUS_FAILED,
+        source_section=evidence.source_section,
+        source_text=evidence.source_text,
+        source_value=None,
+        warning="Source element was present but was not a deterministic integer.",
+    )
+
+
+def _evidence_int_value(evidence: FieldEvidence) -> int | None:
+    if evidence.status != FIELD_STATUS_EXTRACTED or evidence.source_value is None:
+        return None
+    return int(evidence.source_value)
+
+
+def _regional_office_evidence(cells: list[str]) -> FieldEvidence:
+    for cell in cells:
+        match = re.search(r"\bCCLD Regional Office\b", cell, re.IGNORECASE)
+        if match is None:
+            continue
+        return FieldEvidence(
+            status=FIELD_STATUS_EXTRACTED,
+            source_section="report header",
+            source_text=cell,
+            source_value=match.group(0),
+        )
+    return FieldEvidence(
+        status=FIELD_STATUS_ABSENT,
+        source_section="report header",
+        source_text=None,
+        source_value=None,
+        warning="Source element was not found in the retained source report.",
+    )
+
+
+def _first_investigation_activity(
+    lines: list[str],
+) -> tuple[dict[str, object] | None, FieldEvidence]:
+    section_lines = _investigation_findings_lines(lines)
+    if section_lines is None:
+        return None, FieldEvidence(
+            status=FIELD_STATUS_ABSENT,
+            source_section="investigation findings",
+            source_text=None,
+            source_value=None,
+            warning="Investigation findings section was not found in the source report.",
+        )
+
+    candidates: list[tuple[date, str]] = []
+    malformed_source_text: str | None = None
+    for line in section_lines:
+        if INVESTIGATION_ACTIVITY_CUE_RE.search(line) is None:
+            continue
+        source_text = re.split(r"(?<=[.!?])\s+", line, maxsplit=1)[0].strip()
+        date_tokens = SOURCE_DATE_TOKEN_RE.findall(source_text)
+        for token in date_tokens:
+            normalized = _iso_date(token)
+            if normalized is None:
+                malformed_source_text = source_text
+                continue
+            parsed = parse_date_or_none(normalized)
+            if parsed is not None:
+                candidates.append((parsed, source_text))
+
+    if not candidates:
+        if malformed_source_text is not None:
+            return None, FieldEvidence(
+                status=FIELD_STATUS_FAILED,
+                source_section="investigation findings",
+                source_text=malformed_source_text,
+                source_value=None,
+                warning=(
+                    "Investigation activity text contained a date-like value that "
+                    "could not be parsed deterministically."
+                ),
+            )
+        return None, FieldEvidence(
+            status=FIELD_STATUS_ABSENT,
+            source_section="investigation findings",
+            source_text=None,
+            source_value=None,
+            warning="No deterministic dated investigation activity was found.",
+        )
+
+    first_date, source_text = min(candidates, key=lambda item: (item[0], item[1]))
+    normalized_date = first_date.isoformat()
+    evidence = FieldEvidence(
+        status=FIELD_STATUS_EXTRACTED,
+        source_section="investigation findings",
+        source_text=source_text,
+        source_value=normalized_date,
+    )
+    return (
+        {
+            "event_date": normalized_date,
+            "event_type": "investigation_activity",
+            "event_text": source_text,
+            "extracted_from_section": "investigation findings",
+            "source_text": source_text,
+            "source_section": "investigation findings",
+        },
+        evidence,
+    )
+
+
+def _investigation_findings_lines(lines: list[str]) -> list[str] | None:
+    heading_index = _line_index_any(
+        lines,
+        (
+            "INVESTIGATION FINDINGS:",
+            "INVESTIGATION FINDINGS -",
+            "INVESTIGATION FINDINGS",
+            "INVESTIGATION FINDING:",
+            "INVESTIGATION FINDING -",
+            "INVESTIGATION FINDING",
+        ),
+    )
+    if heading_index is None:
+        return None
+    section: list[str] = []
+    for line in lines[heading_index + 1 :]:
+        if section and line.strip(" .:-").casefold() == "facility name":
+            break
+        section.append(line)
+    return section
 
 
 def discover_facility_report_candidates(
@@ -1151,7 +1414,10 @@ def _review_delay_over(delay_days: int | None, threshold: int) -> bool:
 
 
 def _iso_date(value: str | None) -> str | None:
-    parsed = parse_date_or_none(value)
+    try:
+        parsed = parse_date_or_none(value)
+    except (OverflowError, ValueError):
+        return None
     return parsed.isoformat() if parsed is not None else None
 
 
@@ -1167,10 +1433,26 @@ def _optional_str(extracted: dict[str, object], field_name: str) -> str | None:
     return value if isinstance(value, str) else None
 
 
+def _required_mapping_str(values: dict[str, object], field_name: str) -> str:
+    value = _optional_mapping_str(values, field_name)
+    if value is None:
+        raise ValueError(f"Missing required extracted field: {field_name}")
+    return value
+
+
+def _optional_mapping_str(values: dict[str, object], field_name: str) -> str | None:
+    value = values.get(field_name)
+    return value if isinstance(value, str) else None
+
+
 def _audit_records(document_id: str, extracted: dict[str, object]) -> list[dict[str, object]]:
     field_names = (
         "facility_number",
         "facility_name",
+        "facility_address",
+        "facility_capacity",
+        "facility_city",
+        "regional_office",
         "report_type",
         "report_date",
         "date_signed",
@@ -1191,9 +1473,13 @@ def _audit_records(document_id: str, extracted: dict[str, object]) -> list[dict[
         "missing_first_activity_date",
         "report_date_used_as_proxy",
     )
+    field_evidence = cast(
+        dict[str, FieldEvidence], extracted.get("_field_evidence", {})
+    )
     records: list[dict[str, object]] = []
     for field_name in field_names:
         value = extracted.get(field_name)
+        evidence = field_evidence.get(field_name)
         records.append(
             {
                 "audit_id": f"{document_id}-{field_name}",
@@ -1202,12 +1488,38 @@ def _audit_records(document_id: str, extracted: dict[str, object]) -> list[dict[
                 "extraction_method": DETERMINISTIC_METHOD,
                 "extractor_version": CcldFacilityReportsConnector.connector_version,
                 "extracted_value": _audit_value(value),
-                "confidence": 1.0 if value is not None else 0.0,
-                "source_text": None,
-                "source_section": None,
-                "warning": None if value is not None else "Field was not found in source report.",
+                "confidence": (
+                    1.0
+                    if evidence is not None and evidence.status == FIELD_STATUS_EXTRACTED
+                    else 1.0 if evidence is None and value is not None else 0.0
+                ),
+                "source_text": evidence.source_text if evidence is not None else None,
+                "source_section": evidence.source_section if evidence is not None else None,
+                "warning": (
+                    evidence.warning
+                    if evidence is not None
+                    else None if value is not None else "Field was not found in source report."
+                ),
             }
         )
+    events = cast(list[dict[str, object]], extracted.get("events", []))
+    for index, event in enumerate(events, start=1):
+        for field_name in ("event_date", "event_type", "event_text"):
+            value = event.get(field_name)
+            records.append(
+                {
+                    "audit_id": f"{document_id}-event-{index}-{field_name}",
+                    "document_id": document_id,
+                    "field_name": f"event.{field_name}",
+                    "extraction_method": DETERMINISTIC_METHOD,
+                    "extractor_version": CcldFacilityReportsConnector.connector_version,
+                    "extracted_value": _audit_value(value),
+                    "confidence": 1.0,
+                    "source_text": _optional_mapping_str(event, "source_text"),
+                    "source_section": _optional_mapping_str(event, "source_section"),
+                    "warning": None,
+                }
+            )
     return records
 
 

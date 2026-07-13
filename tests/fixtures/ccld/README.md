@@ -9,7 +9,10 @@ Raw fixtures and expected JSON are governed by `.gitattributes` line-ending rule
 ## Current fixtures
 
 - `raw/157806098_facility_detail.html`: Public CCLD facility detail page fixture for facility `157806098`, including rendered FacilityReports links used for offline discovery regression tests.
-- `raw/157806098_inx3.html`: Public CCLD FacilityReports response for facility `157806098`, report index `3`.
+- `raw/157806098_inx3.html`: Public CCLD FacilityReports response for facility
+  `157806098`, report index `3`, governing deterministic first-activity/event,
+  facility-capacity, regional-office, present-but-blank address/city, and
+  field-level source-section/source-text traceability regressions.
 - `raw/157806097_facility_detail.html`: Source-shaped CCLD facility detail page fixture for facility `157806097`, used with the sample fixture corpus to exercise multi-facility discovery without live public requests.
 - `raw/157806097_inx1.html`: Source-shaped CCLD FacilityReports response for facility `157806097`, report index `1`, used with the sample fixture corpus to exercise multi-facility ingestion, traceability, comparison, and review-bundle export paths.
 - `expected/157806098_inx3.json`: Expected normalized records for the first deterministic CCLD extraction regression test.

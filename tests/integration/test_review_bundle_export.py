@@ -31,11 +31,11 @@ def test_export_review_bundle_writes_source_traceable_csvs(tmp_path: Path) -> No
         "facility_comparison_review.csv",
     }
     assert exported_paths["complaint_review_with_source_traceability.csv"].row_count == 1
-    assert exported_paths["delay_review_flags_with_source_traceability.csv"].row_count == 1
+    assert exported_paths["delay_review_flags_with_source_traceability.csv"].row_count == 0
     assert exported_paths["source_traceability.csv"].row_count == 1
     assert exported_paths["multi_facility_source_traceability.csv"].row_count == 1
-    assert exported_paths["complaint_timeline_with_source_traceability.csv"].row_count == 4
-    assert exported_paths["field_source_traceability.csv"].row_count == 21
+    assert exported_paths["complaint_timeline_with_source_traceability.csv"].row_count == 6
+    assert exported_paths["field_source_traceability.csv"].row_count == 28
     assert exported_paths["facility_pattern_review.csv"].row_count == 1
     assert exported_paths["facility_comparison_review.csv"].row_count == 1
 
@@ -48,12 +48,10 @@ def test_export_review_bundle_writes_source_traceable_csvs(tmp_path: Path) -> No
     assert complaint_rows[0]["connector_version"] == "0.1.0"
     assert complaint_rows[0]["retrieved_at"] == "2026-06-10T00:00:00+00:00"
     assert complaint_rows[0]["report_index"] == "3"
-    assert complaint_rows[0]["first_investigation_activity_date"] == "unknown"
+    assert complaint_rows[0]["first_investigation_activity_date"] == "2022-04-14"
 
     delay_rows = _read_csv(output_dir / "delay_review_flags_with_source_traceability.csv")
-    assert delay_rows[0]["review_delay_over_120_days"] == "1"
-    assert delay_rows[0]["raw_sha256"] == complaint_rows[0]["raw_sha256"]
-    assert delay_rows[0]["source_url"] == complaint_rows[0]["source_url"]
+    assert delay_rows == []
 
     source_rows = _read_csv(output_dir / "source_traceability.csv")
     assert source_rows[0]["raw_sha256"] == complaint_rows[0]["raw_sha256"]
@@ -80,7 +78,7 @@ def test_export_review_bundle_writes_source_traceable_csvs(tmp_path: Path) -> No
     pattern_rows = _read_csv(output_dir / "facility_pattern_review.csv")
     assert pattern_rows[0]["facility_number"] == "157806098"
     assert pattern_rows[0]["source_document_count"] == "1"
-    assert pattern_rows[0]["records_with_review_flags"] == "1"
+    assert pattern_rows[0]["records_with_review_flags"] == "0"
 
     comparison_rows = _read_csv(output_dir / "facility_comparison_review.csv")
     assert comparison_rows[0]["facility_number"] == "157806098"

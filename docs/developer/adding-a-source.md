@@ -49,6 +49,13 @@ The CCLD connector discovers public FacilityReports URLs from the facility detai
 
 Discovery does not download or parse each report body. Fetching, raw storage, extraction, normalization, validation, and emission remain separate connector contract steps.
 
-The initial deterministic extraction fixture targets report index `3`. It extracts labeled HTML fields deterministically and normalizes them into the existing facility, source document, complaint, allegation, and extraction audit records without adding source-specific canonical columns.
+The initial deterministic extraction fixture targets report index `3`. It
+extracts labeled HTML fields plus a bounded, dated investigation activity
+sentence deterministically and normalizes them into the existing facility,
+source document, complaint, allegation, event, and extraction audit records.
+Facility address and city source elements are audited as present-but-blank in
+that governed artifact; canonical allocation for those fields remains separate.
+Target audit rows preserve document identity, source section, and bounded source
+text while generated evidence emits only aggregate-safe status and hashes.
 
 The initial single-facility ingestion helper returns validated records in memory and records per-candidate failures. Offline tests should inject fixture loaders for report bodies; live fetching is only used when no loader is provided, and raw content is stored before extraction.

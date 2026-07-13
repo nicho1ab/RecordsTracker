@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Closed the governed complaint-report extraction gaps for deterministic first
+  investigation activity, bounded event records, complaint-report capacity and
+  regional-office values, present-but-blank facility address/city states, and
+  field-level source section/text traceability. Added aggregate-safe local and
+  runtime evidence adapters while preserving null allegation categories and
+  deferring address/city canonical allocation and existing-data refresh work.
 - Added `/reviewer/facilities/trends`, a read-only attorney-facing monthly or
   quarterly complaint activity comparison over authorized loaded records. It
   deduplicates stable complaint identities, reconciles complaint,

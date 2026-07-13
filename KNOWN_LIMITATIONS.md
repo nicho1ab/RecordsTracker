@@ -6,7 +6,16 @@
 - Report date may not equal first investigation activity date.
 - Delay review flags are screening aids and do not prove that an investigation was delayed.
 - Report date may be used as a review proxy only when no first investigation activity date or visit date is available; report date alone does not establish when investigation activity began.
-- Narrative dates may require separate extraction and confidence scoring.
+- Narrative activity dates are extracted only for governed
+  investigation-findings wording with deterministic activity cues and parseable
+  numeric dates. Unsupported or malformed wording remains null with explicit
+  extraction audit status.
+- Complaint-report facility address and city elements can be present but blank;
+  the extractor preserves that distinction in audit evidence, but canonical
+  storage allocation remains deferred.
+- Existing hosted PostgreSQL source-derived rows do not change when extractor
+  code changes. Regeneration and reimport are required, and no safe automated
+  in-place refresh command is currently implemented.
 - Some older reports may have different layouts or missing fields.
 - Live CCLD ingestion can persist normalized records to SQLite for one or more explicitly provided facility numbers when configured with a database path; it does not perform statewide crawling or automatic search expansion.
 - Live facility identifier intake accepts digit-only public facility numbers,
