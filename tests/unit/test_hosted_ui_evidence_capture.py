@@ -268,6 +268,132 @@ def failed_issue_417_checks(assertions: list[dict[str, object]]) -> set[str]:
     return {str(row["check"]) for row in assertions if row["passed"] is not True}
 
 
+def issue_418_assertion_functions() -> str:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    start = script.index("function Get-Issue418CountSummary")
+    end = script.index("\nfunction Get-SafeDynamicHref", start)
+    return script[start:end]
+
+
+def run_issue_418_zero_assertion(
+    *,
+    qualifying: int,
+    state: str,
+    cue: str = "No anomaly cue",
+) -> dict[str, object]:
+    html_text = (
+        "<html><body><h1>Review complaint trends over time</h1>"
+        "<table><caption>Complaint trends</caption><tr><th>Period</th></tr></table>"
+        '<input name="facility"><input name="facility_type">'
+        '<input name="geography"><input name="finding">'
+        '<input name="serious_topic"><input name="start_date">'
+        '<input name="end_date"><input name="time_grain">'
+        f'<input name="period_count"><span>{state}</span><strong>{cue}</strong>'
+        "</body></html>"
+    )
+    text = " ".join(
+        (
+            "Review complaint trends over time",
+            (
+                f"{qualifying} qualifying complaint record(s): {qualifying} "
+                "assigned to displayed periods and 0 with date unavailable"
+            ),
+            (
+                "Anomaly cue definitions: increased activity means at least twice "
+                "the preceding count; decreased activity means no more than half."
+            ),
+            f"{state} {cue} Current period: 0; preceding period: not available",
+        )
+    )
+    ps_script = f"""
+function Add-AssertionResult {{
+    param(
+        [System.Collections.ArrayList]$Target,
+        [string]$RouteName,
+        [string]$Check,
+        [string]$Status,
+        [string]$Message
+    )
+    [void]$Target.Add([pscustomobject]@{{
+        route = $RouteName
+        check = $Check
+        status = $Status
+        message = $Message
+    }})
+}}
+{issue_418_assertion_functions()}
+$assertions = [System.Collections.ArrayList]::new()
+$route = @{{ Name = 'issue-418-zero'; Issue418Kind = 'zero' }}
+$html = @'
+{html_text}
+'@
+$text = @'
+{text}
+'@
+Test-Issue418RouteAssertions -Route $route -Html $html -Text $text -Assertions $assertions
+$assertions | Where-Object {{ $_.check -eq 'issue418 zero qualifying' }} | ConvertTo-Json -Compress
+"""
+    result = subprocess.run(
+        [powershell(), "-NoProfile", "-Command", ps_script],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, plain_output(result)
+    payload = json.loads(result.stdout)
+    assert isinstance(payload, dict)
+    return payload
+
+
+def test_issue_418_zero_assertion_accepts_zero_qualifying_records_state() -> None:
+    assertion = run_issue_418_zero_assertion(
+        qualifying=0,
+        state="Zero qualifying records",
+    )
+
+    assert assertion["status"] == "PASS"
+
+
+def test_issue_418_zero_assertion_accepts_coverage_unavailable_state() -> None:
+    assertion = run_issue_418_zero_assertion(
+        qualifying=0,
+        state="Coverage unavailable",
+    )
+
+    assert assertion["status"] == "PASS"
+
+
+def test_issue_418_zero_assertion_rejects_decreased_activity_for_either_state() -> None:
+    for state in ("Zero qualifying records", "Coverage unavailable"):
+        assertion = run_issue_418_zero_assertion(
+            qualifying=0,
+            state=state,
+            cue="Decreased activity",
+        )
+
+        assert assertion["status"] == "FAIL"
+
+
+def test_issue_418_zero_assertion_rejects_nonzero_qualifying_count() -> None:
+    assertion = run_issue_418_zero_assertion(
+        qualifying=1,
+        state="Zero qualifying records",
+    )
+
+    assert assertion["status"] == "FAIL"
+
+
+def test_issue_418_zero_assertion_requires_no_anomaly_cue() -> None:
+    assertion = run_issue_418_zero_assertion(
+        qualifying=0,
+        state="Coverage unavailable",
+        cue="",
+    )
+
+    assert assertion["status"] == "FAIL"
+
+
 def test_issue_417_assertions_accept_shared_semantic_explanation_without_row_labels() -> None:
     assertions = run_issue_417_assertions(
         "default",
