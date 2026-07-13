@@ -42,13 +42,13 @@ Facility comparison rows summarize local derived facility/category/finding group
 
 Source traceability counts summarize linked records in the local derived dataset only. Use them to find source documents that need checking, not as proof that the public source is complete or incomplete.
 
-Timeline rows in `complaint_timeline_review` show extracted dates that are available in the local derived dataset. Missing dates are unknown and should not be described as proof that an event did not occur.
+Timeline rows in `complaint_timeline_review` show extracted dates that are available in the local derived dataset. Reviewer pages label missing, blank, unavailable, undated, or invalid dates explicitly; none of those labels proves that an event did not occur.
 
 ## Delay fields
 
-Delay fields are calculated from extracted dates. If either date needed for a calculation is missing, the delay should be blank or marked unknown.
+Delay fields are calculated from extracted dates. If either date needed for a calculation is missing, blank, unavailable, or invalid, no numeric delay is shown and the governed value-state label explains the condition. A same-day interval remains the verified numeric value `0`.
 
-Use `days_received_to_first_activity` when it is available because it is closest to the question of when investigation activity began. If that field is blank, compare it with `days_received_to_visit`, `days_received_to_report`, `missing_first_activity_date`, and `report_date_used_as_proxy` before drawing any conclusions.
+Use `days_received_to_first_activity` when it is available because it is closest to the question of when investigation activity began. If that field has a missing or unavailable label, compare it with `days_received_to_visit`, `days_received_to_report`, `missing_first_activity_date`, and `report_date_used_as_proxy` before drawing any conclusions.
 
 The `review_delay_over_30_days`, `review_delay_over_60_days`, `review_delay_over_90_days`, and `review_delay_over_120_days` fields are review flags. They identify records that may deserve closer review. They do not prove that CCLD delayed an investigation.
 

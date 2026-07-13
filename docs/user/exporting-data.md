@@ -120,13 +120,14 @@ The bundle includes:
   source coverage, active complaint-received-date dimension, range, explicit
   limit, truncation status, result status, and cause.
 
-Unknown database values are exported as `unknown`. Delay review flags, timeline rows, facility pattern counts, multi-facility traceability rows, and facility comparison rows in the bundle are screening aids for closer review, not conclusions that an investigation was delayed, findings about a facility, proof that an event did or did not occur, proof that the public source is complete, or findings about facility-wide conduct.
+Governed CSVs use explicit value-state labels instead of unexplained blank cells or a generic `unknown`: for example, `Not provided`, `Date not provided`, `Not available from source`, `Not applicable`, and `Invalid source value`. Verified numeric zero remains `0`, and valid dates remain ISO `YYYY-MM-DD`. Delay review flags, timeline rows, facility pattern counts, multi-facility traceability rows, and facility comparison rows in the bundle are screening aids for closer review, not conclusions that an investigation was delayed, findings about a facility, proof that an event did or did not occur, proof that the public source is complete, or findings about facility-wide conduct.
 
 Hosted complaint and complaint-matrix CSV exports are uncapped unless the
 request explicitly supplies a limit. Their metadata columns report the record
 universe, eligible/exported counts, source coverage, date dimension/range,
 limit, truncation status, and a plain-language result cause. An empty export row
-describes why no rows matched; it does not imply that no records exist globally.
+describes why no rows matched, and its record-specific cells use `Not applicable`;
+it does not imply that no records exist globally.
 
 ## Export from Datasette
 

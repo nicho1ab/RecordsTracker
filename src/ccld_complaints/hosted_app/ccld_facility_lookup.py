@@ -23,6 +23,11 @@ from ccld_complaints.hosted_app.ui_shell import (
     render_action_group,
     render_page_shell,
 )
+from ccld_complaints.presentation_values import (
+    PresentationValueKind,
+    presentation_value,
+    presentation_value_for_field,
+)
 
 CCLD_FACILITY_LOOKUP_PATH = "/ccld/facilities"
 CCLD_FACILITY_SUGGESTIONS_PATH = f"{CCLD_FACILITY_LOOKUP_PATH}/suggestions"
@@ -300,6 +305,8 @@ class CcldFacilityLookupRecord:
     facility_address: str | None = None
     fac_do_desc: str | None = None
     res_street_addr: str | None = None
+    capacity_source_present: bool | None = None
+    closed_date_source_present: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -781,7 +788,7 @@ def _render_signal_only_summary_cards(
     summary: FacilityReviewSignalsSummary,
     review_context: CcldFacilityReviewContext,
 ) -> str:
-    last_activity = _display_date(summary.last_visit_date) if summary.last_visit_date else "not listed"
+    last_activity = _display_date(summary.last_visit_date)
     return f"""        <section aria-labelledby="signal-only-summary-cards-heading">
             <h2 id="signal-only-summary-cards-heading">Summary</h2>
             <div class="dense-fact-row" aria-label="Facility summary signals">
@@ -800,13 +807,15 @@ def _facility_record_from_signal_summary(
     facility_name=summary.facility_name or summary.facility_number,
     city="",
     state="",
-    county=_display_tuple(summary.counties),
+    county="; ".join(summary.counties),
     zip_code="",
-    facility_type=_display_tuple(summary.facility_types),
+    facility_type="; ".join(summary.facility_types),
     program_type="",
-    capacity=_display_tuple(summary.capacities),
-    status=_display_tuple(summary.statuses),
-    closed_date=_display_tuple(summary.closed_dates),
+    capacity="; ".join(summary.capacities),
+    status="; ".join(summary.statuses),
+    closed_date="; ".join(summary.closed_dates),
+    capacity_source_present=bool(summary.capacities),
+    closed_date_source_present=bool(summary.closed_dates),
     )
 
 
@@ -1115,8 +1124,8 @@ def _render_intelligence_row(
     field_text = (
         f"{summary.total_visit_count} total visits; {summary.complaint_visit_count} complaint visits; "
         f"{summary.citation_count} citation value(s); {summary.poc_date_count} POC date(s); "
-        f"last visit {_display_value(summary.last_visit_date)}; status {_display_tuple(summary.statuses)}; "
-        f"capacity {_display_tuple(summary.capacities)}; county {_display_tuple(summary.counties)}"
+        f"last visit {_display_date(summary.last_visit_date)}; status {_display_tuple(summary.statuses)}; "
+        f"capacity {_display_tuple(summary.capacities, kind='number')}; county {_display_tuple(summary.counties)}"
     )
     facility_label = _safe_priority_text(summary.facility_name or summary.facility_number)
     request_href = _facility_request_href_for_values(
@@ -1224,6 +1233,8 @@ def _facility_lookup_record_from_source_record(
         facility_address=_source_value_if_present(values, "facility_address"),
         fac_do_desc=_source_value_if_present(values, "FAC_DO_DESC"),
         res_street_addr=_source_value_if_present(values, "RES_STREET_ADDR"),
+        capacity_source_present="capacity" in values,
+        closed_date_source_present="closed_date" in values,
     )
 
 
@@ -1289,6 +1300,8 @@ def _record_from_program_facility_row(row: dict[str, str]) -> CcldFacilityLookup
         address=_clean_value(row.get("Facility Address", "")),
         regional_office=_clean_value(row.get("Regional Office", "")),
         facility_address=_raw_query_field(row, "Facility Address"),
+        capacity_source_present="Facility Capacity" in row,
+        closed_date_source_present="Closed Date" in row,
     )
 
 
@@ -1312,6 +1325,8 @@ def _record_from_chhs_facility_master_row(row: dict[str, str]) -> CcldFacilityLo
         regional_office=_clean_value(row.get("FAC_DO_DESC", "")),
         fac_do_desc=_raw_query_field(row, "FAC_DO_DESC"),
         res_street_addr=_raw_query_field(row, "RES_STREET_ADDR"),
+        capacity_source_present="CAPACITY" in row,
+        closed_date_source_present=False,
     )
 
 
@@ -1702,6 +1717,7 @@ def _render_facility_directory_details(
                 "County",
                 "Capacity",
                 "Status",
+                "Closed date",
         )
         return f"""<dl class="summary-list">
                 <dt>{labels[0]}</dt>
@@ -1717,9 +1733,11 @@ def _render_facility_directory_details(
                 <dt>{labels[5]}</dt>
                 <dd>{_escape(_display_value(record.county))}</dd>
                 <dt>{labels[6]}</dt>
-                <dd>{_escape(_display_value(record.capacity))}</dd>
+                <dd>{_escape(_record_display_value(record, "capacity", kind="number"))}</dd>
                 <dt>{labels[7]}</dt>
                 <dd>{_escape(_display_value(_display_facility_status_code(record.status)))}</dd>
+                <dt>{labels[8]}</dt>
+                <dd>{_escape(_record_display_value(record, "closed_date", kind="date"))}</dd>
             </dl>"""
 
 
@@ -1872,7 +1890,7 @@ def _render_review_next_item(
                         <dt>Finding/status cue</dt>
                         <dd>{_escape(_display_value(item.finding_status_cue))}</dd>
                         <dt>Date shown</dt>
-                        <dd>{_escape(_display_date(item.date_label) if item.date_label else _display_value(item.date_label))}</dd>
+                        <dd>{_escape(_display_value(item.date_label))}</dd>
                         <dt>Why suggested</dt>
                         <dd>
                             <ul class="flag-list">
@@ -2001,7 +2019,7 @@ def _render_facility_review_signals_section(
                 <div class="stat-card"><strong>{summary.complaint_visit_count}</strong><span>Complaint visits</span></div>
                 <div class="stat-card"><strong>{summary.citation_count}</strong><span>Citation values</span></div>
                 <div class="stat-card"><strong>{summary.poc_date_count}</strong><span>POC dates</span></div>
-                <div class="stat-card"><strong>{_escape(_display_date(summary.last_visit_date) if summary.last_visit_date else _display_value(summary.last_visit_date))}</strong><span>Last visit date</span></div>
+                <div class="stat-card"><strong>{_escape(_display_date(summary.last_visit_date))}</strong><span>Last visit date</span></div>
             </div>
             <details class="technical-details dense-table-details">
                 <summary>Uploaded summary field details</summary>
@@ -2013,7 +2031,7 @@ def _render_facility_review_signals_section(
                 <dt>Status in uploaded summary</dt>
                 <dd>{_escape(_display_tuple(summary.statuses))}</dd>
                 <dt>Capacity in uploaded summary</dt>
-                <dd>{_escape(_display_tuple(summary.capacities))}</dd>
+                <dd>{_escape(_display_tuple(summary.capacities, kind="number"))}</dd>
                 <dt>County / regional office in uploaded summary</dt>
                 <dd>{_escape(_display_joined_parts((_display_tuple(summary.counties), _display_tuple(summary.regional_offices))))}</dd>
                 <dt>License first date in uploaded summary</dt>
@@ -2021,7 +2039,7 @@ def _render_facility_review_signals_section(
                 <dt>Closed date in uploaded summary</dt>
                 <dd>{_escape(_display_date_tuple(summary.closed_dates))}</dd>
                 <dt>Last visit date in uploaded summary</dt>
-                <dd>{_escape(_display_date(summary.last_visit_date) if summary.last_visit_date else _display_value(summary.last_visit_date))}</dd>
+                <dd>{_escape(_display_date(summary.last_visit_date))}</dd>
                 <dt>Visit activity in uploaded summary</dt>
                 <dd>{summary.total_visit_count} total; {summary.inspection_visit_count} inspection; {summary.complaint_visit_count} complaint; {summary.other_visit_count} other</dd>
                 <dt>Citation indicators in uploaded summary</dt>
@@ -2360,8 +2378,8 @@ def _render_priority_row(summary: FacilityReviewSignalsSummary) -> str:
     field_text = (
         f"{summary.total_visit_count} total visits; {summary.complaint_visit_count} complaint visits; "
         f"{summary.citation_count} citation value(s); {summary.poc_date_count} POC date(s); "
-        f"last visit {_display_date(summary.last_visit_date) if summary.last_visit_date else 'not listed'}; status {_display_tuple(summary.statuses)}; "
-        f"capacity {_display_tuple(summary.capacities)}"
+        f"last visit {_display_date(summary.last_visit_date)}; status {_display_tuple(summary.statuses)}; "
+        f"capacity {_display_tuple(summary.capacities, kind='number')}"
     )
     facility_label = _safe_priority_text(summary.facility_name or summary.facility_number)
     return f"""          <tr>
@@ -2529,28 +2547,47 @@ def _normalized_text(value: str) -> str:
 
 
 def _display_value(value: str) -> str:
-    return value if value else "not listed"
+    return presentation_value(value).display_text
+
+
+def _record_display_value(
+    record: CcldFacilityLookupRecord,
+    field_name: str,
+    *,
+    kind: PresentationValueKind,
+) -> str:
+    source_present = getattr(record, f"{field_name}_source_present", None)
+    raw_value = getattr(record, field_name)
+    if source_present is not False and isinstance(raw_value, str) and ";" in raw_value:
+        return "; ".join(
+            presentation_value(value.strip(), kind=kind).display_text
+            for value in raw_value.split(";")
+        )
+    values = {} if source_present is False else {field_name: raw_value}
+    return presentation_value_for_field(values, field_name, kind=kind).display_text
 
 
 def _display_date(value: str) -> str:
-    try:
-        parsed = date.fromisoformat(value)
-    except ValueError:
-        return value
-    return f"{parsed:%m/%d/%Y}"
+    return presentation_value(value, kind="date").display_text
 
 
-def _display_tuple(values: tuple[str, ...]) -> str:
-    return "; ".join(values) if values else "not listed"
+def _display_tuple(
+    values: tuple[str, ...],
+    *,
+    kind: PresentationValueKind = "text",
+) -> str:
+    if not values:
+        return presentation_value().display_text
+    return "; ".join(presentation_value(value, kind=kind).display_text for value in values)
 
 
 def _display_date_tuple(values: tuple[str, ...]) -> str:
-    return "; ".join(_display_date(value) for value in values) if values else "not listed"
+    return _display_tuple(values, kind="date")
 
 
 def _render_source_dataset_labels(values: tuple[str, ...]) -> str:
     if not values:
-        return "not listed"
+        return presentation_value().display_text
     return "; ".join(_render_source_dataset_label(value) for value in values)
 
 

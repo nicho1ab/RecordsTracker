@@ -7,9 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ccld_complaints.aggregate_results import build_aggregate_result
+from ccld_complaints.presentation_values import presentation_value_for_field
 
 DEFAULT_REVIEW_BUNDLE_DIR = Path("data/processed/review-bundle")
-UNKNOWN_EXPORT_VALUE = "unknown"
 
 COMPLAINT_REVIEW_EXPORT_SQL = """
 SELECT
@@ -205,7 +205,12 @@ def _write_csv(
         writer = csv.writer(csv_file)
         writer.writerow(column_names)
         for row in rows:
-            writer.writerow([_export_value(row[column_name]) for column_name in column_names])
+            writer.writerow(
+                [
+                    _export_value(row[column_name], column_name=column_name)
+                    for column_name in column_names
+                ]
+            )
     traceability_columns = {
         column_name for column_name in column_names if column_name in {"source_url", "raw_sha256"}
     }
@@ -237,8 +242,12 @@ def _bundle_manifest(files: list[ReviewBundleFile]) -> dict[str, object]:
             }
         )
     return {
-        "manifest_version": 1,
+        "manifest_version": 2,
         "record_universe": "governed local SQLite review views",
+        "presentation_value_contract": (
+            "Stored values remain unchanged; CSV labels distinguish verified zero, "
+            "not provided, date not provided, unavailable, not applicable, and invalid states."
+        ),
         "date_dimension": "complaint_received_date",
         "query_start": None,
         "query_end": None,
@@ -248,10 +257,11 @@ def _bundle_manifest(files: list[ReviewBundleFile]) -> dict[str, object]:
     }
 
 
-def _export_value(value: object) -> object:
-    if value is None:
-        return UNKNOWN_EXPORT_VALUE
-    return value
+def _export_value(value: object, *, column_name: str = "value") -> object:
+    return presentation_value_for_field(
+        {column_name: value},
+        column_name,
+    ).export_text
 
 
 def _bundle_readme() -> str:
@@ -286,8 +296,8 @@ def _bundle_readme() -> str:
         ),
         (
             "- complaint_timeline_with_source_traceability.csv: complaint milestone dates "
-            "and extracted event dates with source traceability. Missing dates are unknown "
-            "in the derived dataset."
+            "and extracted event dates with source traceability. Missing dates use governed "
+            "date-state labels in the derived export."
         ),
         (
             "- field_source_traceability.csv: extracted values, source text, source section, "
@@ -320,7 +330,10 @@ def _bundle_readme() -> str:
             "- Use language such as \"flagged for review based on available extracted "
             "dates\" when discussing flagged records."
         ),
-        "- Unknown database values are exported as \"unknown\".",
+        (
+            "- Missing database values use field-aware labels such as \"Not provided\" "
+            "or \"Date not provided\"; verified numeric zero remains \"0\"."
+        ),
         "- Keep source URL and raw SHA-256 hash columns when sharing or citing review outputs.",
         (
             "- Facility pattern counts and timeline rows are screening aids over the derived "

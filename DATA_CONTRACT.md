@@ -25,6 +25,18 @@ verified zero is reserved for complete eligible coverage with an explicit cause.
 An explicit limit reports eligible and returned counts and truncation. An
 omitted limit means all eligible records.
 
+Reviewer presentation and governed CSV output use a shared value-state
+contract without changing the stored canonical value. The contract distinguishes
+present values, verified numeric zero, a present-but-blank source field, null,
+an absent field, an explicitly unavailable source, an explicitly not-applicable
+field, an explicitly undated value, an invalid value for the governed field
+type, and a field that is not collected for that record type. Reviewer text uses
+plain labels such as `Not provided`, `Not collected`, `Not available from
+source`, `Not applicable`, `Date not provided`, `Date not available`, and
+`Invalid source value`; internal state identifiers are not reviewer-facing.
+Valid dates remain ISO `YYYY-MM-DD` in storage and governed CSVs and display as
+`MM/DD/YYYY` in reviewer HTML. No missing or invalid state is converted to zero.
+
 Facility reference query projections preserve `Facility Address`,
 `FAC_DO_DESC`, and `RES_STREET_ADDR` source presence separately from normalized
 address and regional-office values. A present blank cell remains an empty

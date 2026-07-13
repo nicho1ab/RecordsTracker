@@ -15,6 +15,10 @@ from ccld_complaints.hosted_app.seeded_import import (
     hosted_import_batches,
     hosted_source_derived_records,
 )
+from ccld_complaints.presentation_values import (
+    PresentationValue,
+    presentation_values_for_record,
+)
 
 
 @dataclass(frozen=True)
@@ -46,6 +50,10 @@ class SourceDerivedRecordRead:
     original_values: Mapping[str, Any]
     source_traceability: Mapping[str, Any]
     import_batch: ImportBatchRead
+
+    @property
+    def original_value_presentations(self) -> Mapping[str, PresentationValue]:
+        return presentation_values_for_record(self.entity_type, self.original_values)
 
 
 @dataclass(frozen=True)

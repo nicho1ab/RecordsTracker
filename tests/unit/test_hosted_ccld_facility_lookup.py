@@ -104,13 +104,54 @@ def test_source_derived_facility_lookup_preserves_integer_capacity() -> None:
                     "facility_id": "ccld-facility-157806098",
                     "external_facility_number": "157806098",
                     "facility_name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
-                    "capacity": 48,
+                    "capacity": 0,
                 },
             },
         )
     )
 
-    assert source.records[0].capacity == "48"
+    assert source.records[0].capacity == "0"
+    assert source.records[0].capacity_source_present is True
+
+
+@pytest.mark.parametrize(
+    ("capacity", "capacity_present", "closed_date", "closed_present", "expected"),
+    [
+        ("0", True, "2026-07-13", True, ("0", "07/13/2026")),
+        ("", True, "not-a-date", True, ("Not provided", "Invalid source value")),
+        ("", False, "", False, ("Not collected", "Not collected")),
+    ],
+)
+def test_facility_directory_values_use_governed_value_states(
+    capacity: str,
+    capacity_present: bool,
+    closed_date: str,
+    closed_present: bool,
+    expected: tuple[str, str],
+) -> None:
+    record = CcldFacilityLookupRecord(
+        facility_number="157806098",
+        facility_name="Example Facility",
+        city="Sacramento",
+        state="CA",
+        county="Sacramento",
+        zip_code="95814",
+        facility_type="Child Care Center",
+        program_type="Child Care",
+        capacity=capacity,
+        status="Licensed",
+        closed_date=closed_date,
+        capacity_source_present=capacity_present,
+        closed_date_source_present=closed_present,
+    )
+
+    html = facility_lookup._render_facility_directory_details(record)  # noqa: SLF001
+
+    assert expected[0] in html
+    assert expected[1] in html
+    assert "not-a-date" not in html
+    assert "present_blank" not in html
+    assert "source_unavailable" not in html
 
 
 class _DefinitionTermParser(HTMLParser):
@@ -290,6 +331,8 @@ def test_ccld_facility_reference_loads_safe_lookup_columns() -> None:
         address="100 Example Way",
         regional_office="South Regional Office",
         facility_address="100 Example Way",
+        capacity_source_present=True,
+        closed_date_source_present=True,
     )
     assert {record.facility_number for record in records} == {"900000001", "900000002"}
 
@@ -1177,7 +1220,7 @@ def test_ccld_facility_review_hub_renders_signal_only_context_without_mutation(
     assert "Review next" in html
     assert "Open loaded records in this suggested order" in html
     assert "Finding: Unsubstantiated; reviewer status: Not started" in html
-    assert "Recent activity 2022-08-26" in html
+    assert "Recent activity 08/26/2022" in html
     assert "No reviewer-created status recorded yet." in html
     assert "Source traceability available for detail review." in html
     assert "Open reviewer detail for 32-CR-20220407124448" in html
@@ -1294,7 +1337,7 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
         in html
     )
     assert "Finding: Unsubstantiated; reviewer status: Not started" in html
-    assert "Recent activity 2022-08-26" in html
+    assert "Recent activity 08/26/2022" in html
     assert "No reviewer-created status recorded yet." in html
     assert "Source traceability available for detail review." in html
     assert "Open reviewer detail for 32-CR-20220407124448" in html
@@ -1354,7 +1397,7 @@ def test_ccld_facility_review_hub_review_next_cautious_reason_rows() -> None:
             CcldReviewNextRecommendation(
                 label="32-CR-REVIEW-NEXT",
                 finding_status_cue="Finding: Substantiated; reviewer status: Needs follow-up",
-                date_label="Recent activity 2026-01-31",
+                date_label="Recent activity 01/31/2026",
                 detail_href="/reviewer/records/detail?source%5Frecord%5Fkey=encoded-record",
                 reasons=(
                     "Reviewer-created status is Needs follow-up, not reviewed.",
@@ -1377,7 +1420,7 @@ def test_ccld_facility_review_hub_review_next_cautious_reason_rows() -> None:
     assert "Review next" in html
     assert "32-CR-REVIEW-NEXT" in html
     assert "Finding: Substantiated; reviewer status: Needs follow-up" in html
-    assert "Recent activity 2026-01-31" in html
+    assert "Recent activity 01/31/2026" in html
     assert "Reviewer-created status is Needs follow-up, not reviewed." in html
     assert "Source-derived finding is substantiated." in html
     assert "Type A citation cue loaded; verify wording in the source record." in html

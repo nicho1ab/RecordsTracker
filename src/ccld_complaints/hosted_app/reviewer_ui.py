@@ -88,6 +88,14 @@ from ccld_complaints.hosted_app.source_derived_routes import (
     route_source_derived_api_response,
 )
 from ccld_complaints.hosted_app.ui_shell import render_page_shell
+from ccld_complaints.presentation_values import (
+    NOT_APPLICABLE,
+    SOURCE_UNAVAILABLE,
+    PresentationValue,
+    PresentationValueKind,
+    presentation_value,
+    presentation_value_for_field,
+)
 
 REVIEWER_UI_PREFIX = "/reviewer"
 REVIEWER_UI_RECORDS_PATH = f"{REVIEWER_UI_PREFIX}/records"
@@ -1086,7 +1094,7 @@ def _facility_priority_activity_date(
 
 
 def _looks_like_iso_date(value: str) -> bool:
-    return len(value) == 10 and value[4] == "-" and value[7] == "-"
+    return _validated_iso_date_or_none(value) is not None
 
 
 def _facility_priority_complaint_sort_key(
@@ -1322,7 +1330,7 @@ def _render_facility_priorities(
         <section class="quiet-section" aria-labelledby="facility-priorities-decision-heading">
           <h2 id="facility-priorities-decision-heading">Find facilities that may deserve review first</h2>
           <p>This reviewer worklist aggregates authorized loaded complaint records by stable source-derived facility identity and shows the source-derived factors that surfaced each facility. It does not use a hidden score, machine learning, or unsupported legal conclusions.</p>
-          <p>Counts are based on deduplicated complaint identities in the loaded corpus available to this reviewer. Missing values are shown as unknown, and missing source links are identified rather than silently omitted.</p>
+          <p>Counts are based on deduplicated complaint identities in the loaded corpus available to this reviewer. Missing and unavailable values use explicit labels, and missing source links are identified rather than silently omitted.</p>
         </section>
 {filter_markup}
 {aggregate_context}
@@ -1459,12 +1467,12 @@ def _render_facility_priority_row(summary: FacilityPrioritySummary) -> str:
             )
             source_link = f'<a href="{_escape(next_complaint.source_url_href)}">Open original public report{_escape(suffix)}</a>'
     return f"""        <tr>
-          <th scope="row">{_escape(summary.facility_name)}<br><span class="helper-text">Facility ID: {_escape(summary.facility_number)}</span></th>
-          <td>{_escape(summary.facility_type)}</td>
-          <td>{_escape(summary.geography)}</td>
+          <th scope="row">{_escape(_reviewer_value_text(summary.facility_name))}<br><span class="helper-text">Facility ID: {_escape(_reviewer_value_text(summary.facility_number))}</span></th>
+          <td>{_escape(_reviewer_value_text(summary.facility_type))}</td>
+          <td>{_escape(_reviewer_value_text(summary.geography))}</td>
           <td>{summary.complaint_count}</td>
           <td>{summary.substantiated_count}</td>
-          <td>{_escape(_detail_display_date(summary.recent_activity_date) if summary.recent_activity_date else "unknown")}</td>
+          <td>{_escape(_reviewer_value_text(summary.recent_activity_date, kind="date"))}</td>
           <td>
             <ul class="compact-list">
 {factors}
@@ -1954,7 +1962,11 @@ def _render_aggregate_context(
         f"{query_start or 'earliest loaded date'} through "
         f"{query_end or 'latest loaded date'}"
     )
-    value_text = "Unavailable" if result.value is None else str(result.value)
+    value_text = presentation_value(
+        result.value,
+        kind="number",
+        source_available=result.status not in {"unavailable", "error"},
+    ).display_text
     return f"""        <section class="quiet-section aggregate-context" aria-labelledby="aggregate-context-heading">
           <h2 id="aggregate-context-heading">Result scope</h2>
           <dl class="summary-list">
@@ -1985,7 +1997,7 @@ def _render_facility_trend_period(period: FacilityTrendPeriod) -> str:
     previous = (
         str(period.preceding_complaint_count)
         if period.preceding_complaint_count is not None
-        else "not available"
+        else NOT_APPLICABLE
     )
     return f"""              <tr>
                 <th scope="row">{_detail_display_date(period.period_start.isoformat())}–{_detail_display_date(period.period_end.isoformat())}</th>
@@ -2454,16 +2466,16 @@ def _render_serious_topic_row(item: Mapping[str, str]) -> str:
         else item["matched_fields"]
     )
     return f"""        <tr>
-          <th scope="row">{_escape(item['facility_display'])}</th>
+          <th scope="row">{_escape(_reviewer_value_text(item['facility_display']))}</th>
           <td>{_copyable_value("Facility ID", item['facility_number'])}</td>
-          <td>{_escape(item['complaint_date_display'])}</td>
-          <td>{_escape(item['finding_value'])}</td>
+          <td>{_escape(_reviewer_value_text(item['complaint_date_display']))}</td>
+          <td>{_escape(_reviewer_value_text(item['finding_value']))}</td>
           <td>{_escape(item['category_labels'])}</td>
           <td>{_escape(item['match_bases'])}</td>
           <td>{_escape(matched)}</td>
-          <td>{_escape(item['source_categories'])}</td>
-          <td>{_escape(item['facility_type'])}</td>
-          <td>{_escape(item['geography'])}</td>
+          <td>{_escape(_reviewer_value_text(item['source_categories']))}</td>
+          <td>{_escape(_reviewer_value_text(item['facility_type']))}</td>
+          <td>{_escape(_reviewer_value_text(item['geography']))}</td>
           <td>{_serious_topic_source_link(item)}</td>
           <td><a class="button" href="{_escape(item['detail_href'])}">Open complaint review workspace</a></td>
         </tr>"""
@@ -2944,7 +2956,9 @@ def _substantiated_date_context(values: Mapping[str, Any]) -> str:
         raw_value = values.get(key)
         if not _has_display_value(raw_value):
             continue
-        parts.append(f"{label}: {_display_value(raw_value)}")
+        parts.append(
+            f"{label}: {presentation_value_for_field(values, key).display_text}"
+        )
     if parts:
         return "; ".join(parts)
     return "No complaint/report date context available in currently loaded records."
@@ -2982,9 +2996,7 @@ def _substantiated_complaint_date(
 
 
 def _substantiated_date_display(value: str) -> str:
-    if not value or value == "unknown":
-        return "Not available in loaded record"
-    return _queue_display_date(value)
+    return presentation_value(value, kind="date").display_text
 
 
 def _substantiated_finding_value(finding_label: str) -> str:
@@ -3280,13 +3292,13 @@ def _render_substantiated_triage(
     else:
         rows = "\n".join(
             f"""        <tr>
-          <th scope=\"row\">{_escape(item['facility_display'])}</th>
+          <th scope=\"row\">{_escape(_reviewer_value_text(item['facility_display']))}</th>
           <td>{_copyable_value("Facility ID", item['facility_number'])}</td>
-          <td>{_escape(item['complaint_date_display'])}</td>
-          <td>{_escape(item['finding_value'])}</td>
-          <td>{_escape(item['category_or_summary'])}</td>
-          <td>{_escape(item['facility_type'])}</td>
-          <td>{_escape(item['geography'])}</td>
+          <td>{_escape(_reviewer_value_text(item['complaint_date_display']))}</td>
+          <td>{_escape(_reviewer_value_text(item['finding_value']))}</td>
+          <td>{_escape(_reviewer_value_text(item['category_or_summary']))}</td>
+          <td>{_escape(_reviewer_value_text(item['facility_type']))}</td>
+          <td>{_escape(_reviewer_value_text(item['geography']))}</td>
           <td>
             {_substantiated_source_link(item)}
           </td>
@@ -3617,6 +3629,10 @@ def _source_derived_read_payload(record: SourceDerivedRecordRead) -> dict[str, A
         "connector_version": record.connector_version,
         "retrieved_at": record.retrieved_at,
         "original_values": dict(record.original_values),
+        "original_value_presentations": {
+            key: value.to_dict()
+            for key, value in record.original_value_presentations.items()
+        },
         "source_traceability": dict(record.source_traceability),
         "import_batch": {
             "import_batch_id": record.import_batch.import_batch_id,
@@ -3745,8 +3761,8 @@ def _empty_substantiated_row(
     return_context: CcldQueueReturnContext,
     metadata: Mapping[str, str] | None = None,
 ) -> dict[str, str]:
-    return {key: "" for key in _substantiated_fieldnames()} | {
-        "Facility/License Number": return_context.facility_number or "",
+    return {key: NOT_APPLICABLE for key in _substantiated_fieldnames()} | {
+        "Facility/License Number": return_context.facility_number or NOT_APPLICABLE,
     } | dict(metadata or {})
 
 
@@ -3867,9 +3883,9 @@ def _aggregate_export_metadata(aggregate: AggregateResult) -> dict[str, str]:
         "Exported Count": str(aggregate.returned_count),
         "Source Coverage Count": str(aggregate.source_coverage_count),
         "Source Unavailable Count": str(aggregate.source_unavailable_count),
-        "Query Start": aggregate.query_start or "",
-        "Query End": aggregate.query_end or "",
-        "Explicit Limit": "" if aggregate.limit is None else str(aggregate.limit),
+        "Query Start": aggregate.query_start or NOT_APPLICABLE,
+        "Query End": aggregate.query_end or NOT_APPLICABLE,
+        "Explicit Limit": NOT_APPLICABLE if aggregate.limit is None else str(aggregate.limit),
         "Truncated": "yes" if aggregate.truncated else "no",
         "Result Status": aggregate.status,
         "Result Cause": aggregate.cause,
@@ -3912,20 +3928,36 @@ def _substantiated_row_for_record(
         except Exception:
             pass
     return {
-        "Facility Name": facility_name,
-        "Facility/License Number": _complaint_export_row_facility_number(source_record, return_context),
-        "Complaint Received Date": _optional_string(original_values, "complaint_received_date"),
-        "First Investigation Activity Date": _optional_string(original_values, "first_investigation_activity_date"),
+        "Facility Name": presentation_value(facility_name).export_text,
+        "Facility/License Number": presentation_value(
+            _complaint_export_row_facility_number(source_record, return_context)
+        ).export_text,
+        "Complaint Received Date": _export_field(original_values, "complaint_received_date"),
+        "First Investigation Activity Date": _export_field(
+            original_values, "first_investigation_activity_date"
+        ),
         "Date Dimension": date_dimension_label(date_dimension),
-        "Selected Date": _substantiated_complaint_date(original_values, date_dimension),
-        "Report Date": _optional_string(original_values, "report_date"),
-        "Visit Date": _optional_string(original_values, "visit_date"),
-        "Date Signed": _optional_string(original_values, "date_signed"),
-        "Finding/Status": _optional_string(original_values, "finding"),
-        "Complaint Control Number": _optional_string(original_values, "complaint_control_number"),
-        "Source Report URL": _optional_string(source_document, "source_url"),
+        "Selected Date": presentation_value(
+            _substantiated_complaint_date(original_values, date_dimension),
+            kind="date",
+        ).export_text,
+        "Report Date": _export_field(original_values, "report_date"),
+        "Visit Date": _export_field(original_values, "visit_date"),
+        "Date Signed": _export_field(original_values, "date_signed"),
+        "Finding/Status": _export_field(original_values, "finding"),
+        "Complaint Control Number": _export_field(
+            original_values, "complaint_control_number"
+        ),
+        "Source Report URL": _export_field(
+            source_document,
+            "source_url",
+            source_available=_source_url_available(source_document),
+        ),
         "Source Traceability Status": _source_traceability_cue(source_document),
-        "Serious Review Cue": _serious_review_cue(source_record, related_records),
+        "Serious Review Cue": (
+            _serious_review_cue(source_record, related_records)
+            or "No serious review cue"
+        ),
         "Reviewer-created status": _latest_status_label_text(summary),
         "Reviewer-created note present": "yes" if _summary_int(summary, "note_count") > 0 else "no",
     }
@@ -4243,14 +4275,14 @@ def _matrix_review_guidance_text() -> str:
 
 def _empty_matrix_row(return_context: CcldQueueReturnContext) -> dict[str, str]:
     return {
-        key: ""
+        key: NOT_APPLICABLE
         for key in _matrix_fieldnames()
     } | {
         "matrix_status": "No loaded complaint records matched this facility/date context.",
         "review_guidance": _matrix_review_guidance_text(),
-        "facility_number": return_context.facility_number or "",
-        "request_start_date": return_context.start_date or "",
-        "request_end_date": return_context.end_date or "",
+        "facility_number": return_context.facility_number or NOT_APPLICABLE,
+        "request_start_date": return_context.start_date or NOT_APPLICABLE,
+        "request_end_date": return_context.end_date or NOT_APPLICABLE,
         "loaded_local_test_record_indicator": "no",
     }
 
@@ -4274,29 +4306,44 @@ def _matrix_row_for_record(
     return {
         "matrix_status": "loaded complaint record",
         "review_guidance": _matrix_review_guidance_text(),
-        "facility_number": return_context.facility_number or _optional_string(identity, "facility_id"),
-        "facility_name": _facility_context_value(facility, "facility_name"),
-        "request_start_date": return_context.start_date or "",
-        "request_end_date": return_context.end_date or "",
+        "facility_number": presentation_value(
+            return_context.facility_number or _optional_string(identity, "facility_id")
+        ).export_text,
+        "facility_name": presentation_value(
+            _facility_context_value(facility, "facility_name")
+        ).export_text,
+        "request_start_date": return_context.start_date or NOT_APPLICABLE,
+        "request_end_date": return_context.end_date or NOT_APPLICABLE,
         "source_record_key": source_record_key,
-        "complaint_number": _optional_string(original_values, "complaint_control_number"),
-        "complaint_date": _optional_string(original_values, "complaint_received_date"),
-        "first_investigation_activity_date": _optional_string(original_values, "first_investigation_activity_date"),
+        "complaint_number": _export_field(original_values, "complaint_control_number"),
+        "complaint_date": _export_field(original_values, "complaint_received_date"),
+        "first_investigation_activity_date": _export_field(
+            original_values, "first_investigation_activity_date"
+        ),
         "date_dimension": date_dimension_label(date_dimension),
-        "selected_date": _substantiated_complaint_date(original_values, date_dimension),
-        "visit_date": _optional_string(original_values, "visit_date"),
-        "report_date": _optional_string(original_values, "report_date"),
-        "date_signed": _optional_string(original_values, "date_signed"),
+        "selected_date": presentation_value(
+            _substantiated_complaint_date(original_values, date_dimension),
+            kind="date",
+        ).export_text,
+        "visit_date": _export_field(original_values, "visit_date"),
+        "report_date": _export_field(original_values, "report_date"),
+        "date_signed": _export_field(original_values, "date_signed"),
         "allegation_categories": _matrix_allegation_categories(related_records),
-        "finding_or_resolution": _optional_string(original_values, "finding"),
+        "finding_or_resolution": _export_field(original_values, "finding"),
         "source_label": _matrix_source_label(source_document),
-        "source_url": _optional_string(source_document, "source_url"),
+        "source_url": _export_field(
+            source_document,
+            "source_url",
+            source_available=_source_url_available(source_document),
+        ),
         "source_traceability_status": _source_traceability_cue(source_document),
         "missing_field_cues": _matrix_missing_field_cues(original_values, source_document),
         "loaded_local_test_record_indicator": "yes",
         "reviewer_created_status": _latest_status_label_text(summary),
         "reviewer_created_note_present": "yes" if _summary_int(summary, "note_count") > 0 else "no",
-        "reviewer_created_last_updated": _summary_optional_string(summary, "latest_created_at") or "",
+        "reviewer_created_last_updated": (
+            _summary_optional_string(summary, "latest_created_at") or NOT_APPLICABLE
+        ),
     }
 
 
@@ -4308,7 +4355,7 @@ def _matrix_allegation_categories(related_records: list[Mapping[str, Any]]) -> s
             category = _display_value(values.get("allegation_category"))
             if category and category != "unknown":
                 categories.append(category)
-    return "; ".join(dict.fromkeys(categories))
+    return "; ".join(dict.fromkeys(categories)) or "Not collected"
 
 
 def _matrix_source_label(source_document: Mapping[str, Any]) -> str:
@@ -4317,7 +4364,10 @@ def _matrix_source_label(source_document: Mapping[str, Any]) -> str:
         _optional_string(source_document, "document_type"),
         _optional_string(source_document, "source_document_id"),
     ]
-    return "; ".join(part for part in parts if part and part != "unknown")
+    return (
+        "; ".join(part for part in parts if part and part != "unknown")
+        or SOURCE_UNAVAILABLE
+    )
 
 
 def _matrix_missing_field_cues(
@@ -6438,7 +6488,7 @@ def _packet_traceability_counts(records: list[Mapping[str, Any]]) -> dict[str, i
     }
     for item in records:
         source_document = _mapping(_mapping(item, "source_record"), "source_document")
-        has_source_url = _has_display_value(source_document.get("source_url"))
+        has_source_url = _source_url_available(source_document)
         has_raw_sha = _has_display_value(source_document.get("raw_sha256"))
         has_connector_retrieval = _has_display_value(source_document.get("connector_name")) and _has_display_value(source_document.get("retrieved_at"))
         if has_source_url:
@@ -7032,7 +7082,7 @@ def _render_quick_review_cards(
     card_markup = "\n".join(
         f"""        <a class="quick-review-card" href="{href}">
           <span class="stage-kicker">{_escape(label)}</span>
-          <strong>{_escape(value)}</strong>
+          <strong>{_reviewer_value_markup(value, term_id=f"quick-review-{label}")}</strong>
           <span>{_escape(action)}</span>
         </a>"""
         for label, value, action, href in cards
@@ -7085,10 +7135,11 @@ def _render_top_facility_fact_strip(
 
 
 def _copyable_value(label: str, value: str) -> str:
-    if not value or value == "unknown":
-        return _escape(value or "unknown")
+    presented = presentation_value(value)
+    if presented.state not in {"present", "verified_zero"}:
+        return _presentation_markup(presented, f"copyable-{label}")
     if label not in {"Complaint/control number", "Facility ID"}:
-        return _escape(value)
+        return _escape(presented.display_text)
     accessible_label = _copy_button_label(label)
     return (
         f'<span class="copyable-value">{_escape(value)}'
@@ -7463,13 +7514,23 @@ def _source_traceability_cue(source_document: Mapping[str, Any]) -> str:
 
 
 def _source_availability_label(source_document: Mapping[str, Any]) -> str:
-    if _has_display_value(source_document.get("source_url")):
+    if _source_url_available(source_document):
         return "CCLD source available"
     return "Source not available"
 
 
+def _source_url_available(source_document: Mapping[str, Any]) -> bool:
+    source_url = source_document.get("source_url")
+    return (
+        isinstance(source_url, str)
+        and bool(source_url.strip())
+        and source_url.strip().casefold()
+        not in {"unknown", "unavailable", "not available", "source unavailable"}
+    )
+
+
 def _packet_source_record_cue(source_document: Mapping[str, Any]) -> str:
-    if _has_display_value(source_document.get("source_url")):
+    if _source_url_available(source_document):
         return "CCLD source record available."
     if _has_visible_traceability_document(source_document):
         return "Loaded source cue available; open reviewer detail for the CCLD source record when needed."
@@ -7552,7 +7613,7 @@ def _missing_first_activity_warning(original_values: Mapping[str, Any]) -> bool:
 def _source_unavailable_for_queue_item(item: Mapping[str, Any]) -> bool:
     source_record = _mapping(item, "source_record")
     source_document = _mapping(source_record, "source_document")
-    return not _has_display_value(source_document.get("source_url"))
+    return not _source_url_available(source_document)
 
 
 def _render_review_flag_chips(
@@ -7644,7 +7705,7 @@ def _source_warning_labels(
     warnings: list[str] = []
     if not _has_visible_traceability_document(source_document):
         warnings.append("Source unavailable")
-    if not _has_display_value(source_document.get("source_url")):
+    if not _source_url_available(source_document):
         warnings.append("Source link unavailable")
     if _missing_first_activity_warning(original_values):
         warnings.append("Missing first activity")
@@ -7938,7 +7999,7 @@ def _render_complaint_overview_card(
 
 
 def _source_availability_chip(source_document: Mapping[str, Any]) -> str:
-    if _has_display_value(source_document.get("source_url")):
+    if _source_url_available(source_document):
         return '<span class="review-chip source-chip">CCLD source available</span>'
     return ""
 
@@ -8558,12 +8619,12 @@ def _detail_date_flag_summary(original_values: Mapping[str, Any]) -> str:
 
 def _render_key_date_cards(original_values: Mapping[str, Any]) -> str:
     cards = "\n".join(
-        f"        <div class=\"stat-card\"><strong>{_escape(value)}</strong><span>{_escape(label)}</span></div>"
-        for label, value in (
-            ("Complaint received", _optional_string(original_values, "complaint_received_date")),
-            ("Visit", _optional_string(original_values, "visit_date")),
-            ("Report", _optional_string(original_values, "report_date")),
-            ("Signed", _optional_string(original_values, "date_signed")),
+        _render_key_date_card(original_values, label, field_name)
+        for label, field_name in (
+            ("Complaint received", "complaint_received_date"),
+            ("Visit", "visit_date"),
+            ("Report", "report_date"),
+            ("Signed", "date_signed"),
         )
     )
     return f"""<section aria-labelledby="key-dates-heading">
@@ -8572,6 +8633,19 @@ def _render_key_date_cards(original_values: Mapping[str, Any]) -> str:
 {cards}
       </div>
     </section>"""
+
+
+def _render_key_date_card(
+    original_values: Mapping[str, Any],
+    label: str,
+    field_name: str,
+) -> str:
+    presented = presentation_value_for_field(original_values, field_name)
+    return (
+        '        <div class="stat-card"><strong>'
+        f'{_presentation_markup(presented, f"key-date-{field_name}")}'
+        f"</strong><span>{_escape(label)}</span></div>"
+    )
 
 
 def _render_detail_first_run_steps(
@@ -8706,7 +8780,7 @@ def _render_record_summary_section(
 def _render_fact_item(label: str, value: str) -> str:
     return f"""        <div class="fact-card">
           <dt>{_escape(label)}</dt>
-          <dd>{_escape(value)}</dd>
+          <dd>{_reviewer_value_markup(value, term_id=f"fact-{label}")}</dd>
         </div>"""
 
 
@@ -8790,16 +8864,16 @@ def _render_complaint_timeline_section(
 
 def _source_action_link(source_document: Mapping[str, Any]) -> str:
     source_url = source_document.get("source_url")
-    if _has_display_value(source_url):
+    if _source_url_available(source_document):
         return f'<a class="button" href="{_escape(str(source_url))}">Open CCLD source record</a>'
     return '<span class="button button-disabled" aria-disabled="true">Source not available</span>'
 
 
 def _timeline_first_activity_value(original_values: Mapping[str, Any]) -> str:
-    value = original_values.get("first_investigation_activity_date")
-    if _has_display_value(value):
-        return _detail_display_date(_display_value(value))
-    return "Not available"
+    return presentation_value_for_field(
+        original_values,
+        "first_investigation_activity_date",
+    ).display_text
 
 
 def _timeline_first_activity_note(original_values: Mapping[str, Any]) -> str:
@@ -9071,17 +9145,17 @@ def _render_report_date_proxy_confidence_row(values: Mapping[str, Any]) -> str:
 
 
 def _source_confidence_cue(value: object) -> str:
-    if _has_display_value(value):
+    presented = presentation_value(value)
+    if presented.state in {"present", "verified_zero"}:
         return "Present in this source-derived record."
-    return "Not available in this record."
+    return presented.explanation
 
 
 def _source_confidence_value(value: object) -> str:
-    if not _has_display_value(value):
-        return "not available in this record"
-    if isinstance(value, bool):
-        return "yes" if value else "no"
-    return _display_value(value)
+    return presentation_value(
+        value,
+        kind="boolean" if isinstance(value, bool) else "text",
+    ).display_text
 
 
 def _render_source_traceability_section(
@@ -9128,7 +9202,7 @@ def _render_source_traceability_section(
 
 def _source_link_markup(source_document: Mapping[str, Any]) -> str:
     source_url = source_document.get("source_url")
-    if _has_display_value(source_url):
+    if _source_url_available(source_document):
         return f'<a href="{_escape(str(source_url))}">Open CCLD source record</a>'
     return "Source link not available in this loaded record."
 
@@ -9146,7 +9220,7 @@ def _traceability_level_label(
 ) -> str:
     if _has_visible_traceability_document(source_document) and source_traceability:
         return "Field-level available"
-    if _has_display_value(source_document.get("source_url")):
+    if _source_url_available(source_document):
         return "Source link available"
     return "Limited in loaded record"
 
@@ -10176,19 +10250,11 @@ def _detail_date_summary(values: Mapping[str, Any]) -> str:
 
 
 def _detail_display_date(value: str) -> str:
-    if not value or value == "unknown":
-        return value
-    try:
-        parsed = datetime.strptime(value[:10], "%Y-%m-%d")
-    except ValueError:
-        return value
-    return parsed.strftime("%m/%d/%Y")
+    return presentation_value(value, kind="date").display_text
 
 
 def _detail_timeline_date(value: str) -> str:
-    if not value or value == "unknown":
-        return "Not available"
-    return _detail_display_date(value)
+    return presentation_value(value, kind="date").display_text
 
 
 def _has_display_value(value: object) -> bool:
@@ -10874,10 +10940,11 @@ def _render_original_value_rows(original_values: Mapping[str, Any]) -> str:
             continue
         value = original_values[key]
         if isinstance(value, str | int | float | bool) or value is None:
+            presented = presentation_value_for_field(original_values, key)
             rows.append(
                 f"""          <tr>
             <th scope="row">{_escape(key)}</th>
-            <td>{_escape(_display_value(value))}</td>
+            <td>{_presentation_markup(presented, f"original-{key}")}</td>
           </tr>"""
             )
     if not rows:
@@ -10998,6 +11065,72 @@ def _display_value(value: object) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
     return str(value)
+
+
+def _reviewer_value_text(
+    value: object,
+    *,
+    kind: PresentationValueKind = "text",
+    source_available: bool = True,
+    applicable: bool = True,
+    supported: bool = True,
+) -> str:
+    return presentation_value(
+        value,
+        kind=kind,
+        source_available=source_available,
+        applicable=applicable,
+        supported=supported,
+    ).display_text
+
+
+def _reviewer_value_markup(
+    value: object,
+    *,
+    kind: PresentationValueKind = "text",
+    term_id: str,
+    source_available: bool = True,
+    applicable: bool = True,
+    supported: bool = True,
+) -> str:
+    return _presentation_markup(
+        presentation_value(
+            value,
+            kind=kind,
+            source_available=source_available,
+            applicable=applicable,
+            supported=supported,
+        ),
+        term_id,
+    )
+
+
+def _presentation_markup(value: PresentationValue, term_id: str) -> str:
+    if value.state in {"present", "verified_zero"}:
+        return _escape(value.display_text)
+    normalized_term_id = re.sub(r"[^a-z0-9]+", "-", term_id.casefold()).strip("-")
+    return _glossary_term(
+        value.display_text,
+        value.explanation,
+        normalized_term_id or "value-state",
+    )
+
+
+def _export_field(
+    values: Mapping[str, Any],
+    field_name: str,
+    *,
+    kind: PresentationValueKind | None = None,
+    source_available: bool = True,
+    applicable: bool = True,
+) -> str:
+    return presentation_value_for_field(
+        values,
+        field_name,
+        kind=kind,
+        source_available=source_available,
+        applicable=applicable,
+    ).export_text
 
 
 def _escape(value: str) -> str:
