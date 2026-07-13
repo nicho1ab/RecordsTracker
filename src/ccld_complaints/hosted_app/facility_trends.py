@@ -29,12 +29,14 @@ class FacilityTrendComplaint:
     substantiated: bool
     serious_topics: tuple[str, ...]
     detail_href: str
+    source_available: bool = True
 
 
 @dataclass(frozen=True)
 class FacilityTrendFilters:
     start_date: date | None = None
     end_date: date | None = None
+    date_dimension: str = "complaint_received_date"
     facility: str = ""
     facility_type: str = ""
     geography: str = ""

@@ -1,5 +1,18 @@
 # Known Limitations
 
+- Reviewer aggregates report their loaded-record universe, denominator,
+  selected date dimension/range, source coverage, and explicit zero,
+  unavailable, partial, or truncated cause. These counts describe authorized
+  loaded records only; they do not prove statewide or public-source completeness.
+- Source-derived list reads and complaint exports have no implicit 100-row cap.
+  A caller-requested limit reports eligible count, returned count, and
+  truncation status. Ordinary reviewer pagination remains presentation paging,
+  not an aggregate completeness claim.
+- Complaint received date and first investigation activity date are distinct
+  range dimensions. Existing PostgreSQL rows still require governed artifact
+  regeneration and reimport to receive newly populated issue #447 values. No
+  complete safe production refresh command exists.
+
 - The public portal remains the public source of record.
 - Extracted data is a derived dataset and may contain extraction errors.
 - Public source reports may be incomplete, corrected later, or removed.

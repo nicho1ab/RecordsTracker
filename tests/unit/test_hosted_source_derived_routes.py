@@ -48,7 +48,15 @@ def test_source_derived_api_lists_authorized_staged_records() -> None:
 
     assert status == 200
     assert content_type == "application/json; charset=utf-8"
-    assert payload["pagination"] == {"limit": 100, "offset": 0, "returned_count": 7}
+    assert payload["pagination"] == {
+        "limit": None,
+        "offset": 0,
+        "returned_count": 7,
+        "eligible_count": 7,
+        "truncated": False,
+        "status": "available",
+        "cause": "The result includes every eligible record in the selected range.",
+    }
     assert payload["filters"] == {"entity_type": None}
     complaint = next(
         record for record in payload["records"] if record["entity_type"] == "complaint"
@@ -112,7 +120,15 @@ def test_source_derived_api_supports_entity_filter_and_paging() -> None:
 
     assert status == 200
     assert payload["filters"] == {"entity_type": "allegation"}
-    assert payload["pagination"] == {"limit": 1, "offset": 1, "returned_count": 1}
+    assert payload["pagination"] == {
+        "limit": 1,
+        "offset": 1,
+        "returned_count": 1,
+        "eligible_count": 1,
+        "truncated": False,
+        "status": "available",
+        "cause": "The result includes every eligible record in the selected range.",
+    }
     assert [record["stable_source_id"] for record in payload["records"]] == [
         "ccld:allegation:32-CR-20220407124448:2"
     ]

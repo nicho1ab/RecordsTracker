@@ -287,6 +287,9 @@ def test_ccld_facility_reference_loads_safe_lookup_columns() -> None:
         capacity="24",
         status="Licensed",
         closed_date="",
+        address="100 Example Way",
+        regional_office="South Regional Office",
+        facility_address="100 Example Way",
     )
     assert {record.facility_number for record in records} == {"900000001", "900000002"}
 
@@ -526,6 +529,7 @@ def test_active_ccld_facility_reference_loads_cdss_chhs_facility_directory_shape
                 "COUNTY": "Marin",
                 "FAC_TYPE_DESC": "DAY CARE CENTER",
                 "RES_STREET_ADDR": "40 JOHN STREET",
+                "FAC_DO_DESC": "North Bay",
                 "FAC_PHONE_NBR": "7078782214",
                 "FAC_LATITUDE": "38.24546602",
                 "FAC_LONGITUDE": "-122.901353",
@@ -551,6 +555,11 @@ def test_active_ccld_facility_reference_loads_cdss_chhs_facility_directory_shape
     assert record.capacity == "24"
     assert record.status == "3"
     assert record.closed_date == ""
+    assert record.address == "40 JOHN STREET"
+    assert record.regional_office == "North Bay"
+    assert record.facility_address is None
+    assert record.fac_do_desc == "North Bay"
+    assert record.res_street_addr == "40 JOHN STREET"
 
 
 def test_cdss_chhs_facility_directory_searches_supported_fields(

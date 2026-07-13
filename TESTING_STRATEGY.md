@@ -1,5 +1,21 @@
 # Testing Strategy
 
+## Aggregate readiness
+
+Aggregate and export changes test positive, verified-zero, unavailable,
+partial-source, outside-range, first-investigation-activity range, more-than-100,
+explicit-limit, no-limit, present-blank, and source-unavailable cases. Tests
+reconcile eligible and returned counts, prove that unavailable is not numeric
+zero, and exercise both SQLite execution and PostgreSQL-style result mapping.
+
+Generate focused local evidence with:
+
+```powershell
+.\.venv\Scripts\python.exe -m ccld_complaints.aggregate_readiness_evidence --mode local --output-dir <path>
+```
+
+Generated evidence is aggregate-safe and must not be committed.
+
 ## Test categories
 
 ### Unit tests

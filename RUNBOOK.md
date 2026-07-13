@@ -63,6 +63,30 @@ operator-controlled reimport. Existing facility-reference rows require the
 additive migration followed by the documented preload dry-run and apply steps.
 Do not substitute a reset, startup backfill, or partial ad hoc update.
 
+## Generate aggregate-readiness evidence
+
+Write the aggregate-safe local packet to an ignored or external directory:
+
+```powershell
+.\.venv\Scripts\python.exe -m ccld_complaints.aggregate_readiness_evidence --mode local --output-dir <path>
+```
+
+Runtime-compatible form:
+
+```powershell
+python -m ccld_complaints.aggregate_readiness_evidence --mode runtime --output-dir <path>
+```
+
+The packet records denominator, date range/dimension, source coverage, zero,
+unavailable, partial, explicit-limit, and no-limit behavior without record
+identifiers or source bodies. Local mode executes temporary SQLite aggregates
+and compiles the exercised statement shape for PostgreSQL. Runtime mode reports
+implementation capability separately from actual runtime inspection and must
+not be described as production validation unless its manifest says a real
+production-style store was inspected. Existing PostgreSQL rows still require
+governed regeneration and reimport, and no complete safe production refresh
+command currently exists.
+
 For changes to Docker runtime files, validate the static Docker/env tests and,
 when Docker is available, run a bounded Compose configuration check against the
 no-secret example environment before relying on the runtime.

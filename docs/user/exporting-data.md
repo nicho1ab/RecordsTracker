@@ -116,8 +116,17 @@ The bundle includes:
 - `facility_pattern_review.csv` for facility-level complaint counts, source document counts, allegation categories, finding mix, missingness, report-date proxy usage, review flag counts, and date ranges.
 - `facility_comparison_review.csv` for facility/category/finding rows with source-document counts, traceability-completeness counts, same-category/finding facility counts, and cautious scope notes.
 - `README.md` with review notes and delay-flag caution language.
+- `manifest.json` with each export's record universe, eligible/exported counts,
+  source coverage, active complaint-received-date dimension, range, explicit
+  limit, truncation status, result status, and cause.
 
 Unknown database values are exported as `unknown`. Delay review flags, timeline rows, facility pattern counts, multi-facility traceability rows, and facility comparison rows in the bundle are screening aids for closer review, not conclusions that an investigation was delayed, findings about a facility, proof that an event did or did not occur, proof that the public source is complete, or findings about facility-wide conduct.
+
+Hosted complaint and complaint-matrix CSV exports are uncapped unless the
+request explicitly supplies a limit. Their metadata columns report the record
+universe, eligible/exported counts, source coverage, date dimension/range,
+limit, truncation status, and a plain-language result cause. An empty export row
+describes why no rows matched; it does not imply that no records exist globally.
 
 ## Export from Datasette
 

@@ -13,6 +13,25 @@
   facility traceability rules below. A raw hash for those CSV resources is
   optional diagnostic metadata, not a required product/data-contract field.
 
+## Derived aggregate result contract
+
+Reviewer aggregates and exports are derived output, not new canonical fields.
+They use one structured result contract containing `value`, `denominator`,
+`eligible_count`, `returned_count`, `source_coverage_count`,
+`source_unavailable_count`, `filtered_count`, `outside_range_count`, explicit
+`limit`, `truncated`, finite `status`, `cause`, `date_dimension`, `query_start`,
+and `query_end` values. `unavailable` and `error` results have no numeric value;
+verified zero is reserved for complete eligible coverage with an explicit cause.
+An explicit limit reports eligible and returned counts and truncation. An
+omitted limit means all eligible records.
+
+Facility reference query projections preserve `Facility Address`,
+`FAC_DO_DESC`, and `RES_STREET_ADDR` source presence separately from normalized
+address and regional-office values. A present blank cell remains an empty
+string; an unavailable source column remains null. These projections do not add
+canonical facility fields or place raw reference details on the primary
+reviewer page.
+
 ## Public source inventory boundary
 
 `PUBLIC_SOURCE_DATA_INVENTORY.md` may document future source metadata, uploaded
