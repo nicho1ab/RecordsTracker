@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Added a shared reviewer aggregate/export result contract with explicit
+  denominator, range, source coverage, zero, unavailable, partial, and
+  truncation semantics; removed the implicit source-derived 100-row cap; added
+  first-investigation-activity range selection; exposed governed facility
+  address/regional-office source fields with blank versus unavailable states;
+  added export count manifests; and added aggregate-safe local/runtime evidence.
 - Added aggregate-safe SQLite/PostgreSQL import-parity evidence for equivalent
   governed canonical and facility-reference inputs. The evidence exercises
   actual temporary SQLite storage, the hosted SQLAlchemy mapping path on a

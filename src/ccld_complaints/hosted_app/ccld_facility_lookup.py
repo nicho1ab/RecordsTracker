@@ -295,6 +295,11 @@ class CcldFacilityLookupRecord:
     capacity: str
     status: str
     closed_date: str
+    address: str = ""
+    regional_office: str = ""
+    facility_address: str | None = None
+    fac_do_desc: str | None = None
+    res_street_addr: str | None = None
 
 
 @dataclass(frozen=True)
@@ -1214,6 +1219,11 @@ def _facility_lookup_record_from_source_record(
         capacity=_source_value(values, "capacity"),
         status=_source_value(values, "status"),
         closed_date=_source_value(values, "closed_date"),
+        address=_source_value(values, "address") or _source_value(values, "facility_address"),
+        regional_office=_source_value(values, "regional_office") or _source_value(values, "FAC_DO_DESC"),
+        facility_address=_source_value_if_present(values, "facility_address"),
+        fac_do_desc=_source_value_if_present(values, "FAC_DO_DESC"),
+        res_street_addr=_source_value_if_present(values, "RES_STREET_ADDR"),
     )
 
 
@@ -1224,6 +1234,15 @@ def _source_value(values: Mapping[str, Any], key: str) -> str:
     if isinstance(value, int | float) and not isinstance(value, bool):
         return str(value)
     return ""
+
+
+def _source_value_if_present(values: Mapping[str, Any], key: str) -> str | None:
+    if key not in values:
+        return None
+    value = values.get(key)
+    if value is None:
+        return ""
+    return str(value).strip()
 
 
 def _record_from_row(row: dict[str, str]) -> CcldFacilityLookupRecord:
@@ -1267,6 +1286,9 @@ def _record_from_program_facility_row(row: dict[str, str]) -> CcldFacilityLookup
         capacity=_clean_value(row["Facility Capacity"]),
         status=_clean_value(row["Facility Status"]),
         closed_date=_clean_value(row["Closed Date"]),
+        address=_clean_value(row.get("Facility Address", "")),
+        regional_office=_clean_value(row.get("Regional Office", "")),
+        facility_address=_raw_query_field(row, "Facility Address"),
     )
 
 
@@ -1286,7 +1308,18 @@ def _record_from_chhs_facility_master_row(row: dict[str, str]) -> CcldFacilityLo
         capacity=_clean_value(row["CAPACITY"]),
         status=_clean_value(row["STATUS"]),
         closed_date="",
+        address=_clean_value(row.get("RES_STREET_ADDR", "")),
+        regional_office=_clean_value(row.get("FAC_DO_DESC", "")),
+        fac_do_desc=_raw_query_field(row, "FAC_DO_DESC"),
+        res_street_addr=_raw_query_field(row, "RES_STREET_ADDR"),
     )
+
+
+def _raw_query_field(row: Mapping[str, Any], key: str) -> str | None:
+    if key not in row:
+        return None
+    value = row.get(key)
+    return "" if value is None else str(value).strip()
 
 
 def _deduplicate_facility_records(
@@ -2639,7 +2672,7 @@ def _facility_suggestions_payload(
 
 def _facility_json_records(
     records: Iterable[CcldFacilityLookupRecord],
-) -> list[dict[str, str]]:
+) -> list[dict[str, str | None]]:
     return [
         {
             "num": record.facility_number,
@@ -2652,6 +2685,11 @@ def _facility_json_records(
             "p": record.program_type,
             "cap": record.capacity,
             "s": record.status,
+            "address": record.address,
+            "regional_office": record.regional_office,
+            "facility_address": record.facility_address,
+            "FAC_DO_DESC": record.fac_do_desc,
+            "RES_STREET_ADDR": record.res_street_addr,
         }
         for record in records
     ]

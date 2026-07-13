@@ -304,57 +304,14 @@ AGGREGATE_FEATURES: tuple[AggregateFeatureSpec, ...] = (
         ),
         gap_classification="NOT_APPLICABLE",
         zero_or_unavailable_cause="export coverage follows the inspected loaded corpus",
-        known_query_limit="exports must not use the 100-row source list default",
+        known_query_limit="no default row limit; explicit limits report truncation",
         evidence_reference_location="src/ccld_complaints/review_bundle.py",
         recommended_validation="Compare export counts with governed store aggregates.",
     ),
 )
 
 
-QUERY_COVERAGE_GAPS: tuple[QueryCoverageGap, ...] = (
-    QueryCoverageGap(
-        gap_id="gap.query.source-derived-default-100-row-cap",
-        data_element_id=stable_data_element_id(
-            "shared", "query", "source_derived_default_limit"
-        ),
-        title="Source-derived default list query is capped at 100 rows",
-        description=(
-            "The generic list API defaults to 100 rows and must not be used as an "
-            "unbounded completeness or aggregate population query."
-        ),
-        ownership="shared",
-        gap_classification="STORED_QUERY_OMISSION",
-        priority="P1",
-        disposition="use aggregate SQL or explicit pagination in completeness paths",
-        recommended_display_location="query/service layer",
-        dependencies="hosted source-derived read adapter",
-        evidence_reference_location=(
-            "src/ccld_complaints/hosted_app/source_derived_reads.py#"
-            "list_source_derived_records"
-        ),
-        validation_requirement="Exercise more than 100 governed records without truncation.",
-    ),
-    QueryCoverageGap(
-        gap_id="gap.query.first-activity-date-range-omission",
-        data_element_id=_canonical_id("complaint", "first_investigation_activity_date"),
-        title="First investigation activity is omitted from request date matching",
-        description=(
-            "The active review-date field registry checks received, visit, report, and "
-            "signed dates but omits first investigation activity."
-        ),
-        ownership="complaint",
-        gap_classification="STORED_QUERY_OMISSION",
-        priority="P1",
-        disposition="retain for separately scoped request-date query work",
-        recommended_display_location="complaint request date filtering",
-        dependencies="runtime population assessment and query behavior approval",
-        evidence_reference_location=(
-            "src/ccld_complaints/hosted_app/source_derived_reads.py#"
-            "CCLD_REVIEW_DATE_FIELDS"
-        ),
-        validation_requirement="Include a governed record matched only by first activity date.",
-    ),
-)
+QUERY_COVERAGE_GAPS: tuple[QueryCoverageGap, ...] = ()
 
 
 _TABLE_BY_ENTITY: Mapping[str, str] = {
@@ -952,20 +909,23 @@ def _facility_header_spec(
         or signal_field is not None
         or source_reference_allocation is not None
     )
+    query_consumed = displayed or header in {
+        "Facility Address",
+        "FAC_DO_DESC",
+        "RES_STREET_ADDR",
+    }
     classification = classify_gap(
         intentionally_internal=internal,
         extracted=True,
         canonical_mapped=mapped,
         stored=stored,
-        query_consumed=displayed if stored else None,
+        query_consumed=query_consumed if stored else None,
         displayed=displayed if mapped else None,
     )
     if not internal and not mapped:
         classification = "EXTRACTED_CANONICAL_MAPPING_MISSING"
     if source_reference_allocation is not None:
         classification = "NOT_APPLICABLE"
-    if header in {"Facility Address", "RES_STREET_ADDR"}:
-        classification = "STORED_QUERY_OMISSION"
     mapping_parts = ["original_row_json key preserved"]
     if profile_field is not None:
         mapping_parts.append(f"source-profiling mapping: {profile_field}")
@@ -1040,7 +1000,12 @@ def _facility_header_spec(
         recommended_display_method=(
             "keep out of the primary reviewer page" if internal else method
         ),
-        traceability_availability="header identity and original_row_json key; values excluded",
+        traceability_availability=(
+            "header identity, original_row_json key, and governed query value with "
+            "blank/unavailable distinction"
+            if query_consumed
+            else "header identity and original_row_json key"
+        ),
         validation_coverage=(
             "governed fixture header inventory"
             if is_governed_fixture

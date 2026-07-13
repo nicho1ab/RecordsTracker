@@ -85,9 +85,15 @@ Related stable gaps:
 
 - `No current structural gap; retain as an audit coverage workstream.`
 
-## P1: Make reviewer aggregate outputs data-ready
+## Completed: Make reviewer aggregate outputs data-ready
 
 Prove denominator, query-range, source-coverage, and zero semantics for current priorities, trends, topic review, and exports.
+
+Implemented through the shared aggregate result contract, uncapped default
+source-derived reads, selectable first-investigation-activity ranges, governed
+facility query projections, export manifests, and aggregate-safe local/runtime
+evidence. Generated source-to-screen audit snapshots remain untouched until the
+normal repository regeneration workflow is explicitly run.
 
 Dependencies:
 

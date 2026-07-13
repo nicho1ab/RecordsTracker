@@ -20,10 +20,12 @@ from sqlalchemy.engine import Connection
 from ccld_complaints.hosted_app.seeded_import import SourceDerivedEntityType
 from ccld_complaints.hosted_app.source_derived_reads import (
     CcldSourceDerivedRequestLookup,
+    SourceDerivedRecordListResult,
     SourceDerivedRecordRead,
     find_ccld_source_derived_records_for_request,
     get_source_derived_record_by_identity,
     get_source_derived_record_by_key,
+    list_source_derived_record_result,
     list_source_derived_records,
     list_source_derived_records_by_entity_types,
 )
@@ -837,7 +839,7 @@ def list_authorized_source_derived_records(
     entity_type: SourceDerivedEntityType | None = None,
     entity_types: tuple[SourceDerivedEntityType, ...] | None = None,
     import_batch_id: str | None = None,
-    limit: int = 100,
+    limit: int | None = None,
     offset: int = 0,
 ) -> tuple[SourceDerivedRecordRead, ...]:
     scoped_import_batch_id = (
@@ -865,6 +867,48 @@ def list_authorized_source_derived_records(
             offset=offset,
         )
     return list_source_derived_records(
+        connection,
+        entity_type=entity_type,
+        entity_types=entity_types,
+        import_batch_id=scoped_import_batch_id,
+        limit=limit,
+        offset=offset,
+    )
+
+
+def list_authorized_source_derived_record_result(
+    connection: Connection,
+    actor: AuthenticatedActor | None,
+    *,
+    scope: HostedAccessScope,
+    entity_type: SourceDerivedEntityType | None = None,
+    entity_types: tuple[SourceDerivedEntityType, ...] | None = None,
+    import_batch_id: str | None = None,
+    limit: int | None = None,
+    offset: int = 0,
+) -> SourceDerivedRecordListResult:
+    scoped_import_batch_id = (
+        None
+        if import_batch_id is None
+        else _scoped_import_batch_id_for_read(connection, scope, import_batch_id)
+    )
+    target_id = scoped_import_batch_id or scope.scope_id
+    require_permission(
+        actor,
+        permission=SOURCE_DERIVED_READ_PERMISSION,
+        scope=scope,
+        target=AuthorizationTarget("source_derived_record_list", target_id),
+    )
+    if scoped_import_batch_id is None:
+        return list_source_derived_record_result(
+            connection,
+            entity_type=entity_type,
+            entity_types=entity_types,
+            import_batch_ids=_authorized_source_import_batch_ids(connection, scope),
+            limit=limit,
+            offset=offset,
+        )
+    return list_source_derived_record_result(
         connection,
         entity_type=entity_type,
         entity_types=entity_types,
@@ -918,6 +962,7 @@ def find_authorized_ccld_source_derived_records_for_request(
     facility_number: str,
     start_date: str | None = None,
     end_date: str | None = None,
+    date_dimension: str = "any_review_date",
     import_batch_id: str | None = None,
 ) -> CcldSourceDerivedRequestLookup:
     if import_batch_id is not None:
@@ -940,6 +985,7 @@ def find_authorized_ccld_source_derived_records_for_request(
             facility_number=facility_number,
             start_date=start_date,
             end_date=end_date,
+            date_dimension=date_dimension,
             import_batch_id=scoped_import_batch_id,
         )
 
@@ -958,6 +1004,7 @@ def find_authorized_ccld_source_derived_records_for_request(
             facility_number=facility_number,
             start_date=start_date,
             end_date=end_date,
+            date_dimension=date_dimension,
             import_batch_id=authorized_import_batch_id,
         )
         for authorized_import_batch_id in _authorized_source_import_batch_ids(

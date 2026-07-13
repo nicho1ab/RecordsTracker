@@ -28,6 +28,14 @@ In the hosted reviewer workflow, use `/reviewer/records/serious-topics` to filte
 
 Use `/reviewer/facilities/trends` when the review task is to compare loaded complaint and finding activity over time. Coverage and anomaly labels describe only the displayed, qualifying loaded records; open the contributing complaint record and its existing public-report action before relying on an individual complaint.
 
+Current priorities, facility priorities, trends, serious-topic review, and
+substantiated review show the loaded-record universe, eligible denominator,
+active date dimension/range, source coverage, and a reason for zero or
+unavailable results. Choose first investigation activity when the review range
+is about the first governed investigation event; do not substitute complaint
+received, visit, report, or signed dates. Pagination changes the visible page,
+not the aggregate denominator.
+
 Facility pattern counts summarize the local derived dataset only. Use them to choose records for closer source review, not as findings about a facility or the public source record.
 
 Facility comparison rows summarize local derived facility/category/finding groups only. Use same-category/finding facility counts to find records for closer source review, not as findings about a facility or facility-wide conduct.

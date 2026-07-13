@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import json
 from pathlib import Path
 
 from ccld_complaints.local_sample import (
@@ -20,6 +21,7 @@ def test_export_review_bundle_writes_source_traceable_csvs(tmp_path: Path) -> No
     exported_paths = {exported_file.path.name: exported_file for exported_file in result.files}
     assert result.output_dir == output_dir
     assert result.readme_path.exists()
+    assert result.manifest_path.exists()
     assert set(exported_paths) == {
         "complaint_review_with_source_traceability.csv",
         "delay_review_flags_with_source_traceability.csv",
@@ -38,6 +40,21 @@ def test_export_review_bundle_writes_source_traceable_csvs(tmp_path: Path) -> No
     assert exported_paths["field_source_traceability.csv"].row_count == 28
     assert exported_paths["facility_pattern_review.csv"].row_count == 1
     assert exported_paths["facility_comparison_review.csv"].row_count == 1
+
+    manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+    assert manifest["date_dimension"] == "complaint_received_date"
+    assert manifest["explicit_limit"] is None
+    assert manifest["truncated"] is False
+    assert len(manifest["exports"]) == len(exported_paths)
+    complaint_manifest = next(
+        item
+        for item in manifest["exports"]
+        if item["file"] == "complaint_review_with_source_traceability.csv"
+    )
+    assert complaint_manifest["eligible_count"] == 1
+    assert complaint_manifest["returned_count"] == 1
+    assert complaint_manifest["source_coverage_count"] == 1
+    assert complaint_manifest["status"] == "available"
 
     complaint_rows = _read_csv(output_dir / "complaint_review_with_source_traceability.csv")
     assert complaint_rows[0]["facility_number"] == "157806098"

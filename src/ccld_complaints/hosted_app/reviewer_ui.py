@@ -20,6 +20,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.pool import StaticPool
 
+from ccld_complaints.aggregate_results import (
+    AggregateResult,
+    build_aggregate_result,
+    date_dimension_label,
+    validate_date_dimension,
+)
 from ccld_complaints.hosted_app.auth import (
     CCLD_RETRIEVAL_CORPUS_SCOPE,
     AuthenticatedActor,
@@ -345,6 +351,7 @@ class CcldQueueReturnContext:
 class SubstantiatedWorklistFilters:
     start_date: str | None = None
     end_date: str | None = None
+    date_dimension: str = "complaint_received_date"
     facility: str = ""
     facility_type: str = ""
     geography: str = ""
@@ -358,6 +365,7 @@ class SubstantiatedWorklistFilters:
 class SeriousTopicsFilters:
     start_date: str | None = None
     end_date: str | None = None
+    date_dimension: str = "complaint_received_date"
     facility: str = ""
     facility_type: str = ""
     geography: str = ""
@@ -379,6 +387,7 @@ class SubstantiatedFindingEvidence:
 class FacilityPrioritiesFilters:
     start_date: str | None = None
     end_date: str | None = None
+    date_dimension: str = "latest_supported_activity"
     facility_type: str = ""
     geography: str = ""
     min_complaints: int = 1
@@ -617,7 +626,7 @@ def _record_list_response(
     query_values = parse_qs(query, keep_blank_values=True)
     search_query = _first_form_value(query_values, "q")
     status, _content_type, body = route_reviewer_workflow_shell_response(
-        f"{REVIEWER_WORKFLOW_API_PREFIX}/queue?limit=100",
+        f"{REVIEWER_WORKFLOW_API_PREFIX}/queue",
         context.workflow_shell_context,
     )
     if status != 200:
@@ -664,7 +673,7 @@ def _packet_preview_response(
             _render_packet_preview_context_needed(actor_label=_signed_in_actor_label(context)),
         )
     status, _content_type, body = route_reviewer_workflow_shell_response(
-        f"{REVIEWER_WORKFLOW_API_PREFIX}/queue?limit=100",
+        f"{REVIEWER_WORKFLOW_API_PREFIX}/queue",
         context.workflow_shell_context,
     )
     if status != 200:
@@ -698,15 +707,24 @@ def _matrix_export_response(
  ) -> tuple[int, str, bytes]:
     query_values = parse_qs(query, keep_blank_values=True)
     return_context = _packet_preview_context_from_values(query_values)
+    date_dimension = _date_dimension_query_value(
+        query_values,
+        default="any_review_date",
+    )
+    explicit_limit = _optional_positive_query_int(query_values, "limit", maximum=10000)
     status, _content_type, body = route_reviewer_workflow_shell_response(
-        f"{REVIEWER_WORKFLOW_API_PREFIX}/queue?limit=100",
+        f"{REVIEWER_WORKFLOW_API_PREFIX}/queue",
         context.workflow_shell_context,
     )
     if status != 200:
         return _workflow_error_page(status, body)
     payload = _json_object(body)
     queue = _mapping(payload, "queue")
-    records = _filter_packet_preview_items(_record_list(queue, "records"), return_context)
+    records = _filter_export_items_by_date_dimension(
+        _record_list(queue, "records"),
+        return_context,
+        date_dimension=date_dimension,
+    )
     state_status, state_body = _reviewer_created_state_records(context)
     if state_status != 200:
         if not isinstance(state_body, bytes):
@@ -721,6 +739,8 @@ def _matrix_export_response(
         state_summaries,
         related_records,
         return_context,
+        date_dimension=date_dimension,
+        explicit_limit=explicit_limit,
     )
     return 200, "text/csv; charset=utf-8", csv_text.encode("utf-8-sig")
 
@@ -748,7 +768,10 @@ def _facility_priorities_response(
         )
     if isinstance(source_result, bytes):
         raise ValueError("Expected source-derived records.")
-    all_summaries = _facility_priority_summaries(source_result)
+    all_summaries = _facility_priority_summaries(
+        source_result,
+        date_dimension=filters.date_dimension,
+    )
     filtered_summaries = _filter_facility_priority_summaries(all_summaries, filters)
     sorted_summaries = _sort_facility_priority_summaries(filtered_summaries)
     paged_summaries, pagination = _paginate_facility_priority_summaries(
@@ -762,6 +785,7 @@ def _facility_priorities_response(
             filters=filters,
             result_count=len(filtered_summaries),
             total_facility_count=len(all_summaries),
+            eligible_summaries=filtered_summaries,
             all_summaries=all_summaries,
             pagination=pagination,
             actor_label=_signed_in_actor_label(context),
@@ -775,6 +799,10 @@ def _facility_priorities_filters(
     return FacilityPrioritiesFilters(
         start_date=_validated_iso_date_or_none(_first_form_value(query_values, "start_date")),
         end_date=_validated_iso_date_or_none(_first_form_value(query_values, "end_date")),
+        date_dimension=_date_dimension_query_value(
+            query_values,
+            default="latest_supported_activity",
+        ),
         facility_type=_first_form_value(query_values, "facility_type"),
         geography=_first_form_value(query_values, "geography"),
         min_complaints=_bounded_query_int(
@@ -845,6 +873,8 @@ def _bounded_query_int(
 
 def _facility_priority_summaries(
     source_records: list[Mapping[str, Any]],
+    *,
+    date_dimension: str = "latest_supported_activity",
 ) -> list[FacilityPrioritySummary]:
     source_indexes = _source_record_indexes(source_records)
     grouped: dict[str, list[tuple[Mapping[str, Any], list[Mapping[str, Any]]]]] = {}
@@ -865,7 +895,11 @@ def _facility_priority_summaries(
         facility_identity = _facility_priority_identity(source_record, related_records)
         grouped.setdefault(facility_identity, []).append((source_record, related_records))
     summaries = [
-        _facility_priority_summary(facility_identity, grouped_records)
+        _facility_priority_summary(
+            facility_identity,
+            grouped_records,
+            date_dimension=date_dimension,
+        )
         for facility_identity, grouped_records in grouped.items()
     ]
     return _sort_facility_priority_summaries(summaries)
@@ -874,6 +908,8 @@ def _facility_priority_summaries(
 def _facility_priority_summary(
     facility_identity: str,
     grouped_records: list[tuple[Mapping[str, Any], list[Mapping[str, Any]]]],
+    *,
+    date_dimension: str = "latest_supported_activity",
 ) -> FacilityPrioritySummary:
     representative_source_record, representative_related = grouped_records[0]
     facility = _facility_context(representative_related)
@@ -887,7 +923,11 @@ def _facility_priority_summary(
     facility_type = _facility_context_value(facility, "facility_type")
     geography = _substantiated_geography_label(facility)
     complaints = tuple(
-        _facility_priority_complaint(source_record, related_records)
+        _facility_priority_complaint(
+            source_record,
+            related_records,
+            date_dimension=date_dimension,
+        )
         for source_record, related_records in grouped_records
     )
     sorted_complaints = tuple(sorted(complaints, key=_facility_priority_complaint_sort_key))
@@ -1002,12 +1042,17 @@ def _facility_priority_facility_number(
 def _facility_priority_complaint(
     source_record: Mapping[str, Any],
     related_records: list[Mapping[str, Any]],
+    *,
+    date_dimension: str = "latest_supported_activity",
 ) -> FacilityPriorityComplaint:
     identity = _mapping(source_record, "identity")
     original_values = _mapping(source_record, "original_values")
     source_document = _mapping(source_record, "source_document")
     source_record_key = _string(identity, "source_record_key")
-    activity_date = _facility_priority_activity_date(original_values)
+    activity_date = _facility_priority_activity_date(
+        original_values,
+        date_dimension=date_dimension,
+    )
     source_url = _optional_string(source_document, "source_url")
     return FacilityPriorityComplaint(
         source_record_key=source_record_key,
@@ -1020,7 +1065,13 @@ def _facility_priority_complaint(
     )
 
 
-def _facility_priority_activity_date(original_values: Mapping[str, Any]) -> str:
+def _facility_priority_activity_date(
+    original_values: Mapping[str, Any],
+    *,
+    date_dimension: str = "latest_supported_activity",
+) -> str:
+    if date_dimension != "latest_supported_activity":
+        return _substantiated_complaint_date(original_values, date_dimension)
     dates = [
         _optional_string(original_values, field_name)
         for field_name in (
@@ -1208,10 +1259,24 @@ def _render_facility_priorities(
     filters: FacilityPrioritiesFilters,
     result_count: int,
     total_facility_count: int,
+    eligible_summaries: list[FacilityPrioritySummary],
     all_summaries: list[FacilityPrioritySummary],
     pagination: Mapping[str, int],
     actor_label: str | None,
 ) -> str:
+    source_coverage_count = sum(
+        summary.source_missing_count == 0 for summary in eligible_summaries
+    )
+    aggregate_context = _render_aggregate_context(
+        denominator="authorized loaded facilities with deduplicated complaint records",
+        universe_count=total_facility_count,
+        eligible_count=result_count,
+        source_coverage_count=source_coverage_count,
+        source_unavailable_count=result_count - source_coverage_count,
+        date_dimension=filters.date_dimension,
+        query_start=filters.start_date,
+        query_end=filters.end_date,
+    )
     filter_markup = _render_facility_priorities_filter_form(filters, all_summaries)
     summary = _render_facility_priorities_count_summary(
         result_count,
@@ -1260,6 +1325,7 @@ def _render_facility_priorities(
           <p>Counts are based on deduplicated complaint identities in the loaded corpus available to this reviewer. Missing values are shown as unknown, and missing source links are identified rather than silently omitted.</p>
         </section>
 {filter_markup}
+{aggregate_context}
 {list_markup}
         {_render_facility_priority_rules_disclosure()}
         <section class="quiet-section" aria-labelledby="facility-priorities-next-heading">
@@ -1290,7 +1356,11 @@ def _render_facility_priorities_filter_form(
           <form class="compact-filter-form" method="get" action="{REVIEWER_UI_FACILITY_PRIORITIES_PATH}">
             <div class="facility-intelligence-filter-grid">
               <p>
-                <label for="facility-priorities-start-date">From activity date</label>
+                <label for="facility-priorities-date-dimension">Date used for this range</label>
+                <select id="facility-priorities-date-dimension" name="date_dimension">{_date_dimension_options(filters.date_dimension, include_latest=True)}</select>
+              </p>
+              <p>
+                <label for="facility-priorities-start-date">From selected date</label>
                 <input id="facility-priorities-start-date" name="start_date" type="date" value="{_escape(filters.start_date or '')}">
               </p>
               <p>
@@ -1448,6 +1518,7 @@ def _facility_priorities_page_href(
     query_values = {
         "start_date": filters.start_date or "",
         "end_date": filters.end_date or "",
+        "date_dimension": filters.date_dimension,
         "facility_type": filters.facility_type,
         "geography": filters.geography,
         "min_complaints": str(filters.min_complaints),
@@ -1503,7 +1574,10 @@ def _facility_trends_response(
         )
     if isinstance(source_result, bytes):
         raise ValueError("Expected source-derived records.")
-    complaints = _facility_trend_complaints(source_result)
+    complaints = _facility_trend_complaints(
+        source_result,
+        date_dimension=filters.date_dimension,
+    )
     result = build_facility_trend(
         complaints,
         filters,
@@ -1530,6 +1604,10 @@ def _facility_trend_filters(
     return FacilityTrendFilters(
         start_date=date.fromisoformat(start_date) if start_date else None,
         end_date=date.fromisoformat(end_date) if end_date else None,
+        date_dimension=_date_dimension_query_value(
+            query_values,
+            default="complaint_received_date",
+        ),
         facility=_first_form_value(query_values, "facility"),
         facility_type=_first_form_value(query_values, "facility_type"),
         geography=_first_form_value(query_values, "geography"),
@@ -1548,6 +1626,8 @@ def _facility_trend_filters(
 
 def _facility_trend_complaints(
     source_records: list[Mapping[str, Any]],
+    *,
+    date_dimension: str = "complaint_received_date",
 ) -> list[FacilityTrendComplaint]:
     indexes = _source_record_indexes(source_records)
     complaints: list[FacilityTrendComplaint] = []
@@ -1578,9 +1658,9 @@ def _facility_trend_complaints(
                 if facility_number != "unknown"
                 else "Unknown facility"
             )
-        complaint_date_value = _optional_string(
+        complaint_date_value = _substantiated_complaint_date(
             original_values,
-            "complaint_received_date",
+            date_dimension,
         )
         validated_complaint_date = _validated_iso_date_or_none(complaint_date_value)
         complaint_date = (
@@ -1620,6 +1700,9 @@ def _facility_trend_complaints(
                             facility_number if facility_number != "unknown" else None
                         ),
                     ),
+                ),
+                source_available=_has_display_value(
+                    _mapping(source_record, "source_document").get("source_url")
                 ),
             )
         )
@@ -1674,8 +1757,31 @@ def _render_facility_trends(
     actor_label: str | None,
 ) -> str:
     rows = "\n".join(_render_facility_trend_period(period) for period in result.periods)
-    rows += "\n" + _render_facility_trend_date_unavailable_row(result)
+    rows += "\n" + _render_facility_trend_date_unavailable_row(
+        result,
+        date_dimension=filters.date_dimension,
+    )
     period_label = "quarter" if filters.time_grain == "quarter" else "month"
+    qualifying_complaints = [
+        complaint
+        for period in result.periods
+        for complaint in period.complaints
+    ] + list(result.date_unavailable_complaints)
+    source_coverage_count = sum(
+        complaint.source_available for complaint in qualifying_complaints
+    )
+    aggregate_context = _render_aggregate_context(
+        denominator="authorized deduplicated loaded complaint records",
+        universe_count=len(all_complaints),
+        eligible_count=result.qualifying_complaint_count,
+        source_coverage_count=source_coverage_count,
+        source_unavailable_count=(
+            result.qualifying_complaint_count - source_coverage_count
+        ),
+        date_dimension=filters.date_dimension,
+        query_start=filters.start_date.isoformat() if filters.start_date else None,
+        query_end=filters.end_date.isoformat() if filters.end_date else None,
+    )
     return _page(
         title="Complaint trends over time",
         heading="Review complaint trends over time",
@@ -1683,6 +1789,7 @@ def _render_facility_trends(
         main=f"""
         <p>Compare deduplicated loaded complaint and finding activity by {period_label}, then open the contributing complaint records for review.</p>
         {_render_facility_trend_filter_form(filters, all_complaints)}
+        {aggregate_context}
         <section aria-labelledby="facility-trends-results-heading">
           <h2 id="facility-trends-results-heading">Complaint activity by {period_label}</h2>
           <p>{result.qualifying_complaint_count} qualifying complaint record(s): {result.dated_qualifying_complaint_count} assigned to displayed periods and {len(result.date_unavailable_complaints)} with date unavailable.</p>
@@ -1764,6 +1871,10 @@ def _render_facility_trend_filter_form(
                 <datalist id="facility-trends-serious-topics">{serious_topic_options}</datalist>
               </p>
               <p>
+                <label for="facility-trends-date-dimension">Date used for this trend</label>
+                <select id="facility-trends-date-dimension" name="date_dimension">{_date_dimension_options(filters.date_dimension)}</select>
+              </p>
+              <p>
                 <label for="facility-trends-start-date">Start date</label>
                 <input id="facility-trends-start-date" name="start_date" type="date" value="{filters.start_date.isoformat() if filters.start_date else ''}">
               </p>
@@ -1798,6 +1909,67 @@ def _facility_trend_option(current: str, value: str, label: str) -> str:
     return f'<option value="{value}"{selected}>{label}</option>'
 
 
+def _date_dimension_options(current: str, *, include_latest: bool = False) -> str:
+    values = [
+        "complaint_received_date",
+        "first_investigation_activity_date",
+        "visit_date",
+        "report_date",
+        "date_signed",
+    ]
+    if include_latest:
+        values.append("latest_supported_activity")
+    return "".join(
+        _facility_trend_option(current, value, date_dimension_label(value))
+        for value in values
+    )
+
+
+def _render_aggregate_context(
+    *,
+    denominator: str,
+    universe_count: int,
+    eligible_count: int,
+    source_coverage_count: int,
+    source_unavailable_count: int,
+    date_dimension: str,
+    query_start: str | None,
+    query_end: str | None,
+    outside_range_count: int = 0,
+) -> str:
+    result = build_aggregate_result(
+        value=eligible_count,
+        denominator=denominator,
+        eligible_count=eligible_count,
+        returned_count=eligible_count,
+        source_coverage_count=source_coverage_count,
+        source_unavailable_count=source_unavailable_count,
+        filtered_count=max(universe_count - eligible_count - outside_range_count, 0),
+        outside_range_count=outside_range_count,
+        date_dimension=date_dimension,
+        query_start=query_start,
+        query_end=query_end,
+    )
+    range_text = (
+        f"{query_start or 'earliest loaded date'} through "
+        f"{query_end or 'latest loaded date'}"
+    )
+    value_text = "Unavailable" if result.value is None else str(result.value)
+    return f"""        <section class="quiet-section aggregate-context" aria-labelledby="aggregate-context-heading">
+          <h2 id="aggregate-context-heading">Result scope</h2>
+          <dl class="summary-list">
+            <dt>Record universe</dt><dd>{_escape(result.denominator)} ({universe_count})</dd>
+            <dt>Eligible records</dt><dd>{result.eligible_count}</dd>
+            <dt>Result</dt><dd>{_escape(value_text)}</dd>
+            <dt>Date used</dt><dd>{_escape(date_dimension_label(result.date_dimension))}</dd>
+            <dt>Selected range</dt><dd>{_escape(range_text)}</dd>
+            <dt>Source coverage</dt><dd>{result.source_coverage_count} available; {result.source_unavailable_count} unavailable</dd>
+            <dt>Status</dt><dd><span class="status-badge">{_escape(result.status.title())}</span></dd>
+            <dt>Reason</dt><dd>{_escape(result.cause)}</dd>
+          </dl>
+        </section>"""
+
+
 def _facility_trend_period_count_options(current: int) -> str:
     values = sorted({3, 6, 12, 18, 24, current})
     options = []
@@ -1826,7 +1998,11 @@ def _render_facility_trend_period(period: FacilityTrendPeriod) -> str:
               </tr>"""
 
 
-def _render_facility_trend_date_unavailable_row(result: FacilityTrendResult) -> str:
+def _render_facility_trend_date_unavailable_row(
+    result: FacilityTrendResult,
+    *,
+    date_dimension: str = "complaint_received_date",
+) -> str:
     count = len(result.date_unavailable_complaints)
     substantiated_count = sum(
         complaint.substantiated for complaint in result.date_unavailable_complaints
@@ -1836,7 +2012,7 @@ def _render_facility_trend_date_unavailable_row(result: FacilityTrendResult) -> 
         for complaint in result.date_unavailable_complaints
     )
     return f"""              <tr>
-                <th scope="row">Complaint received date unavailable</th>
+                <th scope="row">{_escape(date_dimension_label(date_dimension))} unavailable</th>
                 <td><span class="status-badge">{DATE_UNAVAILABLE}</span></td>
                 <td>{count}</td>
                 <td>{substantiated_count}</td>
@@ -1891,7 +2067,11 @@ def _serious_topics_response(
         if _string(record, "entity_type") == "complaint"
     ]
     source_indexes = _source_record_indexes(source_records)
-    serious_items = _serious_topic_items(complaint_items, source_indexes)
+    serious_items = _serious_topic_items(
+        complaint_items,
+        source_indexes,
+        date_dimension=filters.date_dimension,
+    )
     filtered_items = _filter_serious_topic_items(serious_items, filters)
     sorted_items = _sort_substantiated_worklist_items(filtered_items, filters.sort)
     paged_items, pagination = _paginate_serious_topic_items(sorted_items, filters)
@@ -1902,6 +2082,7 @@ def _serious_topics_response(
             filters=filters,
             result_count=len(filtered_items),
             total_qualifying_count=len(serious_items),
+            eligible_items=filtered_items,
             all_items=serious_items,
             pagination=pagination,
             actor_label=_signed_in_actor_label(context),
@@ -1916,6 +2097,10 @@ def _serious_topics_filters(
     return SeriousTopicsFilters(
         start_date=start_date,
         end_date=end_date,
+        date_dimension=_date_dimension_query_value(
+            query_values,
+            default="complaint_received_date",
+        ),
         facility=_first_form_value(query_values, "facility"),
         facility_type=_first_form_value(query_values, "facility_type"),
         geography=_first_form_value(query_values, "geography"),
@@ -1948,6 +2133,8 @@ def _serious_topics_match_basis(value: str) -> str:
 def _serious_topic_items(
     records: list[Mapping[str, Any]],
     source_indexes: SourceRecordIndexes,
+    *,
+    date_dimension: str = "complaint_received_date",
 ) -> list[dict[str, str]]:
     items: list[dict[str, str]] = []
     seen_stable_complaint_ids: set[str] = set()
@@ -1984,7 +2171,10 @@ def _serious_topic_items(
             if facility_name == "unknown"
             else facility_name
         )
-        complaint_date = _substantiated_complaint_date(original_values)
+        complaint_date = _substantiated_complaint_date(
+            original_values,
+            date_dimension,
+        )
         source_document = _mapping(source_record, "source_document")
         source_url = _optional_string(source_document, "source_url")
         category_labels = _joined_unique(
@@ -2130,6 +2320,7 @@ def _serious_topic_item_matches_filters(
         SubstantiatedWorklistFilters(
             start_date=filters.start_date,
             end_date=filters.end_date,
+            date_dimension=filters.date_dimension,
             facility=filters.facility,
             facility_type=filters.facility_type,
             geography=filters.geography,
@@ -2174,10 +2365,22 @@ def _render_serious_topics_worklist(
     filters: SeriousTopicsFilters,
     result_count: int,
     total_qualifying_count: int,
+    eligible_items: list[dict[str, str]],
     all_items: list[dict[str, str]],
     pagination: Mapping[str, int],
     actor_label: str | None,
 ) -> str:
+    source_coverage_count = sum(bool(item["source_url_href"]) for item in eligible_items)
+    aggregate_context = _render_aggregate_context(
+        denominator="authorized deduplicated complaint records with governed serious-topic evidence",
+        universe_count=total_qualifying_count,
+        eligible_count=result_count,
+        source_coverage_count=source_coverage_count,
+        source_unavailable_count=result_count - source_coverage_count,
+        date_dimension=filters.date_dimension,
+        query_start=filters.start_date,
+        query_end=filters.end_date,
+    )
     filter_markup = _render_serious_topics_filter_form(filters, all_items)
     filter_basis_markup = _render_serious_topics_filter_basis(filters)
     summary = _render_serious_topics_count_summary(
@@ -2231,6 +2434,7 @@ def _render_serious_topics_worklist(
         </section>
 {filter_markup}
 {filter_basis_markup}
+{aggregate_context}
 {list_markup}
         <section class="quiet-section" aria-labelledby="serious-topics-next-heading">
           <h2 id="serious-topics-next-heading">Next steps</h2>
@@ -2316,7 +2520,11 @@ def _render_serious_topics_filter_form(
           <form class="compact-filter-form" method="get" action="{REVIEWER_UI_SERIOUS_TOPICS_PATH}">
             <div class="facility-intelligence-filter-grid">
               <p>
-                <label for="serious-topics-start-date">From complaint date</label>
+                <label for="serious-topics-date-dimension">Date used for this range</label>
+                <select id="serious-topics-date-dimension" name="date_dimension">{_date_dimension_options(filters.date_dimension)}</select>
+              </p>
+              <p>
+                <label for="serious-topics-start-date">From selected date</label>
                 <input id="serious-topics-start-date" name="start_date" type="date" value="{_escape(filters.start_date or '')}">
               </p>
               <p>
@@ -2413,6 +2621,7 @@ def _serious_topics_page_href(filters: SeriousTopicsFilters, page: int) -> str:
     query_values = {
         "start_date": filters.start_date or "",
         "end_date": filters.end_date or "",
+        "date_dimension": filters.date_dimension,
         "facility": filters.facility,
         "facility_type": filters.facility_type,
         "geography": filters.geography,
@@ -2464,6 +2673,7 @@ def _substantiated_triage_response(
     substantiated_items = _substantiated_triage_items(
         complaint_items,
         source_indexes,
+        date_dimension=filters.date_dimension,
     )
     filtered_items = _filter_substantiated_worklist_items(substantiated_items, filters)
     sorted_items = _sort_substantiated_worklist_items(filtered_items, filters.sort)
@@ -2478,6 +2688,7 @@ def _substantiated_triage_response(
             filters=filters,
             result_count=len(filtered_items),
             total_qualifying_count=len(substantiated_items),
+            eligible_items=filtered_items,
             all_items=substantiated_items,
             pagination=pagination,
             actor_label=_signed_in_actor_label(context),
@@ -2488,6 +2699,8 @@ def _substantiated_triage_response(
 def _substantiated_triage_items(
     records: list[Mapping[str, Any]],
     source_indexes: SourceRecordIndexes,
+    *,
+    date_dimension: str = "complaint_received_date",
 ) -> list[dict[str, str]]:
     items: list[dict[str, str]] = []
     seen_stable_complaint_ids: set[str] = set()
@@ -2527,7 +2740,10 @@ def _substantiated_triage_items(
         else:
             facility_display = facility_name
         date_context = _substantiated_date_context(original_values)
-        complaint_date = _substantiated_complaint_date(original_values)
+        complaint_date = _substantiated_complaint_date(
+            original_values,
+            date_dimension,
+        )
         detail_href = _reviewer_detail_href(
             source_record_key,
             CcldQueueReturnContext(
@@ -2734,13 +2950,29 @@ def _substantiated_date_context(values: Mapping[str, Any]) -> str:
     return "No complaint/report date context available in currently loaded records."
 
 
-def _substantiated_complaint_date(values: Mapping[str, Any]) -> str:
-    for key in (
-        "complaint_received_date",
-        "report_date",
-        "visit_date",
-        "date_signed",
-    ):
+def _substantiated_complaint_date(
+    values: Mapping[str, Any],
+    date_dimension: str = "complaint_received_date",
+) -> str:
+    validate_date_dimension(date_dimension)
+    if date_dimension in {"latest_supported_activity", "any_review_date"}:
+        valid_dates = []
+        for key in (
+            "complaint_received_date",
+            "first_investigation_activity_date",
+            "visit_date",
+            "report_date",
+            "date_signed",
+        ):
+            raw_value = values.get(key)
+            if _has_display_value(raw_value):
+                parsed = _validated_iso_date_or_none(_display_value(raw_value)[:10])
+                if parsed is not None:
+                    valid_dates.append(parsed)
+        if valid_dates:
+            return max(valid_dates)
+        return "unknown"
+    for key in (date_dimension,):
         raw_value = values.get(key)
         if _has_display_value(raw_value):
             parsed = _validated_iso_date_or_none(_display_value(raw_value)[:10])
@@ -2809,6 +3041,10 @@ def _substantiated_worklist_filters(
     return SubstantiatedWorklistFilters(
         start_date=start_date,
         end_date=end_date,
+        date_dimension=_date_dimension_query_value(
+            query_values,
+            default="complaint_received_date",
+        ),
         facility=_first_form_value(query_values, "facility"),
         facility_type=_first_form_value(query_values, "facility_type"),
         geography=_first_form_value(query_values, "geography"),
@@ -2845,6 +3081,24 @@ def _positive_int_query_value(value: str, *, default: int, maximum: int) -> int:
         return default
     if parsed < 1:
         return default
+    return min(parsed, maximum)
+
+
+def _optional_positive_query_int(
+    query_values: Mapping[str, list[str]],
+    key: str,
+    *,
+    maximum: int,
+) -> int | None:
+    raw_value = _first_form_value(query_values, key)
+    if not raw_value:
+        return None
+    try:
+        parsed = int(raw_value)
+    except ValueError:
+        return None
+    if parsed < 1:
+        return None
     return min(parsed, maximum)
 
 
@@ -2995,10 +3249,22 @@ def _render_substantiated_triage(
     filters: SubstantiatedWorklistFilters,
     result_count: int,
     total_qualifying_count: int,
+    eligible_items: list[dict[str, str]],
     all_items: list[dict[str, str]],
     pagination: Mapping[str, int],
     actor_label: str | None,
 ) -> str:
+    source_coverage_count = sum(bool(item["source_url_href"]) for item in eligible_items)
+    aggregate_context = _render_aggregate_context(
+        denominator="authorized deduplicated complaint records with substantiated or equivalent source evidence",
+        universe_count=total_qualifying_count,
+        eligible_count=result_count,
+        source_coverage_count=source_coverage_count,
+        source_unavailable_count=result_count - source_coverage_count,
+        date_dimension=filters.date_dimension,
+        query_start=filters.start_date,
+        query_end=filters.end_date,
+    )
     filter_markup = _render_substantiated_filter_form(filters, all_items)
     summary = _render_substantiated_count_summary(
         result_count,
@@ -3065,6 +3331,7 @@ def _render_substantiated_triage(
           <p>Counts are reconciled to authorized loaded source-derived complaint records. This page does not claim source completeness or make legal conclusions.</p>
         </section>
 {filter_markup}
+{aggregate_context}
 {list_markup}
         {_render_substantiated_triage_guidance_disclosure()}
         <section class=\"quiet-section\" aria-labelledby=\"substantiated-next-heading\">
@@ -3118,7 +3385,11 @@ def _render_substantiated_filter_form(
           <form class="compact-filter-form" method="get" action="{REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH}">
             <div class="facility-intelligence-filter-grid">
               <p>
-                <label for="substantiated-start-date">From complaint date</label>
+                <label for="substantiated-date-dimension">Date used for this range</label>
+                <select id="substantiated-date-dimension" name="date_dimension">{_date_dimension_options(filters.date_dimension)}</select>
+              </p>
+              <p>
+                <label for="substantiated-start-date">From selected date</label>
                 <input id="substantiated-start-date" name="start_date" type="date" value="{_escape(filters.start_date or '')}">
               </p>
               <p>
@@ -3230,6 +3501,7 @@ def _substantiated_page_href(
     query_values = {
         "start_date": filters.start_date or "",
         "end_date": filters.end_date or "",
+        "date_dimension": filters.date_dimension,
         "facility": filters.facility,
         "facility_type": filters.facility_type,
         "geography": filters.geography,
@@ -3393,17 +3665,47 @@ def _render_complaint_review_matrix_csv(
     state_summaries: Mapping[str, Mapping[str, Any]],
     all_source_records: list[Mapping[str, Any]],
     return_context: CcldQueueReturnContext,
+    *,
+    date_dimension: str = "complaint_received_date",
+    explicit_limit: int | None = None,
 ) -> str:
     output = io.StringIO(newline="")
     fieldnames = _matrix_fieldnames()
     writer = csv.DictWriter(output, fieldnames=fieldnames, lineterminator="\r\n")
     writer.writeheader()
-    if not records:
-        writer.writerow(_empty_matrix_row(return_context))
-    for record in records:
-        writer.writerow(
-            _matrix_row_for_record(record, state_summaries, all_source_records, return_context)
+    source_coverage_count = sum(
+        _has_display_value(
+            _mapping(_mapping(item, "source_record"), "source_document").get("source_url")
         )
+        for item in records
+    )
+    returned_count = min(len(records), explicit_limit or len(records))
+    aggregate = build_aggregate_result(
+        value=returned_count,
+        denominator="authorized loaded complaint records matching the facility and export filters",
+        eligible_count=len(records),
+        returned_count=returned_count,
+        source_coverage_count=source_coverage_count,
+        source_unavailable_count=len(records) - source_coverage_count,
+        limit=explicit_limit,
+        date_dimension=date_dimension,
+        query_start=return_context.start_date,
+        query_end=return_context.end_date,
+    )
+    metadata = _aggregate_export_metadata(aggregate)
+    if not records:
+        writer.writerow(_empty_matrix_row(return_context) | metadata)
+    selected_records = records[:explicit_limit] if explicit_limit is not None else records
+    for record in selected_records:
+        row = _matrix_row_for_record(
+            record,
+            state_summaries,
+            all_source_records,
+            return_context,
+            date_dimension=date_dimension,
+        )
+        row.update(metadata)
+        writer.writerow(row)
     return output.getvalue()
 
 
@@ -3412,6 +3714,9 @@ def _substantiated_fieldnames() -> list[str]:
         "Facility Name",
         "Facility/License Number",
         "Complaint Received Date",
+        "First Investigation Activity Date",
+        "Date Dimension",
+        "Selected Date",
         "Report Date",
         "Visit Date",
         "Date Signed",
@@ -3422,13 +3727,27 @@ def _substantiated_fieldnames() -> list[str]:
         "Serious Review Cue",
         "Reviewer-created status",
         "Reviewer-created note present",
+        "Record Universe",
+        "Eligible Count",
+        "Exported Count",
+        "Source Coverage Count",
+        "Source Unavailable Count",
+        "Query Start",
+        "Query End",
+        "Explicit Limit",
+        "Truncated",
+        "Result Status",
+        "Result Cause",
     ]
 
 
-def _empty_substantiated_row(return_context: CcldQueueReturnContext) -> dict[str, str]:
+def _empty_substantiated_row(
+    return_context: CcldQueueReturnContext,
+    metadata: Mapping[str, str] | None = None,
+) -> dict[str, str]:
     return {key: "" for key in _substantiated_fieldnames()} | {
         "Facility/License Number": return_context.facility_number or "",
-    }
+    } | dict(metadata or {})
 
 
 def _render_substantiated_complaint_csv(
@@ -3441,6 +3760,8 @@ def _render_substantiated_complaint_csv(
     complaint_start_date_filter: str | None,
     complaint_end_date_filter: str | None,
     serious_review_cue_only: bool,
+    date_dimension: str = "complaint_received_date",
+    explicit_limit: int | None = None,
 ) -> str:
     output = io.StringIO(newline="")
     fieldnames = _substantiated_fieldnames()
@@ -3456,9 +3777,9 @@ def _render_substantiated_complaint_csv(
             row_facility_number = _complaint_export_row_facility_number(src, return_context)
             if complaint_facility_filter is not None and row_facility_number != complaint_facility_filter:
                 continue
-            complaint_received_date = _complaint_export_row_complaint_received_date(src)
+            selected_date = _complaint_export_row_date(src, date_dimension)
             if not _complaint_export_date_in_range(
-                complaint_received_date,
+                selected_date,
                 complaint_start_date_filter,
                 complaint_end_date_filter,
             ):
@@ -3474,26 +3795,44 @@ def _render_substantiated_complaint_csv(
                 filtered_records.append(item)
         except Exception:
             continue
+    source_coverage_count = sum(
+        _has_display_value(
+            _mapping(_mapping(item, "source_record"), "source_document").get("source_url")
+        )
+        for item in filtered_records
+    )
+    returned_count = min(len(filtered_records), explicit_limit or len(filtered_records))
+    aggregate = build_aggregate_result(
+        value=returned_count,
+        denominator="authorized loaded complaint records matching the export filters",
+        eligible_count=len(filtered_records),
+        returned_count=returned_count,
+        source_coverage_count=source_coverage_count,
+        source_unavailable_count=len(filtered_records) - source_coverage_count,
+        date_dimension=date_dimension,
+        query_start=complaint_start_date_filter,
+        query_end=complaint_end_date_filter,
+        limit=explicit_limit,
+    )
+    export_metadata = _aggregate_export_metadata(aggregate)
     if not filtered_records:
-        writer.writerow(_empty_substantiated_row(return_context))
+        writer.writerow(_empty_substantiated_row(return_context, export_metadata))
         return output.getvalue()
     records = filtered_records
 
-    # Sort: records with complaint_received_date first (desc), then missing-date rows by key
+    # Sort by the active date dimension first (desc), then missing-date rows by key.
     records_with_date: list[Mapping[str, Any]] = []
     records_without_date: list[Mapping[str, Any]] = []
     for item in records:
         source_record = _mapping(item, "source_record")
-        original_values = _mapping(source_record, "original_values")
-        if original_values.get("complaint_received_date"):
+        if _complaint_export_row_date(source_record, date_dimension) != "unknown":
             records_with_date.append(item)
         else:
             records_without_date.append(item)
 
     def _date_key(it: Mapping[str, Any]) -> str:
         src = _mapping(it, "source_record")
-        vals = _mapping(src, "original_values")
-        return vals.get("complaint_received_date") or ""
+        return _complaint_export_row_date(src, date_dimension)
 
     records_with_date.sort(key=_date_key, reverse=True)
 
@@ -3504,12 +3843,37 @@ def _render_substantiated_complaint_csv(
 
     records_without_date.sort(key=_key_by_source_record)
 
-    for record in records_with_date + records_without_date:
-        writer.writerow(
-            _substantiated_row_for_record(record, state_summaries, all_source_records, return_context)
-        )
+    ordered_records = records_with_date + records_without_date
+    if explicit_limit is not None:
+        ordered_records = ordered_records[:explicit_limit]
+    for record in ordered_records:
+        row = _substantiated_row_for_record(
+                record,
+                state_summaries,
+                all_source_records,
+                return_context,
+                date_dimension=date_dimension,
+            )
+        row.update(export_metadata)
+        writer.writerow(row)
 
     return output.getvalue()
+
+
+def _aggregate_export_metadata(aggregate: AggregateResult) -> dict[str, str]:
+    return {
+        "Record Universe": aggregate.denominator,
+        "Eligible Count": str(aggregate.eligible_count),
+        "Exported Count": str(aggregate.returned_count),
+        "Source Coverage Count": str(aggregate.source_coverage_count),
+        "Source Unavailable Count": str(aggregate.source_unavailable_count),
+        "Query Start": aggregate.query_start or "",
+        "Query End": aggregate.query_end or "",
+        "Explicit Limit": "" if aggregate.limit is None else str(aggregate.limit),
+        "Truncated": "yes" if aggregate.truncated else "no",
+        "Result Status": aggregate.status,
+        "Result Cause": aggregate.cause,
+    }
 
 
 def _substantiated_row_for_record(
@@ -3517,6 +3881,8 @@ def _substantiated_row_for_record(
     state_summaries: Mapping[str, Mapping[str, Any]],
     all_source_records: list[Mapping[str, Any]],
     return_context: CcldQueueReturnContext,
+    *,
+    date_dimension: str = "complaint_received_date",
 ) -> dict[str, str]:
     source_record = _mapping(item, "source_record")
     identity = _mapping(source_record, "identity")
@@ -3549,6 +3915,9 @@ def _substantiated_row_for_record(
         "Facility Name": facility_name,
         "Facility/License Number": _complaint_export_row_facility_number(source_record, return_context),
         "Complaint Received Date": _optional_string(original_values, "complaint_received_date"),
+        "First Investigation Activity Date": _optional_string(original_values, "first_investigation_activity_date"),
+        "Date Dimension": date_dimension_label(date_dimension),
+        "Selected Date": _substantiated_complaint_date(original_values, date_dimension),
         "Report Date": _optional_string(original_values, "report_date"),
         "Visit Date": _optional_string(original_values, "visit_date"),
         "Date Signed": _optional_string(original_values, "date_signed"),
@@ -3569,6 +3938,11 @@ def _substantiated_export_response(
     query_values = parse_qs(query, keep_blank_values=True)
     return_context = _packet_preview_context_from_values(query_values)
     complaint_start_date_filter, complaint_end_date_filter = _complaint_export_date_filters(query_values)
+    date_dimension = _date_dimension_query_value(
+        query_values,
+        default="complaint_received_date",
+    )
+    explicit_limit = _optional_positive_query_int(query_values, "limit", maximum=10000)
     export_context = CcldQueueReturnContext(
         facility_number=return_context.facility_number,
         start_date=complaint_start_date_filter,
@@ -3577,7 +3951,7 @@ def _substantiated_export_response(
         lookup_facility_name=return_context.lookup_facility_name,
     )
     status, _content_type, body = route_reviewer_workflow_shell_response(
-        f"{REVIEWER_WORKFLOW_API_PREFIX}/queue?limit=100",
+        f"{REVIEWER_WORKFLOW_API_PREFIX}/queue",
         context.workflow_shell_context,
     )
     if status != 200:
@@ -3618,6 +3992,8 @@ def _substantiated_export_response(
         complaint_start_date_filter,
         complaint_end_date_filter,
         serious_review_cue_only,
+        date_dimension,
+        explicit_limit,
     )
     return 200, "text/csv; charset=utf-8", csv_text.encode("utf-8-sig")
 
@@ -3684,6 +4060,19 @@ def _complaint_export_date_filters(
     return _validated_iso_date_or_none(raw_start), _validated_iso_date_or_none(raw_end)
 
 
+def _date_dimension_query_value(
+    query_values: Mapping[str, list[str]],
+    *,
+    default: str,
+) -> str:
+    raw_value = query_values.get("date_dimension", [default])[0].strip()
+    candidate = raw_value or default
+    try:
+        return validate_date_dimension(candidate)
+    except ValueError:
+        return default
+
+
 def _validated_iso_date_or_none(value: str) -> str | None:
     candidate = value.strip()
     if not candidate:
@@ -3737,6 +4126,14 @@ def _complaint_export_row_facility_number(
 def _complaint_export_row_complaint_received_date(source_record: Mapping[str, Any]) -> str:
     original_values = _mapping(source_record, "original_values")
     return _optional_string(original_values, "complaint_received_date")
+
+
+def _complaint_export_row_date(
+    source_record: Mapping[str, Any],
+    date_dimension: str,
+) -> str:
+    original_values = _mapping(source_record, "original_values")
+    return _substantiated_complaint_date(original_values, date_dimension)
 
 
 def _complaint_export_date_in_range(
@@ -3807,6 +4204,9 @@ def _matrix_fieldnames() -> list[str]:
         "source_record_key",
         "complaint_number",
         "complaint_date",
+        "first_investigation_activity_date",
+        "date_dimension",
+        "selected_date",
         "visit_date",
         "report_date",
         "date_signed",
@@ -3820,6 +4220,17 @@ def _matrix_fieldnames() -> list[str]:
         "reviewer_created_status",
         "reviewer_created_note_present",
         "reviewer_created_last_updated",
+        "Record Universe",
+        "Eligible Count",
+        "Exported Count",
+        "Source Coverage Count",
+        "Source Unavailable Count",
+        "Query Start",
+        "Query End",
+        "Explicit Limit",
+        "Truncated",
+        "Result Status",
+        "Result Cause",
     ]
 
 
@@ -3849,6 +4260,8 @@ def _matrix_row_for_record(
     state_summaries: Mapping[str, Mapping[str, Any]],
     all_source_records: list[Mapping[str, Any]],
     return_context: CcldQueueReturnContext,
+    *,
+    date_dimension: str = "complaint_received_date",
 ) -> dict[str, str]:
     source_record = _mapping(item, "source_record")
     identity = _mapping(source_record, "identity")
@@ -3868,6 +4281,9 @@ def _matrix_row_for_record(
         "source_record_key": source_record_key,
         "complaint_number": _optional_string(original_values, "complaint_control_number"),
         "complaint_date": _optional_string(original_values, "complaint_received_date"),
+        "first_investigation_activity_date": _optional_string(original_values, "first_investigation_activity_date"),
+        "date_dimension": date_dimension_label(date_dimension),
+        "selected_date": _substantiated_complaint_date(original_values, date_dimension),
         "visit_date": _optional_string(original_values, "visit_date"),
         "report_date": _optional_string(original_values, "report_date"),
         "date_signed": _optional_string(original_values, "date_signed"),
@@ -3936,7 +4352,7 @@ def _packet_draft_response(
                         _render_packet_draft_context_needed(actor_label=_signed_in_actor_label(context)),
                 )
         status, _content_type, body = route_reviewer_workflow_shell_response(
-                f"{REVIEWER_WORKFLOW_API_PREFIX}/queue?limit=100",
+                f"{REVIEWER_WORKFLOW_API_PREFIX}/queue",
                 context.workflow_shell_context,
         )
         if status != 200:
@@ -4490,13 +4906,35 @@ def _render_record_list(
         </article>"""
         returned_count = _int_value(_mapping(queue, "pagination"), "returned_count")
     no_results_notice = _render_no_results_notice(search_query, records)
+    universe_count = sum(
+        _string(record, "entity_type") == "complaint" for record in export_records
+    )
+    source_coverage_count = sum(
+        _has_display_value(
+            _mapping(_mapping(record, "source_record"), "source_document").get(
+                "source_url"
+            )
+        )
+        for record in records
+    )
+    aggregate_context = _render_aggregate_context(
+        denominator="authorized loaded complaint records in the current review corpus",
+        universe_count=universe_count,
+        eligible_count=len(records),
+        source_coverage_count=source_coverage_count,
+        source_unavailable_count=len(records) - source_coverage_count,
+        date_dimension="any_review_date",
+        query_start=export_context.start_date,
+        query_end=export_context.end_date,
+    )
     return _page(
                 title="Complaint records ready for review",
                 heading="Complaint records ready for review",
         actor_label=actor_label,
         main=f"""
-        {_render_reviewer_case_brief(records, state_summaries, export_records, export_context)}
+                {_render_reviewer_case_brief(records, state_summaries, export_records, export_context)}
                 {no_results_notice}
+                {aggregate_context}
         <section aria-labelledby="reviewer-list-heading">
                         <div class="dense-section-header">
                           <div>
@@ -6068,6 +6506,31 @@ def _filter_packet_preview_items(
         for record in records
         if _packet_item_matches_context(record, return_context)
     ]
+
+
+def _filter_export_items_by_date_dimension(
+    records: list[Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+    *,
+    date_dimension: str,
+) -> list[Mapping[str, Any]]:
+    result = []
+    for record in records:
+        source_record = _mapping(record, "source_record")
+        if return_context.facility_number and not _packet_record_matches_facility(
+            source_record,
+            return_context.facility_number,
+        ):
+            continue
+        selected_date = _complaint_export_row_date(source_record, date_dimension)
+        if not _complaint_export_date_in_range(
+            selected_date,
+            return_context.start_date,
+            return_context.end_date,
+        ):
+            continue
+        result.append(record)
+    return result
 
 
 def _packet_item_matches_context(

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import csv
+import json
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
+
+from ccld_complaints.aggregate_results import build_aggregate_result
 
 DEFAULT_REVIEW_BUNDLE_DIR = Path("data/processed/review-bundle")
 UNKNOWN_EXPORT_VALUE = "unknown"
@@ -138,6 +141,8 @@ EXPORTS: tuple[tuple[str, str], ...] = (
 class ReviewBundleFile:
     path: Path
     row_count: int
+    source_coverage_count: int = 0
+    source_unavailable_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -145,6 +150,7 @@ class ReviewBundleResult:
     output_dir: Path
     files: tuple[ReviewBundleFile, ...]
     readme_path: Path
+    manifest_path: Path
 
 
 def export_review_bundle(
@@ -158,19 +164,40 @@ def export_review_bundle(
         conn.row_factory = sqlite3.Row
         for filename, sql in EXPORTS:
             output_path = output_dir / filename
-            row_count = _write_csv(conn, sql, output_path)
-            exported_files.append(ReviewBundleFile(path=output_path, row_count=row_count))
+            row_count, source_coverage_count, source_unavailable_count = _write_csv(
+                conn,
+                sql,
+                output_path,
+            )
+            exported_files.append(
+                ReviewBundleFile(
+                    path=output_path,
+                    row_count=row_count,
+                    source_coverage_count=source_coverage_count,
+                    source_unavailable_count=source_unavailable_count,
+                )
+            )
 
     readme_path = output_dir / "README.md"
     readme_path.write_text(_bundle_readme(), encoding="utf-8")
+    manifest_path = output_dir / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(_bundle_manifest(exported_files), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     return ReviewBundleResult(
         output_dir=output_dir,
         files=tuple(exported_files),
         readme_path=readme_path,
+        manifest_path=manifest_path,
     )
 
 
-def _write_csv(conn: sqlite3.Connection, sql: str, output_path: Path) -> int:
+def _write_csv(
+    conn: sqlite3.Connection,
+    sql: str,
+    output_path: Path,
+) -> tuple[int, int, int]:
     cursor = conn.execute(sql)
     column_names = [description[0] for description in cursor.description or ()]
     rows = cursor.fetchall()
@@ -179,7 +206,46 @@ def _write_csv(conn: sqlite3.Connection, sql: str, output_path: Path) -> int:
         writer.writerow(column_names)
         for row in rows:
             writer.writerow([_export_value(row[column_name]) for column_name in column_names])
-    return len(rows)
+    traceability_columns = {
+        column_name for column_name in column_names if column_name in {"source_url", "raw_sha256"}
+    }
+    if not traceability_columns:
+        return len(rows), len(rows), 0
+    source_coverage_count = sum(
+        all(row[column_name] not in {None, ""} for column_name in traceability_columns)
+        for row in rows
+    )
+    return len(rows), source_coverage_count, len(rows) - source_coverage_count
+
+
+def _bundle_manifest(files: list[ReviewBundleFile]) -> dict[str, object]:
+    export_rows = []
+    for exported_file in files:
+        result = build_aggregate_result(
+            value=exported_file.row_count,
+            denominator="all eligible rows in the corresponding governed SQLite review view",
+            eligible_count=exported_file.row_count,
+            returned_count=exported_file.row_count,
+            source_coverage_count=exported_file.source_coverage_count,
+            source_unavailable_count=exported_file.source_unavailable_count,
+            date_dimension="complaint_received_date",
+        )
+        export_rows.append(
+            {
+                "file": exported_file.path.name,
+                **result.to_dict(),
+            }
+        )
+    return {
+        "manifest_version": 1,
+        "record_universe": "governed local SQLite review views",
+        "date_dimension": "complaint_received_date",
+        "query_start": None,
+        "query_end": None,
+        "explicit_limit": None,
+        "truncated": False,
+        "exports": export_rows,
+    }
 
 
 def _export_value(value: object) -> object:
@@ -237,6 +303,11 @@ def _bundle_readme() -> str:
             "- facility_comparison_review.csv: facility/category/finding rows with "
             "source-document counts, traceability-completeness counts, same-category/finding "
             "facility counts, and cautious scope notes."
+        ),
+        (
+            "- manifest.json: record universe, eligible/exported counts, source coverage, "
+            "date dimension/range, explicit limit, truncation status, and result cause "
+            "for each CSV."
         ),
         "",
         "## Review Notes",

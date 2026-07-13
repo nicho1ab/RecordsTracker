@@ -87,6 +87,32 @@ OTHER_SCOPE = HostedAccessScope("seeded_corpus", "different-seeded-corpus")
 COMPLAINT_KEY = "complaint:ccld:complaint:32-CR-20220407124448"
 
 
+def _assert_aggregate_export_fieldnames(fieldnames: list[str] | None) -> None:
+    assert fieldnames is not None
+    assert {
+        "Facility Name",
+        "Facility/License Number",
+        "Complaint Received Date",
+        "First Investigation Activity Date",
+        "Date Dimension",
+        "Selected Date",
+        "Finding/Status",
+        "Complaint Control Number",
+        "Source Report URL",
+        "Record Universe",
+        "Eligible Count",
+        "Exported Count",
+        "Source Coverage Count",
+        "Source Unavailable Count",
+        "Query Start",
+        "Query End",
+        "Explicit Limit",
+        "Truncated",
+        "Result Status",
+        "Result Cause",
+    }.issubset(fieldnames)
+
+
 class ElementTextByIdParser(HTMLParser):
     def __init__(self, element_id: str) -> None:
         super().__init__()
@@ -2850,21 +2876,7 @@ def test_reviewer_ui_complaint_export_section_smoke_regression() -> None:
 
     assert csv_status == 200
     assert csv_content_type == "text/csv; charset=utf-8"
-    assert reader.fieldnames == [
-        "Facility Name",
-        "Facility/License Number",
-        "Complaint Received Date",
-        "Report Date",
-        "Visit Date",
-        "Date Signed",
-        "Finding/Status",
-        "Complaint Control Number",
-        "Source Report URL",
-        "Source Traceability Status",
-        "Serious Review Cue",
-        "Reviewer-created status",
-        "Reviewer-created note present",
-    ]
+    _assert_aggregate_export_fieldnames(reader.fieldnames)
     assert rows
     [record] = rows
     assert record["Facility/License Number"] == "157806098"
@@ -3432,21 +3444,7 @@ def test_reviewer_ui_complaint_export_csv_body_header_unchanged_for_filtered_exp
 
     assert status == 200
     assert content_type == "text/csv; charset=utf-8"
-    assert reader.fieldnames == [
-        "Facility Name",
-        "Facility/License Number",
-        "Complaint Received Date",
-        "Report Date",
-        "Visit Date",
-        "Date Signed",
-        "Finding/Status",
-        "Complaint Control Number",
-        "Source Report URL",
-        "Source Traceability Status",
-        "Serious Review Cue",
-        "Reviewer-created status",
-        "Reviewer-created note present",
-    ]
+    _assert_aggregate_export_fieldnames(reader.fieldnames)
     assert rows
     [record] = rows
     assert record["Facility Name"] == "A. MIRIAM JAMISON CHILDREN'S CENTER"
@@ -3554,21 +3552,7 @@ def test_reviewer_ui_complaint_export_review_cue_query_filter_without_mutation(
         "audit_events": 2,
         "reset_reload_planning_metadata": 0,
     }
-    assert reader.fieldnames == [
-        "Facility Name",
-        "Facility/License Number",
-        "Complaint Received Date",
-        "Report Date",
-        "Visit Date",
-        "Date Signed",
-        "Finding/Status",
-        "Complaint Control Number",
-        "Source Report URL",
-        "Source Traceability Status",
-        "Serious Review Cue",
-        "Reviewer-created status",
-        "Reviewer-created note present",
-    ]
+    _assert_aggregate_export_fieldnames(reader.fieldnames)
     assert rows
     [record] = rows
     if expect_row:

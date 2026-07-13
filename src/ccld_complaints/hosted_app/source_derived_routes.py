@@ -17,7 +17,7 @@ from ccld_complaints.hosted_app.auth import (
     HostedScopeDeniedError,
     get_authorized_source_derived_record_by_identity,
     get_authorized_source_derived_record_by_key,
-    list_authorized_source_derived_records,
+    list_authorized_source_derived_record_result,
 )
 from ccld_complaints.hosted_app.seeded_import import (
     SOURCE_DERIVED_ENTITY_TYPES,
@@ -29,7 +29,7 @@ from ccld_complaints.hosted_app.source_derived_reads import (
 )
 
 SOURCE_DERIVED_API_PREFIX = "/api/source-derived-records"
-MAX_SOURCE_DERIVED_API_LIMIT = 100
+MAX_SOURCE_DERIVED_API_LIMIT = 10000
 
 
 @dataclass(frozen=True)
@@ -81,9 +81,9 @@ def _list_source_derived_records(
 ) -> tuple[int, str, bytes]:
     entity_type = _optional_entity_type(query_values)
     import_batch_id = _optional_query_value(query_values, "import_batch_id")
-    limit = _bounded_int_query_value(query_values, "limit", default=100, minimum=1)
+    limit = _optional_bounded_int_query_value(query_values, "limit", minimum=1)
     offset = _bounded_int_query_value(query_values, "offset", default=0, minimum=0)
-    records = list_authorized_source_derived_records(
+    result = list_authorized_source_derived_record_result(
         context.connection,
         context.actor,
         scope=context.scope,
@@ -98,12 +98,16 @@ def _list_source_derived_records(
     return _json_response(
         200,
         {
-            "records": [_record_payload(record) for record in records],
+            "records": [_record_payload(record) for record in result.records],
             "filters": filters,
             "pagination": {
                 "limit": limit,
                 "offset": offset,
-                "returned_count": len(records),
+                "returned_count": len(result.records),
+                "eligible_count": result.aggregate.eligible_count,
+                "truncated": result.aggregate.truncated,
+                "status": result.aggregate.status,
+                "cause": result.aggregate.cause,
             },
         },
     )
@@ -225,6 +229,17 @@ def _bounded_int_query_value(
     if key == "limit" and value > MAX_SOURCE_DERIVED_API_LIMIT:
         raise ValueError(f"limit must be at most {MAX_SOURCE_DERIVED_API_LIMIT}.")
     return value
+
+
+def _optional_bounded_int_query_value(
+    query_values: Mapping[str, list[str]],
+    key: str,
+    *,
+    minimum: int,
+) -> int | None:
+    if _optional_query_value(query_values, key) is None:
+        return None
+    return _bounded_int_query_value(query_values, key, default=minimum, minimum=minimum)
 
 
 def _required_query_value(

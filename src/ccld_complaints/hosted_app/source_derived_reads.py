@@ -6,9 +6,10 @@ from datetime import date
 from typing import Any, cast
 from urllib.parse import parse_qs, urlparse
 
-from sqlalchemy import Select, and_, select
+from sqlalchemy import Select, and_, func, select
 from sqlalchemy.engine import Connection, RowMapping
 
+from ccld_complaints.aggregate_results import AggregateResult, build_aggregate_result
 from ccld_complaints.hosted_app.seeded_import import (
     SourceDerivedEntityType,
     hosted_import_batches,
@@ -54,9 +55,17 @@ class CcldSourceDerivedRequestLookup:
     all_facility_records: tuple[SourceDerivedRecordRead, ...]
 
 
+@dataclass(frozen=True)
+class SourceDerivedRecordListResult:
+    records: tuple[SourceDerivedRecordRead, ...]
+    aggregate: AggregateResult
+    offset: int
+
+
 CCLD_CONNECTOR_NAME = "ccld_facility_reports"
 CCLD_REVIEW_DATE_FIELDS = (
     "complaint_received_date",
+    "first_investigation_activity_date",
     "visit_date",
     "report_date",
     "date_signed",
@@ -70,10 +79,10 @@ def list_source_derived_records(
     entity_types: tuple[SourceDerivedEntityType, ...] | None = None,
     import_batch_id: str | None = None,
     import_batch_ids: tuple[str, ...] | None = None,
-    limit: int = 100,
+    limit: int | None = None,
     offset: int = 0,
 ) -> tuple[SourceDerivedRecordRead, ...]:
-    if limit < 1:
+    if limit is not None and limit < 1:
         raise ValueError("Source-derived record list limit must be at least 1.")
     if offset < 0:
         raise ValueError("Source-derived record list offset must be at least 0.")
@@ -85,29 +94,78 @@ def list_source_derived_records(
         raise ValueError("Source-derived record list accepts one entity filter mode.")
 
     query = _source_derived_read_query()
-    filters = []
-    if entity_type is not None:
-        filters.append(hosted_source_derived_records.c.entity_type == entity_type)
-    if entity_types is not None:
-        if not entity_types:
-            return ()
-        filters.append(hosted_source_derived_records.c.entity_type.in_(entity_types))
-    if import_batch_id is not None:
-        filters.append(hosted_source_derived_records.c.import_batch_id == import_batch_id)
-    if import_batch_ids is not None:
-        if not import_batch_ids:
-            return ()
-        filters.append(hosted_source_derived_records.c.import_batch_id.in_(import_batch_ids))
+    filters = _source_derived_filters(
+        entity_type=entity_type,
+        entity_types=entity_types,
+        import_batch_id=import_batch_id,
+        import_batch_ids=import_batch_ids,
+    )
+    if filters is None:
+        return ()
     if filters:
         query = query.where(and_(*filters))
     query = query.order_by(
         hosted_source_derived_records.c.entity_type,
         hosted_source_derived_records.c.stable_source_id,
-    ).limit(limit).offset(offset)
+    )
+    if limit is not None:
+        query = query.limit(limit)
+    if offset:
+        query = query.offset(offset)
 
     return tuple(
         _read_model_from_row(row) for row in connection.execute(query).mappings().all()
     )
+
+
+def list_source_derived_record_result(
+    connection: Connection,
+    *,
+    entity_type: SourceDerivedEntityType | None = None,
+    entity_types: tuple[SourceDerivedEntityType, ...] | None = None,
+    import_batch_id: str | None = None,
+    import_batch_ids: tuple[str, ...] | None = None,
+    limit: int | None = None,
+    offset: int = 0,
+) -> SourceDerivedRecordListResult:
+    records = list_source_derived_records(
+        connection,
+        entity_type=entity_type,
+        entity_types=entity_types,
+        import_batch_id=import_batch_id,
+        import_batch_ids=import_batch_ids,
+        limit=limit,
+        offset=offset,
+    )
+    filters = _source_derived_filters(
+        entity_type=entity_type,
+        entity_types=entity_types,
+        import_batch_id=import_batch_id,
+        import_batch_ids=import_batch_ids,
+    )
+    if filters is None:
+        eligible_count = 0
+    else:
+        count_query = select(func.count()).select_from(hosted_source_derived_records)
+        if filters:
+            count_query = count_query.where(and_(*filters))
+        eligible_count = int(connection.execute(count_query).scalar_one())
+    returned_count = len(records)
+    visible_eligible_count = max(eligible_count - offset, 0)
+    aggregate = build_aggregate_result(
+        value=returned_count,
+        denominator=(
+            "authorized source-derived records matching the active entity and import filters"
+        ),
+        eligible_count=visible_eligible_count,
+        returned_count=returned_count,
+        source_coverage_count=visible_eligible_count,
+        source_unavailable_count=0,
+        filtered_count=offset,
+        limit=limit,
+        date_dimension="any_review_date",
+    )
+    return SourceDerivedRecordListResult(records=records, aggregate=aggregate, offset=offset)
 
 
 def list_source_derived_records_by_entity_types(
@@ -148,6 +206,7 @@ def find_ccld_source_derived_records_for_request(
     facility_number: str,
     start_date: str | None = None,
     end_date: str | None = None,
+    date_dimension: str = "any_review_date",
     import_batch_id: str | None = None,
 ) -> CcldSourceDerivedRequestLookup:
     requested_facility = _normalized_facility_number(facility_number)
@@ -175,6 +234,7 @@ def find_ccld_source_derived_records_for_request(
             record,
             start_date=parsed_start,
             end_date=parsed_end,
+            date_dimension=date_dimension,
         )
     )
     matched_complaint_keys = tuple(record.source_record_key for record in matching_complaints)
@@ -353,8 +413,9 @@ def _ccld_record_matches_date_range(
     *,
     start_date: date | None,
     end_date: date | None,
+    date_dimension: str,
 ) -> bool:
-    record_dates = _ccld_record_dates(record)
+    record_dates = _ccld_record_dates(record, date_dimension=date_dimension)
     if start_date is None and end_date is None:
         return True
     return any(
@@ -364,15 +425,50 @@ def _ccld_record_matches_date_range(
     )
 
 
-def _ccld_record_dates(record: SourceDerivedRecordRead) -> tuple[date, ...]:
+def _ccld_record_dates(
+    record: SourceDerivedRecordRead,
+    *,
+    date_dimension: str = "any_review_date",
+) -> tuple[date, ...]:
+    if date_dimension != "any_review_date" and date_dimension not in CCLD_REVIEW_DATE_FIELDS:
+        allowed = ", ".join(("any_review_date", *CCLD_REVIEW_DATE_FIELDS))
+        raise ValueError(f"date_dimension must be one of: {allowed}.")
     dates: list[date] = []
-    for field_name in CCLD_REVIEW_DATE_FIELDS:
+    field_names = (
+        CCLD_REVIEW_DATE_FIELDS
+        if date_dimension == "any_review_date"
+        else (date_dimension,)
+    )
+    for field_name in field_names:
         value = record.original_values.get(field_name)
         if isinstance(value, str):
             parsed = _parse_iso_date(value[:10])
             if parsed is not None:
                 dates.append(parsed)
     return tuple(dates)
+
+
+def _source_derived_filters(
+    *,
+    entity_type: SourceDerivedEntityType | None,
+    entity_types: tuple[SourceDerivedEntityType, ...] | None,
+    import_batch_id: str | None,
+    import_batch_ids: tuple[str, ...] | None,
+) -> list[Any] | None:
+    filters: list[Any] = []
+    if entity_type is not None:
+        filters.append(hosted_source_derived_records.c.entity_type == entity_type)
+    if entity_types is not None:
+        if not entity_types:
+            return None
+        filters.append(hosted_source_derived_records.c.entity_type.in_(entity_types))
+    if import_batch_id is not None:
+        filters.append(hosted_source_derived_records.c.import_batch_id == import_batch_id)
+    if import_batch_ids is not None:
+        if not import_batch_ids:
+            return None
+        filters.append(hosted_source_derived_records.c.import_batch_id.in_(import_batch_ids))
+    return filters
 
 
 def _normalized_facility_number(value: object) -> str | None:

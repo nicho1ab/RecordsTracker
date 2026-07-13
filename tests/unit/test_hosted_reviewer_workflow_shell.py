@@ -92,6 +92,10 @@ def test_reviewer_workflow_shell_lists_authenticated_review_queue() -> None:
         "limit": 10,
         "offset": 0,
         "returned_count": 1,
+        "eligible_count": 1,
+        "truncated": False,
+        "status": "available",
+        "cause": "The result includes every eligible record in the selected range.",
     }
     assert payload["queue"]["filters"] == {"entity_type": "complaint"}
     [item] = payload["queue"]["records"]
@@ -996,9 +1000,13 @@ def test_reviewer_workflow_shell_returns_empty_queue_without_seeded_records() ->
     assert payload["queue"]["empty"] is True
     assert payload["queue"]["records"] == []
     assert payload["queue"]["pagination"] == {
-        "limit": 100,
+        "limit": None,
         "offset": 0,
         "returned_count": 0,
+        "eligible_count": 0,
+        "truncated": False,
+        "status": "zero",
+        "cause": "Complete eligible source coverage contains zero qualifying records.",
     }
 
 

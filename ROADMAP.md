@@ -9,6 +9,13 @@ the governed primary future review experience.
 
 ## Completed foundation
 
+- Made reviewer priorities, complaint trends, serious-topic and substantiated
+  review, and complaint/facility exports data-ready through a shared aggregate
+  result contract. The implementation exposes record universes, denominators,
+  active date range/dimension, incomplete source coverage, explicit zero and
+  unavailable causes, and explicit-limit truncation while removing the silent
+  source-derived 100-row default.
+
 - Established the governed repository structure, Copilot instructions, and core
 	project documentation.
 - Defined the data contract, source connector contract, testing strategy,

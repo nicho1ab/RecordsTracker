@@ -12,8 +12,10 @@ from ccld_complaints.hosted_app.seeded_import import (
     load_seeded_corpus_artifact,
 )
 from ccld_complaints.hosted_app.source_derived_reads import (
+    find_ccld_source_derived_records_for_request,
     get_source_derived_record_by_identity,
     get_source_derived_record_by_key,
+    list_source_derived_record_result,
     list_source_derived_records,
     list_source_derived_records_by_entity_types,
 )
@@ -74,6 +76,47 @@ def test_list_source_derived_records_supports_limit_and_offset() -> None:
 
     assert len(records) == 1
     assert records[0].entity_type == "complaint"
+
+
+def test_source_derived_list_has_no_default_cap_and_explicit_limit_is_reported() -> None:
+    with _seeded_connection() as connection:
+        _insert_additional_complaint_rows(connection, count=125)
+        uncapped = list_source_derived_record_result(connection, entity_type="complaint")
+        limited = list_source_derived_record_result(
+            connection,
+            entity_type="complaint",
+            limit=100,
+        )
+
+    assert len(uncapped.records) == 126
+    assert uncapped.aggregate.eligible_count == 126
+    assert uncapped.aggregate.limit is None
+    assert uncapped.aggregate.truncated is False
+    assert len(limited.records) == 100
+    assert limited.aggregate.eligible_count == 126
+    assert limited.aggregate.status == "truncated"
+    assert limited.aggregate.truncated is True
+
+
+def test_request_lookup_applies_selected_first_activity_date_dimension() -> None:
+    with _seeded_connection() as connection:
+        first_activity_match = find_ccld_source_derived_records_for_request(
+            connection,
+            facility_number="157806098",
+            start_date="2022-04-14",
+            end_date="2022-04-14",
+            date_dimension="first_investigation_activity_date",
+        )
+        received_date_does_not_match = find_ccld_source_derived_records_for_request(
+            connection,
+            facility_number="157806098",
+            start_date="2022-04-07",
+            end_date="2022-04-07",
+            date_dimension="first_investigation_activity_date",
+        )
+
+    assert len(first_activity_match.matched_complaint_keys) == 1
+    assert received_date_does_not_match.matched_complaint_keys == ()
 
 
 def test_list_source_derived_records_by_entity_types_is_uncapped_and_excludes_audit() -> None:
@@ -199,3 +242,23 @@ def _insert_extraction_audit_row(connection: Connection) -> None:
             source_traceability=template["source_traceability"],
         )
     )
+
+
+def _insert_additional_complaint_rows(connection: Connection, *, count: int) -> None:
+    from ccld_complaints.hosted_app.seeded_import import hosted_source_derived_records
+
+    template = connection.execute(
+        hosted_source_derived_records.select().where(
+            hosted_source_derived_records.c.entity_type == "complaint"
+        )
+    ).mappings().one()
+    rows = []
+    for index in range(count):
+        values = dict(template)
+        values["source_record_key"] = f"complaint:aggregate-evidence:{index:03d}"
+        values["stable_source_id"] = f"aggregate-evidence:{index:03d}"
+        original_values = dict(template["original_values"])
+        original_values["complaint_id"] = f"aggregate-evidence:{index:03d}"
+        values["original_values"] = original_values
+        rows.append(values)
+    connection.execute(hosted_source_derived_records.insert(), rows)
