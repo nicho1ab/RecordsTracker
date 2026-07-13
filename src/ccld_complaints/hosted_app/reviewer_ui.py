@@ -10,7 +10,7 @@ import os
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any, cast
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -50,6 +50,14 @@ from ccld_complaints.hosted_app.facility_case_brief import (
 from ccld_complaints.hosted_app.facility_review_signals import (
     load_active_facility_review_signals,
 )
+from ccld_complaints.hosted_app.facility_trends import (
+    DATE_UNAVAILABLE,
+    FacilityTrendComplaint,
+    FacilityTrendFilters,
+    FacilityTrendPeriod,
+    FacilityTrendResult,
+    build_facility_trend,
+)
 from ccld_complaints.hosted_app.reviewer_created_state import REVIEWER_STATUS_VALUES
 from ccld_complaints.hosted_app.reviewer_created_state_routes import (
     REVIEWER_CREATED_STATE_API_PREFIX,
@@ -83,6 +91,7 @@ REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH = f"{REVIEWER_UI_RECORDS_PATH}/substantiat
 REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH = f"{REVIEWER_UI_RECORDS_PATH}/substantiated.csv"
 REVIEWER_UI_SERIOUS_TOPICS_PATH = f"{REVIEWER_UI_RECORDS_PATH}/serious-topics"
 REVIEWER_UI_FACILITY_PRIORITIES_PATH = f"{REVIEWER_UI_PREFIX}/facilities/priorities"
+REVIEWER_UI_FACILITY_TRENDS_PATH = f"{REVIEWER_UI_PREFIX}/facilities/trends"
 REVIEWER_UI_NOTE_PATH = f"{REVIEWER_UI_RECORDS_PATH}/note"
 REVIEWER_UI_STATUS_PATH = f"{REVIEWER_UI_RECORDS_PATH}/status"
 REVIEWER_UI_PACKET_PREVIEW_PATH = f"{REVIEWER_UI_PREFIX}/packet/preview"
@@ -306,6 +315,8 @@ _SUBSTANTIATED_DEFAULT_PAGE_SIZE = 50
 _SUBSTANTIATED_MAX_PAGE_SIZE = 100
 _FACILITY_PRIORITIES_DEFAULT_PAGE_SIZE = 25
 _FACILITY_PRIORITIES_MAX_PAGE_SIZE = 100
+_FACILITY_TRENDS_DEFAULT_PERIOD_COUNT = 12
+_FACILITY_TRENDS_MAX_PERIOD_COUNT = 24
 _SUBSTANTIATED_SOURCE_ENTITY_TYPES: tuple[SourceDerivedEntityType, ...] = (
     "facility",
     "source_document",
@@ -551,6 +562,8 @@ def route_reviewer_ui_response(
         return _record_list_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_FACILITY_PRIORITIES_PATH:
         return _facility_priorities_response(parsed_url.query, context)
+    if parsed_url.path == REVIEWER_UI_FACILITY_TRENDS_PATH:
+        return _facility_trends_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH:
         return _substantiated_triage_response(parsed_url.query, context)
     if parsed_url.path == REVIEWER_UI_SERIOUS_TOPICS_PATH:
@@ -1252,6 +1265,7 @@ def _render_facility_priorities(
         <section class="quiet-section" aria-labelledby="facility-priorities-next-heading">
           <h2 id="facility-priorities-next-heading">Next steps</h2>
           <ul>
+            <li><a href="{REVIEWER_UI_FACILITY_TRENDS_PATH}">Compare complaint trends over time</a></li>
             <li><a href="{REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH}">Open substantiated complaint worklist</a></li>
             <li><a href="{REVIEWER_UI_RECORDS_PATH}">Return to review queue</a></li>
             <li><a href="{CCLD_RECORD_REQUEST_PATH}">Return to CCLD request queue</a></li>
@@ -1450,6 +1464,410 @@ def _render_facility_priority_rules_disclosure() -> str:
           <summary>Prioritization and tie rules</summary>
           <p>This page uses deterministic contributing factors only: deduplicated loaded complaint count, substantiated/equivalent finding count, existing timing review flags, missing local date context, source-link availability, supported recent activity, and low-data status.</p>
           <p>Rows are ordered by substantiated/equivalent count descending, complaint count descending, strongest timing review flag descending, recent activity descending, facility name ascending, then stable facility identity ascending. These rules are visible ordering rules, not a stored or hidden risk score.</p>
+        </details>"""
+
+
+def _facility_trends_response(
+    query: str,
+    context: ReviewerUiContext,
+) -> tuple[int, str, bytes]:
+    query_values = parse_qs(query, keep_blank_values=True)
+    filters = _facility_trend_filters(query_values)
+    if (
+        filters.start_date is not None
+        and filters.end_date is not None
+        and filters.start_date > filters.end_date
+    ):
+        return _html_response(
+            400,
+            _render_blocked_page(
+                title="Complaint trend dates need attention",
+                heading="Complaint trend dates need attention",
+                message="Start date must be on or before end date.",
+            ),
+        )
+    source_status, source_result = _substantiated_source_records_response(context)
+    if source_status != 200:
+        if not isinstance(source_result, bytes):
+            raise ValueError("Expected source-derived error body to be bytes.")
+        return _workflow_error_page(
+            source_status,
+            source_result,
+            title="Complaint trends blocked",
+            heading="Complaint trends blocked",
+            guidance=(
+                "Retry with an authenticated actor that can read the loaded "
+                "source-derived corpus."
+            ),
+            links=(("Return to reviewer records", REVIEWER_UI_RECORDS_PATH),),
+        )
+    if isinstance(source_result, bytes):
+        raise ValueError("Expected source-derived records.")
+    complaints = _facility_trend_complaints(source_result)
+    result = build_facility_trend(
+        complaints,
+        filters,
+        today=datetime.now(CENTRAL_TIME).date(),
+    )
+    return _html_response(
+        200,
+        _render_facility_trends(
+            result,
+            filters=filters,
+            all_complaints=complaints,
+            actor_label=_signed_in_actor_label(context),
+        ),
+    )
+
+
+def _facility_trend_filters(
+    query_values: Mapping[str, list[str]],
+) -> FacilityTrendFilters:
+    start_date, end_date = _complaint_export_date_filters(query_values)
+    grain = _first_form_value(query_values, "time_grain").strip().casefold()
+    if grain not in {"month", "quarter"}:
+        grain = "month"
+    return FacilityTrendFilters(
+        start_date=date.fromisoformat(start_date) if start_date else None,
+        end_date=date.fromisoformat(end_date) if end_date else None,
+        facility=_first_form_value(query_values, "facility"),
+        facility_type=_first_form_value(query_values, "facility_type"),
+        geography=_first_form_value(query_values, "geography"),
+        finding=_first_form_value(query_values, "finding"),
+        serious_topic=_first_form_value(query_values, "serious_topic"),
+        time_grain=grain,
+        period_count=_bounded_query_int(
+            query_values,
+            "period_count",
+            default=_FACILITY_TRENDS_DEFAULT_PERIOD_COUNT,
+            minimum=1,
+            maximum=_FACILITY_TRENDS_MAX_PERIOD_COUNT,
+        ),
+    )
+
+
+def _facility_trend_complaints(
+    source_records: list[Mapping[str, Any]],
+) -> list[FacilityTrendComplaint]:
+    indexes = _source_record_indexes(source_records)
+    complaints: list[FacilityTrendComplaint] = []
+    seen_stable_complaint_ids: set[str] = set()
+    for record in source_records:
+        if _string(record, "entity_type") != "complaint":
+            continue
+        review_item = _review_item_from_source_record(record)
+        source_record = _mapping(review_item, "source_record")
+        stable_complaint_id = _stable_complaint_identity(source_record)
+        if stable_complaint_id in seen_stable_complaint_ids:
+            continue
+        seen_stable_complaint_ids.add(stable_complaint_id)
+        related_records = _related_source_records_from_indexes(source_record, indexes)
+        complaint_related_records = _facility_trend_complaint_related_records(
+            source_record,
+            related_records,
+        )
+        original_values = _mapping(source_record, "original_values")
+        identity = _mapping(source_record, "identity")
+        source_record_key = _string(identity, "source_record_key")
+        facility = _facility_context(related_records)
+        facility_number = _facility_priority_facility_number(source_record, facility)
+        facility_name = _facility_context_value(facility, "facility_name")
+        if facility_name == "unknown":
+            facility_name = (
+                f"Facility ID {facility_number}"
+                if facility_number != "unknown"
+                else "Unknown facility"
+            )
+        complaint_date_value = _optional_string(
+            original_values,
+            "complaint_received_date",
+        )
+        validated_complaint_date = _validated_iso_date_or_none(complaint_date_value)
+        complaint_date = (
+            date.fromisoformat(validated_complaint_date)
+            if validated_complaint_date
+            else None
+        )
+        complaints.append(
+            FacilityTrendComplaint(
+                stable_complaint_id=stable_complaint_id,
+                source_record_key=source_record_key,
+                complaint_control_number=_optional_string(
+                    original_values,
+                    "complaint_control_number",
+                ),
+                facility_number=facility_number,
+                facility_name=facility_name,
+                facility_type=_facility_context_value(facility, "facility_type"),
+                geography=_substantiated_geography_label(facility),
+                complaint_date=complaint_date,
+                finding=_optional_string(original_values, "finding"),
+                substantiated=(
+                    _substantiated_finding_evidence(
+                        source_record,
+                        complaint_related_records,
+                    )
+                    is not None
+                ),
+                serious_topics=_facility_trend_serious_topics(
+                    source_record,
+                    complaint_related_records,
+                ),
+                detail_href=_reviewer_detail_href(
+                    source_record_key,
+                    CcldQueueReturnContext(
+                        facility_number=(
+                            facility_number if facility_number != "unknown" else None
+                        ),
+                    ),
+                ),
+            )
+        )
+    return sorted(
+        complaints,
+        key=lambda item: (item.facility_name.casefold(), item.stable_complaint_id),
+    )
+
+
+def _facility_trend_serious_topics(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> tuple[str, ...]:
+    complaint_ids = set(_selected_source_complaint_ids(source_record))
+    allegation_records = [
+        record
+        for record in related_records
+        if _string(record, "entity_type") == "allegation"
+        and complaint_ids.intersection(_flat_record_complaint_ids(record))
+    ]
+    evidence = _serious_topic_evidence(allegation_records)
+    return tuple(
+        sorted(
+            {
+                item["category_label"]
+                for item in evidence
+                if item["category_label"]
+            },
+            key=str.casefold,
+        )
+    )
+
+
+def _facility_trend_complaint_related_records(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> list[Mapping[str, Any]]:
+    complaint_ids = set(_selected_source_complaint_ids(source_record))
+    return [
+        record
+        for record in related_records
+        if _string(record, "entity_type") not in {"allegation", "event"}
+        or bool(complaint_ids.intersection(_flat_record_complaint_ids(record)))
+    ]
+
+
+def _render_facility_trends(
+    result: FacilityTrendResult,
+    *,
+    filters: FacilityTrendFilters,
+    all_complaints: list[FacilityTrendComplaint],
+    actor_label: str | None,
+) -> str:
+    rows = "\n".join(_render_facility_trend_period(period) for period in result.periods)
+    rows += "\n" + _render_facility_trend_date_unavailable_row(result)
+    period_label = "quarter" if filters.time_grain == "quarter" else "month"
+    return _page(
+        title="Complaint trends over time",
+        heading="Review complaint trends over time",
+        actor_label=actor_label,
+        main=f"""
+        <p>Compare deduplicated loaded complaint and finding activity by {period_label}, then open the contributing complaint records for review.</p>
+        {_render_facility_trend_filter_form(filters, all_complaints)}
+        <section aria-labelledby="facility-trends-results-heading">
+          <h2 id="facility-trends-results-heading">Complaint activity by {period_label}</h2>
+          <p>{result.qualifying_complaint_count} qualifying complaint record(s): {result.dated_qualifying_complaint_count} assigned to displayed periods and {len(result.date_unavailable_complaints)} with date unavailable.</p>
+          <table>
+            <caption>Deduplicated complaint activity, coverage states, and deterministic anomaly cues</caption>
+            <thead>
+              <tr>
+                <th scope="col">Period</th>
+                <th scope="col">Coverage</th>
+                <th scope="col">Total complaints</th>
+                <th scope="col">Substantiated/equivalent findings</th>
+                <th scope="col">Serious-topic qualifying complaints</th>
+                <th scope="col">Anomaly cue and contributing counts</th>
+                <th scope="col">Complaint records</th>
+              </tr>
+            </thead>
+            <tbody>
+{rows}
+            </tbody>
+          </table>
+        </section>
+        {_render_facility_trend_rules()}
+        <nav class="form-actions" aria-label="Complaint trend next actions">
+          <a class="button button-secondary" href="{REVIEWER_UI_RECORDS_PATH}">Return to review queue</a>
+          <a class="button button-secondary" href="{REVIEWER_UI_FACILITY_PRIORITIES_PATH}">Open facility review priorities</a>
+        </nav>
+""",
+    )
+
+
+def _render_facility_trend_filter_form(
+    filters: FacilityTrendFilters,
+    all_complaints: list[FacilityTrendComplaint],
+) -> str:
+    facility_options = _substantiated_filter_options(
+        value
+        for item in all_complaints
+        for value in (item.facility_name, item.facility_number)
+    )
+    facility_type_options = _substantiated_filter_options(
+        item.facility_type for item in all_complaints
+    )
+    geography_options = _substantiated_filter_options(
+        item.geography for item in all_complaints
+    )
+    finding_options = _substantiated_filter_options(
+        item.finding for item in all_complaints
+    )
+    serious_topic_options = _substantiated_filter_options(
+        topic for item in all_complaints for topic in item.serious_topics
+    )
+    return f"""        <section class="quiet-section" aria-labelledby="facility-trends-filters-heading">
+          <h2 id="facility-trends-filters-heading">Choose facilities and periods</h2>
+          <form class="compact-filter-form" method="get" action="{REVIEWER_UI_FACILITY_TRENDS_PATH}">
+            <div class="facility-intelligence-filter-grid">
+              <p>
+                <label for="facility-trends-facility">Facility name or ID</label>
+                <input id="facility-trends-facility" name="facility" value="{_escape(filters.facility)}" list="facility-trends-facilities" autocomplete="off">
+                <datalist id="facility-trends-facilities">{facility_options}</datalist>
+              </p>
+              <p>
+                <label for="facility-trends-facility-type">Facility type</label>
+                <input id="facility-trends-facility-type" name="facility_type" value="{_escape(filters.facility_type)}" list="facility-trends-facility-types">
+                <datalist id="facility-trends-facility-types">{facility_type_options}</datalist>
+              </p>
+              <p>
+                <label for="facility-trends-geography">Geography</label>
+                <input id="facility-trends-geography" name="geography" value="{_escape(filters.geography)}" list="facility-trends-geographies">
+                <datalist id="facility-trends-geographies">{geography_options}</datalist>
+              </p>
+              <p>
+                <label for="facility-trends-finding">Finding or status</label>
+                <input id="facility-trends-finding" name="finding" value="{_escape(filters.finding)}" list="facility-trends-findings">
+                <datalist id="facility-trends-findings">{finding_options}</datalist>
+              </p>
+              <p>
+                <label for="facility-trends-serious-topic">Serious review topic</label>
+                <input id="facility-trends-serious-topic" name="serious_topic" value="{_escape(filters.serious_topic)}" list="facility-trends-serious-topics">
+                <datalist id="facility-trends-serious-topics">{serious_topic_options}</datalist>
+              </p>
+              <p>
+                <label for="facility-trends-start-date">Start date</label>
+                <input id="facility-trends-start-date" name="start_date" type="date" value="{filters.start_date.isoformat() if filters.start_date else ''}">
+              </p>
+              <p>
+                <label for="facility-trends-end-date">End date</label>
+                <input id="facility-trends-end-date" name="end_date" type="date" value="{filters.end_date.isoformat() if filters.end_date else ''}">
+              </p>
+              <p>
+                <label for="facility-trends-time-grain">Time grain</label>
+                <select id="facility-trends-time-grain" name="time_grain">
+                  {_facility_trend_option(filters.time_grain, "month", "Month")}
+                  {_facility_trend_option(filters.time_grain, "quarter", "Quarter")}
+                </select>
+              </p>
+              <p>
+                <label for="facility-trends-period-count">Periods to show</label>
+                <select id="facility-trends-period-count" name="period_count">
+                  {_facility_trend_period_count_options(filters.period_count)}
+                </select>
+              </p>
+            </div>
+            <div class="form-actions">
+              <button class="button" type="submit">Compare complaint activity</button>
+              <a class="button button-secondary" href="{REVIEWER_UI_FACILITY_TRENDS_PATH}">Clear filters</a>
+            </div>
+          </form>
+        </section>"""
+
+
+def _facility_trend_option(current: str, value: str, label: str) -> str:
+    selected = ' selected="selected"' if current == value else ""
+    return f'<option value="{value}"{selected}>{label}</option>'
+
+
+def _facility_trend_period_count_options(current: int) -> str:
+    values = sorted({3, 6, 12, 18, 24, current})
+    options = []
+    for value in values:
+        if not 1 <= value <= _FACILITY_TRENDS_MAX_PERIOD_COUNT:
+            continue
+        selected = ' selected="selected"' if value == current else ""
+        options.append(f'<option value="{value}"{selected}>{value}</option>')
+    return "".join(options)
+
+
+def _render_facility_trend_period(period: FacilityTrendPeriod) -> str:
+    previous = (
+        str(period.preceding_complaint_count)
+        if period.preceding_complaint_count is not None
+        else "not available"
+    )
+    return f"""              <tr>
+                <th scope="row">{_detail_display_date(period.period_start.isoformat())}–{_detail_display_date(period.period_end.isoformat())}</th>
+                <td><span class="status-badge">{_escape(period.coverage_state)}</span></td>
+                <td>{period.complaint_count}</td>
+                <td>{period.substantiated_count}</td>
+                <td>{period.serious_topic_count}</td>
+                <td><strong>{_escape(period.anomaly_cue)}</strong><br>Current period: {period.complaint_count}; preceding period: {previous}.</td>
+                <td>{_render_facility_trend_complaint_links(period.complaints)}</td>
+              </tr>"""
+
+
+def _render_facility_trend_date_unavailable_row(result: FacilityTrendResult) -> str:
+    count = len(result.date_unavailable_complaints)
+    substantiated_count = sum(
+        complaint.substantiated for complaint in result.date_unavailable_complaints
+    )
+    serious_count = sum(
+        bool(complaint.serious_topics)
+        for complaint in result.date_unavailable_complaints
+    )
+    return f"""              <tr>
+                <th scope="row">Complaint received date unavailable</th>
+                <td><span class="status-badge">{DATE_UNAVAILABLE}</span></td>
+                <td>{count}</td>
+                <td>{substantiated_count}</td>
+                <td>{serious_count}</td>
+                <td><strong>No anomaly cue</strong><br>Current period: {count}; preceding period: not comparable.</td>
+                <td>{_render_facility_trend_complaint_links(result.date_unavailable_complaints)}</td>
+              </tr>"""
+
+
+def _render_facility_trend_complaint_links(
+    complaints: tuple[FacilityTrendComplaint, ...],
+) -> str:
+    if not complaints:
+        return "No qualifying complaint records."
+    links = "".join(
+        f'<li><a href="{_escape(complaint.detail_href)}">Open complaint record {_escape(_facility_trend_complaint_label(complaint))}</a></li>'
+        for complaint in complaints
+    )
+    return f"<ul>{links}</ul>"
+
+
+def _facility_trend_complaint_label(complaint: FacilityTrendComplaint) -> str:
+    if complaint.complaint_control_number != "unknown":
+        return complaint.complaint_control_number
+    return complaint.stable_complaint_id
+
+
+def _render_facility_trend_rules() -> str:
+    return """        <details class="technical-details">
+          <summary>Anomaly cue definitions</summary>
+          <p>Comparable complete periods use complaint counts only. New activity means at least 3 current complaints after 0; increased activity means at least 3 current complaints and at least twice the preceding count; decreased activity means at least 3 preceding complaints and a current count no more than half. Incomplete, unavailable, partial, or otherwise non-comparable periods receive no anomaly cue.</p>
         </details>"""
 
 

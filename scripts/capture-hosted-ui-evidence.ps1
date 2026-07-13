@@ -31,6 +31,8 @@ Capture the focused issue #415 substantiated-worklist evidence routes and assert
 Capture the focused issue #416 facility-priorities evidence routes and assertions.
 .PARAMETER Issue417
 Capture the focused issue #417 serious-topic worklist evidence routes and assertions.
+.PARAMETER Issue418
+Capture the focused issue #418 complaint trend and anomaly evidence routes and assertions.
 .EXAMPLE
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8003 -Mode live
 .EXAMPLE
@@ -41,6 +43,8 @@ Capture the focused issue #417 serious-topic worklist evidence routes and assert
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://192.168.1.122:8003 -Mode live -Issue416
 .EXAMPLE
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://192.168.1.122:8003 -Mode live -Issue417
+.EXAMPLE
+.\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture -Issue418
 .NOTES
 Run from the repository root. Generated packets capture local hosted UI route,
 text, assertion, accessibility, and screenshot evidence for reviewer inspection.
@@ -73,12 +77,17 @@ param(
 
     [switch]$Issue416,
 
-    [switch]$Issue417
+    [switch]$Issue417,
+
+    [switch]$Issue418
 )
 
 $ErrorActionPreference = "Stop"
 
-$evidencePurpose = if ($Issue417) {
+$evidencePurpose = if ($Issue418) {
+    "Focused issue #418 complaint trend evidence for grouping, filters, coverage states, deterministic anomaly cues, links, accessibility snapshots, and screenshots."
+}
+elseif ($Issue417) {
     "Focused issue #417 serious-topic complaint worklist evidence for route status, category/cue separation, filters, links, accessibility snapshots, and screenshots."
 }
 elseif ($Issue416) {
@@ -665,6 +674,71 @@ function Test-Issue417RouteAssertions {
     }
 }
 
+function Get-Issue418CountSummary {
+    param([string]$Text)
+    $summary = [pscustomobject]@{ Found = $false; Qualifying = 0; Dated = 0; DateUnavailable = 0; Raw = "" }
+    $pattern = "(?<qualifying>\d+)\s+qualifying\s+complaint\s+record\(s\):\s+(?<dated>\d+)\s+assigned\s+to\s+displayed\s+periods\s+and\s+(?<missing>\d+)\s+with\s+date\s+unavailable"
+    $match = [regex]::Match($Text, $pattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    if (-not $match.Success) { return $summary }
+    return [pscustomobject]@{
+        Found           = $true
+        Qualifying      = [int]$match.Groups["qualifying"].Value
+        Dated           = [int]$match.Groups["dated"].Value
+        DateUnavailable = [int]$match.Groups["missing"].Value
+        Raw             = $match.Value
+    }
+}
+
+function Add-Issue418PassFail {
+    param([System.Collections.ArrayList]$Assertions, [string]$RouteName, [string]$Check, [bool]$Pass, [string]$PassMessage, [string]$FailMessage)
+    if ($Pass) { Add-AssertionResult -Target $Assertions -RouteName $RouteName -Check $Check -Status "PASS" -Message $PassMessage }
+    else { Add-AssertionResult -Target $Assertions -RouteName $RouteName -Check $Check -Status "FAIL" -Message $FailMessage }
+}
+
+function Test-Issue418RouteAssertions {
+    param([hashtable]$Route, [string]$Html, [string]$Text, [System.Collections.ArrayList]$Assertions)
+    if (-not $Route.ContainsKey("Issue418Kind")) { return }
+    $name = [string]$Route.Name
+    $kind = [string]$Route.Issue418Kind
+    $counts = Get-Issue418CountSummary -Text $Text
+    Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 h1" -Pass ($Html.Contains("<h1") -and $Text.Contains("Review complaint trends over time")) -PassMessage "Expected complaint trends H1 found." -FailMessage "Expected complaint trends H1 missing."
+    Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 count reconciliation" -Pass ($counts.Found -and $counts.Qualifying -eq ($counts.Dated + $counts.DateUnavailable)) -PassMessage "Qualifying, dated, and date-unavailable counts reconcile." -FailMessage "Complaint trend count summary is missing or does not reconcile."
+    Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 semantic table" -Pass (($Html -match "(?is)<caption[^>]*>.*?</caption>") -and ($Html -match "(?is)<th\b")) -PassMessage "Semantic trend table caption and headings found." -FailMessage "Semantic trend table caption or headings missing."
+    Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 labeled controls" -Pass ($Html.Contains('name="facility"') -and $Html.Contains('name="facility_type"') -and $Html.Contains('name="geography"') -and $Html.Contains('name="finding"') -and $Html.Contains('name="serious_topic"') -and $Html.Contains('name="start_date"') -and $Html.Contains('name="end_date"') -and $Html.Contains('name="time_grain"') -and $Html.Contains('name="period_count"')) -PassMessage "Expected labeled trend filters found." -FailMessage "One or more expected trend filters missing."
+    Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 transparent rules" -Pass ($Text.Contains("Anomaly cue definitions") -and $Text.Contains("at least twice the preceding count") -and $Text.Contains("no more than half")) -PassMessage "Concise deterministic anomaly definitions found." -FailMessage "Deterministic anomaly definitions missing."
+    Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 safe aggregate output" -Pass (-not ($Text -match "(?i)risk score|legal conclusion|facility-wide conclusion|raw_sha256|raw_path|provider_subject|connection string|DO NOT SHOW")) -PassMessage "No unsafe aggregate output markers found." -FailMessage "Unsafe aggregate output marker found."
+    Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 direct counts" -Pass ($Text.Contains("Current period:") -and $Text.Contains("preceding period:")) -PassMessage "Visible current and preceding counts found." -FailMessage "Visible contributing period counts missing."
+    if ($kind -eq "default") {
+        Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 coverage labels" -Pass ($Text.Contains("Complete period") -or $Text.Contains("Coverage unavailable") -or $Text.Contains("Incomplete current period")) -PassMessage "Compact coverage label found." -FailMessage "No supported coverage label found."
+        Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 date unavailable state" -Pass $Text.Contains("Date unavailable") -PassMessage "Date-unavailable state found." -FailMessage "Date-unavailable state missing."
+    }
+    elseif ($kind -eq "monthly-facility") {
+        Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 monthly facility filters" -Pass ($Html.Contains('value="month" selected="selected"') -and $Html.Contains('value="157806098"')) -PassMessage "Monthly facility filter state found." -FailMessage "Monthly facility filter state missing."
+        Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 complaint links" -Pass ($Text.Contains("Open complaint record") -or $counts.Dated -eq 0) -PassMessage "Complaint record links found or no dated qualifying complaints." -FailMessage "Qualifying complaint record links missing."
+    }
+    elseif ($kind -eq "quarterly") {
+        Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 quarterly grouping" -Pass $Html.Contains('value="quarter" selected="selected"') -PassMessage "Quarterly grouping selected." -FailMessage "Quarterly grouping selection missing."
+    }
+    elseif ($kind -eq "increased") {
+        Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 increased activity cue" -Pass (($Html -match "(?is)<strong>Increased activity</strong>.*?Current period:\s*\d+;\s*preceding period:\s*\d+") -or ($Text.Contains("increased activity means at least 3 current complaints and at least twice the preceding count") -and $Text.Contains("Current period:") -and $Text.Contains("preceding period:"))) -PassMessage "Increased-activity row cue or governed fixture rule definition with visible period counts found." -FailMessage "Increased-activity cue/rule with visible contributing counts missing."
+    }
+    elseif ($kind -eq "secondary-cue") {
+        $secondaryCueSupported = $Html -match "(?is)<strong>(New activity|Decreased activity)</strong>.*?Current period:\s*\d+;\s*preceding period:\s*\d+"
+        if ($secondaryCueSupported) {
+            Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 secondary activity cue" -Pass $true -PassMessage "New- or decreased-activity row cue and contributing counts found." -FailMessage ""
+        }
+        else {
+            Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue418 secondary activity cue" -Status "WARN" -Message "Loaded governed records do not expose a new- or decreased-activity cue for this route."
+        }
+    }
+    elseif ($kind -eq "incomplete") {
+        Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 incomplete period" -Pass ($Html -match "(?is)<span[^>]*>Incomplete current period</span>.*?<strong>No anomaly cue</strong>") -PassMessage "Incomplete current period has no anomaly cue." -FailMessage "Incomplete current period state or no-cue behavior missing."
+    }
+    elseif ($kind -eq "zero") {
+        Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 zero qualifying" -Pass ($Text.Contains("Zero qualifying records") -and -not ($Html -match "(?is)Zero qualifying records.*?<strong>Decreased activity</strong>")) -PassMessage "Zero qualifying state found without unsupported decrease cue." -FailMessage "Zero qualifying state missing or described as decreased activity."
+    }
+}
+
 function Get-SafeDynamicHref {
     param([string]$Html, [string]$Pattern)
     $match = [regex]::Match($Html, $Pattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
@@ -700,7 +774,7 @@ try {
     $baseUri = [System.Uri]::new($BaseUrl)
     $normalizedBaseUrl = $baseUri.GetLeftPart([System.UriPartial]::Authority).TrimEnd("/")
     $timestamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmssZ")
-    $packetName = if ($Issue417) { "$timestamp-$Mode-issue-417" } elseif ($Issue416) { "$timestamp-$Mode-issue-416" } elseif ($Issue415) { "$timestamp-$Mode-issue-415" } else { "$timestamp-$Mode" }
+    $packetName = if ($Issue418) { "$timestamp-$Mode-issue-418" } elseif ($Issue417) { "$timestamp-$Mode-issue-417" } elseif ($Issue416) { "$timestamp-$Mode-issue-416" } elseif ($Issue415) { "$timestamp-$Mode-issue-415" } else { "$timestamp-$Mode" }
     $outputRoot = Join-Path $PWD $OutputDir
     $packetDir = Join-Path $outputRoot $packetName
     $zipPath = Join-Path $outputRoot "$packetName.zip"
@@ -721,6 +795,7 @@ try {
         @{ Name = "jobs"; Path = "/ccld/retrieval/jobs"; Label = "04-job-status"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Status" },
         @{ Name = "reviewer"; Path = "/reviewer"; Label = "05-reviewer"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
         @{ Name = "facility-priorities"; Path = "/reviewer/facilities/priorities"; Label = "05-facility-priorities"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
+        @{ Name = "facility-trends"; Path = "/reviewer/facilities/trends"; Label = "05-facility-trends"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
         @{ Name = "substantiated-triage"; Path = "/reviewer/records/substantiated"; Label = "05-substantiated-triage"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
         @{ Name = "serious-topics"; Path = "/reviewer/records/serious-topics"; Label = "05-serious-topics"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
         @{ Name = "matrix-export"; Path = "/reviewer/records/matrix.csv?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry"; Label = "05-matrix-export" },
@@ -752,7 +827,18 @@ try {
         @{ Name = "issue-417-filtered"; Path = "/reviewer/records/serious-topics?topic=Supervision%20topic&finding=Unsubstantiated&facility=157806098&geography=Kern&start_date=2022-04-01&end_date=2022-04-30"; Label = "issue-417-04-filtered"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue417Kind = "filtered" },
         @{ Name = "issue-417-empty"; Path = "/reviewer/records/serious-topics?topic=Runaway%2FAWOL%20topic&start_date=2099-01-01&end_date=2099-12-31"; Label = "issue-417-05-empty"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue417Kind = "empty" }
     )
-    $routesToCapture = if ($Issue417) { $issue417Routes } elseif ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
+    $issue418CurrentStart = (Get-Date -Day 1).ToString("yyyy-MM-dd")
+    $issue418CurrentEnd = (Get-Date -Day 1).AddMonths(1).AddDays(-1).ToString("yyyy-MM-dd")
+    $issue418Routes = @(
+        @{ Name = "issue-418-default"; Path = "/reviewer/facilities/trends"; Label = "issue-418-01-default"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue418Kind = "default" },
+        @{ Name = "issue-418-monthly-facility"; Path = "/reviewer/facilities/trends?facility=157806098&start_date=2022-03-01&end_date=2022-05-31&time_grain=month&period_count=3"; Label = "issue-418-02-monthly-facility"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue418Kind = "monthly-facility" },
+        @{ Name = "issue-418-quarterly"; Path = "/reviewer/facilities/trends?start_date=2022-01-01&end_date=2022-12-31&time_grain=quarter&period_count=4"; Label = "issue-418-03-quarterly"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue418Kind = "quarterly" },
+        @{ Name = "issue-418-increased"; Path = "/reviewer/facilities/trends?start_date=2020-01-01&end_date=2021-12-31&time_grain=month&period_count=24"; Label = "issue-418-04-increased"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue418Kind = "increased" },
+        @{ Name = "issue-418-secondary-cue"; Path = "/reviewer/facilities/trends?start_date=2022-01-01&end_date=2023-12-31&time_grain=month&period_count=24"; Label = "issue-418-05-secondary-cue"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue418Kind = "secondary-cue" },
+        @{ Name = "issue-418-incomplete"; Path = "/reviewer/facilities/trends?start_date=$issue418CurrentStart&end_date=$issue418CurrentEnd&time_grain=month&period_count=1"; Label = "issue-418-06-incomplete"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue418Kind = "incomplete" },
+        @{ Name = "issue-418-zero"; Path = "/reviewer/facilities/trends?facility=157806098&finding=Substantiated&start_date=2022-04-01&end_date=2022-04-30&time_grain=month&period_count=1"; Label = "issue-418-07-zero"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue418Kind = "zero" }
+    )
+    $routesToCapture = if ($Issue418) { $issue418Routes } elseif ($Issue417) { $issue417Routes } elseif ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
 
     $routeResults = [System.Collections.ArrayList]::new()
     $assertions = [System.Collections.ArrayList]::new()
@@ -800,6 +886,9 @@ try {
         if ($Issue417) {
             Test-Issue417RouteAssertions -Route $Route -Html $safeHtml -Text $plainText -Assertions $assertions
         }
+        if ($Issue418) {
+            Test-Issue418RouteAssertions -Route $Route -Html $safeHtml -Text $plainText -Assertions $assertions
+        }
         if (($response.StatusCode -ge 400 -or $response.StatusCode -eq 0) -and -not $AllowUnavailable) { $failure = if ($failure) { $failure } else { "Route returned HTTP $($response.StatusCode)." } }
         [void]$routeResults.Add([pscustomobject]@{ name = $Route.Name; path = $Route.Path; label = $Route.Label; url = $url; statusCode = $response.StatusCode; title = $title; h1 = $h1; htmlPath = $htmlPath; textPath = $textPath; screenshotPath = $screenshotPath; failure = $failure })
         $routeHtmlByName[$Route.Name] = $safeHtml
@@ -823,7 +912,7 @@ try {
         }
     }
 
-    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417) {
+    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418) {
         $jobDetailHref = Get-SafeDynamicHref -Html ([string]$routeHtmlByName["jobs"]) -Pattern 'href\s*=\s*["'']([^"'']*/ccld/retrieval/jobs/detail\?job_id=[A-Za-z0-9_.:%-]+)["'']'
         if ($jobDetailHref) { $dynamicLinks.jobDetail = $jobDetailHref; Capture-Route -Route @{ Name = "job-detail"; Path = $jobDetailHref; Label = "08-job-detail"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Status" } }
         else { Add-AssertionResult -Target $assertions -RouteName "jobs" -Check "dynamic job detail" -Status "WARN" -Message "No safe retrieval job detail link discovered." }
@@ -835,7 +924,7 @@ try {
 
     # Capture a supplemental screenshot anchored to the complaint export section from the
     # reliable reviewer queue route. This avoids depending on reviewer-detail availability.
-    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and $IncludeScreenshots -and $null -ne $screenshotTool) {
+    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418 -and $IncludeScreenshots -and $null -ne $screenshotTool) {
         $reviewerExportAnchorUrl = (Join-RouteUrl -Base $normalizedBaseUrl -Path "/reviewer") + "#complaint-export-controls"
         $reviewerExportShotFile = Join-Path $screenshotDir "05-reviewer-complaint-exports.png"
         $reviewerExportShotError = Invoke-RouteScreenshot -Tool $screenshotTool -Url $reviewerExportAnchorUrl -ScreenshotPath $reviewerExportShotFile
@@ -912,6 +1001,7 @@ try {
     $issue415HrefInventory = @()
     $issue416CountSummaries = @()
     $issue417CountSummaries = @()
+    $issue418CountSummaries = @()
     if ($Issue415) {
         foreach ($result in $routeResults) {
             $htmlText = [string]$routeHtmlByName[$result.name]
@@ -1014,6 +1104,35 @@ try {
         }
         Set-Content -LiteralPath (Join-Path $packetDir "route-assertions.csv") -Value ($assertionRows -join "`n") -Encoding UTF8
     }
+    if ($Issue418) {
+        foreach ($result in $routeResults) {
+            $htmlText = [string]$routeHtmlByName[$result.name]
+            $plainText = ConvertFrom-HtmlText -Html $htmlText
+            $countSummary = Get-Issue418CountSummary -Text $plainText
+            $issue418CountSummaries += [pscustomobject]@{
+                route           = $result.name
+                path            = $result.path
+                found           = $countSummary.Found
+                qualifying      = $countSummary.Qualifying
+                dated           = $countSummary.Dated
+                dateUnavailable = $countSummary.DateUnavailable
+                raw             = $countSummary.Raw
+            }
+        }
+        $countRows = @("route,path,found,qualifying,dated,dateUnavailable,raw")
+        foreach ($summaryRow in $issue418CountSummaries) {
+            $values = @($summaryRow.route, $summaryRow.path, $summaryRow.found, $summaryRow.qualifying, $summaryRow.dated, $summaryRow.dateUnavailable, $summaryRow.raw)
+            $countRows += (($values | ForEach-Object { '"' + ([string]$_).Replace('"', '""') + '"' }) -join ",")
+        }
+        Set-Content -LiteralPath (Join-Path $packetDir "issue-418-count-summaries.csv") -Value ($countRows -join "`n") -Encoding UTF8
+        $assertionRows = @("route,check,status,message")
+        foreach ($assertion in $assertions) {
+            $values = @($assertion.route, $assertion.check, $assertion.status, $assertion.message)
+            $escaped = $values | ForEach-Object { '"' + ([string]$_).Replace('"', '""') + '"' }
+            $assertionRows += ($escaped -join ",")
+        }
+        Set-Content -LiteralPath (Join-Path $packetDir "route-assertions.csv") -Value ($assertionRows -join "`n") -Encoding UTF8
+    }
 
     $gitBranch = (git branch --show-current 2>$null) -join ""
     $gitCommit = (git rev-parse HEAD 2>$null) -join ""
@@ -1022,7 +1141,7 @@ try {
     $gitStatusText = if ($workingTreeClean) { "clean" } else { $gitStatus }
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-status.txt") -Value $gitStatusText -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-log.txt") -Value ((git log --oneline -n 5 2>$null) -join "`n") -Encoding UTF8
-    $focusedCommandSuffix = if ($Issue417) { " -Issue417" } elseif ($Issue416) { " -Issue416" } elseif ($Issue415) { " -Issue415" } else { "" }
+    $focusedCommandSuffix = if ($Issue418) { " -Issue418" } elseif ($Issue417) { " -Issue417" } elseif ($Issue416) { " -Issue416" } elseif ($Issue415) { " -Issue415" } else { "" }
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "capture-command.txt") -Value "capture-hosted-ui-evidence.ps1 -BaseUrl $normalizedBaseUrl -Mode $Mode -OutputDir $OutputDir -ViewportWidth $ViewportWidth -ViewportHeight $ViewportHeight -TimeoutSeconds $TimeoutSeconds$focusedCommandSuffix" -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "environment-summary.txt") -Value @(
         "mode=$Mode",
@@ -1034,6 +1153,7 @@ try {
         "issue415FocusedCapture=$([bool]$Issue415)",
         "issue416FocusedCapture=$([bool]$Issue416)",
         "issue417FocusedCapture=$([bool]$Issue417)",
+        "issue418FocusedCapture=$([bool]$Issue418)",
         "browserZoomControl=not controlled by this script; use ViewportWidth/ViewportHeight for supplemental narrow-width or 200-percent-review approximation only",
         "evidencePurpose=$evidencePurpose"
     ) -Encoding UTF8
@@ -1082,6 +1202,7 @@ explicitly says to do so.
         issue415      = if ($Issue415) { Get-EvidenceFileCount -Path $packetDir -Filter "issue-415-*.csv" } else { 0 }
         issue416      = if ($Issue416) { Get-EvidenceFileCount -Path $packetDir -Filter "issue-416-*.csv" } else { 0 }
         issue417      = if ($Issue417) { Get-EvidenceFileCount -Path $packetDir -Filter "issue-417-*.csv" } else { 0 }
+        issue418      = if ($Issue418) { Get-EvidenceFileCount -Path $packetDir -Filter "issue-418-*.csv" } else { 0 }
     }
     $manifest = [ordered]@{
         generatedAt            = (Get-Date).ToUniversalTime().ToString("o")
@@ -1104,6 +1225,7 @@ explicitly says to do so.
         issue415               = [ordered]@{ enabled = [bool]$Issue415; countSummaries = @($issue415CountSummaries); hrefInventory = @($issue415HrefInventory); zoomLimitation = "True browser zoom is not controlled by this script; reduced viewport captures are supplemental evidence only." }
         issue416               = [ordered]@{ enabled = [bool]$Issue416; routeCount = @($routesToCapture).Count; countSummaries = @($issue416CountSummaries); zoomLimitation = "True browser zoom is not controlled by this script; reduced viewport captures are supplemental evidence only." }
         issue417               = [ordered]@{ enabled = [bool]$Issue417; routeCount = @($routesToCapture).Count; countSummaries = @($issue417CountSummaries); zoomLimitation = "True browser zoom is not controlled by this script; reduced viewport captures are supplemental evidence only." }
+        issue418               = [ordered]@{ enabled = [bool]$Issue418; routeCount = @($routesToCapture).Count; countSummaries = @($issue418CountSummaries); zoomLimitation = "True browser zoom is not controlled by this script; reduced viewport captures are supplemental evidence only." }
         git                    = [ordered]@{ branch = $gitBranch; commit = $gitCommit; workingTreeClean = [bool]$workingTreeClean; notice = if ($workingTreeClean) { "" } else { "Working tree was not clean when evidence was captured." } }
         output                 = [ordered]@{ packetDirectory = ConvertTo-RelativeEvidencePath -Path $packetDir -Root $PWD; zipPacket = ConvertTo-RelativeEvidencePath -Path $zipPath -Root $PWD; manifest = "manifest.json"; routeStatusCsv = "route-status.csv"; routeAssertionsCsv = "route-assertions.csv"; textMarkers = "route-text-markers.txt"; counts = $outputCounts }
         evidencePurpose        = $evidencePurpose
