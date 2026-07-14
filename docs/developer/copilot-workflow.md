@@ -38,8 +38,8 @@ testing policy, documentation policy, or workflow guidance may need to change.
 ```text
 Using the governance files, propose and implement the smallest governance update
 for <change>. Preserve non-negotiable safeguards, update related docs that would
-otherwise become stale, run focused documentation validation first, then standard
-PR validation.
+otherwise become stale, run focused documentation validation, then rely on the
+required GitHub checks for broader ordinary PR validation.
 ```
 
 Governance may be challenged when project phase, reviewer needs, validation
@@ -80,8 +80,8 @@ Create a failing regression test or fixture for this bug first. Then fix the sma
 ```
 
 Implementation work must keep schema, extraction, connector, traceability,
-accessibility, privacy, and documentation impacts explicit. Do not treat focused
-validation as a substitute for standard PR validation.
+accessibility, privacy, and documentation impacts explicit. Focused local
+validation does not replace the required GitHub checks.
 
 ### Phase-transition tasks
 
@@ -120,9 +120,9 @@ present it as the production stack decision.
 - Do not accept schema changes without migration, docs, and tests.
 - Do not accept extraction changes without fixture tests.
 - Do not accept bug or CI-failure fixes that skip root-cause governance review.
-- Do not skip standard PR validation for implementation work.
 - Use focused validation first to catch likely failures quickly, and explain why
 	the focused tests matched the changed area.
+- Do not skip the required GitHub checks for implementation work.
 - When a bug or CI failure reveals a missing or unclear rule, update the relevant
 	governance, testing, fixture, connector, or workflow documentation in the same
 	change.
@@ -132,10 +132,13 @@ present it as the production stack decision.
 
 Use tiered validation for implementation work.
 
-### Focused validation
+### Local implementation validation
 
-Before broader validation, run the smallest relevant tests for the changed area.
-Examples:
+For a focused bug fix or similarly narrow change, run the new regression
+independently, then the smallest relevant tests for the changed area. Run
+targeted Ruff and mypy appropriate to the changed files, documentation
+validation when documentation or governed behavior changes, and
+`git diff --check`. Examples:
 
 - Extraction change: targeted extractor tests and related fixture regression tests.
 - Connector change: targeted connector discovery, fetch, and raw storage tests using fixtures or mocks.
@@ -146,30 +149,14 @@ Examples:
 - Accessibility-facing change: documentation, export, view, or presentation accessibility checks.
 
 Copilot should state which focused validation it selected and why it matched the
-change.
+change. Focused tests must genuinely prove the changed behavior. Do not report
+unrun validation as passed, and do not run the complete local suite by default
+for an ordinary focused change.
 
-### Standard PR validation
+### Required GitHub PR validation
 
-Run standard PR validation before every PR unless the task is analysis-only and
-no files were edited:
-
-```powershell
-.\scripts\lint.ps1
-```
-
-```powershell
-.\scripts\test.ps1
-```
-
-```powershell
-.\scripts\docs.ps1
-```
-
-```powershell
-git diff --check
-```
-
-### Required remote validation
+For this repository, Standard PR validation means the required GitHub checks
+below, not an automatic complete local test-suite run.
 
 Before merge, verify the required GitHub checks pass:
 
@@ -178,11 +165,16 @@ Before merge, verify the required GitHub checks pass:
 - `fixtures`
 - `security`
 
-### Full release validation
+These checks provide broader pre-merge validation for ordinary focused changes
+and must not be weakened or bypassed.
 
-Run or verify the full test suite before any release, production-readiness
-milestone, schema change, connector expansion, export-contract change, or
-production architecture transition.
+### Full local or release validation
+
+Run or verify the full test suite only when explicitly requested; for releases,
+production-readiness milestones, schema changes, connector expansion,
+export-contract changes, production architecture transitions, or broad
+cross-cutting changes; or when focused or CI failures require broader
+investigation.
 
 ## Required completion handoff
 
@@ -282,7 +274,8 @@ The PR body must also include:
 
 - Focused validation run.
 - Why those focused tests matched the change.
-- Full local validation results.
+- Full local validation results when required or run; otherwise, state why the
+  full local suite was intentionally not run.
 - Required remote check results.
 - Any tests intentionally not run and why.
 
@@ -326,7 +319,8 @@ Every next prompt should include:
 - Files to read.
 - What not to do.
 - Focused validation.
-- Standard PR validation.
+- Focused local implementation validation.
+- Conditions that would require full local or release validation.
 - Remote required checks: `validate`, `docs-check`, `fixtures`, and `security`.
 - PR body requirements.
 - Final handoff requirements.
