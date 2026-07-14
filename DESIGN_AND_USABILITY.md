@@ -117,15 +117,18 @@ tester feedback, and export packet inclusion decisions. Status labels must not
 imply source facts, legal conclusions, facility-wide conclusions, or verified
 harm beyond what qualified reviewers establish from source records.
 
-The first browser-accessible hosted reviewer UI shell is now a local/test,
-server-rendered HTML surface at `/reviewer` and `/reviewer/records`. Its design
-purpose is functional validation, not polish: local testers can list/search a
-seeded source-derived record, see list-level reviewer-created note/status
-indicators, open detail, inspect safe source traceability fields and safe
-related seeded bundle context, add a reviewer note, set a reviewer status, and
+The browser-accessible hosted reviewer UI is a server-rendered HTML surface at
+`/reviewer` and `/reviewer/records`. Its landing page uses one compact,
+single-column, responsive complaint worklist: matching and bounded-result
+context plus search appear before the records, and each row presents complaint
+and facility identity, key dates, finding, review-flag badges, reviewer status,
+note presence, CCLD-source availability, and one record-specific action. A
+single `Review next` cue uses the existing reviewer-state ordering without
+changing governed query order. Local testers can open detail, inspect the
+attorney-tier source context, add a reviewer note, set a reviewer status, and
 see read-after-write reviewer-created state. Empty, invalid-form, and blocked
 states should give clear next steps such as clearing search, returning to the
-reviewer list, selecting a seeded record, or retrying valid note/status input.
+reviewer list, selecting a record, or retrying valid note/status input.
 Narrative
 source fields are hidden in the browser shell. It must keep source-derived values visibly separate
 from reviewer-created notes/statuses, keep local/test limitations visible, use

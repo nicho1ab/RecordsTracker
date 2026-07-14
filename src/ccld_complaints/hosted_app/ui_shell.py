@@ -1254,6 +1254,185 @@ SHARED_CSS = r"""
       grid-template-columns: minmax(0, 1fr) minmax(11rem, 13.5rem);
       padding: 0.78rem 0.9rem;
     }
+    .worklist-intro {
+      border-bottom: 1px solid var(--line-soft);
+      padding-bottom: 0.45rem;
+    }
+    .worklist-intro h2,
+    .worklist-intro p {
+      margin-bottom: 0.3rem;
+    }
+    .worklist-controls {
+      align-items: end;
+      background: var(--surface);
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      box-shadow: 0 1px 2px rgb(23 33 43 / 5%);
+      display: grid;
+      gap: 1rem 1.5rem;
+      grid-template-columns: minmax(14rem, 0.8fr) minmax(25rem, 1.2fr);
+      padding: 0.85rem 1rem;
+    }
+    .worklist-controls h2,
+    .worklist-controls p {
+      margin-bottom: 0.2rem;
+    }
+    .worklist-result-count {
+      color: var(--ink);
+      font-weight: 800;
+    }
+    .compact-search-form,
+    .worklist-search-field {
+      display: grid;
+      gap: 0.35rem;
+      min-width: 0;
+    }
+    .compact-search-form input {
+      width: 100%;
+    }
+    .compact-search-form .form-actions {
+      margin-top: 0;
+    }
+    .review-worklist-section {
+      min-width: 0;
+    }
+    .review-worklist {
+      display: grid;
+      gap: 0.55rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .review-worklist-row {
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      box-shadow: 0 1px 2px rgb(23 33 43 / 5%);
+      display: grid;
+      gap: 0.65rem 1rem;
+      grid-template-areas: "identity dates outcome state action";
+      grid-template-columns: minmax(15rem, 1.55fr) minmax(18rem, 1.15fr) minmax(10rem, 0.8fr) minmax(10rem, 0.8fr) minmax(9rem, 0.65fr);
+      padding: 0.72rem 0.85rem;
+    }
+    .review-worklist-row.is-suggested {
+      border-left: 4px solid var(--teal);
+      box-shadow: 0 5px 14px rgb(13 110 110 / 9%);
+      padding-left: 0.7rem;
+    }
+    .worklist-identity {
+      grid-area: identity;
+      min-width: 0;
+    }
+    .worklist-identity h3 {
+      font-family: var(--ds-font-mono);
+      font-size: 1rem;
+      margin: 0.08rem 0 0.2rem;
+      overflow-wrap: anywhere;
+    }
+    .worklist-review-next {
+      align-items: center;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      font-size: 0.82rem;
+      gap: 0.35rem;
+      margin: 0 0 0.2rem;
+    }
+    .worklist-review-next > span {
+      background: var(--ds-primary-soft);
+      border: 1px solid #75B9B9;
+      border-radius: 999px;
+      color: var(--ds-primary);
+      font-weight: 900;
+      padding: 0.16rem 0.45rem;
+    }
+    .worklist-facility-name {
+      color: var(--ink);
+      font-weight: 750;
+      margin: 0 0 0.15rem;
+    }
+    .worklist-facility-id {
+      color: var(--muted);
+      font-size: 0.84rem;
+      margin: 0;
+    }
+    .worklist-field-label {
+      color: var(--muted);
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 850;
+      letter-spacing: 0.01em;
+      line-height: 1.2;
+      margin-bottom: 0.08rem;
+    }
+    .worklist-dates {
+      display: grid;
+      gap: 0.25rem 0.65rem;
+      grid-area: dates;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      min-width: 0;
+    }
+    .worklist-dates p,
+    .worklist-outcome p,
+    .worklist-state p {
+      margin: 0;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .worklist-dates p {
+      white-space: nowrap;
+    }
+    .worklist-outcome {
+      display: grid;
+      gap: 0.35rem;
+      grid-area: outcome;
+      min-width: 0;
+    }
+    .worklist-review-flags .flag-list {
+      gap: 0.25rem;
+      margin: 0;
+    }
+    .worklist-review-flags .review-chip {
+      font-size: 0.76rem;
+      padding: 0.2rem 0.42rem;
+    }
+    .worklist-state {
+      display: grid;
+      gap: 0.3rem;
+      grid-area: state;
+      min-width: 0;
+    }
+    .worklist-state .review-chip {
+      font-size: 0.76rem;
+      padding: 0.2rem 0.42rem;
+    }
+    .worklist-source {
+      color: #286A5B;
+      font-weight: 700;
+    }
+    .worklist-action {
+      grid-area: action;
+      min-width: 0;
+    }
+    .worklist-action .button {
+      margin: 0;
+      white-space: normal;
+      width: 100%;
+    }
+    .review-worklist-empty {
+      background: #f8fafb;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .review-worklist-empty h3,
+    .review-worklist-empty p {
+      margin-bottom: 0.35rem;
+    }
+    .worklist-result-details .aggregate-context {
+      margin-top: 0.75rem;
+    }
     .result-card.work-item.is-suggested {
       border-color: #86C8B9;
       box-shadow: 0 8px 18px rgb(13 110 110 / 10%);
@@ -2550,10 +2729,25 @@ SHARED_CSS = r"""
         gap: 0.6rem;
         justify-content: stretch;
         margin-top: 0.75rem;
+        min-width: 0;
       }
       .attorney-hero, .legal-summary-grid, .detail-top-grid, .support-layout,
       .dense-page-header, .dense-section-header {
         display: block;
+      }
+      .worklist-controls {
+        display: block;
+      }
+      .compact-search-form {
+        margin-top: 0.75rem;
+      }
+      .review-worklist-row {
+        align-items: stretch;
+        grid-template-areas: "identity" "dates" "outcome" "state" "action";
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .worklist-dates {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
       .overview-layout,
       .overview-primary-row {
@@ -2631,10 +2825,11 @@ SHARED_CSS = r"""
       }
       .mode-panel {
         justify-content: flex-start;
+        min-width: 0;
       }
       .site-nav ul {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
       .site-nav a {
         width: 100%;
@@ -2664,6 +2859,15 @@ SHARED_CSS = r"""
       }
       .facility-intelligence-filter-grid {
         grid-template-columns: minmax(0, 1fr);
+      }
+    }
+    @media (min-width: 761px) and (max-width: 1180px) {
+      .review-worklist-row {
+        align-items: start;
+        grid-template-areas:
+          "identity identity action"
+          "dates outcome state";
+        grid-template-columns: minmax(0, 1.4fr) minmax(10rem, 0.8fr) minmax(10rem, 0.8fr);
       }
     }
 """.strip()

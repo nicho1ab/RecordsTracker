@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Redesigned the `/reviewer` landing page as a compact, single-column attorney
+  complaint worklist. Search and matching/bounded-result context now precede
+  the records; each responsive row presents complaint and facility identity,
+  key dates, finding, one badge expression of review flags, reviewer status,
+  note and CCLD-source availability, and one record-specific review action.
+  The governed PostgreSQL query, 100-record bound, matching count,
+  deterministic order, authorization, reviewer-created state reads, exports,
+  and detail behavior remain unchanged.
 - Fixed PostgreSQL reviewer-query performance: the reviewer landing route no
   longer materializes the complete authorized source-derived corpus through
   repeated deep-`OFFSET` pages, and filtered matrix exports now apply authorized

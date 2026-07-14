@@ -87,7 +87,7 @@ def test_verify_script_checks_complete_tester_readiness_route_set() -> None:
         "Before copying or printing",
         "Review before copying or printing",
         "Do not include private material",
-        "How packet preparation fits in",
+        "Packet preview and preparation draft",
     ):
         assert marker in script
 

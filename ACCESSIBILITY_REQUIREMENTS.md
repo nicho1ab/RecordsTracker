@@ -60,6 +60,13 @@ Accessibility requirements apply to:
 	next-record, and unchanged-source-derived-record guidance with descriptive
 	links. Any copy-to-clipboard affordance must have an accessible name and must
 	not be the only way to read the copied value.
+	The `/reviewer` landing worklist must use a labeled semantic list or equivalent
+	worklist structure, keep visible labels associated with complaint identity,
+	facility identity, dates, finding, review flags, reviewer status, note
+	presence, and source availability, and give each review action a
+	record-specific accessible name. Its primary worklist must reflow without
+	horizontal scrolling or overlapping values at supported narrow widths and
+	200% browser zoom.
 - The local/test hosted CCLD record request page must use semantic headings,
 	labeled facility/license number and date controls, accessible validation
 	messages, labeled local validated load controls, table captions/headings for

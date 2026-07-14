@@ -24,6 +24,23 @@ The local database is a derived review aid. The public portal remains the source
 
 Search matches from `public_record_allegation_search` are screening aids over the derived dataset. They do not prove harm, liability, rights deprivation, abuse, neglect, or any legal element. Verify important details against the public source before relying on them.
 
+## Hosted complaint worklist
+
+Open `/reviewer` to choose the next loaded complaint to review. Search and the
+matching-result summary appear before one compact worklist. The summary states
+how many matching complaints are shown and whether the current 100-record bound
+omits additional matching records; it is not a public-source completeness
+claim.
+
+Each worklist row shows the complaint number, facility name and Facility ID,
+complaint/visit/report dates, finding or resolution, review-flag badges,
+reviewer status, note presence, CCLD-source availability, and one **Review
+complaint** action. The **Review next** cue explains the existing reviewer-state
+reason for starting with that row. It does not assign or claim the complaint,
+create a legal priority score, or change the governed query order. At narrow
+widths and browser zoom, the same labeled values stack vertically so the
+primary review action remains reachable without horizontal scrolling.
+
 In the hosted reviewer workflow, use `/reviewer/records/serious-topics` to filter loaded complaint records by governed serious-review themes. Treat `Source category` rows as official source-derived categories and `Keyword-assisted cue` rows as separate review prompts when the source category is missing or unknown. Do not summarize keyword cues as findings or verified events.
 
 Use `/reviewer/facilities/trends` when the review task is to compare loaded complaint and finding activity over time. Coverage and anomaly labels describe only the displayed, qualifying loaded records; open the contributing complaint record and its existing public-report action before relying on an individual complaint.

@@ -118,19 +118,19 @@ $checks = @(
     @{ Name = "facility-lookup"; Path = "/ccld/facilities"; Required = @("Find a facility", "Find the Facility ID", "Search by name, Facility ID, city, county, ZIP") },
     @{ Name = "facility-priority"; Path = "/ccld/facilities/review-priority"; Required = @("Facility review priority", "review cue", "uploaded public summary fields") },
     @{ Name = "facility-intelligence"; Path = "/ccld/facilities/intelligence"; Required = @("Facility review intelligence", "review cue", "How to use these indicators") },
-    @{ Name = "facility-hub"; Path = "/ccld/facilities/detail?facility_number=$PreloadedFacilityNumber"; Required = @("Facility review hub", "Facility-directory details", "Return to facility lookup") },
+    @{ Name = "facility-hub"; Path = "/ccld/facilities/detail?facility_number=$PreloadedFacilityNumber"; Required = @("Facility review hub", "Facility review hub", "Back to search") },
     @{ Name = "record-request"; Path = "/ccld/records/request"; Required = @("Which facility should be reviewed?", "Confirm facility", "Request complaint records for a facility") },
     @{ Name = "record-request-context"; Path = "/ccld/records/request?$contextQuery"; Required = @($ContextFacilityNumber, "Open loaded records or request complaint records", "Show existing queue", "Date range") },
-    @{ Name = "reviewer"; Path = "/reviewer"; Required = @("Worklist", "Open packet preview", "Open print draft"); Forbidden = @("Open local/test packet preview", "Open local/test preparation draft for browser copy or print") },
-    @{ Name = "reviewer-records"; Path = "/reviewer/records"; Required = @("Worklist", "Open record", "Source traceability available") },
-    @{ Name = "matrix-export"; Path = "/reviewer/records/matrix.csv?$contextQuery"; Required = @("local/test complaint review matrix", "CSV export", "source_record_key", "review_guidance") },
-    @{ Name = "reviewer-detail"; Path = "/reviewer/records/detail?source_record_key=$encodedSourceRecordKey&$contextQuery"; Required = @("Complaint overview", "Record review action", "Source traceability", "Reviewer-created") },
+    @{ Name = "reviewer"; Path = "/reviewer"; Required = @("Complaint worklist", "Review complaint"); Forbidden = @("Open local/test packet preview", "Open local/test preparation draft for browser copy or print") },
+    @{ Name = "reviewer-records"; Path = "/reviewer/records"; Required = @("Complaint worklist", "Review complaint") },
+    @{ Name = "matrix-export"; Path = "/reviewer/records/matrix.csv?$contextQuery"; Required = @("complaint review matrix", "CSV export", "source_record_key", "review_guidance") },
+    @{ Name = "reviewer-detail"; Path = "/reviewer/records/detail?source_record_key=$encodedSourceRecordKey&$contextQuery"; Required = @("Complaint overview", "Complaint overview", "CCLD source available", "Status and note") },
     @{ Name = "packet-preview-empty"; Path = "/reviewer/packet/preview"; Required = @("No facility/date packet context was supplied."); Forbidden = @("Date range: not provided") },
     @{ Name = "packet-preview-context"; Path = "/reviewer/packet/preview?$contextQuery"; Required = @($ContextFacilityNumber, "Packet preview", "Included complaint records", "Readiness checks", "Before copying or printing", "Open print draft", "Send feedback", "Back to review queue") ; Forbidden = @("Date range: not provided", "Open local/test preparation draft for browser copy or print", "Report copy/print preparation concern", "Return to same facility/date queue") },
     @{ Name = "packet-draft-empty"; Path = "/reviewer/packet/draft"; Required = @("No facility/date packet context was supplied."); Forbidden = @("Date range: not provided") },
-    @{ Name = "packet-draft-context"; Path = "/reviewer/packet/draft?$contextQuery"; Required = @("Attorney Review Packet Draft", "Local/test preparation draft for browser copy or print", "Review before copying or printing", "Before using this draft", "Report copy/print preparation concern", $ContextFacilityNumber); Forbidden = @("Date range: not provided") },
+    @{ Name = "packet-draft-context"; Path = "/reviewer/packet/draft?$contextQuery"; Required = @("Attorney Review Packet Draft", "Preparation draft for browser copy or print", "Review before copying or printing", "Before using this draft", "Report copy/print preparation concern", $ContextFacilityNumber); Forbidden = @("Date range: not provided") },
     @{ Name = "feedback"; Path = "/feedback"; Required = @("Feedback", "Send RecordsTracker feedback", "Do not include private material", "Feedback type", "Description") },
-    @{ Name = "help"; Path = "/ccld/help"; Required = @("How to review a facility", "How source traceability works", "Review guidance and next steps", "How packet preparation fits in") }
+    @{ Name = "help"; Path = "/ccld/help"; Required = @("Find a facility", "Reviewer Detail", "Review Queue", "Packet preview and preparation draft") }
 )
 
 $forbiddenMarkers = @(

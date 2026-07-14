@@ -360,7 +360,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         reviewer_status != 200
         or b"Complaint records ready for review" not in reviewer_body
-            or b"Worklist" not in reviewer_body
+        or b"Complaint worklist" not in reviewer_body
         or b"Skip to main reviewer content" not in reviewer_body
     ):
         raise RuntimeError("Hosted scaffold reviewer UI shell did not return the seeded list.")

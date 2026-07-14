@@ -321,7 +321,7 @@ function Test-RouteOrientationMarker {
         "facility-hub" = @("Facility review hub", "Facility-directory details")
         "request-records" = @("Request Records", "Which facility should be reviewed?")
         "jobs" = @("Job diagnostics", "Track Request Records jobs")
-        "reviewer" = @("Complaint records ready for review", "Worklist")
+        "reviewer" = @("Complaint records ready for review", "Complaint worklist", "Review complaint")
         "substantiated-triage" = @("substantiated complaint triage", "Source-derived finding")
         "serious-topics" = @("Serious-topic complaint worklist", "Filter serious review themes")
         "facility-priorities" = @("Facility review priorities", "Find facilities that may deserve review first")
@@ -390,7 +390,7 @@ function Test-RouteAssertions {
         else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "request records flow" -Status "WARN" -Message "Default Request Records facility flow markers were not found." }
     }
     if ($Route.Path -eq "/reviewer") {
-        if ($Html.Contains("Worklist") -and ($Html.Contains("Open next record") -or $Html.Contains("Open record"))) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "reviewer queue" -Status "PASS" -Message "Worklist and review action found." }
+        if ($Html.Contains("Complaint worklist") -and $Html.Contains("Review complaint")) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "reviewer queue" -Status "PASS" -Message "Complaint worklist and record-specific review action found." }
         else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "reviewer queue" -Status "WARN" -Message "Reviewer worklist/action markers were not found." }
     }
     if ($Route.Path -eq "/feedback") {

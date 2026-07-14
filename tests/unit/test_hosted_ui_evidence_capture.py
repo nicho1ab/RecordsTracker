@@ -96,6 +96,8 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     assert "OutputDir must be inside the ignored data/processed folder" in script
     assert "screenshot tool" in script.lower()
     assert "Local hosted UI review evidence" in script
+    assert '$Html.Contains("Complaint worklist")' in script
+    assert '$Html.Contains("Review complaint")' in script
     assert "05-reviewer-complaint-exports.png" in script
     assert 'Join-RouteUrl -Base $normalizedBaseUrl -Path "/reviewer"' in script
     assert "#complaint-export-controls" in script

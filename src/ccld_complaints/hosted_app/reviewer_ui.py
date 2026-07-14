@@ -5223,30 +5223,28 @@ def _render_record_list(
     eligible_count = _int_value(pagination, "eligible_count")
     suggested_item = _next_review_item(records, state_summaries)
     suggested_source_record_key = _source_record_key_for_item(suggested_item)
+    facility_names = _facility_names_by_number(export_records)
     rows = "\n".join(
         _render_review_item_row(record, state_summaries, export_context) for record in records
     )
-    cards = "\n".join(
-        _render_review_item_card(
-            record,
-            state_summaries,
-            export_context,
-            suggested=_source_record_key_for_item(record) == suggested_source_record_key,
-        )
+    worklist_items = "\n".join(
+        f"""          <li>
+{_render_review_item_card(
+    record,
+    state_summaries,
+    export_context,
+    facility_names,
+    suggested=_source_record_key_for_item(record) == suggested_source_record_key,
+)}
+          </li>"""
         for record in records
     )
     if not rows:
         rows = """        <tr>
-                    <td colspan="9">No loaded complaint records match the
+                    <td colspan="10">No loaded complaint records match the
                     current search.</td>
         </tr>"""
-        cards = """        <article class="empty-state-card result-card">
-          <div>
-            <h3>No matching complaint records</h3>
-            <p>No loaded complaint records match the current search.</p>
-          </div>
-        </article>"""
-    no_results_notice = _render_no_results_notice(search_query, records)
+        worklist_items = _render_worklist_empty_item(search_query)
     universe_count = complaint_universe_count
     source_coverage_count = sum(
         _has_display_value(
@@ -5269,51 +5267,59 @@ def _render_record_list(
         limit=_SOURCE_DERIVED_PAGE_LIMIT,
     )
     return _page(
-                title="Complaint records ready for review",
-                heading="Complaint records ready for review",
+        title="Complaint records ready for review",
+        heading="Complaint records ready for review",
         actor_label=actor_label,
         main=f"""
-                {_render_reviewer_case_brief(records, state_summaries, export_records, export_context)}
-                {no_results_notice}
-                {aggregate_context}
-        <section aria-labelledby="reviewer-list-heading">
-                        <div class="dense-section-header">
-                          <div>
-                            <p class="stage-kicker">Review queue</p>
-                            <h2 id="reviewer-list-heading">Worklist</h2>
-                          </div>
-                        </div>
-                <div class="result-list dense-card-grid" aria-label="Complaint records ready for review">
-        {cards}
-                </div>
-            {_render_queue_search_filter(records, search_query, state_summaries, eligible_count, export_records)}
+        <section class="worklist-intro" aria-labelledby="worklist-intro-heading">
+          <div>
+            <p class="stage-kicker">Review worklist</p>
+            <h2 id="worklist-intro-heading">Choose the next complaint to review</h2>
+            <p>Start with the complaint marked <strong>Review next</strong>, or search the current authorized worklist.</p>
+          </div>
+        </section>
+        {_render_queue_search_filter(records, search_query, state_summaries, eligible_count, export_records)}
+        <section class="review-worklist-section" aria-labelledby="reviewer-list-heading">
+          <div class="dense-section-header">
+            <div>
+              <p class="stage-kicker">Review queue</p>
+              <h2 id="reviewer-list-heading">Complaint worklist</h2>
+            </div>
+          </div>
+          <ol class="review-worklist" aria-label="Complaint records ready for review">
+{worklist_items}
+          </ol>
+        </section>
+        <details class="technical-details dense-table-details worklist-result-details">
+          <summary>About these results</summary>
+          {aggregate_context}
+        </details>
         <details class="technical-details dense-table-details">
           <summary>Show table view</summary>
-      <table>
-                                <caption>Complaint records ready for review with key dates and status cues</caption>
+          <table>
+            <caption>Complaint records ready for review with key dates and status cues</caption>
         <thead>
           <tr>
-                        <th scope="col">Review action</th>
+            <th scope="col">Review action</th>
             <th scope="col">Complaint control number</th>
-                        <th scope="col">Finding</th>
-                        <th scope="col">Facility ID</th>
-                        <th scope="col">Complaint received date</th>
-                        <th scope="col">Visit date</th>
-                        <th scope="col">Report date</th>
-                        <th scope="col">Review status</th>
-                        <th scope="col">Note</th>
-                                                <th scope="col">Source</th>
+            <th scope="col">Finding</th>
+            <th scope="col">Facility ID</th>
+            <th scope="col">Complaint received date</th>
+            <th scope="col">Visit date</th>
+            <th scope="col">Report date</th>
+            <th scope="col">Review status</th>
+            <th scope="col">Note</th>
+            <th scope="col">Source</th>
           </tr>
         </thead>
         <tbody>
 {rows}
         </tbody>
-      </table>
-            </details>
-            {_render_queue_review_cue_summary(records, export_records)}
-            {_render_complaint_export_controls(export_context, export_records)}
-            {_DETAIL_COPY_SCRIPT}
-    </section>""",
+          </table>
+        </details>
+        {_render_queue_review_cue_summary(records, export_records)}
+        {_render_complaint_export_controls(export_context, export_records)}
+        {_DETAIL_COPY_SCRIPT}""",
     )
 
 
@@ -5336,10 +5342,25 @@ def _render_queue_search_filter(
     suggestion_options = "\n".join(
         f'          <option value="{_escape(value)}"></option>' for value in suggestions
     )
-    return f"""        <section class="quiet-section queue-search-section" aria-labelledby="queue-search-heading">
-          <h2 id="queue-search-heading">Search records</h2>
-          <form action="{REVIEWER_UI_RECORDS_PATH}" method="get" class="compact-search-form">
-            <p>
+    record_word = "record" if returned_count == 1 else "records"
+    limit_text = (
+        f"The first {len(records)} records are shown within the current "
+        f"{_SOURCE_DERIVED_PAGE_LIMIT}-record limit."
+        if returned_count > len(records)
+        else (
+            f"The matching record is shown within the current {_SOURCE_DERIVED_PAGE_LIMIT}-record limit."
+            if returned_count == 1
+            else f"All matching records are shown within the current {_SOURCE_DERIVED_PAGE_LIMIT}-record limit."
+        )
+    )
+    return f"""        <section class="worklist-controls" aria-labelledby="queue-search-heading">
+          <div class="worklist-result-context">
+            <h2 id="queue-search-heading">Search records</h2>
+            <p id="worklist-result-count" class="worklist-result-count" aria-live="polite">Showing {len(records)} of {returned_count} matching complaint {record_word}.</p>
+            <p class="helper-text">{_escape(limit_text)}</p>
+          </div>
+          <form action="{REVIEWER_UI_RECORDS_PATH}" method="get" class="compact-search-form" role="search">
+            <div class="worklist-search-field">
               <label class="sr-only" for="q">Queue search</label>
               <input id="q" name="q" type="search" value="{_escape(search_query)}"
                 list="queue-search-suggestions" aria-describedby="reviewer-search-help">
@@ -5347,14 +5368,27 @@ def _render_queue_search_filter(
 {suggestion_options}
               </datalist>
               <span id="reviewer-search-help">Search by complaint, facility, finding, status, or note state.</span>
-            </p>
-            <p class="form-actions">
-              <button class="secondary" type="submit">Search</button>
-              <a href="{REVIEWER_UI_RECORDS_PATH}">Clear</a>
-            </p>
+            </div>
+            <div class="form-actions">
+              <button class="button" type="submit">Search worklist</button>
+              <a class="button button-secondary" href="{REVIEWER_UI_RECORDS_PATH}">Clear search</a>
+            </div>
           </form>
-          <p class="helper-text">Showing {len(records)} of {returned_count} records.</p>
         </section>"""
+
+
+def _render_worklist_empty_item(search_query: str) -> str:
+    if search_query:
+        message = f"No loaded complaint records match {_escape(search_query)}."
+    else:
+        message = "No loaded complaint records are available for this review worklist."
+    return f"""          <li>
+            <article class="review-worklist-empty" aria-labelledby="worklist-empty-heading">
+              <h3 id="worklist-empty-heading">No matching complaint records</h3>
+              <p>{message}</p>
+              <p><a href="{REVIEWER_UI_RECORDS_PATH}">Clear search and show all complaint records</a></p>
+            </article>
+          </li>"""
 
 
 def _queue_search_suggestions(
@@ -7679,69 +7713,100 @@ def _render_review_item_row(
 
 
 def _render_review_item_card(
-        item: Mapping[str, Any],
-        state_summaries: Mapping[str, Mapping[str, Any]],
-        return_context: CcldQueueReturnContext,
-        *,
-        suggested: bool = False,
+    item: Mapping[str, Any],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    return_context: CcldQueueReturnContext,
+    facility_names: Mapping[str, str],
+    *,
+    suggested: bool = False,
 ) -> str:
-        source_record = _mapping(item, "source_record")
-        identity = _mapping(source_record, "identity")
-        source_document = _mapping(source_record, "source_document")
-        original_values = _mapping(source_record, "original_values")
-        source_record_key = _string(identity, "source_record_key")
-        detail_href = _reviewer_detail_href(source_record_key, return_context)
-        state_summary = state_summaries.get(source_record_key, _empty_state_summary())
-        control_number = _display_value(original_values.get("complaint_control_number") or source_record_key)
-        facility_number = _complaint_export_row_facility_number(source_record, return_context)
-        finding = _optional_string(original_values, "finding")
-        reviewer_status_text = _latest_status_text(state_summary)
-        note_presence_text = _card_note_presence_text(state_summary)
-        suggested_label = '<p class="stage-kicker">Suggested</p>' if suggested else ""
-        packet_actions = ""
-        if suggested:
-            packet_actions = f"""
-                            <a class="button button-secondary" href="{_escape(_packet_preview_href(return_context))}">Open packet preview</a>
-                            <a class="button button-quiet" href="{_escape(_packet_draft_href(return_context))}">Open print draft</a>"""
-        card_class = "result-card work-item is-suggested" if suggested else "result-card work-item"
-        return f"""        <article class="{card_class}" aria-labelledby="record-{_escape(source_record_key)}-heading">
-                    <div class="work-item-main">
-                        {suggested_label}
-                        <h3 id="record-{_escape(source_record_key)}-heading">{_copyable_value("Complaint/control number", control_number)}</h3>
-                        {_render_queue_record_badges(finding, reviewer_status_text, note_presence_text, original_values)}
-                        <dl class="work-item-facts">
-                          <div class="work-item-fact-pair" data-fact-pair="facility-id">
-                            <dt>Facility ID</dt>
-                            <dd>{_copyable_value("Facility ID", facility_number)}</dd>
-                          </div>
-                          <div class="work-item-fact-pair" data-fact-pair="complaint-received">
-                            <dt>Complaint received</dt>
-                            <dd>{_escape(_queue_display_date(_optional_string(original_values, 'complaint_received_date')))}</dd>
-                          </div>
-                          <div class="work-item-fact-pair" data-fact-pair="first-investigation-activity">
-                            <dt>First investigation activity</dt>
-                            <dd>{_escape(_queue_display_date(_optional_string(original_values, 'first_investigation_activity_date')))}</dd>
-                          </div>
-                          <div class="work-item-fact-pair" data-fact-pair="visit">
-                            <dt>Visit</dt>
-                            <dd>{_escape(_queue_display_date(_optional_string(original_values, 'visit_date')))}</dd>
-                          </div>
-                          <div class="work-item-fact-pair" data-fact-pair="report">
-                            <dt>Report</dt>
-                            <dd>{_escape(_queue_display_date(_optional_string(original_values, 'report_date')))}</dd>
-                          </div>
-                          <div class="work-item-fact-pair" data-fact-pair="signed">
-                            <dt>Signed</dt>
-                            <dd>{_escape(_queue_display_date(_optional_string(original_values, 'date_signed')))}</dd>
-                          </div>
-                        </dl>
-                        <p class="work-item-source"><span class="review-chip source-chip">{_escape(_source_availability_label(source_document))}</span></p>
-                    </div>
-                    <div class="work-item-actions" aria-label="Record actions">
-                        <a class="button" href="{_escape(detail_href)}">Open record</a>
-{packet_actions}
-                    </div>
-                </article>"""
+    source_record = _mapping(item, "source_record")
+    identity = _mapping(source_record, "identity")
+    source_document = _mapping(source_record, "source_document")
+    original_values = _mapping(source_record, "original_values")
+    source_record_key = _string(identity, "source_record_key")
+    detail_href = _reviewer_detail_href(source_record_key, return_context)
+    state_summary = state_summaries.get(source_record_key, _empty_state_summary())
+    control_number = _display_value(
+        original_values.get("complaint_control_number") or source_record_key
+    )
+    facility_number = _complaint_export_row_facility_number(
+        source_record,
+        return_context,
+    )
+    facility_name = _reviewer_value_text(original_values.get("facility_name"))
+    if facility_name == "Not provided":
+        facility_name = facility_names.get(facility_number, facility_name)
+    finding = _reviewer_value_text(original_values.get("finding"))
+    reviewer_status_text = _latest_status_text(state_summary)
+    note_presence_text = _card_note_presence_text(state_summary)
+    suggested_markup = _render_review_next_cue(state_summary) if suggested else ""
+    card_class = "review-worklist-row is-suggested" if suggested else "review-worklist-row"
+    return f"""            <article class="{card_class}" aria-labelledby="record-{_escape(source_record_key)}-heading">
+              <div class="worklist-identity">
+                {suggested_markup}
+                <h3 id="record-{_escape(source_record_key)}-heading">{_copyable_value("Complaint/control number", control_number)}</h3>
+                <p class="worklist-facility-name">{_escape(facility_name)}</p>
+                <p class="worklist-facility-id"><span class="worklist-field-label">Facility ID</span> {_worklist_copyable_value("Facility ID", facility_number)}</p>
+              </div>
+              <div class="worklist-dates" aria-label="Key complaint dates">
+                {_render_worklist_date("Complaint", original_values.get("complaint_received_date"), "complaint-received")}
+                {_render_worklist_date("Visit", original_values.get("visit_date"), "visit")}
+                {_render_worklist_date("Report", original_values.get("report_date"), "report")}
+              </div>
+              <div class="worklist-outcome">
+                <p><span class="worklist-field-label">Finding / resolution</span><strong>{_finding_definition_term(finding)}</strong></p>
+                {_render_worklist_review_flags(original_values)}
+              </div>
+              <div class="worklist-state" aria-label="Reviewer and source status">
+                <p><span class="worklist-field-label">Reviewer status</span>{_review_chip_markup(reviewer_status_text)}</p>
+                <p><span class="worklist-field-label">Note</span>{_review_chip_markup(note_presence_text)}</p>
+                <p class="worklist-source"><span class="worklist-field-label">Source</span>{_worklist_source_chip(source_document)}</p>
+              </div>
+              <div class="worklist-action">
+                <a class="button" href="{_escape(detail_href)}">Review complaint <span class="sr-only">{_escape(control_number)}</span></a>
+              </div>
+            </article>"""
+
+
+def _render_review_next_cue(state_summary: Mapping[str, Any]) -> str:
+    status = _reviewer_queue_status(state_summary)
+    reason = {
+        "not_started": "No reviewer status has been saved.",
+        "in_review": "This complaint is already in review.",
+        "needs_follow_up": "This complaint is marked for follow-up.",
+        "blocked": "This complaint is marked blocked.",
+        "reviewed": "This complaint is next in the current worklist order.",
+    }[status]
+    return f"""<p class="worklist-review-next"><span>Review next</span> {_escape(reason)}</p>"""
+
+
+def _render_worklist_date(label: str, value: object, field_name: str) -> str:
+    return f"""<p data-worklist-field="{field_name}"><span class="worklist-field-label">{_escape(label)}</span>{_escape(_reviewer_value_text(value, kind="date"))}</p>"""
+
+
+def _render_worklist_review_flags(original_values: Mapping[str, Any]) -> str:
+    flags = _review_flag_labels(original_values)
+    if not flags:
+        return """<p class="worklist-review-flags"><span class="worklist-field-label">Review flags</span>No review flags</p>"""
+    items = "".join(
+        f'<li><span class="{_review_flag_chip_class(label)}">{_escape(label)}</span></li>'
+        for label in flags
+    )
+    return f"""<div class="worklist-review-flags"><span class="worklist-field-label">Review flags</span><ul class="flag-list" aria-label="Review flags">{items}</ul></div>"""
+
+
+def _worklist_source_chip(source_document: Mapping[str, Any]) -> str:
+    label = _source_availability_label(source_document)
+    if label == "CCLD source available":
+        return f'<span class="review-chip source-chip">{_escape(label)}</span>'
+    return _review_chip_markup(label)
+
+
+def _worklist_copyable_value(label: str, value: str) -> str:
+    if not value or value == "unknown":
+        return _escape(_reviewer_value_text(None))
+    return _copyable_value(label, value)
 
 
 def _render_queue_record_badges(

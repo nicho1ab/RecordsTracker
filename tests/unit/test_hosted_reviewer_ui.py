@@ -203,37 +203,10 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert "Complaint records ready for review" in html
     assert "Source-traceable complaint review." not in html
     assert "Signed in as Local Test Reviewer" not in html
-    assert "Facility case brief" in html
-    assert 'class="facility-case-brief facility-context-band"' in html
-    assert (
-        _text_for_id(html, "facility-case-brief-heading")
-        == "A. MIRIAM JAMISON CHILDREN'S CENTER"
-    )
-    assert _text_for_id(html, "facility-case-brief-heading") != "Facility"
-    assert "Facility/license" not in html
-    assert "Facility/license number" not in html
-    assert "facility/license number" not in html
-    assert "<strong>1</strong><span>Record</span>" in html
-    assert "<strong>1</strong><span>Records</span>" not in html
-    assert "Flagged" in html
-    assert "Source available" in html
-    assert "Notes/status saved" in html
-    case_brief_html = html[
-        html.index('class="facility-case-brief facility-context-band"') : html.index("Worklist")
-    ]
-    assert "Facility ID:" in case_brief_html
-    assert "157806098" in case_brief_html
-    assert 'aria-label="Copy Facility ID"' in case_brief_html
-    assert 'data-copy-value="157806098"' in case_brief_html
     assert "function ensureCopyStatus(button)" in html
     assert "showCopyStatus(button, 'Copied')" in html
     assert "aria-live', 'polite'" in html
     assert "1700" in html
-    assert 'aria-label="Copy facility name"' in case_brief_html
-    assert 'data-copy-value="A. MIRIAM JAMISON CHILDREN&#x27;S CENTER"' in case_brief_html
-    assert 'class="hero-card facility-case-brief"' not in case_brief_html
-    assert 'class="metric-card"' not in case_brief_html
-    assert 'class="brief-metric"' in case_brief_html
     mode_panel = html.split('<div class="mode-panel" aria-label="Retrieval mode">', 1)[1].split(
         "</div>",
         1,
@@ -241,10 +214,6 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert html.count("Fixture/mock demo") == 1
     assert html.count('<span class="ds-badge ds-badge--info">Fixture/mock demo</span>') == 1
     assert '<span class="ds-badge ds-badge--info">Fixture/mock demo</span>' in mode_panel
-    assert "Open packet preview" in html
-    assert REVIEWER_UI_PACKET_PREVIEW_PATH in html
-    assert "Open print draft" in html
-    assert REVIEWER_UI_PACKET_DRAFT_PATH in html
     assert "Open local/test packet preview" not in html
     assert "Open local/test preparation draft for browser copy or print" not in html
     assert "Skip to main reviewer content" in html
@@ -263,12 +232,14 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert "reviewer UI shell" not in html
     assert "fixture actor context" not in normalized_html
     assert "seeded corpus scope" not in normalized_html
-    assert "review-chip" in html
     assert "Attorney workflow" not in html
     assert "Current step:" not in html
+    assert '<section class="worklist-intro" aria-labelledby="worklist-intro-heading">' in html
+    assert "Choose the next complaint to review" in html
     assert "Search records" in html
     assert html.count("Search records") == 1
     assert '<label class="sr-only" for="q">Queue search</label>' in html
+    assert 'class="compact-search-form" role="search"' in html
     assert 'list="queue-search-suggestions"' in html
     assert '<datalist id="queue-search-suggestions">' in html
     for suggestion in (
@@ -284,66 +255,67 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert "Missing source date" not in html
     assert "Source unavailable" not in html
     assert "Check source" not in html
-    assert "Worklist" in html
+    assert "Complaint worklist" in html
+    assert "Showing 1 of 1 matching complaint record." in html
+    assert "The matching record is shown within the current 100-record limit." in html
     assert '<div class="dense-section-header">' in html
-    assert 'class="result-list dense-card-grid"' in html
-    assert 'class="result-card work-item is-suggested"' in html
-    assert 'class="work-item-main"' in html
-    assert 'class="work-item-facts"' in html
-    work_item_start = html.index('class="result-card work-item is-suggested"')
+    assert '<ol class="review-worklist" aria-label="Complaint records ready for review">' in html
+    assert 'class="result-list dense-card-grid"' not in html
+    assert 'class="review-worklist-row is-suggested"' in html
+    work_item_start = html.index('class="review-worklist-row is-suggested"')
     work_item_end = html.index("</article>", work_item_start)
     work_item_html = html[work_item_start:work_item_end]
-    for pair_name in (
-        "facility-id",
+    for field_name in (
         "complaint-received",
         "visit",
         "report",
-        "signed",
     ):
-        assert f'data-fact-pair="{pair_name}"' in work_item_html
-    assert 'data-fact-pair="facility-license"' not in work_item_html
+        assert f'data-worklist-field="{field_name}"' in work_item_html
+    assert 'aria-label="Key complaint dates"' in work_item_html
+    assert 'aria-label="Reviewer and source status"' in work_item_html
+    assert "Review next" in work_item_html
+    assert "No reviewer status has been saved." in work_item_html
+    assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in work_item_html
     assert "Facility ID" in work_item_html
     assert 'aria-label="Copy complaint/control number"' in work_item_html
     assert 'aria-label="Copy Facility ID"' in work_item_html
-    expected_source_pill = (
-        '<p class="work-item-source"><span class="review-chip source-chip">'
-        "CCLD source available</span></p>"
+    assert "Finding / resolution" in work_item_html
+    assert "Unsubstantiated" in work_item_html
+    assert "Review flags" in work_item_html
+    assert "No review flags" in work_item_html
+    assert "Reviewer status" in work_item_html
+    assert "No status" in work_item_html
+    assert "Note" in work_item_html
+    assert "No note" in work_item_html
+    assert "CCLD source available" in work_item_html
+    assert 'class="inline-glossary-term"' in work_item_html
+    assert 'class="review-chip badge-info badge-info--status"' in work_item_html
+    assert 'class="review-chip badge-info badge-info--note"' in work_item_html
+    assert 'class="review-chip source-chip"' in work_item_html
+    assert (
+        'Review complaint <span class="sr-only">32-CR-20220407124448</span>'
+        in work_item_html
     )
-    assert expected_source_pill in html
-    assert 'class="work-item-actions" aria-label="Record actions"' in html
-    assert 'class="button button-quiet"' in html
-    assert "grid-template-columns: repeat(5, minmax(7rem, 1fr));" in html
-    badges_html = work_item_html[
-        work_item_html.index('class="queue-record-badges"') : work_item_html.index(
-            'class="work-item-facts"',
-        )
-    ]
-    assert "source-chip" not in badges_html
-    assert 'class="review-chip__marker review-chip__marker--finding"' in badges_html
-    assert 'class="review-chip__marker review-chip__marker--status"' in badges_html
-    assert 'class="review-chip__marker review-chip__marker--note"' in badges_html
-    assert work_item_html.index(">Open record</a>") < work_item_html.index(
-        'class="button button-secondary"',
-    )
-    assert work_item_html.index('class="button button-secondary"') < work_item_html.index(
-        'class="button button-quiet"',
-    )
+    assert work_item_html.count('href="/reviewer/records/detail?') == 1
+    assert "grid-template-areas: \"identity dates outcome state action\";" in html
+    assert 'grid-template-areas: "identity" "dates" "outcome" "state" "action";' in html
     assert 'class="technical-details dense-table-details"' in html
     assert 'class="technical-details diagnostic-details"' not in html
     assert "Keyboard flow: search filters this queue" not in html
+    assert "About these results" in html
     assert "Show table view" in html
     assert "Exports" in html
+    _assert_collapsed_disclosure(html, "About these results")
     _assert_collapsed_disclosure(html, "Show table view")
     _assert_collapsed_disclosure(html, "Exports")
     _assert_collapsed_disclosure(html, "Facility exports")
     assert "Public records stay separate from saved notes/status" not in normalized_html
     assert "Queue status summary" not in html
-    assert "Suggested" in html
-    assert "Open record" in html
     section_order = [
-        "Facility case brief",
-        "Worklist",
+        "Choose the next complaint to review",
         "Search records",
+        "Complaint worklist",
+        "About these results",
         "Show table view",
         "Exports",
     ]
@@ -372,6 +344,9 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
         "Reviewer-created notes",
         "Reviewer-created status",
         "Source link/status",
+        "Facility case brief",
+        "Open packet preview",
+        "Open print draft",
         "raw SHA-256",
         "raw artifact reference",
         "connector metadata",
@@ -386,13 +361,9 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert "No note" in html
     assert "CCLD source available" in html
     assert "04/07/2022" in html
-    assert "04/14/2022" in html
     assert "08/24/2022" in html
-    assert "08/26/2022" in html
-    assert "08/26/2022" in html
     assert "2022-04-07" not in html
     assert "2022-08-24" not in html
-    assert "2022-08-26" not in html
     assert "32-CR-20220407124448" in html
     assert "this runtime does not add production sign-in" not in normalized_html
     assert_no_secret_html(html)
@@ -511,9 +482,9 @@ def test_reviewer_ui_landing_keeps_complaint_export_controls_secondary() -> None
         "Use CSV exports to triage and navigate records.",
     ):
         assert removed not in html
-    assert "Facility case brief" in html
-    assert "Worklist" in html
-    assert html.index("Worklist") < html.index("Exports")
+    assert "Facility case brief" not in html
+    assert "Complaint worklist" in html
+    assert html.index("Complaint worklist") < html.index("Exports")
     assert "triage and navigate records" not in normalized_html
 
 
@@ -1763,7 +1734,6 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     for removed in (
         "Facility / license",
         "facility/license",
-        "license number",
         "source-derived fields",
         "source-derived values",
         "source-derived records",
@@ -2083,7 +2053,6 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     for removed in (
         "Facility / license",
         "facility/license",
-        "license number",
         "source-derived fields",
         "source-derived values",
         "source-derived records",
@@ -2260,8 +2229,8 @@ def test_reviewer_ui_landing_shows_reviewer_created_state_indicators() -> None:
     assert "Reviewed" in html
     assert "1 note" in html
     assert "Note added" in html
-    assert "Facility case brief" in html
-    assert "Notes/status saved" in html
+    assert "Facility case brief" not in html
+    assert "Reviewer status" in html
     assert "Queue status summary" not in html
     assert "reviewer-created" not in " ".join(html.split()).casefold()
     assert_no_secret_html(html)
@@ -2284,12 +2253,82 @@ def test_reviewer_ui_landing_supports_simple_search() -> None:
     assert "value=\"32-CR\"" in matched_html
     assert "32-CR-20220407124448" in matched_html
     assert empty_status == 200
-    assert "No loaded complaint records match the current search." in (
-        " ".join(empty_html.split())
-    )
+    assert "No loaded complaint records match no-match." in " ".join(empty_html.split())
     assert "No matching complaint records" in empty_html
-    assert "Clear search" in empty_html
-    assert "Return to reviewer home" in empty_html
+    assert "Showing 0 of 0 matching complaint records." in empty_html
+    assert "Clear search and show all complaint records" in empty_html
+    assert "Return to reviewer home" not in empty_html
+
+
+def test_reviewer_ui_landing_uses_plain_missing_values_and_source_cues() -> None:
+    with _seeded_connection() as connection:
+        original_values = dict(
+            connection.execute(
+                select(hosted_source_derived_records.c.original_values).where(
+                    hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY
+                )
+            ).scalar_one()
+        )
+        original_values.update(
+            finding=None,
+            complaint_received_date=None,
+            visit_date=None,
+            report_date=None,
+        )
+        connection.execute(
+            update(hosted_source_derived_records)
+            .where(hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY)
+            .values(original_values=original_values, source_url="unknown")
+        )
+        status, content_type, body = route_response(
+            "/reviewer",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    record_start = html.index('class="review-worklist-row is-suggested"')
+    record_html = html[record_start : html.index("</article>", record_start)]
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Not provided" in record_html
+    assert record_html.count("Date not provided") == 3
+    assert "Source not available" in record_html
+    assert ">unknown<" not in record_html
+    assert "raw_path" not in record_html
+    assert "raw_sha256" not in record_html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_landing_displays_each_primary_review_flag_once_as_a_badge() -> None:
+    with _seeded_connection() as connection:
+        original_values = dict(
+            connection.execute(
+                select(hosted_source_derived_records.c.original_values).where(
+                    hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY
+                )
+            ).scalar_one()
+        )
+        original_values["review_delay_over_120_days"] = True
+        connection.execute(
+            update(hosted_source_derived_records)
+            .where(hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY)
+            .values(original_values=original_values)
+        )
+        status, _content_type, body = route_response(
+            "/reviewer",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    record_start = html.index('class="review-worklist-row is-suggested"')
+    record_html = html[record_start : html.index("</article>", record_start)]
+
+    assert status == 200
+    assert record_html.count("120+ day gap") == 1
+    assert 'class="review-chip badge-attention badge-attention--warning"' in record_html
+    assert "Possible delay indicator" not in record_html
+    assert_no_secret_html(html)
 
 def test_reviewer_priority_prefers_records_without_reviewer_created_state_then_flags() -> None:
     reviewed_stronger_flag = _case_brief_record_for_priority(
@@ -3159,6 +3198,8 @@ def test_reviewer_ui_matrix_export_returns_excel_ready_csv_without_mutation() ->
 def test_reviewer_landing_uses_one_bounded_governed_bundle_without_offset_paging(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    assert not hasattr(reviewer_ui, "_all_source_derived_records")
+
     def fail_api_pagination(*_args: object, **_kwargs: object) -> None:
         raise AssertionError("reviewer landing must not enumerate the source API")
 
@@ -3195,7 +3236,9 @@ def test_reviewer_landing_uses_one_bounded_governed_bundle_without_offset_paging
     assert content_type == "text/html; charset=utf-8"
     html = body.decode("utf-8")
     assert "32-CR-20220407124448" in html
-    assert "Showing 100 of 126 records." in html
+    assert "Showing 100 of 126 matching complaint records." in html
+    assert "The first 100 records are shown within the current 100-record limit." in html
+    assert html.count('class="review-worklist-row') == 100
     assert "<dt>Eligible records</dt><dd>126</dd>" in html
     assert '<span class="status-badge">Truncated</span>' in html
     assert len(statements) == 3
