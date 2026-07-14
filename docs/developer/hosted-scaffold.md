@@ -448,6 +448,13 @@ record counts, discovered/selected/retrieved/matched/imported/failure counts,
 safe warnings/errors, direct `Review imported records` and `View job details`
 actions, and specific zero-import reasons such as candidates outside the selected
 date range or retrieval not configured.
+Successful retrieval imports also run the shared governed source-preparation
+step. Approved preloaded facility-reference rows may supply canonical facility
+type, county, and status; the complaint report supplies explicit facility type
+and deterministic first-activity evidence. Precedence conflicts are retained in
+source traceability, and repeat retrieval does not duplicate canonical rows.
+Existing hosted rows use the separate dry-run-first process documented in
+`hosted-ccld-backfill.md`; browser request routes do not run that backfill.
 The queue includes a triage summary, progress counts, reviewer note/status cues,
 source-traceability availability cues, suggested next-record links, and a
 reviewer-status filter derived from existing reviewer-created note/status rows.

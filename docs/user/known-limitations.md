@@ -192,6 +192,12 @@
   does not prove source completeness, statewide coverage, official facility
   status, complaint availability, or legal or facility-wide conclusions. Full/raw
   facility CSV files must not be committed.
+- Approved facility-reference rows preloaded into the hosted database can now
+  supply canonical facility type, county, and status during controlled CCLD
+  retrieval or operator backfill. This does not make the local lookup fixture
+  authoritative, fill other fields, fetch current reference data, or prove
+  completeness. Missing approved reference values remain unknown and do not
+  erase existing populated values.
 - Production-readiness items such as source-verification planning, auth provider
   integration, audit UI/export, export packet generation, reset/reload execution,
   deployment, database-backed lookup, non-CCLD sources, and persisted tester

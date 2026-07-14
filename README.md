@@ -190,6 +190,22 @@ The live command makes controlled server-side public CCLD requests only when a
 browser user submits a retrieval job. The demo command uses committed fixtures.
 Neither mode proves CCLD public-source completeness.
 
+## Hosted CCLD Refresh And Backfill
+
+Ordinary controlled CCLD retrieval now applies the same governed facility-
+reference enrichment used by the existing-data backfill. The backfill defaults
+to dry-run, reads only preserved complaint artifacts and approved preloaded
+facility-reference rows, and supports one facility, a facility-number file, or
+all existing hosted facilities with bounded batches and checkpoint/restart:
+
+```powershell
+.\scripts\backfill-hosted-ccld-data.ps1 -FacilityNumber 425802141 -Operation all -DryRun
+```
+
+See `docs/developer/hosted-ccld-backfill.md` for precedence, prerequisites,
+apply mode, safe output, and container-runtime details. The backfill never makes
+live CCLD requests.
+
 ## Batch Complaint Retrieval
 
 Operators can plan or run bounded CCLD complaint retrieval by facility type and

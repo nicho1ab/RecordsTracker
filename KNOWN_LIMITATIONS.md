@@ -230,6 +230,13 @@
     and it does not prove source completeness, statewide coverage, official
     facility status, complaint availability, or legal or facility-wide
     conclusions. Full/raw facility CSV files must not be committed.
+- Approved facility-reference rows preloaded into PostgreSQL can now enrich
+    hosted canonical facility type, county, and status during ordinary CCLD
+    retrieval or the governed preserved-artifact backfill. This narrow bridge
+    does not make the browser lookup fixture authoritative, infer missing
+    values, bridge other reference fields, fetch fresh public data, or prove
+    reference completeness or currency. Facilities without approved matching
+    reference rows retain their existing nonblank values and setup warnings.
 - The local hosted scaffold facility hub can show facility review signals from
     supported ignored uploaded public licensing/visit/citation summary CSVs.
     A directory-backed hub shows facility name, Facility ID, facility type,

@@ -37,7 +37,7 @@ def test_export_review_bundle_writes_source_traceable_csvs(tmp_path: Path) -> No
     assert exported_paths["source_traceability.csv"].row_count == 1
     assert exported_paths["multi_facility_source_traceability.csv"].row_count == 1
     assert exported_paths["complaint_timeline_with_source_traceability.csv"].row_count == 6
-    assert exported_paths["field_source_traceability.csv"].row_count == 28
+    assert exported_paths["field_source_traceability.csv"].row_count == 29
     assert exported_paths["facility_pattern_review.csv"].row_count == 1
     assert exported_paths["facility_comparison_review.csv"].row_count == 1
 

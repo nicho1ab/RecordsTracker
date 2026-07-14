@@ -21,6 +21,18 @@ server-side raw storage and PostgreSQL.
 See [QNAP pilot auth readiness](qnap-pilot-auth-readiness.md) for the operator
 evidence to capture before inviting testers.
 
+## Governed Hosted CCLD Backfill
+
+The repository wrapper can hand the dry-run-first backfill to the existing app
+container with `-QnapContainer`. The container must already have its normal
+database configuration, approved facility-reference preload, and preserved raw
+artifact mounts. The wrapper supports `-FacilityNumber`,
+`-FacilityNumberFile`, or `-AllExisting`; `-Operation`, `-BatchSize`,
+`-CheckpointFile`, and `-Restart`; and explicit `-Apply`. Omitting `-Apply`
+remains dry-run. It executes no public-source requests and reports aggregate
+counts only. See [Hosted CCLD refresh and backfill](hosted-ccld-backfill.md) for
+the complete governed interface.
+
 ## Files
 
 - `Dockerfile` builds the Python standard-library hosted scaffold image.

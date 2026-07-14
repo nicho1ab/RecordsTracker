@@ -24,6 +24,8 @@ from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
     hosted_ccld_retrieval_jobs,
 )
 from ccld_complaints.hosted_app.facility_reference_preload import (
+    FACILITY_REFERENCE_DATASET_SLUG,
+    FACILITY_REFERENCE_DATASET_URL,
     hosted_facility_reference_metadata,
     hosted_facility_reference_records,
 )
@@ -130,7 +132,7 @@ def test_apply_calls_controlled_retrieval_import_path(tmp_path: Path) -> None:
     assert summary.succeeded_count == 1
     assert counts["retrieval_jobs"] == 1
     assert counts["import_batches"] == 1
-    assert counts["source_records"] == 34
+    assert counts["source_records"] == 38
     assert client.facility_detail_calls == ["157806098"]
     assert len(client.report_calls) == 1
     assert job["job_state"] == "completed"
@@ -215,7 +217,7 @@ def test_force_reruns_already_loaded_window(tmp_path: Path) -> None:
 
     assert summary.succeeded_count == 1
     assert counts["retrieval_jobs"] == 2
-    assert counts["source_records"] == 34
+    assert counts["source_records"] == 38
     assert client.facility_detail_calls == ["157806098"]
 
 
@@ -380,7 +382,7 @@ def _insert_facility(
 ) -> None:
     connection.execute(
         hosted_facility_reference_records.insert().values(
-            source_resource_id=f"resource-{facility_number}",
+            source_resource_id="c9df723a-437f-4dcd-be37-ec73ae518bb9",
             facility_number=facility_number,
             facility_name=name,
             facility_type=facility_type,
@@ -399,11 +401,11 @@ def _insert_facility(
             license_first_date=None,
             closed_date=None,
             snapshot_date=None,
-            source_resource_name="Test resource",
-            source_dataset_slug="test-dataset",
-            source_dataset_url="https://example.invalid/dataset",
+            source_resource_name="24-Hour Residential Care for Children",
+            source_dataset_slug=FACILITY_REFERENCE_DATASET_SLUG,
+            source_dataset_url=FACILITY_REFERENCE_DATASET_URL,
             source_accessed_at="2026-07-03T12:00:00+00:00",
-            source_file_name="test.csv",
+            source_file_name="24HourResidentialCareforChildren.csv",
             original_row_json={},
         )
     )

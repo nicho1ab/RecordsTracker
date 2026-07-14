@@ -325,6 +325,15 @@ traceability, rejects missing or unsafe traceability fields, remains no-secret,
 and is compatible with the existing hosted seeded import and CCLD import/reload
 path without running live crawling or browser-triggered connector execution.
 
+Hosted CCLD refresh/backfill tests must prove complaint-report facility type,
+structured visit-based first activity, approved-reference ownership and
+conflict provenance, blank-preserving updates, dry-run rollback, apply/repeat
+idempotency, bounded batch and checkpoint/resume behavior, failure isolation,
+preserved raw URL/hash/path/retrieval metadata, stable source-derived identities
+and import scope, unchanged reviewer-created state/audit history, reviewer UI
+visibility, and ordinary retrieval parity. Tests must use source-shaped fixtures
+and doubles only; they must not make live CCLD requests.
+
 Issue #447 canonical-allocation evidence tests must cover the exact 12-field
 registry, canonical importer population, null versus verified zero, date-list
 ordering/deduplication, raw composite provenance, additive migration behavior,

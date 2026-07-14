@@ -64,6 +64,28 @@ FACILITY_CANONICAL_FIELDS = frozenset(
     }
 )
 
+COMPLAINT_REFRESH_FIELDS = frozenset(
+    {
+        "complaint_control_number",
+        "complaint_received_date",
+        "first_investigation_activity_date",
+        "visit_date",
+        "report_date",
+        "date_signed",
+        "finding",
+        "days_received_to_first_activity",
+        "days_received_to_visit",
+        "days_received_to_report",
+        "days_report_to_signed",
+        "review_delay_over_30_days",
+        "review_delay_over_60_days",
+        "review_delay_over_90_days",
+        "review_delay_over_120_days",
+        "missing_first_activity_date",
+        "report_date_used_as_proxy",
+    }
+)
+
 RAW_SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
 hosted_seeded_import_metadata = MetaData()
@@ -162,6 +184,10 @@ class SeededCorpusImportResult:
     imported_record_count: int
     imported_counts_by_entity: Mapping[str, int]
     reviewer_created_state_written: bool = False
+    inserted_record_count: int = 0
+    updated_record_count: int = 0
+    unchanged_record_count: int = 0
+    conflicted_field_count: int = 0
 
 
 def hosted_seeded_import_tables() -> tuple[Table, Table]:
@@ -216,12 +242,29 @@ def flatten_seeded_corpus_records(
 def import_seeded_corpus_artifact(
     connection: Connection,
     artifact: SeededCorpusArtifact,
+    *,
+    preserve_existing_import_batch: bool = False,
 ) -> SeededCorpusImportResult:
     flattened_records = flatten_seeded_corpus_records(artifact)
     _upsert_batch(connection, artifact)
 
+    inserted = 0
+    updated = 0
+    unchanged = 0
+    conflicted = 0
     for record in flattened_records:
-        _upsert_source_record(connection, record)
+        operation, conflict_count = _upsert_source_record(
+            connection,
+            record,
+            preserve_existing_import_batch=preserve_existing_import_batch,
+        )
+        conflicted += conflict_count
+        if operation == "inserted":
+            inserted += 1
+        elif operation == "updated":
+            updated += 1
+        else:
+            unchanged += 1
 
     persisted_counts_by_entity = _unique_persisted_counts_by_entity(flattened_records)
 
@@ -229,6 +272,10 @@ def import_seeded_corpus_artifact(
         import_batch_id=artifact.import_batch_id,
         imported_record_count=sum(persisted_counts_by_entity.values()),
         imported_counts_by_entity=persisted_counts_by_entity,
+        inserted_record_count=inserted,
+        updated_record_count=updated,
+        unchanged_record_count=unchanged,
+        conflicted_field_count=conflicted,
     )
 
 
@@ -258,12 +305,16 @@ def _flatten_normalized_record(
 
     facility = _optional_mapping(normalized_record, "facility")
     if facility is not None:
+        facility_traceability = dict(source_document_traceability)
+        refresh_context = _optional_mapping(normalized_record, "hosted_refresh")
+        if refresh_context is not None:
+            facility_traceability["hosted_refresh"] = dict(refresh_context)
         records.append(
             _seeded_record(
                 artifact,
                 "facility",
                 facility,
-                source_document_traceability,
+                facility_traceability,
                 _required_str_from_mapping(source_document, "document_id"),
                 _required_str_from_mapping(facility, "facility_id"),
             )
@@ -402,7 +453,12 @@ def _upsert_batch(connection: Connection, artifact: SeededCorpusArtifact) -> Non
         )
 
 
-def _upsert_source_record(connection: Connection, record: SeededSourceDerivedRecord) -> None:
+def _upsert_source_record(
+    connection: Connection,
+    record: SeededSourceDerivedRecord,
+    *,
+    preserve_existing_import_batch: bool = False,
+) -> tuple[str, int]:
     values = {
         "source_record_key": record.source_record_key,
         "entity_type": record.entity_type,
@@ -420,44 +476,124 @@ def _upsert_source_record(connection: Connection, record: SeededSourceDerivedRec
         "source_traceability": dict(record.source_traceability),
     }
     existing = connection.execute(
-        select(
-            hosted_source_derived_records.c.source_record_key,
-            hosted_source_derived_records.c.original_values,
-        ).where(
+        select(hosted_source_derived_records).where(
             hosted_source_derived_records.c.source_record_key == record.source_record_key
         )
     ).mappings().first()
     if existing is None:
-        connection.execute(hosted_source_derived_records.insert().values(**values))
-    else:
-        if record.entity_type == "facility":
-            values["original_values"] = _merge_facility_original_values(
-                existing.get("original_values"), record.original_values
+        if preserve_existing_import_batch:
+            values["import_batch_id"] = _existing_document_import_batch_id(
+                connection,
+                record.source_document_id,
+                fallback=record.import_batch_id,
             )
+        connection.execute(hosted_source_derived_records.insert().values(**values))
+        return "inserted", 0
+    else:
+        if preserve_existing_import_batch:
+            values["import_batch_id"] = existing["import_batch_id"]
+        merged_original_values, conflicts = _merge_source_original_values(
+            record.entity_type,
+            existing.get("original_values"),
+            record.original_values,
+        )
+        values["original_values"] = merged_original_values
+        values["source_traceability"] = _merge_source_traceability(
+            existing.get("source_traceability"),
+            record.source_traceability,
+            conflicts,
+        )
+        comparable_existing = {key: existing.get(key) for key in values}
+        if comparable_existing == values:
+            return "unchanged", len(conflicts)
         connection.execute(
             update(hosted_source_derived_records)
             .where(hosted_source_derived_records.c.source_record_key == record.source_record_key)
             .values(**values)
         )
+        return "updated", len(conflicts)
 
 
-def _merge_facility_original_values(
+def _existing_document_import_batch_id(
+    connection: Connection,
+    source_document_id: str,
+    *,
+    fallback: str,
+) -> str:
+    value = connection.execute(
+        select(hosted_source_derived_records.c.import_batch_id).where(
+            hosted_source_derived_records.c.entity_type == "source_document",
+            hosted_source_derived_records.c.stable_source_id == source_document_id,
+        )
+    ).scalar_one_or_none()
+    return str(value) if value is not None else fallback
+
+
+def _merge_source_original_values(
+    entity_type: SourceDerivedEntityType,
     existing: object,
     incoming: Mapping[str, Any],
-) -> dict[str, Any]:
-    """Keep governed facility values when a repeated bundle supplies null.
+) -> tuple[dict[str, Any], tuple[dict[str, Any], ...]]:
+    """Apply null-preserving refresh and trace governed nonblank conflicts.
 
-    Hosted artifacts repeat a facility object for each complaint bundle.  The
-    merge is deliberately limited to canonical facility fields so unrelated
-    source values keep ordinary snapshot replacement behavior.
+    Complaint-report-owned fields use the newest successfully validated
+    deterministic extraction. Facility master precedence is resolved before
+    import, so a nonblank incoming canonical facility value is authoritative.
     """
 
     merged = dict(existing) if isinstance(existing, Mapping) else {}
+    conflict_fields = (
+        FACILITY_CANONICAL_FIELDS
+        if entity_type == "facility"
+        else COMPLAINT_REFRESH_FIELDS if entity_type == "complaint" else frozenset()
+    )
+    conflicts: list[dict[str, Any]] = []
     for key, value in incoming.items():
-        if key in FACILITY_CANONICAL_FIELDS and value is None and key in merged:
+        if _is_blank_refresh_value(value) and key in merged and not _is_blank_refresh_value(
+            merged[key]
+        ):
+            continue
+        if (
+            key in conflict_fields
+            and key in merged
+            and not _is_blank_refresh_value(merged[key])
+            and not _is_blank_refresh_value(value)
+            and merged[key] != value
+        ):
+            conflicts.append(
+                {
+                    "field_name": key,
+                    "previous_value": merged[key],
+                    "incoming_value": value,
+                    "resolution": "incoming_governed_source_precedence",
+                }
+            )
+        merged[key] = value
+    return merged, tuple(conflicts)
+
+
+def _merge_source_traceability(
+    existing: object,
+    incoming: Mapping[str, Any],
+    conflicts: tuple[dict[str, Any], ...],
+) -> dict[str, Any]:
+    merged = dict(existing) if isinstance(existing, Mapping) else {}
+    for key, value in incoming.items():
+        if _is_blank_refresh_value(value) and key in merged:
             continue
         merged[key] = value
+    prior_conflicts = merged.get("refresh_conflicts")
+    conflict_rows = list(prior_conflicts) if isinstance(prior_conflicts, list) else []
+    for conflict in conflicts:
+        if conflict not in conflict_rows:
+            conflict_rows.append(conflict)
+    if conflict_rows:
+        merged["refresh_conflicts"] = conflict_rows
     return merged
+
+
+def _is_blank_refresh_value(value: object) -> bool:
+    return value is None or (isinstance(value, str) and not value.strip())
 
 
 def _required_mapping(data: Mapping[str, Any], field_name: str) -> Mapping[str, Any]:

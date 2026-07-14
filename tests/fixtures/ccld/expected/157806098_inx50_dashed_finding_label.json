@@ -32,12 +32,12 @@
         "document_id": "ccld-157806098-inx-50",
         "complaint_control_number": "32-CR-20240610181818",
         "complaint_received_date": "2024-06-10",
-        "first_investigation_activity_date": null,
+        "first_investigation_activity_date": "2024-06-20",
         "visit_date": "2024-06-20",
         "report_date": "2024-08-05",
         "date_signed": "2024-08-06",
         "finding": "No deficiency cited",
-        "days_received_to_first_activity": null,
+        "days_received_to_first_activity": 10,
         "days_received_to_visit": 10,
         "days_received_to_report": 56,
         "days_report_to_signed": 1,
@@ -45,7 +45,7 @@
         "review_delay_over_60_days": false,
         "review_delay_over_90_days": false,
         "review_delay_over_120_days": false,
-        "missing_first_activity_date": true,
+        "missing_first_activity_date": false,
         "report_date_used_as_proxy": false,
         "extraction_confidence": 1.0
     },
@@ -64,6 +64,17 @@
             "allegation_text": "Facility staff did not complete the family notification log",
             "allegation_category": null,
             "finding": "No deficiency cited",
+            "extraction_confidence": 1.0
+        }
+    ],
+    "events": [
+        {
+            "event_id": "ccld-complaint-32-CR-20240610181818-event-1",
+            "complaint_id": "ccld-complaint-32-CR-20240610181818",
+            "event_date": "2024-06-20",
+            "event_type": "investigation_activity",
+            "event_text": "VISIT DATE: 06/20/2024",
+            "extracted_from_section": "report header",
             "extraction_confidence": 1.0
         }
     ]

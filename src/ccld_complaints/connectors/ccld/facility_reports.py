@@ -44,7 +44,7 @@ NUMBERED_ALLEGATION_PREFIX_RE = re.compile(
 FINDING_INLINE_LABEL_RE = re.compile(r"^finding\s*[-:]\s*(.+)$", re.IGNORECASE)
 SOURCE_DATE_TOKEN_RE = re.compile(r"\b\d{1,2}/\d{1,2}/\d{2,4}\b")
 INVESTIGATION_ACTIVITY_CUE_RE = re.compile(
-    r"\b(?:conducted|interviewed|reviewed|visited|inspected|investigated)\b",
+    r"\b(?:conducted|interviewed|performed|reviewed|visited|inspected|investigated)\b",
     re.IGNORECASE,
 )
 FIELD_STATUS_EXTRACTED = "EXTRACTED_VALUE_PRESENT"
@@ -312,12 +312,13 @@ class CcldFacilityReportsConnector:
             or _value_after_spaced_colon_label(lines, "Report Date")
             or _value_after_punctuated_label(lines, "Report Date")
         )
-        visit_date = _iso_date(
+        visit_date_source = (
             _value_after_label(lines, "VISIT DATE:")
             or _value_after_exact_label(lines, "VISIT DATE")
             or _value_after_spaced_colon_label(lines, "VISIT DATE")
             or _value_after_punctuated_label(lines, "VISIT DATE")
         )
+        visit_date = _iso_date(visit_date_source)
         date_signed = _iso_date(
             _value_after_label(lines, "Date Signed:")
             or _value_after_exact_label(lines, "Date Signed")
@@ -326,11 +327,16 @@ class CcldFacilityReportsConnector:
         )
         facility_address = _table_label_evidence(cells, "ADDRESS", "facility details")
         facility_city = _table_label_evidence(cells, "CITY", "facility details")
+        facility_type = _table_label_evidence(cells, "FACILITY TYPE", "facility details")
         facility_capacity = _integer_field_evidence(
             _table_label_evidence(cells, "CAPACITY", "facility details")
         )
         regional_office = _regional_office_evidence(cells)
-        activity_event, first_activity_evidence = _first_investigation_activity(lines)
+        activity_event, first_activity_evidence = _first_investigation_activity(
+            lines,
+            visit_date=visit_date,
+            visit_date_source=visit_date_source,
+        )
         first_activity_date = first_activity_evidence.source_value
         delay_metrics = _delay_metrics(
             complaint_received_date=complaint_received_date,
@@ -344,6 +350,7 @@ class CcldFacilityReportsConnector:
             "facility_address": facility_address,
             "facility_capacity": facility_capacity,
             "facility_city": facility_city,
+            "facility_type": facility_type,
             "regional_office": regional_office,
             "first_investigation_activity_date": first_activity_evidence,
         }
@@ -370,6 +377,7 @@ class CcldFacilityReportsConnector:
             "facility_address": facility_address.source_value,
             "facility_capacity": _evidence_int_value(facility_capacity),
             "facility_city": facility_city.source_value,
+            "facility_type": facility_type.source_value,
             "regional_office": regional_office.source_value,
             "report_date": report_date,
             "date_signed": date_signed,
@@ -435,7 +443,7 @@ class CcldFacilityReportsConnector:
                 "source_id": SOURCE_ID,
                 "external_facility_number": facility_number,
                 "facility_name": facility_name,
-                "facility_type": None,
+                "facility_type": _optional_str(extracted, "facility_type"),
                 "licensee_name": None,
                 "county": None,
                 "status": None,
@@ -901,20 +909,27 @@ def _regional_office_evidence(cells: list[str]) -> FieldEvidence:
 
 def _first_investigation_activity(
     lines: list[str],
+    *,
+    visit_date: str | None = None,
+    visit_date_source: str | None = None,
 ) -> tuple[dict[str, object] | None, FieldEvidence]:
     section_lines = _investigation_findings_lines(lines)
-    if section_lines is None:
-        return None, FieldEvidence(
-            status=FIELD_STATUS_ABSENT,
-            source_section="investigation findings",
-            source_text=None,
-            source_value=None,
-            warning="Investigation findings section was not found in the source report.",
-        )
 
-    candidates: list[tuple[date, str]] = []
+    candidates: list[tuple[date, int, str, str]] = []
+    if visit_date is not None:
+        parsed_visit_date = parse_date_or_none(visit_date)
+        if parsed_visit_date is not None:
+            candidates.append(
+                (
+                    parsed_visit_date,
+                    1,
+                    f"VISIT DATE: {visit_date_source or visit_date}",
+                    "report header",
+                )
+            )
+
     malformed_source_text: str | None = None
-    for line in section_lines:
+    for line in section_lines or []:
         if INVESTIGATION_ACTIVITY_CUE_RE.search(line) is None:
             continue
         source_text = re.split(r"(?<=[.!?])\s+", line, maxsplit=1)[0].strip()
@@ -926,7 +941,7 @@ def _first_investigation_activity(
                 continue
             parsed = parse_date_or_none(normalized)
             if parsed is not None:
-                candidates.append((parsed, source_text))
+                candidates.append((parsed, 0, source_text, "investigation findings"))
 
     if not candidates:
         if malformed_source_text is not None:
@@ -945,14 +960,21 @@ def _first_investigation_activity(
             source_section="investigation findings",
             source_text=None,
             source_value=None,
-            warning="No deterministic dated investigation activity was found.",
+            warning=(
+                "No deterministic dated investigation activity was found."
+                if section_lines is not None
+                else "Investigation findings section and structured visit date were not found."
+            ),
         )
 
-    first_date, source_text = min(candidates, key=lambda item: (item[0], item[1]))
+    first_date, _evidence_priority, source_text, source_section = min(
+        candidates,
+        key=lambda item: (item[0], item[1], item[2]),
+    )
     normalized_date = first_date.isoformat()
     evidence = FieldEvidence(
         status=FIELD_STATUS_EXTRACTED,
-        source_section="investigation findings",
+        source_section=source_section,
         source_text=source_text,
         source_value=normalized_date,
     )
@@ -961,9 +983,9 @@ def _first_investigation_activity(
             "event_date": normalized_date,
             "event_type": "investigation_activity",
             "event_text": source_text,
-            "extracted_from_section": "investigation findings",
+            "extracted_from_section": source_section,
             "source_text": source_text,
-            "source_section": "investigation findings",
+            "source_section": source_section,
         },
         evidence,
     )
@@ -1452,6 +1474,7 @@ def _audit_records(document_id: str, extracted: dict[str, object]) -> list[dict[
         "facility_address",
         "facility_capacity",
         "facility_city",
+        "facility_type",
         "regional_office",
         "report_type",
         "report_date",

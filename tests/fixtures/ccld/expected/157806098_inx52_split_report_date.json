@@ -32,12 +32,12 @@
         "document_id": "ccld-157806098-inx-52",
         "complaint_control_number": "32-CR-20240614202020",
         "complaint_received_date": "2024-06-14",
-        "first_investigation_activity_date": null,
+        "first_investigation_activity_date": "2024-06-26",
         "visit_date": "2024-06-26",
         "report_date": "2024-08-19",
         "date_signed": "2024-08-20",
         "finding": "Substantiated",
-        "days_received_to_first_activity": null,
+        "days_received_to_first_activity": 12,
         "days_received_to_visit": 12,
         "days_received_to_report": 66,
         "days_report_to_signed": 1,
@@ -45,7 +45,7 @@
         "review_delay_over_60_days": false,
         "review_delay_over_90_days": false,
         "review_delay_over_120_days": false,
-        "missing_first_activity_date": true,
+        "missing_first_activity_date": false,
         "report_date_used_as_proxy": false,
         "extraction_confidence": 1.0
     },
@@ -64,6 +64,17 @@
             "allegation_text": "Facility staff did not document required follow-up contacts",
             "allegation_category": null,
             "finding": "Substantiated",
+            "extraction_confidence": 1.0
+        }
+    ],
+    "events": [
+        {
+            "event_id": "ccld-complaint-32-CR-20240614202020-event-1",
+            "complaint_id": "ccld-complaint-32-CR-20240614202020",
+            "event_date": "2024-06-26",
+            "event_type": "investigation_activity",
+            "event_text": "VISIT DATE: 06/26/2024",
+            "extracted_from_section": "report header",
             "extraction_confidence": 1.0
         }
     ]

@@ -43,6 +43,13 @@ schemas, migrations, hosted behavior, or canonical fields.
   source metadata, and treat raw SHA-256 as optional diagnostic metadata rather
   than a required product/data-contract field.
 - Extract fields deterministically when reliable patterns exist.
+- For CCLD complaint reports, preserve the source `FACILITY TYPE` value,
+  including an explicit numeric source code, as complaint-report facility-type
+  evidence. Do not substitute an unrelated program or CHHS numeric type field.
+- A valid structured CCLD `VISIT DATE` is eligible deterministic investigation-
+  activity evidence. When narrative activity evidence also exists, use the
+  earliest valid date and retain the selected evidence. Report date alone must
+  not establish first investigation activity.
 - Normalize records into the canonical data contract.
 - Validate output against JSON schemas.
 - Emit extraction audit records.

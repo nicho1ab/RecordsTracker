@@ -32,12 +32,12 @@
         "document_id": "ccld-157806098-inx-65",
         "complaint_control_number": "32-CR-20240617212121",
         "complaint_received_date": "2024-06-17",
-        "first_investigation_activity_date": null,
+        "first_investigation_activity_date": "2024-06-28",
         "visit_date": "2024-06-28",
         "report_date": "2024-08-26",
         "date_signed": "2024-08-27",
         "finding": "Inconclusive",
-        "days_received_to_first_activity": null,
+        "days_received_to_first_activity": 11,
         "days_received_to_visit": 11,
         "days_received_to_report": 70,
         "days_report_to_signed": 1,
@@ -45,7 +45,7 @@
         "review_delay_over_60_days": false,
         "review_delay_over_90_days": false,
         "review_delay_over_120_days": false,
-        "missing_first_activity_date": true,
+        "missing_first_activity_date": false,
         "report_date_used_as_proxy": false,
         "extraction_confidence": 1.0
     },
@@ -64,6 +64,17 @@
             "allegation_text": "Facility staff did not update the supervision checklist timely",
             "allegation_category": null,
             "finding": "Inconclusive",
+            "extraction_confidence": 1.0
+        }
+    ],
+    "events": [
+        {
+            "event_id": "ccld-complaint-32-CR-20240617212121-event-1",
+            "complaint_id": "ccld-complaint-32-CR-20240617212121",
+            "event_date": "2024-06-28",
+            "event_type": "investigation_activity",
+            "event_text": "VISIT DATE: 06/28/2024",
+            "extracted_from_section": "report header",
             "extraction_confidence": 1.0
         }
     ]
