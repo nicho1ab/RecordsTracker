@@ -28,6 +28,32 @@ In the hosted reviewer workflow, use `/reviewer/records/serious-topics` to filte
 
 Use `/reviewer/facilities/trends` when the review task is to compare loaded complaint and finding activity over time. Coverage and anomaly labels describe only the displayed, qualifying loaded records; open the contributing complaint record and its existing public-report action before relying on an individual complaint.
 
+## Facility hub fact placement
+
+The facility hub gives each selected reviewer-facing facility fact one home:
+
+| Facility fact | Disposition | Reviewer-facing home |
+| --- | --- | --- |
+| Facility name | Primary reviewer fact | Facility heading, with a copy control |
+| Facility ID | Primary reviewer fact | Primary facility facts, with a copy control |
+| Facility type, status, county, and capacity | Primary reviewer facts | Primary facility facts |
+| Street address, city, state, and ZIP code | Primary reviewer fact | One composed **Address** value in primary facility facts |
+| Program type, regional office, and closed date | Secondary reviewer facts | One collapsed **More facility facts** disclosure |
+| Loaded complaint count, date/missing-date cues, finding counts, and compact CCLD source availability | Review signals | **Review summary** |
+| Reviewer-created status and note summaries | Review signals from separate reviewer-created state | Clearly labeled rows in **Review summary** |
+| Visit, citation, POC, and last-visit cues | Review signals | **Additional review signals** |
+| Facility-reference source filename/resource label | Support/operator-only | Not shown on the primary facility hub |
+| Raw source column names, source row/internal IDs, hashes, connector/import metadata, and source bundle dumps | Support/operator-only or intentionally excluded | Not shown on the primary facility hub |
+
+The regional-office value may be derived from a governed facility-directory
+description field, and the street-address value may be derived from a governed
+residential-address field. The hub labels them **Regional office** and
+**Address**; raw source column names are retained only for internal provenance.
+Closed dates display as `MM/DD/YYYY`. The governed labels described in the data
+dictionary distinguish verified zero, blank, null, unavailable, not-applicable,
+malformed, undated, and not-collected values without inventing a fact. A missing
+closed date does not mean that a facility is open.
+
 Current priorities, facility priorities, trends, serious-topic review, and
 substantiated review show the loaded-record universe, eligible denominator,
 active date dimension/range, source coverage, and a reason for zero or

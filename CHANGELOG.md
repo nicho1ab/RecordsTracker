@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Consolidated the facility hub into one primary facility-fact block, one
+  secondary fact disclosure, one review summary, and one additional-signal
+  section. The hub now composes address fields once, presents governed
+  residential-address and regional-office source values with reviewer-friendly
+  labels, preserves verified zero and governed missing/invalid states, uses
+  `MM/DD/YYYY` closed dates, keeps copy controls for facility identity, removes
+  duplicate identity/source/reviewer summaries, and excludes raw source-field
+  codes and source dataset filenames from the primary page and suggestions
+  payload without changing schemas, persistence, or export columns.
 - Added reviewer-detail milestone timing for complaint received, first
   investigation activity, visit, report, and signed dates plus all four governed
   stored intervals. The compact attorney-tier section preserves numeric zero and

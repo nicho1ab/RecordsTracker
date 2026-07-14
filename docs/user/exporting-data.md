@@ -129,6 +129,12 @@ limit, truncation status, and a plain-language result cause. An empty export row
 describes why no rows matched, and its record-specific cells use `Not applicable`;
 it does not imply that no records exist globally.
 
+Facility-hub fact placement does not add duplicate export columns. The hosted
+complaint matrix continues to include one `facility_number` column and one
+`facility_name` column because it does not otherwise represent facility-detail
+fields. Raw facility-directory source column codes are not added to reviewer-
+facing exports or payloads.
+
 ## Export from Datasette
 
 1. Open the table you want to review.

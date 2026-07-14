@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 from html.parser import HTMLParser
@@ -118,7 +118,10 @@ def test_source_derived_facility_lookup_preserves_integer_capacity() -> None:
     ("capacity", "capacity_present", "closed_date", "closed_present", "expected"),
     [
         ("0", True, "2026-07-13", True, ("0", "07/13/2026")),
-        ("", True, "not-a-date", True, ("Not provided", "Invalid source value")),
+        ("many", True, "not-a-date", True, ("Invalid source value", "Invalid source value")),
+        ("", True, "", True, ("Not provided", "Date not provided")),
+        (cast(str, None), True, cast(str, None), True, ("Not provided", "Date not provided")),
+        ("Unavailable", True, "Undated", True, ("Not available from source", "Date not available")),
         ("", False, "", False, ("Not collected", "Not collected")),
     ],
 )
@@ -145,13 +148,55 @@ def test_facility_directory_values_use_governed_value_states(
         closed_date_source_present=closed_present,
     )
 
-    html = facility_lookup._render_facility_directory_details(record)  # noqa: SLF001
+    html = (
+        facility_lookup._render_facility_identity_and_core_facts(  # noqa: SLF001
+            record,
+            CcldFacilityReviewContext(),
+        )
+        + facility_lookup._render_secondary_facility_facts(record)  # noqa: SLF001
+    )
 
     assert expected[0] in html
     assert expected[1] in html
     assert "not-a-date" not in html
     assert "present_blank" not in html
     assert "source_unavailable" not in html
+
+
+@pytest.mark.parametrize(
+    ("address", "raw_address", "city", "state", "zip_code", "expected"),
+    (
+        ("40 JOHN STREET", None, "TOMALES", "CA", "94971", "40 JOHN STREET, TOMALES, CA 94971"),
+        ("", "10 SOURCE WAY", "SACRAMENTO", "CA", "95814", "10 SOURCE WAY, SACRAMENTO, CA 95814"),
+        ("Unavailable", None, "", "", "", "Not available from source"),
+        ("", None, "", "", "", "Not provided"),
+    ),
+)
+def test_facility_address_uses_one_readable_governed_presentation(
+    address: str,
+    raw_address: str | None,
+    city: str,
+    state: str,
+    zip_code: str,
+    expected: str,
+) -> None:
+    record = CcldFacilityLookupRecord(
+        facility_number="214005552",
+        facility_name="Example Facility",
+        city=city,
+        state=state,
+        county="Marin",
+        zip_code=zip_code,
+        facility_type="Day Care Center",
+        program_type="Child Care",
+        capacity="24",
+        status="Licensed",
+        closed_date="",
+        address=address,
+        res_street_addr=raw_address,
+    )
+
+    assert facility_lookup._display_facility_address(record) == expected  # noqa: SLF001
 
 
 class _DefinitionTermParser(HTMLParser):
@@ -604,6 +649,13 @@ def test_active_ccld_facility_reference_loads_cdss_chhs_facility_directory_shape
     assert record.fac_do_desc == "North Bay"
     assert record.res_street_addr == "40 JOHN STREET"
 
+    [payload] = facility_lookup._facility_json_records((record,))  # noqa: SLF001
+    assert payload["address"] == "40 JOHN STREET"
+    assert payload["regional_office"] == "North Bay"
+    assert "FAC_DO_DESC" not in payload
+    assert "RES_STREET_ADDR" not in payload
+    assert "facility_address" not in payload
+
 
 def test_cdss_chhs_facility_directory_searches_supported_fields(
     monkeypatch: pytest.MonkeyPatch,
@@ -847,10 +899,9 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
         page_data_mode="fixture-demo",
     )
     html = body.decode("utf-8")
+    normalized_html = " ".join(html.split())
     visible_text = _visible_text(html)
     lowered_visible_text = visible_text.casefold()
-    normalized_html = " ".join(html.split())
-
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Find a Facility" in html
@@ -986,63 +1037,68 @@ def test_ccld_facility_review_hub_renders_safe_directory_context() -> None:
     )
     html = body.decode("utf-8")
     normalized_html = " ".join(html.split())
+    visible_text = _visible_text(html)
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Facility review hub" in html
-    assert "Facility-directory context" in html
+    assert "Primary facility facts" in html
     assert "Synthetic Orchard Child Care" in html
-    assert "Facility-directory details" in html
-    assert "Directory and planning details" in html
-    _assert_collapsed_disclosure(html, "Directory and planning details")
-    assert html.index("Complaint review context") < html.index("Next actions")
-    assert html.index("Next actions") < html.index("Directory and planning details")
+    assert visible_text.count("Synthetic Orchard Child Care") == 1
+    assert visible_text.count("900000001") == 1
+    assert "More facility facts" in html
+    _assert_collapsed_disclosure(html, "More facility facts")
+    assert html.index("Review summary") < html.index("Review next")
+    assert html.index("Review next") < html.index("Additional review signals")
+    assert html.index("Additional review signals") < html.index("Next actions")
+    assert html.index("Next actions") < html.index("More facility facts")
     terms = _definition_terms(html)
-    expected_directory_terms = [
+    for term in (
         "Facility ID",
-        "Name",
-        "Program type",
         "Facility type",
-        "City / State / ZIP",
+        "Status",
+        "Address",
         "County",
         "Capacity",
-        "Status",
-    ]
-    assert any(
-        terms[index : index + len(expected_directory_terms)] == expected_directory_terms
-        for index in range(len(terms) - len(expected_directory_terms) + 1)
-    )
+        "Program type",
+        "Regional office",
+        "Closed date",
+    ):
+        assert terms.count(term) == 1
     assert "directory field" not in html
     assert "900000001" in html
     assert "Child Care Center" in html
-    assert "Sample City, CA 90001" in html
+    assert "100 Example Way, Sample City, CA 90001" in html
     assert "Los Angeles" in html
     assert "24" in html
     assert "Licensed" in html
-    assert "Complaint records are requested and reviewed separately" in html
-    assert "Open source links from record detail when a source check is needed" in html
-    assert "Facility pattern review summary" in html
+    assert 'aria-label="Copy facility name"' in html
+    assert 'aria-label="Copy Facility ID"' in html
+    assert "Facility pattern review summary" not in html
     assert "No loaded complaint records are currently available" in html
     assert "not a public-source completeness conclusion" in normalized_html
     assert "Request or load records for this facility" in html
+    assert html.count("CCLD source availability") == 1
+    assert "No loaded complaint record is available for source review." in html
     assert "Review next" in html
     assert "No loaded records have review-next signals in this context." in html
     assert "does not imply source completeness or absence of problems" in normalized_html
-    assert "Packet readiness" in html
-    assert "No loaded complaint records are available in this facility context" in html
-    assert "Request records for this facility before preparing packet content." in html
-    assert "Review prioritized records first after loaded records" in html
-    assert "No packet preview/draft content is implied" in html
-    assert "No complaint records loaded for this facility." in html
+    assert "Packet readiness" not in html
+    assert "No complaint records are loaded for this facility." in html
     assert "Choose a date range to request or show complaint records." in html
     assert "Start complaint request" in html
     assert "Back to search" in html
     assert f"{CCLD_RECORD_REQUEST_PATH}?facility_number=900000001" in html
+    assert terms.count("Facility ID") == 1
+    assert "FAC_DO_DESC" not in html
+    assert "RES_STREET_ADDR" not in html
+    assert "source_record_key" not in html
+    assert "raw_sha256" not in html
+    assert "connector" not in html.casefold()
     assert "Facility hub review actions" not in html
     assert "Opening this page leaves source-derived records" not in normalized_html
     assert "Example Licensee" not in html
     assert "555-0101" not in html
-    assert "100 Example Way" not in html
     assert_no_secret_html(html)
 
 
@@ -1065,6 +1121,8 @@ def test_ccld_facility_review_hub_known_loaded_preloaded_example_renders(
                 "RES_ZIP_CODE": "95112",
                 "COUNTY": "Santa Clara",
                 "FAC_TYPE_DESC": "DAY CARE CENTER",
+                "RES_STREET_ADDR": "77 REVIEW WAY",
+                "FAC_DO_DESC": "San Jose Regional Office",
             },
         ),
     )
@@ -1084,10 +1142,15 @@ def test_ccld_facility_review_hub_known_loaded_preloaded_example_renders(
     assert "434417302" in html
     assert "DAY CARE CENTER" in html
     assert "Santa Clara" in html
+    assert "77 REVIEW WAY, SAN JOSE, CA 95112" in html
+    assert "San Jose Regional Office" in html
     assert "Status</dt>" in html
     assert "<dd>3 (Licensed)</dd>" in html
     assert "<dd>3</dd>" not in html
-    assert "Complaint records are requested and reviewed separately" in html
+    assert "RES_STREET_ADDR" not in html
+    assert "FAC_DO_DESC" not in html
+    assert _definition_terms(html).count("Address") == 1
+    assert _definition_terms(html).count("Regional office") == 1
     assert_no_secret_html(html)
 
 
@@ -1199,21 +1262,21 @@ def test_ccld_facility_review_hub_renders_signal_only_context_without_mutation(
     assert "Uploaded summary signals exist" in html
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
     assert "157806098" in html
-    assert "TEMPORARY SHELTER CARE FACILITY" in html
-    assert "KERN" in html
-    assert "LICENSED" in html
-    assert "48" in html
+    assert "TEMPORARY SHELTER CARE FACILITY" not in html
+    assert "KERN" not in html
+    assert "LICENSED" not in html
     assert "05/04/2026" in html
     assert "43 total; 0 inspection; 12 complaint; 31 other" in html
     assert "Complaint visit activity present review cue" not in html
     assert "Citation indicator present review cue" not in html
     assert "POC indicator present review cue" not in html
-    assert "Facility pattern review summary" in html
-    assert "Review signals below use source-derived loaded records" in html
+    assert "Review summary" in html
+    assert "These ordered review signals use loaded source-derived complaint records" in html
     assert "1</strong><span>Loaded complaint records" in html
     assert "0</strong><span>Delay-review records" in html
     assert "0</strong><span>Missing-date records" in html
-    assert "1</strong><span>Records with source traceability" in html
+    assert html.count("CCLD source availability") == 1
+    assert "1 of 1 loaded complaint record(s) have source traceability available." in html
     assert "Unsubstantiated: 1" in html
     assert "Not started: 1" in html
     assert "0 loaded record(s) have reviewer-created note rows" in html
@@ -1222,10 +1285,11 @@ def test_ccld_facility_review_hub_renders_signal_only_context_without_mutation(
     assert "Finding: Unsubstantiated; reviewer status: Not started" in html
     assert "Recent activity 08/26/2022" in html
     assert "No reviewer-created status recorded yet." in html
-    assert "Source traceability available for detail review." in html
+    assert html.count("CCLD source availability") == 1
+    assert "Source traceability available for detail review." not in html
     assert "Open reviewer detail for 32-CR-20220407124448" in html
     assert "/reviewer/records/detail?source%5Frecord%5Fkey=" in html
-    assert "1 Type A value(s); 1 Type B value(s); 2 POC date(s)" in html
+    assert "2 citation value(s); 1 Type A value(s); 1 Type B value(s)" in html
     assert "Open reviewer queue filtered to this facility" in html
     assert "Start complaint request" in html
     assert f"{CCLD_RECORD_REQUEST_PATH}?facility_number=157806098" in html
@@ -1238,9 +1302,12 @@ def test_ccld_facility_review_hub_renders_signal_only_context_without_mutation(
         in normalized_html
     )
     assert "Signal-only hub actions" not in html
+    assert _definition_terms(html).count("Facility ID") == 1
+    assert "FAC_DO_DESC" not in html
+    assert "RES_STREET_ADDR" not in html
     assert "verified complaint" not in normalized_html
     assert "facility has no complaints" not in normalized_html
-    assert "source complete" not in normalized_html
+    assert "source is complete" not in normalized_html
     assert "directory error" not in normalized_html
     assert "missing from official records" not in normalized_html
     assert "Do Not Display" not in html
@@ -1292,44 +1359,32 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
         after_counts = _table_counts(connection)
 
     html = body.decode("utf-8")
-    normalized_html = " ".join(html.split())
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == _empty_reviewer_counts()
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
-    assert "Facility pattern review summary" in html
-    assert "Review signals below use source-derived loaded records" in html
+    assert "Review summary" in html
+    assert "These ordered review signals use loaded source-derived complaint records" in html
     assert "may deserve closer review" in html
     assert "not legal conclusions or source-completeness findings" in html
-    assert "1 loaded complaint record(s)" in html
     assert "1</strong><span>Loaded complaint records" in html
     assert "0</strong><span>Delay-review records" in html
     assert "0</strong><span>Missing-date records" in html
-    assert "1</strong><span>Records with source traceability" in html
+    assert html.count("CCLD source availability") == 1
+    assert "1 of 1 loaded complaint record(s) have source traceability available." in html
     assert "Recent complaint/report/visit activity in loaded records" in html
-    assert "2022-08-26" in html
+    assert "08/26/2022" in html
     assert "Finding counts in loaded records" in html
     assert "Unsubstantiated: 1" in html
     assert "Reviewer-created status summary" in html
     assert "Not started: 1" in html
+    assert html.count("Reviewer-created status summary") == 1
+    assert html.count("Reviewer-created note cue") == 1
     assert "Suggested next loaded complaint" in html
     assert "32-CR-20220407124448" in html
-    assert "Packet readiness" in html
-    assert "Prepare a review packet from this selected facility context" in html
-    assert "Selected facility identity" in html
-    assert "Loaded complaint/review context" in html
-    assert "1 loaded complaint record(s) from 04/07/2022 to 08/26/2022" in html
-    assert "Prioritized records available" in html
-    assert "1 prioritized loaded record(s) available from Review next." in html
-    assert "Source traceability availability" in html
-    assert "1 of 1 loaded record(s) have visible source traceability cues." in html
-    assert "Reviewer-created status/note presence" in html
-    assert "Reviewer-created status summary: Not started: 1." in html
-    assert "0 loaded record(s) have reviewer-created note rows." in html
-    assert "not a legal report, final export, certified record" in html
-    assert "no packet lifecycle state is saved" in html
+    assert "Packet readiness" not in html
     assert "Review next" in html
     assert (
         "Reasons use existing source-derived values and existing reviewer-created "
@@ -1339,10 +1394,10 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
     assert "Finding: Unsubstantiated; reviewer status: Not started" in html
     assert "Recent activity 08/26/2022" in html
     assert "No reviewer-created status recorded yet." in html
-    assert "Source traceability available for detail review." in html
+    assert html.count("CCLD source availability") == 1
+    assert "Source traceability available for detail review." not in html
     assert "Open reviewer detail for 32-CR-20220407124448" in html
     assert "/reviewer/records/detail?source%5Frecord%5Fkey=" in html
-    assert "04/07/2022 to 08/26/2022" in html
     assert "Open loaded records" in html
     assert "Open reviewer queue filtered to this facility" in html
     assert "/reviewer/records?q=157806098" in html
@@ -1353,7 +1408,10 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
     assert "start_date=2022-04-07" in html
     assert "end_date=2022-08-26" in html
     assert "Packet draft" in html
-    assert "Use this context to open loaded records" in normalized_html
+    assert "Selected facility identity" not in html
+    assert _definition_terms(html).count("Facility ID") == 1
+    assert _definition_terms(html).count("Facility type") == 1
+    assert "flag-badge" not in html
     assert "source_record_key" not in html
     assert "source_document_id" not in html
     assert "import_batch" not in html
@@ -1425,7 +1483,7 @@ def test_ccld_facility_review_hub_review_next_cautious_reason_rows() -> None:
     assert "Source-derived finding is substantiated." in html
     assert "Type A citation cue loaded; verify wording in the source record." in html
     assert "POC cue loaded; verify completion wording in the source record." in html
-    assert "Source traceability available for detail review." in html
+    assert "Source traceability available for detail review." not in html
     assert (
         'href="/reviewer/records/detail?source%5Frecord%5Fkey=encoded-record"'
         in html
@@ -1508,45 +1566,26 @@ def test_ccld_facility_review_hub_renders_uploaded_public_summary_signals(
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Facility review signals" in html
+    assert "Additional review signals" in html
     assert "Facility signal highlights" in html
-    assert "Uploaded summary field details" in html
-    assert 'class="technical-details dense-table-details"' in html
+    assert "Uploaded summary field details" not in html
+    assert 'class="technical-details dense-table-details"' not in html
     assert 'class="technical-details diagnostic-details"' not in html
-    _assert_collapsed_disclosure(
-        html,
-        "How to use these signals",
-    )
-    assert html.count("How to use these signals") == 1
-    assert html.count(
-        "These facility review signals come from uploaded public summary fields"
-    ) == 1
-    assert html.count("Use signals to choose the next review route") == 1
-    signals_heading_index = html.index("Facility review signals")
-    first_signal_data_index = html.index("Source dataset label")
-    disclosure_index = html.index("How to use these signals")
-    first_guidance_index = html.index(
-        "These facility review signals come from uploaded public summary fields"
-    )
-    second_guidance_index = html.index("Use signals to choose the next review route")
-    assert signals_heading_index < first_signal_data_index
-    assert first_signal_data_index < disclosure_index
-    assert disclosure_index < first_guidance_index < second_guidance_index
-    assert "uploaded public summary fields" in html
-    assert "public licensing/visit/citation summary" in html
-    assert "check source traceability before relying on summary fields" in normalized_html
-    assert "<code>ChildCareCenters06072026.csv</code>" in html
-    assert "(loaded June 7, 2026)" in html
-    assert "DAY CARE CENTER" in html
-    assert "LICENSED" in html
-    assert "48" in html
-    assert "Santa Clara" in html
-    assert "Central Valley" in html
-    assert "07/30/2018" in html
+    assert "How to use these signals" not in html
+    assert html.count("CCLD source availability") == 1
+    assert "uploaded public summary counts and dates are planning cues only" in normalized_html
+    assert "ChildCareCenters06072026.csv" not in html
+    assert "loaded June 7, 2026" not in html
+    assert _definition_terms(html).count("Facility type") == 1
+    assert _definition_terms(html).count("Status") == 1
+    assert _definition_terms(html).count("Capacity") == 1
+    assert _definition_terms(html).count("County") == 1
+    assert _definition_terms(html).count("Regional office") == 1
+    assert _definition_terms(html).count("Closed date") == 1
     assert "05/04/2026" in html
     assert "43 total; 0 inspection; 12 complaint; 31 other" in html
     assert "2 citation value(s); 1 Type A value(s); 2 Type B value(s)" in html
-    assert "POC date indicators in uploaded summary" in html
+    assert "POC date indicators" in html
     assert "Possible delay" in html
     assert "Check source" in html
     assert "verified complaint" not in normalized_html.casefold()
@@ -1557,10 +1596,12 @@ def test_ccld_facility_review_hub_renders_uploaded_public_summary_signals(
     assert "Do Not Display" not in html
     assert "555-0199" not in html
     assert "1 Private Fixture Way" not in html
+    assert "FAC_DO_DESC" not in html
+    assert "RES_STREET_ADDR" not in html
     assert_no_secret_html(html)
 
 
-def test_ccld_facility_review_hub_source_dataset_without_date_stays_filename_only(
+def test_ccld_facility_review_hub_keeps_source_dataset_filename_outside_primary_page(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -1603,7 +1644,7 @@ def test_ccld_facility_review_hub_source_dataset_without_date_stays_filename_onl
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "<code>ChildCareCentersCurrent.csv</code>" in html
+    assert "ChildCareCentersCurrent.csv" not in html
     assert "(loaded " not in html
     assert_no_secret_html(html)
 

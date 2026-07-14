@@ -232,6 +232,11 @@
     conclusions. Full/raw facility CSV files must not be committed.
 - The local hosted scaffold facility hub can show facility review signals from
     supported ignored uploaded public licensing/visit/citation summary CSVs.
+    A directory-backed hub shows facility name, Facility ID, facility type,
+    status, one composed address, county, and capacity once in the primary fact
+    block; program type, regional office, and closed date appear once in a
+    secondary disclosure. Raw source column names and source dataset filenames
+    remain outside the primary page.
     These signals are uploaded public summary fields only, not complaint records,
     not source verification, not legal findings, not complaint-coverage
     determinations, and not source-completeness proof. Malformed, shifted, or
@@ -239,8 +244,9 @@
     contents. Missing signals do not mean a facility has no complaints, visits,
     citations, POC dates, or public-source records.
     When a facility-directory row is not available locally but supported signals
-    are available, the hub can render a signal-only facility hub. That fallback
-    is a navigation aid over uploaded public summary fields only; it does not
+    are available, the hub can render a signal-only facility hub with only its
+    safe facility name/ID and review cues. That fallback is a navigation aid over
+    uploaded public summary fields only; it does not
     diagnose official directory status, validate a license, verify a source,
     prove complaint coverage, or create complaint records.
 - Production-readiness items such as source-verification planning, auth provider
