@@ -3108,7 +3108,8 @@ def test_reviewer_ui_matrix_export_returns_excel_ready_csv_without_mutation() ->
         after_counts = _table_counts(connection)
 
     csv_text = body.decode("utf-8-sig")
-    rows = list(csv.DictReader(io.StringIO(csv_text)))
+    reader = csv.DictReader(io.StringIO(csv_text))
+    rows = list(reader)
 
     assert status == 200
     assert content_type == "text/csv; charset=utf-8"
@@ -3121,6 +3122,12 @@ def test_reviewer_ui_matrix_export_returns_excel_ready_csv_without_mutation() ->
         "reset_reload_planning_metadata": 0,
     }
     assert rows
+    assert reader.fieldnames is not None
+    assert len(reader.fieldnames) == len(set(reader.fieldnames))
+    assert reader.fieldnames.count("facility_number") == 1
+    assert reader.fieldnames.count("facility_name") == 1
+    assert "FAC_DO_DESC" not in reader.fieldnames
+    assert "RES_STREET_ADDR" not in reader.fieldnames
     [row] = rows
     assert row["matrix_status"] == "loaded complaint record"
     assert "complaint review matrix" in row["review_guidance"]

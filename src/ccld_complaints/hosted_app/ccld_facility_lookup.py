@@ -6,10 +6,8 @@ import csv
 import html
 import json
 import os
-import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from datetime import date
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -646,79 +644,15 @@ def render_ccld_facility_review_hub_page(
         )
     record = matching_records[0]
     review_context = review_context or CcldFacilityReviewContext()
-    duplicate_note = ""
-    if len(matching_records) > 1:
-        duplicate_note = f"""      <p class="helper-text">This directory has {len(matching_records)} distinct rows with this facility number. The hub shows the first deterministic directory row for review navigation only.</p>"""
-    if not review_context.has_loaded_context:
-        return _page(
-            title=f"Facility review hub {record.facility_number}",
-            heading="Facility review hub",
-            main=f"""    <section class="hero-card attorney-hero" aria-labelledby="facility-hub-heading">
-      <div>
-        <p class="launch-kicker">Facility-directory context</p>
-        <h2 id="facility-hub-heading">{_escape(record.facility_name)}</h2>
-        <p class="launch-value">No complaint records loaded for this facility. Choose a date range to request or show complaint records.</p>
-        <dl class="summary-list">
-          <dt>Facility ID</dt>
-          <dd>{_escape(record.facility_number)}</dd>
-          <dt>Facility type</dt>
-          <dd>{_escape(_display_value(record.facility_type))}</dd>
-          <dt>Location</dt>
-          <dd>{_escape(_display_value(_display_location(record)))}</dd>
-          <dt>Status</dt>
-          <dd>{_escape(_display_value(_display_facility_status_code(record.status)))}</dd>
-        </dl>
-      </div>
-    </section>
-    {_render_facility_hub_review_context(record, review_context)}
-    {_render_facility_hub_actions(record, review_context)}
-    <details class="technical-details dense-table-details" id="facility-directory-review-details">
-      <summary>Directory and planning details</summary>
-      <section aria-labelledby="facility-directory-details-heading">
-        <h2 id="facility-directory-details-heading">Facility-directory details</h2>
-        <p>These fields come from the active preloaded facility directory. Complaint records are requested and reviewed separately. Open source links from record detail when a source check is needed.</p>
-{duplicate_note}
-        {_render_facility_directory_details(record, concise_labels=True)}
-      </section>
-      {_render_facility_pattern_review_summary(record, review_context, signals_summary)}
-      {_render_review_next_section(review_context)}
-      {_render_packet_readiness_section(record, review_context)}
-      {_render_facility_review_signals_section(record, signals_summary)}
-    </details>
-    """,
-        )
     return _page(
-        title=f"Facility review hub {record.facility_number}",
+        title="Facility review hub",
         heading="Facility review hub",
-        main=f"""    <section class="hero-card attorney-hero" aria-labelledby="facility-hub-heading">
-      <div>
-        <p class="launch-kicker">Facility-directory context</p>
-        <h2 id="facility-hub-heading">{_escape(record.facility_name)}</h2>
-        <p class="launch-value">Open loaded records or start a new complaint request for this facility.</p>
-        <dl class="summary-list">
-          <dt>Facility ID</dt>
-          <dd>{_escape(record.facility_number)}</dd>
-          <dt>Facility type</dt>
-          <dd>{_escape(_display_value(record.facility_type))}</dd>
-          <dt>Location</dt>
-          <dd>{_escape(_display_value(_display_location(record)))}</dd>
-          <dt>Status</dt>
-          <dd>{_escape(_display_value(_display_facility_status_code(record.status)))}</dd>
-        </dl>
-      </div>
-    </section>
-    {_render_facility_pattern_review_summary(record, review_context, signals_summary)}
+        main=f"""    {_render_facility_identity_and_core_facts(record, review_context)}
+    {_render_facility_pattern_review_summary(record, review_context)}
     {_render_review_next_section(review_context)}
-    {_render_packet_readiness_section(record, review_context)}
-    <section aria-labelledby="facility-directory-details-heading">
-      <h2 id="facility-directory-details-heading">Facility-directory details</h2>
-      <p>These fields come from the active preloaded facility directory. Complaint records are requested and reviewed separately. Open source links from record detail when a source check is needed.</p>
-{duplicate_note}
-      {_render_facility_directory_details(record, concise_labels=True)}
-    </section>
-    {_render_facility_review_signals_section(record, signals_summary)}
-    {_render_facility_hub_review_context(record, review_context)}
+    {_render_facility_review_signals_section(signals_summary)}
     {_render_facility_hub_actions(record, review_context)}
+    {_render_secondary_facility_facts(record)}
     """,
     )
 
@@ -732,71 +666,54 @@ def _render_signal_only_facility_hub_page(
     facility_label = _safe_priority_text(summary.facility_name or summary.facility_number)
     if not review_context.has_loaded_context:
         return _page(
-            title=f"Facility summary {summary.facility_number}",
+            title="Facility summary",
             heading="Facility summary",
             main=f"""    <section class="hero-card attorney-hero" aria-labelledby="signal-only-facility-hub-heading">
             <div>
                 <p class="launch-kicker">Facility summary</p>
-                <h2 id="signal-only-facility-hub-heading">{_escape(facility_label)}</h2>
-                <p class="launch-value">Facility-directory record not available. Uploaded summary signals are available for facility {_escape(summary.facility_number)}.</p>
+                <h2 id="signal-only-facility-hub-heading">{_render_copyable_value("Copy facility name", facility_label)}</h2>
+                <p class="launch-value">Facility-directory record not available. Uploaded public summary cues can still guide the next review step.</p>
+                <dl class="summary-list">
+                    <dt>Facility ID</dt>
+                    <dd>{_render_copyable_value("Copy Facility ID", summary.facility_number)}</dd>
+                </dl>
             </div>
         </section>
         <section aria-labelledby="signal-only-context-heading">
             <h2 id="signal-only-context-heading">Facility-directory record not available</h2>
             <p>Uploaded summary signals exist. Start a complaint request before drawing conclusions from complaint activity.</p>
         </section>
-        {_render_signal_only_summary_cards(summary, review_context)}
-        {_render_facility_hub_review_context(record, review_context)}
+        {_render_facility_pattern_review_summary(record, review_context)}
+        {_render_review_next_section(review_context)}
+        {_render_facility_review_signals_section(summary)}
         {_render_facility_hub_actions(record, review_context)}
-        <details class="technical-details dense-table-details" id="signal-only-planning-details">
-            <summary>Facility details</summary>
-            {_render_facility_pattern_review_summary(record, review_context, summary)}
-            {_render_review_next_section(review_context)}
-            {_render_packet_readiness_section(record, review_context)}
-            {_render_facility_review_signals_section(record, summary)}
-        </details>
+        {_render_copy_control_script()}
         """,
         )
     return _page(
-    title=f"Facility summary {summary.facility_number}",
+    title="Facility summary",
     heading="Facility summary",
     main=f"""    <section class="hero-card attorney-hero" aria-labelledby="signal-only-facility-hub-heading">
             <div>
                 <p class="launch-kicker">Facility summary</p>
-                <h2 id="signal-only-facility-hub-heading">{_escape(facility_label)}</h2>
-                <p class="launch-value">Facility-directory record not available. Uploaded summary signals and loaded complaint records are available for facility {_escape(summary.facility_number)}.</p>
+                <h2 id="signal-only-facility-hub-heading">{_render_copyable_value("Copy facility name", facility_label)}</h2>
+                <p class="launch-value">Facility-directory record not available. Uploaded public summary cues and loaded complaint records can still guide the next review step.</p>
+                <dl class="summary-list">
+                    <dt>Facility ID</dt>
+                    <dd>{_render_copyable_value("Copy Facility ID", summary.facility_number)}</dd>
+                </dl>
             </div>
         </section>
         <section aria-labelledby="signal-only-context-heading">
             <h2 id="signal-only-context-heading">Facility-directory record not available</h2>
             <p>Uploaded summary signals exist. Review loaded complaint records separately from directory lookup.</p>
         </section>
-        {_render_signal_only_summary_cards(summary, review_context)}
-        {_render_facility_hub_review_context(record, review_context)}
+        {_render_facility_pattern_review_summary(record, review_context)}
+        {_render_review_next_section(review_context)}
+        {_render_facility_review_signals_section(summary)}
         {_render_facility_hub_actions(record, review_context)}
-        <details class="technical-details dense-table-details" id="signal-only-planning-details">
-            <summary>Facility details</summary>
-            {_render_facility_pattern_review_summary(record, review_context, summary)}
-            {_render_review_next_section(review_context)}
-            {_render_packet_readiness_section(record, review_context)}
-            {_render_facility_review_signals_section(record, summary)}
-        </details>""",
+        {_render_copy_control_script()}""",
     )
-
-
-def _render_signal_only_summary_cards(
-    summary: FacilityReviewSignalsSummary,
-    review_context: CcldFacilityReviewContext,
-) -> str:
-    last_activity = _display_date(summary.last_visit_date)
-    return f"""        <section aria-labelledby="signal-only-summary-cards-heading">
-            <h2 id="signal-only-summary-cards-heading">Summary</h2>
-            <div class="dense-fact-row" aria-label="Facility summary signals">
-                <div class="stat-card"><strong>{review_context.loaded_complaint_record_count}</strong><span>Loaded complaint records</span></div>
-                <div class="stat-card"><strong>{len(_priority_cues(summary))}</strong><span>Review flags</span></div>
-                <div class="stat-card"><strong>{_escape(last_activity)}</strong><span>Last activity</span></div>
-            </div>
-        </section>"""
 
 
 def _facility_record_from_signal_summary(
@@ -1741,6 +1658,144 @@ def _render_facility_directory_details(
             </dl>"""
 
 
+def _render_facility_identity_and_core_facts(
+    record: CcldFacilityLookupRecord,
+    review_context: CcldFacilityReviewContext,
+) -> str:
+    launch_value = (
+        "Open loaded records or start a new complaint request for this facility."
+        if review_context.has_loaded_context
+        else "No complaint records are loaded for this facility. Choose a date range to request or show complaint records."
+    )
+    return f"""<section class="hero-card attorney-hero" aria-labelledby="facility-hub-heading">
+      <div>
+        <p class="launch-kicker">Facility</p>
+        <h2 id="facility-hub-heading">{_render_copyable_value("Copy facility name", record.facility_name)}</h2>
+        <p class="launch-value">{_escape(launch_value)}</p>
+        <dl class="summary-list" aria-label="Primary facility facts">
+          <dt>Facility ID</dt>
+          <dd>{_render_copyable_value("Copy Facility ID", record.facility_number)}</dd>
+          <dt>Facility type</dt>
+          <dd>{_escape(_display_value(record.facility_type))}</dd>
+          <dt>Status</dt>
+          <dd>{_escape(_display_value(_display_facility_status_code(record.status)))}</dd>
+          <dt>Address</dt>
+          <dd>{_escape(_display_facility_address(record))}</dd>
+          <dt>County</dt>
+          <dd>{_escape(_display_value(record.county))}</dd>
+          <dt>Capacity</dt>
+          <dd>{_escape(_record_display_value(record, "capacity", kind="number"))}</dd>
+        </dl>
+      </div>
+    </section>
+    {_render_copy_control_script()}"""
+
+
+def _render_secondary_facility_facts(record: CcldFacilityLookupRecord) -> str:
+    return f"""    <details class="secondary-actions reference-details-section" id="secondary-facility-facts">
+      <summary>More facility facts</summary>
+      <dl class="summary-list" aria-label="Secondary facility facts">
+        <dt>Program type</dt>
+        <dd>{_escape(_display_value(record.program_type))}</dd>
+        <dt>Regional office</dt>
+        <dd>{_escape(_display_value(record.regional_office))}</dd>
+        <dt>Closed date</dt>
+        <dd>{_escape(_record_display_value(record, "closed_date", kind="date"))}</dd>
+      </dl>
+    </details>"""
+
+
+def _display_facility_address(record: CcldFacilityLookupRecord) -> str:
+    street_value = record.address
+    street_source_present = bool(street_value)
+    if not street_value and record.facility_address is not None:
+        street_value = record.facility_address
+        street_source_present = True
+    if not street_value and record.res_street_addr is not None:
+        street_value = record.res_street_addr
+        street_source_present = True
+
+    street_values = {"address": street_value} if street_source_present else {}
+    presentations = (
+        presentation_value_for_field(street_values, "address"),
+        presentation_value(record.city),
+        presentation_value(record.state),
+        presentation_value(record.zip_code),
+    )
+    present_values = tuple(
+        value.display_text
+        for value in presentations
+        if value.state in {"present", "verified_zero"}
+    )
+    if present_values:
+        street_text = presentations[0].display_text if presentations[0].state == "present" else ""
+        city_text = presentations[1].display_text if presentations[1].state == "present" else ""
+        state_text = presentations[2].display_text if presentations[2].state == "present" else ""
+        zip_text = presentations[3].display_text if presentations[3].state == "present" else ""
+        state_zip = " ".join(part for part in (state_text, zip_text) if part)
+        locality = ", ".join(part for part in (city_text, state_zip) if part)
+        return ", ".join(part for part in (street_text, locality) if part)
+
+    state_priority = (
+        "invalid",
+        "source_unavailable",
+        "not_applicable",
+        "null",
+        "present_blank",
+        "absent",
+    )
+    for state in state_priority:
+        for value in presentations:
+            if value.state == state:
+                return value.display_text
+    return presentation_value().display_text
+
+
+def _render_copyable_value(accessible_label: str, value: str) -> str:
+    if not value:
+        return _escape(_display_value(value))
+    return (
+        f'<span class="copyable-value">{_escape(value)}'
+        f'<button class="copy-icon-button" type="button" data-copy-value="{_escape(value)}" '
+        f'aria-label="{_escape(accessible_label)}" title="{_escape(accessible_label)}">'
+        f'{_clipboard_icon_svg()}</button>'
+        '<span class="copy-feedback" data-copy-status aria-live="polite"></span></span>'
+    )
+
+
+def _clipboard_icon_svg() -> str:
+    return (
+        '<svg aria-hidden="true" viewBox="0 0 24 24" focusable="false" width="16" height="16">'
+        '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
+        'stroke-linejoin="round" d="M8 8h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z"/>'
+        '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
+        'stroke-linejoin="round" d="M4 15H3a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'
+        '</svg>'
+    )
+
+
+def _render_copy_control_script() -> str:
+    return """<script>
+(function () {
+  document.querySelectorAll('[data-copy-value]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var status = button.parentNode.querySelector('[data-copy-status]');
+      var value = button.getAttribute('data-copy-value') || '';
+      if (!navigator.clipboard || !navigator.clipboard.writeText) {
+        if (status) status.textContent = ' Copy unavailable';
+        return;
+      }
+      navigator.clipboard.writeText(value).then(function () {
+        if (status) status.textContent = ' Copied';
+      }, function () {
+        if (status) status.textContent = ' Copy unavailable';
+      });
+    });
+  });
+}());
+</script>"""
+
+
 def _display_facility_status_code(status: str) -> str:
         if not status:
                 return ""
@@ -1768,64 +1823,40 @@ def _render_facility_hub_not_found(facility_number: str) -> str:
         </section>"""
 
 
-def _render_facility_hub_review_context(
-        record: CcldFacilityLookupRecord,
-        review_context: CcldFacilityReviewContext,
-) -> str:
-        if not review_context.has_loaded_context:
-                return """    <section class="empty-state-card" aria-labelledby="facility-hub-context-heading">
-            <h2 id="facility-hub-context-heading">Complaint review context</h2>
-            <p>No complaint records loaded for this facility.</p>
-            <p>Choose a date range to request or show complaint records.</p>
-        </section>"""
-        date_text = _hub_date_context_text(review_context)
-        return f"""    <section aria-labelledby="facility-hub-context-heading">
-            <h2 id="facility-hub-context-heading">Complaint review context</h2>
-            <p>{review_context.loaded_complaint_record_count} loaded complaint record(s) currently reference this facility in existing source-derived review data.</p>
-            <dl class="summary-list">
-                <dt>Complaint context basis</dt>
-                <dd>{_escape(review_context.source_label)}</dd>
-                <dt>Known date context</dt>
-                <dd>{_escape(date_text)}</dd>
-            </dl>
-            <p>Use this context to open loaded records or start a new complaint request.</p>
-        </section>"""
-
-
 def _render_facility_pattern_review_summary(
         record: CcldFacilityLookupRecord,
         review_context: CcldFacilityReviewContext,
-        signals_summary: FacilityReviewSignalsSummary | None,
 ) -> str:
         request_href = _facility_request_href(record)
         queue_href = f"{REVIEWER_UI_RECORDS_PATH}?{urlencode({'q': record.facility_number})}"
         if not review_context.has_loaded_context:
-                signals_text = _pattern_summary_signal_text(signals_summary)
                 return f"""    <section class="summary-card" aria-labelledby="facility-pattern-summary-heading">
-            <h2 id="facility-pattern-summary-heading">Facility pattern review summary</h2>
+            <h2 id="facility-pattern-summary-heading">Review summary</h2>
             <p>No loaded complaint records are currently available for this facility in the review context. This is not a public-source completeness conclusion.</p>
-            {signals_text}
-            <ul>
-                <li>Request or load records for this facility before drawing review conclusions from complaint activity.</li>
-                <li>Review available source traceability when records become available.</li>
-                <li>Use uploaded public summary review signals only as planning cues, not legal findings.</li>
-            </ul>
+            <dl class="summary-list">
+                <dt>Loaded complaint records</dt>
+                <dd>0</dd>
+                <dt>CCLD source availability</dt>
+                <dd>No loaded complaint record is available for source review.</dd>
+                <dt>Reviewer-created status and notes</dt>
+                <dd>No reviewer-created status or note summary is available without loaded records.</dd>
+            </dl>
             <p><a class="button" href="{_escape(request_href)}">Request or load records for this facility</a></p>
         </section>"""
         finding_items = _render_pattern_summary_finding_items(review_context)
         status_items = _render_pattern_summary_status_items(review_context)
         review_next_text = _review_next_summary_label(review_context)
-        signal_metrics = _pattern_summary_signal_metrics(signals_summary)
         return f"""    <section class="summary-card" aria-labelledby="facility-pattern-summary-heading">
-            <h2 id="facility-pattern-summary-heading">Facility pattern review summary</h2>
-            <p>Review signals below use source-derived loaded records and available uploaded public summary fields for facility {_escape(record.facility_number)}. They may deserve closer review; they are not legal conclusions or source-completeness findings.</p>
+            <h2 id="facility-pattern-summary-heading">Review summary</h2>
+            <p>These ordered review signals use loaded source-derived complaint records and separate reviewer-created state. They may deserve closer review; they are not legal conclusions or source-completeness findings.</p>
             <div class="dense-fact-row" aria-label="Facility pattern review signals">
                 <div class="stat-card"><strong>{review_context.loaded_complaint_record_count}</strong><span>Loaded complaint records</span></div>
                 <div class="stat-card"><strong>{review_context.delay_review_record_count}</strong><span>Delay-review records</span></div>
                 <div class="stat-card"><strong>{review_context.missing_date_record_count}</strong><span>Missing-date records</span></div>
-                <div class="stat-card"><strong>{review_context.source_traceability_count}</strong><span>Records with source traceability</span></div>
             </div>
             <dl class="summary-list">
+                <dt>CCLD source availability</dt>
+                <dd>{review_context.source_traceability_count} of {review_context.loaded_complaint_record_count} loaded complaint record(s) have source traceability available.</dd>
                 <dt>Recent complaint/report/visit activity in loaded records</dt>
                 <dd>{_escape(_display_date(review_context.recent_activity_date) if review_context.recent_activity_date else _display_value(review_context.recent_activity_date))}</dd>
                 <dt>Finding counts in loaded records</dt>
@@ -1844,7 +1875,6 @@ def _render_facility_pattern_review_summary(
                 <dd>{review_context.reviewer_note_record_count} loaded record(s) have reviewer-created note rows.</dd>
                 <dt>Suggested next loaded complaint</dt>
                 <dd>{_escape(review_next_text)}</dd>
-{signal_metrics}
             </dl>
             <nav aria-label="Facility pattern review next actions">
                 <ul>
@@ -1881,9 +1911,16 @@ def _render_review_next_item(
         item: CcldReviewNextRecommendation,
         index: int,
 ) -> str:
-        reasons = "\n".join(
-                f"                    <li>{_escape(reason)}</li>" for reason in item.reasons
+        visible_reasons = tuple(
+                reason
+                for reason in item.reasons
+                if reason != "Source traceability available for detail review."
         )
+        reasons = "\n".join(
+                f"                    <li>{_escape(reason)}</li>" for reason in visible_reasons
+        )
+        if not reasons:
+                reasons = "                    <li>Open the record for the displayed review cues.</li>"
         return f"""                <li class="review-next-item">
                     <p><strong>{index}. {_escape(item.label)}</strong></p>
                     <dl class="summary-list">
@@ -1902,96 +1939,6 @@ def _render_review_next_item(
                 </li>"""
 
 
-def _render_packet_readiness_section(
-        record: CcldFacilityLookupRecord,
-        review_context: CcldFacilityReviewContext,
-) -> str:
-        request_href = _facility_request_href(record)
-        priority_href = CCLD_FACILITY_REVIEW_PRIORITY_PATH
-        if not review_context.has_loaded_context:
-                return f"""    <section class="empty-state-card" aria-labelledby="packet-readiness-heading">
-            <h2 id="packet-readiness-heading">Packet readiness</h2>
-            <p>No loaded complaint records are available in this facility context. This is not a public-source completeness conclusion.</p>
-            <ul>
-                <li>Request records for this facility before preparing packet content.</li>
-                <li>Review prioritized records first after loaded records and review-next signals are available.</li>
-                <li>No packet preview/draft content is implied until loaded records match this context.</li>
-            </ul>
-            <p><a class="button" href="{_escape(request_href)}">Request records for this facility</a></p>
-            <p><a href="{_escape(priority_href)}">Open facility review priority list</a></p>
-        </section>"""
-        packet_query = _packet_readiness_query(record, review_context)
-        packet_query_text = urlencode(packet_query)
-        preview_href = f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?{packet_query_text}"
-        draft_href = f"{REVIEWER_UI_PACKET_DRAFT_PATH}?{packet_query_text}"
-        prioritized_count = len(review_context.review_next_recommendations)
-        prioritized_text = (
-                f"{prioritized_count} prioritized loaded record(s) available from Review next."
-                if prioritized_count
-                else "No prioritized loaded records are available from Review next in this context."
-        )
-        status_text = _packet_readiness_reviewer_status_text(review_context)
-        return f"""    <section class="summary-card" aria-labelledby="packet-readiness-heading">
-            <h2 id="packet-readiness-heading">Packet readiness</h2>
-            <p>Prepare a review packet from this selected facility context using the existing packet preview or draft routes. This is a local/test review-readiness step, not a legal report, final export, certified record, source-verification result, or source-completeness finding.</p>
-            <dl class="summary-list">
-                <dt>Selected facility identity</dt>
-                <dd>{_escape(record.facility_number)}; {_escape(_display_value(record.facility_name))}</dd>
-                <dt>Loaded complaint/review context</dt>
-                <dd>{review_context.loaded_complaint_record_count} loaded complaint record(s){_escape(_packet_readiness_date_text(review_context))}</dd>
-                <dt>Prioritized records available</dt>
-                <dd>{_escape(prioritized_text)}</dd>
-                <dt>Source traceability availability</dt>
-                <dd>{review_context.source_traceability_count} of {review_context.loaded_complaint_record_count} loaded record(s) have visible source traceability cues.</dd>
-                <dt>Reviewer-created status/note presence</dt>
-                <dd>{_escape(status_text)} {review_context.reviewer_note_record_count} loaded record(s) have reviewer-created note rows.</dd>
-            </dl>
-            <ul>
-                <li>Review prioritized records first when the readiness summary shows source-check or reviewer-created status/note attention.</li>
-                <li>Use packet preview to inspect included records before browser copy or print.</li>
-                <li>Use packet draft only for manual review preparation; no packet lifecycle state is saved.</li>
-            </ul>
-            <nav aria-label="Packet readiness actions">
-                <ul>
-                    <li><a class="button" href="{_escape(preview_href)}">Open packet preview for this facility/date context</a></li>
-                    <li><a class="button button-secondary" href="{_escape(draft_href)}">Open packet draft for this facility/date context</a></li>
-                    <li><a href="{_escape(request_href)}">Request or refresh records for this facility</a></li>
-                </ul>
-            </nav>
-        </section>"""
-
-
-def _packet_readiness_query(
-        record: CcldFacilityLookupRecord,
-        review_context: CcldFacilityReviewContext,
-) -> dict[str, str]:
-        return {
-                "facility_number": record.facility_number,
-                "start_date": review_context.start_date,
-                "end_date": review_context.end_date,
-                "request_context_origin": "facility_lookup",
-                "lookup_facility_name": record.facility_name,
-        }
-
-
-def _packet_readiness_date_text(review_context: CcldFacilityReviewContext) -> str:
-        if review_context.has_date_context:
-                return f" from {_display_date(review_context.start_date)} to {_display_date(review_context.end_date)}"
-        return " without a bounded date range"
-
-
-def _packet_readiness_reviewer_status_text(
-        review_context: CcldFacilityReviewContext,
-) -> str:
-        if not review_context.reviewer_status_counts:
-                return "No reviewer-created status summary is available."
-        status_text = "; ".join(
-                f"{_reviewer_status_label(status)}: {count}"
-                for status, count in review_context.reviewer_status_counts
-        )
-        return f"Reviewer-created status summary: {status_text}."
-
-
 def _review_next_summary_label(review_context: CcldFacilityReviewContext) -> str:
         if review_context.review_next_recommendations:
                 return review_context.review_next_recommendations[0].label
@@ -1999,13 +1946,12 @@ def _review_next_summary_label(review_context: CcldFacilityReviewContext) -> str
 
 
 def _render_facility_review_signals_section(
-        record: CcldFacilityLookupRecord,
         summary: FacilityReviewSignalsSummary | None,
 ) -> str:
         if summary is None:
-                return f"""    <section class="empty-state-card" aria-labelledby="facility-review-signals-heading">
-            <h2 id="facility-review-signals-heading">Facility review signals</h2>
-            <p>No uploaded public summary fields are available for facility {_escape(record.facility_number)} in the supported licensing/visit/citation summary CSV inputs.</p>
+                return """    <section class="empty-state-card" aria-labelledby="facility-review-signals-heading">
+            <h2 id="facility-review-signals-heading">Additional review signals</h2>
+            <p>No uploaded public summary fields are available in the supported licensing/visit/citation summary inputs.</p>
             <p>This empty state does not mean the facility has no complaints, visits, citations, POC dates, or public-source records. Start a complaint request or return to facility lookup when you need a different facility context.</p>
         </section>"""
         cues = "\n".join(
@@ -2014,78 +1960,30 @@ def _render_facility_review_signals_section(
         if not cues:
                 cues = "        <li>No supported uploaded public summary review cue is present for this facility.</li>"
         return f"""    <section aria-labelledby="facility-review-signals-heading">
-            <h2 id="facility-review-signals-heading">Facility review signals</h2>
+            <h2 id="facility-review-signals-heading">Additional review signals</h2>
+            <p>These uploaded public summary counts and dates are planning cues only. They are separate from loaded complaint records and are not legal findings or proof of source completeness.</p>
             <div class="dense-fact-row" aria-label="Facility signal highlights">
                 <div class="stat-card"><strong>{summary.complaint_visit_count}</strong><span>Complaint visits</span></div>
                 <div class="stat-card"><strong>{summary.citation_count}</strong><span>Citation values</span></div>
                 <div class="stat-card"><strong>{summary.poc_date_count}</strong><span>POC dates</span></div>
                 <div class="stat-card"><strong>{_escape(_display_date(summary.last_visit_date))}</strong><span>Last visit date</span></div>
             </div>
-            <details class="technical-details dense-table-details">
-                <summary>Uploaded summary field details</summary>
             <dl class="summary-list">
-                <dt>Source dataset label</dt>
-                <dd>{_render_source_dataset_labels(summary.source_dataset_labels)}</dd>
-                <dt>Facility type in uploaded summary</dt>
-                <dd>{_escape(_display_tuple(summary.facility_types))}</dd>
-                <dt>Status in uploaded summary</dt>
-                <dd>{_escape(_display_tuple(summary.statuses))}</dd>
-                <dt>Capacity in uploaded summary</dt>
-                <dd>{_escape(_display_tuple(summary.capacities, kind="number"))}</dd>
-                <dt>County / regional office in uploaded summary</dt>
-                <dd>{_escape(_display_joined_parts((_display_tuple(summary.counties), _display_tuple(summary.regional_offices))))}</dd>
-                <dt>License first date in uploaded summary</dt>
-                <dd>{_escape(_display_date_tuple(summary.license_first_dates))}</dd>
-                <dt>Closed date in uploaded summary</dt>
-                <dd>{_escape(_display_date_tuple(summary.closed_dates))}</dd>
-                <dt>Last visit date in uploaded summary</dt>
-                <dd>{_escape(_display_date(summary.last_visit_date))}</dd>
-                <dt>Visit activity in uploaded summary</dt>
+                <dt>Visit activity</dt>
                 <dd>{summary.total_visit_count} total; {summary.inspection_visit_count} inspection; {summary.complaint_visit_count} complaint; {summary.other_visit_count} other</dd>
-                <dt>Citation indicators in uploaded summary</dt>
+                <dt>Citation indicators</dt>
                 <dd>{summary.citation_count} citation value(s); {summary.type_a_citation_count} Type A value(s); {summary.type_b_citation_count} Type B value(s)</dd>
-                <dt>POC date indicators in uploaded summary</dt>
+                <dt>POC date indicators</dt>
                 <dd>{summary.poc_date_count}</dd>
             </dl>
-            </details>
             <section aria-labelledby="facility-review-cues-heading">
                 <h3 id="facility-review-cues-heading">What to review next</h3>
                 <ul>
 {cues}
                 </ul>
-                <p>Use these cues to decide whether to start a complaint request, review loaded records where available, or return to facility lookup. Review source traceability before relying on summary fields.</p>
+                <p>Use these cues to decide whether to start a complaint request, review loaded records, or return to facility lookup.</p>
             </section>
-            <details class="technical-details dense-table-details">
-                <summary>How to use these signals</summary>
-                <p>These facility review signals come from uploaded public summary fields in supported public licensing/visit/citation summary CSVs; complaint records are requested/reviewed separately.</p>
-                <p>Use signals to choose the next review route, then check source traceability before relying on summary fields.</p>
-            </details>
         </section>"""
-
-
-def _pattern_summary_signal_text(
-        signals_summary: FacilityReviewSignalsSummary | None,
-) -> str:
-        if signals_summary is None:
-                return "<p>No uploaded public summary review signals are available for this facility.</p>"
-        return (
-                "<p>Uploaded public summary fields are available as planning cues: "
-                f"{signals_summary.complaint_visit_count} complaint visit(s), "
-                f"{signals_summary.citation_count} citation value(s), "
-                f"{signals_summary.poc_date_count} POC date(s), and last visit "
-                f"{_escape(_display_date(signals_summary.last_visit_date) if signals_summary.last_visit_date else _display_value(signals_summary.last_visit_date))}.</p>"
-        )
-
-
-def _pattern_summary_signal_metrics(
-        signals_summary: FacilityReviewSignalsSummary | None,
-) -> str:
-        if signals_summary is None:
-                return ""
-        return f"""                <dt>Uploaded public summary citation/POC indicators</dt>
-                <dd>{signals_summary.type_a_citation_count} Type A value(s); {signals_summary.type_b_citation_count} Type B value(s); {signals_summary.poc_date_count} POC date(s)</dd>
-                <dt>Uploaded public summary visit activity</dt>
-                <dd>{signals_summary.complaint_visit_count} complaint visit(s); last visit {_escape(_display_date(signals_summary.last_visit_date) if signals_summary.last_visit_date else _display_value(signals_summary.last_visit_date))}</dd>"""
 
 
 def _render_pattern_summary_finding_items(
@@ -2457,12 +2355,6 @@ def _render_facility_hub_actions(
         </section>"""
 
 
-def _hub_date_context_text(review_context: CcldFacilityReviewContext) -> str:
-        if review_context.has_date_context:
-                return f"{_display_date(review_context.start_date)} to {_display_date(review_context.end_date)}"
-        return "date range needed before review queue can be scoped"
-
-
 def _facility_request_href(record: CcldFacilityLookupRecord) -> str:
         return _facility_request_href_for_values(
                 facility_number=record.facility_number,
@@ -2581,40 +2473,6 @@ def _display_tuple(
     return "; ".join(presentation_value(value, kind=kind).display_text for value in values)
 
 
-def _display_date_tuple(values: tuple[str, ...]) -> str:
-    return _display_tuple(values, kind="date")
-
-
-def _render_source_dataset_labels(values: tuple[str, ...]) -> str:
-    if not values:
-        return presentation_value().display_text
-    return "; ".join(_render_source_dataset_label(value) for value in values)
-
-
-def _render_source_dataset_label(value: str) -> str:
-    loaded_date_text = _loaded_date_text_from_filename(value)
-    if not loaded_date_text:
-        return f"<code>{_escape(value)}</code>"
-    return f"<code>{_escape(value)}</code> {_escape(loaded_date_text)}"
-
-
-def _loaded_date_text_from_filename(filename: str) -> str:
-    match = re.search(r"(?<!\d)(\d{2})(\d{2})(\d{4})(?!\d)", filename)
-    if match is None:
-        return ""
-    month, day, year = (int(part) for part in match.groups())
-    try:
-        loaded_date = date(year, month, day)
-    except ValueError:
-        return ""
-    return f"(loaded {loaded_date:%B} {loaded_date.day}, {loaded_date:%Y})"
-
-
-def _display_joined_parts(values: tuple[str, ...]) -> str:
-    parts = tuple(value for value in values if value and value != "not listed")
-    return " / ".join(parts) if parts else "not listed"
-
-
 def _user_facing_source_label(source: CcldFacilityReferenceSource) -> str:
     """Return a clean, user-facing label for the reference source (no internal paths/jargon)."""
     if source.source_kind == "no_reference":
@@ -2724,9 +2582,6 @@ def _facility_json_records(
             "s": record.status,
             "address": record.address,
             "regional_office": record.regional_office,
-            "facility_address": record.facility_address,
-            "FAC_DO_DESC": record.fac_do_desc,
-            "RES_STREET_ADDR": record.res_street_addr,
         }
         for record in records
     ]

@@ -788,12 +788,13 @@ try {
     $diagnosticsDir = Join-Path $packetDir "diagnostics"
     foreach ($dir in @($packetDir, $htmlDir, $textDir, $screenshotDir, $accessibilityDir, $diagnosticsDir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
 
+    $facilityHubNumber = if ($Mode -eq "fixture") { "900000001" } else { "434417302" }
     $coreRoutes = @(
         @{ Name = "home"; Path = "/"; Label = "01-home"; ActiveHref = "/"; WorkflowStep = "Start" },
         @{ Name = "facility"; Path = "/ccld/facilities"; Label = "02-facility"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
         @{ Name = "facility-priority"; Path = "/ccld/facilities/review-priority"; Label = "02-facility-priority"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
         @{ Name = "facility-intelligence"; Path = "/ccld/facilities/intelligence"; Label = "02-facility-intelligence"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
-        @{ Name = "facility-hub"; Path = "/ccld/facilities/detail?facility_number=434417302"; Label = "02-facility-hub"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
+        @{ Name = "facility-hub"; Path = "/ccld/facilities/detail?facility_number=$facilityHubNumber"; Label = "02-facility-hub"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
         @{ Name = "request-records"; Path = "/ccld/records/request"; Label = "03-request-records"; ActiveHref = "/ccld/records/request"; WorkflowStep = "Request" },
         @{ Name = "jobs"; Path = "/ccld/retrieval/jobs"; Label = "04-job-status"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Status" },
         @{ Name = "reviewer"; Path = "/reviewer"; Label = "05-reviewer"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },

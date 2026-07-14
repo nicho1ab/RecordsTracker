@@ -19,10 +19,22 @@ Name of the facility as shown in the source data.
 
 Facility number assigned by the source system.
 
+## address
+
+On the facility hub, the governed street address, city, state, and ZIP code are
+assembled into one readable **Address** value. A residential street-address
+source field may supply the street portion, but its raw source column name is
+not reviewer-facing. Missing components are not repeated as separate raw fields.
+
 ## facility_type
 
 Descriptive facility type from a governed CCLD `Facility Type` or CHHS
 `FAC_TYPE_DESC` source. The numeric CHHS `TYPE` code is not used as this value.
+
+## program_type
+
+Source-provided facility program label, when available. It remains distinct
+from facility type and appears as a secondary facility fact on the facility hub.
 
 ## county
 
@@ -40,7 +52,16 @@ is distinct from missing or blank source data.
 
 ## regional_office
 
-Source-provided CCLD regional-office label, when available.
+Source-provided CCLD regional-office label, when available. A governed facility-
+directory description field may supply this value, but the hub uses the plain
+reviewer label **Regional office** rather than exposing the raw source column.
+
+## closed_date
+
+Source-reference closed date, when available. The facility hub shows a valid
+date as `MM/DD/YYYY`; missing, blank, unavailable, undated, or malformed values
+use the governed presentation labels. A missing closed date does not establish
+that a facility is open and does not replace facility status.
 
 ## complaint_received_date
 
