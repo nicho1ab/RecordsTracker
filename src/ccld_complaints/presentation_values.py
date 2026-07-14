@@ -85,6 +85,9 @@ REVIEWER_FIELDS_BY_ENTITY: Mapping[str, tuple[str, ...]] = {
         "date_signed",
         "finding",
         "days_received_to_first_activity",
+        "days_received_to_visit",
+        "days_received_to_report",
+        "days_report_to_signed",
     ),
     "event": ("event_date",),
 }

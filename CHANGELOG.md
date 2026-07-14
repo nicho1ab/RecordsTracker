@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Added reviewer-detail milestone timing for complaint received, first
+  investigation activity, visit, report, and signed dates plus all four governed
+  stored intervals. The compact attorney-tier section preserves numeric zero and
+  governed missing/invalid states, keeps stored durations when dates are absent,
+  surfaces concise date/duration mismatch cues, avoids duplicate delay badges,
+  and adds human-readable duration columns to complaint review-bundle exports
+  without exposing raw technical traceability.
 - Added a shared governed presentation-value contract from source-derived reads
   through reviewer HTML and CSV output. Reviewer surfaces now distinguish
   verified zero, present values, present blank, missing, source unavailable,

@@ -107,8 +107,8 @@ The default output folder is `data/processed/review-bundle`. Use `-DbPath` and `
 
 The bundle includes:
 
-- `complaint_review_with_source_traceability.csv` for complaint review fields with source URL, raw SHA-256 hash, raw path, connector metadata, retrieval timestamp, and report index.
-- `delay_review_flags_with_source_traceability.csv` for triage records with one or more review flags and the same source traceability fields.
+- `complaint_review_with_source_traceability.csv` for complaint review fields, including the human-readable `Days from Complaint Received to First Investigation Activity`, `Days from Complaint Received to Visit`, `Days from Complaint Received to Report`, and `Days from Report to Signed` columns, with source URL, raw SHA-256 hash, raw path, connector metadata, retrieval timestamp, and report index.
+- `delay_review_flags_with_source_traceability.csv` for triage records with one or more review flags, the same four duration columns, and the same source traceability fields.
 - `source_traceability.csv` for checking source URL, raw hash, connector metadata, retrieval time, report index, document type, and content type.
 - `multi_facility_source_traceability.csv` for checking source traceability status, source metadata, and linked derived-record counts by source document across facilities.
 - `complaint_timeline_with_source_traceability.csv` for complaint milestone dates and extracted event dates with source traceability.
@@ -120,7 +120,7 @@ The bundle includes:
   source coverage, active complaint-received-date dimension, range, explicit
   limit, truncation status, result status, and cause.
 
-Governed CSVs use explicit value-state labels instead of unexplained blank cells or a generic `unknown`: for example, `Not provided`, `Date not provided`, `Not available from source`, `Not applicable`, and `Invalid source value`. Verified numeric zero remains `0`, and valid dates remain ISO `YYYY-MM-DD`. Delay review flags, timeline rows, facility pattern counts, multi-facility traceability rows, and facility comparison rows in the bundle are screening aids for closer review, not conclusions that an investigation was delayed, findings about a facility, proof that an event did or did not occur, proof that the public source is complete, or findings about facility-wide conduct.
+Governed CSVs use explicit value-state labels instead of unexplained blank cells or a generic `unknown`: for example, `Not provided`, `Date not provided`, `Not available from source`, `Not applicable`, and `Invalid source value`. Verified numeric zero remains `0`; valid duration values remain numeric text suitable for CSV spreadsheet import, and valid dates remain ISO `YYYY-MM-DD`. Delay review flags, timeline rows, facility pattern counts, multi-facility traceability rows, and facility comparison rows in the bundle are screening aids for closer review, not conclusions that an investigation was delayed, findings about a facility, proof that an event did or did not occur, proof that the public source is complete, or findings about facility-wide conduct.
 
 Hosted complaint and complaint-matrix CSV exports are uncapped unless the
 request explicitly supplies a limit. Their metadata columns report the record

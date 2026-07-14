@@ -76,6 +76,10 @@ def test_sqlite_and_postgresql_style_mappings_preserve_the_same_states() -> None
         "closed_date": "not-a-date",
         "license_first_date": "undated",
         "client_served": "unavailable",
+        "days_received_to_first_activity": 7,
+        "days_received_to_visit": 0,
+        "days_received_to_report": None,
+        "days_report_to_signed": "unavailable",
     }
     postgresql_style_values = MappingProxyType(dict(sqlite_values))
 
@@ -97,4 +101,8 @@ def test_sqlite_and_postgresql_style_mappings_preserve_the_same_states() -> None
         "closed_date": "invalid",
         "license_first_date": "undated",
         "client_served": "source_unavailable",
+        "days_received_to_first_activity": "present",
+        "days_received_to_visit": "verified_zero",
+        "days_received_to_report": "null",
+        "days_report_to_signed": "source_unavailable",
     }

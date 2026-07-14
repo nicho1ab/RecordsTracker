@@ -457,6 +457,15 @@ Allowed initial categories:
 - Do not infer first activity date from report date.
 - Narrative date extraction must identify source text and confidence.
 
+Reviewer-detail and complaint-review-bundle presentation preserves each stored
+duration rather than recalculating it for display. Reviewer detail presents the
+five milestone dates in order and the four stored durations with plain-language
+labels. A missing milestone never causes an inferred date or interval. When two
+valid displayed milestone dates imply a different interval from the governed
+stored duration, the display keeps both facts and emits a reviewer-facing timing
+mismatch cue. Verified zero remains `0`; null, blank, unavailable, malformed,
+and unsupported values use the shared presentation-value contract.
+
 ## Delay review flags
 
 - Delay review flags are screening aids, not conclusions that an investigation was delayed.

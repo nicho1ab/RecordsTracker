@@ -46,7 +46,29 @@ Timeline rows in `complaint_timeline_review` show extracted dates that are avail
 
 ## Delay fields
 
-Delay fields are calculated from extracted dates. If either date needed for a calculation is missing, blank, unavailable, or invalid, no numeric delay is shown and the governed value-state label explains the condition. A same-day interval remains the verified numeric value `0`.
+Reviewer detail shows five ordered milestones: complaint received, first
+investigation activity, visit, report, and signed. The adjacent **Elapsed days**
+summary uses plain labels for the four stored intervals: complaint received to
+first investigation activity, complaint received to visit, complaint received
+to report, and report to signed. Visible dates use `MM/DD/YYYY`.
+
+The stored duration remains visible even when an associated milestone date is
+missing; RecordsTracker does not infer the missing date or replace the stored
+duration with a new calculation. Null and blank durations are labeled `Not
+provided`, a source-unavailable duration is `Not available from source`, and a
+malformed duration is `Invalid source value`. A same-day interval remains the
+verified numeric value `0`. When valid displayed milestone dates do not agree
+with a governed stored duration, reviewer detail keeps both source-derived facts
+and shows a concise **Timing mismatch** cue so the source can be checked.
+
+The attorney-tier detail uses the source-derived finding/status and shows
+governed allegation categories with allegations and findings; there is no
+separate canonical complaint-type field to invent or display. Internal complaint,
+facility-relation, and document IDs, extraction confidence, raw hashes, connector
+and import metadata, full raw source bodies, and technical field tables remain
+outside the primary reviewer page because they support extraction, audit, or
+operator troubleshooting rather than the current review decision. The compact
+public-source availability cue and source action remain visible.
 
 Use `days_received_to_first_activity` when it is available because it is closest to the question of when investigation activity began. If that field has a missing or unavailable label, compare it with `days_received_to_visit`, `days_received_to_report`, `missing_first_activity_date`, and `report_date_used_as_proxy` before drawing any conclusions.
 
