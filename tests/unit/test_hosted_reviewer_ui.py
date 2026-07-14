@@ -385,7 +385,9 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert "No note" in html
     assert "CCLD source available" in html
     assert "04/07/2022" in html
+    assert "04/14/2022" in html
     assert "08/24/2022" in html
+    assert "08/26/2022" in html
     assert "08/26/2022" in html
     assert "2022-04-07" not in html
     assert "2022-08-24" not in html
@@ -1717,6 +1719,7 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "CCLD source available" in html
     assert "Facility ID" in html
     assert "Complaint received" in html
+    assert "First investigation activity" in html
     assert "Visit" in html
     assert "Report" in html
     assert "Signed" in html
@@ -2566,9 +2569,14 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert "Signed" in html
     assert 'class="rt-timeline rt-timeline--linear"' in html
     assert 'class="rt-timeline__line" aria-hidden="true"' in html
-    assert 'class="timeline-list timeline-list-linear rt-timeline__milestones"' in html
+    assert (
+        'class="timeline-list timeline-list-linear rt-timeline__milestones" '
+        'aria-label="Ordered complaint milestones"'
+        in html
+    )
     expected_timeline_markers = (
         "received",
+        "activity",
         "visit",
         "report",
         "signed",
@@ -2580,6 +2588,21 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
             in html
         )
     assert 'class="rt-timeline__date"' in html
+    assert (
+        'class="timing-summary"'
+        ' aria-label="Stored elapsed days between complaint milestones"'
+        in html
+    )
+    assert "Elapsed days" in html
+    assert "Complaint received to first investigation activity" in html
+    assert "Complaint received to visit" in html
+    assert "Complaint received to report" in html
+    assert "Report to signed" in html
+    assert ">7</dd>" in html
+    assert html.count(">139</dd>") == 2
+    assert ">2</dd>" in html
+    assert "days_received_to_" not in html
+    assert "days_report_to_signed" not in html
     assert ".rt-timeline.has-gap .rt-timeline__line::after" in html
     assert "left: 25%;" in html
     assert "top: calc(var(--timeline-line-top) - 0.68rem);" in html
@@ -2602,7 +2625,8 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert timeline_html.index('class="rt-timeline__line"') < timeline_html.index(
         "Complaint received"
     )
-    assert "right: 12.5%;" in html
+    assert "right: 10%;" in html
+    assert "grid-template-columns: repeat(5, minmax(0, 1fr));" in html
     assert "width: 33.333%;" in html
     assert (
         'aria-label="Gap between complaint received and visit or investigation activity"'
@@ -2652,6 +2676,146 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert "verified abuse" not in normalized_html.casefold()
     assert_no_correction_workflow_html(html)
     assert_no_secret_html(html)
+
+
+def test_complaint_reviewer_field_inventory_dispositions_are_explicit() -> None:
+    inventory = reviewer_ui.COMPLAINT_REVIEWER_FIELD_INVENTORY
+    required_fields = {
+        "complaint_received_date",
+        "first_investigation_activity_date",
+        "visit_date",
+        "report_date",
+        "date_signed",
+        "days_received_to_first_activity",
+        "days_received_to_visit",
+        "days_received_to_report",
+        "days_report_to_signed",
+        "finding",
+        "complaint_type_or_category",
+        "substantiation_or_equivalent_finding",
+        "serious_topic_cues",
+        "facility_identity",
+        "complaint_control_number",
+        "source_availability",
+        "reviewer_created_status",
+        "reviewer_created_notes",
+    }
+    allowed_dispositions = {
+        "primary reviewer fact",
+        "secondary/collapsible reviewer fact",
+        "export-only fact",
+        "support/operator-only fact",
+        "intentionally excluded",
+    }
+
+    assert required_fields <= inventory.keys()
+    assert {disposition for disposition, _reason in inventory.values()} <= (
+        allowed_dispositions
+    )
+    assert all(reason.strip() for _disposition, reason in inventory.values())
+    assert inventory["raw_hash_connector_and_import_metadata"][0] == (
+        "support/operator-only fact"
+    )
+    assert inventory["raw_source_body"][0] == "intentionally excluded"
+
+
+@pytest.mark.parametrize(
+    ("stored_value", "expected_markup"),
+    (
+        (0, "<dd>0</dd>"),
+        (None, "Not provided"),
+        ("", "Not provided"),
+        ("not-a-number", "Invalid source value"),
+        ("unavailable", "Not available from source"),
+    ),
+)
+def test_reviewer_ui_detail_duration_uses_governed_presentation_states(
+    stored_value: object,
+    expected_markup: str,
+) -> None:
+    with _seeded_connection() as connection:
+        _set_source_record_original_values(
+            connection,
+            COMPLAINT_KEY,
+            {"days_received_to_visit": stored_value},
+        )
+        status, _content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    timing_start = html.index('class="overview-timeline"')
+    timing_end = html.index("</section>", timing_start)
+    timing_html = html[timing_start:timing_end]
+
+    assert status == 200
+    assert expected_markup in timing_html
+    assert "days_received_to_visit" not in timing_html
+    assert "not-a-number" not in timing_html
+    if stored_value in {None, "", "not-a-number", "unavailable"}:
+        assert 'class="inline-glossary-term"' in timing_html
+        assert 'tabindex="0"' in timing_html
+
+
+def test_reviewer_ui_detail_preserves_duration_when_milestone_date_is_missing() -> None:
+    with _seeded_connection() as connection:
+        _set_source_record_original_values(
+            connection,
+            COMPLAINT_KEY,
+            {
+                "report_date": None,
+                "days_received_to_report": 139,
+            },
+        )
+        status, _content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    timing_start = html.index('class="overview-timeline"')
+    timing_end = html.index("</section>", timing_start)
+    timing_html = html[timing_start:timing_end]
+
+    assert status == 200
+    assert "Date not provided" in timing_html
+    assert "Complaint received to report" in timing_html
+    assert ">139</dd>" in timing_html
+    assert "Timing mismatch" not in timing_html
+
+
+def test_reviewer_ui_detail_surfaces_stored_duration_date_conflict_once() -> None:
+    with _seeded_connection() as connection:
+        _set_source_record_original_values(
+            connection,
+            COMPLAINT_KEY,
+            {
+                "days_received_to_report": 1,
+                "review_delay_over_120_days": True,
+            },
+        )
+        status, _content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    timing_start = html.index('class="overview-timeline"')
+    timing_end = html.index("</section>", timing_start)
+    timing_html = html[timing_start:timing_end]
+
+    assert status == 200
+    assert "04/07/2022" in timing_html
+    assert "08/24/2022" in timing_html
+    assert "Complaint received to report" in timing_html
+    assert ">1</dd>" in timing_html
+    assert "Timing mismatch:" in timing_html
+    assert "stored complaint received to report interval does not match" in timing_html
+    assert 'role="note"' in timing_html
+    assert "days_received_to_report" not in timing_html
+    assert "120+ day gap" not in timing_html
+    assert html.count("120+ day gap") == 1
 
 
 @pytest.mark.parametrize(

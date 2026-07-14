@@ -68,7 +68,12 @@ def test_export_review_bundle_writes_source_traceable_csvs(tmp_path: Path) -> No
     assert complaint_rows[0]["retrieved_at"] == "2026-06-10T00:00:00+00:00"
     assert complaint_rows[0]["report_index"] == "3"
     assert complaint_rows[0]["first_investigation_activity_date"] == "2022-04-14"
-    assert complaint_rows[0]["days_received_to_first_activity"] == "7"
+    assert complaint_rows[0][
+        "Days from Complaint Received to First Investigation Activity"
+    ] == "7"
+    assert complaint_rows[0]["Days from Complaint Received to Visit"] == "139"
+    assert complaint_rows[0]["Days from Complaint Received to Report"] == "139"
+    assert complaint_rows[0]["Days from Report to Signed"] == "2"
 
     delay_rows = _read_csv(output_dir / "delay_review_flags_with_source_traceability.csv")
     assert delay_rows == []
@@ -175,6 +180,13 @@ def test_export_review_bundle_covers_multi_facility_fixture_corpus(tmp_path: Pat
 
 def test_review_bundle_export_values_do_not_fabricate_zero() -> None:
     assert _export_value(0, column_name="days_received_to_first_activity") == "0"
+    assert (
+        _export_value(
+            0,
+            column_name="Days from Complaint Received to Visit",
+        )
+        == "0"
+    )
     assert _export_value(None, column_name="days_received_to_first_activity") == (
         "Not provided"
     )
@@ -184,6 +196,10 @@ def test_review_bundle_export_values_do_not_fabricate_zero() -> None:
     assert _export_value("bad", column_name="days_received_to_first_activity") == (
         "Invalid source value"
     )
+    assert _export_value(
+        "bad",
+        column_name="Days from Complaint Received to Report",
+    ) == "Invalid source value"
     assert _export_value(None, column_name="report_date") == "Date not provided"
     assert _export_value("bad", column_name="report_date") == "Invalid source value"
 

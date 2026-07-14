@@ -199,6 +199,146 @@ _NARRATIVE_FIELD_NAMES = (
     "allegation_text",
     "event_text",
 )
+
+# Issue #451 inventory: keep the attorney tier focused while explicitly
+# dispositioning the directly available complaint facts and adjacent context.
+COMPLAINT_REVIEWER_FIELD_INVENTORY: Mapping[str, tuple[str, str]] = {
+    "complaint_control_number": (
+        "primary reviewer fact",
+        "Shown as the copyable complaint identity.",
+    ),
+    "complaint_received_date": (
+        "primary reviewer fact",
+        "Shown in the ordered complaint milestone timing section.",
+    ),
+    "first_investigation_activity_date": (
+        "primary reviewer fact",
+        "Shown as a distinct milestone without substituting visit or report date.",
+    ),
+    "visit_date": (
+        "primary reviewer fact",
+        "Shown as a distinct complaint milestone.",
+    ),
+    "report_date": (
+        "primary reviewer fact",
+        "Shown as a distinct complaint milestone.",
+    ),
+    "date_signed": (
+        "primary reviewer fact",
+        "Shown as the signed milestone.",
+    ),
+    "days_received_to_first_activity": (
+        "primary reviewer fact",
+        "Shown as a governed stored interval next to the milestones.",
+    ),
+    "days_received_to_visit": (
+        "primary reviewer fact",
+        "Shown as a governed stored interval next to the milestones.",
+    ),
+    "days_received_to_report": (
+        "primary reviewer fact",
+        "Shown as a governed stored interval next to the milestones.",
+    ),
+    "days_report_to_signed": (
+        "primary reviewer fact",
+        "Shown as a governed stored interval next to the milestones.",
+    ),
+    "finding": (
+        "primary reviewer fact",
+        "Shown once as the source-derived finding/status badge.",
+    ),
+    "review_delay_flags": (
+        "primary reviewer fact",
+        "Shown as one strongest applicable review badge rather than repeated timing cards.",
+    ),
+    "missing_first_activity_date": (
+        "primary reviewer fact",
+        "Shown only as a concise source-warning cue when its governed condition applies.",
+    ),
+    "report_date_used_as_proxy": (
+        "primary reviewer fact",
+        "Shown only as a concise source-warning cue; it does not replace a milestone.",
+    ),
+    "complaint_type_or_category": (
+        "secondary/collapsible reviewer fact",
+        "No canonical complaint-type field exists; governed allegation categories appear with allegations and findings.",
+    ),
+    "substantiation_or_equivalent_finding": (
+        "primary reviewer fact",
+        "Represented by the governed finding/status value without a separate legal conclusion.",
+    ),
+    "serious_topic_cues": (
+        "primary reviewer fact",
+        "Shown as deterministic review cues when supported, not as a stored severity score.",
+    ),
+    "facility_identity": (
+        "primary reviewer fact",
+        "Shown once in the compact facility fact strip.",
+    ),
+    "source_availability": (
+        "primary reviewer fact",
+        "Shown as a compact source-availability chip and public-source action.",
+    ),
+    "reviewer_created_status": (
+        "primary reviewer fact",
+        "Shown in the separate reviewer-created status and note panel.",
+    ),
+    "reviewer_created_notes": (
+        "primary reviewer fact",
+        "Shown in the separate reviewer-created status and note panel.",
+    ),
+    "complaint_id": (
+        "support/operator-only fact",
+        "Internal stable identity is retained for joins and support, not shown as a reviewer fact.",
+    ),
+    "facility_id": (
+        "support/operator-only fact",
+        "Internal relation identity is retained while the public Facility ID is shown instead.",
+    ),
+    "document_id": (
+        "support/operator-only fact",
+        "Internal document identity remains outside the attorney tier.",
+    ),
+    "extraction_confidence": (
+        "support/operator-only fact",
+        "Extraction diagnostics remain outside the primary reviewer page.",
+    ),
+    "raw_hash_connector_and_import_metadata": (
+        "support/operator-only fact",
+        "Raw hashes, connector metadata, and import mechanics remain available to support workflows only.",
+    ),
+    "raw_source_body": (
+        "intentionally excluded",
+        "Raw source bodies and technical record dumps are not added to the attorney-tier detail.",
+    ),
+}
+
+_COMPLAINT_TIMING_INTERVALS: tuple[tuple[str, str, str, str], ...] = (
+    (
+        "Complaint received to first investigation activity",
+        "days_received_to_first_activity",
+        "complaint_received_date",
+        "first_investigation_activity_date",
+    ),
+    (
+        "Complaint received to visit",
+        "days_received_to_visit",
+        "complaint_received_date",
+        "visit_date",
+    ),
+    (
+        "Complaint received to report",
+        "days_received_to_report",
+        "complaint_received_date",
+        "report_date",
+    ),
+    (
+        "Report to signed",
+        "days_report_to_signed",
+        "report_date",
+        "date_signed",
+    ),
+)
 _SAFE_CONTEXT_FIELDS_BY_ENTITY: Mapping[str, tuple[str, ...]] = {
     "facility": (
         "facility_name",
@@ -5497,6 +5637,8 @@ def _render_packet_preview_record(
               <dd>{_escape(_complaint_export_row_facility_number(source_record, return_context))}</dd>
               <dt>Complaint received</dt>
               <dd>{_escape(_detail_timeline_date(_optional_string(original_values, 'complaint_received_date')))}</dd>
+              <dt>First investigation activity</dt>
+              <dd>{_escape(_detail_timeline_date(_optional_string(original_values, 'first_investigation_activity_date')))}</dd>
               <dt>Visit</dt>
               <dd>{_escape(_detail_timeline_date(_optional_string(original_values, 'visit_date')))}</dd>
               <dt>Report</dt>
@@ -7425,6 +7567,10 @@ def _render_review_item_card(
                             <dt>Complaint received</dt>
                             <dd>{_escape(_queue_display_date(_optional_string(original_values, 'complaint_received_date')))}</dd>
                           </div>
+                          <div class="work-item-fact-pair" data-fact-pair="first-investigation-activity">
+                            <dt>First investigation activity</dt>
+                            <dd>{_escape(_queue_display_date(_optional_string(original_values, 'first_investigation_activity_date')))}</dd>
+                          </div>
                           <div class="work-item-fact-pair" data-fact-pair="visit">
                             <dt>Visit</dt>
                             <dd>{_escape(_queue_display_date(_optional_string(original_values, 'visit_date')))}</dd>
@@ -8127,43 +8273,75 @@ def _render_overview_source_narrative(
 
 def _render_overview_timeline(source_record: Mapping[str, Any]) -> str:
     original_values = _mapping(source_record, "original_values")
-    first_item = f"""          <li class="timeline-item timeline-item--received">
-            <span class="timeline-marker timeline-marker--received rt-timeline__marker rt-timeline__marker--received" aria-hidden="true"></span>
-            <span class="timeline-label rt-timeline__label">Complaint received</span>
-            <strong class="rt-timeline__date">{_escape(_detail_timeline_date(_optional_string(original_values, "complaint_received_date")))}</strong>
-          </li>"""
-    remaining_rows = (
-        ("Visit/investigation activity", "visit", _detail_timeline_date(_optional_string(original_values, "visit_date"))),
-        ("Report", "report", _detail_timeline_date(_optional_string(original_values, "report_date"))),
-        ("Signed", "signed", _detail_timeline_date(_optional_string(original_values, "date_signed"))),
+    milestone_rows = (
+        ("Complaint received", "received", "complaint_received_date"),
+        ("First investigation activity", "activity", "first_investigation_activity_date"),
+        ("Visit", "visit", "visit_date"),
+        ("Report", "report", "report_date"),
+        ("Signed", "signed", "date_signed"),
     )
-    remaining_items = "\n".join(
+    milestone_items = "\n".join(
         f"""          <li class="timeline-item timeline-item--{_escape(marker)}">
             <span class="timeline-marker timeline-marker--{_escape(marker)} rt-timeline__marker rt-timeline__marker--{_escape(marker)}" aria-hidden="true"></span>
             <span class="timeline-label rt-timeline__label">{_escape(label)}</span>
-            <strong class="rt-timeline__date">{_escape(value)}</strong>
+            <strong class="rt-timeline__date">{_presentation_markup(presentation_value_for_field(original_values, field_name), f"timing-{field_name}")}</strong>
           </li>"""
-        for label, marker, value in remaining_rows
+        for label, marker, field_name in milestone_rows
     )
-    has_delay_badge = original_values.get("review_delay_over_120_days") is True
-    delay_badge = (
-        '        <div class="timeline-gap-badge timeline-gap-badge--between-first-activity rt-timeline__gap-badge" aria-label="Gap between complaint received and visit or investigation activity"><span class="review-chip badge-attention badge-attention--warning">120+ day gap</span></div>'
-        if has_delay_badge
-        else ""
+    timing_rows = "\n".join(
+        f"""          <div class="timing-fact">
+            <dt>{_escape(label)}</dt>
+            <dd>{_presentation_markup(presentation_value_for_field(original_values, field_name), f"timing-{field_name}")}</dd>
+          </div>"""
+        for label, field_name, _start_field, _end_field in _COMPLAINT_TIMING_INTERVALS
     )
-    timeline_class = "timeline-list timeline-list-linear has-gap" if has_delay_badge else "timeline-list timeline-list-linear"
-    wrapper_class = "rt-timeline rt-timeline--linear has-gap" if has_delay_badge else "rt-timeline rt-timeline--linear"
+    conflict_labels = _timing_conflict_labels(original_values)
+    conflict_cue = ""
+    if conflict_labels:
+        joined_labels = ", ".join(label.casefold() for label in conflict_labels)
+        conflict_cue = (
+            '        <p class="timing-discrepancy" role="note">'
+            "<strong>Timing mismatch:</strong> the stored "
+            f"{_escape(joined_labels)} interval"
+            f"{'s do' if len(conflict_labels) > 1 else ' does'} not match the displayed milestone dates. Check the source."
+            "</p>"
+        )
     return f"""<section class="overview-timeline" aria-labelledby="complaint-timeline-heading">
-        <h3 id="complaint-timeline-heading">Key dates</h3>
-        <div class="{wrapper_class}">
+        <h3 id="complaint-timeline-heading">Key dates and timing</h3>
+        <div class="rt-timeline rt-timeline--linear">
         <div class="rt-timeline__line" aria-hidden="true"></div>
-        <ol class="{timeline_class} rt-timeline__milestones">
-{first_item}
-{remaining_items}
+        <ol class="timeline-list timeline-list-linear rt-timeline__milestones" aria-label="Ordered complaint milestones">
+{milestone_items}
         </ol>
-{delay_badge}
         </div>
+        <h4 class="timing-summary-heading">Elapsed days</h4>
+        <dl class="timing-summary" aria-label="Stored elapsed days between complaint milestones">
+{timing_rows}
+        </dl>
+{conflict_cue}
       </section>"""
+
+
+def _timing_conflict_labels(original_values: Mapping[str, Any]) -> tuple[str, ...]:
+    conflicts: list[str] = []
+    for label, duration_field, start_field, end_field in _COMPLAINT_TIMING_INTERVALS:
+        duration = presentation_value_for_field(original_values, duration_field)
+        start = presentation_value_for_field(original_values, start_field)
+        end = presentation_value_for_field(original_values, end_field)
+        if duration.state not in {"present", "verified_zero"}:
+            continue
+        if start.state != "present" or end.state != "present":
+            continue
+        try:
+            stored_days = float(duration.export_text.replace(",", ""))
+            milestone_days = (
+                date.fromisoformat(end.export_text) - date.fromisoformat(start.export_text)
+            ).days
+        except ValueError:
+            continue
+        if stored_days != milestone_days:
+            conflicts.append(label)
+    return tuple(conflicts)
 
 
 def _render_detail_tertiary_actions(

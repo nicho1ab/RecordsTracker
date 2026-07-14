@@ -14,6 +14,10 @@
   and no field-level/raw provenance, the original cause of that null cannot be
   reconstructed; the reviewer label remains `Not provided` rather than
   inventing unavailable or not-applicable semantics.
+- Reviewer detail can identify a stored-duration mismatch only when both
+  associated milestone dates and the duration are valid. If either date is
+  absent, blank, unavailable, undated, or malformed, the stored duration and
+  governed date-state labels remain visible without an inferred comparison.
 - Complaint received date and first investigation activity date are distinct
   range dimensions. Existing PostgreSQL rows still require governed artifact
   regeneration and reimport to receive newly populated issue #447 values. No

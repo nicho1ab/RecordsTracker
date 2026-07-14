@@ -1815,9 +1815,9 @@ SHARED_CSS = r"""
     .rt-timeline__line {
       background: rgba(15, 30, 45, 0.18);
       height: 1.5px;
-      left: 12.5%;
+      left: 10%;
       position: absolute;
-      right: 12.5%;
+      right: 10%;
       top: var(--timeline-line-top);
     }
     .rt-timeline.has-gap .rt-timeline__line::after {
@@ -1832,7 +1832,7 @@ SHARED_CSS = r"""
     .timeline-list-linear {
       align-items: start;
       gap: 0;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       padding-bottom: 0;
       padding-top: 0;
       position: relative;
@@ -1887,6 +1887,7 @@ SHARED_CSS = r"""
       background: #2E7D4F;
       box-shadow: 0 0 0 1px #2E7D4F;
     }
+    .timeline-marker--activity::after,
     .timeline-marker--visit::after,
     .timeline-marker--report::after,
     .timeline-marker--signed::after {
@@ -1907,6 +1908,46 @@ SHARED_CSS = r"""
       font-size: 0.84rem;
       line-height: 1.25;
       margin-top: 0.12rem;
+    }
+    .timing-summary-heading {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 900;
+      letter-spacing: 0.035em;
+      margin: 0.72rem 0 0;
+      text-transform: uppercase;
+    }
+    .timing-summary {
+      display: grid;
+      gap: 0.45rem;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      margin: 0;
+    }
+    .timing-fact {
+      background: var(--surface-alt);
+      border: 1px solid var(--line-soft);
+      border-radius: var(--ds-radius-md);
+      min-width: 0;
+      padding: 0.5rem 0.58rem;
+    }
+    .timing-fact dt {
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 750;
+      line-height: 1.25;
+    }
+    .timing-fact dd {
+      color: var(--ink);
+      font-size: 0.92rem;
+      font-weight: 900;
+      margin: 0.18rem 0 0;
+    }
+    .timing-discrepancy {
+      background: var(--ds-attention-soft);
+      border-left: 4px solid #D89D2B;
+      color: var(--ink);
+      margin: 0.55rem 0 0;
+      padding: 0.5rem 0.62rem;
     }
     .timeline-gap-badge {
       list-style: none;
@@ -2542,6 +2583,9 @@ SHARED_CSS = r"""
         padding-bottom: 0;
         padding-top: 0;
         row-gap: 0.85rem;
+      }
+      .timing-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
       .timeline-list-linear::before {
         display: none;

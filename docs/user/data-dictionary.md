@@ -82,6 +82,14 @@ Number of days between complaint received date and visit date, when both dates a
 
 Number of days between report date and date signed, when both dates are available.
 
+On reviewer detail, these four stored durations appear under **Elapsed days**
+with human-readable labels beside the five ordered complaint milestones. The
+display does not infer a missing milestone or silently recalculate a stored
+duration. If valid milestone dates conflict with a stored duration, both remain
+visible and a **Timing mismatch** cue directs the reviewer to check the source.
+The governed missing, blank, unavailable, invalid, and verified-zero labels at
+the top of this dictionary apply to each duration.
+
 ## review_delay_over_30_days
 
 Review flag set to true when the earliest available deterministic delay basis is more than 30 days. This is a screening flag, not a conclusion that an investigation was delayed.

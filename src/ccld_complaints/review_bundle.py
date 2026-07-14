@@ -11,6 +11,20 @@ from ccld_complaints.presentation_values import presentation_value_for_field
 
 DEFAULT_REVIEW_BUNDLE_DIR = Path("data/processed/review-bundle")
 
+DAYS_RECEIVED_TO_FIRST_ACTIVITY_LABEL = (
+    "Days from Complaint Received to First Investigation Activity"
+)
+DAYS_RECEIVED_TO_VISIT_LABEL = "Days from Complaint Received to Visit"
+DAYS_RECEIVED_TO_REPORT_LABEL = "Days from Complaint Received to Report"
+DAYS_REPORT_TO_SIGNED_LABEL = "Days from Report to Signed"
+
+_REVIEW_BUNDLE_PRESENTATION_FIELDS = {
+    DAYS_RECEIVED_TO_FIRST_ACTIVITY_LABEL: "days_received_to_first_activity",
+    DAYS_RECEIVED_TO_VISIT_LABEL: "days_received_to_visit",
+    DAYS_RECEIVED_TO_REPORT_LABEL: "days_received_to_report",
+    DAYS_REPORT_TO_SIGNED_LABEL: "days_report_to_signed",
+}
+
 COMPLAINT_REVIEW_EXPORT_SQL = """
 SELECT
     cr.facility_number,
@@ -24,10 +38,11 @@ SELECT
     cr.finding,
     cr.allegation_count,
     cr.allegation_summary,
-    cr.days_received_to_first_activity,
-    cr.days_received_to_visit,
-    cr.days_received_to_report,
-    cr.days_report_to_signed,
+    cr.days_received_to_first_activity AS
+        "Days from Complaint Received to First Investigation Activity",
+    cr.days_received_to_visit AS "Days from Complaint Received to Visit",
+    cr.days_received_to_report AS "Days from Complaint Received to Report",
+    cr.days_report_to_signed AS "Days from Report to Signed",
     cr.review_delay_over_30_days,
     cr.review_delay_over_60_days,
     cr.review_delay_over_90_days,
@@ -58,10 +73,11 @@ SELECT
     dr.report_date,
     dr.date_signed,
     dr.finding,
-    dr.days_received_to_first_activity,
-    dr.days_received_to_visit,
-    dr.days_received_to_report,
-    dr.days_report_to_signed,
+    dr.days_received_to_first_activity AS
+        "Days from Complaint Received to First Investigation Activity",
+    dr.days_received_to_visit AS "Days from Complaint Received to Visit",
+    dr.days_received_to_report AS "Days from Complaint Received to Report",
+    dr.days_report_to_signed AS "Days from Report to Signed",
     dr.review_delay_over_30_days,
     dr.review_delay_over_60_days,
     dr.review_delay_over_90_days,
@@ -258,9 +274,13 @@ def _bundle_manifest(files: list[ReviewBundleFile]) -> dict[str, object]:
 
 
 def _export_value(value: object, *, column_name: str = "value") -> object:
-    return presentation_value_for_field(
-        {column_name: value},
+    presentation_field = _REVIEW_BUNDLE_PRESENTATION_FIELDS.get(
         column_name,
+        column_name,
+    )
+    return presentation_value_for_field(
+        {presentation_field: value},
+        presentation_field,
     ).export_text
 
 
@@ -277,8 +297,8 @@ def _bundle_readme() -> str:
         "",
         (
             "- complaint_review_with_source_traceability.csv: complaint review fields with "
-            "source URL, raw SHA-256 hash, local raw path, connector metadata, retrieval "
-            "timestamp, and report index."
+            "human-readable complaint milestone interval columns, source URL, raw SHA-256 "
+            "hash, local raw path, connector metadata, retrieval timestamp, and report index."
         ),
         (
             "- delay_review_flags_with_source_traceability.csv: triage records with one or "

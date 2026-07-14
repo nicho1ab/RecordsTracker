@@ -79,9 +79,18 @@ def test_source_derived_api_lists_authorized_staged_records() -> None:
         "explanation": "A source value is present.",
     }
     assert complaint["original_values"]["days_received_to_first_activity"] == 7
-    assert complaint["original_value_presentations"][
-        "days_received_to_first_activity"
-    ]["state"] == "present"
+    expected_durations = {
+        "days_received_to_first_activity": (7, "present"),
+        "days_received_to_visit": (139, "present"),
+        "days_received_to_report": (139, "present"),
+        "days_report_to_signed": (2, "present"),
+    }
+    for field_name, (stored_value, state) in expected_durations.items():
+        assert complaint["original_values"][field_name] == stored_value
+        assert complaint["original_value_presentations"][field_name]["state"] == state
+        assert complaint["original_value_presentations"][field_name]["display"] == str(
+            stored_value
+        )
     facility = next(
         record for record in payload["records"] if record["entity_type"] == "facility"
     )
@@ -125,6 +134,14 @@ def test_source_derived_api_postgres_corpus_lists_loaded_retrieval_complaints() 
     assert payload["pagination"]["returned_count"] == 2
     assert keys == {first_key, second_key}
     assert COMPLAINT_KEY not in keys
+    for record in payload["records"]:
+        presentations = record["original_value_presentations"]
+        assert presentations["days_received_to_first_activity"]["state"] == (
+            "verified_zero"
+        )
+        assert presentations["days_received_to_visit"]["display"] == "2"
+        assert presentations["days_received_to_report"]["display"] == "3"
+        assert presentations["days_report_to_signed"]["display"] == "1"
 
 
 def test_source_derived_api_supports_entity_filter_and_paging() -> None:
@@ -387,6 +404,14 @@ def _insert_corpus_complaint(
                 "facility_number": facility_number,
                 "complaint_control_number": complaint_control_number,
                 "complaint_received_date": "2026-05-08",
+                "first_investigation_activity_date": "2026-05-08",
+                "visit_date": "2026-05-10",
+                "report_date": "2026-05-11",
+                "date_signed": "2026-05-12",
+                "days_received_to_first_activity": 0,
+                "days_received_to_visit": 2,
+                "days_received_to_report": 3,
+                "days_report_to_signed": 1,
                 "finding": "Substantiated",
             },
             source_traceability={
