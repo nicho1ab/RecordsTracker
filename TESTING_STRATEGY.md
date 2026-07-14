@@ -396,8 +396,12 @@ Validate documentation structure and run manual or automated checks for user-fac
 - Bug and CI-failure fixes include a root-cause governance review and update the relevant governance rule when a missing rule contributed to the failure.
 - Data contract changes include schema and documentation updates.
 - User-visible behavior changes include user documentation updates.
-- Implementation work uses focused validation first, then standard PR validation before opening a PR.
-- PR bodies include focused validation, why those focused checks matched the change, full local validation results, required remote check results, and any tests intentionally not run with the reason.
+- Implementation work uses focused local validation first, then required remote
+  validation before merge.
+- PR bodies include focused validation, why those focused checks matched the
+  change, required remote check results, any intentionally unrun tests with the
+  reason, and full local validation results only when full local validation was
+  required or run.
 - Readiness, hardening, planning, and checklist PRs must also state the
 	user-facing CCLD MVP capability, tester productivity improvement, or concrete
 	MVP-blocking risk that justifies doing the work now. If that product-benefit
@@ -406,11 +410,17 @@ Validate documentation structure and run manual or automated checks for user-fac
 
 ## Validation tiers
 
-### Focused validation
+### Local implementation validation
 
-Run the smallest relevant tests for the changed area before broader validation.
-Focused validation should catch likely failures quickly and should be explained in
-the PR body or task handoff.
+For a focused bug fix or similarly narrow change, run the new regression
+independently, then the smallest affected test set. Run targeted Ruff and mypy
+checks appropriate to the changed files, documentation validation when
+documentation or governed behavior changes, and `git diff --check`. Explain why
+the selected checks prove the changed behavior in the PR body or task handoff.
+
+Do not run the complete local test suite by default for an ordinary focused
+change. Focused tests must genuinely prove the changed behavior, and unrun
+validation must never be reported as passed.
 
 Use focused validation such as:
 
@@ -423,28 +433,7 @@ Use focused validation such as:
 - Security or privacy changes: security checks and any affected tests.
 - Accessibility-facing changes: documentation, export, view, or presentation accessibility checks.
 
-### Standard PR validation
-
-Run standard PR validation before every PR unless the change is analysis-only and
-no files were edited:
-
-```powershell
-.\scripts\lint.ps1
-```
-
-```powershell
-.\scripts\test.ps1
-```
-
-```powershell
-.\scripts\docs.ps1
-```
-
-```powershell
-git diff --check
-```
-
-### Required remote validation
+### Required GitHub PR validation
 
 Before merge, verify the required GitHub status-check contexts pass:
 
@@ -453,20 +442,23 @@ Before merge, verify the required GitHub status-check contexts pass:
 - `fixtures`
 - `security`
 
-### Full release validation
+These required checks provide broader pre-merge validation for ordinary focused
+changes. Focused local validation does not weaken, replace, or bypass them.
 
-Run or verify the full test suite before any release, production-readiness
-milestone, schema change, connector expansion, export-contract change, or
-production architecture transition.
+### Full local or release validation
+
+Run or verify the full test suite when explicitly requested; for releases,
+production-readiness milestones, schema changes, connector expansion,
+export-contract changes, production architecture transitions, or broad
+cross-cutting changes; or when focused or CI failures require broader
+investigation.
 
 ## Commands
 
-```powershell
-.\scripts\lint.ps1
-.\scripts\test.ps1
-.\scripts\docs.ps1
-git diff --check
-```
+Select commands according to the validation tier above. `scripts\test.ps1` runs
+the complete local suite and is not a default requirement for a focused bug fix.
+Use `scripts\docs.ps1` for documentation changes and changes to governed
+behavior, and always run `git diff --check` for edited files.
 
 For CI failures, also run the exact failing workflow command locally when it can
 be run without secrets or live external requests. If local and CI results differ,

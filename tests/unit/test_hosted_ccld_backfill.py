@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 from collections.abc import Mapping
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
@@ -15,6 +16,7 @@ from ccld_complaints.hosted_app.audit_events import hosted_audit_events
 from ccld_complaints.hosted_app.auth import HostedAccessScope
 from ccld_complaints.hosted_app.ccld_backfill import (
     CcldHostedBackfillRequest,
+    _deduplicate_facility_projections,
     run_ccld_hosted_backfill,
 )
 from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
@@ -38,6 +40,7 @@ from ccld_complaints.hosted_app.reviewer_ui import (
 )
 from ccld_complaints.hosted_app.seeded_import import (
     SeededCorpusArtifact,
+    hosted_import_batches,
     hosted_seeded_import_metadata,
     hosted_source_derived_records,
     import_seeded_corpus_artifact,
@@ -225,6 +228,75 @@ def test_backfill_checkpoint_resume_and_failed_item_isolation(tmp_path: Path) ->
     assert resumed.failed == 1
 
 
+def test_preserved_artifact_repeat_is_unchanged_with_multiple_documents() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+    hosted_facility_reference_metadata.create_all(engine)
+    first_record = _initial_missing_record()
+    second_record = _record_for_second_document(_initial_missing_record())
+    first_facility = cast(dict[str, Any], first_record["facility"])
+    second_facility = cast(dict[str, Any], second_record["facility"])
+    assert first_facility["facility_id"] == second_facility["facility_id"]
+    assert first_facility["facility_name"] != second_facility["facility_name"]
+
+    deduplicated = _deduplicate_facility_projections((first_record, second_record))
+    assert "facility" not in deduplicated[0]
+    assert deduplicated[1]["facility"] == second_facility
+    for retained_key in (
+        "source_document",
+        "complaint",
+        "allegations",
+        "events",
+        "extraction_audit",
+    ):
+        assert deduplicated[0][retained_key] == first_record[retained_key]
+        assert deduplicated[1][retained_key] == second_record[retained_key]
+
+    artifact = replace(
+        _artifact("multiple-documents", first_record),
+        records=(first_record, second_record),
+    )
+
+    with engine.connect() as connection:
+        import_seeded_corpus_artifact(connection, artifact)
+        connection.commit()
+
+        first_apply = run_ccld_hosted_backfill(
+            connection,
+            CcldHostedBackfillRequest(
+                facility_numbers=("425802141",),
+                operation="preserved-artifacts",
+                batch_size=1,
+                apply_changes=True,
+            ),
+            now=datetime(2026, 7, 13, tzinfo=UTC),
+        )
+        connection.commit()
+        first_complaint = _entity_values(
+            connection,
+            "complaint",
+            "ccld-complaint-31-CR-20240425094018",
+        )
+        after_apply = _backfill_persistence_snapshot(connection)
+
+        repeat_dry_run = run_ccld_hosted_backfill(
+            connection,
+            CcldHostedBackfillRequest(
+                facility_numbers=("425802141",),
+                operation="preserved-artifacts",
+                batch_size=1,
+            ),
+            now=datetime(2026, 7, 14, tzinfo=UTC),
+        )
+
+        assert first_apply.updated == 1
+        assert first_apply.unchanged == 0
+        assert first_complaint["first_investigation_activity_date"] == "2025-11-07"
+        assert repeat_dry_run.updated == 0
+        assert repeat_dry_run.unchanged == 1
+        assert _backfill_persistence_snapshot(connection) == after_apply
+
+
 def test_repeated_supported_retrieval_refreshes_existing_rows_without_state_loss(
     tmp_path: Path,
 ) -> None:
@@ -344,6 +416,45 @@ def _artifact(name: str, record: Mapping[str, Any]) -> SeededCorpusArtifact:
         errors=(),
         records=(copy.deepcopy(record),),
     )
+
+
+def _record_for_second_document(record: dict[str, object]) -> dict[str, object]:
+    old_document_id = "ccld-425802141-inx-1"
+    new_document_id = "ccld-425802141-inx-33"
+    old_complaint_id = "ccld-complaint-31-CR-20240425094018"
+    new_complaint_id = f"{old_complaint_id}-inx-33"
+    facility = cast(dict[str, Any], record["facility"])
+    document = cast(dict[str, Any], record["source_document"])
+    complaint = cast(dict[str, Any], record["complaint"])
+    facility["facility_name"] = "SECOND DOCUMENT FACILITY PROJECTION"
+    document.update(
+        document_id=new_document_id,
+        source_url=SOURCE_URL.replace("inx=1", "inx=33"),
+        report_index=33,
+    )
+    complaint.update(
+        complaint_id=new_complaint_id,
+        document_id=new_document_id,
+    )
+    for allegation in cast(list[dict[str, Any]], record["allegations"]):
+        allegation["allegation_id"] = str(allegation["allegation_id"]).replace(
+            old_complaint_id,
+            new_complaint_id,
+        )
+        allegation["complaint_id"] = new_complaint_id
+    for event in cast(list[dict[str, Any]], record.get("events", [])):
+        event["event_id"] = str(event["event_id"]).replace(
+            old_complaint_id,
+            new_complaint_id,
+        )
+        event["complaint_id"] = new_complaint_id
+    for audit in cast(list[dict[str, Any]], record["extraction_audit"]):
+        audit["audit_id"] = str(audit["audit_id"]).replace(
+            old_document_id,
+            new_document_id,
+        )
+        audit["document_id"] = new_document_id
+    return record
 
 
 def _insert_reference(connection: Any) -> None:
@@ -473,6 +584,27 @@ def _traceability_snapshot(connection: Any) -> tuple[Any, ...]:
         row["connector_name"],
         row["connector_version"],
         row["retrieved_at"],
+    )
+
+
+def _backfill_persistence_snapshot(
+    connection: Any,
+) -> tuple[tuple[tuple[Any, ...], ...], tuple[tuple[Any, ...], ...]]:
+    return (
+        tuple(
+            connection.execute(
+                select(hosted_import_batches).order_by(
+                    hosted_import_batches.c.import_batch_id
+                )
+            ).tuples()
+        ),
+        tuple(
+            connection.execute(
+                select(hosted_source_derived_records).order_by(
+                    hosted_source_derived_records.c.source_record_key
+                )
+            ).tuples()
+        ),
     )
 
 

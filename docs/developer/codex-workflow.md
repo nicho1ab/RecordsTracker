@@ -59,13 +59,17 @@ Worktrees are useful after the repo-level guardrails are committed. Do not copy 
 
 ## Validation
 
-For code changes, normally run:
+For a focused bug fix or similarly narrow implementation change, Codex should:
 
-```powershell
-.\scripts\lint.ps1
-.\scripts\test.ps1
-.\scripts\docs.ps1
-```
+- Run the new regression independently.
+- Run the smallest affected test set.
+- Run targeted Ruff and mypy appropriate to the changed files.
+- Run documentation validation when documentation or governed behavior changes.
+- Run `git diff --check`.
+
+Do not run the complete local suite by default for a focused change. Run it only
+when explicitly requested, for broad or cross-cutting work, for release-level
+validation, or when focused or CI results require broader investigation.
 
 For docs-only changes, normally run:
 
@@ -75,3 +79,12 @@ git diff --check
 ```
 
 Use narrower focused tests first when appropriate, but do not present unrun validation as passed.
+
+Before merge, the required GitHub checks remain `validate`, `docs-check`,
+`fixtures`, and `security`. They provide broader pre-merge validation for
+ordinary focused changes and must not be weakened or bypassed.
+
+Reserve full local validation for releases, production-readiness milestones,
+schema changes, connector expansion, export-contract changes, production
+architecture transitions, broad cross-cutting changes, and investigation of
+failures that focused validation cannot explain.

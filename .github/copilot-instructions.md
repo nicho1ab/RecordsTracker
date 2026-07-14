@@ -67,6 +67,12 @@ For every code change:
 6. Check documentation impact across `README.md`, `docs/user/*`, `docs/developer/*`, `DATA_CONTRACT.md`, `SOURCE_CONNECTOR_CONTRACT.md`, `KNOWN_LIMITATIONS.md`, `DESIGN_AND_USABILITY.md`, `DECISIONS.md`, and ADRs.
 7. If no documentation changes are needed, explicitly state that no user-facing or documentation-impacting behavior changed.
 8. Explain validation commands.
+   For a focused bug fix, run the new regression independently, the smallest
+   affected test set, targeted Ruff and mypy, documentation validation when
+   documentation or governed behavior changes, and `git diff --check`. Do not
+   run the complete local suite by default; reserve it for explicit requests,
+   broad or cross-cutting changes, release-level validation, or investigation
+   that focused or CI results require.
 9. For bug or CI-failure fixes, describe the root cause and whether a new or
 	updated governance rule was added to prevent recurrence.
 10. Before using GitHub CLI automation, verify `gh --version` and
@@ -114,6 +120,10 @@ Required GitHub checks must be named by status-check context in the handoff:
 `validate`, `docs-check`, `fixtures`, and `security`. If GitHub does not show
 those checks as required by branch protection or repository rulesets, stop before
 merge and tell the user to fix repository protection for `main`.
+
+These required checks provide broader pre-merge validation for ordinary focused
+changes. Focused local validation does not weaken or replace them, and unrun
+validation must never be presented as passed.
 
 ## Handoff formatting rules
 

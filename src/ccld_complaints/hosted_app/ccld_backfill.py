@@ -186,7 +186,7 @@ def _process_facility(
 
     artifact = _backfill_artifact(
         facility_number,
-        prepared.records,
+        _deduplicate_facility_projections(prepared.records),
         operation=request.operation,
         now=now,
     )
@@ -331,6 +331,43 @@ def _source_documents_for_facility(
             .order_by(hosted_source_derived_records.c.stable_source_id)
         ).mappings()
     )
+
+
+def _deduplicate_facility_projections(
+    records: Sequence[Mapping[str, Any]],
+) -> tuple[Mapping[str, Any], ...]:
+    """Emit each stable facility once while retaining every document bundle.
+
+    A facility with multiple preserved reports produces one normalized bundle per
+    source document. Flattening every bundle would upsert the same facility key
+    repeatedly with different document-level traceability, so an unchanged run
+    could count intermediate writes even though its final state was identical.
+    Keeping the last projection preserves the importer's prior final-write result.
+    """
+
+    last_index_by_facility_id: dict[str, int] = {}
+    for index, record in enumerate(records):
+        facility = record.get("facility")
+        if isinstance(facility, Mapping):
+            last_index_by_facility_id[
+                _required_text(facility.get("facility_id"), "facility_id")
+            ] = index
+
+    result: list[Mapping[str, Any]] = []
+    for index, record in enumerate(records):
+        facility = record.get("facility")
+        if not isinstance(facility, Mapping):
+            result.append(record)
+            continue
+        facility_id = _required_text(facility.get("facility_id"), "facility_id")
+        if last_index_by_facility_id[facility_id] == index:
+            result.append(record)
+            continue
+        without_duplicate_facility = dict(record)
+        without_duplicate_facility.pop("facility", None)
+        without_duplicate_facility.pop("hosted_refresh", None)
+        result.append(without_duplicate_facility)
+    return tuple(result)
 
 
 def _selected_facilities(

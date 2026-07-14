@@ -58,15 +58,19 @@ Read only the context needed for the task; do not rewrite governance just becaus
 
 ## Validation expectations
 
-Use the smallest validation that proves the change, then run broader validation before PR.
+Use the smallest validation that proves the change. For a focused bug fix or
+similarly narrow implementation change:
 
-For most code changes, run:
+- Run the new regression independently.
+- Run the smallest affected test set.
+- Run targeted Ruff and mypy checks appropriate to the changed files.
+- Run documentation validation when documentation or governed behavior changes.
+- Run `git diff --check`.
 
-```powershell
-.\scripts\lint.ps1
-.\scripts\test.ps1
-.\scripts\docs.ps1
-```
+Do not run the complete local test suite by default for a focused change. Run it
+when the task explicitly requests it, the change is broad or cross-cutting,
+release-level validation is required, or focused or CI results require broader
+investigation.
 
 For documentation-only changes, run:
 
@@ -76,6 +80,10 @@ git diff --check
 ```
 
 For hosted UI or user-facing workflow changes, also run the relevant hosted scaffold/evidence checks described in `TESTING_STRATEGY.md` and `docs/developer/hosted-scaffold.md`. If evidence packets are generated, create the corresponding zip output.
+
+Before merge, required GitHub checks provide broader PR validation for ordinary
+focused changes. Confirm `validate`, `docs-check`, `fixtures`, and `security`
+pass; do not weaken or bypass them.
 
 Do not fake validation results. If validation was not run, say so and explain why.
 
