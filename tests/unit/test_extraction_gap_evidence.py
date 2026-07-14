@@ -18,6 +18,10 @@ from ccld_complaints.connectors.ccld.facility_reports import (
     CcldFacilityReportsConnector,
     FieldEvidence,
     _first_investigation_activity,
+    _html_table_cells,
+    _integer_field_evidence,
+    _regional_office_evidence,
+    _table_label_evidence,
 )
 from ccld_complaints.extraction_gap_evidence import (
     OUTPUT_FILES,
@@ -131,6 +135,29 @@ def test_present_blank_is_distinct_from_unavailable_source_coverage(tmp_path: Pa
         FIELD_STATUS_COVERAGE_UNAVAILABLE
     )
     assert FIELD_STATUS_BLANK != FIELD_STATUS_COVERAGE_UNAVAILABLE
+
+
+def test_facility_field_states_and_repeated_header_are_deterministic() -> None:
+    absent_capacity = _integer_field_evidence(
+        _table_label_evidence([], "CAPACITY", "facility details")
+    )
+    malformed_capacity = _integer_field_evidence(
+        _table_label_evidence(
+            ["CAPACITY:", "not reported"], "CAPACITY", "facility details"
+        )
+    )
+    cells = _html_table_cells(RAW_FIXTURE.read_text(encoding="utf-8"))
+    regional_office_evidence = _regional_office_evidence(cells)
+
+    assert absent_capacity.status == FIELD_STATUS_ABSENT
+    assert absent_capacity.source_value is None
+    assert malformed_capacity.status == FIELD_STATUS_FAILED
+    assert malformed_capacity.source_value is None
+    assert malformed_capacity.source_text == "CAPACITY: not reported"
+    assert sum("CCLD Regional Office" in cell for cell in cells) == 2
+    assert regional_office_evidence.status == FIELD_STATUS_EXTRACTED
+    assert regional_office_evidence.source_value == "CCLD Regional Office"
+    assert regional_office_evidence == _regional_office_evidence(cells)
 
 
 def test_allegation_category_is_not_inferred_from_allegation_text() -> None:
