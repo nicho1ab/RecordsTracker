@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import cast
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy import create_engine
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.engine import Connection
 
+from ccld_complaints.hosted_app import auth as hosted_auth
 from ccld_complaints.hosted_app.auth import (
     AUTH_PROVIDER_CLASS_ENV,
     CCLD_RETRIEVAL_CORPUS_SCOPE,
@@ -28,6 +31,7 @@ from ccld_complaints.hosted_app.auth import (
     HostedScopeDeniedError,
     HostedTesterRole,
     get_authorized_source_derived_record_by_key,
+    list_authorized_source_derived_complaint_bundle,
     list_authorized_source_derived_records,
     list_authorized_source_derived_records_by_entity_types,
     load_hosted_auth_config,
@@ -316,6 +320,57 @@ def test_postgres_corpus_authorizes_multiple_loaded_retrieval_batches() -> None:
         retrieval_import_batch_id("corpus-job-001"),
         retrieval_import_batch_id("corpus-job-002"),
     }
+
+
+def test_postgres_authorized_batch_query_has_corpus_independent_parameter_shape() -> None:
+    query = hosted_auth._authorized_source_import_batch_query(POSTGRES_SCOPE)
+    compiled = query.compile(dialect=postgresql.dialect())
+    sql = str(compiled).upper()
+
+    assert " UNION " in sql
+    assert "HOSTED_CCLD_RETRIEVAL_JOBS" in sql
+    assert "HOSTED_IMPORT_BATCHES" in sql
+    assert len(compiled.params) <= 6
+    assert "POSTCOMPILE" not in sql
+
+
+def test_postgres_filtered_complaint_bundle_compiles_route_filters_before_reads() -> None:
+    connection = MagicMock()
+    connection.dialect.name = "postgresql"
+    count_result = MagicMock()
+    count_result.scalar_one.return_value = 0
+    empty_rows = MagicMock()
+    empty_rows.mappings.return_value.all.return_value = []
+    connection.execute.side_effect = [count_result, empty_rows, empty_rows]
+
+    result = list_authorized_source_derived_complaint_bundle(
+        connection,
+        _read_only_actor(scopes=(POSTGRES_SCOPE,)),
+        scope=POSTGRES_SCOPE,
+        facility_number="157806098",
+        start_date="2022-08-01",
+        end_date="2022-08-31",
+    )
+
+    compiled = [
+        call.args[0].compile(dialect=postgresql.dialect())
+        for call in connection.execute.call_args_list
+    ]
+    sql_statements = [str(statement).upper() for statement in compiled]
+    parameter_values = [
+        str(value)
+        for statement in compiled
+        for value in statement.params.values()
+    ]
+    assert result.records == ()
+    assert len(sql_statements) == 3
+    assert all("HOSTED_CCLD_RETRIEVAL_JOBS" in sql for sql in sql_statements)
+    assert all(" OFFSET " not in sql for sql in sql_statements)
+    assert any("ORDER BY" in sql and "SOURCE_RECORD_KEY" in sql for sql in sql_statements)
+    assert "157806098" in parameter_values
+    assert "2022-08-01" in parameter_values
+    assert "2022-08-31" in parameter_values
+    assert sum(len(statement.params) for statement in compiled) < 500
 
 
 def test_authorized_source_derived_entity_type_bulk_read_preserves_scope() -> None:

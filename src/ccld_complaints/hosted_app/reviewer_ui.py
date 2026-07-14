@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Connection, Engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.pool import StaticPool
 
 from ccld_complaints.aggregate_results import (
@@ -36,6 +37,7 @@ from ccld_complaints.hosted_app.auth import (
     HostedRoleDeniedError,
     HostedScopeDeniedError,
     HostedTesterRole,
+    list_authorized_source_derived_complaint_bundle,
     list_authorized_source_derived_records_by_entity_types,
 )
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
@@ -64,7 +66,10 @@ from ccld_complaints.hosted_app.facility_trends import (
     FacilityTrendResult,
     build_facility_trend,
 )
-from ccld_complaints.hosted_app.reviewer_created_state import REVIEWER_STATUS_VALUES
+from ccld_complaints.hosted_app.reviewer_created_state import (
+    REVIEWER_STATUS_VALUES,
+    list_reviewer_created_state_scaffold,
+)
 from ccld_complaints.hosted_app.reviewer_created_state_routes import (
     REVIEWER_CREATED_STATE_API_PREFIX,
     ReviewerCreatedStateApiContext,
@@ -484,6 +489,14 @@ _SUBSTANTIATED_SOURCE_ENTITY_TYPES: tuple[SourceDerivedEntityType, ...] = (
 class ReviewerUiContext:
     workflow_shell_context: ReviewerWorkflowShellContext
     engine: Engine | None = None
+    manage_read_transactions: bool = False
+
+
+@dataclass(frozen=True)
+class ReviewerComplaintBundle:
+    records: list[Mapping[str, Any]]
+    related_records: list[Mapping[str, Any]]
+    eligible_count: int
 
 
 @dataclass(frozen=True)
@@ -661,6 +674,7 @@ def reviewer_ui_context_for_connection(
     *,
     actor: AuthenticatedActor | None | object = _DEFAULT_ACTOR,
     scope: HostedAccessScope = LOCAL_REVIEWER_UI_SCOPE,
+    manage_read_transactions: bool = False,
 ) -> ReviewerUiContext:
     context_actor = local_test_reviewer_actor() if actor is _DEFAULT_ACTOR else actor
     return ReviewerUiContext(
@@ -668,11 +682,38 @@ def reviewer_ui_context_for_connection(
             connection,
             actor=cast(AuthenticatedActor | None, context_actor),
             scope=scope,
-        )
+        ),
+        manage_read_transactions=manage_read_transactions,
     )
 
 
 def route_reviewer_ui_response(
+    path: str,
+    context: ReviewerUiContext | None,
+    *,
+    method: str = "GET",
+    request_body: bytes | None = None,
+) -> tuple[int, str, bytes]:
+    if context is None:
+        return _route_reviewer_ui_response(
+            path,
+            context,
+            method=method,
+            request_body=request_body,
+        )
+    try:
+        return _route_reviewer_ui_response(
+            path,
+            context,
+            method=method,
+            request_body=request_body,
+        )
+    finally:
+        if method == "GET" and context.manage_read_transactions:
+            _complete_reviewer_read_transaction(context)
+
+
+def _route_reviewer_ui_response(
     path: str,
     context: ReviewerUiContext | None,
     *,
@@ -767,23 +808,41 @@ def _workflow_context(
     )
 
 
+def _complete_reviewer_read_transaction(context: ReviewerUiContext) -> None:
+    connection = context.workflow_shell_context.source_derived_api_context.connection
+    try:
+        if connection.in_transaction():
+            connection.rollback()
+    except SQLAlchemyError:
+        try:
+            connection.invalidate()
+        except SQLAlchemyError:
+            pass
+
+
 def _record_list_response(
     query: str,
     context: ReviewerUiContext,
 ) -> tuple[int, str, bytes]:
     query_values = parse_qs(query, keep_blank_values=True)
     search_query = _first_form_value(query_values, "q")
-    status, _content_type, body = route_reviewer_workflow_shell_response(
-        f"{REVIEWER_WORKFLOW_API_PREFIX}/queue",
-        context.workflow_shell_context,
+    status, bundle_or_body = _complaint_bundle_response(
+        context,
+        search_query=search_query,
+        limit=_SOURCE_DERIVED_PAGE_LIMIT,
     )
     if status != 200:
-        return _workflow_error_page(status, body)
-    payload = _json_object(body)
-    queue = _mapping(payload, "queue")
-    records = _record_list(queue, "records")
-    filtered_records = _filter_review_items(records, search_query)
-    state_status, state_body = _reviewer_created_state_records(context)
+        if not isinstance(bundle_or_body, bytes):
+            raise ValueError("Expected source-derived error body to be bytes.")
+        return _workflow_error_page(status, bundle_or_body)
+    if isinstance(bundle_or_body, bytes):
+        raise ValueError("Expected source-derived complaint bundle.")
+    bundle = bundle_or_body
+    records = bundle.records
+    state_status, state_body = _reviewer_created_state_records_for_source_records(
+        context,
+        _source_record_keys_for_review_items(records),
+    )
     if state_status != 200:
         if not isinstance(state_body, bytes):
             raise ValueError("Expected reviewer-created state error body to be bytes.")
@@ -791,17 +850,25 @@ def _record_list_response(
     if isinstance(state_body, bytes):
         raise ValueError("Expected reviewer-created state records.")
     state_summaries = _state_summaries_by_source_record(state_body)
-    export_context = _reviewer_queue_export_context(filtered_records)
-    export_records = _all_source_derived_records(context)
+    export_context = _reviewer_queue_export_context(records)
+    payload = {
+        "queue": {
+            "pagination": {
+                "returned_count": len(records),
+                "eligible_count": bundle.eligible_count,
+            }
+        }
+    }
     return _html_response(
         status,
         _render_record_list(
             payload,
-            filtered_records,
+            records,
             search_query,
             state_summaries,
             export_context,
-            export_records,
+            bundle.related_records,
+            complaint_universe_count=bundle.eligible_count,
             actor_label=_signed_in_actor_label(context),
         ),
     )
@@ -860,20 +927,26 @@ def _matrix_export_response(
         default="any_review_date",
     )
     explicit_limit = _optional_positive_query_int(query_values, "limit", maximum=10000)
-    status, _content_type, body = route_reviewer_workflow_shell_response(
-        f"{REVIEWER_WORKFLOW_API_PREFIX}/queue",
-        context.workflow_shell_context,
+    status, bundle_or_body = _complaint_bundle_response(
+        context,
+        facility_number=return_context.facility_number,
+        start_date=return_context.start_date,
+        end_date=return_context.end_date,
+        date_dimension=date_dimension,
+        limit=explicit_limit,
     )
     if status != 200:
-        return _workflow_error_page(status, body)
-    payload = _json_object(body)
-    queue = _mapping(payload, "queue")
-    records = _filter_export_items_by_date_dimension(
-        _record_list(queue, "records"),
-        return_context,
-        date_dimension=date_dimension,
+        if not isinstance(bundle_or_body, bytes):
+            raise ValueError("Expected source-derived error body to be bytes.")
+        return _workflow_error_page(status, bundle_or_body)
+    if isinstance(bundle_or_body, bytes):
+        raise ValueError("Expected source-derived complaint bundle.")
+    bundle = bundle_or_body
+    records = bundle.records
+    state_status, state_body = _reviewer_created_state_records_for_source_records(
+        context,
+        _source_record_keys_for_review_items(records),
     )
-    state_status, state_body = _reviewer_created_state_records(context)
     if state_status != 200:
         if not isinstance(state_body, bytes):
             raise ValueError("Expected reviewer-created state error body to be bytes.")
@@ -881,14 +954,14 @@ def _matrix_export_response(
     if isinstance(state_body, bytes):
         raise ValueError("Expected reviewer-created state records.")
     state_summaries = _state_summaries_by_source_record(state_body)
-    related_records = _all_source_derived_records(context)
     csv_text = _render_complaint_review_matrix_csv(
         records,
         state_summaries,
-        related_records,
+        bundle.related_records,
         return_context,
         date_dimension=date_dimension,
         explicit_limit=explicit_limit,
+        eligible_count=bundle.eligible_count,
     )
     return 200, "text/csv; charset=utf-8", csv_text.encode("utf-8-sig")
 
@@ -2084,16 +2157,20 @@ def _render_aggregate_context(
     query_start: str | None,
     query_end: str | None,
     outside_range_count: int = 0,
+    returned_count: int | None = None,
+    limit: int | None = None,
 ) -> str:
+    actual_returned_count = eligible_count if returned_count is None else returned_count
     result = build_aggregate_result(
-        value=eligible_count,
+        value=actual_returned_count,
         denominator=denominator,
         eligible_count=eligible_count,
-        returned_count=eligible_count,
+        returned_count=actual_returned_count,
         source_coverage_count=source_coverage_count,
         source_unavailable_count=source_unavailable_count,
         filtered_count=max(universe_count - eligible_count - outside_range_count, 0),
         outside_range_count=outside_range_count,
+        limit=limit,
         date_dimension=date_dimension,
         query_start=query_start,
         query_end=query_end,
@@ -3691,37 +3768,54 @@ def _substantiated_source_link(item: Mapping[str, str]) -> str:
     )
 
 
-def _all_source_derived_records(
+def _complaint_bundle_response(
     context: ReviewerUiContext,
-) -> list[Mapping[str, Any]]:
-    status, result = _all_source_derived_records_response(context)
-    if status != 200 or isinstance(result, bytes):
-        return []
-    return result
-
-
-def _all_source_derived_records_response(
-    context: ReviewerUiContext,
-) -> tuple[int, list[Mapping[str, Any]] | bytes]:
-    records: list[Mapping[str, Any]] = []
-    offset = 0
-    while True:
-        source_status, _content_type, source_body = route_source_derived_api_response(
-            (
-                f"{SOURCE_DERIVED_API_PREFIX}?"
-                f"{urlencode({'limit': str(_SOURCE_DERIVED_PAGE_LIMIT), 'offset': str(offset)})}"
-            ),
-            context.workflow_shell_context.source_derived_api_context,
+    *,
+    facility_number: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    date_dimension: str = "any_review_date",
+    search_query: str | None = None,
+    limit: int | None = None,
+) -> tuple[int, ReviewerComplaintBundle | bytes]:
+    source_context = context.workflow_shell_context.source_derived_api_context
+    try:
+        result = list_authorized_source_derived_complaint_bundle(
+            source_context.connection,
+            source_context.actor,
+            scope=source_context.scope,
+            facility_number=facility_number,
+            start_date=start_date,
+            end_date=end_date,
+            date_dimension=date_dimension,
+            search_query=search_query,
+            limit=limit,
         )
-        if source_status != 200:
-            return source_status, source_body
-        source_payload = _json_object(source_body)
-        page_records = _record_list(source_payload, "records")
-        records.extend(page_records)
-        if len(page_records) < _SOURCE_DERIVED_PAGE_LIMIT:
-            break
-        offset += _SOURCE_DERIVED_PAGE_LIMIT
-    return 200, records
+    except HostedAuthenticationRequiredError as error:
+        return 401, _source_derived_error_body("authentication_required", str(error))
+    except HostedAccountDisabledError as error:
+        return 403, _source_derived_error_body("account_disabled_or_revoked", str(error))
+    except HostedRoleDeniedError as error:
+        return 403, _source_derived_error_body("role_denied", str(error))
+    except HostedScopeDeniedError as error:
+        return 403, _source_derived_error_body("scope_denied", str(error))
+    except ValueError as error:
+        return 400, _source_derived_error_body("invalid_request", str(error))
+    except SQLAlchemyError:
+        return 503, _source_derived_error_body(
+            "source_derived_read_failed",
+            "Source-derived records could not be read.",
+        )
+    return 200, ReviewerComplaintBundle(
+        records=[
+            _review_item_from_source_record(_source_derived_read_payload(record))
+            for record in result.records
+        ],
+        related_records=[
+            _source_derived_read_payload(record) for record in result.related_records
+        ],
+        eligible_count=result.aggregate.eligible_count,
+    )
 
 
 def _substantiated_source_records_response(
@@ -3824,6 +3918,7 @@ def _render_complaint_review_matrix_csv(
     *,
     date_dimension: str = "complaint_received_date",
     explicit_limit: int | None = None,
+    eligible_count: int | None = None,
 ) -> str:
     output = io.StringIO(newline="")
     fieldnames = _matrix_fieldnames()
@@ -3835,11 +3930,12 @@ def _render_complaint_review_matrix_csv(
         )
         for item in records
     )
-    returned_count = min(len(records), explicit_limit or len(records))
+    returned_count = len(records)
+    matching_count = len(records) if eligible_count is None else eligible_count
     aggregate = build_aggregate_result(
         value=returned_count,
         denominator="authorized loaded complaint records matching the facility and export filters",
-        eligible_count=len(records),
+        eligible_count=matching_count,
         returned_count=returned_count,
         source_coverage_count=source_coverage_count,
         source_unavailable_count=len(records) - source_coverage_count,
@@ -3851,8 +3947,7 @@ def _render_complaint_review_matrix_csv(
     metadata = _aggregate_export_metadata(aggregate)
     if not records:
         writer.writerow(_empty_matrix_row(return_context) | metadata)
-    selected_records = records[:explicit_limit] if explicit_limit is not None else records
-    for record in selected_records:
+    for record in records:
         row = _matrix_row_for_record(
             record,
             state_summaries,
@@ -4815,6 +4910,61 @@ def _reviewer_created_state_records(
     return 200, _record_list(state_payload, "reviewer_created_state")
 
 
+def _source_record_keys_for_review_items(
+    records: list[Mapping[str, Any]],
+) -> tuple[str, ...]:
+    return tuple(
+        _string(_mapping(_mapping(item, "source_record"), "identity"), "source_record_key")
+        for item in records
+    )
+
+
+def _reviewer_created_state_records_for_source_records(
+    context: ReviewerUiContext,
+    source_record_keys: tuple[str, ...],
+) -> tuple[int, list[Mapping[str, Any]] | bytes]:
+    state_context = context.workflow_shell_context.reviewer_created_state_api_context
+    unique_keys = tuple(dict.fromkeys(source_record_keys))
+    key_chunks = [
+        unique_keys[index : index + _SOURCE_DERIVED_PAGE_LIMIT]
+        for index in range(0, len(unique_keys), _SOURCE_DERIVED_PAGE_LIMIT)
+    ] or [()]
+    records: list[Mapping[str, Any]] = []
+    try:
+        for keys in key_chunks:
+            reads = list_reviewer_created_state_scaffold(
+                state_context.connection,
+                state_context.actor,
+                scope=state_context.scope,
+                source_record_keys=keys,
+                limit=None,
+            )
+            records.extend(
+                {
+                    "source_record_key": read.source_record_key,
+                    "state_payload": dict(read.state_payload),
+                    "created_at": read.created_at,
+                }
+                for read in reads
+            )
+    except HostedAuthenticationRequiredError as error:
+        return 401, _source_derived_error_body("authentication_required", str(error))
+    except HostedAccountDisabledError as error:
+        return 403, _source_derived_error_body("account_disabled_or_revoked", str(error))
+    except HostedRoleDeniedError as error:
+        return 403, _source_derived_error_body("role_denied", str(error))
+    except HostedScopeDeniedError as error:
+        return 403, _source_derived_error_body("scope_denied", str(error))
+    except ValueError as error:
+        return 400, _source_derived_error_body("invalid_request", str(error))
+    except SQLAlchemyError:
+        return 503, _source_derived_error_body(
+            "reviewer_state_read_failed",
+            "Reviewer-created state could not be read.",
+        )
+    return 200, records
+
+
 def _detail_response(
     query: str,
     context: ReviewerUiContext,
@@ -5065,10 +5215,12 @@ def _render_record_list(
     export_context: CcldQueueReturnContext,
     export_records: list[Mapping[str, Any]],
     *,
+    complaint_universe_count: int,
     actor_label: str | None,
 ) -> str:
     queue = _mapping(payload, "queue")
-    returned_count = _int_value(_mapping(queue, "pagination"), "returned_count")
+    pagination = _mapping(queue, "pagination")
+    eligible_count = _int_value(pagination, "eligible_count")
     suggested_item = _next_review_item(records, state_summaries)
     suggested_source_record_key = _source_record_key_for_item(suggested_item)
     rows = "\n".join(
@@ -5094,11 +5246,8 @@ def _render_record_list(
             <p>No loaded complaint records match the current search.</p>
           </div>
         </article>"""
-        returned_count = _int_value(_mapping(queue, "pagination"), "returned_count")
     no_results_notice = _render_no_results_notice(search_query, records)
-    universe_count = sum(
-        _string(record, "entity_type") == "complaint" for record in export_records
-    )
+    universe_count = complaint_universe_count
     source_coverage_count = sum(
         _has_display_value(
             _mapping(_mapping(record, "source_record"), "source_document").get(
@@ -5110,12 +5259,14 @@ def _render_record_list(
     aggregate_context = _render_aggregate_context(
         denominator="authorized loaded complaint records in the current review corpus",
         universe_count=universe_count,
-        eligible_count=len(records),
+        eligible_count=eligible_count,
         source_coverage_count=source_coverage_count,
         source_unavailable_count=len(records) - source_coverage_count,
         date_dimension="any_review_date",
         query_start=export_context.start_date,
         query_end=export_context.end_date,
+        returned_count=len(records),
+        limit=_SOURCE_DERIVED_PAGE_LIMIT,
     )
     return _page(
                 title="Complaint records ready for review",
@@ -5135,7 +5286,7 @@ def _render_record_list(
                 <div class="result-list dense-card-grid" aria-label="Complaint records ready for review">
         {cards}
                 </div>
-            {_render_queue_search_filter(records, search_query, state_summaries, returned_count, export_records)}
+            {_render_queue_search_filter(records, search_query, state_summaries, eligible_count, export_records)}
         <details class="technical-details dense-table-details">
           <summary>Show table view</summary>
       <table>

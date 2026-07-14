@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Fixed PostgreSQL reviewer-query performance: the reviewer landing route no
+  longer materializes the complete authorized source-derived corpus through
+  repeated deep-`OFFSET` pages, and filtered matrix exports now apply authorized
+  facility/date filters before materialization while preserving authorization,
+  deterministic ordering, reviewer-created state separation, and existing CSV
+  semantics.
 - Added a governed CCLD hosted refresh path that extracts complaint-report
   facility type and structured visit-based first activity, enriches canonical
   facility type/county/status from approved preloaded facility references, and

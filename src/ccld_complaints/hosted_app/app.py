@@ -1477,6 +1477,7 @@ def _default_postgres_reviewer_context() -> ReviewerUiContext | None:
         connection,
         actor=local_test_reviewer_actor(scopes=(POSTGRES_REVIEWER_UI_SCOPE,)),
         scope=POSTGRES_REVIEWER_UI_SCOPE,
+        manage_read_transactions=True,
     )
     return _DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT
 

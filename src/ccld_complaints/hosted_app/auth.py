@@ -14,17 +14,20 @@ from urllib.request import urlopen
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
-from sqlalchemy import select
+from sqlalchemy import literal, select, union
 from sqlalchemy.engine import Connection
+from sqlalchemy.sql.selectable import CompoundSelect
 
 from ccld_complaints.hosted_app.seeded_import import SourceDerivedEntityType
 from ccld_complaints.hosted_app.source_derived_reads import (
     CcldSourceDerivedRequestLookup,
+    SourceDerivedComplaintBundleResult,
     SourceDerivedRecordListResult,
     SourceDerivedRecordRead,
     find_ccld_source_derived_records_for_request,
     get_source_derived_record_by_identity,
     get_source_derived_record_by_key,
+    list_source_derived_complaint_bundle,
     list_source_derived_record_result,
     list_source_derived_records,
     list_source_derived_records_by_entity_types,
@@ -862,7 +865,7 @@ def list_authorized_source_derived_records(
             connection,
             entity_type=entity_type,
             entity_types=entity_types,
-            import_batch_ids=_authorized_source_import_batch_ids(connection, scope),
+            import_batch_query=_authorized_source_import_batch_query(scope),
             limit=limit,
             offset=offset,
         )
@@ -904,7 +907,7 @@ def list_authorized_source_derived_record_result(
             connection,
             entity_type=entity_type,
             entity_types=entity_types,
-            import_batch_ids=_authorized_source_import_batch_ids(connection, scope),
+            import_batch_query=_authorized_source_import_batch_query(scope),
             limit=limit,
             offset=offset,
         )
@@ -945,12 +948,42 @@ def list_authorized_source_derived_records_by_entity_types(
         return list_source_derived_records_by_entity_types(
             connection,
             entity_types=entity_types,
-            import_batch_ids=_authorized_source_import_batch_ids(connection, scope),
+            import_batch_query=_authorized_source_import_batch_query(scope),
         )
     return list_source_derived_records_by_entity_types(
         connection,
         entity_types=entity_types,
         import_batch_id=scoped_import_batch_id,
+    )
+
+
+def list_authorized_source_derived_complaint_bundle(
+    connection: Connection,
+    actor: AuthenticatedActor | None,
+    *,
+    scope: HostedAccessScope,
+    facility_number: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    date_dimension: str = "any_review_date",
+    search_query: str | None = None,
+    limit: int | None = None,
+) -> SourceDerivedComplaintBundleResult:
+    require_permission(
+        actor,
+        permission=SOURCE_DERIVED_READ_PERMISSION,
+        scope=scope,
+        target=AuthorizationTarget("source_derived_record_list", scope.scope_id),
+    )
+    return list_source_derived_complaint_bundle(
+        connection,
+        import_batch_query=_authorized_source_import_batch_query(scope),
+        facility_number=facility_number,
+        start_date=start_date,
+        end_date=end_date,
+        date_dimension=date_dimension,
+        search_query=search_query,
+        limit=limit,
     )
 
 
@@ -1063,9 +1096,15 @@ def source_record_is_in_scope(
     record: SourceDerivedRecordRead,
     scope: HostedAccessScope,
 ) -> bool:
-    return record.import_batch.import_batch_id in _authorized_source_import_batch_ids(
-        connection,
-        scope,
+    authorized_batches = _authorized_source_import_batch_query(scope).subquery()
+    return (
+        connection.execute(
+            select(authorized_batches.c.import_batch_id).where(
+                authorized_batches.c.import_batch_id
+                == record.import_batch.import_batch_id
+            )
+        ).first()
+        is not None
     )
 
 
@@ -1086,11 +1125,52 @@ def _scoped_import_batch_id_for_read(
     scope: HostedAccessScope,
     import_batch_id: str,
 ) -> str:
-    if import_batch_id not in _authorized_source_import_batch_ids(connection, scope):
+    authorized_batches = _authorized_source_import_batch_query(scope).subquery()
+    if (
+        connection.execute(
+            select(authorized_batches.c.import_batch_id).where(
+                authorized_batches.c.import_batch_id == import_batch_id
+            )
+        ).first()
+        is None
+    ):
         raise HostedScopeDeniedError(
             "Requested source-derived import batch is outside the authorized scope."
         )
     return import_batch_id
+
+
+def _authorized_source_import_batch_query(
+    scope: HostedAccessScope,
+) -> CompoundSelect[Any]:
+    from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
+        CCLD_RETRIEVAL_IMPORT_BATCH_PREFIX,
+        hosted_ccld_retrieval_jobs,
+    )
+    from ccld_complaints.hosted_app.seeded_import import hosted_import_batches
+
+    queries = [
+        select(literal(scope.scope_id).label("import_batch_id")),
+        select(
+            (
+                literal(CCLD_RETRIEVAL_IMPORT_BATCH_PREFIX)
+                + hosted_ccld_retrieval_jobs.c.retrieval_job_id
+            ).label("import_batch_id")
+        ).where(
+            hosted_ccld_retrieval_jobs.c.source_scope_type == scope.scope_type,
+            hosted_ccld_retrieval_jobs.c.source_scope_id == scope.scope_id,
+            hosted_ccld_retrieval_jobs.c.source_artifact_identity.is_not(None),
+        ),
+    ]
+    if scope.matches(CCLD_RETRIEVAL_CORPUS_SCOPE):
+        queries.append(
+            select(hosted_import_batches.c.import_batch_id).where(
+                hosted_import_batches.c.import_batch_id.like(
+                    f"{CCLD_RETRIEVAL_IMPORT_BATCH_PREFIX}%"
+                )
+            )
+        )
+    return union(*queries)
 
 
 def _authorized_source_import_batch_ids(

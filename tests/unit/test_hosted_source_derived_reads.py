@@ -3,11 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event, select, update
 from sqlalchemy.engine import Connection
 
 from ccld_complaints.hosted_app.seeded_import import (
     hosted_seeded_import_metadata,
+    hosted_source_derived_records,
     import_seeded_corpus_artifact,
     load_seeded_corpus_artifact,
 )
@@ -15,6 +16,7 @@ from ccld_complaints.hosted_app.source_derived_reads import (
     find_ccld_source_derived_records_for_request,
     get_source_derived_record_by_identity,
     get_source_derived_record_by_key,
+    list_source_derived_complaint_bundle,
     list_source_derived_record_result,
     list_source_derived_records,
     list_source_derived_records_by_entity_types,
@@ -96,6 +98,96 @@ def test_source_derived_list_has_no_default_cap_and_explicit_limit_is_reported()
     assert limited.aggregate.eligible_count == 126
     assert limited.aggregate.status == "truncated"
     assert limited.aggregate.truncated is True
+
+
+def test_complaint_bundle_filters_counts_and_limits_without_offset_traversal() -> None:
+    statements: list[str] = []
+    with _seeded_connection() as connection:
+        _insert_additional_complaint_rows(connection, count=125)
+
+        def capture_statement(
+            _connection: object,
+            _cursor: object,
+            statement: str,
+            _parameters: object,
+            _context: object,
+            _executemany: bool,
+        ) -> None:
+            statements.append(statement)
+
+        event.listen(connection, "before_cursor_execute", capture_statement)
+        try:
+            result = list_source_derived_complaint_bundle(
+                connection,
+                facility_number="157806098",
+                start_date="2022-08-01",
+                end_date="2022-08-31",
+                date_dimension="any_review_date",
+                limit=100,
+            )
+        finally:
+            event.remove(connection, "before_cursor_execute", capture_statement)
+
+    assert len(result.records) == 100
+    assert result.aggregate.eligible_count == 126
+    assert result.aggregate.truncated is True
+    assert [record.source_record_key for record in result.records] == sorted(
+        record.source_record_key for record in result.records
+    )
+    assert {record.entity_type for record in result.related_records}.issubset(
+        {"facility", "source_document", "complaint", "allegation", "event"}
+    )
+    assert len(statements) == 3
+    assert all("OFFSET 100" not in statement.upper() for statement in statements)
+    assert all("OFFSET 200" not in statement.upper() for statement in statements)
+    assert any(" LIMIT " in statement.upper() for statement in statements)
+
+
+def test_complaint_bundle_date_filter_preserves_calendar_validation() -> None:
+    with _seeded_connection() as connection:
+        original_values = dict(
+            connection.execute(
+                select(hosted_source_derived_records.c.original_values).where(
+                    hosted_source_derived_records.c.entity_type == "complaint"
+                )
+            ).scalar_one()
+        )
+        for field_name in (
+            "complaint_received_date",
+            "first_investigation_activity_date",
+            "visit_date",
+            "report_date",
+            "date_signed",
+        ):
+            original_values[field_name] = ""
+        original_values["complaint_received_date"] = "2022-02-31"
+        connection.execute(
+            update(hosted_source_derived_records)
+            .where(hosted_source_derived_records.c.entity_type == "complaint")
+            .values(original_values=original_values)
+        )
+        invalid = list_source_derived_complaint_bundle(
+            connection,
+            start_date="2022-02-01",
+            end_date="2022-02-28",
+        )
+
+        original_values["complaint_received_date"] = "2020-02-29"
+        connection.execute(
+            update(hosted_source_derived_records)
+            .where(hosted_source_derived_records.c.entity_type == "complaint")
+            .values(original_values=original_values)
+        )
+        leap_day = list_source_derived_complaint_bundle(
+            connection,
+            start_date="2020-02-29",
+            end_date="2020-02-29",
+        )
+
+    assert invalid.records == ()
+    assert invalid.aggregate.eligible_count == 0
+    assert len(leap_day.records) == 1
+    assert leap_day.aggregate.eligible_count == 1
 
 
 def test_request_lookup_applies_selected_first_activity_date_dimension() -> None:
