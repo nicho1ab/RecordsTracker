@@ -366,8 +366,8 @@ def test_guided_attorney_review_workflow_acceptance_route_markers(
             "/reviewer",
             (
                 "Complaint records ready for review",
-                "Worklist",
-                "Open record",
+                "Complaint worklist",
+                "Review complaint",
             ),
         ),
         (
@@ -461,7 +461,10 @@ def test_polished_shared_layout_navigation_on_key_pages() -> None:
             '<label class="sr-only" for="shell-facility-search">Search facilities</label>'
             not in html
         )
-        assert 'placeholder="Search complaint, facility, Facility ID, or source record..."' in html
+        assert (
+            'placeholder="Search complaint, facility, Facility ID, or source record..."'
+            in html
+        )
         assert "Search complaint, facility, license, or source record" not in html
         if path != "/ccld/help":
             assert "Attorney workflow" not in html

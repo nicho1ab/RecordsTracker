@@ -32,6 +32,21 @@ Use this lightweight checklist for generated or local proof-of-concept outputs,
 including Datasette views, generated Datasette metadata, saved queries, CSV
 exports, review bundle files, and script output.
 
+### Hosted reviewer worklist
+
+- Confirm the `/reviewer` primary records are exposed as one labeled semantic
+  worklist and that heading order remains logical.
+- Confirm every row keeps complaint identity, facility identity, key dates,
+  finding, review flags, reviewer status, note presence, source availability,
+  and the review action visibly associated when CSS is disabled.
+- Confirm repeated review actions have record-specific accessible names and a
+  visible focus indicator.
+- At desktop width, tablet/narrow-desktop width, mobile width, and 200% browser
+  zoom, confirm values do not overlap, the primary worklist does not require
+  horizontal scrolling, and the action remains reachable.
+- Confirm review flags, reviewer state, note presence, and source availability
+  retain visible text and do not depend on color alone.
+
 ### Datasette views
 
 - The reviewer can identify which view to open first and what each view
