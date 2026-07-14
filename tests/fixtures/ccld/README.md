@@ -15,6 +15,10 @@ Raw fixtures and expected JSON are governed by `.gitattributes` line-ending rule
   field-level source-section/source-text traceability regressions.
 - `raw/157806097_facility_detail.html`: Source-shaped CCLD facility detail page fixture for facility `157806097`, used with the sample fixture corpus to exercise multi-facility discovery without live public requests.
 - `raw/157806097_inx1.html`: Source-shaped CCLD FacilityReports response for facility `157806097`, report index `1`, used with the sample fixture corpus to exercise multi-facility ingestion, traceability, comparison, and review-bundle export paths.
+- `raw/425802141_inx1_governed_refresh.html`: Source-shaped CCLD complaint report
+  for facility `425802141` and complaint `31-CR-20240425094018`, covering
+  explicit facility type `733`, complaint received `04/25/2024`, and structured
+  visit/first-activity date `11/07/2025` without live source access.
 - `expected/157806098_inx3.json`: Expected normalized records for the first deterministic CCLD extraction regression test.
 - `raw/157806098_inx40_numbered_allegations.html`: Source-shaped CCLD report fixture covering allegation rows where the numeric marker and allegation text appear on the same line.
 - `expected/157806098_inx40_numbered_allegations.json`: Expected normalized records for numbered-allegation extraction hardening.

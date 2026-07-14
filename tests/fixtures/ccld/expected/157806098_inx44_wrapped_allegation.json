@@ -32,12 +32,12 @@
         "document_id": "ccld-157806098-inx-44",
         "complaint_control_number": "32-CR-20240401121212",
         "complaint_received_date": "2024-04-01",
-        "first_investigation_activity_date": null,
+        "first_investigation_activity_date": "2024-04-11",
         "visit_date": "2024-04-11",
         "report_date": "2024-05-02",
         "date_signed": "2024-05-06",
         "finding": "Unsubstantiated",
-        "days_received_to_first_activity": null,
+        "days_received_to_first_activity": 10,
         "days_received_to_visit": 10,
         "days_received_to_report": 31,
         "days_report_to_signed": 4,
@@ -45,7 +45,7 @@
         "review_delay_over_60_days": false,
         "review_delay_over_90_days": false,
         "review_delay_over_120_days": false,
-        "missing_first_activity_date": true,
+        "missing_first_activity_date": false,
         "report_date_used_as_proxy": false,
         "extraction_confidence": 1.0
     },
@@ -64,6 +64,17 @@
             "allegation_text": "Facility staff did not provide adequate supervision during transportation",
             "allegation_category": null,
             "finding": "Unsubstantiated",
+            "extraction_confidence": 1.0
+        }
+    ],
+    "events": [
+        {
+            "event_id": "ccld-complaint-32-CR-20240401121212-event-1",
+            "complaint_id": "ccld-complaint-32-CR-20240401121212",
+            "event_date": "2024-04-11",
+            "event_type": "investigation_activity",
+            "event_text": "VISIT DATE: 04/11/2024",
+            "extracted_from_section": "report header",
             "extraction_confidence": 1.0
         }
     ]

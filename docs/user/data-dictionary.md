@@ -28,8 +28,11 @@ not reviewer-facing. Missing components are not repeated as separate raw fields.
 
 ## facility_type
 
-Descriptive facility type from a governed CCLD `Facility Type` or CHHS
-`FAC_TYPE_DESC` source. The numeric CHHS `TYPE` code is not used as this value.
+Facility type from the explicit CCLD complaint-report `FACILITY TYPE` field or
+an approved facility-reference `Facility Type`/`FAC_TYPE_DESC` value. An
+explicit numeric complaint-report code such as `733` is retained. The unrelated
+numeric CHHS `TYPE` field is not used. For hosted refresh, an approved nonblank
+facility-reference value takes precedence and conflicts remain traceable.
 
 ## program_type
 
@@ -38,12 +41,15 @@ from facility type and appears as a secondary facility fact on the facility hub.
 
 ## county
 
-Source-provided county label, when available.
+Source-provided county label, when available. Hosted canonical county is owned
+by the newest approved nonblank facility-reference row; missing reference data
+does not erase an existing value.
 
 ## status
 
 Source-provided facility status label, when available. It is not inferred from
-closed date.
+closed date. Hosted canonical status is owned by the newest approved nonblank
+facility-reference row; missing reference data does not erase an existing value.
 
 ## capacity
 
@@ -69,7 +75,9 @@ Date the complaint was reportedly received by the licensing office.
 
 ## first_investigation_activity_date
 
-Earliest investigation activity date extracted from the report narrative, if available.
+Earliest valid investigation activity date from explicit report narrative or a
+structured `VISIT DATE`, if available. When both exist, the earliest date wins.
+Report date alone is not first-activity evidence.
 
 ## visit_date
 

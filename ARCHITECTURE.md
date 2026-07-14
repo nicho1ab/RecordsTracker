@@ -168,6 +168,11 @@ links, filtered-empty guidance, and a structured copyable tester feedback
 checklist that must be copied externally, and links matches into the reviewer UI,
 a CCLD-only local/test artifact builder that converts validated CCLD SQLite
 pipeline output into hosted seeded-corpus JSON outside browser requests,
+a shared hosted CCLD source-preparation service used by controlled retrieval and
+operator backfill that combines validated complaint records with approved
+preloaded facility type/county/status values, retains precedence conflicts, and
+enters the existing artifact/import path without changing reviewer-created
+state or creating a second canonical persistence path,
 a local/test authenticated reset/reload dry-run route seam, and a local/test
 authenticated reset/reload execution-plan route seam: a
 no-secret database URL configuration seam, an Alembic script location, one

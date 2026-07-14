@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Added a governed CCLD hosted refresh path that extracts complaint-report
+  facility type and structured visit-based first activity, enriches canonical
+  facility type/county/status from approved preloaded facility references, and
+  records deterministic precedence conflicts without erasing populated values.
+  Added a dry-run-first, filtered, batched, checkpointable preserved-artifact
+  backfill that retains source traceability, stable identities, import scope,
+  reviewer-created state, and audit history; repeated retrieval and backfill are
+  idempotent and make no browser or live-source calls during backfill.
 - Consolidated the facility hub into one primary facility-fact block, one
   secondary fact disclosure, one review summary, and one additional-signal
   section. The hub now composes address fields once, presents governed

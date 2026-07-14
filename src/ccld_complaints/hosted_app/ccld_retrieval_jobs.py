@@ -31,6 +31,9 @@ from ccld_complaints.hosted_app.auth import (
     HostedScopeDeniedError,
     require_permission,
 )
+from ccld_complaints.hosted_app.ccld_source_refresh import (
+    prepare_ccld_hosted_source_records,
+)
 from ccld_complaints.hosted_app.seeded_import import (
     SeededCorpusArtifact,
     flatten_seeded_corpus_records,
@@ -608,11 +611,17 @@ def _execute_job(
             errors=(),
             data_mutations_performed=False,
         )
+    prepared = prepare_ccld_hosted_source_records(
+        context.connection,
+        matching_records,
+        allow_test_reference=context.config.mock_success_demo_enabled,
+    )
+    warnings.extend(prepared.warnings)
     artifact = _retrieval_artifact(
         context,
         retrieval_request,
         retrieval_job_id,
-        matching_records,
+        prepared.records,
         warnings=tuple(warnings),
     )
     import_result = import_seeded_corpus_artifact(context.connection, artifact)
@@ -624,6 +633,7 @@ def _execute_job(
         "matched_record_bundles": len(matching_records),
         "imported_source_derived_records": import_result.imported_record_count,
         "report_failures": len(result.failures),
+        "facility_reference_conflicts": prepared.conflicted_field_count,
     }
     return _update_job_state(
         context,

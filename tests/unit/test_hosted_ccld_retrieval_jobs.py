@@ -238,7 +238,7 @@ def test_controlled_retrieval_imports_records_and_links_queue(tmp_path: Path) ->
     assert status == 200
     assert before_counts == _empty_counts()
     assert after_counts["import_batches"] == 1
-    assert after_counts["source_records"] == 34
+    assert after_counts["source_records"] == 35
     assert after_counts["retrieval_jobs"] == 1
     assert after_counts["reviewer_created_state"] == 0
     assert after_counts["audit_events"] == 0
@@ -327,8 +327,8 @@ def test_retrieval_imported_count_uses_persisted_unique_source_rows(
     assert job["result_counts"]["retrieved_record_bundles"] == 2
     assert job["result_counts"]["matched_record_bundles"] == 2
     assert imported_count == counts["source_records"]
-    assert imported_count < 68
-    assert counts["source_records"] == 63
+    assert imported_count < 70
+    assert counts["source_records"] == 65
     assert counts["import_batches"] == 1
     assert "Records imported" in html
     assert f"<dd>{imported_count}</dd>" in html
@@ -401,7 +401,7 @@ def test_postgres_retrieval_persists_jobs_and_queue_after_reopened_connection(
     history_html = history_body.decode("utf-8")
     queue_html = queue_body.decode("utf-8")
     assert counts["import_batches"] == 1
-    assert counts["source_records"] == 34
+    assert counts["source_records"] == 35
     assert counts["retrieval_jobs"] == 1
     assert history_status == 200
     assert "Job diagnostics" in history_html
@@ -451,7 +451,7 @@ def test_duplicate_retrieval_rerun_does_not_duplicate_visible_source_rows(
     assert second_status == 200
     assert counts["retrieval_jobs"] == 2
     assert counts["import_batches"] == 2
-    assert counts["source_records"] == 34
+    assert counts["source_records"] == 35
     assert "1 complaint queue record(s) are visible now" in first_html
     assert "1 complaint queue record(s) are visible now" in second_html
     assert_no_secret_html(first_html)
@@ -484,7 +484,7 @@ def test_controlled_retrieval_fetches_only_complaint_links_in_requested_date_ran
     assert status == 200
     assert len(client.facility_detail_calls) == 1
     assert [_report_index_from_url(url) for url, _timeout in client.report_calls] == [3]
-    assert counts["source_records"] == 34
+    assert counts["source_records"] == 35
     assert counts["retrieval_jobs"] == 1
     assert jobs[0]["job_state"] == "completed"
     assert jobs[0]["facility_number"] == "157806098"
@@ -934,7 +934,7 @@ def test_live_retrieval_falls_back_to_complaint_report_list_when_detail_has_no_l
 
     assert status == 200
     assert [_report_index_from_url(url) for url, _timeout in client.report_calls] == [1]
-    assert counts["source_records"] == 34
+    assert counts["source_records"] == 35
     assert jobs[0]["result_counts"]["discovered_report_candidates"] == 2
     assert jobs[0]["result_counts"]["selected_report_candidates"] == 1
     assert "Live public CCLD" in html

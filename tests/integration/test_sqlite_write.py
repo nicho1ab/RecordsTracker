@@ -33,7 +33,7 @@ def test_write_normalized_ccld_report_to_sqlite(tmp_path: Path) -> None:
     assert _row_count(db_path, "complaints") == 1
     assert _row_count(db_path, "allegations") == 2
     assert _row_count(db_path, "events") == 1
-    assert _row_count(db_path, "extraction_audit") == 28
+    assert _row_count(db_path, "extraction_audit") == 29
     assert _source_traceability(db_path) == {
         "source_url": FIXTURE_URL,
         "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
@@ -182,7 +182,7 @@ def test_review_views_return_fixture_backed_rows(tmp_path: Path) -> None:
         "complaint_count": 1,
         "allegation_count": 2,
         "event_count": 1,
-        "extraction_audit_field_count": 28,
+            "extraction_audit_field_count": 29,
     }
     assert _complaint_timeline_review(db_path) == [
         {
@@ -278,7 +278,7 @@ def test_review_views_do_not_duplicate_rows_on_rerun(tmp_path: Path) -> None:
     assert _row_count(db_path, "complaint_review_summary") == 1
     assert _row_count(db_path, "complaint_first_pass_review") == 1
     assert _row_count(db_path, "complaint_timeline_review") == 6
-    assert _row_count(db_path, "field_source_traceability_review") == 28
+    assert _row_count(db_path, "field_source_traceability_review") == 29
     assert _row_count(db_path, "facility_complaint_summary") == 1
     assert _row_count(db_path, "facility_pattern_review") == 1
     assert _row_count(db_path, "facility_comparison_review") == 1
@@ -317,7 +317,7 @@ def test_write_normalized_ccld_report_is_idempotent(tmp_path: Path) -> None:
     assert _row_count(db_path, "source_documents") == 1
     assert _row_count(db_path, "complaints") == 1
     assert _row_count(db_path, "allegations") == 2
-    assert _row_count(db_path, "extraction_audit") == 28
+    assert _row_count(db_path, "extraction_audit") == 29
 
 
 def test_facility_upsert_preserves_governed_values_when_later_record_is_null(
