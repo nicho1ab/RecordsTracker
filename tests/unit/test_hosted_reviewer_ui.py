@@ -66,6 +66,7 @@ from ccld_complaints.hosted_app.reviewer_ui import (
     REVIEWER_UI_NOTE_PATH,
     REVIEWER_UI_PACKET_DRAFT_PATH,
     REVIEWER_UI_PACKET_PREVIEW_PATH,
+    REVIEWER_UI_PREFIX,
     REVIEWER_UI_STATUS_PATH,
     REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH,
     REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH,
@@ -1289,9 +1290,6 @@ def test_postgres_corpus_substantiated_worklist_uses_authorized_retrieval_batche
             ),
             scope=POSTGRES_REVIEWER_UI_SCOPE,
         )
-        source_status, source_result = reviewer_ui._all_source_derived_records_response(
-            context
-        )
         status, content_type, body = route_response(
             REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH
             + "?facility=107207198&facility_type=Foster%20Family%20Agency",
@@ -1302,10 +1300,6 @@ def test_postgres_corpus_substantiated_worklist_uses_authorized_retrieval_batche
             + "?start_date=2099-01-01&end_date=2099-12-31",
             reviewer_ui_context=context,
         )
-
-    assert source_status == 200
-    assert not isinstance(source_result, bytes)
-    assert len(source_result) > reviewer_ui._SOURCE_DERIVED_PAGE_LIMIT
 
     html = body.decode("utf-8")
     future_html = future_body.decode("utf-8")
@@ -3161,15 +3155,183 @@ def test_reviewer_ui_matrix_export_returns_excel_ready_csv_without_mutation() ->
     assert "source complete" not in csv_text.casefold()
     assert "export approved" not in csv_text.casefold()
 
+
+def test_reviewer_landing_uses_one_bounded_governed_bundle_without_offset_paging(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_api_pagination(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("reviewer landing must not enumerate the source API")
+
+    monkeypatch.setattr(
+        reviewer_ui,
+        "route_source_derived_api_response",
+        fail_api_pagination,
+    )
+    statements: list[str] = []
+    with _seeded_connection() as connection:
+        _insert_matrix_complaint_copies(connection, count=125)
+
+        def capture_statement(
+            _connection: object,
+            _cursor: object,
+            statement: str,
+            _parameters: object,
+            _context: object,
+            _executemany: bool,
+        ) -> None:
+            if "hosted_source_derived_records" in statement:
+                statements.append(statement)
+
+        event.listen(connection, "before_cursor_execute", capture_statement)
+        try:
+            status, content_type, body = route_response(
+                REVIEWER_UI_PREFIX,
+                reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+            )
+        finally:
+            event.remove(connection, "before_cursor_execute", capture_statement)
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    html = body.decode("utf-8")
+    assert "32-CR-20220407124448" in html
+    assert "Showing 100 of 126 records." in html
+    assert "<dt>Eligible records</dt><dd>126</dd>" in html
+    assert '<span class="status-badge">Truncated</span>' in html
+    assert len(statements) == 3
+    assert all("OFFSET 100" not in statement.upper() for statement in statements)
+    assert all("OFFSET 200" not in statement.upper() for statement in statements)
+    assert any(" LIMIT " in statement.upper() for statement in statements)
+
+
+def test_matrix_export_filters_before_materialization_and_exports_more_than_100_rows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_api_pagination(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("matrix export must not enumerate the source API")
+
+    monkeypatch.setattr(
+        reviewer_ui,
+        "route_source_derived_api_response",
+        fail_api_pagination,
+    )
+    statements: list[tuple[str, object]] = []
+    with _seeded_connection() as connection:
+        _insert_matrix_complaint_copies(connection, count=105)
+
+        def capture_statement(
+            _connection: object,
+            _cursor: object,
+            statement: str,
+            parameters: object,
+            _context: object,
+            _executemany: bool,
+        ) -> None:
+            if "hosted_source_derived_records" in statement:
+                statements.append((statement, parameters))
+
+        event.listen(connection, "before_cursor_execute", capture_statement)
+        try:
+            path = (
+                f"{REVIEWER_UI_MATRIX_EXPORT_PATH}?facility_number=157806098"
+                "&start_date=2022-08-01&end_date=2022-08-31"
+                "&request_context_origin=manual_entry"
+            )
+            first = route_response(
+                path,
+                reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+            )
+            second = route_response(
+                path,
+                reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+            )
+        finally:
+            event.remove(connection, "before_cursor_execute", capture_statement)
+
+    first_status, first_content_type, first_body = first
+    second_status, second_content_type, second_body = second
+    rows = list(csv.DictReader(io.StringIO(first_body.decode("utf-8-sig"))))
+    assert first_status == second_status == 200
+    assert first_content_type == second_content_type == "text/csv; charset=utf-8"
+    assert first_body == second_body
+    assert len(rows) == 106
+    assert len({row["source_record_key"] for row in rows}) == 106
+    assert all(row["facility_number"] == "157806098" for row in rows)
+    assert statements
+    assert all(" OFFSET " not in statement.upper() for statement, _ in statements)
+    assert any("2022-08-01" in _flatten_sql_parameters(parameters) for _, parameters in statements)
+    assert any("2022-08-31" in _flatten_sql_parameters(parameters) for _, parameters in statements)
+    assert any("157806098" in _flatten_sql_parameters(parameters) for _, parameters in statements)
+
+
+def test_matrix_export_database_failure_returns_no_partial_csv(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from sqlalchemy.exc import OperationalError
+
+    def fail_read(*_args: object, **_kwargs: object) -> None:
+        raise OperationalError("SELECT", {}, Exception("database unavailable"))
+
+    monkeypatch.setattr(
+        reviewer_ui,
+        "list_authorized_source_derived_complaint_bundle",
+        fail_read,
+    )
+    with _seeded_connection() as connection:
+        status, content_type, body = route_response(
+            REVIEWER_UI_MATRIX_EXPORT_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    assert status == 503
+    assert content_type == "text/html; charset=utf-8"
+    assert not body.startswith(b"\xef\xbb\xbf")
+    assert b"source_derived_read_failed" not in body
+
+
+def test_managed_reviewer_reads_complete_transactions_after_success_and_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from sqlalchemy.exc import OperationalError
+
+    with _seeded_connection() as connection:
+        context = reviewer_ui_context_for_connection(
+            connection,
+            manage_read_transactions=True,
+        )
+        success_status, _content_type, _body = route_response(
+            REVIEWER_UI_PREFIX,
+            reviewer_ui_context=context,
+        )
+        assert success_status == 200
+        assert connection.in_transaction() is False
+
+        connection.begin()
+
+        def fail_read(*_args: object, **_kwargs: object) -> None:
+            raise OperationalError("SELECT", {}, Exception("database unavailable"))
+
+        monkeypatch.setattr(
+            reviewer_ui,
+            "list_authorized_source_derived_complaint_bundle",
+            fail_read,
+        )
+        failure_status, _content_type, _body = route_response(
+            REVIEWER_UI_PREFIX,
+            reviewer_ui_context=context,
+        )
+        assert failure_status == 503
+        assert connection.in_transaction() is False
+
 def test_reviewer_ui_substantiated_export_returns_excel_ready_csv_without_mutation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    def fail_whole_corpus_helper(context: object) -> list[Mapping[str, Any]]:
+    def fail_whole_corpus_helper(*_args: object, **_kwargs: object) -> None:
         raise AssertionError("substantiated export must not enumerate the whole corpus")
 
     monkeypatch.setattr(
         reviewer_ui,
-        "_all_source_derived_records",
+        "_complaint_bundle_response",
         fail_whole_corpus_helper,
     )
 
@@ -4717,6 +4879,7 @@ def test_default_postgres_reviewer_context_uses_loaded_ccld_corpus_scope(
         assert source_context.scope.scope_id != "seeded-ccld-fixture-2026-06-13"
         assert source_context.actor is not None
         assert source_context.actor.scopes == (POSTGRES_REVIEWER_UI_SCOPE,)
+        assert context.manage_read_transactions is True
     finally:
         monkeypatch.setattr(hosted_app, "_DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT", None)
         engine.dispose()
@@ -5294,6 +5457,26 @@ def _insert_extraction_audit_marker(connection: Connection) -> None:
             source_traceability=template["source_traceability"],
         )
     )
+
+
+def _insert_matrix_complaint_copies(connection: Connection, *, count: int) -> None:
+    template = connection.execute(
+        select(hosted_source_derived_records).where(
+            hosted_source_derived_records.c.source_record_key == COMPLAINT_KEY
+        )
+    ).mappings().one()
+    rows = []
+    for index in range(count):
+        values = dict(template)
+        stable_source_id = f"ccld:complaint:matrix-performance-{index:03d}"
+        values["source_record_key"] = f"complaint:{stable_source_id}"
+        values["stable_source_id"] = stable_source_id
+        original_values = dict(template["original_values"])
+        original_values["complaint_id"] = stable_source_id
+        original_values["complaint_control_number"] = f"MATRIX-{index:03d}"
+        values["original_values"] = original_values
+        rows.append(values)
+    connection.execute(hosted_source_derived_records.insert(), rows)
 
 
 def _flatten_sql_parameters(parameters: object) -> tuple[object, ...]:

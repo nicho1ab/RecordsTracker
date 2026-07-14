@@ -240,16 +240,21 @@ def list_reviewer_created_state_scaffold(
     *,
     scope: HostedAccessScope,
     source_record_key: str | None = None,
+    source_record_keys: tuple[str, ...] | None = None,
     state_kind: ReviewerCreatedStateKind | None = None,
     actor_provider_subject: str | None = None,
     search_query: str | None = None,
-    limit: int = 100,
+    limit: int | None = 100,
     offset: int = 0,
 ) -> tuple[ReviewerCreatedStateRead, ...]:
-    if limit < 1:
+    if limit is not None and limit < 1:
         raise ValueError("Reviewer-created state list limit must be at least 1.")
     if offset < 0:
         raise ValueError("Reviewer-created state list offset must be at least 0.")
+    if source_record_key is not None and source_record_keys is not None:
+        raise ValueError(
+            "Reviewer-created state list accepts one source record filter mode."
+        )
     if state_kind is not None and state_kind not in REVIEWER_CREATED_STATE_KINDS:
         raise ValueError("Reviewer-created state kind is not supported by this scaffold.")
     normalized_search_query = _normalized_search_query(search_query)
@@ -267,6 +272,12 @@ def list_reviewer_created_state_scaffold(
     if source_record_key is not None:
         query = query.where(
             hosted_reviewer_created_state.c.source_record_key == source_record_key
+        )
+    if source_record_keys is not None:
+        if not source_record_keys:
+            return ()
+        query = query.where(
+            hosted_reviewer_created_state.c.source_record_key.in_(source_record_keys)
         )
     if state_kind is not None:
         query = query.where(hosted_reviewer_created_state.c.state_kind == state_kind)
@@ -310,14 +321,14 @@ def list_reviewer_created_state_scaffold(
                 ),
             )
         )
-    query = (
-        query.order_by(
-            hosted_reviewer_created_state.c.created_at,
-            hosted_reviewer_created_state.c.reviewer_state_id,
-        )
-        .limit(limit)
-        .offset(offset)
+    query = query.order_by(
+        hosted_reviewer_created_state.c.created_at,
+        hosted_reviewer_created_state.c.reviewer_state_id,
     )
+    if limit is not None:
+        query = query.limit(limit)
+    if offset:
+        query = query.offset(offset)
     return tuple(_read_model_from_row(row) for row in connection.execute(query).mappings().all())
 
 
