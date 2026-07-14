@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import re
+import subprocess
+from collections.abc import Iterable
 from pathlib import Path
 
 REQUIRED = [
@@ -691,6 +694,10 @@ STALE_ROADMAP_CURRENT_PRIORITIES = {
     ],
 }
 
+USER_SPECIFIC_REPOSITORY_PATH = re.compile(
+    r"(?i)c:[\\/]+users[\\/]+andre[\\/]+onedrive[\\/]+desktop[\\/]+repos[\\/]+"
+)
+
 
 def find_missing_files(root: Path = Path(".")) -> list[str]:
     return [item for item in REQUIRED if not (root / item).exists()]
@@ -737,6 +744,34 @@ def find_stale_roadmap_priorities(root: Path = Path(".")) -> list[str]:
     return found
 
 
+def find_user_specific_repository_paths(
+    root: Path = Path("."), tracked_files: Iterable[str] | None = None
+) -> list[str]:
+    if tracked_files is None:
+        result = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z"],
+            check=True,
+            capture_output=True,
+        )
+        tracked_files = result.stdout.decode("utf-8").split("\0")
+
+    found = []
+    for relative_path in tracked_files:
+        if not relative_path:
+            continue
+        path = root / relative_path
+        if not path.is_file():
+            continue
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except UnicodeDecodeError:
+            continue
+        for line_number, line in enumerate(lines, start=1):
+            if USER_SPECIFIC_REPOSITORY_PATH.search(line):
+                found.append(f"{Path(relative_path).as_posix()}:{line_number}")
+    return found
+
+
 def _markdown_section(content: str, heading: str) -> str:
     marker = f"## {heading}"
     start = content.find(marker)
@@ -771,6 +806,14 @@ def main() -> None:
         raise SystemExit(
             "Stale completed roadmap priorities found: "
             + "; ".join(stale_roadmap_priorities)
+        )
+
+    user_specific_repository_paths = find_user_specific_repository_paths()
+    if user_specific_repository_paths:
+        raise SystemExit(
+            "User-specific absolute repository paths found; replace the local "
+            "repository prefix with <Repo Path>\\: "
+            + "; ".join(user_specific_repository_paths)
         )
 
     print("Documentation check passed.")
