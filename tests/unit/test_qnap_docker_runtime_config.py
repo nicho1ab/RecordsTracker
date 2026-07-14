@@ -792,6 +792,17 @@ def test_dockerfile_preserves_no_secret_portable_app_start() -> None:
     assert "CCLD_POSTGRES_PASSWORD" not in dockerfile
 
 
+def test_dockerfile_packages_runnable_hosted_ccld_backfill_entry_point() -> None:
+    dockerfile = read_repo_text("Dockerfile")
+    wrapper = read_repo_text("scripts/backfill-hosted-ccld-data.ps1")
+    entry_point = read_repo_text("scripts/backfill_hosted_ccld_data.py")
+
+    assert "COPY scripts/backfill_hosted_ccld_data.py ./scripts/" in dockerfile
+    assert '@("scripts/backfill_hosted_ccld_data.py"' in wrapper
+    assert 'if __name__ == "__main__":' in entry_point
+    assert "raise SystemExit(main())" in entry_point
+
+
 def test_qnap_runtime_doc_keeps_qnap_specifics_out_of_app_code() -> None:
     guide = read_repo_text("docs/developer/qnap-docker-runtime.md")
     normalized_guide = " ".join(guide.split())
