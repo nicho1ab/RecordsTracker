@@ -157,6 +157,10 @@ reuses stable complaint deduplication, facility-priority ordering factors,
 substantiated/equivalent and serious-topic classification, monthly anomaly
 rules, and aggregate source-coverage semantics while linking counts to reviewer
 detail and carrying facility/date context into existing review routes,
+a per-facility attorney review hub at `/ccld/facilities/detail` that consumes
+those same governed calculations for one Facility ID, adds separately read
+reviewer-created status/note summaries, and reconciles every aggregate to stable
+complaint-detail links without introducing another facility-detail route,
 a thin browser-accessible
 local/test CCLD facility lookup page at `/ccld/facilities` that reads committed
 or configured full local/test CCLD program facility reference CSV rows, searches

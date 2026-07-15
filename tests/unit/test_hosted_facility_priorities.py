@@ -17,9 +17,20 @@ from ccld_complaints.hosted_app.auth import (
     load_hosted_auth_runtime_config,
 )
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
+    CCLD_FACILITY_REVIEW_HUB_PATH,
     CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
 )
+from ccld_complaints.hosted_app.ccld_record_request_ui import (
+    ccld_record_request_context_for_reviewer_context,
+)
 from ccld_complaints.hosted_app.ccld_retrieval_jobs import hosted_ccld_retrieval_jobs
+from ccld_complaints.hosted_app.facility_reference_preload import (
+    hosted_facility_reference_metadata,
+    hosted_facility_reference_records,
+)
+from ccld_complaints.hosted_app.reviewer_created_state import (
+    hosted_reviewer_created_state,
+)
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
     REVIEWER_UI_FACILITY_PRIORITIES_PATH,
@@ -387,6 +398,12 @@ def test_facility_intelligence_filters_reconciles_and_preserves_drilldown_contex
     assert "Open complaint record A-2" not in html
     assert "05/01/2026" in html
     assert "/ccld/facilities/detail?facility_number=100001" in html
+    assert "origin=facility_intelligence" in html
+    assert "date_dimension=complaint_received_date" in html
+    assert "finding=Substantiated" in html
+    assert "serious_topic=Supervision%2Btopic" not in html
+    assert "serious_topic=Supervision+topic" in html
+    assert "coverage=available" in html
     assert "Open filtered complaint queue" in html
     assert "start_date=2026-05-01" in html
     assert "end_date=2026-05-31" in html
@@ -480,14 +497,23 @@ def test_facility_intelligence_get_is_read_only_and_production_has_no_fixture_fa
         auth_runtime_config=auth_runtime_config,
         page_data_mode="postgres",
     )
+    hub_status, _hub_type, hub_body = route_response(
+        f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098",
+        auth_runtime_config=auth_runtime_config,
+        page_data_mode="postgres",
+    )
     html = body.decode("utf-8")
     production_html = production_body.decode("utf-8")
+    hub_html = hub_body.decode("utf-8")
     assert status == 200
     assert after == before
     assert "Read Only Center" in html
     assert production_status in {401, 503}
     assert "A. MIRIAM JAMISON CHILDREN" not in production_html
     assert "Fixture/mock demo" not in production_html
+    assert hub_status in {401, 503}
+    assert "A. MIRIAM JAMISON CHILDREN" not in hub_html
+    assert "Synthetic Orchard" not in hub_html
 
 
 def test_facility_intelligence_accessible_structure_and_safe_language() -> None:
@@ -524,12 +550,212 @@ def test_facility_intelligence_accessible_structure_and_safe_language() -> None:
     assert "hidden score" in normalized
 
 
+def test_facility_hub_reuses_intelligence_aggregates_state_and_tie_order() -> None:
+    with _priority_connection() as connection:
+        _insert_facility_bundle(
+            connection,
+            facility_number="100001",
+            facility_name="Alpha Center",
+            facility_type="Children's Center",
+            county="Kern",
+            complaints=(
+                _complaint("A-2", "2026-05-03", "Unsubstantiated"),
+                _complaint(
+                    "A-1",
+                    "2026-05-03",
+                    "Substantiated",
+                    delay_days=120,
+                    serious=True,
+                ),
+                _complaint("A-3", "2026-05-02", "Substantiated"),
+                _complaint(
+                    "A-4",
+                    "2026-04-01",
+                    "Unsubstantiated",
+                    source_url="",
+                ),
+            ),
+        )
+        _insert_reviewer_state(
+            connection,
+            reviewer_state_id="state:a-1-status",
+            source_record_key="complaint:ccld:complaint:A-1",
+            created_at="2026-07-01T12:00:00+00:00",
+            payload={
+                "payload_kind": "reviewer_status_scaffold",
+                "reviewer_status": "in_review",
+            },
+        )
+        _insert_reviewer_state(
+            connection,
+            reviewer_state_id="state:a-1-note",
+            source_record_key="complaint:ccld:complaint:A-1",
+            created_at="2026-07-01T12:01:00+00:00",
+            payload={
+                "payload_kind": "reviewer_note_scaffold",
+                "note_text": "Fixture note content must not render.",
+            },
+        )
+        reviewer_context = reviewer_ui_context_for_connection(connection)
+        before = _table_counts(connection)
+        status, content_type, body = route_response(
+            (
+                f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=100001"
+                "&origin=facility_intelligence"
+                "&date_dimension=complaint_received_date"
+                "&start_date=2026-04-01&end_date=2026-05-31"
+                "&coverage=partial"
+            ),
+            page_data_mode="postgres",
+            ccld_record_request_ui_context=(
+                ccld_record_request_context_for_reviewer_context(reviewer_context)
+            ),
+        )
+        after = _table_counts(connection)
+
+    html = body.decode("utf-8")
+    normalized = " ".join(html.casefold().split())
+    all_start = html.index('id="facility-hub-contributors-all"')
+    all_end = html.index("</details>", all_start)
+    all_contributors = html[all_start:all_end]
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert after == before
+    assert "<h2 id=\"facility-hub-heading\">" in html
+    assert ">Alpha Center<button" in html
+    assert html.count("Primary facility facts") == 1
+    assert html.count("<dt>Facility type</dt>") == 1
+    assert "Opened from</dt><dd>Facility review intelligence" in html
+    assert "04/01/2026 to 05/31/2026" in html
+    assert "Source coverage</dt><dd>Partial" in html
+    assert "4</a></strong><span>Deduplicated complaints" in html
+    assert "04/01/2026" in html
+    assert "05/03/2026" in html
+    assert "Substantiated: 2 exact complaint record(s)" in html
+    assert "Unsubstantiated: 2 exact complaint record(s)" in html
+    assert "Supervision topic: 1 exact complaint record(s)" in html
+    assert "Trend or anomaly summary" in html
+    assert "Increased activity" in html
+    assert "Partial: " in html
+    assert "3 with a CCLD report" in html
+    assert "1 without a report link" in html
+    assert "In review: 1 complaint record(s)" in html
+    assert "Not started: 3 complaint record(s)" in html
+    assert "1 note(s) across 1 complaint record(s)" in html
+    assert "Open recommended complaint A-1" in html
+    assert html.index("Open recommended complaint A-1") < html.index(
+        "Open complaint record A-2"
+    )
+    for control_number in ("A-1", "A-2", "A-3", "A-4"):
+        assert f"Open complaint record {control_number}" in all_contributors
+    assert all_contributors.count("120+ day gap") == 1
+    assert all_contributors.count("Supervision topic") == 1
+    assert 'aria-label="Copy Facility ID"' in html
+    assert 'aria-label="Copy complaint or control number"' in html
+    assert 'aria-label="Copy complaint date"' in html
+    assert 'aria-label="Copy complaint finding"' in html
+    assert 'aria-label="Copy reviewer-created status"' in html
+    assert 'aria-label="Copy original CCLD report URL"' in html
+    assert 'class="inline-glossary-term"' in html
+    assert "border-bottom: 1px dotted currentColor" in html
+    assert (
+        'class="is-active" aria-current="page" href="/ccld/facilities">Facilities</a>'
+        in html
+    )
+    assert "Fixture note content must not render" not in html
+    assert "raw_sha256" not in html
+    assert "connector_name" not in html
+    assert "tests/fixtures" not in html
+    assert "local/test" not in normalized
+    assert "source_record_key" not in html
+
+
+def test_facility_hub_renders_complaint_context_without_directory_row() -> None:
+    with _priority_connection() as connection:
+        hosted_facility_reference_metadata.create_all(connection)
+        _insert_facility_reference_row(connection, facility_number="200002")
+        _insert_facility_bundle(
+            connection,
+            facility_number="157806098",
+            facility_name="Corpus Only Center",
+            facility_type="Children's Center",
+            county="Kern",
+            complaints=(
+                _complaint("C-1", "2026-05-03", "Substantiated"),
+            ),
+        )
+        reviewer_context = reviewer_ui_context_for_connection(connection)
+        ccld_context = ccld_record_request_context_for_reviewer_context(reviewer_context)
+
+        status, content_type, body = route_response(
+            (
+                f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098"
+                "&origin=facility_intelligence"
+                "&date_dimension=complaint_received_date"
+            ),
+            page_data_mode="postgres",
+            ccld_record_request_ui_context=ccld_context,
+        )
+        unknown_status, _unknown_type, unknown_body = route_response(
+            f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=999999999",
+            page_data_mode="postgres",
+            ccld_record_request_ui_context=ccld_context,
+        )
+
+    html = body.decode("utf-8")
+    unknown_html = unknown_body.decode("utf-8")
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Facility-directory result not found" not in html
+    assert "Facility-directory record not available" in html
+    assert "Review summary" in html
+    assert "Review next" in html
+    assert "Opened from</dt><dd>Facility review intelligence" in html
+    assert "complaint received date" in html.casefold()
+    assert "157806098" in html
+    assert "Different Directory Facility" not in html
+    assert "Synthetic Orchard" not in html
+    assert "A. MIRIAM JAMISON CHILDREN" not in html
+    assert "Fixture/mock demo" not in html
+    assert unknown_status == 200
+    assert "Facility-directory result not found" in unknown_html
+    assert "Review summary" not in unknown_html
+    assert "Review next" not in unknown_html
+
+
 def _priority_connection() -> Connection:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     hosted_seeded_import_metadata.create_all(engine)
     connection = engine.connect()
     _insert_import_batch(connection, TEST_SCOPE.scope_id)
     return connection
+
+
+def _insert_reviewer_state(
+    connection: Connection,
+    *,
+    reviewer_state_id: str,
+    source_record_key: str,
+    created_at: str,
+    payload: Mapping[str, Any],
+) -> None:
+    connection.execute(
+        hosted_reviewer_created_state.insert().values(
+            reviewer_state_id=reviewer_state_id,
+            source_record_key=source_record_key,
+            scope_type=TEST_SCOPE.scope_type,
+            scope_id=TEST_SCOPE.scope_id,
+            state_kind="review_item_state_scaffold",
+            state_payload=dict(payload),
+            created_at=created_at,
+            created_by_provider_subject="fixture-reviewer",
+            created_by_provider_issuer="fixture-issuer",
+            created_by_display_name="Fixture Reviewer",
+            created_by_actor_category="tester",
+            authorization_permission="reviewer_state_write",
+        )
+    )
 
 
 def _insert_import_batch(connection: Connection, import_batch_id: str) -> None:
@@ -544,6 +770,27 @@ def _insert_import_batch(connection: Connection, import_batch_id: str) -> None:
             record_counts={},
             warnings=[],
             errors=[],
+        )
+    )
+
+
+def _insert_facility_reference_row(
+    connection: Connection,
+    *,
+    facility_number: str,
+) -> None:
+    connection.execute(
+        hosted_facility_reference_records.insert().values(
+            source_resource_id="approved-directory-resource",
+            facility_number=facility_number,
+            facility_name="Different Directory Facility",
+            source_resource_name="Approved facility directory",
+            source_dataset_slug="approved-facility-directory",
+            source_dataset_url=(
+                "https://data.ca.gov/dataset/approved-facility-directory"
+            ),
+            source_accessed_at="2026-07-01T12:00:00+00:00",
+            original_row_json={"facility_number": facility_number},
         )
     )
 

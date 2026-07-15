@@ -6,6 +6,7 @@ import csv
 import html
 import json
 import os
+import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -344,6 +345,24 @@ class CcldReviewNextRecommendation:
 
 
 @dataclass(frozen=True)
+class CcldFacilityComplaintContext:
+    source_record_key: str
+    stable_complaint_id: str
+    complaint_control_number: str
+    activity_date: str
+    finding: str
+    detail_href: str
+    source_url_href: str = ""
+    serious_topics: tuple[str, ...] = ()
+    substantiated: bool = False
+    strongest_delay_days: int = 0
+    missing_dates: bool = False
+    source_available: bool = False
+    reviewer_status: str = "not_started"
+    reviewer_note_count: int = 0
+
+
+@dataclass(frozen=True)
 class CcldFacilityReviewContext:
     loaded_complaint_record_count: int = 0
     start_date: str = ""
@@ -358,6 +377,16 @@ class CcldFacilityReviewContext:
     reviewer_note_record_count: int = 0
     review_next_label: str = ""
     review_next_recommendations: tuple[CcldReviewNextRecommendation, ...] = ()
+    date_dimension: str = "complaint_received_date"
+    date_dimension_label: str = "Complaint received date"
+    coverage_status: str = "unavailable"
+    source_unavailable_count: int = 0
+    serious_topic_counts: tuple[tuple[str, int], ...] = ()
+    anomaly_cues: tuple[str, ...] = ()
+    complaints: tuple[CcldFacilityComplaintContext, ...] = ()
+    reviewer_state_available: bool = True
+    origin: str = ""
+    active_filters: tuple[tuple[str, str], ...] = ()
 
     @property
     def has_loaded_context(self) -> bool:
@@ -633,19 +662,25 @@ def render_ccld_facility_review_hub_page(
 ) -> str:
     reference_source = reference_source or load_active_ccld_facility_reference()
     facility_number = facility_number.strip()
+    review_context = review_context or CcldFacilityReviewContext()
     matching_records = tuple(
         record
         for record in reference_source.records
         if record.facility_number == facility_number
     )
-    signals_summary = load_active_facility_review_signals().summary_for_facility(
-        facility_number
+    signals_summary = (
+        None
+        if reference_source.source_kind.startswith("postgres_")
+        else load_active_facility_review_signals().summary_for_facility(facility_number)
     )
     if not facility_number or not matching_records:
-        if facility_number and signals_summary is not None:
+        if facility_number and (
+            review_context.has_loaded_context or signals_summary is not None
+        ):
             return _render_signal_only_facility_hub_page(
-                signals_summary,
-                review_context=review_context or CcldFacilityReviewContext(),
+                facility_number,
+                signals_summary=signals_summary,
+                review_context=review_context,
             )
         return _page(
             title="Facility review hub not found",
@@ -653,27 +688,73 @@ def render_ccld_facility_review_hub_page(
             main=_render_facility_hub_not_found(facility_number),
         )
     record = matching_records[0]
-    review_context = review_context or CcldFacilityReviewContext()
     return _page(
         title="Facility review hub",
         heading="Facility review hub",
         main=f"""    {_render_facility_identity_and_core_facts(record, review_context)}
     {_render_facility_pattern_review_summary(record, review_context)}
     {_render_review_next_section(review_context)}
+    {_render_facility_contributor_sections(review_context)}
     {_render_facility_review_signals_section(signals_summary)}
     {_render_facility_hub_actions(record, review_context)}
     {_render_secondary_facility_facts(record)}
+    {_render_facility_hub_limitations(review_context)}
     """,
     )
 
 
 def _render_signal_only_facility_hub_page(
-    summary: FacilityReviewSignalsSummary,
+    facility_number: str,
     *,
+    signals_summary: FacilityReviewSignalsSummary | None,
     review_context: CcldFacilityReviewContext,
 ) -> str:
-    record = _facility_record_from_signal_summary(summary)
-    facility_label = _safe_priority_text(summary.facility_name or summary.facility_number)
+    record = (
+        _facility_record_from_signal_summary(signals_summary)
+        if signals_summary is not None
+        else CcldFacilityLookupRecord(
+            facility_number=facility_number,
+            facility_name="",
+            city="",
+            state="",
+            county="",
+            zip_code="",
+            facility_type="",
+            program_type="",
+            capacity="",
+            status="",
+            closed_date="",
+        )
+    )
+    facility_label = _safe_priority_text(
+        signals_summary.facility_name if signals_summary is not None else facility_number
+    )
+    signal_context_message = (
+        "Uploaded summary signals exist. Review loaded complaint records "
+        "separately from directory lookup."
+        if signals_summary is not None
+        else (
+            "Loaded complaint records exist. Directory-sourced facility facts are "
+            "not available for this Facility ID."
+        )
+    )
+    signals_section = (
+        _render_facility_review_signals_section(signals_summary)
+        if signals_summary is not None
+        else ""
+    )
+    facility_label_copy_aria = (
+        "Copy facility name" if signals_summary is not None else "Copy Facility ID"
+    )
+    loaded_context_intro = (
+        "Facility-directory record not available. Uploaded public summary cues and "
+        "loaded complaint records can still guide the next review step."
+        if signals_summary is not None
+        else (
+            "Facility-directory record not available. Loaded complaint records can "
+            "still guide the next review step."
+        )
+    )
     if not review_context.has_loaded_context:
         return _page(
             title="Facility summary",
@@ -685,7 +766,7 @@ def _render_signal_only_facility_hub_page(
                 <p class="launch-value">Facility-directory record not available. Uploaded public summary cues can still guide the next review step.</p>
                 <dl class="summary-list">
                     <dt>Facility ID</dt>
-                    <dd>{_render_copyable_value("Copy Facility ID", summary.facility_number)}</dd>
+                    <dd>{_render_copyable_value("Copy Facility ID", facility_number)}</dd>
                 </dl>
             </div>
         </section>
@@ -695,8 +776,10 @@ def _render_signal_only_facility_hub_page(
         </section>
         {_render_facility_pattern_review_summary(record, review_context)}
         {_render_review_next_section(review_context)}
-        {_render_facility_review_signals_section(summary)}
+        {_render_facility_contributor_sections(review_context)}
+        {signals_section}
         {_render_facility_hub_actions(record, review_context)}
+        {_render_facility_hub_limitations(review_context)}
         {_render_copy_control_script()}
         """,
         )
@@ -706,22 +789,24 @@ def _render_signal_only_facility_hub_page(
     main=f"""    <section class="hero-card attorney-hero" aria-labelledby="signal-only-facility-hub-heading">
             <div>
                 <p class="launch-kicker">Facility summary</p>
-                <h2 id="signal-only-facility-hub-heading">{_render_copyable_value("Copy facility name", facility_label)}</h2>
-                <p class="launch-value">Facility-directory record not available. Uploaded public summary cues and loaded complaint records can still guide the next review step.</p>
+                <h2 id="signal-only-facility-hub-heading">{_render_copyable_value(facility_label_copy_aria, facility_label)}</h2>
+                <p class="launch-value">{loaded_context_intro}</p>
                 <dl class="summary-list">
                     <dt>Facility ID</dt>
-                    <dd>{_render_copyable_value("Copy Facility ID", summary.facility_number)}</dd>
+                    <dd>{_render_copyable_value("Copy Facility ID", facility_number)}</dd>
                 </dl>
             </div>
         </section>
         <section aria-labelledby="signal-only-context-heading">
             <h2 id="signal-only-context-heading">Facility-directory record not available</h2>
-            <p>Uploaded summary signals exist. Review loaded complaint records separately from directory lookup.</p>
+            <p>{signal_context_message}</p>
         </section>
         {_render_facility_pattern_review_summary(record, review_context)}
         {_render_review_next_section(review_context)}
-        {_render_facility_review_signals_section(summary)}
+        {_render_facility_contributor_sections(review_context)}
+        {signals_section}
         {_render_facility_hub_actions(record, review_context)}
+        {_render_facility_hub_limitations(review_context)}
         {_render_copy_control_script()}""",
     )
 
@@ -1468,6 +1553,17 @@ def _render_copyable_value(accessible_label: str, value: str) -> str:
     )
 
 
+def _render_copy_button(accessible_label: str, value: str) -> str:
+    if not value:
+        return ""
+    return (
+        f'<span class="copyable-value"><button class="copy-icon-button" type="button" '
+        f'data-copy-value="{_escape(value)}" aria-label="{_escape(accessible_label)}" '
+        f'title="{_escape(accessible_label)}">{_clipboard_icon_svg()}</button>'
+        '<span class="copy-feedback" data-copy-status aria-live="polite"></span></span>'
+    )
+
+
 def _clipboard_icon_svg() -> str:
     return (
         '<svg aria-hidden="true" viewBox="0 0 24 24" focusable="false" width="16" height="16">'
@@ -1508,8 +1604,8 @@ def _display_facility_status_code(status: str) -> str:
                 return status
         label = _FACILITY_STATUS_CODE_LABELS.get(status)
         if not label:
-                return status
-        return f"{status} ({label})"
+                return "Status label not available"
+        return label
 
 
 def _render_facility_hub_not_found(facility_number: str) -> str:
@@ -1532,12 +1628,21 @@ def _render_facility_pattern_review_summary(
         record: CcldFacilityLookupRecord,
         review_context: CcldFacilityReviewContext,
 ) -> str:
+        if review_context.complaints:
+                return _render_governed_facility_review_summary(record, review_context)
         request_href = _facility_request_href(record)
         queue_href = f"{REVIEWER_UI_RECORDS_PATH}?{urlencode({'q': record.facility_number})}"
         if not review_context.has_loaded_context:
+                empty_message = (
+                    review_context.source_label
+                    if review_context.source_label != "Loaded source-derived complaint records"
+                    else "No loaded complaint records are currently available for this facility in the review context."
+                )
+                origin_markup = _render_facility_origin_context(review_context)
                 return f"""    <section class="summary-card" aria-labelledby="facility-pattern-summary-heading">
             <h2 id="facility-pattern-summary-heading">Review summary</h2>
-            <p>No loaded complaint records are currently available for this facility in the review context. This is not a public-source completeness conclusion.</p>
+            <p>{_escape(empty_message)} This is not a public-source completeness conclusion.</p>
+            {origin_markup}
             <dl class="summary-list">
                 <dt>Loaded complaint records</dt>
                 <dd>0</dd>
@@ -1590,14 +1695,147 @@ def _render_facility_pattern_review_summary(
         </section>"""
 
 
+def _render_governed_facility_review_summary(
+    record: CcldFacilityLookupRecord,
+    review_context: CcldFacilityReviewContext,
+) -> str:
+    request_href = _facility_request_href(record)
+    finding_items = "\n".join(
+        f'                  <li><a href="#{_facility_contributor_id("finding", label)}">'
+        f'{_escape(_display_value(label))}: {count} exact complaint record(s)</a></li>'
+        for label, count in review_context.finding_counts
+    ) or "                  <li>Finding values are not available.</li>"
+    serious_items = "\n".join(
+        f'                  <li><a href="#{_facility_contributor_id("serious", label)}">'
+        f'{_escape(label)}: {count} exact complaint record(s)</a></li>'
+        for label, count in review_context.serious_topic_counts
+    ) or "                  <li>No governed serious-review category is present in these complaint records.</li>"
+    status_items = "\n".join(
+        f'                  <li><a href="#{_facility_contributor_id("status", label)}">'
+        f'{_escape(_reviewer_status_label(label))}: {count} complaint record(s)</a></li>'
+        for label, count in review_context.reviewer_status_counts
+    )
+    if not review_context.reviewer_state_available:
+        status_items = "                  <li>Reviewer-created status and note counts are unavailable.</li>"
+    note_count = sum(item.reviewer_note_count for item in review_context.complaints)
+    note_records = sum(item.reviewer_note_count > 0 for item in review_context.complaints)
+    notes_markup = (
+        f'<a href="#facility-hub-contributors-notes">{note_count} note(s) across '
+        f'{note_records} complaint record(s)</a>'
+        if review_context.reviewer_state_available and note_records
+        else (
+            "0 notes"
+            if review_context.reviewer_state_available
+            else "Reviewer-created note counts are unavailable."
+        )
+    )
+    origin_markup = _render_facility_origin_context(review_context)
+    timeline = _render_facility_activity_timeline(review_context)
+    anomaly_markup = (
+        '<ul class="compact-list">'
+        + "".join(
+            f'<li><a href="#facility-hub-contributors-trend">{_escape(cue)}</a></li>'
+            for cue in review_context.anomaly_cues
+        )
+        + "</ul>"
+        if review_context.anomaly_cues
+        else "No governed monthly anomaly cue is present for the relevant dated records."
+    )
+    coverage_label = review_context.coverage_status.title()
+    return f"""    <section class="summary-card" aria-labelledby="facility-pattern-summary-heading">
+      <h2 id="facility-pattern-summary-heading">Review summary</h2>
+      <p>This summary reconciles deduplicated loaded complaint records to the exact records below. Source facts and reviewer-created state remain separate.</p>
+      {origin_markup}
+      <div class="form-actions" aria-label="Primary facility review actions">
+        <a class="button" href="{_escape(review_context.complaints[0].detail_href)}">Open recommended complaint</a>
+        <a class="button button-secondary" href="#facility-hub-contributors-all">Open exact contributing complaints</a>
+        <a class="button button-secondary" href="{_escape(request_href)}">Request records</a>
+      </div>
+      <div class="dense-fact-row" aria-label="Facility complaint summary">
+        <div class="stat-card"><strong><a href="#facility-hub-contributors-all">{review_context.loaded_complaint_record_count}</a></strong><span>Deduplicated complaints</span></div>
+        <div class="stat-card"><strong><a href="#facility-hub-contributors-source-available">{review_context.source_traceability_count}</a></strong><span>CCLD reports available</span></div>
+        <div class="stat-card"><strong><a href="#facility-hub-contributors-review-flags">{review_context.delay_review_record_count + review_context.missing_date_record_count}</a></strong><span>Complaint records with review flags</span></div>
+      </div>
+      {timeline}
+      <dl class="summary-list">
+        <dt>{_inline_definition("Finding", "The outcome or status shown in a public complaint record.", "hub-finding")} distribution</dt>
+        <dd><ul class="compact-list">
+{finding_items}
+        </ul></dd>
+        <dt>{_inline_definition("Serious-review category", "A governed source category or cautious keyword-assisted review cue; it is not a legal conclusion.", "hub-serious-category")}</dt>
+        <dd><ul class="compact-list">
+{serious_items}
+        </ul></dd>
+        <dt>Trend or anomaly summary</dt>
+        <dd>{anomaly_markup}</dd>
+        <dt>{_inline_definition("Source coverage", "Whether contributing loaded complaint records include an original public-report link.", "hub-source-coverage")}</dt>
+        <dd>{_escape(coverage_label)}: <a href="#facility-hub-contributors-source-available">{review_context.source_traceability_count} with a CCLD report</a>; <a href="#facility-hub-contributors-source-unavailable">{review_context.source_unavailable_count} without a report link</a>.</dd>
+        <dt>Reviewer-created status counts</dt>
+        <dd><ul class="compact-list">
+{status_items}
+        </ul></dd>
+        <dt>Reviewer-created note count</dt>
+        <dd>{notes_markup}</dd>
+      </dl>
+    </section>"""
+
+
+def _render_facility_origin_context(
+    review_context: CcldFacilityReviewContext,
+) -> str:
+    if not review_context.active_filters:
+        return ""
+    items = "\n".join(
+        f"          <dt>{_escape(label)}</dt><dd>{_escape(value)}</dd>"
+        for label, value in review_context.active_filters
+    )
+    return f"""      <details class="technical-details" open>
+        <summary>Current review context</summary>
+        <dl class="summary-list">
+{items}
+        </dl>
+      </details>"""
+
+
+def _render_facility_activity_timeline(
+    review_context: CcldFacilityReviewContext,
+) -> str:
+    dated = tuple(
+        item for item in review_context.complaints if item.activity_date != "unknown"
+    )
+    if not dated:
+        return """      <section class="overview-timeline" aria-labelledby="facility-activity-range-heading">
+        <h3 id="facility-activity-range-heading">Relevant complaint date range</h3>
+        <p>Date not available for the selected date field.</p>
+      </section>"""
+    milestones = [("Earliest", review_context.start_date)]
+    if review_context.end_date != review_context.start_date:
+        milestones.append(("Latest", review_context.end_date))
+    items = "\n".join(
+        f"          <li class=\"timeline-item\"><span class=\"timeline-marker timeline-marker--activity rt-timeline__marker\" aria-hidden=\"true\"></span><span class=\"timeline-label rt-timeline__label\">{label}</span><strong class=\"rt-timeline__date\">{_render_copyable_value(f'Copy {label.casefold()} relevant date', _display_date(value))}</strong></li>"
+        for label, value in milestones
+    )
+    return f"""      <section class="overview-timeline" aria-labelledby="facility-activity-range-heading">
+        <h3 id="facility-activity-range-heading"><a href="#facility-hub-contributors-dates">Relevant { _escape(review_context.date_dimension_label.casefold()) } range</a></h3>
+        <div class="rt-timeline rt-timeline--linear">
+          <div class="rt-timeline__line" aria-hidden="true"></div>
+          <ol class="timeline-list timeline-list-linear rt-timeline__milestones" aria-label="Relevant complaint date range">
+{items}
+          </ol>
+        </div>
+      </section>"""
+
+
 def _render_review_next_section(
         review_context: CcldFacilityReviewContext,
 ) -> str:
+        if review_context.complaints:
+                return _render_governed_review_next(review_context)
         if not review_context.has_loaded_context or not review_context.review_next_recommendations:
                 return """    <section class="empty-state-card" aria-labelledby="review-next-heading">
             <h2 id="review-next-heading">Review next</h2>
             <p>No loaded records have review-next signals in this context.</p>
-            <p>This only reflects the currently loaded local/test records and does not imply source completeness or absence of problems.</p>
+            <p>This only reflects the currently loaded records and does not imply source completeness or absence of problems.</p>
         </section>"""
         items = "\n".join(
                 _render_review_next_item(item, index)
@@ -1610,6 +1848,37 @@ def _render_review_next_section(
 {items}
             </ol>
         </section>"""
+
+
+def _render_governed_review_next(
+    review_context: CcldFacilityReviewContext,
+) -> str:
+    item = review_context.complaints[0]
+    label = (
+        item.complaint_control_number
+        if item.complaint_control_number != "unknown"
+        else item.stable_complaint_id
+    )
+    flags = _render_facility_complaint_flags(item)
+    date_text = _display_date(item.activity_date) if item.activity_date != "unknown" else "Date not available"
+    return f"""    <section class="summary-card" aria-labelledby="review-next-heading">
+      <h2 id="review-next-heading">Review next</h2>
+      <p><strong>{_render_copyable_value("Copy recommended complaint or control number", label)}</strong></p>
+      <p>Recommended because it has the most recent supported {_escape(review_context.date_dimension_label.casefold())}. When dates match or are unavailable, the stable source-derived record identity provides the deterministic tie order.</p>
+      <dl class="summary-list">
+        <dt>Date used</dt>
+        <dd>{_render_copyable_value("Copy recommended complaint date", date_text)}</dd>
+        <dt>Finding</dt>
+        <dd>{_render_copyable_value("Copy recommended complaint finding", _display_value(item.finding))}</dd>
+        <dt>Reviewer-created status</dt>
+        <dd>{_render_copyable_value("Copy recommended complaint reviewer status", _reviewer_status_label(item.reviewer_status))}</dd>
+      </dl>
+      {flags}
+      <div class="form-actions">
+        <a class="button" href="{_escape(item.detail_href)}">Open recommended complaint {_escape(label)}</a>
+        <a class="button button-secondary" href="#facility-hub-contributors-all">Open exact contributing complaints</a>
+      </div>
+    </section>"""
 
 
 def _render_review_next_item(
@@ -1648,6 +1917,201 @@ def _review_next_summary_label(review_context: CcldFacilityReviewContext) -> str
         if review_context.review_next_recommendations:
                 return review_context.review_next_recommendations[0].label
         return _display_value(review_context.review_next_label)
+
+
+def _render_facility_contributor_sections(
+    review_context: CcldFacilityReviewContext,
+) -> str:
+    complaints = review_context.complaints
+    if not complaints:
+        return ""
+    groups: list[tuple[str, str, tuple[CcldFacilityComplaintContext, ...]]] = [
+        (
+            "facility-hub-contributors-all",
+            "All deduplicated contributing complaint records",
+            complaints,
+        ),
+        (
+            "facility-hub-contributors-dates",
+            f"Complaint records contributing to the {review_context.date_dimension_label.casefold()} range",
+            tuple(item for item in complaints if item.activity_date != "unknown"),
+        ),
+        (
+            "facility-hub-contributors-review-flags",
+            "Complaint records with review flags",
+            tuple(
+                item
+                for item in complaints
+                if item.strongest_delay_days or item.missing_dates or item.serious_topics
+            ),
+        ),
+    ]
+    groups.extend(
+        (
+            _facility_contributor_id("finding", label),
+            f"Finding: {label}",
+            tuple(item for item in complaints if item.finding == label),
+        )
+        for label, _count in review_context.finding_counts
+    )
+    groups.extend(
+        (
+            _facility_contributor_id("serious", topic),
+            f"Serious-review category: {topic}",
+            tuple(item for item in complaints if topic in item.serious_topics),
+        )
+        for topic, _count in review_context.serious_topic_counts
+    )
+    if review_context.anomaly_cues:
+        groups.append(
+            (
+                "facility-hub-contributors-trend",
+                "Dated complaint records contributing to the monthly trend summary",
+                tuple(item for item in complaints if item.activity_date != "unknown"),
+            )
+        )
+    groups.extend(
+        (
+            section_id,
+            label,
+            tuple(item for item in complaints if predicate(item)),
+        )
+        for section_id, label, predicate in (
+            (
+                "facility-hub-contributors-source-available",
+                "Complaint records with an original CCLD report link",
+                lambda item: item.source_available,
+            ),
+            (
+                "facility-hub-contributors-source-unavailable",
+                "Complaint records without an original CCLD report link",
+                lambda item: not item.source_available,
+            ),
+        )
+    )
+    if review_context.reviewer_state_available:
+        groups.extend(
+            (
+                _facility_contributor_id("status", status),
+                f"Reviewer-created status: {_reviewer_status_label(status)}",
+                tuple(item for item in complaints if item.reviewer_status == status),
+            )
+            for status, _count in review_context.reviewer_status_counts
+        )
+        if any(item.reviewer_note_count for item in complaints):
+            groups.append(
+                (
+                    "facility-hub-contributors-notes",
+                    "Complaint records with reviewer-created notes",
+                    tuple(item for item in complaints if item.reviewer_note_count),
+                )
+            )
+    rendered_groups = "\n".join(
+        _render_facility_contributor_group(section_id, label, records)
+        for section_id, label, records in groups
+    )
+    return f"""    <section aria-labelledby="facility-contributors-heading">
+      <h2 id="facility-contributors-heading">Exact contributing complaints</h2>
+      <p>Each summary value above links to the deduplicated complaint records used for that value.</p>
+{rendered_groups}
+    </section>"""
+
+
+def _render_facility_contributor_group(
+    section_id: str,
+    label: str,
+    complaints: tuple[CcldFacilityComplaintContext, ...],
+) -> str:
+    items = "\n".join(
+        _render_facility_contributor_item(item) for item in complaints
+    ) or "          <li>No exact complaint records contribute to this value.</li>"
+    return f"""      <details id="{_escape(section_id)}" class="technical-details">
+        <summary>{_escape(label)} ({len(complaints)})</summary>
+        <ul class="compact-list contributor-list">
+{items}
+        </ul>
+      </details>"""
+
+
+def _render_facility_contributor_item(
+    item: CcldFacilityComplaintContext,
+) -> str:
+    label = (
+        item.complaint_control_number
+        if item.complaint_control_number != "unknown"
+        else item.stable_complaint_id
+    )
+    date_text = (
+        _display_date(item.activity_date)
+        if item.activity_date != "unknown"
+        else "Date not available"
+    )
+    source_markup = (
+        f'<a href="{_escape(item.source_url_href)}">Open original CCLD report for {_escape(label)}</a> '
+        f'{_render_copy_button("Copy original CCLD report URL", item.source_url_href)}'
+        if item.source_available and item.source_url_href
+        else "Original CCLD report link not available for this loaded complaint."
+    )
+    flags = _render_facility_complaint_flags(item)
+    note_text = (
+        f"{item.reviewer_note_count} reviewer-created note(s)"
+        if item.reviewer_status != "unavailable"
+        else "Reviewer-created note count unavailable"
+    )
+    return f"""          <li>
+            <p><a href="{_escape(item.detail_href)}">Open complaint record {_escape(label)}</a> {_render_copyable_value("Copy complaint or control number", label)}</p>
+            <dl class="summary-list">
+              <dt>Date used</dt><dd>{_render_copyable_value("Copy complaint date", date_text)}</dd>
+              <dt>Finding</dt><dd>{_render_copyable_value("Copy complaint finding", _display_value(item.finding))}</dd>
+              <dt>Reviewer-created status</dt><dd>{_render_copyable_value("Copy reviewer-created status", _reviewer_status_label(item.reviewer_status))}</dd>
+              <dt>Reviewer-created notes</dt><dd>{_escape(note_text)}</dd>
+              <dt>CCLD source</dt><dd>{source_markup}</dd>
+            </dl>
+            {flags}
+          </li>"""
+
+
+def _render_facility_complaint_flags(
+    item: CcldFacilityComplaintContext,
+) -> str:
+    labels: list[str] = []
+    if item.strongest_delay_days:
+        labels.append(f"{item.strongest_delay_days}+ day gap")
+    if item.missing_dates:
+        labels.append("Missing source date")
+    labels.extend(item.serious_topics)
+    if not labels:
+        return ""
+    badges = "".join(
+        f'<li><span class="review-chip">{_escape(label)}</span></li>'
+        for label in dict.fromkeys(labels)
+    )
+    return f'<ul class="flag-list" aria-label="Review flags">{badges}</ul>'
+
+
+def _facility_contributor_id(group: str, value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-") or "unknown"
+    return f"facility-hub-contributors-{group}-{slug}"
+
+
+def _inline_definition(term: str, definition: str, term_id: str) -> str:
+    return (
+        f'<dfn class="inline-glossary-term" tabindex="0" role="term" '
+        f'aria-description="{_escape(definition)}" title="{_escape(definition)}" '
+        f'data-definition="{_escape(definition)}" data-term-id="{_escape(term_id)}">'
+        f'{_escape(term)}</dfn>'
+    )
+
+
+def _render_facility_hub_limitations(
+    review_context: CcldFacilityReviewContext,
+) -> str:
+    if not review_context.complaints:
+        return ""
+    return """    <details class="technical-details">
+      <summary>Coverage and interpretation limits</summary>
+      <p>This page summarizes authorized loaded public records; it does not establish source completeness or a facility-wide conclusion. Missing and unavailable values remain distinct from zero. Review flags and serious-review categories are review cues, not legal conclusions.</p>
+    </details>"""
 
 
 def _render_facility_review_signals_section(
@@ -2007,6 +2471,8 @@ def _render_facility_hub_actions(
         record: CcldFacilityLookupRecord,
         review_context: CcldFacilityReviewContext,
 ) -> str:
+        if review_context.complaints:
+                return ""
         request_href = _facility_request_href(record)
         lookup_href = f"{CCLD_FACILITY_LOOKUP_PATH}?{urlencode({'q': record.facility_number})}"
         if review_context.has_loaded_context and review_context.has_date_context:

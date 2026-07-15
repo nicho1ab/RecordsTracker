@@ -23,15 +23,19 @@ through the CCLD-only review path in plain language:
 3. Choose a complaint date range and retrieve or show loaded local/test records.
 4. Work a facility/date-scoped review queue with progress counts, status
    filters, source-traceability cues, and suggested next-record guidance.
-5. Use the serious-topic worklist when attorney reviewers need governed
+5. Start across facilities in Facility Review Intelligence, then open a
+   Facility Review Hub for deduplicated complaint, finding, serious-review,
+   trend, source-coverage, reviewer-state, and recommended-next context linked
+   to exact complaint records.
+6. Use the serious-topic worklist when attorney reviewers need governed
    source-category and keyword-cue filters across loaded complaint records.
-6. Compare monthly or quarterly complaint trends for one facility or a filtered
+7. Compare monthly or quarterly complaint trends for one facility or a filtered
    facility group, with explicit coverage states and deterministic anomaly cues.
-7. Open reviewer detail to check source-derived values, source traceability,
+8. Open reviewer detail to check source-derived values, source traceability,
    source-confidence cues, and reviewer-created notes/statuses.
-8. Prepare a local/test packet preview or draft for manual review, browser copy,
+9. Prepare a local/test packet preview or draft for manual review, browser copy,
    or browser print after the reviewer confirms readiness cues.
-9. Send feedback when retrieval, queue order, source traceability, wording,
+10. Send feedback when retrieval, queue order, source traceability, wording,
    keyboard flow, packet readiness, or copy/print preparation is confusing.
 
 The local/test packet pages are preparation aids only. They are not legal

@@ -58,7 +58,6 @@ from ccld_complaints.hosted_app.reset_reload_dry_run import (
 from ccld_complaints.hosted_app.reviewer_created_state import hosted_reviewer_created_state
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
-    REVIEWER_UI_MATRIX_EXPORT_PATH,
     reviewer_ui_context_for_connection,
 )
 from ccld_complaints.hosted_app.seeded_import import (
@@ -1146,7 +1145,7 @@ def test_ccld_facility_review_hub_known_loaded_preloaded_example_renders(
     assert "77 REVIEW WAY, SAN JOSE, CA 95112" in html
     assert "San Jose Regional Office" in html
     assert "Status</dt>" in html
-    assert "<dd>3 (Licensed)</dd>" in html
+    assert "<dd>Licensed</dd>" in html
     assert "<dd>3</dd>" not in html
     assert "RES_STREET_ADDR" not in html
     assert "FAC_DO_DESC" not in html
@@ -1272,32 +1271,31 @@ def test_ccld_facility_review_hub_renders_signal_only_context_without_mutation(
     assert "Citation indicator present review cue" not in html
     assert "POC indicator present review cue" not in html
     assert "Review summary" in html
-    assert "These ordered review signals use loaded source-derived complaint records" in html
-    assert "1</strong><span>Loaded complaint records" in html
-    assert "0</strong><span>Delay-review records" in html
-    assert "0</strong><span>Missing-date records" in html
-    assert html.count("CCLD source availability") == 1
-    assert "1 of 1 loaded complaint record(s) have source traceability available." in html
-    assert "Unsubstantiated: 1" in html
-    assert "Not started: 1" in html
-    assert "0 loaded record(s) have reviewer-created note rows" in html
+    assert "reconciles deduplicated loaded complaint records" in html
+    assert "1</a></strong><span>Deduplicated complaints" in html
+    assert "1</a></strong><span>CCLD reports available" in html
+    assert "0</a></strong><span>Complaint records with review flags" in html
+    assert "Relevant complaint received date range" in html
+    assert "04/07/2022" in html
+    assert "Unsubstantiated: 1 exact complaint record(s)" in html
+    assert "Source coverage" in html
+    assert "Available:" in html
+    assert "Not started: 1 complaint record(s)" in html
+    assert "0 notes" in html
     assert "Review next" in html
-    assert "Open loaded records in this suggested order" in html
-    assert "Finding: Unsubstantiated; reviewer status: Not started" in html
-    assert "Recent activity 08/26/2022" in html
-    assert "No reviewer-created status recorded yet." in html
-    assert html.count("CCLD source availability") == 1
-    assert "Source traceability available for detail review." not in html
-    assert "Open reviewer detail for 32-CR-20220407124448" in html
+    assert "stable source-derived record identity provides the deterministic tie order" in html
+    assert "Open recommended complaint 32-CR-20220407124448" in html
     assert "/reviewer/records/detail?source%5Frecord%5Fkey=" in html
+    assert "Exact contributing complaints" in html
+    assert "Open complaint record 32-CR-20220407124448" in html
+    assert 'aria-label="Copy complaint or control number"' in html
+    assert 'aria-label="Copy original CCLD report URL"' in html
     assert "2 citation value(s); 1 Type A value(s); 1 Type B value(s)" in html
-    assert "Open reviewer queue filtered to this facility" in html
-    assert "Start complaint request" in html
+    assert "Request records" in html
     assert f"{CCLD_RECORD_REQUEST_PATH}?facility_number=157806098" in html
     assert "Open facility review priority list" not in html
-    assert "Back to search" in html
-    assert "1 loaded complaint record(s)" in html
-    assert "/reviewer/packet/preview?facility_number=157806098" in html
+    assert "Coverage and interpretation limits" in html
+    assert "local/test" not in normalized_html
     assert (
         "uploaded summary signals exist"
         in normalized_html
@@ -1367,48 +1365,31 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
     assert before_counts == after_counts == _empty_reviewer_counts()
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
     assert "Review summary" in html
-    assert "These ordered review signals use loaded source-derived complaint records" in html
-    assert "may deserve closer review" in html
-    assert "not legal conclusions or source-completeness findings" in html
-    assert "1</strong><span>Loaded complaint records" in html
-    assert "0</strong><span>Delay-review records" in html
-    assert "0</strong><span>Missing-date records" in html
-    assert html.count("CCLD source availability") == 1
-    assert "1 of 1 loaded complaint record(s) have source traceability available." in html
-    assert "Recent complaint/report/visit activity in loaded records" in html
-    assert "08/26/2022" in html
-    assert "Finding counts in loaded records" in html
-    assert "Unsubstantiated: 1" in html
-    assert "Reviewer-created status summary" in html
-    assert "Not started: 1" in html
-    assert html.count("Reviewer-created status summary") == 1
-    assert html.count("Reviewer-created note cue") == 1
-    assert "Suggested next loaded complaint" in html
+    assert "reconciles deduplicated loaded complaint records" in html
+    assert "1</a></strong><span>Deduplicated complaints" in html
+    assert "1</a></strong><span>CCLD reports available" in html
+    assert "0</a></strong><span>Complaint records with review flags" in html
+    assert "Relevant complaint received date range" in html
+    assert "04/07/2022" in html
+    assert "Finding" in _definition_terms(html)
+    assert "Serious-review category" in _definition_terms(html)
+    assert "Source coverage" in _definition_terms(html)
+    assert "Unsubstantiated: 1 exact complaint record(s)" in html
+    assert "Reviewer-created status counts" in html
+    assert "Not started: 1 complaint record(s)" in html
+    assert "Reviewer-created note count" in html
+    assert "0 notes" in html
     assert "32-CR-20220407124448" in html
     assert "Packet readiness" not in html
     assert "Review next" in html
-    assert (
-        "Reasons use existing source-derived values and existing reviewer-created "
-        "status cues only"
-        in html
-    )
-    assert "Finding: Unsubstantiated; reviewer status: Not started" in html
-    assert "Recent activity 08/26/2022" in html
-    assert "No reviewer-created status recorded yet." in html
-    assert html.count("CCLD source availability") == 1
-    assert "Source traceability available for detail review." not in html
-    assert "Open reviewer detail for 32-CR-20220407124448" in html
+    assert "stable source-derived record identity provides the deterministic tie order" in html
+    assert "Open recommended complaint 32-CR-20220407124448" in html
     assert "/reviewer/records/detail?source%5Frecord%5Fkey=" in html
-    assert "Open loaded records" in html
-    assert "Open reviewer queue filtered to this facility" in html
-    assert "/reviewer/records?q=157806098" in html
-    assert "Download complaint review matrix CSV" in html
-    assert f"{REVIEWER_UI_MATRIX_EXPORT_PATH}?facility_number=157806098" in html
-    assert "Packet preview" in html
-    assert "/reviewer/packet/preview?facility_number=157806098" in html
-    assert "start_date=2022-04-07" in html
-    assert "end_date=2022-08-26" in html
-    assert "Packet draft" in html
+    assert "Exact contributing complaints" in html
+    assert "Open complaint record 32-CR-20220407124448" in html
+    assert "Open original CCLD report for 32-CR-20220407124448" in html
+    assert "Request records" in html
+    assert "Coverage and interpretation limits" in html
     assert "Selected facility identity" not in html
     assert _definition_terms(html).count("Facility ID") == 1
     assert _definition_terms(html).count("Facility type") == 1

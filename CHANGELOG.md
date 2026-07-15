@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased
+- Expanded `/ccld/facilities/detail` into the per-facility review hub for the
+  authorized loaded complaint corpus. The hub now reuses the cross-facility
+  intelligence calculations for stable complaint deduplication, finding and
+  serious-review distributions, source coverage, monthly anomaly cues, and
+  deterministic recommended-next ordering; reconciles every aggregate to exact
+  complaint links; preserves intelligence filter/origin context; shows separate
+  reviewer-created status and note counts; and adds a compact date-range
+  timeline, accessible definitions, useful copy controls, review-flag badges,
+  and collapsed limitations without exposing hashes, raw paths, connector
+  metadata, source-bundle rows, or fixture fallback facilities in PostgreSQL
+  mode.
 - Rebuilt `/ccld/facilities/intelligence` as the attorney-facing cross-facility
   decision dashboard over the authorized loaded complaint corpus. The route now
   reuses stable complaint deduplication, facility priority factors and ordering,

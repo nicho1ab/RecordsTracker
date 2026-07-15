@@ -62,8 +62,10 @@ timing flag, recent supported activity, facility name, and stable facility
 identity. This is deterministic ordering, not a hidden score. Each dashboard
 count opens the exact deduplicated complaint records that contributed to it;
 each facility also links to its Facility Review Hub, its filtered complaint
-queue, and its deterministic recommended next complaint while preserving date
-context where useful.
+queue, and its deterministic recommended next complaint. The Facility Review
+Hub preserves the useful intelligence origin, date, finding, serious-review,
+and coverage filters, then reconciles its facility-specific distributions and
+review-state counts to exact complaint links.
 
 ## Hosted complaint trends
 

@@ -9,6 +9,11 @@ the governed primary future review experience.
 
 ## Completed foundation
 
+- Expanded the existing Facility Review Hub into the per-facility drill-down
+  from cross-facility intelligence, reusing stable complaint deduplication,
+  serious-review, finding, trend/anomaly, coverage, and recommended-next logic
+  while reconciling source-derived and separate reviewer-created summaries to
+  exact complaint records.
 - Made reviewer priorities, complaint trends, serious-topic and substantiated
   review, and complaint/facility exports data-ready through a shared aggregate
   result contract. The implementation exposes record universes, denominators,
