@@ -8,6 +8,7 @@ import io
 import json
 import os
 import re
+from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
@@ -46,6 +47,8 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
     CCLD_FACILITY_REVIEW_PRIORITY_PATH,
     CCLD_RECORD_REQUEST_PATH,
+    CcldFacilityComplaintContext,
+    CcldFacilityReviewContext,
     load_active_ccld_facility_reference,
 )
 from ccld_complaints.hosted_app.facility_case_brief import (
@@ -1098,6 +1101,238 @@ def _facility_intelligence_response(
     )
 
 
+def build_facility_review_context(
+    context: ReviewerUiContext,
+    facility_number: str,
+    query_values: Mapping[str, list[str]] | None = None,
+) -> CcldFacilityReviewContext:
+    """Build one facility hub from the governed cross-facility calculations."""
+    filters = _facility_intelligence_filters(query_values or {})
+    origin = _first_form_value(query_values or {}, "origin").strip().casefold()
+    active_filters = _facility_hub_active_filters(filters, origin=origin)
+    source_status, source_result = _substantiated_source_records_response(context)
+    if source_status != 200 or isinstance(source_result, bytes):
+        return CcldFacilityReviewContext(
+            source_label="Complaint records are not available for this review.",
+            date_dimension=filters.date_dimension,
+            date_dimension_label=date_dimension_label(filters.date_dimension),
+            reviewer_state_available=False,
+            origin=origin,
+            active_filters=active_filters,
+        )
+
+    all_summaries = _facility_priority_summaries(
+        source_result,
+        date_dimension=filters.date_dimension,
+    )
+    source_summary = next(
+        (
+            summary
+            for summary in all_summaries
+            if summary.facility_number == facility_number
+        ),
+        None,
+    )
+    if source_summary is None:
+        return CcldFacilityReviewContext(
+            date_dimension=filters.date_dimension,
+            date_dimension_label=date_dimension_label(filters.date_dimension),
+            origin=origin,
+            active_filters=active_filters,
+        )
+
+    complaints = tuple(
+        complaint
+        for complaint in source_summary.complaints
+        if _facility_intelligence_complaint_matches(complaint, filters)
+    )
+    if complaints:
+        summary = _facility_intelligence_rebuild_priority_summary(
+            source_summary,
+            complaints,
+        )
+        coverage = _facility_intelligence_coverage(summary, filters)
+        if filters.coverage != "all" and coverage.status != filters.coverage:
+            complaints = ()
+    if not complaints:
+        return CcldFacilityReviewContext(
+            source_label="No complaint records match the active facility filters.",
+            date_dimension=filters.date_dimension,
+            date_dimension_label=date_dimension_label(filters.date_dimension),
+            origin=origin,
+            active_filters=active_filters,
+        )
+
+    summary = _facility_intelligence_rebuild_priority_summary(
+        source_summary,
+        complaints,
+    )
+    coverage = _facility_intelligence_coverage(summary, filters)
+    anomaly_cues = _facility_intelligence_anomaly_cues(summary, filters)
+    source_record_keys = tuple(
+        complaint.source_record_key for complaint in summary.complaints
+    )
+    state_status, state_result = _reviewer_created_state_records_for_source_records(
+        context,
+        source_record_keys,
+    )
+    reviewer_state_available = state_status == 200 and not isinstance(
+        state_result,
+        bytes,
+    )
+    state_summaries = (
+        _state_summaries_by_source_record(state_result)
+        if reviewer_state_available and not isinstance(state_result, bytes)
+        else {}
+    )
+
+    complaint_contexts = tuple(
+        _facility_hub_complaint_context(
+            complaint,
+            summary,
+            filters,
+            state_summaries,
+            reviewer_state_available=reviewer_state_available,
+        )
+        for complaint in summary.complaints
+    )
+    finding_counts = tuple(
+        sorted(
+            Counter(item.finding for item in complaint_contexts).items(),
+            key=lambda item: (item[0] in {"unknown", "not listed"}, item[0].casefold()),
+        )
+    )
+    serious_topic_counts = tuple(
+        sorted(
+            Counter(
+                topic
+                for complaint in complaint_contexts
+                for topic in set(complaint.serious_topics)
+            ).items(),
+            key=lambda item: item[0].casefold(),
+        )
+    )
+    reviewer_status_counts = tuple(
+        sorted(
+            Counter(item.reviewer_status for item in complaint_contexts).items(),
+            key=lambda item: (
+                _REVIEWER_STATUS_ORDER.index(item[0])
+                if item[0] in _REVIEWER_STATUS_ORDER
+                else len(_REVIEWER_STATUS_ORDER),
+                item[0],
+            ),
+        )
+    )
+    dated_values = sorted(
+        item.activity_date
+        for item in complaint_contexts
+        if item.activity_date != "unknown"
+    )
+    recommended = complaint_contexts[0]
+    return CcldFacilityReviewContext(
+        loaded_complaint_record_count=summary.complaint_count,
+        start_date=dated_values[0] if dated_values else "",
+        end_date=dated_values[-1] if dated_values else "",
+        source_label="Authorized loaded complaint records",
+        finding_counts=finding_counts,
+        source_traceability_count=summary.source_available_count,
+        delay_review_record_count=summary.delay_flag_count,
+        missing_date_record_count=summary.missing_date_count,
+        recent_activity_date=summary.recent_activity_date,
+        reviewer_status_counts=reviewer_status_counts,
+        reviewer_note_record_count=sum(
+            item.reviewer_note_count > 0 for item in complaint_contexts
+        ),
+        review_next_label=(
+            recommended.complaint_control_number
+            if recommended.complaint_control_number != "unknown"
+            else recommended.stable_complaint_id
+        ),
+        date_dimension=filters.date_dimension,
+        date_dimension_label=date_dimension_label(filters.date_dimension),
+        coverage_status=coverage.status,
+        source_unavailable_count=summary.source_missing_count,
+        serious_topic_counts=serious_topic_counts,
+        anomaly_cues=anomaly_cues,
+        complaints=complaint_contexts,
+        reviewer_state_available=reviewer_state_available,
+        origin=origin,
+        active_filters=active_filters,
+    )
+
+
+def _facility_hub_complaint_context(
+    complaint: FacilityPriorityComplaint,
+    summary: FacilityPrioritySummary,
+    filters: FacilityIntelligenceFilters,
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    *,
+    reviewer_state_available: bool,
+) -> CcldFacilityComplaintContext:
+    state_summary = state_summaries.get(
+        complaint.source_record_key,
+        _empty_state_summary(),
+    )
+    return CcldFacilityComplaintContext(
+        source_record_key=complaint.source_record_key,
+        stable_complaint_id=complaint.stable_complaint_id,
+        complaint_control_number=complaint.complaint_control_number,
+        activity_date=complaint.activity_date,
+        finding=complaint.finding,
+        detail_href=_facility_intelligence_detail_href(
+            complaint,
+            summary,
+            filters,
+        ),
+        source_url_href=complaint.source_url_href,
+        serious_topics=complaint.serious_topics,
+        substantiated=complaint.substantiated,
+        strongest_delay_days=complaint.strongest_delay_days,
+        missing_dates=complaint.missing_dates,
+        source_available=complaint.source_available,
+        reviewer_status=(
+            _reviewer_queue_status(state_summary)
+            if reviewer_state_available
+            else "unavailable"
+        ),
+        reviewer_note_count=(
+            _summary_int(state_summary, "note_count")
+            if reviewer_state_available
+            else 0
+        ),
+    )
+
+
+def _facility_hub_active_filters(
+    filters: FacilityIntelligenceFilters,
+    *,
+    origin: str,
+) -> tuple[tuple[str, str], ...]:
+    values: list[tuple[str, str]] = []
+    if origin == "facility_intelligence":
+        values.append(("Opened from", "Facility review intelligence"))
+    values.append(("Date used", date_dimension_label(filters.date_dimension)))
+    if filters.start_date or filters.end_date:
+        values.append(
+            (
+                "Date range",
+                f"{_reviewer_value_text(filters.start_date or 'unknown', kind='date')} to "
+                f"{_reviewer_value_text(filters.end_date or 'unknown', kind='date')}",
+            )
+        )
+    for label, value in (
+        ("Facility type", filters.facility_type),
+        ("Geography", filters.geography),
+        ("Finding", filters.finding),
+        ("Serious-review category", filters.serious_topic),
+    ):
+        if value:
+            values.append((label, value))
+    if filters.coverage != "all":
+        values.append(("Source coverage", filters.coverage.title()))
+    return tuple(values)
+
+
 def _facility_intelligence_filters(
     query_values: Mapping[str, list[str]],
 ) -> FacilityIntelligenceFilters:
@@ -1569,7 +1804,7 @@ def _render_facility_intelligence_result(
     badges = _render_facility_intelligence_badges(item)
     next_complaint = summary.complaints[0]
     hub_action = (
-        f'<a class="button button-secondary" href="{_escape(_facility_hub_href(summary.facility_number))}">Open Facility Review Hub</a>'
+        f'<a class="button button-secondary" href="{_escape(_facility_intelligence_hub_href(summary, filters))}">Open Facility Review Hub</a>'
         if summary.facility_number != "unknown"
         else '<span class="helper-text">Facility Review Hub unavailable because Facility ID is not available.</span>'
     )
@@ -1730,7 +1965,7 @@ def _facility_intelligence_detail_href(
             context_origin="facility_intelligence",
             lookup_facility_name=summary.facility_name,
         ),
-    )
+    ).replace("source_record_key", "source%5Frecord%5Fkey")
 
 
 def _facility_intelligence_request_href(
@@ -1747,6 +1982,29 @@ def _facility_intelligence_request_href(
     if filters.end_date:
         values["end_date"] = filters.end_date
     return f"{CCLD_RECORD_REQUEST_PATH}?{urlencode(values)}"
+
+
+def _facility_intelligence_hub_href(
+    summary: FacilityPrioritySummary,
+    filters: FacilityIntelligenceFilters,
+) -> str:
+    values = {
+        "facility_number": summary.facility_number,
+        "origin": "facility_intelligence",
+        "date_dimension": filters.date_dimension,
+    }
+    for key, value in (
+        ("start_date", filters.start_date or ""),
+        ("end_date", filters.end_date or ""),
+        ("facility_type", filters.facility_type),
+        ("geography", filters.geography),
+        ("finding", filters.finding),
+        ("serious_topic", filters.serious_topic),
+        ("coverage", filters.coverage if filters.coverage != "all" else ""),
+    ):
+        if value:
+            values[key] = value
+    return f"{CCLD_FACILITY_REVIEW_HUB_PATH}?{urlencode(values)}"
 
 
 def _facility_intelligence_result_id(summary: FacilityPrioritySummary) -> str:
@@ -4589,6 +4847,11 @@ def _substantiated_source_records_response(
         return 403, _source_derived_error_body("scope_denied", str(error))
     except ValueError as error:
         return 400, _source_derived_error_body("invalid_request", str(error))
+    except SQLAlchemyError:
+        return 503, _source_derived_error_body(
+            "source_derived_read_failed",
+            "Source-derived records could not be read.",
+        )
     return 200, [_source_derived_read_payload(record) for record in records]
 
 

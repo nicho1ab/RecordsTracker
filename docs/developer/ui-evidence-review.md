@@ -20,8 +20,8 @@ The capture command performs GET-only requests against an already-running local 
 - keyboard-flow marker assertions showing whether a route exposes visible
 	keyboard-flow guidance for moving through the current hosted review step.
 - a facility-hub route capture that exercises `/ccld/facilities/detail` as a
-	GET-only navigation surface from directory lookup into existing complaint
-	request and review routes.
+  GET-only per-facility review summary with Review next guidance and exact
+  contributing-complaint access.
 - a facility-priority route capture that exercises `/ccld/facilities/review-priority`
   as a GET-only view over uploaded public summary-field review cues.
 - a facility-intelligence route capture that exercises `/ccld/facilities/intelligence`
@@ -91,6 +91,26 @@ running with the governed local records being reviewed:
 ```powershell
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8003 -Mode live -Issue418
 ```
+
+For issue #420, review the facility hub from both direct and intelligence-origin
+contexts. The core packet captures the direct hub. Add these GET-only routes to
+manual evidence review against the same running instance, substituting a known
+loaded Facility ID when needed:
+
+```text
+/ccld/facilities/detail?facility_number=157806098
+/ccld/facilities/detail?facility_number=157806098&origin=facility_intelligence&date_dimension=complaint_received_date&start_date=2022-04-01&end_date=2022-04-30
+/ccld/facilities/detail?facility_number=999999999
+/ccld/facilities/detail?facility_number=invalid
+```
+
+Review the loaded, filtered, filtered-empty, partial/unavailable-source,
+reviewer-state-present, no-record, and invalid-ID states at 500 pixels and 200%
+browser zoom. Confirm facility facts appear once, Review next stays above the
+contributor disclosures, every aggregate reaches exact complaint links, focus
+is visible, definitions work by keyboard, copy controls are named, and the page
+has no page-level horizontal scrolling. True browser zoom and assistive-
+technology behavior remain manual review items.
 
 ## Fixture/Mock Evidence
 

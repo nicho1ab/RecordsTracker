@@ -65,8 +65,11 @@ The facility hub gives each selected reviewer-facing facility fact one home:
 | Facility type, status, county, and capacity | Primary reviewer facts | Primary facility facts |
 | Street address, city, state, and ZIP code | Primary reviewer fact | One composed **Address** value in primary facility facts |
 | Program type, regional office, and closed date | Secondary reviewer facts | One collapsed **More facility facts** disclosure |
-| Loaded complaint count, date/missing-date cues, finding counts, and compact CCLD source availability | Review signals | **Review summary** |
-| Reviewer-created status and note summaries | Review signals from separate reviewer-created state | Clearly labeled rows in **Review summary** |
+| Deduplicated complaint count and relevant date range | Review signals | **Review summary**, linked to exact contributing complaints |
+| Finding distribution, serious-review categories, and monthly anomaly cues | Review signals | **Review summary**, with each aggregate linked to its exact contributing complaints |
+| Original CCLD report coverage | Review signals | Available, partial, or unavailable **Source coverage**, linked to the applicable complaints |
+| Reviewer-created status and note counts | Review signals from separate reviewer-created state | Clearly labeled rows in **Review summary**, linked to the applicable complaints |
+| Deterministic recommended complaint | Review action | Default-visible **Review next**, using the governed date and stable-identity tie order |
 | Visit, citation, POC, and last-visit cues | Review signals | **Additional review signals** |
 | Facility-reference source filename/resource label | Support/operator-only | Not shown on the primary facility hub |
 | Raw source column names, source row/internal IDs, hashes, connector/import metadata, and source bundle dumps | Support/operator-only or intentionally excluded | Not shown on the primary facility hub |
@@ -79,6 +82,14 @@ Closed dates display as `MM/DD/YYYY`. The governed labels described in the data
 dictionary distinguish verified zero, blank, null, unavailable, not-applicable,
 malformed, undated, and not-collected values without inventing a fact. A missing
 closed date does not mean that a facility is open.
+
+When the hub is opened from cross-facility intelligence, it keeps the selected
+date dimension/range, finding, serious-review category, and source-coverage
+context that contributed to the facility result. The primary actions open the
+recommended complaint, the exact contributing complaints, or Request Records.
+Complaint links use stable source-derived identities. Reviewer-created statuses
+and notes remain separate from public-record facts, and note text is not exposed
+in the hub summary.
 
 Current priorities, facility priorities, trends, serious-topic review, and
 substantiated review show the loaded-record universe, eligible denominator,

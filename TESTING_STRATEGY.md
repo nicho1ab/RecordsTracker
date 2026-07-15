@@ -263,6 +263,19 @@ and labeled controls, descriptive links, badge text meaning, MM/DD/YYYY display,
 filter context preservation, no raw traceability internals or secrets, and
 source-derived versus reviewer-created state separation. Exact-route hosted UI
 evidence must assert the decision heading and recommended-next action.
+Hosted facility review hub tests must prove `/ccld/facilities/detail` reuses
+those governed cross-facility calculations for one Facility ID; preserves
+useful intelligence origin/filter context; reconciles deduplicated complaint,
+date-range, finding, serious-review, anomaly, source-coverage, reviewer-status,
+and reviewer-note aggregates to exact stable complaint links; and uses the same
+deterministic recommended-next and tie order. Tests must also cover loaded,
+filtered-empty, no-record, invalid Facility ID, partial/unavailable source,
+reviewer-state-unavailable, and PostgreSQL setup states; facility facts shown
+once; compact timelines; `MM/DD/YYYY` dates; accessible copy controls and inline
+definitions; badge-only review-flag expression; active Facilities navigation;
+safe narrow-width/zoom CSS; no mutation; no fixture/synthetic PostgreSQL
+fallback; and no raw traceability internals, note text, private values, or
+secrets.
 Hosted facility-trends tests must prove `/reviewer/facilities/trends` groups
 authorized loaded complaints by month and quarter using stable complaint
 identity, honors inclusive date boundaries and combined facility, facility type,

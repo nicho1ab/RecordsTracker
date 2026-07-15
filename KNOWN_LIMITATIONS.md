@@ -262,6 +262,16 @@
     uploaded public summary fields only; it does not
     diagnose official directory status, validate a license, verify a source,
     prove complaint coverage, or create complaint records.
+    When authorized complaint records are loaded, the same route reuses the
+    cross-facility intelligence calculations for stable complaint
+    deduplication, finding and serious-review distributions, monthly anomaly
+    cues, report-link coverage, and deterministic recommended-next ordering.
+    It also reads separate reviewer-created status/note summaries and links
+    aggregates to exact complaint records. Those summaries cover only the
+    authorized loaded corpus and active filters; they do not prove public-source
+    completeness, statewide coverage, legal conclusions, or facility-wide
+    conduct. Reviewer-created note text and raw traceability internals remain
+    outside the hub.
 - Production-readiness items such as source-verification planning, auth provider
     integration, audit UI/export, export packet generation, reset/reload execution,
     public deployment, production monitoring, database-backed lookup, non-CCLD
