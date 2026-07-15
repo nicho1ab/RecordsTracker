@@ -16,6 +16,9 @@ from ccld_complaints.hosted_app.auth import (
     HostedTesterRole,
     load_hosted_auth_runtime_config,
 )
+from ccld_complaints.hosted_app.ccld_facility_lookup import (
+    CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+)
 from ccld_complaints.hosted_app.ccld_retrieval_jobs import hosted_ccld_retrieval_jobs
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
@@ -328,6 +331,199 @@ def test_facility_priority_helper_deduplicates_complaint_records() -> None:
     assert summaries[0].substantiated_count == 1
 
 
+def test_facility_intelligence_filters_reconciles_and_preserves_drilldown_context() -> None:
+    with _priority_connection() as connection:
+        _insert_facility_bundle(
+            connection,
+            facility_number="100001",
+            facility_name="Alpha Center",
+            facility_type="Children's Center",
+            county="Kern",
+            complaints=(
+                _complaint(
+                    "A-1",
+                    "2026-05-01",
+                    "Substantiated",
+                    delay_days=120,
+                    serious=True,
+                ),
+                _complaint(
+                    "A-2",
+                    "2026-04-01",
+                    "Unsubstantiated",
+                    source_url="",
+                ),
+            ),
+        )
+        _insert_facility_bundle(
+            connection,
+            facility_number="200002",
+            facility_name="Beta Center",
+            facility_type="Foster Family Agency",
+            county="Alameda",
+            complaints=(
+                _complaint("B-1", "2026-05-03", "Substantiated", serious=True),
+            ),
+        )
+
+        status, content_type, body = route_response(
+            (
+                f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}"
+                "?facility_type=children&geography=kern"
+                "&start_date=2026-05-01&end_date=2026-05-31"
+                "&finding=Substantiated&serious_topic=Supervision+topic"
+                "&coverage=available&sort=complaint_count"
+            ),
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Alpha Center" in html
+    assert "Beta Center" not in html
+    assert "1 exact complaint record(s)" in html
+    assert html.count("Open complaint record A-1") >= 2
+    assert "Open complaint record A-2" not in html
+    assert "05/01/2026" in html
+    assert "/ccld/facilities/detail?facility_number=100001" in html
+    assert "Open filtered complaint queue" in html
+    assert "start_date=2026-05-01" in html
+    assert "end_date=2026-05-31" in html
+    assert "return_context_origin=facility_intelligence" in html
+    assert "Open recommended next complaint" in html
+    assert "120+ day gap" in html
+    assert "Supervision topic" in html
+    assert "Source coverage: Available" in html
+    assert "raw_sha256" not in html
+    assert "tests/fixtures" not in html
+    assert "connector_name" not in html
+
+
+def test_facility_intelligence_coverage_missing_date_empty_and_invalid_range_states() -> None:
+    with _priority_connection() as connection:
+        _insert_facility_bundle(
+            connection,
+            facility_number="100001",
+            facility_name="Partial Center",
+            facility_type="Children's Center",
+            county="Kern",
+            complaints=(
+                _complaint("P-1", "2026-05-01", "Substantiated"),
+                _complaint("P-2", "", "Unknown", source_url=""),
+            ),
+        )
+        _insert_facility_bundle(
+            connection,
+            facility_number="300003",
+            facility_name="Unavailable Center",
+            facility_type="Children's Center",
+            county="Kern",
+            complaints=(
+                _complaint("U-1", "2026-05-02", "Unknown", source_url=""),
+            ),
+        )
+        partial_status, _partial_type, partial_body = route_response(
+            f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?coverage=partial",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+        unavailable_status, _unavailable_type, unavailable_body = route_response(
+            f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?coverage=unavailable",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+        empty_status, _empty_type, empty_body = route_response(
+            f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?start_date=2099-01-01&end_date=2099-12-31",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+        invalid_status, _invalid_type, invalid_body = route_response(
+            f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?start_date=2026-06-01&end_date=2026-05-01",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    partial_html = partial_body.decode("utf-8")
+    unavailable_html = unavailable_body.decode("utf-8")
+    empty_html = empty_body.decode("utf-8")
+    invalid_html = invalid_body.decode("utf-8")
+    assert partial_status == unavailable_status == empty_status == 200
+    assert invalid_status == 400
+    assert "Partial Center" in partial_html
+    assert "Unavailable Center" not in partial_html
+    assert "Source coverage: Partial" in partial_html
+    assert "Unavailable Center" in unavailable_html
+    assert "Partial Center" not in unavailable_html
+    assert "Source coverage: Unavailable" in unavailable_html
+    assert "No facilities matched the active filters." in empty_html
+    assert "Missing dates do not match an active date range" in empty_html
+    assert "Start date must be on or before end date." in invalid_html
+
+
+def test_facility_intelligence_get_is_read_only_and_production_has_no_fixture_fallback() -> None:
+    with _priority_connection() as connection:
+        _insert_facility_bundle(
+            connection,
+            facility_number="100001",
+            facility_name="Read Only Center",
+            facility_type="Children's Center",
+            county="Kern",
+            complaints=(_complaint("R-1", "2026-05-01", "Substantiated"),),
+        )
+        before = _table_counts(connection)
+        status, _content_type, body = route_response(
+            CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+        after = _table_counts(connection)
+
+    auth_runtime_config = load_hosted_auth_runtime_config(environ={})
+    production_status, _production_type, production_body = route_response(
+        CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+        auth_runtime_config=auth_runtime_config,
+        page_data_mode="postgres",
+    )
+    html = body.decode("utf-8")
+    production_html = production_body.decode("utf-8")
+    assert status == 200
+    assert after == before
+    assert "Read Only Center" in html
+    assert production_status in {401, 503}
+    assert "A. MIRIAM JAMISON CHILDREN" not in production_html
+    assert "Fixture/mock demo" not in production_html
+
+
+def test_facility_intelligence_accessible_structure_and_safe_language() -> None:
+    with _priority_connection() as connection:
+        _insert_facility_bundle(
+            connection,
+            facility_number="100001",
+            facility_name="Accessible Center",
+            facility_type="Children's Center",
+            county="Kern",
+            complaints=(
+                _complaint("A11Y-1", "2026-05-01", "Unsubstantiated", serious=True),
+            ),
+        )
+        status, _content_type, body = route_response(
+            CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    normalized = " ".join(html.casefold().split())
+    assert status == 200
+    assert '<main id="main-content"' in html
+    assert '<form class="compact-filter-form" method="get"' in html
+    assert '<label for="facility-intelligence-facility-type">' in html
+    assert '<label for="facility-intelligence-coverage">' in html
+    assert '<button class="button" type="submit">Apply filters</button>' in html
+    assert 'aria-label="Review flags and source coverage"' in html
+    assert "Coverage and interpretation limits" in html
+    assert "Facility ID:" in html
+    assert "license number" not in normalized
+    assert "legal conclusion" in normalized
+    assert "facility-wide conclusion" in normalized
+    assert "hidden score" in normalized
+
+
 def _priority_connection() -> Connection:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     hosted_seeded_import_metadata.create_all(engine)
@@ -413,6 +609,26 @@ def _insert_facility_bundle(
                 )
             )
         )
+        if complaint.get("serious"):
+            allegation_id = f"ccld:allegation:{complaint['control']}:1"
+            connection.execute(
+                hosted_source_derived_records.insert().values(
+                    **_source_record_values(
+                        import_batch_id=import_batch_id,
+                        entity_type="allegation",
+                        stable_source_id=allegation_id,
+                        source_document_id=document_id,
+                        facility_id=facility_id,
+                        source_url=source_url,
+                        original_values={
+                            "allegation_id": allegation_id,
+                            "complaint_id": complaint_id,
+                            "allegation_category": "Inadequate supervision",
+                            "allegation_text": "Fixture text must not render",
+                        },
+                    )
+                )
+            )
         original_values = {
             "complaint_id": complaint_id,
             "facility_id": facility_id,
@@ -454,6 +670,7 @@ def _complaint(
     *,
     delay_days: int = 0,
     source_url: str | None = None,
+    serious: bool = False,
 ) -> dict[str, Any]:
     return {
         "control": control,
@@ -461,6 +678,7 @@ def _complaint(
         "finding": finding,
         "delay_days": delay_days,
         "source_url": source_url,
+        "serious": serious,
     }
 
 

@@ -151,6 +151,12 @@ a thin browser-accessible local/test reviewer UI shell at `/reviewer` and
 read-only facility trend route at `/reviewer/facilities/trends` over authorized
 loaded source-derived records with deterministic monthly/quarterly aggregation,
 coverage labels, anomaly cues, and complaint-detail links,
+a cross-facility attorney decision route at
+`/ccld/facilities/intelligence` over the same authorized loaded corpus that
+reuses stable complaint deduplication, facility-priority ordering factors,
+substantiated/equivalent and serious-topic classification, monthly anomaly
+rules, and aggregate source-coverage semantics while linking counts to reviewer
+detail and carrying facility/date context into existing review routes,
 a thin browser-accessible
 local/test CCLD facility lookup page at `/ccld/facilities` that reads committed
 or configured full local/test CCLD program facility reference CSV rows, searches

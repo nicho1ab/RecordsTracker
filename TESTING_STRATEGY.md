@@ -247,6 +247,22 @@ queue/detail links, and original-source link availability accessibly, preserves
 authorization and import-batch scope, excludes fixture/demo fallback data in
 production mode, and does not mutate source-derived, reviewer-created, audit,
 import, feedback, retrieval-job, or operational rows.
+Hosted cross-facility intelligence tests must prove
+`/ccld/facilities/intelligence` reads the authorized loaded complaint corpus,
+deduplicates by stable complaint identity, reuses governed facility priority,
+substantiated/equivalent, serious-topic, trend/anomaly, and aggregate coverage
+logic, and reconciles visible totals and per-facility counts to exact complaint
+detail links. Combined filters must cover facility type, geography, date
+dimension/range, finding, serious-review category, and available/partial/
+unavailable source coverage; ordering and recommended-next selection must be
+deterministic and explainable. Tests must cover missing values, missing dates,
+partial and unavailable coverage, negative and no-result cases, invalid ranges,
+duplicates, authorization/import-batch isolation, GET no-mutation, safe
+PostgreSQL setup failure without fixture/synthetic fallback, semantic headings
+and labeled controls, descriptive links, badge text meaning, MM/DD/YYYY display,
+filter context preservation, no raw traceability internals or secrets, and
+source-derived versus reviewer-created state separation. Exact-route hosted UI
+evidence must assert the decision heading and recommended-next action.
 Hosted facility-trends tests must prove `/reviewer/facilities/trends` groups
 authorized loaded complaints by month and quarter using stable complaint
 identity, honors inclusive date boundaries and combined facility, facility type,

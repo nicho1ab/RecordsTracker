@@ -45,6 +45,15 @@ In the hosted reviewer workflow, use `/reviewer/records/serious-topics` to filte
 
 Use `/reviewer/facilities/trends` when the review task is to compare loaded complaint and finding activity over time. Coverage and anomaly labels describe only the displayed, qualifying loaded records; open the contributing complaint record and its existing public-report action before relying on an individual complaint.
 
+Use `/ccld/facilities/intelligence` when the task starts across facilities. The
+dashboard applies complaint-level filters before reconciling facility counts,
+shows source coverage as available, partial, or unavailable, and links every
+summary and facility count to the exact contributing complaint records. Open the
+recommended next complaint for the first result under the selected visible
+ordering, or continue to that Facility Review Hub or filtered complaint queue.
+These indicators describe only the authorized loaded corpus and do not make a
+legal, facility-wide, or public-source completeness conclusion.
+
 ## Facility hub fact placement
 
 The facility hub gives each selected reviewer-facing facility fact one home:

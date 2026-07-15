@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased
+- Rebuilt `/ccld/facilities/intelligence` as the attorney-facing cross-facility
+  decision dashboard over the authorized loaded complaint corpus. The route now
+  reuses stable complaint deduplication, facility priority factors and ordering,
+  substantiated/equivalent matching, governed serious-review categories,
+  monthly anomaly rules, and aggregate coverage states; supports facility type,
+  geography, date, finding, serious-category, coverage, and ordering controls;
+  reconciles every visible count to exact complaint-detail links; and carries
+  filter context into Facility Hub, complaint queue, and recommended-next-record
+  actions. PostgreSQL mode no longer has a summary-CSV, tiny-fixture, or
+  synthetic dashboard fallback, and the reviewer tier does not expose hashes,
+  raw paths, connector metadata, or source-bundle internals.
 - Redesigned the `/reviewer` landing page as a compact, single-column attorney
   complaint worklist. Search and matching/bounded-result context now precede
   the records; each responsive row presents complaint and facility identity,

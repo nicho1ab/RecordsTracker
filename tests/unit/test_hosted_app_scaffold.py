@@ -21,6 +21,7 @@ from ccld_complaints.hosted_app.app import (
 )
 from ccld_complaints.hosted_app.auth import load_hosted_auth_runtime_config
 from ccld_complaints.hosted_app.smoke import run_scaffold_smoke_check
+from ccld_complaints.hosted_app.ui_shell import render_page_shell
 
 ROOT = Path(__file__).resolve().parents[2]
 HOSTED_RUNTIME_ENV_KEYS = (
@@ -1310,6 +1311,17 @@ def test_route_active_nav_highlights_correct_item() -> None:
     route_active_specs = (
         ("/", "/", "Home"),
         ("/ccld/facilities", "/ccld/facilities", "Facilities"),
+        (
+            "/ccld/facilities/intelligence",
+            "/ccld/facilities",
+            "Facilities",
+        ),
+        (
+            "/ccld/facilities/review-priority",
+            "/ccld/facilities",
+            "Facilities",
+        ),
+        ("/ccld/facilities/detail", "/ccld/facilities", "Facilities"),
         ("/ccld/records/request", "/ccld/records/request", "Request Records"),
         ("/ccld/help", "/ccld/help", "Help"),
         ("/reviewer", "/reviewer", "Review"),
@@ -1335,6 +1347,20 @@ def test_route_active_nav_highlights_correct_item() -> None:
         assert active_count == 1, (
             f"Route {path}: expected exactly 1 aria-current=page in nav, got {active_count}."
         )
+
+
+def test_active_nav_route_prefixes_require_a_path_segment_boundary() -> None:
+    html = render_page_shell(
+        title="Boundary check",
+        heading="Boundary check",
+        main="<p>Boundary check</p>",
+        skip_label="Skip boundary check",
+        nav_label="Boundary navigation",
+        active_path="/ccld/facilities-extra/intelligence",
+    )
+
+    assert 'aria-current="page" href="/ccld/facilities">Facilities' not in html
+    assert html.count('aria-current="page"') == 0
 
 
 def test_help_route_does_not_activate_retrieve_nav() -> None:

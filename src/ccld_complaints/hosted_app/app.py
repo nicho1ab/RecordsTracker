@@ -1123,11 +1123,25 @@ def route_response(
     if parsed_path == f"{CCLD_UI_PREFIX}/":
         path = CCLD_UI_PREFIX
         parsed_path = CCLD_UI_PREFIX
+    if parsed_path == CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH:
+        explicit_intelligence_context = reviewer_ui_context
+        if (
+            explicit_intelligence_context is None
+            and ccld_record_request_ui_context is not None
+        ):
+            explicit_intelligence_context = (
+                ccld_record_request_ui_context.reviewer_ui_context
+            )
+        active_reviewer_ui_context = _default_reviewer_context_for_mode(
+            active_auth_config,
+            active_page_data_mode,
+            explicit_intelligence_context,
+        )
+        return route_reviewer_ui_response(path, active_reviewer_ui_context)
     if parsed_path in {
         CCLD_FACILITY_LOOKUP_PATH,
         CCLD_FACILITY_SUGGESTIONS_PATH,
         CCLD_FACILITY_REVIEW_HUB_PATH,
-        CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
         CCLD_FACILITY_REVIEW_PRIORITY_PATH,
     }:
         if active_page_data_mode == FIXTURE_DEMO_PAGE_DATA_MODE:

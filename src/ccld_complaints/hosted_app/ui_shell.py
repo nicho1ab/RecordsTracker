@@ -645,6 +645,7 @@ SHARED_CSS = r"""
     a {
       color: var(--ds-link);
       font-weight: 650;
+      overflow-wrap: anywhere;
       text-underline-offset: 0.16em;
     }
     a:hover {
@@ -848,10 +849,12 @@ SHARED_CSS = r"""
       display: inline-block;
       font: inherit;
       font-weight: 700;
+      max-width: 100%;
+      overflow-wrap: anywhere;
       padding: 0.6rem 0.85rem;
       text-align: center;
       text-decoration: none;
-      white-space: nowrap;
+      white-space: normal;
     }
     button:hover, input[type="submit"]:hover, .button:hover {
       background: var(--accent-strong);

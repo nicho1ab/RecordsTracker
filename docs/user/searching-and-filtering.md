@@ -47,6 +47,24 @@ The hosted reviewer route `/reviewer/records/serious-topics` filters authorized 
 
 The serious-topic filters can be combined with finding, facility, geography, and complaint received date. Use the reviewer detail link and original public report link before relying on a row; the worklist intentionally does not show raw allegation narrative text in the primary table.
 
+## Cross-facility intelligence
+
+Use `/ccld/facilities/intelligence` to decide which loaded facilities and
+complaints to open next. Filters cover facility type, the best available
+governed geography, a selected complaint date dimension and range, finding,
+governed serious-review category, and original-report coverage state. Missing
+dates do not match an active date range, and missing source links remain
+explicitly unavailable.
+
+The default order reuses the visible facility-priority rules: filtered
+substantiated/equivalent count, filtered complaint count, strongest existing
+timing flag, recent supported activity, facility name, and stable facility
+identity. This is deterministic ordering, not a hidden score. Each dashboard
+count opens the exact deduplicated complaint records that contributed to it;
+each facility also links to its Facility Review Hub, its filtered complaint
+queue, and its deterministic recommended next complaint while preserving date
+context where useful.
+
 ## Hosted complaint trends
 
 Use `/reviewer/facilities/trends` to compare deduplicated loaded complaint activity by month or quarter for one facility or a filtered facility group. Filters cover facility, facility type, geography, finding/status, supported serious review topic, start date, end date, time grain, and a bounded period count.
