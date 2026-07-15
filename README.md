@@ -180,6 +180,14 @@ http://127.0.0.1:8000/feedback
 http://127.0.0.1:8000/ccld/help
 ```
 
+Use `/ccld/facilities/intelligence` to narrow the authorized loaded corpus by
+facility type, geography, date range, finding, serious-review category, and
+source coverage. Facility results explain their visible ordering factors, link
+every count to its exact contributing complaint records, and continue to the
+Facility Review Hub, the filtered complaint queue, or the deterministic next
+complaint. The route does not use uploaded summary CSVs or tiny fixture fallback
+facilities in PostgreSQL mode.
+
 For local live public CCLD retrieval, use the explicit live startup command:
 
 ```powershell

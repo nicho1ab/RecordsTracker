@@ -4,6 +4,12 @@
   selected date dimension/range, source coverage, and explicit zero,
   unavailable, partial, or truncated cause. These counts describe authorized
   loaded records only; they do not prove statewide or public-source completeness.
+- `/ccld/facilities/intelligence` covers only authorized loaded complaint
+  records. Its available, partial, and unavailable states describe original
+  public-report links on those contributing records, not statewide or portal
+  completeness. Monthly anomaly cues are limited to the existing governed
+  24-period comparison window, and records missing the selected date dimension
+  remain explicit but cannot match an active date range.
 - Source-derived list reads and complaint exports have no implicit 100-row cap.
   A caller-requested limit reports eligible count, returned count, and
   truncation status. Ordinary reviewer pagination remains presentation paging,

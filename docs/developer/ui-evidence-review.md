@@ -25,6 +25,8 @@ The capture command performs GET-only requests against an already-running local 
 - a facility-priority route capture that exercises `/ccld/facilities/review-priority`
   as a GET-only view over uploaded public summary-field review cues.
 - a facility-intelligence route capture that exercises `/ccld/facilities/intelligence`
+  and asserts the cross-facility decision heading plus a recommended-next
+  complaint action over authorized loaded records
 	as a GET-only dashboard over transparent public summary-field review-priority
 	indicators.
 - a matrix-export route capture that exercises `/reviewer/records/matrix.csv`

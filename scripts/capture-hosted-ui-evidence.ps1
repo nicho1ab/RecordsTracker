@@ -317,7 +317,7 @@ function Test-RouteOrientationMarker {
         "home" = @("Find a Facility", "Find the facility/license number")
         "facility" = @("Find a facility", "Find the facility/license number")
         "facility-priority" = @("Facility review priority", "Facilities grouped by review cue priority")
-        "facility-intelligence" = @("Facility review intelligence", "Facilities by review-priority indicator")
+        "facility-intelligence" = @("Facility review intelligence", "Which facilities may warrant review next?", "Open recommended next complaint")
         "facility-hub" = @("Facility review hub", "Facility-directory details")
         "request-records" = @("Request Records", "Which facility should be reviewed?")
         "jobs" = @("Job diagnostics", "Track Request Records jobs")
