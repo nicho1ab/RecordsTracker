@@ -383,3 +383,7 @@ tests affected by the changed public presentation or screenshot guidance. Code,
 schema, connector, extraction, workflow, or hosted UI changes require the broader
 validation described in [TESTING_STRATEGY.md](TESTING_STRATEGY.md) and the task
 handoff.
+
+## QNAP release deployment authority
+
+For QNAP deployment, verification, hosted acceptance, or rollback, follow the authoritative [QNAP Release Deployment Runbook](docs/developer/qnap-release-deployment-runbook.md). Do not invent or substitute another deployment procedure.
