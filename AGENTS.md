@@ -15,6 +15,8 @@ Before making code, schema, extraction, hosted reviewer, export, QNAP, or user-f
 - `TESTING_STRATEGY.md`
 - `DOCUMENTATION_STRATEGY.md`
 - `DESIGN_AND_USABILITY.md`
+- `docs/product/records-tracker-product-ux-lead-charter.md`
+- `docs/planning/records-tracker-ui-ux-data-completeness-remediation-plan.md`
 - `ACCESSIBILITY_REQUIREMENTS.md`
 - `SECURITY_AND_PRIVACY.md`
 - `KNOWN_LIMITATIONS.md`
