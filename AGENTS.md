@@ -17,6 +17,7 @@ Before making code, schema, extraction, hosted reviewer, export, QNAP, or user-f
 - `DESIGN_AND_USABILITY.md`
 - `docs/product/records-tracker-product-ux-lead-charter.md`
 - `docs/planning/records-tracker-ui-ux-data-completeness-remediation-plan.md`
+- `docs/product/records-tracker-approved-design-decisions.md`
 - `ACCESSIBILITY_REQUIREMENTS.md`
 - `SECURITY_AND_PRIVACY.md`
 - `KNOWN_LIMITATIONS.md`
