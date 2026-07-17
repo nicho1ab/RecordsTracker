@@ -393,9 +393,9 @@ def test_facility_intelligence_filters_reconciles_and_preserves_drilldown_contex
     assert content_type == "text/html; charset=utf-8"
     assert "Alpha Center" in html
     assert "Beta Center" not in html
-    assert "1 exact complaint record(s)" in html
-    assert html.count("Open complaint record A-1") >= 2
-    assert "Open complaint record A-2" not in html
+    assert "1 exact contributing complaint" in html
+    assert html.count("Open next complaint") >= 2
+    assert "A-2" not in html
     assert "05/01/2026" in html
     assert "/ccld/facilities/detail?facility_number=100001" in html
     assert "origin=facility_intelligence" in html
@@ -404,14 +404,16 @@ def test_facility_intelligence_filters_reconciles_and_preserves_drilldown_contex
     assert "serious_topic=Supervision%2Btopic" not in html
     assert "serious_topic=Supervision+topic" in html
     assert "coverage=available" in html
-    assert "Open filtered complaint queue" in html
     assert "start_date=2026-05-01" in html
     assert "end_date=2026-05-31" in html
     assert "return_context_origin=facility_intelligence" in html
-    assert "Open recommended next complaint" in html
+    assert "Review next" in html
+    assert "Open next complaint" in html
+    assert "Open next complaint source" in html
+    assert "Copy next complaint source URL" in html
     assert "120+ day gap" in html
     assert "Supervision topic" in html
-    assert "Source coverage: Available" in html
+    assert "Source available" in html
     assert "raw_sha256" not in html
     assert "tests/fixtures" not in html
     assert "connector_name" not in html
@@ -465,13 +467,17 @@ def test_facility_intelligence_coverage_missing_date_empty_and_invalid_range_sta
     assert invalid_status == 400
     assert "Partial Center" in partial_html
     assert "Unavailable Center" not in partial_html
-    assert "Source coverage: Partial" in partial_html
+    assert "Partial source coverage" in partial_html
     assert "Unavailable Center" in unavailable_html
     assert "Partial Center" not in unavailable_html
-    assert "Source coverage: Unavailable" in unavailable_html
-    assert "No facilities matched the active filters." in empty_html
-    assert "Missing dates do not match an active date range" in empty_html
+    assert "Source unavailable" in unavailable_html
+    assert "No facilities match these filters" in empty_html
+    assert "Clear one filter or clear all filters" in empty_html
     assert "Start date must be on or before end date." in invalid_html
+    assert "Cross-facility intelligence" in invalid_html
+    assert "Date range needs attention" in invalid_html
+    assert 'value="2026-06-01"' in invalid_html
+    assert 'value="2026-05-01"' in invalid_html
 
 
 def test_facility_intelligence_get_is_read_only_and_production_has_no_fixture_fallback() -> None:
@@ -541,13 +547,162 @@ def test_facility_intelligence_accessible_structure_and_safe_language() -> None:
     assert '<label for="facility-intelligence-facility-type">' in html
     assert '<label for="facility-intelligence-coverage">' in html
     assert '<button class="button" type="submit">Apply filters</button>' in html
-    assert 'aria-label="Review flags and source coverage"' in html
-    assert "Coverage and interpretation limits" in html
-    assert "Facility ID:" in html
+    assert 'aria-label="Finding and review flags"' in html
+    assert 'aria-current="page" href="/reviewer">Review</a>' in html
+    assert "Source record" in html
+    assert "Reviewer state" in html
+    assert "Facility ID" in html
+    assert 'aria-live="polite"' in html
+    assert "Cross-facility intelligence" in html
+    assert "Which facilities may warrant review next?" not in html
+    assert "What the active filters surface" not in html
+    assert "All contributing complaint records" not in html
+    assert "<details" not in html
+    assert "No substantiated count" not in html
+    assert "Review public records" in html
+    assert "Find facility" in html
+    assert "Request records" in html
+    assert "Job Status" in html
+    assert "shell-facility-search" not in html
+    assert "typeof navigator !== 'undefined'" in html
+    assert "showCopyStatus(button, 'Copy unavailable');" in html
+    assert "@media print" in html
+    assert ".site-header, .civic-header" in html
+    assert ".copy-icon-button, .copy-text-control" in html
+    assert ".facility-row-actions" in html
     assert "license number" not in normalized
-    assert "legal conclusion" in normalized
-    assert "facility-wide conclusion" in normalized
-    assert "hidden score" in normalized
+    assert "legal conclusion" not in normalized
+    assert "facility-wide conclusion" not in normalized
+    assert "hidden score" not in normalized
+
+
+def test_facility_intelligence_approved_state_variants_and_filter_recovery() -> None:
+    with _priority_connection() as connection:
+        context = reviewer_ui_context_for_connection(connection)
+        no_data_status, _no_data_type, no_data_body = route_response(
+            CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+            reviewer_ui_context=context,
+        )
+        _insert_facility_bundle(
+            connection,
+            facility_number="100001",
+            facility_name="State Center",
+            facility_type="Children's Center",
+            county="Kern",
+            complaints=(_complaint("STATE-1", "2026-05-01", "Unsubstantiated"),),
+        )
+        filtered_status, _filtered_type, filtered_body = route_response(
+            f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?geography=Nowhere",
+            reviewer_ui_context=context,
+        )
+
+    loading_html = reviewer_ui._render_facility_intelligence(
+        [],
+        filters=reviewer_ui.FacilityIntelligenceFilters(),
+        all_summaries=[],
+        state_summaries={},
+        reviewer_state_available=False,
+        actor_label=None,
+        page_state="loading",
+    )
+    no_data_html = no_data_body.decode("utf-8")
+    filtered_html = filtered_body.decode("utf-8")
+    assert no_data_status == filtered_status == 200
+    assert "No source-derived facility data" in no_data_html
+    assert "No facility rows are rendered." in no_data_html
+    assert "No facilities match these filters" in filtered_html
+    assert "1 facility · Loaded complaint corpus" in filtered_html
+    assert "0 of 1 facilities match the active filters." in filtered_html
+    assert 'aria-label="Clear Geography filter"' in filtered_html
+    assert ">Clear all</a>" in filtered_html
+    assert "Loading facility intelligence" in loading_html
+    assert 'aria-busy="true"' in loading_html
+    assert "Loading source-backed ordering reasons" in loading_html
+
+
+def test_facility_intelligence_binds_source_and_reviewer_actions_to_next_complaint() -> None:
+    with _priority_connection() as connection:
+        _insert_facility_bundle(
+            connection,
+            facility_number="100001",
+            facility_name="Binding Center",
+            facility_type="Children's Center",
+            county="Kern",
+            complaints=(
+                _complaint(
+                    "BIND-1",
+                    "2026-05-03",
+                    "Substantiated",
+                    source_url="https://example.test/source/BIND-1",
+                ),
+                _complaint(
+                    "BIND-2",
+                    "2026-05-01",
+                    "Unsubstantiated",
+                    source_url="https://example.test/source/BIND-2",
+                ),
+            ),
+        )
+        _insert_reviewer_state(
+            connection,
+            reviewer_state_id="state:bind-1-status",
+            source_record_key="complaint:ccld:complaint:BIND-1",
+            created_at="2026-07-01T12:00:00+00:00",
+            payload={
+                "payload_kind": "reviewer_status_scaffold",
+                "reviewer_status": "in_review",
+            },
+        )
+        before = _table_counts(connection)
+        status, _content_type, body = route_response(
+            CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+        after = _table_counts(connection)
+
+    html = body.decode("utf-8")
+    assert status == 200
+    assert after == before
+    assert "Next complaint: <strong>BIND-1</strong>" in html
+    assert 'href="https://example.test/source/BIND-1"' in html
+    assert 'data-copy-value="https://example.test/source/BIND-1"' in html
+    assert 'aria-label="Open next complaint source for BIND-1"' in html
+    assert "In review" in html
+    assert html.index("Source record") < html.index("Reviewer state")
+    assert "https://example.test/source/BIND-2" not in html
+
+
+def test_facility_intelligence_distinguishes_verified_zero_and_unavailable_values() -> None:
+    with _priority_connection() as connection:
+        _insert_facility_bundle(
+            connection,
+            facility_number="100001",
+            facility_name="Verified Zero Center",
+            facility_type="Children's Center",
+            county="Kern",
+            complaints=(_complaint("ZERO-1", "2026-05-01", "Unsubstantiated"),),
+        )
+        _insert_facility_bundle(
+            connection,
+            facility_number="200002",
+            facility_name="Unavailable Values Center",
+            facility_type="Children's Center",
+            county="Kern",
+            complaints=(_complaint("UNKNOWN-1", "", "Unknown", source_url=""),),
+        )
+        status, _content_type, body = route_response(
+            CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    assert status == 200
+    assert "0 substantiated" in html
+    assert "Substantiated count unavailable" in html
+    assert "Latest complaint date unavailable" in html
+    assert "No substantiated count" not in html
+    assert "Copy next complaint source URL unavailable" in html
+    assert 'aria-disabled="true">Source unavailable</span>' in html
 
 
 def test_facility_hub_reuses_intelligence_aggregates_state_and_tie_order() -> None:

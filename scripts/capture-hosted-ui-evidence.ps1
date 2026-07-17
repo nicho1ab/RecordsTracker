@@ -287,6 +287,10 @@ function Invoke-RouteScreenshot {
     else { $arguments = @("--headless=new", "--disable-gpu", "--hide-scrollbars", "--window-size=$ViewportWidth,$ViewportHeight", "--screenshot=$ScreenshotPath", $Url) }
     $screenshotTimeoutSeconds = [Math]::Max(30, [int]$TimeoutSeconds)
     $result = Invoke-NativeCaptureCommand -Command $Tool.Command -Arguments $arguments -Timeout $screenshotTimeoutSeconds
+    $visibilityDeadline = [DateTime]::UtcNow.AddSeconds(3)
+    while ($result.ExitCode -eq 0 -and -not (Test-Path -LiteralPath $ScreenshotPath) -and [DateTime]::UtcNow -lt $visibilityDeadline) {
+        Start-Sleep -Milliseconds 50
+    }
     if ($result.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $ScreenshotPath)) { return "screenshot failed with $($Tool.Name) exit code $($result.ExitCode): $($result.Output.Trim())" }
     return ""
 }
@@ -317,7 +321,7 @@ function Test-RouteOrientationMarker {
         "home" = @("Find a Facility", "Find the facility/license number")
         "facility" = @("Find a facility", "Find the facility/license number")
         "facility-priority" = @("Facility review priority", "Facilities grouped by review cue priority")
-        "facility-intelligence" = @("Facility review intelligence", "Which facilities may warrant review next?", "Open recommended next complaint")
+        "facility-intelligence" = @("Cross-facility intelligence", "Filter facilities", "Open next complaint")
         "facility-hub" = @("Facility review hub", "Review summary", "Review next")
         "request-records" = @("Request Records", "Which facility should be reviewed?")
         "jobs" = @("Job diagnostics", "Track Request Records jobs")
@@ -793,7 +797,7 @@ try {
         @{ Name = "home"; Path = "/"; Label = "01-home"; ActiveHref = "/"; WorkflowStep = "Start" },
         @{ Name = "facility"; Path = "/ccld/facilities"; Label = "02-facility"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
         @{ Name = "facility-priority"; Path = "/ccld/facilities/review-priority"; Label = "02-facility-priority"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
-        @{ Name = "facility-intelligence"; Path = "/ccld/facilities/intelligence"; Label = "02-facility-intelligence"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
+        @{ Name = "facility-intelligence"; Path = "/ccld/facilities/intelligence"; Label = "02-facility-intelligence"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
         @{ Name = "facility-hub"; Path = "/ccld/facilities/detail?facility_number=$facilityHubNumber"; Label = "02-facility-hub"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
         @{ Name = "request-records"; Path = "/ccld/records/request"; Label = "03-request-records"; ActiveHref = "/ccld/records/request"; WorkflowStep = "Request" },
         @{ Name = "jobs"; Path = "/ccld/retrieval/jobs"; Label = "04-job-status"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Status" },

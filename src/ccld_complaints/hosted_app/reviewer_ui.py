@@ -1059,26 +1059,29 @@ def _facility_intelligence_response(
     ):
         return _html_response(
             400,
-            _render_blocked_page(
-                title="Facility intelligence dates need attention",
-                heading="Facility intelligence dates need attention",
-                message="Start date must be on or before end date.",
+            _render_facility_intelligence(
+                [],
+                filters=filters,
+                all_summaries=[],
+                state_summaries={},
+                reviewer_state_available=False,
+                actor_label=_signed_in_actor_label(context),
+                page_state="date-error",
             ),
         )
     source_status, source_result = _substantiated_source_records_response(context)
     if source_status != 200:
-        if not isinstance(source_result, bytes):
-            raise ValueError("Expected source-derived error body to be bytes.")
-        return _workflow_error_page(
+        return _html_response(
             source_status,
-            source_result,
-            title="Facility intelligence blocked",
-            heading="Facility intelligence blocked",
-            guidance=(
-                "Retry with an authenticated actor that can read the loaded "
-                "source-derived corpus."
+            _render_facility_intelligence(
+                [],
+                filters=filters,
+                all_summaries=[],
+                state_summaries={},
+                reviewer_state_available=False,
+                actor_label=_signed_in_actor_label(context),
+                page_state="error",
             ),
-            links=(("Return to reviewer records", REVIEWER_UI_RECORDS_PATH),),
         )
     if isinstance(source_result, bytes):
         raise ValueError("Expected source-derived records.")
@@ -1090,12 +1093,34 @@ def _facility_intelligence_response(
         all_priority_summaries,
         filters=filters,
     )
+    source_record_keys = tuple(
+        dict.fromkeys(
+            complaint.source_record_key
+            for item in summaries
+            for complaint in item.priority.complaints
+        )
+    )
+    state_status, state_result = _reviewer_created_state_records_for_source_records(
+        context,
+        source_record_keys,
+    )
+    reviewer_state_available = state_status == 200 and not isinstance(
+        state_result,
+        bytes,
+    )
+    state_summaries = (
+        _state_summaries_by_source_record(state_result)
+        if reviewer_state_available and not isinstance(state_result, bytes)
+        else {}
+    )
     return _html_response(
         200,
         _render_facility_intelligence(
             summaries,
             filters=filters,
             all_summaries=all_priority_summaries,
+            state_summaries=state_summaries,
+            reviewer_state_available=reviewer_state_available,
             actor_label=_signed_in_actor_label(context),
         ),
     )
@@ -1595,72 +1620,104 @@ def _render_facility_intelligence(
     *,
     filters: FacilityIntelligenceFilters,
     all_summaries: list[FacilityPrioritySummary],
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    reviewer_state_available: bool,
     actor_label: str | None,
+    page_state: str | None = None,
 ) -> str:
-    complaints = _facility_intelligence_unique_complaints(summaries)
-    substantiated = tuple(item for item in complaints if item.substantiated)
-    serious = tuple(item for item in complaints if item.serious_topics)
-    partial_coverage = _facility_intelligence_complaints_for_coverage(
-        summaries,
-        "partial",
+    resolved_state = page_state or (
+        "populated"
+        if summaries
+        else "no-data"
+        if not all_summaries
+        else "filtered-empty"
     )
-    unavailable_coverage = _facility_intelligence_complaints_for_coverage(
+    result_markup = _render_facility_intelligence_results(
         summaries,
-        "unavailable",
+        filters=filters,
+        state_summaries=state_summaries,
+        reviewer_state_available=reviewer_state_available,
+        page_state=resolved_state,
+        total_facility_count=len(all_summaries),
     )
-    top_summary = summaries[0].priority if summaries else None
-    top_complaint = top_summary.complaints[0] if top_summary and top_summary.complaints else None
-    if top_summary is None or top_complaint is None:
-        next_action = "No recommended next complaint is available for the active filters."
-    else:
-        next_action = (
-            f'<a class="button" href="{_escape(_facility_intelligence_detail_href(top_complaint, top_summary, filters))}">'
-            f'Open recommended next complaint for {_escape(top_summary.facility_name)}</a>'
-        )
-    if summaries:
-        result_markup = f"""        <section id="facility-intelligence-results" aria-labelledby="facility-intelligence-results-heading">
-          <h2 id="facility-intelligence-results-heading">Facilities that match the review indicators</h2>
-          <p>Results use the visible ordering selected below. Each count resolves to the exact deduplicated complaint records that contributed to it.</p>
-          <ol class="worklist-list">
-{''.join(_render_facility_intelligence_result(item, filters) for item in summaries)}
-          </ol>
-        </section>"""
-    else:
-        result_markup = """        <section id="facility-intelligence-results" class="hero-card" aria-labelledby="facility-intelligence-empty-heading">
-          <h2 id="facility-intelligence-empty-heading">No facilities matched the active filters.</h2>
-          <p>Clear or broaden the filters. Missing dates do not match an active date range, and unavailable source links do not become available coverage.</p>
-          <p><a class="button button-secondary" href="/ccld/facilities/intelligence">Clear filters</a></p>
-        </section>"""
+    status_markup = _facility_intelligence_page_status(
+        resolved_state,
+        summaries=summaries,
+    )
     return _page(
-        title="Facility review intelligence",
-        heading="Facility review intelligence",
+        title="Cross-facility intelligence",
+        heading="Cross-facility intelligence",
         actor_label=actor_label,
         active_path=CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
         main=f"""
-        <section class="hero-card attorney-hero" aria-labelledby="facility-intelligence-decision-heading">
-          <div>
-            <p class="launch-kicker">Cross-facility review</p>
-            <h2 id="facility-intelligence-decision-heading">Which facilities may warrant review next?</h2>
-            <p class="launch-value"><strong>{len(summaries)}</strong> loaded facilit{'y matches' if len(summaries) == 1 else 'ies match'} the active source-backed filters. Facilities appear because of visible complaint counts, findings, review flags, serious-review categories, source coverage, and governed trend cues—not a hidden score.</p>
-            <p>Start with the first result under the selected ordering, open its exact contributing complaint records, or continue directly to the deterministic next complaint.</p>
-            <p>{next_action}</p>
-          </div>
+        <p class="intelligence-purpose">Review area · Compare loaded complaint records to decide which facility or complaint to open next.</p>
+        <section class="intelligence-scope" aria-label="Loaded complaint corpus scope">
+          <p>{_facility_intelligence_scope_text(all_summaries, filters)}</p>
+          <p>Ordered by governed priority factors. Exact reasons appear in each row.</p>
         </section>
         {_render_facility_intelligence_filters(filters, all_summaries)}
-        {_render_facility_intelligence_summary(summaries, complaints, substantiated, serious, partial_coverage, unavailable_coverage)}
+        <p class="intelligence-glossary-line">{_glossary_term('Substantiated', 'A finding label shown in a public CCLD complaint record.', 'intelligence-substantiated')} <span>CCLD finding term</span></p>
+        {status_markup}
 {result_markup}
-        {_render_facility_intelligence_contributor_group('facility-intelligence-all-contributors', 'All contributing complaint records', complaints, summaries, filters)}
-        {_render_facility_intelligence_contributor_group('facility-intelligence-substantiated-contributors', 'Substantiated/equivalent contributing complaint records', substantiated, summaries, filters)}
-        {_render_facility_intelligence_contributor_group('facility-intelligence-serious-contributors', 'Serious-review category contributing complaint records', serious, summaries, filters)}
-        {_render_facility_intelligence_contributor_group('facility-intelligence-partial-coverage-contributors', 'Complaint records in partial-coverage facility results', partial_coverage, summaries, filters)}
-        {_render_facility_intelligence_contributor_group('facility-intelligence-unavailable-coverage-contributors', 'Complaint records in unavailable-coverage facility results', unavailable_coverage, summaries, filters)}
-        <details class="technical-details notice-card">
-          <summary>Coverage and interpretation limits</summary>
-          <p>Counts describe only deduplicated records in the authorized loaded corpus. Available, partial, and unavailable coverage describe original public-report links for those records; they do not prove public-source completeness.</p>
-          <p>Finding, category, timing, and trend labels remain source-derived review aids. They are not legal conclusions or facility-wide conclusions.</p>
-        </details>
+        {_DETAIL_COPY_SCRIPT}
 """,
     )
+
+
+def _facility_intelligence_scope_text(
+    summaries: list[FacilityPrioritySummary],
+    filters: FacilityIntelligenceFilters,
+) -> str:
+    range_text = "Loaded complaint corpus"
+    if filters.start_date or filters.end_date:
+        range_text = (
+            "Complaint activity "
+            f"{_reviewer_value_text(filters.start_date or 'unknown', kind='date')}–"
+            f"{_reviewer_value_text(filters.end_date or 'unknown', kind='date')}"
+        )
+    facility_label = "facility" if len(summaries) == 1 else "facilities"
+    return f"{len(summaries)} {facility_label} · {range_text}"
+
+
+def _facility_intelligence_page_status(
+    page_state: str,
+    *,
+    summaries: list[FacilityIntelligenceSummary],
+) -> str:
+    if page_state == "loading":
+        return """        <section class="intelligence-message intelligence-message--info" aria-live="polite" aria-busy="true">
+          <h2>Loading facility intelligence</h2>
+          <p>Filters remain visible and actions are temporarily disabled.</p>
+        </section>"""
+    if page_state == "error":
+        return f"""        <section class="intelligence-message intelligence-message--error" role="alert">
+          <h2>Facility intelligence could not be loaded</h2>
+          <p>Retry the page or <a href="/feedback">report the problem</a>.</p>
+          <p><a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">Retry facility intelligence</a></p>
+        </section>"""
+    if page_state == "date-error":
+        return """        <section class="intelligence-message intelligence-message--error" role="alert">
+          <h2>Date range needs attention</h2>
+          <p>Start date must be on or before end date.</p>
+          <p>Correct either date, then apply the filters again.</p>
+        </section>"""
+    if page_state == "no-data":
+        return """        <section class="intelligence-message" aria-labelledby="facility-intelligence-no-data-heading">
+          <h2 id="facility-intelligence-no-data-heading">No source-derived facility data</h2>
+          <p>No authorized loaded complaint records are available for this page.</p>
+          <p><a href="/ccld/records/request">Request records</a> or <a href="/ccld/facilities">find a facility</a>.</p>
+        </section>"""
+    if page_state == "filtered-empty":
+        return """        <section class="intelligence-message" aria-labelledby="facility-intelligence-empty-heading">
+          <h2 id="facility-intelligence-empty-heading">No facilities match these filters</h2>
+          <p>Clear one filter or clear all filters to restore results.</p>
+        </section>"""
+    if any(item.coverage.status == "partial" for item in summaries):
+        return """        <section class="intelligence-message intelligence-message--review">
+          <h2>Partial source coverage</h2>
+          <p>Facility rows remain available, but some next-complaint source links are missing.</p>
+        </section>"""
+    return ""
 
 
 def _render_facility_intelligence_filters(
@@ -1684,41 +1741,21 @@ def _render_facility_intelligence_filters(
         for complaint in summary.complaints
         for topic in complaint.serious_topics
     )
-    return f"""        <section class="quiet-section" aria-labelledby="facility-intelligence-filters-heading">
-          <h2 id="facility-intelligence-filters-heading">Narrow the loaded corpus</h2>
+    return f"""        <section class="intelligence-filters" aria-labelledby="facility-intelligence-filters-heading">
+          <h2 id="facility-intelligence-filters-heading">Filter facilities</h2>
           <form class="compact-filter-form" method="get" action="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">
             <div class="facility-intelligence-filter-grid">
               <p>
-                <label for="facility-intelligence-date-dimension">Date used for this range</label>
-                <select id="facility-intelligence-date-dimension" name="date_dimension">{_date_dimension_options(filters.date_dimension, include_latest=True)}</select>
-              </p>
-              <p>
-                <label for="facility-intelligence-start-date">Start date</label>
-                <input id="facility-intelligence-start-date" name="start_date" type="date" value="{_escape(filters.start_date or '')}">
-              </p>
-              <p>
-                <label for="facility-intelligence-end-date">End date</label>
-                <input id="facility-intelligence-end-date" name="end_date" type="date" value="{_escape(filters.end_date or '')}">
-              </p>
-              <p>
                 <label for="facility-intelligence-facility-type">Facility type</label>
-                <input id="facility-intelligence-facility-type" name="facility_type" value="{_escape(filters.facility_type)}" list="facility-intelligence-facility-types">
-                <datalist id="facility-intelligence-facility-types">{facility_types}</datalist>
+                <select id="facility-intelligence-facility-type" name="facility_type">{_facility_intelligence_filter_options(filters.facility_type, facility_types, 'All facility types')}</select>
               </p>
               <p>
                 <label for="facility-intelligence-geography">Geography</label>
-                <input id="facility-intelligence-geography" name="geography" value="{_escape(filters.geography)}" list="facility-intelligence-geographies">
-                <datalist id="facility-intelligence-geographies">{geographies}</datalist>
+                <select id="facility-intelligence-geography" name="geography">{_facility_intelligence_filter_options(filters.geography, geographies, 'All geographies')}</select>
               </p>
               <p>
-                <label for="facility-intelligence-finding">Finding</label>
-                <input id="facility-intelligence-finding" name="finding" value="{_escape(filters.finding)}" list="facility-intelligence-findings">
-                <datalist id="facility-intelligence-findings">{findings}</datalist>
-              </p>
-              <p>
-                <label for="facility-intelligence-serious-topic">Serious-review category</label>
-                <input id="facility-intelligence-serious-topic" name="serious_topic" value="{_escape(filters.serious_topic)}" list="facility-intelligence-serious-topics">
-                <datalist id="facility-intelligence-serious-topics">{serious_topics}</datalist>
+                <label for="facility-intelligence-finding">Finding / disposition</label>
+                <select id="facility-intelligence-finding" name="finding">{_facility_intelligence_filter_options(filters.finding, findings, 'All findings')}</select>
               </p>
               <p>
                 <label for="facility-intelligence-coverage">Source coverage</label>
@@ -1730,22 +1767,113 @@ def _render_facility_intelligence_filters(
                 </select>
               </p>
               <p>
-                <label for="facility-intelligence-sort">Order facilities by</label>
-                <select id="facility-intelligence-sort" name="sort">
-                  {_facility_intelligence_option(filters.sort, 'priority', 'Visible review-priority rules')}
-                  {_facility_intelligence_option(filters.sort, 'complaint_count', 'Complaint count')}
-                  {_facility_intelligence_option(filters.sort, 'recent_activity', 'Most recent activity')}
-                  {_facility_intelligence_option(filters.sort, 'facility_name', 'Facility name')}
-                </select>
+                <label for="facility-intelligence-start-date">Start date</label>
+                <input id="facility-intelligence-start-date" name="start_date" type="date" value="{_escape(filters.start_date or '')}">
+              </p>
+              <p>
+                <label for="facility-intelligence-end-date">End date</label>
+                <input id="facility-intelligence-end-date" name="end_date" type="date" value="{_escape(filters.end_date or '')}">
+              </p>
+              <p>
+                <label for="facility-intelligence-date-dimension">Date based on</label>
+                <select id="facility-intelligence-date-dimension" name="date_dimension">{_date_dimension_options(filters.date_dimension, include_latest=True)}</select>
+              </p>
+              <p>
+                <label for="facility-intelligence-serious-topic">Serious review category</label>
+                <select id="facility-intelligence-serious-topic" name="serious_topic">{_facility_intelligence_filter_options(filters.serious_topic, serious_topics, 'No category selected')}</select>
               </p>
             </div>
+            <input type="hidden" name="sort" value="{_escape(filters.sort)}">
             <div class="form-actions">
               <button class="button" type="submit">Apply filters</button>
-              <a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">Clear filters</a>
+              <a class="button-link" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">Clear all</a>
             </div>
-            <p class="helper-text">Defined terms: {_glossary_term('Facility ID', 'The public CCLD identifier used to connect a facility with its loaded complaint records.', 'intelligence-facility-id')}; {_glossary_term('Finding', 'The outcome or status shown in a public complaint record.', 'intelligence-finding')}; {_glossary_term('Serious-review category', 'A governed source category or cautious keyword-assisted review cue; it is not a legal conclusion.', 'intelligence-serious-topic')}; {_glossary_term('Source coverage', 'Whether contributing loaded complaint records include an original public-report link.', 'intelligence-coverage')}.</p>
+            {_render_facility_intelligence_applied_filters(filters)}
           </form>
         </section>"""
+
+
+def _facility_intelligence_filter_options(
+    current: str,
+    option_markup: str,
+    all_label: str,
+) -> str:
+    all_option = _facility_intelligence_option(current, "", all_label)
+    return f"{all_option}{option_markup}"
+
+
+def _render_facility_intelligence_applied_filters(
+    filters: FacilityIntelligenceFilters,
+) -> str:
+    active = _facility_intelligence_active_filters(filters)
+    if not active:
+        return '<p class="applied-filter-empty">No additional filters applied.</p>'
+    chips = "\n".join(
+        f'<li><a class="applied-filter-chip" href="{_escape(_facility_intelligence_clear_filter_href(filters, key))}" '
+        f'aria-label="Clear { _escape(label) } filter"><span>{_escape(label)}: {_escape(value)}</span><span aria-hidden="true">×</span></a></li>'
+        for key, label, value in active
+    )
+    return f"""            <div class="applied-filters" aria-labelledby="applied-filters-heading">
+              <h3 id="applied-filters-heading" class="sr-only">Applied filters</h3>
+              <ul>
+{chips}
+              </ul>
+            </div>"""
+
+
+def _facility_intelligence_active_filters(
+    filters: FacilityIntelligenceFilters,
+) -> tuple[tuple[str, str, str], ...]:
+    values: list[tuple[str, str, str]] = []
+    for key, label, value in (
+        ("facility_type", "Facility type", filters.facility_type),
+        ("geography", "Geography", filters.geography),
+        ("finding", "Finding", filters.finding),
+        ("coverage", "Source coverage", "" if filters.coverage == "all" else filters.coverage.title()),
+        ("start_date", "Start date", _reviewer_value_text(filters.start_date, kind="date") if filters.start_date else ""),
+        ("end_date", "End date", _reviewer_value_text(filters.end_date, kind="date") if filters.end_date else ""),
+        ("date_dimension", "Date based on", date_dimension_label(filters.date_dimension) if filters.date_dimension != "complaint_received_date" else ""),
+        ("serious_topic", "Serious category", filters.serious_topic),
+        ("sort", "Sort", _facility_intelligence_sort_label(filters.sort) if filters.sort != "priority" else ""),
+    ):
+        if value:
+            values.append((key, label, value))
+    return tuple(values)
+
+
+def _facility_intelligence_clear_filter_href(
+    filters: FacilityIntelligenceFilters,
+    clear_key: str,
+) -> str:
+    values = _facility_intelligence_query_values(filters)
+    values.pop(clear_key, None)
+    query = urlencode(values)
+    return f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?{query}" if query else CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH
+
+
+def _facility_intelligence_query_values(
+    filters: FacilityIntelligenceFilters,
+) -> dict[str, str]:
+    values = {
+        "date_dimension": filters.date_dimension,
+        "sort": filters.sort,
+    }
+    for key, value in (
+        ("start_date", filters.start_date or ""),
+        ("end_date", filters.end_date or ""),
+        ("facility_type", filters.facility_type),
+        ("geography", filters.geography),
+        ("finding", filters.finding),
+        ("serious_topic", filters.serious_topic),
+        ("coverage", "" if filters.coverage == "all" else filters.coverage),
+    ):
+        if value:
+            values[key] = value
+    if values["date_dimension"] == "complaint_received_date":
+        values.pop("date_dimension")
+    if values["sort"] == "priority":
+        values.pop("sort")
+    return values
 
 
 def _facility_intelligence_option(current: str, value: str, label: str) -> str:
@@ -1753,92 +1881,137 @@ def _facility_intelligence_option(current: str, value: str, label: str) -> str:
     return f'<option value="{_escape(value)}"{selected}>{_escape(label)}</option>'
 
 
-def _render_facility_intelligence_summary(
+def _render_facility_intelligence_results(
     summaries: list[FacilityIntelligenceSummary],
-    complaints: tuple[FacilityPriorityComplaint, ...],
-    substantiated: tuple[FacilityPriorityComplaint, ...],
-    serious: tuple[FacilityPriorityComplaint, ...],
-    partial_coverage: tuple[FacilityPriorityComplaint, ...],
-    unavailable_coverage: tuple[FacilityPriorityComplaint, ...],
+    *,
+    filters: FacilityIntelligenceFilters,
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    reviewer_state_available: bool,
+    page_state: str,
+    total_facility_count: int,
 ) -> str:
-    return f"""        <section aria-labelledby="facility-intelligence-summary-heading">
-          <h2 id="facility-intelligence-summary-heading">What the active filters surface</h2>
-          <dl class="summary-list">
-            <dt>Facilities shown</dt>
-            <dd><a href="#facility-intelligence-results">{len(summaries)} facility result(s)</a></dd>
-            <dt>Contributing complaint records</dt>
-            <dd><a href="#facility-intelligence-all-contributors">{len(complaints)} exact complaint record(s)</a></dd>
-            <dt>Substantiated/equivalent records</dt>
-            <dd><a href="#facility-intelligence-substantiated-contributors">{len(substantiated)} exact complaint record(s)</a></dd>
-            <dt>Serious-review category records</dt>
-            <dd><a href="#facility-intelligence-serious-contributors">{len(serious)} exact complaint record(s)</a></dd>
-            <dt>Complaint records in partial-coverage facility results</dt>
-            <dd><a href="#facility-intelligence-partial-coverage-contributors">{len(partial_coverage)} exact complaint record(s)</a></dd>
-            <dt>Complaint records in unavailable-coverage facility results</dt>
-            <dd><a href="#facility-intelligence-unavailable-coverage-contributors">{len(unavailable_coverage)} exact complaint record(s)</a></dd>
-          </dl>
+    count_text = (
+        "Facility results"
+        if page_state in {"no-data", "error", "date-error", "loading"}
+        else f"Facility results — {len(summaries)}"
+    )
+    sort_form = _render_facility_intelligence_sort(filters)
+    if page_state == "loading":
+        rows = """          <div class="intelligence-loading-row" aria-hidden="true">
+            <div><strong>Loading facilities</strong><span>Loading source-backed ordering reasons…</span></div>
+            <span>Loading result…</span><span>Review facility</span>
+          </div>"""
+    elif summaries:
+        rows = f"""          <ol class="facility-intelligence-inventory">
+{''.join(_render_facility_intelligence_result(item, filters, state_summaries=state_summaries, reviewer_state_available=reviewer_state_available, selected=index == 0) for index, item in enumerate(summaries))}
+          </ol>"""
+    else:
+        empty_text = (
+            f"0 of {total_facility_count} facilities match the active filters."
+            if page_state == "filtered-empty"
+            else "No facility rows are rendered."
+        )
+        rows = f'<p class="intelligence-results-empty">{_escape(empty_text)}</p>'
+    return f"""        <section id="facility-intelligence-results" class="facility-intelligence-results" aria-labelledby="facility-intelligence-results-heading">
+          <div class="facility-intelligence-results__header">
+            <h2 id="facility-intelligence-results-heading">{_escape(count_text)}</h2>
+            {sort_form}
+          </div>
+{rows}
         </section>"""
+
+
+def _render_facility_intelligence_sort(filters: FacilityIntelligenceFilters) -> str:
+    hidden = "\n".join(
+        f'<input type="hidden" name="{_escape(key)}" value="{_escape(value)}">'
+        for key, value in _facility_intelligence_query_values(filters).items()
+        if key != "sort"
+    )
+    return f"""<form class="facility-intelligence-sort" method="get" action="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">
+              {hidden}
+              <label for="facility-intelligence-sort">Sort by</label>
+              <select id="facility-intelligence-sort" name="sort" onchange="this.form.submit()">
+                {_facility_intelligence_option(filters.sort, 'priority', 'Governed priority')}
+                {_facility_intelligence_option(filters.sort, 'complaint_count', 'Complaint count')}
+                {_facility_intelligence_option(filters.sort, 'recent_activity', 'Recent activity')}
+                {_facility_intelligence_option(filters.sort, 'facility_name', 'Facility name')}
+              </select>
+              <noscript><button class="button button-secondary" type="submit">Apply sort</button></noscript>
+            </form>"""
+
+
+def _facility_intelligence_sort_label(value: str) -> str:
+    return {
+        "priority": "Governed priority",
+        "complaint_count": "Complaint count",
+        "recent_activity": "Recent activity",
+        "facility_name": "Facility name",
+    }.get(value, "Governed priority")
 
 
 def _render_facility_intelligence_result(
     item: FacilityIntelligenceSummary,
     filters: FacilityIntelligenceFilters,
+    *,
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    reviewer_state_available: bool,
+    selected: bool,
 ) -> str:
     summary = item.priority
     result_id = _facility_intelligence_result_id(summary)
-    contributor_id = f"{result_id}-contributors"
-    factors = "\n".join(
-        f"                <li>{_escape(factor)}</li>" for factor in summary.factors
-    )
-    anomaly_items = "\n".join(
-        f"                <li>{_escape(cue)}</li>" for cue in item.anomaly_cues
-    )
-    anomaly_markup = (
-        f"""              <p><strong>Governed monthly trend cues</strong></p>
-              <ul class="compact-list">
-{anomaly_items}
-              </ul>"""
-        if anomaly_items
-        else ""
-    )
     badges = _render_facility_intelligence_badges(item)
     next_complaint = summary.complaints[0]
-    hub_action = (
-        f'<a class="button button-secondary" href="{_escape(_facility_intelligence_hub_href(summary, filters))}">Open Facility Review Hub</a>'
-        if summary.facility_number != "unknown"
-        else '<span class="helper-text">Facility Review Hub unavailable because Facility ID is not available.</span>'
+    detail_href = _facility_intelligence_detail_href(next_complaint, summary, filters)
+    reviewer_status = _facility_intelligence_reviewer_status(
+        next_complaint,
+        state_summaries,
+        reviewer_state_available=reviewer_state_available,
     )
-    request_action = (
-        f'<a class="button button-secondary" href="{_escape(_facility_intelligence_request_href(summary, filters))}">Open filtered complaint queue</a>'
+    source_region = _render_facility_intelligence_source_region(next_complaint)
+    facility_action = (
+        f'<a class="button" href="{_escape(_facility_intelligence_hub_href(summary, filters))}" aria-label="Open facility {_escape(summary.facility_name)}">Open facility</a>'
         if summary.facility_number != "unknown"
-        else ""
+        else '<span class="button button-disabled" aria-disabled="true">Open facility unavailable</span>'
     )
-    return f"""            <li id="{result_id}">
-              <article class="worklist-card" aria-labelledby="{result_id}-heading">
-                <p class="launch-kicker">Facility review result</p>
-                <h3 id="{result_id}-heading">{_escape(summary.facility_name)}</h3>
-                <p><strong>Facility ID:</strong> {_escape(_reviewer_value_text(summary.facility_number))}</p>
-                <p>{_escape(_reviewer_value_text(summary.facility_type))} · {_escape(_reviewer_value_text(summary.geography))}</p>
-                {badges}
-                <p><a href="#{contributor_id}">{summary.complaint_count} contributing complaint record(s)</a>; {summary.substantiated_count} substantiated/equivalent; most recent supported activity {_escape(_reviewer_value_text(summary.recent_activity_date, kind='date'))}.</p>
-                <h4>Why this facility appears</h4>
-                <ul class="compact-list">
-{factors}
-                </ul>
-{anomaly_markup}
-                <div class="form-actions">
-                  {hub_action}
-                  {request_action}
-                  <a class="button" href="{_escape(_facility_intelligence_detail_href(next_complaint, summary, filters))}">Open recommended next complaint</a>
+    selection_label = '<p class="facility-row-kicker">Review next</p>' if selected else '<p class="facility-row-kicker">Facility</p>'
+    row_class = "facility-intelligence-row is-selected" if selected else "facility-intelligence-row"
+    return f"""            <li id="{result_id}" class="{row_class}">
+              <article aria-labelledby="{result_id}-heading">
+                <div class="facility-row-identity">
+                  {selection_label}
+                  <h3 id="{result_id}-heading">{_escape(summary.facility_name)}</h3>
+                  <p><strong>Facility ID</strong> {_copyable_value('Facility ID', summary.facility_number)}</p>
+                  <p>{_glossary_term(_reviewer_value_text(summary.facility_type), 'The facility type shown in the loaded public record.', f'{result_id}-facility-type')} <span aria-hidden="true">·</span> {_escape(_reviewer_value_text(summary.geography))}</p>
                 </div>
-                {_render_facility_intelligence_facility_contributors(item, filters, contributor_id)}
+                <div class="facility-row-reason">
+                  <h4>{summary.complaint_count} contributing complaint{'s' if summary.complaint_count != 1 else ''}</h4>
+                  <p class="ordering-explanation">{_escape(_facility_intelligence_ordering_explanation(summary))}</p>
+                  {badges}
+                </div>
+                {source_region}
+                <section class="facility-row-reviewer" aria-labelledby="{result_id}-reviewer-heading">
+                  <h4 id="{result_id}-reviewer-heading">Reviewer state</h4>
+                  <p>{_review_chip_markup(reviewer_status)}</p>
+                  <a class="button button-secondary" href="{_escape(detail_href)}#reviewer-state-heading" aria-label="Update reviewer status for {_escape(summary.facility_name)}">Update status</a>
+                </section>
+                <div class="facility-row-actions" aria-label="Actions for {_escape(summary.facility_name)}">
+                  {facility_action}
+                  <a class="button button-secondary" href="{_escape(detail_href)}" aria-label="Open next complaint for {_escape(summary.facility_name)}">Open next complaint</a>
+                </div>
               </article>
             </li>"""
 
 
 def _render_facility_intelligence_badges(item: FacilityIntelligenceSummary) -> str:
     summary = item.priority
-    labels: list[str] = []
+    labels = sorted(
+        {
+            complaint.finding
+            for complaint in summary.complaints
+            if complaint.finding.casefold() not in {"unknown", "not listed", "not provided"}
+        },
+        key=str.casefold,
+    )
     if summary.strongest_delay_days:
         labels.append(f"{summary.strongest_delay_days}+ day gap")
     if summary.missing_date_count:
@@ -1854,11 +2027,90 @@ def _render_facility_intelligence_badges(item: FacilityIntelligenceSummary) -> s
     )
     flag_markup = "".join(
         f"<li>{_review_chip_markup(label)}</li>" for label in labels
-    ) or "<li>No active review-flag badge</li>"
-    return f"""                <ul class="flag-list" aria-label="Review flags and source coverage">
-                  <li><span class="status-badge">Source coverage: {_escape(item.coverage.status.title())}</span></li>
+    )
+    return f"""                <ul class="flag-list" aria-label="Finding and review flags">
                   {flag_markup}
                 </ul>"""
+
+
+def _facility_intelligence_ordering_explanation(
+    summary: FacilityPrioritySummary,
+) -> str:
+    substantiated = _facility_intelligence_substantiated_text(summary)
+    latest = (
+        f"latest complaint {_reviewer_value_text(summary.recent_activity_date, kind='date')}"
+        if summary.recent_activity_date
+        else "Latest complaint date unavailable"
+    )
+    complaint_label = "complaint" if summary.complaint_count == 1 else "complaints"
+    base = f"{summary.complaint_count} exact contributing {complaint_label}; {substantiated}; {latest}."
+    return base
+
+
+def _facility_intelligence_substantiated_text(
+    summary: FacilityPrioritySummary,
+) -> str:
+    known = all(
+        complaint.finding.casefold() not in {"unknown", "not listed", "not provided"}
+        for complaint in summary.complaints
+    )
+    if not known:
+        return "Substantiated count unavailable"
+    return f"{summary.substantiated_count} substantiated"
+
+
+def _render_facility_intelligence_source_region(
+    complaint: FacilityPriorityComplaint,
+) -> str:
+    control = (
+        complaint.complaint_control_number
+        if complaint.complaint_control_number != "unknown"
+        else complaint.stable_complaint_id
+    )
+    if complaint.source_available and complaint.source_url_href:
+        source_badge = _review_chip_markup("Source available")
+        open_action = (
+            f'<a class="button button-secondary" href="{_escape(complaint.source_url_href)}" '
+            f'aria-label="Open next complaint source for {_escape(control)}">Open next complaint source</a>'
+        )
+        copy_action = _copy_text_button(
+            "Copy next complaint source URL",
+            complaint.source_url_href,
+        )
+    else:
+        source_badge = _review_chip_markup("Source unavailable")
+        open_action = '<span class="button button-disabled" aria-disabled="true">Source unavailable</span>'
+        copy_action = '<button class="copy-text-button" type="button" disabled>Copy next complaint source URL unavailable</button>'
+    return f"""                <section class="facility-row-source" aria-label="Source record for complaint {_escape(control)}">
+                  <h4>Source record</h4>
+                  <p>{source_badge}</p>
+                  <p>Next complaint: <strong>{_escape(control)}</strong></p>
+                  {open_action}
+                  {copy_action}
+                </section>"""
+
+
+def _copy_text_button(label: str, value: str) -> str:
+    return (
+        f'<span class="copy-text-control"><button class="copy-text-button" type="button" '
+        f'data-copy-value="{_escape(value)}" data-copy-feedback="Copied" '
+        f'aria-label="{_escape(label)}">{_clipboard_icon_svg()}<span>{_escape(label)}</span></button>'
+        '<span class="copy-feedback" data-copy-status hidden aria-live="polite" aria-atomic="true"></span></span>'
+    )
+
+
+def _facility_intelligence_reviewer_status(
+    complaint: FacilityPriorityComplaint,
+    state_summaries: Mapping[str, Mapping[str, Any]],
+    *,
+    reviewer_state_available: bool,
+) -> str:
+    if not reviewer_state_available:
+        return "Reviewer status unavailable"
+    status = _reviewer_queue_status(
+        state_summaries.get(complaint.source_record_key, _empty_state_summary())
+    )
+    return _REVIEWER_STATUS_LABELS.get(status, "Not started")
 
 
 def _render_facility_intelligence_facility_contributors(
@@ -8545,12 +8797,12 @@ function showCopyStatus(button, message) {
     status.hidden = true;
     status.textContent = '';
     button.removeAttribute('data-copy-state');
-  }, 1700);
+  }, 2000);
 }
 document.querySelectorAll('[data-copy-value]').forEach(function (button) {
   button.addEventListener('click', function () {
     var value = button.getAttribute('data-copy-value') || '';
-    if (navigator.clipboard && navigator.clipboard.writeText) {
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(value).then(function () {
         button.setAttribute('data-copy-state', 'copied');
         showCopyStatus(button, 'Copied');
@@ -8558,6 +8810,10 @@ document.querySelectorAll('[data-copy-value]').forEach(function (button) {
         button.setAttribute('data-copy-state', 'unavailable');
         showCopyStatus(button, 'Copy unavailable');
       });
+    }
+    else {
+      button.setAttribute('data-copy-state', 'unavailable');
+      showCopyStatus(button, 'Copy unavailable');
     }
   });
 });
@@ -9018,8 +9274,10 @@ def _review_flag_chip_class(label: str) -> str:
         "Source link unavailable",
     }:
         return "review-chip badge-danger"
-    if label == "CCLD source available":
+    if label in {"CCLD source available", "Source available"}:
         return "review-chip source-chip"
+    if label.strip().casefold() in {"substantiated", "unsubstantiated", "inconclusive"}:
+        return "review-chip badge-info"
     if label.endswith("day gap"):
         return "review-chip badge-attention badge-attention--warning"
     workflow_state_labels = (
@@ -12197,6 +12455,7 @@ def _page(
                 step_id="review_records",
                 next_action="Open next record or add reviewer-created notes/status",
                 show_workflow_indicator=show_workflow_indicator,
+                civic_ledger=active_path == CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
         )
 
 

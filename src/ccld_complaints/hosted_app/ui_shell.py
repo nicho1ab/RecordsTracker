@@ -111,9 +111,14 @@ def render_page_shell(
     step_id: str | None = None,
     next_action: str | None = None,
     show_workflow_indicator: bool = False,
+    civic_ledger: bool = False,
 ) -> str:
     runtime_mode = mode_label or _runtime_mode_label()
-    links = _nav_links(extra_nav_links, active_path=active_path)
+    links = (
+      _civic_ledger_nav_links(active_path=active_path)
+      if civic_ledger
+      else _nav_links(extra_nav_links, active_path=active_path)
+    )
     current_step = step_id or _step_id_for_path(active_path)
     stepper = _guided_stepper(current_step, next_action) if show_workflow_indicator else ""
     actor_markup = (
@@ -123,19 +128,11 @@ def render_page_shell(
     )
     eyebrow_markup = f'<p class="pilot-eyebrow">{html.escape(eyebrow)}</p>' if eyebrow else ""
     badge_class = MODE_BADGE_CLASSES.get(runtime_mode, "ds-badge ds-badge--muted")
-    return f"""<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{html.escape(title)} - {APP_TITLE}</title>
-  <style>
-{SHARED_CSS}
-  </style>
-</head>
-<body class="ds-page-bg">
-  <a class="skip-link" href="#main-content">{html.escape(skip_label)}</a>
-  <header class="app-shell-header site-header ds-surface">
+    body_class = "ds-page-bg civic-ledger-page" if civic_ledger else "ds-page-bg"
+    header_markup = (
+      _civic_ledger_header(links)
+      if civic_ledger
+      else f"""  <header class="app-shell-header site-header ds-surface">
     <div class="shell app-shell app-shell-compact">
       <div class="brand-title-row site-title-row">
         <div class="brand-title-block brand-block" aria-label="{APP_TITLE}">
@@ -159,7 +156,22 @@ def render_page_shell(
         </div>
       </div>
     </div>
-  </header>
+  </header>"""
+    )
+    footer_markup = _civic_ledger_footer() if civic_ledger else ""
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{html.escape(title)} - {APP_TITLE}</title>
+  <style>
+{SHARED_CSS}
+  </style>
+</head>
+<body class="{body_class}">
+  <a class="skip-link" href="#main-content">{html.escape(skip_label)}</a>
+{header_markup}
   <main id="main-content" class="ds-page-main app-page" tabindex="-1">
     <div class="shell page-main app-page-main">
       <section class="page-title-block" aria-labelledby="page-heading">
@@ -171,9 +183,62 @@ def render_page_shell(
 {main}
     </div>
   </main>
+{footer_markup}
 </body>
 </html>
 """
+
+
+def _civic_ledger_header(links: str) -> str:
+    return f"""  <header class="civic-header">
+    <div class="shell civic-header__inner">
+      <div class="civic-brand">
+        <a class="civic-brand__name" href="/">RecordsTracker</a>
+        <span class="civic-brand__tagline">Review public records</span>
+      </div>
+      <span class="civic-menu-label" aria-hidden="true">Menu</span>
+      <nav class="civic-nav" aria-label="Primary navigation">
+        <ul>
+{links}
+        </ul>
+      </nav>
+    </div>
+  </header>"""
+
+
+def _civic_ledger_footer() -> str:
+    return """  <footer class="civic-footer">
+    <div class="shell civic-footer__inner">
+      <div><strong>RecordsTracker</strong><span>Public CCLD records remain the source of record.</span></div>
+      <nav aria-label="Footer navigation"><a href="/ccld/help">Help</a><span aria-hidden="true"> · </span><a href="/feedback">Feedback</a><span aria-hidden="true"> · </span><a href="/ccld/help#accessibility">Accessibility</a></nav>
+    </div>
+  </footer>"""
+
+
+def _civic_ledger_nav_links(*, active_path: str | None) -> str:
+    links = (
+      ("Home", "/"),
+      ("Find facility", "/ccld/facilities"),
+      ("Request records", "/ccld/records/request"),
+      ("Review", "/reviewer"),
+      ("Job Status", "/ccld/retrieval/jobs"),
+      ("Help", "/ccld/help"),
+    )
+    items: list[str] = []
+    review_active = active_path == "/ccld/facilities/intelligence"
+    for label, href in links:
+      active = (
+        href == "/reviewer"
+        if review_active
+        else _is_active_nav(href, active_path)
+      )
+      active_class = ' class="is-active"' if active else ""
+      current = ' aria-current="page"' if active else ""
+      items.append(
+        f'          <li><a{active_class}{current} href="{html.escape(href, quote=True)}">'
+        f"{html.escape(label)}</a></li>"
+      )
+    return "\n".join(items)
 
 
 def render_action_group(
@@ -2676,14 +2741,558 @@ SHARED_CSS = r"""
       padding: 1rem;
       white-space: pre-wrap;
     }
+    .civic-ledger-page {
+      --ds-page-bg: #f6f1e7;
+      --ds-surface: #fffdf8;
+      --ds-surface-muted: #f2eadc;
+      --ds-text: #17212b;
+      --ds-text-muted: #5f6872;
+      --ds-border: #b8b1a5;
+      --ds-border-soft: #d8d0c3;
+      --ds-primary: #14283d;
+      --ds-primary-hover: #0b1d2f;
+      --ds-primary-soft: #e7edf5;
+      --ds-link: #174d74;
+      --ds-link-hover: #0d3654;
+      --ds-info: #254f73;
+      --ds-info-soft: #e7edf5;
+      --ds-nav-active-border: #d5a21a;
+      --ds-attention: #7b5608;
+      --ds-attention-soft: #fff1c7;
+      --ds-danger: #9f281c;
+      --ds-danger-soft: #fde8e6;
+      --ds-success: #1c5a35;
+      --ds-focus: #d5a21a;
+      --bg: var(--ds-page-bg);
+      --surface: var(--ds-surface);
+      --surface-alt: var(--ds-surface-muted);
+      --ink: var(--ds-text);
+      --muted: var(--ds-text-muted);
+      --line: var(--ds-border);
+      --line-soft: var(--ds-border-soft);
+      --accent: var(--ds-primary);
+      --accent-strong: var(--ds-primary-hover);
+      --focus: var(--ds-focus);
+      background: var(--ds-page-bg);
+      font-family: Inter, "Segoe UI", system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.42;
+    }
+    .civic-ledger-page .shell {
+      max-width: 90rem;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+    .civic-header,
+    .civic-footer {
+      background: #14283d;
+      color: #fff;
+    }
+    .civic-header {
+      margin: 1.5rem 1.5rem 0;
+    }
+    .civic-header__inner {
+      align-items: center;
+      display: grid;
+      gap: 1.5rem;
+      grid-template-columns: minmax(16rem, 1fr) auto minmax(32rem, auto);
+      min-height: 5rem;
+      padding-bottom: 1rem;
+      padding-top: 1rem;
+    }
+    .civic-brand {
+      display: grid;
+      gap: 0.55rem;
+    }
+    .civic-brand__name {
+      color: #fff;
+      font-size: 1.15rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .civic-brand__tagline {
+      font-size: 0.82rem;
+    }
+    .civic-menu-label {
+      color: #f3d77d;
+      display: none;
+      font-weight: 650;
+    }
+    .civic-nav ul {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(6, minmax(5rem, auto));
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .civic-nav a {
+      border-bottom: 3px solid transparent;
+      color: #fff;
+      display: block;
+      font-weight: 500;
+      min-height: 2.75rem;
+      padding: 0.7rem 0.35rem 0.45rem;
+      text-align: center;
+      text-decoration: none;
+    }
+    .civic-nav a:hover,
+    .civic-nav a:focus-visible,
+    .civic-nav a.is-active {
+      border-bottom-color: #d5a21a;
+      color: #fff;
+    }
+    .civic-ledger-page .app-page-main {
+      padding-bottom: 1rem;
+      padding-top: 1.15rem;
+    }
+    .civic-ledger-page .page-title-block {
+      margin-bottom: 0;
+    }
+    .civic-ledger-page h1 {
+      font-size: 1.625rem;
+      font-weight: 650;
+      line-height: 2.375rem;
+    }
+    .intelligence-purpose {
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+    .intelligence-scope,
+    .intelligence-filters,
+    .facility-intelligence-results,
+    .intelligence-message {
+      background: #fffdf8;
+      border: 1px solid #b8b1a5;
+      border-radius: 4px;
+      box-shadow: none;
+      margin-bottom: 1rem;
+      padding: 1rem;
+    }
+    .intelligence-scope p,
+    .intelligence-message p {
+      margin-bottom: 0.25rem;
+    }
+    .intelligence-scope p:last-child,
+    .intelligence-message p:last-child {
+      color: var(--muted);
+      margin-bottom: 0;
+    }
+    .intelligence-filters h2,
+    .facility-intelligence-results h2,
+    .intelligence-message h2 {
+      font-size: 1rem;
+      line-height: 1.45;
+      margin-bottom: 0.75rem;
+    }
+    .civic-ledger-page .facility-intelligence-filter-grid {
+      gap: 0.2rem 0;
+      grid-template-columns: repeat(7, minmax(8.5rem, 1fr));
+    }
+    .civic-ledger-page .facility-intelligence-filter-grid p:nth-child(8) {
+      grid-column: 1 / 2;
+    }
+    .civic-ledger-page .facility-intelligence-filter-grid label,
+    .facility-intelligence-sort label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    .civic-ledger-page .facility-intelligence-filter-grid input,
+    .civic-ledger-page .facility-intelligence-filter-grid select,
+    .facility-intelligence-sort select {
+      background: #fffdf8;
+      border-color: #b8b1a5;
+      border-radius: 4px;
+      min-height: 2.5rem;
+      width: 100%;
+    }
+    .civic-ledger-page button,
+    .civic-ledger-page .button {
+      border-radius: 4px;
+      min-height: 2.5rem;
+    }
+    .civic-ledger-page .button-secondary {
+      background: #fffdf8;
+      border-color: #14283d;
+      color: #14283d;
+    }
+    .civic-ledger-page .button-secondary:hover {
+      background: #f2eadc;
+      color: #14283d;
+    }
+    .button-link {
+      align-items: center;
+      display: inline-flex;
+      min-height: 2.75rem;
+      padding: 0 0.75rem;
+      text-decoration: none;
+    }
+    .applied-filter-empty {
+      color: var(--muted);
+      margin: 0;
+    }
+    .applied-filters ul {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .applied-filter-chip {
+      align-items: center;
+      background: #fffdf8;
+      border: 1px solid #b8b1a5;
+      border-radius: 999px;
+      color: #17212b;
+      display: inline-flex;
+      gap: 0.45rem;
+      min-height: 2rem;
+      padding: 0.35rem 0.75rem;
+      text-decoration: none;
+    }
+    .intelligence-glossary-line {
+      align-items: center;
+      display: flex;
+      gap: 3rem;
+      margin: 0 0 1rem 0.25rem;
+      max-width: 22rem;
+    }
+    .intelligence-glossary-line > span:last-child {
+      color: var(--muted);
+    }
+    .civic-ledger-page .inline-glossary-term {
+      border-bottom-color: #174d74;
+      color: #174d74;
+    }
+    .intelligence-message--info {
+      background: #e7edf5;
+      border-color: #82a6c7;
+      color: #254f73;
+    }
+    .intelligence-message--review {
+      background: #fff1c7;
+      border-color: #dda800;
+      color: #7b5608;
+    }
+    .intelligence-message--error {
+      background: #fde8e6;
+      border-color: #e07a70;
+      color: #9f281c;
+    }
+    .facility-intelligence-results {
+      padding: 0;
+    }
+    .facility-intelligence-results__header {
+      align-items: end;
+      display: flex;
+      justify-content: space-between;
+      padding: 1rem;
+    }
+    .facility-intelligence-results__header h2 {
+      margin: 0;
+    }
+    .facility-intelligence-sort {
+      min-width: 13.75rem;
+    }
+    .facility-intelligence-inventory {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .facility-intelligence-row {
+      border-top: 1px solid #b8b1a5;
+      margin: 0;
+    }
+    .facility-intelligence-row > article {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: minmax(15rem, 1.05fr) minmax(20rem, 1.8fr) minmax(15rem, 1fr) minmax(11rem, 0.75fr) minmax(10rem, 0.7fr);
+      padding: 1rem;
+    }
+    .facility-intelligence-row.is-selected {
+      background: #f5e5b5;
+      border: 2px solid #c38a09;
+      border-radius: 4px;
+    }
+    .facility-intelligence-row:hover:not(.is-selected) {
+      background: #fbf7ef;
+      box-shadow: inset 4px 0 0 #d5a21a;
+    }
+    .facility-row-kicker,
+    .facility-row-source h4,
+    .facility-row-reviewer h4 {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 500;
+      margin-bottom: 0.45rem;
+    }
+    .facility-row-identity h3,
+    .facility-row-reason h4 {
+      font-size: 1rem;
+      margin: 0 0 0.45rem;
+    }
+    .facility-row-identity p,
+    .facility-row-reason p,
+    .facility-row-source p,
+    .facility-row-reviewer p {
+      margin-bottom: 0.55rem;
+    }
+    .ordering-explanation {
+      overflow-wrap: anywhere;
+    }
+    .facility-row-source,
+    .facility-row-reviewer {
+      align-content: start;
+      background: #f2eadc;
+      border: 1px solid #b8b1a5;
+      border-radius: 4px;
+      display: grid;
+      gap: 0.4rem;
+      padding: 0.75rem;
+    }
+    .facility-row-actions {
+      align-content: start;
+      display: grid;
+      gap: 0.5rem;
+    }
+    .facility-row-source .button,
+    .facility-row-reviewer .button,
+    .facility-row-actions .button {
+      width: 100%;
+    }
+    .civic-ledger-page .review-chip {
+      background: #f5efe3;
+      border-color: #b8b1a5;
+      color: #17212b;
+      font-size: 0.78rem;
+    }
+    .civic-ledger-page .source-chip {
+      background: #e1f1e8;
+      border-color: #79b594;
+      color: #1c5a35;
+    }
+    .civic-ledger-page .badge-danger {
+      background: #fde8e6;
+      border-color: #e07a70;
+      color: #9f281c;
+    }
+    .civic-ledger-page .badge-attention {
+      background: #fff1c7;
+      border-color: #dda800;
+      color: #7b5608;
+    }
+    .civic-ledger-page .badge-info {
+      background: #e7edf5;
+      border-color: #82a6c7;
+      color: #254f73;
+    }
+    .civic-ledger-page .facility-row-reviewer .badge-info {
+      background: #f5efe3;
+      border-color: #b8b1a5;
+      color: #17212b;
+    }
+    .civic-ledger-page .copy-icon-button,
+    .copy-text-button {
+      background: #fffdf8;
+      border: 1px solid #b8b1a5;
+      color: #174d74;
+    }
+    .copy-text-control {
+      display: grid;
+      gap: 0.25rem;
+    }
+    .copy-text-button {
+      align-items: center;
+      display: inline-flex;
+      font-size: 0.82rem;
+      gap: 0.35rem;
+      justify-content: flex-start;
+      min-height: 2.75rem;
+      padding: 0.45rem 0.55rem;
+      text-align: left;
+    }
+    .copy-text-button svg {
+      flex: 0 0 auto;
+      height: 1rem;
+      width: 1rem;
+    }
+    .copy-feedback:not([hidden]) {
+      color: #1c5a35;
+      display: inline-block;
+      font-weight: 700;
+    }
+    .civic-ledger-page .button-disabled,
+    .civic-ledger-page button:disabled {
+      background: #eee7da;
+      border-color: #b8b1a5;
+      color: #5f6872;
+      cursor: not-allowed;
+    }
+    .intelligence-loading-row {
+      border: 1px solid #b8b1a5;
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: 1fr 1fr 0.5fr;
+      margin: 0 1rem 1rem;
+      min-height: 9rem;
+      padding: 1rem;
+    }
+    .intelligence-loading-row div {
+      display: grid;
+      gap: 0.5rem;
+    }
+    .intelligence-results-empty {
+      color: var(--muted);
+      padding: 0 1rem 1rem;
+    }
+    .civic-footer {
+      margin: 0 1.5rem 1.5rem;
+    }
+    .civic-footer__inner {
+      align-items: center;
+      display: flex;
+      justify-content: space-between;
+      min-height: 6rem;
+      padding-bottom: 1rem;
+      padding-top: 1rem;
+    }
+    .civic-footer__inner div {
+      display: grid;
+      font-size: 0.82rem;
+      gap: 0.65rem;
+    }
+    .civic-footer a {
+      color: #f3d77d;
+      font-weight: 500;
+    }
+    @media (max-width: 1100px) {
+      .civic-header__inner {
+        grid-template-columns: minmax(12rem, 1fr) auto;
+      }
+      .civic-menu-label {
+        display: inline;
+      }
+      .civic-nav {
+        grid-column: 1 / -1;
+      }
+      .civic-nav ul {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+      .civic-ledger-page .facility-intelligence-filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .civic-ledger-page .facility-intelligence-filter-grid p:nth-child(8) {
+        grid-column: auto;
+      }
+      .facility-intelligence-row > article {
+        grid-template-areas:
+          "identity reason"
+          "source reviewer"
+          "actions actions";
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      }
+      .facility-row-identity { grid-area: identity; }
+      .facility-row-reason { grid-area: reason; }
+      .facility-row-source { grid-area: source; }
+      .facility-row-reviewer { grid-area: reviewer; }
+      .facility-row-actions {
+        display: flex;
+        grid-area: actions;
+      }
+      .facility-row-actions .button {
+        width: auto;
+      }
+    }
+    @media (max-width: 760px) {
+      .civic-header,
+      .civic-footer {
+        margin-left: 0.75rem;
+        margin-right: 0.75rem;
+      }
+      .civic-ledger-page .shell {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+      }
+      .civic-header__inner {
+        gap: 0.75rem;
+        grid-template-columns: 1fr auto;
+      }
+      .civic-nav ul {
+        gap: 0.25rem 0.5rem;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .civic-nav a {
+        align-items: center;
+        display: flex;
+        font-size: 0.78rem;
+        justify-content: center;
+        min-height: 2.75rem;
+        padding-left: 0.15rem;
+        padding-right: 0.15rem;
+        white-space: normal;
+      }
+      .civic-ledger-page h1 {
+        font-size: 1.35rem;
+        line-height: 1.45;
+      }
+      .civic-ledger-page .facility-intelligence-filter-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .facility-intelligence-results__header {
+        align-items: stretch;
+        display: grid;
+        gap: 0.75rem;
+      }
+      .facility-intelligence-sort {
+        min-width: 0;
+      }
+      .facility-intelligence-sort select {
+        max-width: 14rem;
+      }
+      .facility-intelligence-row > article {
+        display: grid;
+        grid-template-areas:
+          "identity"
+          "reason"
+          "source"
+          "reviewer"
+          "actions";
+        grid-template-columns: minmax(0, 1fr);
+        padding: 0.75rem;
+      }
+      .facility-row-actions {
+        display: grid;
+      }
+      .facility-row-actions .button {
+        width: min(100%, 14rem);
+      }
+      .facility-row-source,
+      .facility-row-reviewer {
+        min-width: 0;
+      }
+      .intelligence-glossary-line {
+        gap: 1rem;
+        justify-content: space-between;
+      }
+      .civic-footer__inner {
+        align-items: start;
+        display: grid;
+        gap: 1rem;
+      }
+    }
     @media print {
       body {
         background: #fff;
         color: #000;
         font-size: 11pt;
       }
-      .site-header, .guided-stepper, .site-footer, .packet-draft-actions,
-      .technical-details, .skip-link, .mode-panel {
+      .site-header, .civic-header, .guided-stepper, .site-footer, .civic-footer,
+      .packet-draft-actions, .technical-details, .skip-link, .mode-panel,
+      .copy-icon-button, .copy-text-control, .facility-intelligence-sort,
+      .facility-row-actions {
         display: none !important;
       }
       .shell {
@@ -2709,6 +3318,20 @@ SHARED_CSS = r"""
       .badge, .review-chip {
         border-color: #000;
         color: #000;
+      }
+      .civic-ledger-page .intelligence-scope,
+      .civic-ledger-page .intelligence-filters,
+      .civic-ledger-page .facility-intelligence-results,
+      .civic-ledger-page .facility-intelligence-row,
+      .civic-ledger-page .facility-row-source,
+      .civic-ledger-page .facility-row-reviewer {
+        background: #fff !important;
+        border-color: #000 !important;
+        color: #000 !important;
+        box-shadow: none !important;
+      }
+      .civic-ledger-page .facility-intelligence-row > article {
+        grid-template-columns: 1fr 1.5fr 1fr 1fr;
       }
     }
     @media (max-width: 760px) {
