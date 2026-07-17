@@ -198,3 +198,12 @@ Use a combination of:
 ## Release gate
 
 A release cannot be marked stable if known accessibility blockers exist without being documented in `KNOWN_LIMITATIONS.md`.
+
+## Primary record inventory and disclosure accessibility
+
+- Primary complaint inventories and supporting evidence must not require repeated expansion of disclosure controls before a user can identify records, findings, dates, source availability, or available actions.
+- When records support multiple summary values, expose one semantic record inventory and represent aggregate membership through visible labels, filters, text, or columns. Do not duplicate the same interactive complaint record in multiple disclosure groups unless the duplication is necessary, documented, and approved.
+- Every disclosure control must have a unique descriptive accessible name, expose expanded or collapsed state, and contain truly secondary content. Generic labels such as `Exact contributing complaints` are insufficient when multiple disclosures appear on a page.
+- At 200% zoom and supported narrow widths, the primary complaint inventory must remain visible and usable without converting each record into a collapsed disclosure-only element.
+- Topic, finding, source-availability, and reviewer-state filters must be keyboard operable and announce their active state and resulting record count.
+- Semantic colors, including traffic-light protocol colors, must always be paired with visible text, symbols, or accessible labels. Color token use must follow the approved design package and must not be replaced by an unapproved generic teal palette.
