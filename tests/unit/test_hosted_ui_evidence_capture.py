@@ -66,6 +66,8 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "Invoke-NativeCaptureCommand",
         "Test-HtmlScreenshotCandidate",
         "native screenshot command timed out",
+        "$visibilityDeadline",
+        "Start-Sleep -Milliseconds 50",
         "screenshotFailures",
         "route, assertion, or screenshot failures",
         "$Route.Path -match",
@@ -98,6 +100,20 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     assert "Local hosted UI review evidence" in script
     assert '$Html.Contains("Complaint worklist")' in script
     assert '$Html.Contains("Review complaint")' in script
+    assert (
+        '"facility-intelligence" = @('
+        '"Cross-facility intelligence", '
+        '"Filter facilities", '
+        '"Open next complaint")'
+        in script
+    )
+    assert (
+        'Path = "/ccld/facilities/intelligence"; '
+        'Label = "02-facility-intelligence"; '
+        'ActiveHref = "/reviewer"; '
+        'WorkflowStep = "Review"'
+        in script
+    )
     assert "05-reviewer-complaint-exports.png" in script
     assert 'Join-RouteUrl -Base $normalizedBaseUrl -Path "/reviewer"' in script
     assert "#complaint-export-controls" in script
@@ -158,9 +174,9 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     for issue_418_route in (
         "/reviewer/facilities/trends?facility=157806098",
         "time_grain=quarter&period_count=4",
-        "Issue418Kind = \"increased\"",
-        "Issue418Kind = \"secondary-cue\"",
-        "Issue418Kind = \"incomplete\"",
+        'Issue418Kind = "increased"',
+        'Issue418Kind = "secondary-cue"',
+        'Issue418Kind = "incomplete"',
         "finding=Substantiated&start_date=2022-04-01",
     ):
         assert issue_418_route in script
@@ -440,12 +456,8 @@ def test_issue_417_assertions_keep_route_specific_basis_checks() -> None:
         matching=1,
     )
 
-    assert failed_issue_417_checks(source_assertions) == {
-        "issue417 source category basis"
-    }
-    assert failed_issue_417_checks(keyword_assertions) == {
-        "issue417 keyword cue basis"
-    }
+    assert failed_issue_417_checks(source_assertions) == {"issue417 source category basis"}
+    assert failed_issue_417_checks(keyword_assertions) == {"issue417 keyword cue basis"}
 
 
 def test_issue_417_assertions_keep_unsupported_conclusion_check() -> None:
@@ -607,15 +619,9 @@ def test_capture_script_issue_415_mode_writes_focused_artifacts() -> None:
         assert packets, output
         packet = packets[-1]
         manifest = json.loads((packet / "manifest.json").read_text(encoding="utf-8-sig"))
-        count_csv = (packet / "issue-415-count-summaries.csv").read_text(
-            encoding="utf-8-sig"
-        )
-        href_csv = (packet / "issue-415-href-inventory.csv").read_text(
-            encoding="utf-8-sig"
-        )
-        assertions_csv = (packet / "route-assertions.csv").read_text(
-            encoding="utf-8-sig"
-        )
+        count_csv = (packet / "issue-415-count-summaries.csv").read_text(encoding="utf-8-sig")
+        href_csv = (packet / "issue-415-href-inventory.csv").read_text(encoding="utf-8-sig")
+        assertions_csv = (packet / "route-assertions.csv").read_text(encoding="utf-8-sig")
 
         assert (packet / "issue-415-count-summaries.csv").exists()
         assert (packet / "issue-415-href-inventory.csv").exists()
@@ -625,9 +631,7 @@ def test_capture_script_issue_415_mode_writes_focused_artifacts() -> None:
         assert "/reviewer/records/substantiated?facility=107207198" in count_csv
         assert "sourceRecordKey,facilityId,complaintId,finding,date" in href_csv
         assert "issue415 count summary" in assertions_csv
-        assert "True browser zoom is not controlled by this script" in json.dumps(
-            manifest
-        )
+        assert "True browser zoom is not controlled by this script" in json.dumps(manifest)
     finally:
         shutil.rmtree(output_dir, ignore_errors=True)
 
@@ -668,12 +672,8 @@ def test_capture_script_issue_416_mode_writes_focused_artifacts() -> None:
         assert packets, output
         packet = packets[-1]
         manifest = json.loads((packet / "manifest.json").read_text(encoding="utf-8-sig"))
-        count_csv = (packet / "issue-416-count-summaries.csv").read_text(
-            encoding="utf-8-sig"
-        )
-        assertions_csv = (packet / "route-assertions.csv").read_text(
-            encoding="utf-8-sig"
-        )
+        count_csv = (packet / "issue-416-count-summaries.csv").read_text(encoding="utf-8-sig")
+        assertions_csv = (packet / "route-assertions.csv").read_text(encoding="utf-8-sig")
         capture_command = (packet / "diagnostics" / "capture-command.txt").read_text(
             encoding="utf-8-sig"
         )
@@ -686,9 +686,7 @@ def test_capture_script_issue_416_mode_writes_focused_artifacts() -> None:
         assert "/reviewer/facilities/priorities?page_size=10" in count_csv
         assert "issue416 h1" in assertions_csv
         assert "-Issue416" in capture_command
-        assert "Focused issue #416 facility prioritization evidence" in manifest[
-            "evidencePurpose"
-        ]
+        assert "Focused issue #416 facility prioritization evidence" in manifest["evidencePurpose"]
     finally:
         shutil.rmtree(output_dir, ignore_errors=True)
 
@@ -729,12 +727,8 @@ def test_capture_script_issue_417_mode_writes_focused_artifacts() -> None:
         assert packets, output
         packet = packets[-1]
         manifest = json.loads((packet / "manifest.json").read_text(encoding="utf-8-sig"))
-        count_csv = (packet / "issue-417-count-summaries.csv").read_text(
-            encoding="utf-8-sig"
-        )
-        assertions_csv = (packet / "route-assertions.csv").read_text(
-            encoding="utf-8-sig"
-        )
+        count_csv = (packet / "issue-417-count-summaries.csv").read_text(encoding="utf-8-sig")
+        assertions_csv = (packet / "route-assertions.csv").read_text(encoding="utf-8-sig")
         capture_command = (packet / "diagnostics" / "capture-command.txt").read_text(
             encoding="utf-8-sig"
         )
@@ -747,9 +741,10 @@ def test_capture_script_issue_417_mode_writes_focused_artifacts() -> None:
         assert "/reviewer/records/serious-topics?match_basis=keyword-cue" in count_csv
         assert "issue417 h1" in assertions_csv
         assert "-Issue417" in capture_command
-        assert "Focused issue #417 serious-topic complaint worklist evidence" in manifest[
-            "evidencePurpose"
-        ]
+        assert (
+            "Focused issue #417 serious-topic complaint worklist evidence"
+            in manifest["evidencePurpose"]
+        )
     finally:
         shutil.rmtree(output_dir, ignore_errors=True)
 
@@ -790,12 +785,8 @@ def test_capture_script_issue_418_mode_writes_focused_artifacts() -> None:
         assert packets, output
         packet = packets[-1]
         manifest = json.loads((packet / "manifest.json").read_text(encoding="utf-8-sig"))
-        count_csv = (packet / "issue-418-count-summaries.csv").read_text(
-            encoding="utf-8-sig"
-        )
-        assertions_csv = (packet / "route-assertions.csv").read_text(
-            encoding="utf-8-sig"
-        )
+        count_csv = (packet / "issue-418-count-summaries.csv").read_text(encoding="utf-8-sig")
+        assertions_csv = (packet / "route-assertions.csv").read_text(encoding="utf-8-sig")
         capture_command = (packet / "diagnostics" / "capture-command.txt").read_text(
             encoding="utf-8-sig"
         )
@@ -808,9 +799,7 @@ def test_capture_script_issue_418_mode_writes_focused_artifacts() -> None:
         assert "/reviewer/facilities/trends?facility=157806098" in count_csv
         assert "issue418 h1" in assertions_csv
         assert "-Issue418" in capture_command
-        assert "Focused issue #418 complaint trend evidence" in manifest[
-            "evidencePurpose"
-        ]
+        assert "Focused issue #418 complaint trend evidence" in manifest["evidencePurpose"]
     finally:
         shutil.rmtree(output_dir, ignore_errors=True)
 
@@ -843,11 +832,9 @@ def test_capture_script_restores_local_dev_auth_env_after_capture() -> None:
             "'CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH'"
             "); "
             "foreach($v in $vars){ "
-            "Remove-Item -LiteralPath (\"Env:{0}\" -f $v) "
+            'Remove-Item -LiteralPath ("Env:{0}" -f $v) '
             "-ErrorAction SilentlyContinue "
-            "}; "
-            + capture_call
-            + post_env_json
+            "}; " + capture_call + post_env_json
         )
         unset_result = subprocess.run(
             [

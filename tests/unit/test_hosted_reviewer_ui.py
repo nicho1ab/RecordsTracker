@@ -206,7 +206,7 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert "function ensureCopyStatus(button)" in html
     assert "showCopyStatus(button, 'Copied')" in html
     assert "aria-live', 'polite'" in html
-    assert "1700" in html
+    assert "2000" in html
     mode_panel = html.split('<div class="mode-panel" aria-label="Retrieval mode">', 1)[1].split(
         "</div>",
         1,
@@ -2459,7 +2459,7 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert "navigator.clipboard.writeText" in html
     assert "showCopyStatus(button, 'Copied')" in html
     assert "status.hidden = true" in html
-    assert "1700" in html
+    assert "2000" in html
     assert "04/07/2022" in html
     assert "08/24/2022" in html
     assert "2022-04-07" not in parser.text_for("main")

@@ -47,12 +47,11 @@ Use `/reviewer/facilities/trends` when the review task is to compare loaded comp
 
 Use `/ccld/facilities/intelligence` when the task starts across facilities. The
 dashboard applies complaint-level filters before reconciling facility counts,
-shows source coverage as available, partial, or unavailable, and links every
-summary and facility count to the exact contributing complaint records. Open the
-recommended next complaint for the first result under the selected visible
-ordering, or continue to that Facility Review Hub or filtered complaint queue.
-These indicators describe only the authorized loaded corpus and do not make a
-legal, facility-wide, or public-source completeness conclusion.
+shows source coverage as available, partial, or unavailable, and renders one
+canonical facility inventory. Start with the selected first row under the
+visible governed ordering. Its source and reviewer-state regions refer to that
+row's deterministic next complaint, with actions to open the facility, complaint,
+or public source. These indicators describe only the authorized loaded corpus.
 
 ## Facility hub fact placement
 

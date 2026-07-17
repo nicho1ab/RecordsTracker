@@ -1895,32 +1895,35 @@ def test_ccld_facility_review_intelligence_dashboard_filters_sorts_and_links(
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Facility review intelligence" in html
-    assert "Which facilities may warrant review next?" in html
+    assert "Cross-facility intelligence" in html
+    assert "Which facilities may warrant review next?" not in html
     filter_grid = _facility_intelligence_filter_grid(html)
     assert filter_grid.labels == [
-        "Date used for this range",
-        "Start date",
-        "End date",
         "Facility type",
         "Geography",
-        "Finding",
-        "Serious-review category",
+        "Finding / disposition",
         "Source coverage",
-        "Order facilities by",
+        "Start date",
+        "End date",
+        "Date based on",
+        "Serious review category",
+        "Sort by",
     ]
     assert filter_grid.field_count >= 9
+    assert '<label for="facility-intelligence-sort">Sort by</label>' in html
     _assert_primary_button(html, "Apply filters")
-    _assert_collapsed_disclosure(html, "Coverage and interpretation limits")
+    assert "<details" not in html
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
     assert "Signal-only Facility Must Not Render" not in html
-    assert "Facility ID:</strong> 157806098" in html
-    assert "1 exact complaint record(s)" in html
-    assert "Open Facility Review Hub" in html
+    assert "Facility ID</strong>" in html
+    assert "157806098" in html
+    assert "1 exact contributing complaint" in html
+    assert "Open facility" in html
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098" in html
-    assert "Open filtered complaint queue" in html
-    assert f"{CCLD_RECORD_REQUEST_PATH}?facility_number=157806098" in html
-    assert "Open recommended next complaint" in html
+    assert "Open filtered complaint queue" not in html
+    assert "Open next complaint" in html
+    assert "Open next complaint source" in html
+    assert "Copy next complaint source URL" in html
     assert "return_context_origin=facility_intelligence" in html
     link_rule = re.search(r"\n    a \{(?P<rules>.*?)\n    \}", html, flags=re.DOTALL)
     assert link_rule is not None
@@ -1935,7 +1938,7 @@ def test_ccld_facility_review_intelligence_dashboard_filters_sorts_and_links(
     assert "overflow-wrap: anywhere;" in button_rule["rules"]
     assert "white-space: normal;" in button_rule["rules"]
     assert "04/07/2022" in html
-    assert "hidden score" in normalized_html
+    assert "hidden score" not in normalized_html
     assert "raw_sha256" not in html
     assert "data/raw" not in html
     assert_no_secret_html(html)
@@ -1981,9 +1984,9 @@ def test_ccld_facility_review_intelligence_dashboard_does_not_mutate_hosted_tabl
     assert content_type == "text/html; charset=utf-8"
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == _empty_reviewer_counts()
-    assert "Facility review intelligence" in html
+    assert "Cross-facility intelligence" in html
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
-    assert "1 exact complaint record(s)" in html
+    assert "1 exact contributing complaint" in html
     assert "Signal-only" not in html
     assert_no_secret_html(html)
 

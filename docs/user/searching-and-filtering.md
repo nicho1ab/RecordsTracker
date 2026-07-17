@@ -60,12 +60,12 @@ The default order reuses the visible facility-priority rules: filtered
 substantiated/equivalent count, filtered complaint count, strongest existing
 timing flag, recent supported activity, facility name, and stable facility
 identity. This is deterministic ordering, not a hidden score. Each dashboard
-count opens the exact deduplicated complaint records that contributed to it;
-each facility also links to its Facility Review Hub, its filtered complaint
-queue, and its deterministic recommended next complaint. The Facility Review
-Hub preserves the useful intelligence origin, date, finding, serious-review,
-and coverage filters, then reconciles its facility-specific distributions and
-review-state counts to exact complaint links.
+row explains the visible factors that placed it in the current order. The first
+row is selected and links to its Facility Review Hub and deterministic next
+complaint. Its separate source and reviewer-state regions remain bound to that
+same complaint. Applied-filter chips can clear one filter at a time; **Clear
+all** restores the default inventory. The Facility Review Hub preserves the
+useful intelligence origin, date, finding, serious-review, and coverage filters.
 
 ## Hosted complaint trends
 

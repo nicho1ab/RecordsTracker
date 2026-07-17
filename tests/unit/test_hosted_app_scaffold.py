@@ -1313,8 +1313,8 @@ def test_route_active_nav_highlights_correct_item() -> None:
         ("/ccld/facilities", "/ccld/facilities", "Facilities"),
         (
             "/ccld/facilities/intelligence",
-            "/ccld/facilities",
-            "Facilities",
+            "/reviewer",
+            "Review",
         ),
         (
             "/ccld/facilities/review-priority",
