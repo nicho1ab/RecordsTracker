@@ -9,6 +9,12 @@ Repository path:
 
 `docs/planning/records-tracker-ui-ux-data-completeness-remediation-plan.md`
 
+Approved design requirement register:
+
+`docs/product/records-tracker-approved-design-decisions.md`
+
+This register preserves the stable requirement IDs associated with the authoritative approved Figma design. Reviewer-facing design prompts, implementation packages, and visual evidence reviews must cite the applicable requirement IDs and report unexplained variance or regression as an acceptance blocker.
+
 Upload the current version to the ChatGPT Project Sources section. When Codex changes a repository file represented in ChatGPT Project Sources, I must tell you to upload the replacement version prior to it becoming material to a future response.
 
 ## Standing operating rules
