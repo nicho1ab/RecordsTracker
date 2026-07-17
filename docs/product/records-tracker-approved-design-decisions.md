@@ -411,6 +411,57 @@ The readable value must remain visible. `Open original source` and
 - **Required evidence before acceptance:** Figma component inspection and
   implementation-state evidence.
 
+### RT-PAG-001 — Large-corpus pagination and orientation
+
+- **Approved decision:** `/ccld/facilities/intelligence` uses database-level
+  seek/keyset pagination with exactly 25 facilities per page and a compact
+  inventory orientation treatment.
+- **Scope:** Cross-facility intelligence inventory for Issue #419.
+- **Figma proof:** Pagination addendum node `59:463`; desktop first, middle, and
+  last pages `59:469`, `59:505`, and `59:541`; approximately 500 px, mobile
+  390 px, and 200% zoom `59:577`, `59:613`, and `59:649`; Previous and Next
+  disabled states `59:685` and `59:721`; keyboard focus for Previous and Next
+  `59:757` and `59:793`; applied filters `59:829`; print `59:868`; and empty
+  filtered result `59:904`.
+- **Responsive requirement:** Desktop may use restrained sticky orientation
+  only while controls and focused content remain unobscured. Approximately
+  500 px, mobile 390 px, 200% zoom, and print use normal document flow, and
+  print disables sticky positioning. Pagination must not introduce horizontal
+  page overflow.
+- **Accessibility requirement:** Previous and Next are descriptive real links
+  or buttons with semantic disabled states, logical focus order, and visible
+  Civic Ledger focus treatment. `Showing X–Y of Z facilities` remains available
+  to assistive technology without excessive result announcements.
+- **Prohibited regression:** Numbered pages, arbitrary page jumps, `Page N of
+  M`, facility-page OFFSET, progressive or deep OFFSET, full-corpus
+  application-memory slicing or aggregation, obscured focused controls,
+  duplicate facility inventories, or pagination that loses active filters or
+  deterministic ordering.
+- **Required evidence before acceptance:** Exact-route controlled evidence for
+  every cited state node; adjacent-page reconciliation proving no duplicates or
+  omissions; query evidence proving bounded database-level seek/keyset
+  pagination with no facility-page OFFSET; a bounded ordered `LIMIT 1` query for
+  the full-filtered-corpus Review next result; bounded current-page complaint,
+  supporting-row, and reviewer-created-state hydration; keyboard-focus,
+  responsive, print, disabled-state, applied-filter, empty-result, and
+  horizontal-overflow evidence.
+
+The inventory uses Previous and Next only. It does not render numbered pages,
+arbitrary page jumps, or `Page N of M`. Its exact result-position wording is
+`Showing X–Y of Z facilities`. Previous is semantically disabled on the first
+page, Next is semantically disabled on the last page, and both navigation links
+preserve the active filters and deterministic ordering. Changing a filter
+returns to the first page.
+
+Authorization, corpus/import scope, active filters, deduplication, governed
+priority ordering, normalized facility name, and stable facility identity are
+applied before seek pagination. The page query returns one bounded current page
+and a separate total matching-facility count. Complaint and supporting rows and
+reviewer-created state are hydrated only for facilities on the current page.
+The governed full-filtered-corpus Review next result uses a separate bounded,
+ordered `LIMIT 1` database query and must not require full-corpus hydration or
+application-memory aggregation.
+
 ### RT-RWD-001 — Desktop, narrow, compact/mobile, and 200% zoom behavior
 
 - **Approved decision:** The system has distinct desktop, narrow,
