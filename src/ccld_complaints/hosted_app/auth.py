@@ -21,12 +21,16 @@ from sqlalchemy.sql.selectable import CompoundSelect
 from ccld_complaints.hosted_app.seeded_import import SourceDerivedEntityType
 from ccld_complaints.hosted_app.source_derived_reads import (
     CcldSourceDerivedRequestLookup,
+    FacilityIntelligencePageRead,
+    FacilityIntelligenceReadFilters,
+    FacilityIntelligenceSeek,
     SourceDerivedComplaintBundleResult,
     SourceDerivedRecordListResult,
     SourceDerivedRecordRead,
     find_ccld_source_derived_records_for_request,
     get_source_derived_record_by_identity,
     get_source_derived_record_by_key,
+    list_facility_intelligence_page,
     list_source_derived_complaint_bundle,
     list_source_derived_record_result,
     list_source_derived_records,
@@ -954,6 +958,28 @@ def list_authorized_source_derived_records_by_entity_types(
         connection,
         entity_types=entity_types,
         import_batch_id=scoped_import_batch_id,
+    )
+
+
+def list_authorized_facility_intelligence_page(
+    connection: Connection,
+    actor: AuthenticatedActor | None,
+    *,
+    scope: HostedAccessScope,
+    filters: FacilityIntelligenceReadFilters,
+    seek: FacilityIntelligenceSeek | None = None,
+) -> FacilityIntelligencePageRead:
+    require_permission(
+        actor,
+        permission=SOURCE_DERIVED_READ_PERMISSION,
+        scope=scope,
+        target=AuthorizationTarget("source_derived_record_list", scope.scope_id),
+    )
+    return list_facility_intelligence_page(
+        connection,
+        filters=filters,
+        import_batch_query=_authorized_source_import_batch_query(scope),
+        seek=seek,
     )
 
 

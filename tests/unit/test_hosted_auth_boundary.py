@@ -31,6 +31,7 @@ from ccld_complaints.hosted_app.auth import (
     HostedScopeDeniedError,
     HostedTesterRole,
     get_authorized_source_derived_record_by_key,
+    list_authorized_facility_intelligence_page,
     list_authorized_source_derived_complaint_bundle,
     list_authorized_source_derived_records,
     list_authorized_source_derived_records_by_entity_types,
@@ -45,6 +46,9 @@ from ccld_complaints.hosted_app.seeded_import import (
     hosted_source_derived_records,
     import_seeded_corpus_artifact,
     load_seeded_corpus_artifact,
+)
+from ccld_complaints.hosted_app.source_derived_reads import (
+    FacilityIntelligenceReadFilters,
 )
 
 FIXTURE = Path("tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json")
@@ -396,6 +400,45 @@ def test_authorized_source_derived_entity_type_bulk_read_preserves_scope() -> No
     assert unauthorized_key not in keys
     assert COMPLAINT_KEY not in keys
     assert {record.entity_type for record in records} == {"complaint"}
+
+
+def test_authorized_facility_intelligence_page_enforces_existing_read_boundary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    read = MagicMock(return_value=MagicMock())
+    monkeypatch.setattr(hosted_auth, "list_facility_intelligence_page", read)
+    filters = FacilityIntelligenceReadFilters()
+
+    with _seeded_connection() as connection:
+        with pytest.raises(HostedAuthenticationRequiredError):
+            list_authorized_facility_intelligence_page(
+                connection,
+                None,
+                scope=TEST_SCOPE,
+                filters=filters,
+            )
+        with pytest.raises(HostedScopeDeniedError):
+            list_authorized_facility_intelligence_page(
+                connection,
+                _read_only_actor(scopes=(OTHER_SCOPE,)),
+                scope=TEST_SCOPE,
+                filters=filters,
+            )
+        assert read.call_count == 0
+
+        result = list_authorized_facility_intelligence_page(
+            connection,
+            _read_only_actor(),
+            scope=TEST_SCOPE,
+            filters=filters,
+        )
+
+    assert result is read.return_value
+    read.assert_called_once()
+    call = read.call_args
+    assert call.kwargs["filters"] == filters
+    assert call.kwargs["seek"] is None
+    assert call.kwargs["import_batch_query"] is not None
 
 
 def test_postgres_corpus_denies_unauthorized_batch_and_record() -> None:

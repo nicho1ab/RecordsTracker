@@ -1,0 +1,105 @@
+{
+  "evidenceLabel": "Controlled fixture evidence; not real-corpus or hosted acceptance evidence",
+  "route": "/ccld/facilities/intelligence",
+  "figmaNodes": [
+    "59:469",
+    "59:505",
+    "59:541",
+    "59:577",
+    "59:613",
+    "59:649",
+    "59:685",
+    "59:721",
+    "59:757",
+    "59:793",
+    "59:829",
+    "59:868",
+    "59:904"
+  ],
+  "desktopFirst": {
+    "contextPosition": "sticky",
+    "horizontalOverflow": false,
+    "innerWidth": 1440,
+    "position": "Showing 1–25 of 51 facilities",
+    "previousDisabled": "true",
+    "rowCount": 25,
+    "scrollWidth": 1425
+  },
+  "desktopMiddle": {
+    "horizontalOverflow": false,
+    "nextName": "Next facilities, showing 51–51",
+    "position": "Showing 26–50 of 51 facilities",
+    "previousName": "Previous facilities, showing 1–25",
+    "rowCount": 25
+  },
+  "desktopLast": {
+    "horizontalOverflow": false,
+    "nextDisabled": "true",
+    "position": "Showing 51–51 of 51 facilities",
+    "rowCount": 1
+  },
+  "keyboardPrevious": {
+    "horizontalOverflow": false,
+    "name": "Previous facilities, showing 1–25",
+    "outline": "solid"
+  },
+  "keyboardNext": {
+    "horizontalOverflow": false,
+    "name": "Next facilities, showing 51–51",
+    "outline": "solid"
+  },
+  "focusedControlVisibility": {
+    "activeName": "Next facilities, showing 26–50",
+    "outline": "solid",
+    "withinViewport": true
+  },
+  "width500": {
+    "contextPosition": "static",
+    "horizontalOverflow": false,
+    "position": "Showing 1–25 of 51 facilities",
+    "scrollWidth": 485,
+    "viewport": 500
+  },
+  "mobile390": {
+    "contextPosition": "static",
+    "horizontalOverflow": false,
+    "position": "Showing 1–25 of 51 facilities",
+    "scrollWidth": 375,
+    "viewport": 390
+  },
+  "appliedFilters": {
+    "chips": [
+      "Facility type: Children's Center×",
+      "Finding: Unsubstantiated×",
+      "Sort: Facility name×"
+    ],
+    "horizontalOverflow": false,
+    "position": "Showing 1–25 of 49 facilities"
+  },
+  "emptyFiltered": {
+    "heading": "No facilities match these filters",
+    "horizontalOverflow": false,
+    "position": "Showing 0–0 of 0 facilities"
+  },
+  "zoom200LayoutEquivalent": {
+    "contextPosition": "static",
+    "evidenceKind": "720 CSS-pixel viewport equivalent to a 1440px viewport at 200% zoom; in-app browser zoom control unavailable",
+    "horizontalOverflow": false,
+    "position": "Showing 1–25 of 51 facilities",
+    "scrollWidth": 705,
+    "viewport": 720
+  },
+  "zoomLimitation": "True in-app browser zoom could not be changed; the 720 CSS-pixel capture is a 1440px-at-200%-zoom layout equivalent, not an actual zoom measurement.",
+  "printCss": {
+    "hasPrintMedia": true,
+    "hidesPagination": true,
+    "resetsSticky": true
+  },
+  "printLimitation": "Print-media screenshot emulation is unavailable in the controlled in-app browser; print CSS is verified directly and by unit/static checks.",
+  "mobile390PaginationContext": {
+    "contextPosition": "static",
+    "horizontalOverflow": false,
+    "position": "Showing 1–25 of 51 facilities",
+    "viewport": 390
+  }
+}

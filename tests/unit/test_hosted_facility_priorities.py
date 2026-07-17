@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+import base64
+import json
+import re
 from collections.abc import Mapping
+from html import unescape
 from typing import Any, cast
+from urllib.parse import parse_qs, urlencode, urlsplit
 
-from sqlalchemy import create_engine, func, select
+import pytest
+from sqlalchemy import create_engine, event, func, select
 from sqlalchemy.engine import Connection
 
 from ccld_complaints.hosted_app import reviewer_ui
@@ -567,6 +573,11 @@ def test_facility_intelligence_accessible_structure_and_safe_language() -> None:
     assert "typeof navigator !== 'undefined'" in html
     assert "showCopyStatus(button, 'Copy unavailable');" in html
     assert "@media print" in html
+    assert "@media (min-width: 1101px)" in html
+    assert ".facility-inventory-context" in html
+    assert "position: sticky" in html
+    assert "position: static !important" in html
+    assert ".facility-pagination, .facility-row-actions" in html
     assert ".site-header, .civic-header" in html
     assert ".copy-icon-button, .copy-text-control" in html
     assert ".facility-row-actions" in html
@@ -599,7 +610,10 @@ def test_facility_intelligence_approved_state_variants_and_filter_recovery() -> 
     loading_html = reviewer_ui._render_facility_intelligence(
         [],
         filters=reviewer_ui.FacilityIntelligenceFilters(),
-        all_summaries=[],
+        filter_options=reviewer_ui.FacilityIntelligenceFilterOptions(),
+        pagination=reviewer_ui.FacilityIntelligencePagination(),
+        total_authorized_facility_count=0,
+        review_next_facility_identity=None,
         state_summaries={},
         reviewer_state_available=False,
         actor_label=None,
@@ -612,7 +626,7 @@ def test_facility_intelligence_approved_state_variants_and_filter_recovery() -> 
     assert "No facility rows are rendered." in no_data_html
     assert "No facilities match these filters" in filtered_html
     assert "1 facility · Loaded complaint corpus" in filtered_html
-    assert "0 of 1 facilities match the active filters." in filtered_html
+    assert "Showing 0–0 of 0 facilities" in filtered_html
     assert 'aria-label="Clear Geography filter"' in filtered_html
     assert ">Clear all</a>" in filtered_html
     assert "Loading facility intelligence" in loading_html
@@ -703,6 +717,384 @@ def test_facility_intelligence_distinguishes_verified_zero_and_unavailable_value
     assert "No substantiated count" not in html
     assert "Copy next complaint source URL unavailable" in html
     assert 'aria-disabled="true">Source unavailable</span>' in html
+
+
+def test_facility_intelligence_pagination_boundaries_and_exact_position_wording() -> None:
+    cases = (0, 1, 24, 25, 26, 49, 50, 51)
+    for facility_count in cases:
+        with _priority_connection() as connection:
+            _insert_facility_population(connection, facility_count)
+            status, _content_type, body = route_response(
+                f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?sort=facility_name",
+                reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+            )
+            first_html = body.decode("utf-8")
+            expected_last = min(facility_count, 25)
+            expected_first = 1 if facility_count else 0
+            assert status == 200
+            assert (
+                f"Showing {expected_first}–{expected_last} of {facility_count} facilities"
+                in first_html
+            )
+            assert 'aria-describedby="facility-intelligence-position"' in first_html
+            assert 'id="facility-intelligence-position"' in first_html
+            assert (
+                '<span class="button button-secondary facility-pagination__control '
+                'is-disabled" aria-disabled="true">Previous</span>'
+                in first_html
+            )
+            if facility_count <= 25:
+                assert _pagination_href(first_html, "Next") is None
+                assert 'aria-disabled="true">Next</span>' in first_html
+                continue
+
+            next_href = _pagination_href(first_html, "Next")
+            assert next_href is not None
+            assert 'aria-label="Next facilities, showing 26–' in first_html
+            second_status, _second_type, second_body = route_response(
+                next_href,
+                reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+            )
+            second_html = second_body.decode("utf-8")
+            second_last = min(facility_count, 50)
+            assert second_status == 200
+            assert f"Showing 26–{second_last} of {facility_count} facilities" in second_html
+            assert _pagination_href(second_html, "Previous") is not None
+            if facility_count <= 50:
+                assert _pagination_href(second_html, "Next") is None
+                assert 'aria-disabled="true">Next</span>' in second_html
+            else:
+                final_href = _pagination_href(second_html, "Next")
+                assert final_href is not None
+                final_status, _final_type, final_body = route_response(
+                    final_href,
+                    reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+                )
+                final_html = final_body.decode("utf-8")
+                assert final_status == 200
+                assert "Showing 51–51 of 51 facilities" in final_html
+                assert 'aria-disabled="true">Next</span>' in final_html
+
+
+def test_facility_intelligence_seek_pages_have_no_duplicates_or_omissions() -> None:
+    with _priority_connection() as connection:
+        _insert_facility_population(connection, 51)
+        context = reviewer_ui_context_for_connection(connection)
+        href = f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?sort=facility_name"
+        seen: list[str] = []
+        positions: list[str] = []
+        while href:
+            status, _content_type, body = route_response(
+                href,
+                reviewer_ui_context=context,
+            )
+            html = body.decode("utf-8")
+            assert status == 200
+            seen.extend(_rendered_population_names(html))
+            match = re.search(r"Showing \d+–\d+ of 51 facilities", html)
+            assert match is not None
+            positions.append(match.group(0))
+            href = _pagination_href(html, "Next") or ""
+
+        assert positions == [
+            "Showing 1–25 of 51 facilities",
+            "Showing 26–50 of 51 facilities",
+            "Showing 51–51 of 51 facilities",
+        ]
+        assert len(seen) == len(set(seen)) == 51
+        assert seen == [f"Page Facility {index:03d}" for index in range(51)]
+
+
+def test_facility_intelligence_continuations_preserve_filters_and_reject_bad_state() -> None:
+    with _priority_connection() as connection:
+        _insert_facility_population(connection, 26)
+        context = reviewer_ui_context_for_connection(connection)
+        status, _content_type, body = route_response(
+            (
+                f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}"
+                "?facility_type=children&sort=facility_name"
+            ),
+            reviewer_ui_context=context,
+        )
+        html = body.decode("utf-8")
+        next_href = _pagination_href(html, "Next")
+        assert status == 200
+        assert next_href is not None
+        assert "facility_type=children" in next_href
+        assert "sort=facility_name" in next_href
+        filter_form = html.split('<form class="compact-filter-form"', 1)[1].split(
+            "</form>", 1
+        )[0]
+        sort_form = html.split('<form class="facility-intelligence-sort"', 1)[1].split(
+            "</form>", 1
+        )[0]
+        assert 'name="continuation"' not in filter_form
+        assert 'name="continuation"' not in sort_form
+
+        next_status, _next_type, next_body = route_response(
+            next_href,
+            reviewer_ui_context=context,
+        )
+        assert next_status == 200
+        assert "Showing 26–26 of 26 facilities" in next_body.decode("utf-8")
+
+        token = parse_qs(urlsplit(next_href).query)["continuation"][0]
+        malformed_status, _malformed_type, malformed_body = route_response(
+            f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?continuation=not-a-cursor",
+            reviewer_ui_context=context,
+        )
+        mismatch_status, _mismatch_type, mismatch_body = route_response(
+            (
+                f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}"
+                f"?sort=recent_activity&continuation={token}"
+            ),
+            reviewer_ui_context=context,
+        )
+        _insert_facility_population(connection, 1, start_index=26)
+        stale_status, _stale_type, stale_body = route_response(
+            next_href,
+            reviewer_ui_context=context,
+        )
+
+    assert malformed_status == mismatch_status == stale_status == 400
+    assert "Pagination link is no longer valid" in malformed_body.decode("utf-8")
+    assert "does not match the active filters and ordering" in mismatch_body.decode(
+        "utf-8"
+    )
+    assert "continuation is stale" in stale_body.decode("utf-8")
+
+
+def test_facility_intelligence_rejects_modified_position_and_anchor() -> None:
+    with _priority_connection() as connection:
+        _insert_facility_population(connection, 51)
+        context = reviewer_ui_context_for_connection(connection)
+        status, _content_type, body = route_response(
+            f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?sort=facility_name",
+            reviewer_ui_context=context,
+        )
+        next_href = _pagination_href(body.decode("utf-8"), "Next")
+        assert status == 200
+        assert next_href is not None
+
+        modified_position_href = _continuation_with_payload_value(
+            next_href,
+            key="s",
+            value=2,
+        )
+        position_status, _position_type, position_body = route_response(
+            modified_position_href,
+            reviewer_ui_context=context,
+        )
+        modified_anchor_href = _continuation_with_payload_value(
+            next_href,
+            key="a",
+            value=["page facility 023", "ccld:facility:800000023"],
+        )
+        anchor_status, _anchor_type, anchor_body = route_response(
+            modified_anchor_href,
+            reviewer_ui_context=context,
+        )
+        missing_anchor_href = _continuation_with_payload_value(
+            next_href,
+            key="a",
+            value=["missing facility", "ccld:facility:missing"],
+        )
+        missing_status, _missing_type, missing_body = route_response(
+            missing_anchor_href,
+            reviewer_ui_context=context,
+        )
+
+    assert position_status == anchor_status == missing_status == 400
+    assert "position does not match its anchor" in position_body.decode("utf-8")
+    assert "position does not match its anchor" in anchor_body.decode("utf-8")
+    assert "continuation is stale" in missing_body.decode("utf-8")
+
+
+def test_facility_intelligence_forward_and_backward_ranges_use_anchor_rank() -> None:
+    with _priority_connection() as connection:
+        _insert_facility_population(connection, 51)
+        context = reviewer_ui_context_for_connection(connection)
+        first_status, _first_type, first_body = route_response(
+            f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?sort=facility_name",
+            reviewer_ui_context=context,
+        )
+        second_href = _pagination_href(first_body.decode("utf-8"), "Next")
+        assert first_status == 200
+        assert second_href is not None
+
+        second_status, _second_type, second_body = route_response(
+            second_href,
+            reviewer_ui_context=context,
+        )
+        second_html = second_body.decode("utf-8")
+        third_href = _pagination_href(second_html, "Next")
+        assert second_status == 200
+        assert "Showing 26–50 of 51 facilities" in second_html
+        assert third_href is not None
+
+        third_status, _third_type, third_body = route_response(
+            third_href,
+            reviewer_ui_context=context,
+        )
+        third_html = third_body.decode("utf-8")
+        back_to_second_href = _pagination_href(third_html, "Previous")
+        assert third_status == 200
+        assert "Showing 51–51 of 51 facilities" in third_html
+        assert back_to_second_href is not None
+
+        back_status, _back_type, back_body = route_response(
+            back_to_second_href,
+            reviewer_ui_context=context,
+        )
+        back_html = back_body.decode("utf-8")
+        back_to_first_href = _pagination_href(back_html, "Previous")
+        assert back_status == 200
+        assert "Showing 26–50 of 51 facilities" in back_html
+        assert back_to_first_href is not None
+
+        first_again_status, _first_again_type, first_again_body = route_response(
+            back_to_first_href,
+            reviewer_ui_context=context,
+        )
+
+    assert first_again_status == 200
+    assert "Showing 1–25 of 51 facilities" in first_again_body.decode("utf-8")
+
+
+def test_facility_intelligence_reads_only_current_page_and_uses_bounded_sql(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with _priority_connection() as connection:
+        _insert_facility_population(connection, 51)
+        context = reviewer_ui_context_for_connection(connection)
+        first_status, _first_type, first_body = route_response(
+            f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?sort=facility_name",
+            reviewer_ui_context=context,
+        )
+        next_href = _pagination_href(first_body.decode("utf-8"), "Next")
+        assert first_status == 200
+        assert next_href is not None
+        statements: list[str] = []
+        captured_state_keys: list[tuple[str, ...]] = []
+        captured_pages: list[reviewer_ui.FacilityIntelligencePageRead] = []
+
+        def capture_statement(
+            _conn: Any,
+            _cursor: Any,
+            statement: str,
+            _parameters: Any,
+            _context: Any,
+            _executemany: bool,
+        ) -> None:
+            statements.append(" ".join(statement.casefold().split()))
+
+        original_page_read = reviewer_ui.list_authorized_facility_intelligence_page
+        original_state_read = (
+            reviewer_ui._reviewer_created_state_records_for_source_records
+        )
+
+        def capture_page(*args: Any, **kwargs: Any) -> Any:
+            page = original_page_read(*args, **kwargs)
+            captured_pages.append(page)
+            return page
+
+        def capture_state(
+            context: reviewer_ui.ReviewerUiContext,
+            source_record_keys: tuple[str, ...],
+        ) -> Any:
+            captured_state_keys.append(source_record_keys)
+            return original_state_read(context, source_record_keys)
+
+        def reject_unbounded_read(*_args: Any, **_kwargs: Any) -> Any:
+            raise AssertionError("The facility route used the unbounded corpus read.")
+
+        monkeypatch.setattr(
+            reviewer_ui,
+            "list_authorized_facility_intelligence_page",
+            capture_page,
+        )
+        monkeypatch.setattr(
+            reviewer_ui,
+            "_reviewer_created_state_records_for_source_records",
+            capture_state,
+        )
+        monkeypatch.setattr(
+            reviewer_ui,
+            "list_authorized_source_derived_records_by_entity_types",
+            reject_unbounded_read,
+        )
+        event.listen(connection, "before_cursor_execute", capture_statement)
+        try:
+            status, _content_type, body = route_response(
+                next_href,
+                reviewer_ui_context=context,
+            )
+        finally:
+            event.remove(connection, "before_cursor_execute", capture_statement)
+
+    html = body.decode("utf-8")
+    assert status == 200
+    assert "Showing 26–50 of 51 facilities" in html
+    assert len(captured_pages) == 1
+    assert len(captured_pages[0].facility_identities) == 25
+    assert len(captured_pages[0].records) == 75
+    assert len(captured_state_keys) == 1
+    assert len(captured_state_keys[0]) == 25
+    offset_statements = [
+        statement for statement in statements if " offset " in f" {statement} "
+    ]
+    assert not offset_statements, offset_statements
+    assert any(
+        "select count(*) as count_1 from facility_intelligence_facilities where"
+        in statement
+        for statement in statements
+    )
+    assert any(
+        "select facility_intelligence_facilities.facility_identity" in statement
+        and "where" in statement
+        and "order by facility_intelligence_facilities.normalized_facility_name asc"
+        in statement
+        and " limit " in statement
+        for statement in statements
+    )
+    assert any(
+        "limit" in statement
+        and "facility_intelligence_facilities" in statement
+        for statement in statements
+    )
+
+
+def test_facility_intelligence_pagination_preserves_authorization_and_batch_isolation() -> None:
+    with _priority_connection() as connection:
+        _insert_facility_population(connection, 26)
+        _insert_import_batch(connection, OTHER_SCOPE.scope_id)
+        _insert_facility_bundle(
+            connection,
+            import_batch_id=OTHER_SCOPE.scope_id,
+            facility_number="999999",
+            facility_name="Outside Scope Center",
+            facility_type="Children's Center",
+            county="Kern",
+            complaints=(_complaint("OUTSIDE-1", "2026-05-01", "Substantiated"),),
+        )
+        denied_status, _denied_type, denied_body = route_response(
+            CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(
+                connection,
+                actor=None,
+            ),
+        )
+        status, _content_type, body = route_response(
+            CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    assert denied_status == 401
+    assert "Facility intelligence unavailable" in denied_body.decode("utf-8")
+    assert status == 200
+    assert "Showing 1–25 of 26 facilities" in html
+    assert "Outside Scope Center" not in html
 
 
 def test_facility_hub_reuses_intelligence_aggregates_state_and_tie_order() -> None:
@@ -885,6 +1277,64 @@ def _priority_connection() -> Connection:
     connection = engine.connect()
     _insert_import_batch(connection, TEST_SCOPE.scope_id)
     return connection
+
+
+def _insert_facility_population(
+    connection: Connection,
+    facility_count: int,
+    *,
+    start_index: int = 0,
+) -> None:
+    for index in range(start_index, start_index + facility_count):
+        _insert_facility_bundle(
+            connection,
+            facility_number=f"8{index:08d}",
+            facility_name=f"Page Facility {index:03d}",
+            facility_type="Children's Center",
+            county="Kern",
+            complaints=(
+                _complaint(
+                    f"PAGE-{index:03d}",
+                    f"2026-05-{(index % 28) + 1:02d}",
+                    "Unsubstantiated",
+                ),
+            ),
+        )
+
+
+def _pagination_href(html: str, label: str) -> str | None:
+    match = re.search(
+        rf'<a class="button button-secondary facility-pagination__control" '
+        rf'href="([^"]+)" aria-label="{label} facilities,[^"]+">{label}</a>',
+        html,
+    )
+    return unescape(match.group(1)) if match is not None else None
+
+
+def _continuation_with_payload_value(
+    href: str,
+    *,
+    key: str,
+    value: Any,
+) -> str:
+    parsed = urlsplit(href)
+    query = parse_qs(parsed.query, keep_blank_values=True)
+    token = query["continuation"][0]
+    padded = token + "=" * (-len(token) % 4)
+    payload = json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
+    payload[key] = value
+    encoded = base64.urlsafe_b64encode(
+        json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    ).decode("ascii").rstrip("=")
+    query["continuation"] = [encoded]
+    return f"{parsed.path}?{urlencode(query, doseq=True)}"
+
+
+def _rendered_population_names(html: str) -> list[str]:
+    return re.findall(
+        r'<h3 id="facility-intelligence-result-[^"]+-heading">(Page Facility \d{3})</h3>',
+        html,
+    )
 
 
 def _insert_reviewer_state(

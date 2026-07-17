@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import csv
+import hashlib
 import html
 import io
 import json
@@ -38,6 +41,7 @@ from ccld_complaints.hosted_app.auth import (
     HostedRoleDeniedError,
     HostedScopeDeniedError,
     HostedTesterRole,
+    list_authorized_facility_intelligence_page,
     list_authorized_source_derived_complaint_bundle,
     list_authorized_source_derived_records_by_entity_types,
 )
@@ -91,7 +95,15 @@ from ccld_complaints.hosted_app.seeded_import import (
     import_seeded_corpus_artifact,
     load_seeded_corpus_artifact,
 )
-from ccld_complaints.hosted_app.source_derived_reads import SourceDerivedRecordRead
+from ccld_complaints.hosted_app.source_derived_reads import (
+    FACILITY_INTELLIGENCE_PAGE_SIZE,
+    FacilityIntelligenceCursorAnchor,
+    FacilityIntelligenceFilterOptions,
+    FacilityIntelligencePageRead,
+    FacilityIntelligenceReadFilters,
+    FacilityIntelligenceSeek,
+    SourceDerivedRecordRead,
+)
 from ccld_complaints.hosted_app.source_derived_routes import (
     SOURCE_DERIVED_API_PREFIX,
     SourceDerivedApiContext,
@@ -574,6 +586,16 @@ class FacilityIntelligenceFilters:
     serious_topic: str = ""
     coverage: str = "all"
     sort: str = "priority"
+    continuation: str = ""
+
+
+@dataclass(frozen=True)
+class FacilityIntelligencePagination:
+    total_matching: int = 0
+    first_position: int = 0
+    last_position: int = 0
+    previous_cursor: str = ""
+    next_cursor: str = ""
 
 
 @dataclass(frozen=True)
@@ -1062,37 +1084,85 @@ def _facility_intelligence_response(
             _render_facility_intelligence(
                 [],
                 filters=filters,
-                all_summaries=[],
+                filter_options=FacilityIntelligenceFilterOptions(),
+                pagination=FacilityIntelligencePagination(),
+                total_authorized_facility_count=0,
+                review_next_facility_identity=None,
                 state_summaries={},
                 reviewer_state_available=False,
                 actor_label=_signed_in_actor_label(context),
                 page_state="date-error",
             ),
         )
-    source_status, source_result = _substantiated_source_records_response(context)
-    if source_status != 200:
+    try:
+        seek = _facility_intelligence_seek(filters)
+        source_context = context.workflow_shell_context.source_derived_api_context
+        page = list_authorized_facility_intelligence_page(
+            source_context.connection,
+            source_context.actor,
+            scope=source_context.scope,
+            filters=_facility_intelligence_read_filters(filters),
+            seek=seek,
+        )
+    except ValueError as error:
         return _html_response(
-            source_status,
+            400,
             _render_facility_intelligence(
                 [],
-                filters=filters,
-                all_summaries=[],
+                filters=replace(filters, continuation=""),
+                filter_options=FacilityIntelligenceFilterOptions(),
+                pagination=FacilityIntelligencePagination(),
+                total_authorized_facility_count=0,
+                review_next_facility_identity=None,
                 state_summaries={},
                 reviewer_state_available=False,
                 actor_label=_signed_in_actor_label(context),
-                page_state="error",
+                page_state="continuation-error",
+                continuation_error=str(error),
             ),
         )
-    if isinstance(source_result, bytes):
-        raise ValueError("Expected source-derived records.")
-    all_priority_summaries = _facility_priority_summaries(
+    except HostedAuthenticationRequiredError as error:
+        return _facility_intelligence_read_error(context, filters, 401, str(error))
+    except (
+        HostedAccountDisabledError,
+        HostedRoleDeniedError,
+        HostedScopeDeniedError,
+    ) as error:
+        return _facility_intelligence_read_error(context, filters, 403, str(error))
+    except SQLAlchemyError:
+        return _facility_intelligence_read_error(
+            context,
+            filters,
+            503,
+            "Facility intelligence could not be read.",
+        )
+
+    source_result: list[Mapping[str, Any]] = [
+        _source_derived_read_payload(record) for record in page.records
+    ]
+    page_priority_summaries = _facility_priority_summaries(
         source_result,
         date_dimension=filters.date_dimension,
     )
-    summaries = _facility_intelligence_summaries(
-        all_priority_summaries,
+    page_summaries = _facility_intelligence_summaries(
+        page_priority_summaries,
         filters=filters,
     )
+    summary_by_identity = {
+        item.priority.facility_identity: item for item in page_summaries
+    }
+    summaries = [
+        summary_by_identity[identity]
+        for identity in page.facility_identities
+        if identity in summary_by_identity
+    ]
+    if len(summaries) != len(page.facility_identities):
+        return _facility_intelligence_read_error(
+            context,
+            filters,
+            503,
+            "Facility intelligence page hydration did not reconcile.",
+        )
     source_record_keys = tuple(
         dict.fromkeys(
             complaint.source_record_key
@@ -1113,15 +1183,51 @@ def _facility_intelligence_response(
         if reviewer_state_available and not isinstance(state_result, bytes)
         else {}
     )
+    pagination = _facility_intelligence_pagination(page, filters)
     return _html_response(
         200,
         _render_facility_intelligence(
             summaries,
             filters=filters,
-            all_summaries=all_priority_summaries,
+            filter_options=page.filter_options,
+            pagination=pagination,
+            total_authorized_facility_count=page.total_authorized_facility_count,
+            review_next_facility_identity=page.review_next_facility_identity,
             state_summaries=state_summaries,
             reviewer_state_available=reviewer_state_available,
             actor_label=_signed_in_actor_label(context),
+        ),
+    )
+
+
+def _facility_intelligence_read_error(
+    context: ReviewerUiContext,
+    filters: FacilityIntelligenceFilters,
+    status: int,
+    message: str,
+) -> tuple[int, str, bytes]:
+    if status == 503:
+        return _html_response(
+            status,
+            _render_facility_intelligence(
+                [],
+                filters=filters,
+                filter_options=FacilityIntelligenceFilterOptions(),
+                pagination=FacilityIntelligencePagination(),
+                total_authorized_facility_count=0,
+                review_next_facility_identity=None,
+                state_summaries={},
+                reviewer_state_available=False,
+                actor_label=_signed_in_actor_label(context),
+                page_state="error",
+            ),
+        )
+    return _html_response(
+        status,
+        _render_blocked_page(
+            title="Facility intelligence unavailable",
+            heading="Facility intelligence unavailable",
+            message=message,
         ),
     )
 
@@ -1384,6 +1490,152 @@ def _facility_intelligence_filters(
         serious_topic=_first_form_value(query_values, "serious_topic"),
         coverage=coverage,
         sort=sort_value,
+        continuation=_first_form_value(query_values, "continuation").strip(),
+    )
+
+
+def _facility_intelligence_read_filters(
+    filters: FacilityIntelligenceFilters,
+) -> FacilityIntelligenceReadFilters:
+    return FacilityIntelligenceReadFilters(
+        start_date=filters.start_date,
+        end_date=filters.end_date,
+        date_dimension=filters.date_dimension,
+        facility_type=filters.facility_type,
+        geography=filters.geography,
+        finding=filters.finding,
+        serious_topic=filters.serious_topic,
+        coverage=filters.coverage,
+        sort=filters.sort,
+    )
+
+
+def _facility_intelligence_seek(
+    filters: FacilityIntelligenceFilters,
+) -> FacilityIntelligenceSeek | None:
+    token = filters.continuation
+    if not token:
+        return None
+    if len(token) > 2_048:
+        raise ValueError("Facility intelligence continuation is malformed.")
+    try:
+        padded = token + "=" * (-len(token) % 4)
+        decoded = base64.b64decode(padded, altchars=b"-_", validate=True)
+        payload = json.loads(decoded.decode("utf-8"))
+    except (UnicodeDecodeError, binascii.Error, json.JSONDecodeError, ValueError):
+        raise ValueError("Facility intelligence continuation is malformed.") from None
+    if not isinstance(payload, dict) or set(payload) != {"v", "f", "d", "a", "s", "t"}:
+        raise ValueError("Facility intelligence continuation is malformed.")
+    if payload["v"] != 1 or payload["f"] != _facility_intelligence_filter_fingerprint(filters):
+        raise ValueError(
+            "Facility intelligence continuation does not match the active filters and ordering."
+        )
+    direction = payload["d"]
+    anchor = payload["a"]
+    start_position = payload["s"]
+    expected_total = payload["t"]
+    if (
+        direction not in {"next", "previous"}
+        or not isinstance(anchor, list)
+        or not _facility_intelligence_anchor_is_valid(anchor, filters.sort)
+        or not isinstance(start_position, int)
+        or isinstance(start_position, bool)
+        or start_position < 1
+        or not isinstance(expected_total, int)
+        or isinstance(expected_total, bool)
+        or expected_total < 1
+    ):
+        raise ValueError("Facility intelligence continuation is malformed.")
+    return FacilityIntelligenceSeek(
+        direction=cast(Any, direction),
+        anchor=tuple(anchor),
+        start_position=start_position,
+        expected_total=expected_total,
+    )
+
+
+def _facility_intelligence_anchor_is_valid(
+    anchor: list[Any],
+    sort_value: str,
+) -> bool:
+    expected_types: Mapping[str, tuple[type[Any], ...]] = {
+        "priority": (int, int, int, str, str, str),
+        "complaint_count": (int, str, str),
+        "recent_activity": (str, str, str),
+        "facility_name": (str, str),
+    }
+    types = expected_types.get(sort_value)
+    if types is None or len(anchor) != len(types):
+        return False
+    return all(
+        isinstance(value, expected_type)
+        and not (expected_type is int and isinstance(value, bool))
+        for value, expected_type in zip(anchor, types, strict=True)
+    )
+
+
+def _facility_intelligence_filter_fingerprint(
+    filters: FacilityIntelligenceFilters,
+) -> str:
+    canonical = json.dumps(
+        _facility_intelligence_query_values(filters),
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _facility_intelligence_cursor(
+    anchor: FacilityIntelligenceCursorAnchor,
+    *,
+    direction: str,
+    total_matching: int,
+    filters: FacilityIntelligenceFilters,
+) -> str:
+    payload = {
+        "v": 1,
+        "f": _facility_intelligence_filter_fingerprint(filters),
+        "d": direction,
+        "a": list(anchor.order_values),
+        "s": anchor.start_position,
+        "t": total_matching,
+    }
+    encoded = base64.urlsafe_b64encode(
+        json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    )
+    return encoded.decode("ascii").rstrip("=")
+
+
+def _facility_intelligence_pagination(
+    page: FacilityIntelligencePageRead,
+    filters: FacilityIntelligenceFilters,
+) -> FacilityIntelligencePagination:
+    previous_cursor = (
+        _facility_intelligence_cursor(
+            page.previous_anchor,
+            direction="previous",
+            total_matching=page.total_matching_facility_count,
+            filters=filters,
+        )
+        if page.previous_anchor is not None
+        else ""
+    )
+    next_cursor = (
+        _facility_intelligence_cursor(
+            page.next_anchor,
+            direction="next",
+            total_matching=page.total_matching_facility_count,
+            filters=filters,
+        )
+        if page.next_anchor is not None
+        else ""
+    )
+    return FacilityIntelligencePagination(
+        total_matching=page.total_matching_facility_count,
+        first_position=page.first_position,
+        last_position=page.last_position,
+        previous_cursor=previous_cursor,
+        next_cursor=next_cursor,
     )
 
 
@@ -1619,30 +1871,37 @@ def _render_facility_intelligence(
     summaries: list[FacilityIntelligenceSummary],
     *,
     filters: FacilityIntelligenceFilters,
-    all_summaries: list[FacilityPrioritySummary],
+    filter_options: FacilityIntelligenceFilterOptions,
+    pagination: FacilityIntelligencePagination,
+    total_authorized_facility_count: int,
+    review_next_facility_identity: str | None,
     state_summaries: Mapping[str, Mapping[str, Any]],
     reviewer_state_available: bool,
     actor_label: str | None,
     page_state: str | None = None,
+    continuation_error: str = "",
 ) -> str:
     resolved_state = page_state or (
         "populated"
         if summaries
         else "no-data"
-        if not all_summaries
+        if not total_authorized_facility_count
         else "filtered-empty"
     )
     result_markup = _render_facility_intelligence_results(
         summaries,
         filters=filters,
+        pagination=pagination,
+        review_next_facility_identity=review_next_facility_identity,
         state_summaries=state_summaries,
         reviewer_state_available=reviewer_state_available,
         page_state=resolved_state,
-        total_facility_count=len(all_summaries),
     )
     status_markup = _facility_intelligence_page_status(
         resolved_state,
+        filters=filters,
         summaries=summaries,
+        continuation_error=continuation_error,
     )
     return _page(
         title="Cross-facility intelligence",
@@ -1652,10 +1911,10 @@ def _render_facility_intelligence(
         main=f"""
         <p class="intelligence-purpose">Review area · Compare loaded complaint records to decide which facility or complaint to open next.</p>
         <section class="intelligence-scope" aria-label="Loaded complaint corpus scope">
-          <p>{_facility_intelligence_scope_text(all_summaries, filters)}</p>
+          <p>{_facility_intelligence_scope_text(total_authorized_facility_count, filters)}</p>
           <p>Ordered by governed priority factors. Exact reasons appear in each row.</p>
         </section>
-        {_render_facility_intelligence_filters(filters, all_summaries)}
+        {_render_facility_intelligence_filters(filters, filter_options)}
         <p class="intelligence-glossary-line">{_glossary_term('Substantiated', 'A finding label shown in a public CCLD complaint record.', 'intelligence-substantiated')} <span>CCLD finding term</span></p>
         {status_markup}
 {result_markup}
@@ -1665,7 +1924,7 @@ def _render_facility_intelligence(
 
 
 def _facility_intelligence_scope_text(
-    summaries: list[FacilityPrioritySummary],
+    total_authorized_facility_count: int,
     filters: FacilityIntelligenceFilters,
 ) -> str:
     range_text = "Loaded complaint corpus"
@@ -1675,14 +1934,16 @@ def _facility_intelligence_scope_text(
             f"{_reviewer_value_text(filters.start_date or 'unknown', kind='date')}–"
             f"{_reviewer_value_text(filters.end_date or 'unknown', kind='date')}"
         )
-    facility_label = "facility" if len(summaries) == 1 else "facilities"
-    return f"{len(summaries)} {facility_label} · {range_text}"
+    facility_label = "facility" if total_authorized_facility_count == 1 else "facilities"
+    return f"{total_authorized_facility_count} {facility_label} · {range_text}"
 
 
 def _facility_intelligence_page_status(
     page_state: str,
     *,
+    filters: FacilityIntelligenceFilters,
     summaries: list[FacilityIntelligenceSummary],
+    continuation_error: str = "",
 ) -> str:
     if page_state == "loading":
         return """        <section class="intelligence-message intelligence-message--info" aria-live="polite" aria-busy="true">
@@ -1700,6 +1961,12 @@ def _facility_intelligence_page_status(
           <h2>Date range needs attention</h2>
           <p>Start date must be on or before end date.</p>
           <p>Correct either date, then apply the filters again.</p>
+        </section>"""
+    if page_state == "continuation-error":
+        return f"""        <section class="intelligence-message intelligence-message--error" role="alert">
+          <h2>Pagination link is no longer valid</h2>
+          <p>{_escape(continuation_error or 'Return to the first page and try again.')}</p>
+          <p><a class="button button-secondary" href="{_escape(_facility_intelligence_first_page_href(filters))}">Return to the first page</a></p>
         </section>"""
     if page_state == "no-data":
         return """        <section class="intelligence-message" aria-labelledby="facility-intelligence-no-data-heading">
@@ -1722,25 +1989,12 @@ def _facility_intelligence_page_status(
 
 def _render_facility_intelligence_filters(
     filters: FacilityIntelligenceFilters,
-    all_summaries: list[FacilityPrioritySummary],
+    filter_options: FacilityIntelligenceFilterOptions,
 ) -> str:
-    facility_types = _substantiated_filter_options(
-        summary.facility_type for summary in all_summaries
-    )
-    geographies = _substantiated_filter_options(
-        summary.geography for summary in all_summaries
-    )
-    findings = _substantiated_filter_options(
-        complaint.finding
-        for summary in all_summaries
-        for complaint in summary.complaints
-    )
-    serious_topics = _substantiated_filter_options(
-        topic
-        for summary in all_summaries
-        for complaint in summary.complaints
-        for topic in complaint.serious_topics
-    )
+    facility_types = _substantiated_filter_options(filter_options.facility_types)
+    geographies = _substantiated_filter_options(filter_options.geographies)
+    findings = _substantiated_filter_options(filter_options.findings)
+    serious_topics = _substantiated_filter_options(filter_options.serious_topics)
     return f"""        <section class="intelligence-filters" aria-labelledby="facility-intelligence-filters-heading">
           <h2 id="facility-intelligence-filters-heading">Filter facilities</h2>
           <form class="compact-filter-form" method="get" action="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">
@@ -1788,7 +2042,6 @@ def _render_facility_intelligence_filters(
               <button class="button" type="submit">Apply filters</button>
               <a class="button-link" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">Clear all</a>
             </div>
-            {_render_facility_intelligence_applied_filters(filters)}
           </form>
         </section>"""
 
@@ -1851,6 +2104,26 @@ def _facility_intelligence_clear_filter_href(
     return f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?{query}" if query else CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH
 
 
+def _facility_intelligence_first_page_href(
+    filters: FacilityIntelligenceFilters,
+) -> str:
+    query = urlencode(_facility_intelligence_query_values(filters))
+    return (
+        f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?{query}"
+        if query
+        else CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH
+    )
+
+
+def _facility_intelligence_navigation_href(
+    filters: FacilityIntelligenceFilters,
+    continuation: str,
+) -> str:
+    values = _facility_intelligence_query_values(filters)
+    values["continuation"] = continuation
+    return f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?{urlencode(values)}"
+
+
 def _facility_intelligence_query_values(
     filters: FacilityIntelligenceFilters,
 ) -> dict[str, str]:
@@ -1885,17 +2158,14 @@ def _render_facility_intelligence_results(
     summaries: list[FacilityIntelligenceSummary],
     *,
     filters: FacilityIntelligenceFilters,
+    pagination: FacilityIntelligencePagination,
+    review_next_facility_identity: str | None,
     state_summaries: Mapping[str, Mapping[str, Any]],
     reviewer_state_available: bool,
     page_state: str,
-    total_facility_count: int,
 ) -> str:
-    count_text = (
-        "Facility results"
-        if page_state in {"no-data", "error", "date-error", "loading"}
-        else f"Facility results — {len(summaries)}"
-    )
     sort_form = _render_facility_intelligence_sort(filters)
+    orientation = _render_facility_intelligence_orientation(filters, pagination)
     if page_state == "loading":
         rows = """          <div class="intelligence-loading-row" aria-hidden="true">
             <div><strong>Loading facilities</strong><span>Loading source-backed ordering reasons…</span></div>
@@ -1903,22 +2173,103 @@ def _render_facility_intelligence_results(
           </div>"""
     elif summaries:
         rows = f"""          <ol class="facility-intelligence-inventory">
-{''.join(_render_facility_intelligence_result(item, filters, state_summaries=state_summaries, reviewer_state_available=reviewer_state_available, selected=index == 0) for index, item in enumerate(summaries))}
+{''.join(_render_facility_intelligence_result(item, filters, state_summaries=state_summaries, reviewer_state_available=reviewer_state_available, selected=item.priority.facility_identity == review_next_facility_identity) for item in summaries)}
           </ol>"""
     else:
         empty_text = (
-            f"0 of {total_facility_count} facilities match the active filters."
+            "0 facilities match the active filters."
             if page_state == "filtered-empty"
             else "No facility rows are rendered."
         )
         rows = f'<p class="intelligence-results-empty">{_escape(empty_text)}</p>'
-    return f"""        <section id="facility-intelligence-results" class="facility-intelligence-results" aria-labelledby="facility-intelligence-results-heading">
+    return f"""        <section id="facility-intelligence-results" class="facility-intelligence-results" aria-labelledby="facility-intelligence-results-heading" aria-describedby="facility-intelligence-position">
           <div class="facility-intelligence-results__header">
-            <h2 id="facility-intelligence-results-heading">{_escape(count_text)}</h2>
+            <h2 id="facility-intelligence-results-heading">Facility results</h2>
             {sort_form}
           </div>
+{orientation}
 {rows}
         </section>"""
+
+
+def _render_facility_intelligence_orientation(
+    filters: FacilityIntelligenceFilters,
+    pagination: FacilityIntelligencePagination,
+) -> str:
+    position = (
+        f"Showing {pagination.first_position}–{pagination.last_position} of "
+        f"{pagination.total_matching} facilities"
+    )
+    previous_control = _facility_intelligence_navigation_control(
+        "Previous",
+        filters=filters,
+        cursor=pagination.previous_cursor,
+        target_start=max(pagination.first_position - FACILITY_INTELLIGENCE_PAGE_SIZE, 1),
+        target_end=max(pagination.first_position - 1, 0),
+    )
+    next_control = _facility_intelligence_navigation_control(
+        "Next",
+        filters=filters,
+        cursor=pagination.next_cursor,
+        target_start=pagination.last_position + 1,
+        target_end=min(
+            pagination.last_position + FACILITY_INTELLIGENCE_PAGE_SIZE,
+            pagination.total_matching,
+        ),
+    )
+    return f"""          <div class="facility-inventory-context">
+            <div class="facility-inventory-context__summary">
+              <p id="facility-intelligence-position" class="facility-result-position">{_escape(position)}</p>
+              <p class="facility-order-description">{_escape(_facility_intelligence_order_description(filters.sort))}</p>
+              {_render_facility_intelligence_applied_filters(filters)}
+            </div>
+            <nav class="facility-pagination" aria-label="Facility result pages">
+              {previous_control}
+              {next_control}
+            </nav>
+          </div>"""
+
+
+def _facility_intelligence_navigation_control(
+    label: str,
+    *,
+    filters: FacilityIntelligenceFilters,
+    cursor: str,
+    target_start: int,
+    target_end: int,
+) -> str:
+    if not cursor:
+        return (
+            f'<span class="button button-secondary facility-pagination__control is-disabled" '
+            f'aria-disabled="true">{_escape(label)}</span>'
+        )
+    accessible_name = (
+        f"{label} facilities, showing {target_start}–{target_end}"
+    )
+    return (
+        f'<a class="button button-secondary facility-pagination__control" '
+        f'href="{_escape(_facility_intelligence_navigation_href(filters, cursor))}" '
+        f'aria-label="{_escape(accessible_name)}">{_escape(label)}</a>'
+    )
+
+
+def _facility_intelligence_order_description(sort_value: str) -> str:
+    descriptions = {
+        "priority": (
+            "Ordered by substantiated complaints, complaint count, delay, and recent activity; "
+            "ties use facility name and stable facility identity."
+        ),
+        "complaint_count": (
+            "Ordered by complaint count; ties use facility name and stable facility identity."
+        ),
+        "recent_activity": (
+            "Ordered by recent activity; ties use facility name and stable facility identity."
+        ),
+        "facility_name": (
+            "Ordered by facility name; ties use stable facility identity."
+        ),
+    }
+    return descriptions.get(sort_value, descriptions["priority"])
 
 
 def _render_facility_intelligence_sort(filters: FacilityIntelligenceFilters) -> str:

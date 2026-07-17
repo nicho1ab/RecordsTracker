@@ -114,6 +114,68 @@ Each important page must have:
 
 Each frame must be labeled `Approved implementation reference — variance requires approval`.
 
+## Approved Issue #419 large-corpus pagination variance
+
+Issue #419 has an approved narrow variance for large-corpus pagination and
+persistent inventory orientation on `/ccld/facilities/intelligence`. The
+authoritative pagination addendum is Figma node `59:463`. Its approved state
+frames are:
+
+- desktop first page `59:469`;
+- desktop middle page `59:505`;
+- desktop last page `59:541`;
+- approximately 500 px `59:577`;
+- mobile 390 px `59:613`;
+- 200% zoom `59:649`;
+- Previous disabled `59:685`;
+- Next disabled `59:721`;
+- keyboard focus Previous `59:757`;
+- keyboard focus Next `59:793`;
+- applied filters `59:829`;
+- print `59:868`;
+- empty filtered result `59:904`.
+
+The implementation must conform to `RT-PAG-001` and use exactly 25 facilities
+per page. Pagination uses Previous and Next only, with no numbered pages,
+arbitrary page jumps, or `Page N of M`. The exact result-position wording is
+`Showing X–Y of Z facilities`. Previous is semantically disabled on the first
+page and Next is semantically disabled on the last page. Navigation preserves
+active filters and deterministic ordering, while changing a filter returns to
+the first page.
+
+The facility page must use database-level seek/keyset pagination. Authorization,
+corpus/import scope, all active filters, complaint deduplication, governed
+priority calculations, the complete visible ordering tuple, normalized facility
+name, and stable facility identity must apply before pagination. The current
+page query is bounded and returns one page plus a separate total matching-
+facility count. Facility-page OFFSET, progressive or deep OFFSET, equivalent
+scan-and-discard behavior, and full-corpus application-memory slicing or
+aggregation are prohibited.
+
+Complaint and supporting rows are fetched only for facilities represented on
+the current page. Reviewer-created state is fetched only for those visible
+facilities or source records. The governed Review next result for the complete
+filtered corpus uses a separate bounded, ordered `LIMIT 1` database query and
+must not hydrate or aggregate the full matching corpus in application memory.
+
+Desktop may use restrained sticky inventory orientation only while controls and
+focused content remain unobscured. Approximately 500 px, mobile 390 px, 200%
+zoom, and print use normal document flow; print disables sticky positioning.
+Pagination must not introduce horizontal page overflow. Previous and Next must
+have descriptive accessible names, semantic disabled states, logical focus
+order, and the approved visible Civic Ledger focus treatment. Result-position
+text must remain available to assistive technology without excessive result
+announcements.
+
+Acceptance requires controlled exact-route evidence for every cited Figma state,
+including keyboard focus, responsive widths, 200% zoom, print, disabled states,
+applied filters, and the empty filtered result. Query evidence must prove bounded
+seek/keyset pagination, no facility-page OFFSET, bounded current-page complaint,
+supporting-row, and reviewer-state hydration, and the bounded ordered `LIMIT 1`
+Review next query. Adjacent controlled pages must reconcile without facility
+duplicates or omissions. Controlled fixture evidence must not be represented as
+real-corpus hosted acceptance evidence.
+
 ## Source-report field inventory
 
 The complaint-report audit must cover document identity, agency/office, facility identity, complaint timing, investigation participants, disposition, allegations, investigation findings, deficiencies, plans of correction, signatures, source traceability, extraction status, canonical allocation, PostgreSQL coverage, read models, and UI components.

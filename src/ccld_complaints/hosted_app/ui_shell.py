@@ -2994,6 +2994,56 @@ SHARED_CSS = r"""
     .facility-intelligence-results__header h2 {
       margin: 0;
     }
+    .facility-inventory-context {
+      align-items: start;
+      background: #f5efe3;
+      border-bottom: 1px solid #b8b1a5;
+      border-top: 1px solid #b8b1a5;
+      display: flex;
+      gap: 1rem;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+    }
+    .facility-inventory-context__summary {
+      display: grid;
+      gap: 0.35rem;
+      min-width: 0;
+    }
+    .facility-result-position {
+      font-weight: 700;
+      margin: 0;
+    }
+    .facility-order-description {
+      color: var(--muted);
+      font-size: 0.84rem;
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+    .facility-inventory-context .applied-filter-empty {
+      font-size: 0.82rem;
+    }
+    .facility-inventory-context .applied-filter-chip {
+      background: #fffdf8;
+      font-size: 0.78rem;
+      min-height: 1.75rem;
+      padding: 0.25rem 0.6rem;
+    }
+    .facility-pagination {
+      display: flex;
+      flex: 0 0 auto;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .facility-pagination__control {
+      min-width: 6.5rem;
+      text-align: center;
+    }
+    .facility-pagination__control.is-disabled {
+      background: #eee7da;
+      border-color: #b8b1a5;
+      color: #5f6872;
+      cursor: not-allowed;
+    }
     .facility-intelligence-sort {
       min-width: 13.75rem;
     }
@@ -3011,6 +3061,9 @@ SHARED_CSS = r"""
       gap: 1rem;
       grid-template-columns: minmax(15rem, 1.05fr) minmax(20rem, 1.8fr) minmax(15rem, 1fr) minmax(11rem, 0.75fr) minmax(10rem, 0.7fr);
       padding: 1rem;
+    }
+    .facility-intelligence-row :focus {
+      scroll-margin-top: 9rem;
     }
     .facility-intelligence-row.is-selected {
       background: #f5e5b5;
@@ -3033,6 +3086,11 @@ SHARED_CSS = r"""
     .facility-row-reason h4 {
       font-size: 1rem;
       margin: 0 0 0.45rem;
+    }
+    .facility-row-identity h3 {
+      font-size: 1.12rem;
+      font-weight: 700;
+      line-height: 1.35;
     }
     .facility-row-identity p,
     .facility-row-reason p,
@@ -3062,6 +3120,12 @@ SHARED_CSS = r"""
     .facility-row-reviewer .button,
     .facility-row-actions .button {
       width: 100%;
+    }
+    .facility-row-actions .button-secondary {
+      background: transparent;
+      border-color: #817a70;
+      color: #254f73;
+      font-weight: 500;
     }
     .civic-ledger-page .review-chip {
       background: #f5efe3;
@@ -3206,6 +3270,13 @@ SHARED_CSS = r"""
         width: auto;
       }
     }
+    @media (min-width: 1101px) {
+      .facility-inventory-context {
+        position: sticky;
+        top: 0.5rem;
+        z-index: 3;
+      }
+    }
     @media (max-width: 760px) {
       .civic-header,
       .civic-footer {
@@ -3252,6 +3323,18 @@ SHARED_CSS = r"""
       .facility-intelligence-sort select {
         max-width: 14rem;
       }
+      .facility-inventory-context {
+        align-items: stretch;
+        display: grid;
+        position: static;
+      }
+      .facility-pagination {
+        width: 100%;
+      }
+      .facility-pagination__control {
+        flex: 1 1 8rem;
+        min-width: 0;
+      }
       .facility-intelligence-row > article {
         display: grid;
         grid-template-areas:
@@ -3292,7 +3375,7 @@ SHARED_CSS = r"""
       .site-header, .civic-header, .guided-stepper, .site-footer, .civic-footer,
       .packet-draft-actions, .technical-details, .skip-link, .mode-panel,
       .copy-icon-button, .copy-text-control, .facility-intelligence-sort,
-      .facility-row-actions {
+      .facility-pagination, .facility-row-actions {
         display: none !important;
       }
       .shell {
@@ -3332,6 +3415,9 @@ SHARED_CSS = r"""
       }
       .civic-ledger-page .facility-intelligence-row > article {
         grid-template-columns: 1fr 1.5fr 1fr 1fr;
+      }
+      .civic-ledger-page .facility-inventory-context {
+        position: static !important;
       }
     }
     @media (max-width: 760px) {
