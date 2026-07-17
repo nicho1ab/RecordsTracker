@@ -207,3 +207,7 @@ The repository identity check must treat organization acronyms as standalone ter
 - For important UI work, implement the exact approved Figma/design package. Produce pre-code and post-code variance inventories. Material unapproved visual variance is a stop condition.
 - Do not default to teal primary and muted accents. Use the approved token package and approved traffic-light protocol colors for their intended semantics, paired with text and accessible labels.
 - A repeated user rejection of a visual pattern is evidence of a missing or weak governance rule. Add the narrow preventive rule in the same task.
+
+## QNAP release deployment authority
+
+For QNAP deployment, verification, hosted acceptance, or rollback, follow the authoritative [QNAP Release Deployment Runbook](docs/developer/qnap-release-deployment-runbook.md). Do not invent or substitute another deployment procedure.

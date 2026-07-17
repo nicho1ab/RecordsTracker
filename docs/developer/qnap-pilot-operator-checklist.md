@@ -357,3 +357,7 @@ docker compose -f docker-compose.qnap.yml --env-file .env up --build -d
 - Do not commit the seeded corpus artifact
   (`data/processed/hosted_seeded_corpus/`).
 - Do not treat non-zero import counts as proof of public-source completeness.
+
+## QNAP release deployment authority
+
+For QNAP deployment, verification, hosted acceptance, or rollback, follow the authoritative [QNAP Release Deployment Runbook](qnap-release-deployment-runbook.md). Do not invent or substitute another deployment procedure.

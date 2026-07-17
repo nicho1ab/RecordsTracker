@@ -119,3 +119,7 @@ Keep handoffs copy/paste-safe for PowerShell users. Do not include secrets, pers
 - Do not accept `Not provided` for a reviewer-relevant field visibly present in governed source evidence without tracing the field through extraction, normalization, canonical allocation, persistence, import/backfill, read model, source precedence, and rendering.
 - For an important reviewer-facing UI task, identify the approved Figma frame or design artifact, list prohibited interaction patterns, and stop if the implementation materially varies without approval.
 - Do not invent a generic teal-primary design. Implement the approved design tokens, including approved traffic-light protocol color semantics, exactly and accessibly.
+
+## QNAP release deployment authority
+
+For QNAP deployment, verification, hosted acceptance, or rollback, follow the authoritative [QNAP Release Deployment Runbook](docs/developer/qnap-release-deployment-runbook.md). Do not invent or substitute another deployment procedure.

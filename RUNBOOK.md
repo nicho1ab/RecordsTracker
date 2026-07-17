@@ -650,3 +650,7 @@ git switch main
 git pull --ff-only
 git switch -c <next-branch-name>
 ```
+
+## QNAP release deployment authority
+
+For QNAP deployment, verification, hosted acceptance, or rollback, follow the authoritative [QNAP Release Deployment Runbook](docs/developer/qnap-release-deployment-runbook.md). Do not invent or substitute another deployment procedure.
