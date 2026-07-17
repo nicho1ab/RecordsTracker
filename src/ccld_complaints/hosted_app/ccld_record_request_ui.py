@@ -80,9 +80,6 @@ CCLD_RECORD_REQUEST_PATH = f"{CCLD_UI_PREFIX}/records/request"
 CCLD_HELP_PATH = f"{CCLD_UI_PREFIX}/help"
 CCLD_RETRIEVAL_JOBS_PATH = f"{CCLD_UI_PREFIX}/retrieval/jobs"
 CCLD_RETRIEVAL_JOB_DETAIL_PATH = f"{CCLD_RETRIEVAL_JOBS_PATH}/detail"
-SUPPORT_NAV_LINKS: tuple[tuple[str, str], ...] = (
-    ("Job diagnostics", CCLD_RETRIEVAL_JOBS_PATH),
-)
 _IMPORT_RELOAD_ACTION_FIELD = "ccld_import_reload_action"
 _IMPORT_RELOAD_ACTION_VALUE = "load_local_validated_ccld_records"
 _RETRIEVAL_ACTION_FIELD = "ccld_retrieval_action"
@@ -2051,7 +2048,6 @@ def _render_retrieval_job_history_page(
         active_path=CCLD_RETRIEVAL_JOBS_PATH,
         step_id="review_results",
         next_action="Open a job, review records, or adjust the request",
-        extra_nav_links=SUPPORT_NAV_LINKS,
                 main=f"""    <section class="hero-card" aria-labelledby="retrieval-history-purpose-heading">
       <p class="launch-kicker">Operator support</p>
       <h2 id="retrieval-history-purpose-heading">Track Request Records jobs</h2>
@@ -2309,7 +2305,6 @@ def _render_retrieval_job_detail_page(job: CcldRetrievalJobHistoryEntry) -> str:
         active_path=CCLD_RETRIEVAL_JOBS_PATH,
         step_id="review_results",
         next_action="Review imported records or adjust the request",
-        extra_nav_links=SUPPORT_NAV_LINKS,
                 main=f"""    <section class="hero-card" aria-labelledby="retrieval-detail-summary-heading">
     <p class="launch-kicker">Operator support</p>
     <h2 id="retrieval-detail-summary-heading">Request job summary and next step</h2>
@@ -4423,11 +4418,6 @@ def _render_message_page(
         title=title,
         heading=heading,
         active_path=selected_active_path,
-        extra_nav_links=(
-            SUPPORT_NAV_LINKS
-            if selected_active_path.startswith(CCLD_RETRIEVAL_JOBS_PATH)
-            else ()
-        ),
         main=f"""    <section aria-labelledby="message-heading">
             <h2 id="message-heading">{_escape(heading)}</h2>
             <p>{_escape(message)}</p>
@@ -4448,15 +4438,12 @@ def _page(
     step_id: str = "retrieve",
     next_action: str | None = None,
     show_workflow_indicator: bool = False,
-    extra_nav_links: tuple[tuple[str, str], ...] = (),
 ) -> str:
     return render_page_shell(
         title=title,
         heading=heading,
         main=main,
         skip_label="Skip to main CCLD request content",
-        nav_label="CCLD records navigation",
-        extra_nav_links=extra_nav_links,
         active_path=active_path,
         step_id=step_id,
         next_action=next_action,

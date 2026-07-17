@@ -207,24 +207,14 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert "showCopyStatus(button, 'Copied')" in html
     assert "aria-live', 'polite'" in html
     assert "2000" in html
-    mode_panel = html.split('<div class="mode-panel" aria-label="Retrieval mode">', 1)[1].split(
-        "</div>",
-        1,
-    )[0]
+    assert html.count('class="mode-panel civic-mode-panel"') == 1
     assert html.count("Fixture/mock demo") == 1
-    assert html.count('<span class="ds-badge ds-badge--info">Fixture/mock demo</span>') == 1
-    assert '<span class="ds-badge ds-badge--info">Fixture/mock demo</span>' in mode_panel
     assert "Open local/test packet preview" not in html
     assert "Open local/test preparation draft for browser copy or print" not in html
     assert "Skip to main reviewer content" in html
-    assert '<a class="product-name" href="/">Records<span>Tracker</span></a>' in html
-    assert '<span class="workspace-label">Reviewer Workspace</span>' in html
-    assert (
-        '<form class="shell-lookup" action="/ccld/facilities" method="get" role="search">'
-        in html
-    )
-    assert 'placeholder="Search complaint, facility, Facility ID, or source record..."' in html
-    assert "Search complaint, facility, license, or source record" not in html
+    assert '<header class="civic-header">' in html
+    assert '<a class="civic-brand__name" href="/">RecordsTracker</a>' in html
+    assert '<nav class="civic-nav" aria-label="Primary navigation">' in html
     assert 'href="/ccld/facilities">Facilities</a>' in html
     assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
     assert '<h1 id="page-heading">Complaint records ready for review</h1>' in html

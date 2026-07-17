@@ -70,6 +70,10 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "Start-Sleep -Milliseconds 50",
         "screenshotFailures",
         "route, assertion, or screenshot failures",
+        "governed shared shell",
+        "authoritative primary navigation",
+        "primary navigation product tiers",
+        "mode badge",
         "$Route.Path -match",
         "bytes written to file",
         "do not commit them unless a specific repository workflow explicitly says to do so",
@@ -110,10 +114,23 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     assert (
         'Path = "/ccld/facilities/intelligence"; '
         'Label = "02-facility-intelligence"; '
-        'ActiveHref = "/reviewer"; '
+        'ActiveHref = "/ccld/facilities"; '
         'WorkflowStep = "Review"'
         in script
     )
+    assert (
+        'Name = "jobs"; Path = "/ccld/retrieval/jobs"; '
+        'Label = "04-job-status"; WorkflowStep = "Status"'
+        in script
+    )
+    assert (
+        'Name = "job-detail"; Path = $jobDetailHref; '
+        'Label = "08-job-detail"; WorkflowStep = "Status"'
+        in script
+    )
+    assert '$modePanelCount -eq 1' in script
+    assert 'Check "mode badge" -Status "FAIL"' in script
+    assert "Expected shared-shell mode marker" in script
     assert "05-reviewer-complaint-exports.png" in script
     assert 'Join-RouteUrl -Base $normalizedBaseUrl -Path "/reviewer"' in script
     assert "#complaint-export-controls" in script

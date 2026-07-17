@@ -12798,15 +12798,12 @@ def _page(
                 heading=heading,
                 main=main,
                 skip_label="Skip to main reviewer content",
-                nav_label="Reviewer navigation",
                 eyebrow=None,
                 actor_label=None,
-                extra_nav_links=(),
                 active_path=active_path,
                 step_id="review_records",
                 next_action="Open next record or add reviewer-created notes/status",
                 show_workflow_indicator=show_workflow_indicator,
-                civic_ledger=active_path == CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
         )
 
 

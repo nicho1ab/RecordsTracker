@@ -2579,7 +2579,6 @@ def _page(
                 heading=heading,
                 main=main,
                 skip_label="Skip to main CCLD facility lookup content",
-                nav_label="CCLD facility navigation",
                 active_path=active_path,
                 step_id="start" if active_path == "/" else "facility",
                 next_action="Find a facility",

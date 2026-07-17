@@ -111,13 +111,10 @@ def test_ccld_record_request_page_renders_from_default_context(
         "Choose a Facility ID and date range, then decide whether to review "
         "already-loaded records or request missing records"
     ) in html
-    mode_panel = html.split('<div class="mode-panel" aria-label="Retrieval mode">', 1)[1].split(
-        "</div>",
-        1,
-    )[0]
+    assert '<header class="civic-header">' in html
+    assert '<nav class="civic-nav" aria-label="Primary navigation">' in html
+    assert html.count('class="mode-panel civic-mode-panel"') == 1
     assert html.count("Fixture/mock demo") == 1
-    assert html.count('<span class="ds-badge ds-badge--info">Fixture/mock demo</span>') == 1
-    assert '<span class="ds-badge ds-badge--info">Fixture/mock demo</span>' in mode_panel
     assert "Keyboard flow: move from facility selection to date range" not in html
     assert '<details class="quiet-section orientation-details" open>' not in html
     assert "Choose complaint date range" in html or "Which facility should be reviewed?" in html

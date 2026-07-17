@@ -554,7 +554,7 @@ def test_facility_intelligence_accessible_structure_and_safe_language() -> None:
     assert '<label for="facility-intelligence-coverage">' in html
     assert '<button class="button" type="submit">Apply filters</button>' in html
     assert 'aria-label="Finding and review flags"' in html
-    assert 'aria-current="page" href="/reviewer">Review</a>' in html
+    assert 'aria-current="page" href="/ccld/facilities">Facilities</a>' in html
     assert "Source record" in html
     assert "Reviewer state" in html
     assert "Facility ID" in html
@@ -566,9 +566,10 @@ def test_facility_intelligence_accessible_structure_and_safe_language() -> None:
     assert "<details" not in html
     assert "No substantiated count" not in html
     assert "Review public records" in html
-    assert "Find facility" in html
-    assert "Request records" in html
-    assert "Job Status" in html
+    assert "Facilities" in html
+    assert "Request Records" in html
+    assert "Feedback" in html
+    assert "Job Status" not in html
     assert "shell-facility-search" not in html
     assert "typeof navigator !== 'undefined'" in html
     assert "showCopyStatus(button, 'Copy unavailable');" in html

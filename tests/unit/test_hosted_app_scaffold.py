@@ -91,6 +91,12 @@ def parse_html_structure(markup: str) -> HtmlStructureParser:
     return parser
 
 
+def primary_navigation_markup(markup: str) -> str:
+    start = markup.index('<nav class="civic-nav" aria-label="Primary navigation">')
+    end = markup.index("</nav>", start)
+    return markup[start:end]
+
+
 def assert_no_buttons_inside_list_items(markup: str) -> None:
     assert not re.search(
         r"<li\b(?![^>]*role=\"option\")[^>]*>(?:(?!</li>).)*(?:<button\b|class=\"[^\"]*\bbutton\b)",
@@ -150,27 +156,18 @@ def test_app_shell_labels_placeholder_scope(monkeypatch: MonkeyPatch) -> None:
     assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
     assert "CCLD-only public-record review workspace." not in html
     assert "CCLD RecordsTracker" in html
-    assert '<a class="product-name" href="/">Records<span>Tracker</span></a>' in html
-    assert '<span class="workspace-label">Reviewer Workspace</span>' in html
-    assert (
-        '<form class="shell-lookup" action="/ccld/facilities" method="get" role="search">'
-        in html
-    )
-    assert (
-        '<label class="sr-only" for="shell-facility-search">'
-        "Search complaint, facility, Facility ID, or source record</label>"
-        in html
-    )
-    assert (
-        '<label class="sr-only" for="shell-facility-search">Search facilities</label>'
-        not in html
-    )
-    assert 'placeholder="Search complaint, facility, Facility ID, or source record..."' in html
-    assert "Search complaint, facility, license, or source record" not in html
+    assert '<body class="ds-page-bg civic-ledger-page">' in html
+    assert '<header class="civic-header">' in html
+    assert '<a class="civic-brand__name" href="/">RecordsTracker</a>' in html
+    assert '<span class="civic-brand__tagline">Review public records</span>' in html
+    assert '<nav class="civic-nav" aria-label="Primary navigation">' in html
+    assert "shell-facility-search" not in html
+    assert '<footer class="civic-footer">' in html
     assert parser.tags.count("h1") == 1
     assert parser.text_for("h1") == "Find a Facility"
     assert parser.text_for("h1") != "CCLD RecordsTracker"
-    assert "Review aids only" in html
+    assert html.count('aria-label="Retrieval mode"') == 1
+    assert html.count("Review aids only") == 1
     assert "Find a Facility" in html
     assert "Facility intake" in html
     assert "Find a facility" in html
@@ -412,7 +409,10 @@ def test_guided_attorney_review_workflow_acceptance_route_markers(
             assert marker in html, f"{route_name}: missing acceptance marker {marker!r}"
 
 
-def test_polished_shared_layout_navigation_on_key_pages() -> None:
+def test_required_routes_use_one_governed_shared_shell_and_primary_navigation(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CCLD_RETRIEVAL_DEMO_MODE", "mock-success")
     auth_config = load_hosted_auth_runtime_config(
         environ={
             "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
@@ -420,86 +420,69 @@ def test_polished_shared_layout_navigation_on_key_pages() -> None:
         }
     )
     route_specs = (
-        ("/", "Skip to main CCLD facility lookup content"),
-        ("/ccld/facilities", "Skip to main CCLD facility lookup content"),
-        ("/ccld/records/request", "Skip to main CCLD request content"),
-        ("/ccld/help", "Skip to main CCLD request content"),
-        ("/reviewer", "Skip to main reviewer content"),
-        ("/feedback", "Skip to main feedback content"),
+        ("/", "Skip to main CCLD facility lookup content", "/"),
+        (
+            "/ccld/facilities",
+            "Skip to main CCLD facility lookup content",
+            "/ccld/facilities",
+        ),
+        (
+            "/ccld/facilities/intelligence",
+            "Skip to main reviewer content",
+            "/ccld/facilities",
+        ),
+        (
+            "/ccld/records/request",
+            "Skip to main CCLD request content",
+            "/ccld/records/request",
+        ),
+        ("/reviewer", "Skip to main reviewer content", "/reviewer"),
+        ("/feedback", "Skip to main feedback content", "/feedback"),
+        ("/ccld/help", "Skip to main CCLD request content", "/ccld/help"),
+    )
+    expected_primary_links = (
+        ("/", "Home"),
+        ("/ccld/facilities", "Facilities"),
+        ("/ccld/records/request", "Request Records"),
+        ("/reviewer", "Review"),
+        ("/feedback", "Feedback"),
+        ("/ccld/help", "Help"),
     )
 
-    for path, skip_text in route_specs:
+    for path, skip_text, active_href in route_specs:
         status, content_type, body = route_response(
             path,
             auth_runtime_config=auth_config,
             page_data_mode="fixture-demo",
         )
         html = body.decode("utf-8")
-        normalized_html = " ".join(html.split())
+        primary_nav = primary_navigation_markup(html)
 
         assert status == 200
         assert content_type == "text/html; charset=utf-8"
-        assert "CCLD-only public-record review workspace." not in html
         assert skip_text in html
         assert '<a class="skip-link" href="#main-content">' in html
-        assert '<header class="app-shell-header site-header ds-surface">' in html
-        assert '<nav class="primary-nav site-nav"' in html
+        assert '<body class="ds-page-bg civic-ledger-page">' in html
+        assert html.count('<header class="civic-header">') == 1
+        assert html.count('aria-label="Primary navigation"') == 1
         assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
-        assert 'class="shell page-main app-page-main"' in html
-        assert "CCLD RecordsTracker" in html
-        assert '<a class="product-name" href="/">Records<span>Tracker</span></a>' in html
-        assert '<span class="workspace-label">Reviewer Workspace</span>' in html
-        assert (
-            '<form class="shell-lookup" action="/ccld/facilities" method="get" role="search">'
-            in html
+        assert html.count('<main id="main-content"') == 1
+        assert html.count('<footer class="civic-footer">') == 1
+        assert html.count('class="mode-panel civic-mode-panel"') == 1
+        assert html.count("Fixture/mock demo") == 1
+        assert "Fixture/mock demo" not in primary_nav
+        assert re.findall(r'href="([^"]+)">([^<]+)</a>', primary_nav) == list(
+            expected_primary_links
         )
-        assert (
-            '<label class="sr-only" for="shell-facility-search">'
-            "Search complaint, facility, Facility ID, or source record</label>"
-            in html
-        )
-        assert (
-            '<label class="sr-only" for="shell-facility-search">Search facilities</label>'
-            not in html
-        )
-        assert (
-            'placeholder="Search complaint, facility, Facility ID, or source record..."'
-            in html
-        )
-        assert "Search complaint, facility, license, or source record" not in html
-        if path != "/ccld/help":
-            assert "Attorney workflow" not in html
-            assert "Current step" not in html
-            assert "Next:" not in html
-            assert "Keyboard flow:" not in html
-        else:
-            assert "Attorney workflow" not in html
-            assert "Current step" not in html
-        assert "Future step" not in html
-        assert 'href="/ccld/facilities">Facility</a>' not in html
-        assert 'href="/ccld/facilities">Facilities</a>' in html
-        assert 'href="/">Home</a>' in html
-        assert 'href="/ccld/records/request">Request Records</a>' in html
-        assert 'href="/ccld/records/request">Retrieve</a>' not in html
-        assert "Review" in html
-        assert 'href="/ccld/retrieval/jobs">Job Status</a>' not in html
-        assert 'href="/ccld/retrieval/jobs">Job diagnostics</a>' not in html
-        assert 'href="/ccld/retrieval/jobs">Jobs</a>' not in html
-        assert "Feedback" in html
-        assert 'href="/feedback">Feedback</a>' in html
-        assert "Feedbac k" not in html
-        assert "Commands</a>" not in html
-        assert "Health check</a>" not in html
-        assert "Auth status</a>" not in html
-        assert "Help" in html
-        if path != "/ccld/help":
-            assert "facility-wide conclusions, harm, abuse" not in normalized_html
-            assert "neglect, liability, or rights-deprivation" not in normalized_html
-        assert "button:focus-visible" in html
-        assert ".sr-only" in html
+        assert primary_nav.count('href="/feedback">Feedback</a>') == 1
+        assert "Job Status" not in primary_nav
+        assert "/ccld/retrieval/jobs" not in primary_nav
+        assert primary_nav.count('aria-current="page"') == 1
+        assert f'aria-current="page" href="{active_href}"' in primary_nav
+        assert "a:focus-visible" in html
+        assert ".skip-link:focus" in html
         assert "@media (max-width: 760px)" in html
-        if path in {"/", "/ccld/facilities", "/feedback", "/ccld/help"}:
-            assert_no_buttons_inside_list_items(html)
+        assert "@media print" in html
 
 
 def test_representative_hosted_pages_do_not_render_shared_footer_disclaimer() -> None:
@@ -530,46 +513,33 @@ def test_representative_hosted_pages_do_not_render_shared_footer_disclaimer() ->
             assert phrase not in normalized_html
 
 
-def test_final_product_shell_uses_compact_unboxed_workflow_design() -> None:
+def test_shared_shell_uses_approved_civic_ledger_foundation() -> None:
     html = render_app_shell()
 
-    assert "--ds-page-bg: #F2F4F7" in html
-    assert "--ds-surface: #ffffff" in html
-    assert "--ds-text: #17212B" in html
-    assert "--ds-primary: #0D6E6E" in html
-    assert "--ds-link: #2457A6" in html
-    assert "--ds-nav-active-bg: #EEF3FA" in html
-    assert "--ds-nav-active-border: #9DB4D6" in html
-    assert '--ds-font-display: "Libre Baskerville", Georgia' in html
-    assert '--ds-font-ui: "DM Sans", "Segoe UI"' in html
-    assert '--ds-font-mono: "DM Mono", "SFMono-Regular"' in html
-    assert "--teal: var(--ds-primary)" in html
-    assert ".app-shell" in html
-    assert ".app-shell-compact" in html
-    assert ".brand-title-block" in html
-    assert ".workspace-label" in html
-    assert ".shell-lookup" in html
-    assert ".shell-nav-cluster" in html
-    shell_row_start = html.index('class="brand-title-row site-title-row"')
+    assert '<body class="ds-page-bg civic-ledger-page">' in html
+    assert "--ds-page-bg: #f6f1e7" in html
+    assert "--ds-surface: #fffdf8" in html
+    assert "--ds-text: #17212b" in html
+    assert "--ds-primary: #14283d" in html
+    assert "--ds-link: #174d74" in html
+    assert "--ds-nav-active-border: #d5a21a" in html
+    assert '<header class="civic-header">' in html
+    assert '<footer class="civic-footer">' in html
+    shell_row_start = html.index('class="shell civic-header__inner"')
     shell_row_end = html.index("</header>", shell_row_start)
     shell_row_html = html[shell_row_start:shell_row_end]
     shell_regions = (
-        'class="brand-title-block brand-block"',
-        'class="shell-lookup"',
-        'class="shell-nav-cluster"',
-        'class="primary-nav site-nav"',
-        'class="mode-panel"',
+        'class="civic-brand"',
+        'class="civic-menu-label"',
+        'class="civic-nav"',
     )
     previous_region_index = -1
     for region in shell_regions:
         region_index = shell_row_html.index(region)
         assert region_index > previous_region_index
         previous_region_index = region_index
-    assert (
-        "grid-template-columns: minmax(10rem, 12rem) minmax(16rem, 30rem) max-content"
-        in html
-    )
-    assert "min-width: max-content" in html
+    assert "grid-template-columns: minmax(16rem, 1fr) auto minmax(32rem, auto)" in html
+    assert "grid-template-columns: repeat(6, minmax(5rem, auto))" in html
     facts_bar_css = (
         ".top-fact-strip {\n"
         "      background: #F8FAFB;\n"
@@ -610,7 +580,7 @@ def test_final_product_shell_uses_compact_unboxed_workflow_design() -> None:
     assert "border-bottom: 3px solid var(--blue)" in html
     assert ".step-index" in html
     assert "display: none;" in html
-    assert '<nav class="primary-nav site-nav"' in html
+    assert '<nav class="civic-nav" aria-label="Primary navigation">' in html
     assert "Health check</a>" not in html
     assert "Commands</a>" not in html
 
@@ -1313,8 +1283,8 @@ def test_route_active_nav_highlights_correct_item() -> None:
         ("/ccld/facilities", "/ccld/facilities", "Facilities"),
         (
             "/ccld/facilities/intelligence",
-            "/reviewer",
-            "Review",
+            "/ccld/facilities",
+            "Facilities",
         ),
         (
             "/ccld/facilities/review-priority",
@@ -1325,7 +1295,6 @@ def test_route_active_nav_highlights_correct_item() -> None:
         ("/ccld/records/request", "/ccld/records/request", "Request Records"),
         ("/ccld/help", "/ccld/help", "Help"),
         ("/reviewer", "/reviewer", "Review"),
-        ("/ccld/retrieval/jobs", "/ccld/retrieval/jobs", "Job diagnostics"),
         ("/feedback", "/feedback", "Feedback"),
     )
     for path, expected_href, expected_label in route_active_specs:
@@ -1355,12 +1324,68 @@ def test_active_nav_route_prefixes_require_a_path_segment_boundary() -> None:
         heading="Boundary check",
         main="<p>Boundary check</p>",
         skip_label="Skip boundary check",
-        nav_label="Boundary navigation",
         active_path="/ccld/facilities-extra/intelligence",
     )
 
     assert 'aria-current="page" href="/ccld/facilities">Facilities' not in html
     assert html.count('aria-current="page"') == 0
+
+
+def test_shared_shell_runtime_mode_disclosure_uses_runtime_environment(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    clear_hosted_runtime_env(monkeypatch)
+    monkeypatch.setenv("CCLD_RETRIEVAL_DEMO_MODE", "mock-success")
+
+    html = render_page_shell(
+        title="Runtime mode",
+        heading="Runtime mode",
+        main="<p>Runtime mode</p>",
+        skip_label="Skip runtime mode",
+    )
+
+    primary_nav = primary_navigation_markup(html)
+    assert html.count('class="mode-panel civic-mode-panel"') == 1
+    assert html.count("Fixture/mock demo") == 1
+    assert '<span class="ds-badge ds-badge--info">Fixture/mock demo</span>' in html
+    assert "Fixture/mock demo" not in primary_nav
+
+
+def test_shared_shell_supplied_mode_disclosure_uses_semantic_badge_classes() -> None:
+    expected_modes = {
+        "Live public CCLD": "ds-badge ds-badge--success",
+        "Fixture/mock demo": "ds-badge ds-badge--info",
+        "Review aids only": "ds-badge ds-badge--muted",
+    }
+
+    for mode_label, badge_class in expected_modes.items():
+        html = render_page_shell(
+            title="Supplied mode",
+            heading="Supplied mode",
+            main="<p>Supplied mode</p>",
+            skip_label="Skip supplied mode",
+            mode_label=mode_label,
+        )
+
+        assert html.count('class="mode-panel civic-mode-panel"') == 1
+        assert html.count(mode_label) == 1
+        assert f'<span class="{badge_class}">{mode_label}</span>' in html
+
+
+def test_auth_health_check_remains_contextual_outside_primary_navigation() -> None:
+    auth_config = load_hosted_auth_runtime_config(environ={})
+
+    status, _content_type, body = route_response(
+        "/reviewer",
+        auth_runtime_config=auth_config,
+        page_data_mode="postgres",
+    )
+    html = body.decode("utf-8")
+    primary_nav = primary_navigation_markup(html)
+
+    assert status in {401, 403}
+    assert 'href="/health">Health check</a>' in html
+    assert "/health" not in primary_nav
 
 
 def test_help_route_does_not_activate_retrieve_nav() -> None:
@@ -1446,15 +1471,13 @@ def test_help_page_topics_toc_links_to_every_help_section_in_order() -> None:
     assert "Support and runtime notes" not in parser.summary_texts
 
 
-def test_retrieval_job_detail_route_highlights_support_diagnostics_nav() -> None:
-    """Job detail routes must highlight the secondary diagnostics nav link."""
+def test_retrieval_job_detail_route_keeps_diagnostics_context_outside_primary_nav() -> None:
     auth_config = load_hosted_auth_runtime_config(
         environ={
             "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
             "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
         }
     )
-    # A missing job_id returns 404, but the support nav still shows diagnostics as active.
     status, _content_type, body = route_response(
         "/ccld/retrieval/jobs/detail?job_id=test-missing-job",
         auth_runtime_config=auth_config,
@@ -1462,13 +1485,12 @@ def test_retrieval_job_detail_route_highlights_support_diagnostics_nav() -> None
     )
     html = body.decode("utf-8")
 
-    # 404 for missing job, but the nav must still show diagnostics active (not Request Records).
     assert status == 404
-    assert 'aria-current="page" href="/ccld/retrieval/jobs">Job diagnostics' in html
-    assert 'aria-current="page" href="/ccld/retrieval/jobs">Job Status' not in html
-    assert 'aria-current="page" href="/ccld/retrieval/jobs">Jobs' not in html
-    assert 'aria-current="page" href="/ccld/records/request">Request Records' not in html
-    assert 'aria-current="page" href="/ccld/records/request">Retrieve' not in html
+    primary_nav = primary_navigation_markup(html)
+    assert "/ccld/retrieval/jobs" not in primary_nav
+    assert "Job Status" not in primary_nav
+    assert "Job diagnostics" not in primary_nav
+    assert 'href="/ccld/retrieval/jobs">Return to job diagnostics</a>' in html
 
 
 def test_reviewer_detail_route_highlights_review_nav() -> None:
