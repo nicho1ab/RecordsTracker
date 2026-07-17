@@ -356,9 +356,41 @@ function Test-RouteAssertions {
     else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "private markers" -Status "PASS" -Message "No forbidden private markers found." }
     if ($Html.Contains("Feedbac k")) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "broken labels" -Status "FAIL" -Message "Broken step label found." }
     else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "broken labels" -Status "PASS" -Message "No broken Feedbac k label found." }
-    $expectedModeText = switch ($Mode) { "live" { "Live public CCLD" } "fixture" { "Fixture/mock demo" } default { "Review aids only" } }
-    if ($Html.Contains($expectedModeText)) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "mode badge" -Status "PASS" -Message "Expected mode marker '$expectedModeText' found." }
-    else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "mode badge" -Status "WARN" -Message "Expected mode marker '$expectedModeText' not found." }
+    $isHtmlShellRoute = $Route.Path -notlike "*.csv*"
+    $primaryNavMatches = [regex]::Matches($Html, '(?is)<nav class="civic-nav" aria-label="Primary navigation">(.*?)</nav>')
+    if ($isHtmlShellRoute) {
+        $mainLandmarkCount = ([regex]::Matches($Html, '<main id="main-content"')).Count
+        $sharedShellPresent = $Html.Contains('<body class="ds-page-bg civic-ledger-page">') -and $Html.Contains('<header class="civic-header">') -and $Html.Contains('class="skip-link"') -and $mainLandmarkCount -eq 1 -and $primaryNavMatches.Count -eq 1
+        if ($sharedShellPresent) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "governed shared shell" -Status "PASS" -Message "Civic Ledger shell, skip link, one main landmark, and one primary navigation landmark found." }
+        else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "governed shared shell" -Status "FAIL" -Message "Expected one governed Civic Ledger shell with skip, main, and primary navigation landmarks." }
+    }
+    if ($isHtmlShellRoute -and $primaryNavMatches.Count -eq 1) {
+        $navLinks = @([regex]::Matches($primaryNavMatches[0].Groups[1].Value, '(?is)<a[^>]*href="([^"]+)"[^>]*>(.*?)</a>') | ForEach-Object {
+            ([string]$_.Groups[1].Value) + "|" + (ConvertFrom-HtmlText -Html ([string]$_.Groups[2].Value))
+        })
+        $expectedNavLinks = @(
+            "/|Home",
+            "/ccld/facilities|Facilities",
+            "/ccld/records/request|Request Records",
+            "/reviewer|Review",
+            "/feedback|Feedback",
+            "/ccld/help|Help"
+        )
+        $navDefinitionMatches = $navLinks.Count -eq $expectedNavLinks.Count -and (($navLinks -join "`n") -ceq ($expectedNavLinks -join "`n"))
+        if ($navDefinitionMatches) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "authoritative primary navigation" -Status "PASS" -Message "Primary navigation uses the authoritative six links in order." }
+        else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "authoritative primary navigation" -Status "FAIL" -Message "Primary navigation differs from the authoritative six-link definition or ordering." }
+        $feedbackCount = @($navLinks | Where-Object { $_ -ceq "/feedback|Feedback" }).Count
+        $jobStatusCount = @($navLinks | Where-Object { $_ -like "/ccld/retrieval/jobs|*" }).Count
+        if ($feedbackCount -eq 1 -and $jobStatusCount -eq 0) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "primary navigation product tiers" -Status "PASS" -Message "Feedback appears once and job diagnostics stays out of primary navigation." }
+        else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "primary navigation product tiers" -Status "FAIL" -Message "Primary navigation must contain Feedback exactly once and no job diagnostics link." }
+    }
+    if ($isHtmlShellRoute) {
+        $expectedModeText = switch ($Mode) { "live" { "Live public CCLD" } "fixture" { "Fixture/mock demo" } default { "Review aids only" } }
+        $modePanelPattern = '(?is)<div class="mode-panel civic-mode-panel" aria-label="Retrieval mode">\s*<span class="[^"]+">' + [regex]::Escape($expectedModeText) + '</span>\s*</div>'
+        $modePanelCount = ([regex]::Matches($Html, $modePanelPattern)).Count
+        if ($modePanelCount -eq 1) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "mode badge" -Status "PASS" -Message "Expected shared-shell mode marker '$expectedModeText' found exactly once." }
+        else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "mode badge" -Status "FAIL" -Message "Expected shared-shell mode marker '$expectedModeText' exactly once; found $modePanelCount." }
+    }
     if ($Route.ContainsKey("ActiveHref")) {
         $activePattern = '<a(?=[^>]*aria-current="page")(?=[^>]*href="' + [regex]::Escape([string]$Route.ActiveHref) + '")'
         if ($Html -match $activePattern) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "active nav" -Status "PASS" -Message "Expected active nav href found." }
@@ -797,10 +829,10 @@ try {
         @{ Name = "home"; Path = "/"; Label = "01-home"; ActiveHref = "/"; WorkflowStep = "Start" },
         @{ Name = "facility"; Path = "/ccld/facilities"; Label = "02-facility"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
         @{ Name = "facility-priority"; Path = "/ccld/facilities/review-priority"; Label = "02-facility-priority"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
-        @{ Name = "facility-intelligence"; Path = "/ccld/facilities/intelligence"; Label = "02-facility-intelligence"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
+        @{ Name = "facility-intelligence"; Path = "/ccld/facilities/intelligence"; Label = "02-facility-intelligence"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Review" },
         @{ Name = "facility-hub"; Path = "/ccld/facilities/detail?facility_number=$facilityHubNumber"; Label = "02-facility-hub"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
         @{ Name = "request-records"; Path = "/ccld/records/request"; Label = "03-request-records"; ActiveHref = "/ccld/records/request"; WorkflowStep = "Request" },
-        @{ Name = "jobs"; Path = "/ccld/retrieval/jobs"; Label = "04-job-status"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Status" },
+        @{ Name = "jobs"; Path = "/ccld/retrieval/jobs"; Label = "04-job-status"; WorkflowStep = "Status" },
         @{ Name = "reviewer"; Path = "/reviewer"; Label = "05-reviewer"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
         @{ Name = "facility-priorities"; Path = "/reviewer/facilities/priorities"; Label = "05-facility-priorities"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
         @{ Name = "facility-trends"; Path = "/reviewer/facilities/trends"; Label = "05-facility-trends"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
@@ -922,7 +954,7 @@ try {
 
     if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418) {
         $jobDetailHref = Get-SafeDynamicHref -Html ([string]$routeHtmlByName["jobs"]) -Pattern 'href\s*=\s*["'']([^"'']*/ccld/retrieval/jobs/detail\?job_id=[A-Za-z0-9_.:%-]+)["'']'
-        if ($jobDetailHref) { $dynamicLinks.jobDetail = $jobDetailHref; Capture-Route -Route @{ Name = "job-detail"; Path = $jobDetailHref; Label = "08-job-detail"; ActiveHref = "/ccld/retrieval/jobs"; WorkflowStep = "Status" } }
+        if ($jobDetailHref) { $dynamicLinks.jobDetail = $jobDetailHref; Capture-Route -Route @{ Name = "job-detail"; Path = $jobDetailHref; Label = "08-job-detail"; WorkflowStep = "Status" } }
         else { Add-AssertionResult -Target $assertions -RouteName "jobs" -Check "dynamic job detail" -Status "WARN" -Message "No safe retrieval job detail link discovered." }
 
         $reviewerDetailHref = Get-SafeDynamicHref -Html ([string]$routeHtmlByName["reviewer"]) -Pattern 'href\s*=\s*["'']([^"'']*/reviewer/records/detail\?source_record_key=[^"'']+)["'']'

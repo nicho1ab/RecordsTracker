@@ -102,23 +102,16 @@ def render_page_shell(
     heading: str,
     main: str,
     skip_label: str,
-    nav_label: str,
     eyebrow: str | None = EYEBROW_TEXT,
     actor_label: str | None = None,
-    extra_nav_links: Sequence[tuple[str, str]] = (),
     active_path: str | None = None,
     mode_label: str | None = None,
     step_id: str | None = None,
     next_action: str | None = None,
     show_workflow_indicator: bool = False,
-    civic_ledger: bool = False,
 ) -> str:
     runtime_mode = mode_label or _runtime_mode_label()
-    links = (
-      _civic_ledger_nav_links(active_path=active_path)
-      if civic_ledger
-      else _nav_links(extra_nav_links, active_path=active_path)
-    )
+    links = _nav_links(active_path=active_path)
     current_step = step_id or _step_id_for_path(active_path)
     stepper = _guided_stepper(current_step, next_action) if show_workflow_indicator else ""
     actor_markup = (
@@ -128,37 +121,9 @@ def render_page_shell(
     )
     eyebrow_markup = f'<p class="pilot-eyebrow">{html.escape(eyebrow)}</p>' if eyebrow else ""
     badge_class = MODE_BADGE_CLASSES.get(runtime_mode, "ds-badge ds-badge--muted")
-    body_class = "ds-page-bg civic-ledger-page" if civic_ledger else "ds-page-bg"
-    header_markup = (
-      _civic_ledger_header(links)
-      if civic_ledger
-      else f"""  <header class="app-shell-header site-header ds-surface">
-    <div class="shell app-shell app-shell-compact">
-      <div class="brand-title-row site-title-row">
-        <div class="brand-title-block brand-block" aria-label="{APP_TITLE}">
-          <a class="product-name" href="/">Records<span>Tracker</span></a>
-          <span class="workspace-divider" aria-hidden="true"></span>
-          <span class="workspace-label">{WORKSPACE_LABEL}</span>
-        </div>
-        <form class="shell-lookup" action="/ccld/facilities" method="get" role="search">
-          <label class="sr-only" for="shell-facility-search">Search complaint, facility, Facility ID, or source record</label>
-          <input id="shell-facility-search" name="q" type="search" placeholder="Search complaint, facility, Facility ID, or source record...">
-        </form>
-        <div class="shell-nav-cluster">
-          <nav class="primary-nav site-nav" aria-label="{html.escape(nav_label)}">
-            <ul>
-{links}
-            </ul>
-          </nav>
-          <div class="mode-panel" aria-label="Retrieval mode">
-            <span class="{badge_class}">{html.escape(runtime_mode)}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </header>"""
-    )
-    footer_markup = _civic_ledger_footer() if civic_ledger else ""
+    body_class = "ds-page-bg civic-ledger-page"
+    header_markup = _civic_ledger_header(links, runtime_mode, badge_class)
+    footer_markup = _civic_ledger_footer()
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -189,12 +154,15 @@ def render_page_shell(
 """
 
 
-def _civic_ledger_header(links: str) -> str:
+def _civic_ledger_header(links: str, runtime_mode: str, badge_class: str) -> str:
     return f"""  <header class="civic-header">
     <div class="shell civic-header__inner">
       <div class="civic-brand">
         <a class="civic-brand__name" href="/">RecordsTracker</a>
         <span class="civic-brand__tagline">Review public records</span>
+        <div class="mode-panel civic-mode-panel" aria-label="Retrieval mode">
+          <span class="{badge_class}">{html.escape(runtime_mode)}</span>
+        </div>
       </div>
       <span class="civic-menu-label" aria-hidden="true">Menu</span>
       <nav class="civic-nav" aria-label="Primary navigation">
@@ -213,32 +181,6 @@ def _civic_ledger_footer() -> str:
       <nav aria-label="Footer navigation"><a href="/ccld/help">Help</a><span aria-hidden="true"> · </span><a href="/feedback">Feedback</a><span aria-hidden="true"> · </span><a href="/ccld/help#accessibility">Accessibility</a></nav>
     </div>
   </footer>"""
-
-
-def _civic_ledger_nav_links(*, active_path: str | None) -> str:
-    links = (
-      ("Home", "/"),
-      ("Find facility", "/ccld/facilities"),
-      ("Request records", "/ccld/records/request"),
-      ("Review", "/reviewer"),
-      ("Job Status", "/ccld/retrieval/jobs"),
-      ("Help", "/ccld/help"),
-    )
-    items: list[str] = []
-    review_active = active_path == "/ccld/facilities/intelligence"
-    for label, href in links:
-      active = (
-        href == "/reviewer"
-        if review_active
-        else _is_active_nav(href, active_path)
-      )
-      active_class = ' class="is-active"' if active else ""
-      current = ' aria-current="page"' if active else ""
-      items.append(
-        f'          <li><a{active_class}{current} href="{html.escape(href, quote=True)}">'
-        f"{html.escape(label)}</a></li>"
-      )
-    return "\n".join(items)
 
 
 def render_action_group(
@@ -279,14 +221,10 @@ def _action_anchor(item: ActionItem, class_name: str) -> str:
     )
 
 
-def _nav_links(
-    extra_nav_links: Sequence[tuple[str, str]],
-    *,
-    active_path: str | None,
-) -> str:
+def _nav_links(*, active_path: str | None) -> str:
     seen: set[str] = set()
     items: list[str] = []
-    for label, href in (*PRIMARY_NAV_LINKS, *tuple(extra_nav_links)):
+    for label, href in PRIMARY_NAV_LINKS:
         if href in seen:
             continue
         seen.add(href)
@@ -2812,6 +2750,9 @@ SHARED_CSS = r"""
     }
     .civic-brand__tagline {
       font-size: 0.82rem;
+    }
+    .civic-mode-panel {
+      justify-content: flex-start;
     }
     .civic-menu-label {
       color: #f3d77d;

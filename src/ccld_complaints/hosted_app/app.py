@@ -1625,13 +1625,10 @@ def _auth_html_response(status: int, heading: str, message: str) -> tuple[int, s
         title=heading,
         heading=heading,
         skip_label="Skip to main content",
-        nav_label="Auth placeholder navigation",
-        extra_nav_links=(
-            ("Health check", "/health"),
-        ),
         main=f"""
     <p>{html.escape(message)}</p>
     <p><a href="/">Return to home</a></p>
+    <p><a href="/health">Health check</a></p>
 """,
     ).encode()
     return status, "text/html; charset=utf-8", body
