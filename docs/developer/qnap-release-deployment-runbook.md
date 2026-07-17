@@ -6,7 +6,7 @@ This is the authoritative RecordsTracker procedure for QNAP release deployment, 
 
 ## Fixed environment
 
-- Local repository: `C:\Users\andre\OneDrive\Desktop\Repos\CCLD-complaints-poc`
+- Local repository: `<Repo Path>\`
 - QNAP host: `192.168.1.122`
 - QNAP username: `andrew`
 - Active application directory: `/share/Public/RecordsTracker`
