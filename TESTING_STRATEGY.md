@@ -502,3 +502,22 @@ git ls-files --eol tests\fixtures\ccld\raw\<fixture-name>.html
 ```powershell
 git show HEAD:tests/fixtures/ccld/raw/<fixture-name>.html
 ```
+
+## Reviewer UI design-conformance and source-to-screen tests
+
+Reviewer-facing facility hub and complaint-detail coverage must prove:
+
+- only one canonical complaint inventory appears for the current page context;
+- each stable complaint identity appears once in that inventory;
+- aggregate metrics, topics, findings, trends, source availability, and reviewer-state summaries filter, highlight, or link to that inventory instead of duplicating records;
+- meaningful source-backed complaint subject summaries are rendered when governed source terms are available;
+- generic `contributing complaint` wording is not used as the primary complaint label;
+- primary records, allegations, findings, deficiencies, and plans of correction remain visible without opening `<details>` or another disclosure control;
+- disclosure elements contain only secondary content;
+- active filters are keyboard operable, visibly identified, and announce result counts;
+- the inventory works at approved desktop, narrow-desktop, mobile, and 200% zoom conditions;
+- approved design tokens and traffic-light protocol semantics are used consistently and never rely on color alone;
+- exact-route screenshots are compared with the named approved Figma or design-package frame, and material variance fails acceptance;
+- fields visibly present in governed sample reports cannot silently render as `Not provided` without an explicit availability or failure state;
+- a source-to-screen inventory reconciles source presence, extraction, normalization, canonical allocation, PostgreSQL population, read-model exposure, and required UI display;
+- the shared facility identity projection produces consistent facility name, type, address, county, capacity, and status behavior across queue, complaint detail, facility hub, packet, and export surfaces.

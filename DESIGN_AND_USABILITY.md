@@ -1218,3 +1218,45 @@ Belongs in future production-build or production-operations work:
 Production-discovery should define the primary reviewer UX requirements while
 preserving source traceability, accessibility, cautious public-source language,
 raw source preservation, and deterministic extraction safeguards.
+
+## Approved design implementation and primary-content rules
+
+### Approved design package is authoritative
+
+For important reviewer-facing pages, Codex and other implementation agents must implement an approved design package rather than inventing the visual design while coding. The package must identify the approved Figma frame or other user-approved reference, layout regions, responsive behavior, component states, interaction behavior, typography hierarchy, spacing, icons, and design tokens.
+
+A design reference is an implementation specification, not general inspiration. Before implementation, the agent must produce a variance inventory identifying every intentional difference. Unapproved variance is a stop condition.
+
+The approved design must define the actual product palette and semantic color system. Agents must not fall back to a generic teal-primary, muted-accent engineering dashboard. Teal may be used only where the approved design system assigns it. Traffic-light protocol colors and other semantic colors must be used consistently for their approved meanings and must always be paired with text or accessible labels.
+
+### Primary record inventory and progressive disclosure
+
+Primary reviewer evidence must be visible by default. Do not use accordions, `<details>` elements, collapsed cards, disclosure widgets, tabs, hover-only content, or `show more` controls as the main presentation for complaint inventories, allegations, findings, deficiencies, plans of correction, source-backed evidence, or records supporting reviewer-facing aggregates.
+
+Progressive disclosure is reserved for genuinely secondary information that most reviewers do not need for the current decision, including technical traceability, operator diagnostics, detailed methodology, archived metadata, long explanatory guidance, or complete raw-field inspection.
+
+A complaint record must not be rendered repeatedly under multiple aggregate sections. Render one canonical complaint inventory for the current facility or queue. Summary metrics, findings, topics, trends, source coverage, and reviewer-state counts must filter, highlight, annotate, or link into that inventory rather than producing duplicate copies.
+
+The canonical complaint inventory must remain understandable without expanding controls. Each row or responsive card must expose, when available, complaint identity, meaningful subject summary, relevant date, finding, review cues, source availability, reviewer-created state, and one primary action.
+
+Disclosure controls must not be used as a substitute for information architecture, pagination, filtering, or a meaningful summary.
+
+### Meaningful complaint labels
+
+Reviewer-facing complaint links and summaries must use deterministic source-backed subject terms derived from governed allegation categories, allegation keywords, findings, deficiencies, or other approved source-derived fields. Do not use generic labels such as `contributing complaint`, `record contributing to this value`, or `exact complaint record` as the primary visible description when more informative source-derived wording is available.
+
+### Source-backed facility identity and missing-data semantics
+
+Facility name, facility type, address, city, state, ZIP, capacity, administrator, telephone, and other ordinary facility identity or context fields visibly present in a governed complaint report must not render as `Not provided` solely because a preferred directory or reference source lacks the value.
+
+Source precedence and fallback must be explicit. Distinguish at least: populated value, blank on source, field absent from source, source artifact unavailable, extraction or mapping failure, conflicting sources, and intentionally internal data. An extraction or import defect must not be presented as though the public source omitted the value.
+
+### Source-to-screen completion rule
+
+A source field is not implemented merely because it is extracted. Completion requires verified extraction, normalization, canonical allocation, persistence, import and backfill behavior, read-model exposure, required UI rendering, missing-state semantics, and production-style evidence.
+
+### Figma and visual acceptance gate
+
+Every important reviewer-facing redesign must name the exact approved Figma frame or approved design artifact. Before coding, provide the numbered page-change inventory and a design variance inventory. After coding, capture the exact route at the approved viewport sizes and compare it to the approved design.
+
+A reviewer-facing UI change is not complete when tests pass but the visual result materially differs from the approved hierarchy, component pattern, palette, spacing, density, responsive behavior, or interaction model. Visual rejection is a release blocker.

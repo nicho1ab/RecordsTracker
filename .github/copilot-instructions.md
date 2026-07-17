@@ -193,3 +193,14 @@ Specific prohibited identity values include:
 - private or test hostnames.
 
 The repository identity check must treat organization acronyms as standalone terms so ordinary words and code identifiers containing the same letters are not false positives.
+
+## Reviewer-facing design implementation rules
+
+- A reviewer-facing redesign must not introduce accordion- or disclosure-based primary content unless the approved design blueprint explicitly requires it.
+- Tests expecting generic `<details>` markup do not override approved product direction. Update stale tests rather than preserving an unapproved disclosure-heavy layout.
+- Do not duplicate the same complaint under multiple aggregate headings. Implement one canonical complaint inventory and connect metrics through filters, chips, highlighting, or links.
+- Do not use generic complaint labels when governed allegation topics, findings, or deficiency categories can provide meaningful source-backed wording.
+- Before completing a source-field display task, report the full path: source label, extractor, normalized field, canonical allocation, database storage, import/backfill, read model, and rendered component.
+- For important UI work, implement the exact approved Figma/design package. Produce pre-code and post-code variance inventories. Material unapproved visual variance is a stop condition.
+- Do not default to teal primary and muted accents. Use the approved token package and approved traffic-light protocol colors for their intended semantics, paired with text and accessible labels.
+- A repeated user rejection of a visual pattern is evidence of a missing or weak governance rule. Add the narrow preventive rule in the same task.

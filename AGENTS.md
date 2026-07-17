@@ -1,4 +1,4 @@
-﻿# RecordsTracker Agent Instructions
+# RecordsTracker Agent Instructions
 
 These instructions apply to Codex, GitHub Copilot, and any other coding agent working in this repository.
 
@@ -108,3 +108,11 @@ At the end of each task, provide:
 6. Stop conditions or blockers.
 
 Keep handoffs copy/paste-safe for PowerShell users. Do not include secrets, personal paths, private URLs, or machine-specific details.
+
+## Reviewer-facing design enforcement
+
+- Do not use accordions, `<details>`, collapsed cards, tabs, or repeated disclosure sections for primary complaint inventories, allegations, findings, deficiencies, plans of correction, or source-backed records supporting reviewer-facing summaries.
+- Do not render the same complaint repeatedly under multiple aggregates. Use one canonical record inventory with filters, chips, badges, highlighting, or anchor links.
+- Do not accept `Not provided` for a reviewer-relevant field visibly present in governed source evidence without tracing the field through extraction, normalization, canonical allocation, persistence, import/backfill, read model, source precedence, and rendering.
+- For an important reviewer-facing UI task, identify the approved Figma frame or design artifact, list prohibited interaction patterns, and stop if the implementation materially varies without approval.
+- Do not invent a generic teal-primary design. Implement the approved design tokens, including approved traffic-light protocol color semantics, exactly and accessibly.
