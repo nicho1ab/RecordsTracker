@@ -4,24 +4,53 @@
 
 This is the authoritative RecordsTracker procedure for QNAP release deployment, verification, hosted acceptance, and application rollback. Do not invent an alternate deployment process. Stop and update this runbook through a reviewed pull request when an observed runtime condition conflicts with it.
 
+HQ is permanently human-only. The user alone performs archive transfer and
+every QNAP, deployment, rollback, database, restore, and Cloudflare operation
+through the approved local transfer workflow and standalone SSH client.
+
+Agents may verify a release SHA locally, prepare and inspect a clean local
+archive, calculate its hash, generate local archive-transfer command text,
+generate QNAP command text from this runbook, prepare hosted-acceptance
+checklists, and interpret safe output pasted by the user.
+
+Agents may never invoke SSH through PowerShell, Git Bash, WSL, Python,
+libraries, MCP, browser terminals, or an indirect mechanism; run remote shell
+commands; run QNAP Docker or Compose; inspect or modify QNAP `.env`; connect to
+QNAP PostgreSQL; transfer or deploy autonomously; deploy; roll back; restore
+PostgreSQL; or administer Cloudflare.
+
 ## Fixed environment
 
-- Local repository: `<Repo Path>\`
-- QNAP host: `192.168.1.122`
-- QNAP username: `andrew`
+- Local repository: `<repo-root>\`
+- QNAP host: `<qnap-host>` (private operator-supplied value).
+- QNAP username: `<qnap-user>` (private operator-supplied value).
 - Active application directory: `/share/Public/RecordsTracker`
+- Staging directory: `/share/Public/RecordsTracker-staging`
+- Backup paths: timestamped application-tree, configuration, deployed-commit,
+  and PostgreSQL-dump paths created by this procedure; no private host or
+  account value is committed as part of those paths.
+- Compose filename: `docker-compose.qnap.yml`
+- Compose service identities: `app` and `postgres`; Compose assigns container
+  names because the file does not declare fixed `container_name` values.
 - QNAP does not use Git for deployment.
-- Use Windows PowerShell only for local Git verification, archive creation, and archive transfer.
-- Run all QNAP commands directly in the standalone SSH client.
+- The user uses Windows PowerShell only for local Git verification, archive
+  creation, and archive transfer.
+- The user runs all QNAP commands directly in the standalone SSH client.
 - Preserve the active `.env` and `docker-compose.qnap.yml`.
 - Application and PostgreSQL runtime data use Docker named volumes unless inspection proves otherwise.
 - Never restore PostgreSQL during an application rollback unless separately authorized.
+
+The host and username values remain in a user-controlled location outside the
+repository. The user may use a private PSD1 file, password manager, operator
+notes, or manual substitution. No agent may read, create, display, upload, or
+depend on that private store, and no agent may create a private PSD1 file.
 
 ## Required deployment model
 
 1. Verify clean local `main` and `origin/main` at the exact approved merged commit.
 2. Create a clean tar archive with `git archive` and verify that it is readable and non-empty.
-3. Transfer the archive with `scp` using `andrew@192.168.1.122`.
+3. The user transfers the archive with `scp` using
+   `<qnap-user>@<qnap-host>`.
 4. Move the archive into a versioned staging directory under `/share/Public/RecordsTracker-staging`.
 5. Inspect active Compose services and container mounts before changing the runtime.
 6. Confirm that runtime data is stored in named volumes or explicitly preserve every runtime bind mount.

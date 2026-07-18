@@ -37,6 +37,40 @@ validation commands. It must not print secret values, commit env files, create
 tokens, or replace host-managed secret storage. Treat warnings about placeholder
 values as deployment readiness prompts, not as permission to commit real values.
 
+## Agent capability and tool boundaries
+
+Repository capabilities are maximum grants, not a way to create tools or
+access. An agent may use RO, II, HV-READ, HV-WORKFLOW, RL-PREPARE, or RL-MERGE
+only when the current task grants it and the active environment supports the
+required tool. Stop and report an unavailable capability or tool instead of
+substituting another mechanism. Capabilities expire at the task's exact stop
+point and never carry into another task or conversation.
+
+HV-READ is limited to approved read-only GET/navigation, responsive, keyboard,
+accessibility, print, screenshot, and evidence activity on the task's browser
+and network allowlists. HV-WORKFLOW is limited to the task's exact named
+ordinary-user mutations, designated account, routes, maximum scope, cleanup or
+state disposition, evidence, and stop point. Neither permits operator actions,
+infrastructure or authentication administration, QNAP access, database
+administration, Cloudflare, credential inspection, or destructive actions.
+
+RL-PREPARE is limited to the assigned branch, worktree, and one PR and does not
+include merge or cleanup. RL-MERGE requires separate current-task user
+authorization plus successful required checks, no merge blockers, and completed
+review and evidence gates. Neither capability permits reading or displaying
+tokens, cookies, credentials, private repository settings, or other secrets.
+
+HQ is permanently human-only. Agents may locally verify a release SHA, prepare
+and inspect a clean archive, calculate its hash, generate transfer and QNAP
+command text from the authoritative runbook, prepare hosted-acceptance
+checklists, and interpret safe operator-pasted output. Agents may never invoke
+SSH through PowerShell, Git Bash, WSL, Python, libraries, MCP, browser terminals,
+or another indirect mechanism; run remote shell or QNAP Docker/Compose; inspect
+or modify QNAP `.env`; connect to QNAP PostgreSQL; transfer or deploy; roll back;
+restore PostgreSQL; or administer Cloudflare. The user performs archive transfer
+and every QNAP command through the approved local transfer workflow and
+standalone SSH client.
+
 ## Hosted tester access
 
 Hosted tester MVP access must be authenticated and limited to explicitly

@@ -1,6 +1,12 @@
 ﻿# Codex Workflow
 
-This repository can be worked on with local Codex, but Codex should be treated as a controlled local engineering agent, not as an autonomous deployment operator.
+This repository can be worked on with Codex or another supported agent
+interface, but every task uses explicit, bounded authority. Repository
+governance defines the maximum capability that may be granted; it does not
+create unavailable tools. A capability may be used only when this governance
+authorizes it and the active environment supports it. A prompt cannot grant
+access to a tool or system that is unavailable. Stop and report a missing
+capability or tool instead of substituting another mechanism.
 
 ## Default local posture
 
@@ -17,45 +23,170 @@ network_access = false
 
 This lets Codex read and edit the active workspace while keeping network activity, remote access, browser/computer-use, and external tooling out of the default path.
 
-## Role split
+## Capability model
+
+- **RO — read and report only:** May inspect repository content, issue and PR
+  state, provenance, and supporting evidence. It cannot edit, mutate, create
+  lifecycle state, or use browser verification authority.
+- **II — isolated implementation:** May edit the assigned worktree and allowed
+  files and run authorized local validation. It cannot create its own branch or
+  worktree, commit, push, create or update a PR, merge, clean up, use browser or
+  network access unless separately granted, or access remote infrastructure.
+- **HV-READ — browser read-only verification:** May use an approved browser and
+  network allowlist for GET/navigation, responsive checks, keyboard and
+  accessibility inspection, print inspection, screenshots, and evidence. It
+  cannot mutate data.
+- **HV-WORKFLOW — controlled ordinary-user workflow:** May perform only
+  explicitly named ordinary-user mutations using a designated account. Every
+  task must define routes, allowed mutations, maximum scope, cleanup or state
+  disposition, expected evidence, and stop point. It never grants operator,
+  infrastructure, authentication administration, QNAP, database, deployment,
+  rollback, restore, or Cloudflare authority.
+- **RL-PREPARE — repository lifecycle preparation:** May create the assigned
+  branch and worktree, verify the base SHA, commit, push, create or update one
+  PR, and monitor required checks. It never includes merge or cleanup authority.
+- **RL-MERGE — separately authorized merge and cleanup:** May squash merge and
+  clean up only after a separate current-task user authorization, successful
+  required checks, no merge blockers, and completion of all required review and
+  evidence gates.
+- **HQ — human QNAP operator:** The user alone performs archive transfer and
+  every QNAP, deployment, rollback, database, restore, and Cloudflare operation.
+
+Capabilities expire at the exact task stop point and do not carry into another
+task or conversation.
+
+## Required task authorization
+
+Every task must state:
+
+- task name;
+- repository;
+- base branch;
+- full verified base SHA;
+- granted capabilities;
+- whether continuous execution across phases is authorized;
+- authorized phase sequence;
+- required stop points;
+- exact branch;
+- exact worktree;
+- allowed files;
+- prohibited files;
+- browser allowlist;
+- network allowlist;
+- HV-WORKFLOW allowed mutations and cleanup;
+- validation;
+- evidence;
+- required checks;
+- whether RL-MERGE is granted;
+- exact final stop point; and
+- prohibited actions.
+
+## Phase transitions
+
+The preferred sequence is:
+
+1. **II:** implement and validate; stop and report.
+2. **HV-READ or HV-WORKFLOW:** capture the authorized evidence; stop and report.
+3. **RL-PREPARE:** commit, push, create or update one PR, and monitor required
+   checks; stop and report.
+4. **RL-MERGE:** proceed only after separate current-task user authorization.
+
+When one session has multiple capabilities, it must stop between phases unless
+the current task explicitly authorizes continuous execution and identifies the
+exact phase sequence. No session may continue into another issue or roadmap
+task.
+
+## Interface and role split
 
 - ChatGPT/project architect: scope review, prompt review, risk gate, final review.
-- Codex local: multi-file repo implementation, focused refactoring, validation, and test fixes.
-- GitHub Copilot: narrow editor assistance.
-- Human operator: final approval, QNAP actions, protected-branch merge authority until Codex is proven on this repo.
+- ChatGPT Desktop Codex: only the capabilities granted for the current task;
+  depending on the environment, these may include worktrees, terminal
+  execution, browser verification, or GitHub lifecycle operations.
+- GitHub Copilot or another interface: only its available subset of the granted
+  capabilities; unavailable tooling must not be replaced with a different
+  mechanism.
+- Human operator: final approval and permanent HQ authority.
 
 ## Do not enable by default
 
-Do not enable these for normal RecordsTracker work unless explicitly required by the current task:
+Do not enable these for normal RecordsTracker work unless a capability and the
+current task explicitly authorize them:
 
 - MCP servers.
 - Browser/computer-use.
-- QNAP SSH or remote shell access.
+- QNAP SSH or remote shell access; agents may never receive this authority.
 - Cloudflare/admin-console access.
 - GitHub token pages or repository settings access.
-- Automatic PR merge/delete-branch workflows.
+- PR merge or cleanup workflows without separately granted RL-MERGE.
 - Access to `.env`, deployment secrets, private keys, cookies, or tokens.
 
-Codex must not run `gh` automation that pushes branches, creates or updates pull
-requests, merges pull requests, deletes branches, or changes repository state
-unless the current task explicitly authorizes that exact GitHub action. Copilot-
-oriented handoff or automation guidance does not override this local Codex
-boundary.
-
-## Safe first tasks
-
-Good early Codex tasks:
-
-- Repo-wide audit with no edits.
-- Small docs/script cleanup that improves operator reliability.
-- Focused bug fix with clear tests.
-- QNAP operator workflow simplification limited to docs/scripts and no SSH.
-
-Avoid starting with broad UI rewrites, deployment automation, live retrieval, Cloudflare work, or destructive reset/import flows.
+RL-PREPARE may use supported repository lifecycle tooling only for its assigned
+branch, worktree, and single PR. It may not merge or clean up. RL-MERGE may use
+supported lifecycle tooling only after its separate authorization and merge
+gates. Neither capability authorizes repository settings changes.
 
 ## Worktrees
 
-Worktrees are useful after the repo-level guardrails are committed. Do not copy `.env`, QNAP credentials, private host details, generated data, or evidence packets into Codex-managed worktrees.
+Before creating or assigning a task worktree, inspect the current branch and
+status, local `main` SHA, `origin/main` SHA, branches, worktrees, unpushed
+commits, active branches, and possible file overlap. Branch creation must start
+from a clean, synchronized current `main`.
+
+Use one bounded branch/worktree per implementation task and do not grant
+overlapping write authority. Stop on unexplained dirty state, unpushed work,
+branch ownership by another worktree, active-task overlap, or unresolved file
+overlap. Do not copy `.env` files, secrets, private operator values, generated
+evidence packets, or private configuration into agent worktrees.
+
+II works only in the already assigned branch/worktree. RL-PREPARE is required
+to create an assigned branch/worktree or perform later repository lifecycle
+steps.
+
+## Browser boundaries
+
+HV-READ permits only allowlisted GET/navigation and read-only responsive,
+keyboard, accessibility, print, screenshot, and evidence work. HV-WORKFLOW
+permits only the exact named ordinary-user mutations, maximum scope, cleanup or
+state disposition, evidence, and stop point in the task.
+
+Neither capability permits operator actions, infrastructure or authentication
+administration, QNAP access, database administration, Cloudflare, credential
+inspection, or destructive actions.
+
+## Human-only QNAP boundary
+
+Agents may verify a release SHA locally; prepare and inspect a clean local
+archive; calculate its hash; generate local archive-transfer command text;
+generate QNAP command text from the authoritative runbook; prepare hosted-
+acceptance checklists; and interpret safe output pasted by the user.
+
+Agents may never invoke SSH through PowerShell, Git Bash, WSL, Python,
+libraries, MCP, browser terminals, or any indirect mechanism. They may never
+run remote shell commands, run QNAP Docker or Compose, inspect or modify QNAP
+`.env`, connect to QNAP PostgreSQL, transfer or deploy autonomously, deploy,
+roll back, restore PostgreSQL, or administer Cloudflare. The user alone performs
+archive-transfer and QNAP commands through the approved local transfer workflow
+and standalone SSH client.
+
+## Project Sources
+
+Repository `main` is authoritative. ChatGPT Project Sources are static
+contextual copies and do not update automatically from GitHub. Repository-file
+Project Sources must be exact unchanged mirrors without prepended source
+metadata.
+
+A separate steering-only Project Source named
+`CCLD RecordsTracker Project Sources Manifest.md` tracks display name,
+repository path or steering-only status, source commit SHA, upload date, and
+current/stale status. The manifest is not a repository file and must not be
+created here. Similar filenames do not prove duplication; remove a superseded
+source only after verifying its identity, replacement, readability, and lack of
+unique content.
+
+Merged repository governance becomes authoritative immediately. Project Source
+replacement is required before a ChatGPT Project relies on mirrored copies as
+current, but Codex may follow repository `main` directly. Between merge and
+Project Source replacement, planning chats must inspect repository `main`.
 
 ## Validation
 

@@ -2,12 +2,28 @@
 
 You are assisting with a governed public-data ingestion and extraction project.
 
-## Agent precedence
+## Agent capability precedence
 
-These Copilot-oriented PR, check, merge, and cleanup automation instructions do
-not override `AGENTS.md` or `docs/developer/codex-workflow.md` when the acting
-agent is Codex. Codex must follow the stricter local Codex boundaries unless the
-current task explicitly authorizes the exact GitHub action.
+`AGENTS.md` and `docs/developer/codex-workflow.md` define the repository
+capability model for every agent interface: RO, II, HV-READ, HV-WORKFLOW,
+RL-PREPARE, RL-MERGE, and HQ. The model defines maximum authority; it does not
+create unavailable tools. An agent may act only when repository governance
+authorizes the capability and the active environment supports it. Stop and
+report an unavailable capability or tool instead of substituting another
+mechanism.
+
+Every task must include the full required authorization fields defined in
+`AGENTS.md`, including the verified base SHA, granted capabilities, phase
+sequence and stop points, exact branch/worktree and file scope, browser/network
+allowlists, validation/evidence, required checks, merge grant, and prohibited
+actions. Capabilities expire at the exact task stop point and do not carry into
+another task or conversation.
+
+The preferred sequence is II implementation and validation, then HV-READ or
+HV-WORKFLOW evidence, then RL-PREPARE lifecycle preparation, with a stop and
+report after each phase. Continuous execution must be explicitly authorized
+with the exact sequence. RL-MERGE always requires separate current-task user
+authorization. No session may continue into another issue or roadmap task.
 
 ## Required context files
 
@@ -41,10 +57,11 @@ Before making changes, read and follow:
 - Do not remove source traceability.
 - Do not delete raw source preservation behavior.
 - Do not store secrets in the repo.
-- When GitHub CLI is installed and authenticated, prefer `gh` for repeatable PR
-	operations such as viewing PR status, waiting for checks, editing PR bodies,
-	and squash merging after required checks pass. Do not print, paste, commit, or
-	document GitHub tokens or authentication secrets.
+- Under RL-PREPARE, when GitHub CLI is installed and authenticated, prefer `gh`
+	for the assigned branch and single PR, including viewing PR status, waiting
+	for checks, and editing the PR body. Squash merge and cleanup require
+	separately granted RL-MERGE. Do not print, paste, commit, or document GitHub
+	tokens or authentication secrets.
 - The `main` branch must be protected by a GitHub branch protection rule or repository ruleset
 	that requires pull requests and requires the `validate`,
 	`docs-check`, `fixtures`, and `security` status checks to pass before merge.
@@ -78,10 +95,10 @@ For every code change:
    that focused or CI results require.
 9. For bug or CI-failure fixes, describe the root cause and whether a new or
 	updated governance rule was added to prevent recurrence.
-10. Before using GitHub CLI automation, verify `gh --version` and
+10. Before using authorized RL-PREPARE or RL-MERGE GitHub CLI automation, verify `gh --version` and
 	`gh auth status` work in the VS Code terminal without printing tokens. When
-	`gh` is available, use it to verify PR state and required checks before
-	telling the user to merge or clean up a branch.
+	`gh` is available, use it within the granted phase to verify PR state and
+	required checks. Do not merge or clean up during RL-PREPARE.
 
 ## Required task handoff
 
@@ -91,23 +108,24 @@ reconstructing context. Include all of the following:
 
 1. Summary of changes.
 2. Validation results, including commands run and whether each passed.
-3. Exact git commit and push commands. For push commands, use
+3. Exact git commit and push commands when repository lifecycle preparation
+   remains for the user. For push commands, use
 	`git -c gc.auto=0 push -u origin <branch-name>` to avoid auto-gc prompts.
 4. PR title.
 5. PR body, including test results and documentation impact.
 6. Required GitHub checks to wait for before merge.
-7. Post-merge cleanup commands.
+7. Post-merge cleanup commands, clearly marked as requiring RL-MERGE or human
+   execution after merge.
 8. Recommended next branch name.
 9. Next Copilot prompt.
 
-If GitHub CLI successfully creates the PR, verifies checks, completes the squash
-merge, deletes the remote/local branch, and returns the workspace to updated
-`main`, provide a concise completion summary instead of manual copy/paste
-commands. Include PR number, validation/check results, merge status, current git
-state, recommended next branch name, and exact next Copilot prompt. The next
-branch and next Copilot prompt are always required, even when every GitHub step
-was automated successfully. Use the full copy/paste-safe handoff when the user
-still needs to complete any GitHub or git workflow step manually.
+If separately granted RL-MERGE successfully completes the squash merge and
+authorized cleanup, provide a concise completion summary instead of manual
+copy/paste commands. Include PR number, validation/check results, merge status,
+current git state, recommended next branch name, and exact next Copilot prompt.
+The recommendation does not authorize beginning that next task. Use the full
+copy/paste-safe handoff when the user still needs to complete any authorized
+GitHub or git workflow step manually.
 
 Do not start an unattended loop through multiple roadmap tasks after a merge.
 Complete one small task, automate the PR lifecycle with `gh` when available,

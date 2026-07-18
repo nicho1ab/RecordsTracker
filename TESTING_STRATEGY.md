@@ -439,6 +439,28 @@ Validate documentation structure and run manual or automated checks for user-fac
 
 ## Validation tiers
 
+### Capability-specific validation and evidence ownership
+
+- **II** owns the focused local validation authorized for the implementation.
+  It runs full validation only when the task assigns it; unrun validation must
+  never be reported as passed.
+- **HV-READ** owns authorized read-only route, responsive, keyboard,
+  accessibility, print, screenshot, and visual evidence.
+- **HV-WORKFLOW** owns evidence for the exact authorized ordinary-user
+  mutations and proof of required cleanup or state disposition.
+- **RL-PREPARE** verifies that required evidence is available for the assigned
+  commit and monitors the required CI checks. It does not recreate evidence by
+  exceeding the granted browser or workflow authority.
+- **RL-MERGE** re-verifies successful required checks, evidence and review gates,
+  and the absence of merge blockers before an authorized merge and cleanup.
+- **RO** may review validation and evidence sufficiency but may not claim it
+  executed validation or evidence capture that another capability performed.
+
+Evidence must identify the commit SHA, route or target, scenario, viewport when
+applicable, capability used, and whether the evidence was local or hosted.
+Phase handoffs must distinguish evidence availability from evidence execution
+and must identify any intentionally unrun validation.
+
 ### Local implementation validation
 
 For a focused bug fix or similarly narrow change, run the new regression
