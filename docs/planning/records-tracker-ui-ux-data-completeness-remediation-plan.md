@@ -47,6 +47,8 @@ Upload the current version to the ChatGPT Project Sources section. When Codex ch
 - #482 — Unify governed facility identity projection across reviewer surfaces.
 - #483 — Extract and surface complaint deficiencies and plans of correction.
 - #484 — Add approved-design variance review to hosted UI evidence.
+- #498 — Govern and deliver the approved narrow reviewer-detail source-to-claim
+  evidence interaction for First investigation activity date only.
 
 The issue-management script accompanying this plan creates additional issues and adds comments to affected existing issues.
 
