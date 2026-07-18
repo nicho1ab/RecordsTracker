@@ -4,7 +4,9 @@ import copy
 from pathlib import Path
 from typing import Any, cast
 
+import pytest
 from sqlalchemy import create_engine, func, select
+from sqlalchemy.exc import IntegrityError
 
 from ccld_complaints.hosted_app.seeded_import import (
     flatten_seeded_corpus_records,
@@ -101,6 +103,50 @@ def test_import_seeded_corpus_artifact_is_idempotent_for_same_stable_identity() 
     assert first_result.imported_record_count == second_result.imported_record_count == 7
     assert batch_count == 1
     assert source_count == 7
+
+
+@pytest.mark.parametrize("entity_type", ("complaint", "facility"))
+def test_persistence_rejects_duplicate_current_stable_identity(
+    entity_type: str,
+) -> None:
+    artifact = load_seeded_corpus_artifact(FIXTURE)
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+
+    with engine.begin() as connection:
+        import_seeded_corpus_artifact(connection, artifact)
+        existing = (
+            connection.execute(
+                select(hosted_source_derived_records).where(
+                    hosted_source_derived_records.c.entity_type == entity_type
+                )
+            )
+            .mappings()
+            .one()
+        )
+        duplicate = {
+            column.name: existing[column.name]
+            for column in hosted_source_derived_records.columns
+        }
+        duplicate["source_record_key"] = f"00-conflicting-{entity_type}-source-key"
+
+        with pytest.raises(IntegrityError):
+            with connection.begin_nested():
+                connection.execute(
+                    hosted_source_derived_records.insert().values(**duplicate)
+                )
+
+        current_identity_count = connection.execute(
+            select(func.count())
+            .select_from(hosted_source_derived_records)
+            .where(
+                hosted_source_derived_records.c.entity_type == entity_type,
+                hosted_source_derived_records.c.stable_source_id
+                == existing["stable_source_id"],
+            )
+        ).scalar_one()
+
+    assert current_identity_count == 1
 
 
 def test_hosted_facility_refresh_does_not_erase_governed_values_with_nulls() -> None:
