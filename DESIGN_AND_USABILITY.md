@@ -792,6 +792,48 @@ or unnecessary narrative source text.
     later approved implementation branch requires them. Audience:
     attorney-facing. Figma AI/design exploration: no.
 
+#### Approved RT-SRC-002 source-to-claim interaction
+
+The approved implementation reference for the narrow reviewer-detail
+source-to-claim interaction is Figma file `SYszaxbcMK8Ce2ywrUiu4q`, section
+`RT-SRC-002 • Reviewer detail source evidence`, node `64:2`. The interaction is
+governed by `RT-SRC-002` in
+`docs/product/records-tracker-approved-design-decisions.md` and is limited to
+`First investigation activity date` on the existing reviewer-detail route.
+Facility/license number and complaint/control number are context only. This
+approval does not imply field-level evidence support for another date, finding,
+allegation, deficiency, regulation, plan of correction, facility name, or
+facility type.
+
+1. **Timeline claim action.** Keep the readable `MM/DD/YYYY` First investigation
+   activity date visible in both closed and open states. Place a restrained
+   `View source evidence` action with that timeline claim. Preserve separate
+   `Copy date`, `View source evidence` or `Close source evidence`, and `Open
+   original source` controls with distinct effects and accessible names.
+2. **Evidence detail.** When open, show only the displayed date, one bounded
+   source event sentence, source section, complaint or report identity,
+   reviewer-safe preserved-source status, and the separate original-source
+   action. Keep the claim and evidence in the source-derived domain, visibly and
+   semantically separate from reviewer-created notes and status. Do not expose
+   raw SHA-256 values, raw paths, connector metadata, source document IDs,
+   database IDs, extraction-audit tables, full narratives, raw field dumps,
+   legal conclusions, or source-completeness claims in the reviewer tier.
+3. **Fallback states.** Implement the exact `closed`, `open`, `document-only`,
+   `field-partial`, `source-unavailable`, and `print` states. Document-only must
+   not imply passage-level verification; field-partial must identify the
+   unavailable evidence part without a completeness claim; source-unavailable
+   must retain the readable claim and must not offer a misleading active source
+   action.
+4. **Responsive, keyboard, focus-return, and print behavior.** Match the approved
+   desktop, narrow-desktop, mobile-compact, and 200%-zoom/reflow proofs. Use the
+   approved compact mobile touch target, preserve visible Civic Ledger focus,
+   and keep logical keyboard order from `Copy date` to the evidence trigger,
+   opened evidence, and `Open original source`. Closing returns focus to the
+   evidence trigger. Reflow must not cause horizontal page scrolling, clipping,
+   or detached claim/action association. Print shows the supported claim,
+   evidence, reviewer-safe source status, and readable original-source URL while
+   hiding interactive, navigation, copy, and reviewer-created controls.
+
 ### Packet draft
 
 23. **UI-23 - Make packet draft copy/print-ready.** Current problem: packet

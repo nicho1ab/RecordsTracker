@@ -395,6 +395,83 @@ The readable value must remain visible. `Open original source` and
   detail shown in the reviewer tier.
 - **Required evidence before acceptance:** Screenshot and DOM review.
 
+### RT-SRC-002 — First investigation activity date source evidence
+
+- **Approved decision:** On the existing reviewer-detail route, a restrained
+  `View source evidence` action may disclose bounded field-level evidence only
+  for the displayed `First investigation activity date`. The readable
+  `MM/DD/YYYY` date remains visible in both the closed and open states.
+- **Scope:** Reviewer detail; the initial supported field-level claim is only
+  `First investigation activity date`. Facility/license number and complaint or
+  control number provide context and are not additional field-level evidenced
+  claims. No other date, finding, allegation, deficiency, regulation, plan of
+  correction, facility name, or facility type is approved for field-level
+  evidence by this requirement.
+- **Figma proof:** Figma file `SYszaxbcMK8Ce2ywrUiu4q`, approved section
+  `RT-SRC-002 • Reviewer detail source evidence`, node `64:2`, including
+  `Desktop evidence closed`, `Desktop evidence open`, `Narrow desktop evidence
+  open`, `Mobile compact evidence open`, `200% zoom reflow`, `Keyboard focus`,
+  `Document-level-only provenance`, `Field provenance incomplete`, `Source
+  document unavailable`, and `Print state`.
+- **Component hierarchy and content:** The timeline milestone retains the
+  visible claim label and displayed date. Its adjacent evidence trigger opens a
+  secondary evidence detail containing exactly the displayed date, one bounded
+  source event sentence, source section, complaint or report identity, a
+  reviewer-safe preserved-source status, and a separate `Open original source`
+  action. The evidence must not become a full narrative or raw-field view.
+- **Action separation:** `Copy date`, `View source evidence` or `Close source
+  evidence`, and `Open original source` are three separate controls with
+  distinct accessible names and effects. Opening or closing evidence does not
+  copy the date or open the source document.
+- **States:**
+  - `closed`: the readable date and `View source evidence` remain visible; the
+    bounded evidence detail is not shown.
+  - `open`: the readable date remains visible; the trigger is named `Close
+    source evidence`; all approved evidence content and the separate original-
+    source action are shown.
+  - `document-only`: document-level provenance exists but field-level support is
+    unavailable; state this limitation without implying that the displayed date
+    was verified by a specific passage.
+  - `field-partial`: some field provenance is available but the approved
+    evidence content is incomplete; identify the unavailable part in restrained
+    reviewer language without a source-completeness claim.
+  - `source-unavailable`: the preserved source document cannot currently be
+    opened; keep the displayed claim and truthful availability message, and do
+    not render a misleading active original-source action.
+  - `print`: show the supported claim, approved evidence content, reviewer-safe
+    source status, and the readable original-source URL; hide interactive,
+    navigation, copy, and reviewer-created controls.
+- **Responsive requirement:** Desktop uses the approved closed/open placement;
+  narrow desktop reflows the evidence within the timeline region; compact/mobile
+  uses the approved compact action and touch-target treatment; and 200% zoom
+  uses normal document reflow with no horizontal page scrolling, clipping, or
+  detached claim/action association.
+- **Accessibility requirement:** All three controls are keyboard operable, have
+  visible Civic Ledger focus, and use distinct accessible names that include
+  `First investigation activity date` where needed to disambiguate the target.
+  Logical keyboard order is `Copy date`, `View source evidence` or `Close source
+  evidence`, evidence content, then `Open original source`. Closing returns
+  focus to the evidence trigger. The compact/mobile treatment preserves the
+  approved touch target without hiding the readable date or relying on an icon,
+  color, position, hover, or pointer input alone.
+- **Domain requirement:** The claim, evidence, source status, and original-source
+  action remain in the source-derived domain and are visibly and semantically
+  separate from reviewer-created notes, statuses, and actions.
+- **Reviewer-tier exclusions:** Do not expose raw SHA-256 values, raw paths,
+  connector metadata, source document IDs, database IDs, extraction-audit
+  tables, full narratives, raw field dumps, legal conclusions, or source-
+  completeness claims.
+- **Prohibited regression:** Hiding the readable date in any state; attaching
+  field-level evidence to an unsupported field; treating contextual identifiers
+  as evidenced claims; combining copy, evidence, and original-source actions;
+  exposing reviewer-tier internals; mixing source-derived evidence with
+  reviewer-created state; or printing interactive controls instead of the
+  readable URL.
+- **Required evidence before acceptance:** Exact reviewer-detail-route evidence
+  matched to every named node `64:2` state, plus DOM/content, keyboard order,
+  focus-visible, focus-return, accessible-name, touch-target, responsive,
+  horizontal-overflow, privacy, domain-separation, and print-preview review.
+
 ### RT-STATE-001 — Explicit component states
 
 - **Approved decision:** Components explicitly implement applicable empty,

@@ -212,6 +212,65 @@ first-run detail steps, issue-report bridge copy, repeated issue/help/return
 action dumps, source-confidence tables, or field-note guidance. These absence
 tests must preserve no-mutation behavior across source-derived,
 reviewer-created, audit, import, and operational metadata rows.
+
+The `RT-SRC-002` reviewer-detail source-evidence feature requires focused tests
+and exact-route visual evidence against Figma file
+`SYszaxbcMK8Ce2ywrUiu4q`, section `RT-SRC-002 • Reviewer detail source
+evidence`, node `64:2`. Acceptance must prove all of the following:
+
+- Only `First investigation activity date` has the governed field-level `View
+  source evidence` interaction. Facility/license number and complaint/control
+  number remain contextual identifiers, and no other date, finding, allegation,
+  deficiency, regulation, plan of correction, facility name, or facility type
+  is presented as a supported field-level evidenced claim.
+- The readable `MM/DD/YYYY` date remains visible in closed and open states.
+  `Copy date`, `View source evidence` or `Close source evidence`, and `Open
+  original source` are separate controls with distinct behavior and accessible
+  names.
+- Open evidence contains the displayed date, one bounded source event sentence,
+  source section, complaint or report identity, reviewer-safe preserved-source
+  status, and a separate original-source action, without a full narrative or raw
+  field dump.
+- Focused state tests cover `closed`, `open`, `document-only`, `field-partial`,
+  `source-unavailable`, and `print`. Document-only does not imply field- or
+  passage-level verification; field-partial truthfully identifies unavailable
+  evidence; source-unavailable does not render a misleading active source
+  action; and no fallback makes a source-completeness claim.
+- Keyboard tests prove operation of every control, visible focus, the logical
+  order `Copy date`, evidence trigger, opened evidence, `Open original source`,
+  and focus return to the evidence trigger after closing. Accessible-name tests
+  disambiguate the First investigation activity date target without relying on
+  icon, color, position, hover, or pointer input.
+- Responsive tests and visual evidence cover `Desktop evidence closed`,
+  `Desktop evidence open`, `Narrow desktop evidence open`, `Mobile compact
+  evidence open`, `200% zoom reflow`, and `Keyboard focus`. They verify the
+  approved compact mobile touch target, logical reading/keyboard order, no
+  clipping or detached controls, and no horizontal page scrolling.
+- Print tests and `Print state` evidence prove the supported claim, bounded
+  evidence, reviewer-safe source status, and readable original-source URL print;
+  navigation, interactive, copy, and reviewer-created controls do not.
+- Privacy and tier tests prove that the reviewer output contains no raw SHA-256,
+  raw path, connector metadata, source document ID, database ID, extraction-
+  audit table, full narrative, raw field dump, legal conclusion, source-
+  completeness claim, secret, token, credential, private URL, or other unsafe
+  internal value.
+- Domain tests prove the claim, evidence, source status, and original-source
+  action remain visibly and semantically grouped as source-derived and separate
+  from reviewer-created notes, statuses, and actions. Opening, closing, copying,
+  and source navigation do not mutate source-derived, reviewer-created, audit,
+  import, or operational rows.
+
+The exact reviewer-detail route must be captured for every approved normal,
+fallback, responsive, keyboard-focus, and print state named above. Evidence must
+compare each capture to node `64:2`, include DOM/content and accessible-name
+inspection, and treat any unsupported field-level claim or material interaction,
+reflow, focus, privacy, print, or domain-separation variance as an acceptance
+failure. Passing markup tests alone does not establish conformance.
+
+The seeded exact route for that evidence is:
+
+`/reviewer/records/detail?source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448`
+
 Reviewer note/status confirmation tests should cover concise return-to-queue,
 next-record, unchanged-source-derived-record, read-after-write, and no-mutation
 behavior without requiring help/checklist/feedback bridge copy on the detail
