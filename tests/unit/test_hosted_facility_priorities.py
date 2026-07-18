@@ -4,15 +4,18 @@ import base64
 import json
 import re
 from collections.abc import Mapping
+from dataclasses import replace
 from html import unescape
+from pathlib import Path
 from typing import Any, cast
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 import pytest
 from sqlalchemy import create_engine, event, func, select
 from sqlalchemy.engine import Connection
+from sqlalchemy.exc import OperationalError
 
-from ccld_complaints.hosted_app import reviewer_ui
+from ccld_complaints.hosted_app import reviewer_ui, source_derived_reads
 from ccld_complaints.hosted_app.app import route_response
 from ccld_complaints.hosted_app.auth import (
     AuthenticatedActor,
@@ -46,6 +49,8 @@ from ccld_complaints.hosted_app.seeded_import import (
     hosted_import_batches,
     hosted_seeded_import_metadata,
     hosted_source_derived_records,
+    import_seeded_corpus_artifact,
+    load_seeded_corpus_artifact,
 )
 
 TEST_SCOPE = LOCAL_REVIEWER_UI_SCOPE
@@ -291,6 +296,29 @@ def test_facility_priorities_production_mode_does_not_fall_back_to_fixture_data(
     assert status in {401, 503}
     assert "A. MIRIAM JAMISON CHILDREN" not in html
     assert "Fixture/mock demo" not in html
+
+
+def test_facility_intelligence_database_unavailability_returns_governed_503(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def unavailable(*_args: Any, **_kwargs: Any) -> None:
+        raise OperationalError("SELECT", {}, Exception("database unavailable"))
+
+    monkeypatch.setattr(
+        reviewer_ui,
+        "list_authorized_facility_intelligence_page",
+        unavailable,
+    )
+    with _priority_connection() as connection:
+        status, _content_type, body = route_response(
+            CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    assert status == 503
+    assert "Facility intelligence could not be loaded" in html
+    assert "Retry facility intelligence" in html
 
 
 def test_facility_priority_helper_deduplicates_complaint_records() -> None:
@@ -1063,6 +1091,30 @@ def test_facility_intelligence_reads_only_current_page_and_uses_bounded_sql(
         and "facility_intelligence_facilities" in statement
         for statement in statements
     )
+    count_statements = [
+        statement
+        for statement in statements
+        if "facility_intelligence_count_facts" in statement
+    ]
+    assert len(count_statements) == 1
+    assert "substantiated_matches" not in count_statements[0]
+    hydration_statements = [
+        statement
+        for statement in statements
+        if "facility_intelligence_hydration_references" in statement
+    ]
+    assert len(hydration_statements) == 1
+    assert "facility_id in" in hydration_statements[0]
+    assert "source_record_key in" in hydration_statements[0]
+    assert "substantiated_matches" not in hydration_statements[0]
+    review_next_statements = [
+        statement
+        for statement in statements
+        if "select facility_intelligence_facilities.facility_identity from "
+        "facility_intelligence_facilities order by" in statement
+    ]
+    assert len(review_next_statements) == 1
+    assert "limit 1" in review_next_statements[0]
 
 
 def test_facility_intelligence_pagination_preserves_authorization_and_batch_isolation() -> None:
@@ -1096,6 +1148,184 @@ def test_facility_intelligence_pagination_preserves_authorization_and_batch_isol
     assert status == 200
     assert "Showing 1–25 of 26 facilities" in html
     assert "Outside Scope Center" not in html
+
+
+@pytest.mark.parametrize(
+    ("filters", "expected_facility_numbers"),
+    (
+        (
+            source_derived_reads.FacilityIntelligenceReadFilters(
+                sort="facility_name"
+            ),
+            {"100001", "200002", "300003", "400004", "500005"},
+        ),
+        (
+            source_derived_reads.FacilityIntelligenceReadFilters(
+                coverage="available",
+                sort="facility_name",
+            ),
+            {"100001", "400004", "500005"},
+        ),
+        (
+            source_derived_reads.FacilityIntelligenceReadFilters(
+                coverage="partial",
+                sort="facility_name",
+            ),
+            {"200002"},
+        ),
+        (
+            source_derived_reads.FacilityIntelligenceReadFilters(
+                coverage="unavailable",
+                sort="facility_name",
+            ),
+            {"300003"},
+        ),
+        (
+            source_derived_reads.FacilityIntelligenceReadFilters(
+                finding="Substantiated",
+                sort="facility_name",
+            ),
+            {"400004"},
+        ),
+        (
+            source_derived_reads.FacilityIntelligenceReadFilters(
+                facility_type="Foster Family Agency",
+                sort="facility_name",
+            ),
+            {"400004"},
+        ),
+        (
+            source_derived_reads.FacilityIntelligenceReadFilters(
+                geography="Alameda",
+                sort="facility_name",
+            ),
+            {"400004"},
+        ),
+        (
+            source_derived_reads.FacilityIntelligenceReadFilters(
+                serious_topic="Supervision topic",
+                sort="facility_name",
+            ),
+            {"400004"},
+        ),
+    ),
+    ids=(
+        "all",
+        "coverage-available",
+        "coverage-partial",
+        "coverage-unavailable",
+        "finding",
+        "facility-type",
+        "geography",
+        "serious-topic",
+    ),
+)
+def test_optimized_facility_relations_preserve_filter_count_semantics(
+    filters: source_derived_reads.FacilityIntelligenceReadFilters,
+    expected_facility_numbers: set[str],
+) -> None:
+    with _priority_connection() as connection:
+        _insert_semantic_parity_corpus(connection)
+        page = source_derived_reads.list_facility_intelligence_page(
+            connection,
+            filters=filters,
+            import_batch_id=TEST_SCOPE.scope_id,
+        )
+
+    expected_identities = {
+        f"ccld:facility:{facility_number}"
+        for facility_number in expected_facility_numbers
+    }
+    assert page.total_matching_facility_count == len(expected_identities)
+    assert set(page.facility_identities) == expected_identities
+    assert len(page.facility_identities) == len(set(page.facility_identities))
+    assert page.total_authorized_facility_count == 5
+    assert page.filter_options.facility_types == (
+        "Children's Center",
+        "Foster Family Agency",
+        "unknown",
+    )
+    assert page.filter_options.geographies == ("Alameda", "Kern", "unknown")
+    assert page.filter_options.findings == (
+        "Inconclusive",
+        "Pending",
+        "Substantiated",
+        "Unknown",
+        "Unsubstantiated",
+    )
+    assert page.filter_options.serious_topics == ("Supervision topic",)
+    complaint_ids = [
+        str(record.original_values["complaint_id"])
+        for record in page.records
+        if record.entity_type == "complaint"
+    ]
+    facility_ids = [
+        str(record.original_values["facility_id"])
+        for record in page.records
+        if record.entity_type == "facility"
+    ]
+    assert len(complaint_ids) == len(set(complaint_ids))
+    assert len(facility_ids) == len(set(facility_ids))
+
+
+def test_filter_options_do_not_invent_unknown_without_missing_facilities() -> None:
+    with _priority_connection() as connection:
+        _insert_facility_bundle(
+            connection,
+            facility_number="100001",
+            facility_name="Known Center",
+            facility_type="Children's Center",
+            county="Kern",
+            complaints=(
+                _complaint("KNOWN-1", "2026-05-01", "Unsubstantiated"),
+            ),
+        )
+        page = source_derived_reads.list_facility_intelligence_page(
+            connection,
+            filters=source_derived_reads.FacilityIntelligenceReadFilters(),
+            import_batch_id=TEST_SCOPE.scope_id,
+        )
+
+    assert page.filter_options.facility_types == ("Children's Center",)
+    assert page.filter_options.geographies == ("Kern",)
+    assert "unknown" not in page.filter_options.facility_types
+    assert "unknown" not in page.filter_options.geographies
+
+
+def test_facility_intelligence_paginates_valid_governed_reimported_data() -> None:
+    artifact = replace(
+        load_seeded_corpus_artifact(
+            Path("tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json")
+        ),
+        import_batch_id=TEST_SCOPE.scope_id,
+    )
+    with _priority_connection() as connection:
+        first_import = import_seeded_corpus_artifact(connection, artifact)
+        second_import = import_seeded_corpus_artifact(connection, artifact)
+        page = source_derived_reads.list_facility_intelligence_page(
+            connection,
+            filters=source_derived_reads.FacilityIntelligenceReadFilters(),
+            import_batch_id=TEST_SCOPE.scope_id,
+        )
+        status, _content_type, body = route_response(
+            CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    assert first_import.inserted_record_count == 7
+    assert second_import.unchanged_record_count == 7
+    assert page.total_matching_facility_count == 1
+    assert page.total_authorized_facility_count == 1
+    assert page.facility_identities == ("ccld:facility:157806098",)
+    assert page.first_position == 1
+    assert page.last_position == 1
+    assert page.previous_anchor is None
+    assert page.next_anchor is None
+    assert len(
+        [record for record in page.records if record.entity_type == "complaint"]
+    ) == 1
+    assert status == 200
+    assert "Showing 1–1 of 1 facilities" in body.decode("utf-8")
 
 
 def test_facility_hub_reuses_intelligence_aggregates_state_and_tie_order() -> None:
@@ -1301,6 +1531,120 @@ def _insert_facility_population(
                 ),
             ),
         )
+
+
+def _insert_semantic_parity_corpus(connection: Connection) -> None:
+    _insert_facility_bundle(
+        connection,
+        facility_number="100001",
+        facility_name="Available Center",
+        facility_type="Children's Center",
+        county="Kern",
+        complaints=(
+            _complaint("AVAILABLE-1", "2026-05-01", "Unsubstantiated"),
+        ),
+    )
+    _insert_facility_bundle(
+        connection,
+        facility_number="200002",
+        facility_name="Partial Center",
+        facility_type="Children's Center",
+        county="Kern",
+        complaints=(
+            _complaint("PARTIAL-1", "2026-05-02", "Inconclusive"),
+            _complaint(
+                "PARTIAL-2",
+                "2026-05-03",
+                "Unknown",
+                source_url="",
+            ),
+        ),
+    )
+    _insert_facility_bundle(
+        connection,
+        facility_number="300003",
+        facility_name="Unavailable Center",
+        facility_type="Children's Center",
+        county="Kern",
+        complaints=(
+            _complaint(
+                "UNAVAILABLE-1",
+                "2026-05-04",
+                "Unknown",
+                source_url="",
+            ),
+        ),
+    )
+    _insert_facility_bundle(
+        connection,
+        facility_number="400004",
+        facility_name="Serious Topic Center",
+        facility_type="Foster Family Agency",
+        county="Alameda",
+        complaints=(
+            _complaint(
+                "SERIOUS-1",
+                "2026-05-05",
+                "Substantiated",
+                serious=True,
+            ),
+        ),
+    )
+    _insert_complaint_without_facility(
+        connection,
+        facility_number="500005",
+        control="MISSING-1",
+        finding="Pending",
+    )
+
+
+def _insert_complaint_without_facility(
+    connection: Connection,
+    *,
+    facility_number: str,
+    control: str,
+    finding: str,
+) -> None:
+    facility_id = f"ccld:facility:{facility_number}"
+    document_id = f"ccld:document:{facility_number}:1"
+    complaint_id = f"ccld:complaint:{control}"
+    source_url = _source_url(facility_number, "1")
+    connection.execute(
+        hosted_source_derived_records.insert().values(
+            **_source_record_values(
+                import_batch_id=TEST_SCOPE.scope_id,
+                entity_type="source_document",
+                stable_source_id=document_id,
+                source_document_id=document_id,
+                facility_id=facility_id,
+                source_url=source_url,
+                original_values={
+                    "document_id": document_id,
+                    "facility_id": facility_id,
+                },
+            )
+        )
+    )
+    connection.execute(
+        hosted_source_derived_records.insert().values(
+            **_source_record_values(
+                import_batch_id=TEST_SCOPE.scope_id,
+                entity_type="complaint",
+                stable_source_id=complaint_id,
+                source_document_id=document_id,
+                facility_id=facility_id,
+                source_url=source_url,
+                original_values={
+                    "complaint_id": complaint_id,
+                    "facility_id": facility_id,
+                    "document_id": document_id,
+                    "complaint_control_number": control,
+                    "complaint_received_date": "2026-05-06",
+                    "finding": finding,
+                },
+            )
+        )
+    )
 
 
 def _pagination_href(html: str, label: str) -> str | None:

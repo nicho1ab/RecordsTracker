@@ -6,7 +6,18 @@ from datetime import date
 from typing import Any, Literal, cast
 from urllib.parse import parse_qs, urlparse
 
-from sqlalchemy import Integer, Select, String, and_, case, func, literal, or_, select
+from sqlalchemy import (
+    Integer,
+    Select,
+    String,
+    and_,
+    case,
+    func,
+    literal,
+    or_,
+    select,
+    tuple_,
+)
 from sqlalchemy import cast as sql_cast
 from sqlalchemy.engine import Connection, RowMapping
 from sqlalchemy.sql.selectable import CompoundSelect
@@ -531,27 +542,61 @@ def list_facility_intelligence_page(
         apply_active_filters=True,
     )
     facilities = _facility_intelligence_facilities(facts, filters=filters)
-    base_facts = _facility_intelligence_complaint_facts(
+    count_facts = _facility_intelligence_complaint_facts(
+        connection,
+        filters=filters,
+        import_batch_id=import_batch_id,
+        import_batch_ids=import_batch_ids,
+        import_batch_query=import_batch_query,
+        apply_active_filters=True,
+        cte_name="facility_intelligence_count_facts",
+        include_priority_signals=False,
+        projection="count",
+    )
+    count_facilities = _facility_intelligence_count_facilities(
+        count_facts,
+        filters=filters,
+    )
+    has_active_filters = any(
+        (
+            filters.start_date is not None,
+            filters.end_date is not None,
+            bool(filters.facility_type.strip()),
+            bool(filters.geography.strip()),
+            bool(filters.finding.strip()),
+            bool(filters.serious_topic),
+            filters.coverage != "all",
+        )
+    )
+    base_identity_facts = _facility_intelligence_complaint_facts(
         connection,
         filters=FacilityIntelligenceReadFilters(),
         import_batch_id=import_batch_id,
         import_batch_ids=import_batch_ids,
         import_batch_query=import_batch_query,
         apply_active_filters=False,
-        cte_name="facility_intelligence_base_facts",
+        cte_name="facility_intelligence_base_identity_facts",
+        include_priority_signals=False,
+        projection="identity",
     )
-    total_statement = select(
-        select(func.count()).select_from(facilities).scalar_subquery().label(
-            "matching_count"
-        ),
-        select(func.count(func.distinct(base_facts.c.facility_identity)))
-        .select_from(base_facts)
-        .scalar_subquery()
-        .label("authorized_count"),
+    matching_count = (
+        select(func.count()).select_from(count_facilities).scalar_subquery()
     )
+    total_statement = select(matching_count.label("matching_count"))
+    if has_active_filters:
+        total_statement = total_statement.add_columns(
+            select(func.count(func.distinct(base_identity_facts.c.facility_identity)))
+            .select_from(base_identity_facts)
+            .scalar_subquery()
+            .label("authorized_count")
+        )
     totals = connection.execute(total_statement).mappings().one()
     total_matching = int(totals["matching_count"] or 0)
-    total_authorized = int(totals["authorized_count"] or 0)
+    total_authorized = (
+        int(totals["authorized_count"] or 0)
+        if has_active_filters
+        else total_matching
+    )
 
     order_columns, descending = _facility_intelligence_order_spec(
         facilities,
@@ -620,8 +665,22 @@ def list_facility_intelligence_page(
     identities = tuple(str(row["facility_identity"]) for row in page_rows)
     records = _facility_intelligence_hydrated_records(
         connection,
-        facts=facts,
-        facility_identities=identities,
+        filters=filters,
+        source_facility_ids=tuple(
+            str(row["source_facility_id"])
+            for row in page_rows
+            if row["source_facility_id"] is not None
+        ),
+        facility_source_record_keys=tuple(
+            str(row["facility_source_record_key"])
+            for row in page_rows
+            if row["facility_source_record_key"] is not None
+        ),
+        fallback_source_record_keys=tuple(
+            str(row["representative_source_record_key"])
+            for row in page_rows
+            if row["source_facility_id"] is None
+        ),
         import_batch_id=import_batch_id,
         import_batch_ids=import_batch_ids,
         import_batch_query=import_batch_query,
@@ -679,7 +738,9 @@ def list_facility_intelligence_page(
         ),
         filter_options=_facility_intelligence_filter_options(
             connection,
-            base_facts,
+            import_batch_id=import_batch_id,
+            import_batch_ids=import_batch_ids,
+            import_batch_query=import_batch_query,
         ),
     )
 
@@ -693,6 +754,10 @@ def _facility_intelligence_complaint_facts(
     import_batch_query: Select[Any] | CompoundSelect[Any] | None,
     apply_active_filters: bool,
     cte_name: str = "facility_intelligence_complaint_facts",
+    include_priority_signals: bool = True,
+    projection: Literal["full", "count", "hydration", "identity"] = "full",
+    source_facility_ids: tuple[str, ...] = (),
+    source_record_keys: tuple[str, ...] = (),
 ) -> Any:
     complaint = hosted_source_derived_records.alias(f"{cte_name}_complaint")
     facility = hosted_source_derived_records.alias(f"{cte_name}_facility")
@@ -701,6 +766,61 @@ def _facility_intelligence_complaint_facts(
     )
     duplicate_facility = hosted_source_derived_records.alias(
         f"{cte_name}_duplicate_facility"
+    )
+    complaint_key_clauses = [
+        duplicate_complaint.c.entity_type == "complaint",
+        _facility_intelligence_import_filter(
+            duplicate_complaint,
+            import_batch_id=import_batch_id,
+            import_batch_ids=import_batch_ids,
+            import_batch_query=import_batch_query,
+        ),
+    ]
+    if source_facility_ids or source_record_keys:
+        complaint_key_clauses.append(
+            or_(
+                duplicate_complaint.c.facility_id.in_(source_facility_ids),
+                duplicate_complaint.c.source_record_key.in_(source_record_keys),
+            )
+        )
+    duplicate_complaint_id = func.coalesce(
+        _json_text(duplicate_complaint, "complaint_id"),
+        duplicate_complaint.c.stable_source_id,
+    )
+    complaint_keys = (
+        select(
+            duplicate_complaint_id.label("complaint_id"),
+            func.min(duplicate_complaint.c.source_record_key).label(
+                "source_record_key"
+            ),
+        )
+        .where(and_(*complaint_key_clauses))
+        .group_by(duplicate_complaint_id)
+        .cte(f"{cte_name}_complaint_keys")
+    )
+    facility_keys = (
+        select(
+            duplicate_facility.c.import_batch_id,
+            duplicate_facility.c.facility_id,
+            func.min(duplicate_facility.c.source_record_key).label(
+                "source_record_key"
+            ),
+        )
+        .where(
+            duplicate_facility.c.entity_type == "facility",
+            duplicate_facility.c.facility_id.is_not(None),
+            _facility_intelligence_import_filter(
+                duplicate_facility,
+                import_batch_id=import_batch_id,
+                import_batch_ids=import_batch_ids,
+                import_batch_query=import_batch_query,
+            ),
+        )
+        .group_by(
+            duplicate_facility.c.import_batch_id,
+            duplicate_facility.c.facility_id,
+        )
+        .cte(f"{cte_name}_facility_keys")
     )
     facility_name = _first_nonblank_text(
         _json_text(facility, "facility_name"),
@@ -767,10 +887,43 @@ def _facility_intelligence_complaint_facts(
         _json_text(complaint, "complaint_id"),
         complaint.c.stable_source_id,
     )
-    substantiated = _facility_intelligence_substantiated_expression(
-        complaint,
-        complaint_id,
+    facts_from = (
+        complaint.join(
+            complaint_keys,
+            complaint_keys.c.source_record_key == complaint.c.source_record_key,
+        )
+        .outerjoin(
+            facility_keys,
+            and_(
+                facility_keys.c.import_batch_id == complaint.c.import_batch_id,
+                facility_keys.c.facility_id == complaint.c.facility_id,
+            ),
+        )
+        .outerjoin(
+            facility,
+            facility.c.source_record_key == facility_keys.c.source_record_key,
+        )
     )
+    substantiated: Any = literal(False)
+    if include_priority_signals:
+        related_substantiated = _facility_intelligence_related_substantiated(
+            cte_name=cte_name,
+            import_batch_id=import_batch_id,
+            import_batch_ids=import_batch_ids,
+            import_batch_query=import_batch_query,
+        )
+        facts_from = facts_from.outerjoin(
+            related_substantiated,
+            and_(
+                related_substantiated.c.import_batch_id
+                == complaint.c.import_batch_id,
+                related_substantiated.c.complaint_id == complaint_id,
+            ),
+        )
+        substantiated = or_(
+            _substantiated_values_expression(complaint),
+            related_substantiated.c.complaint_id.is_not(None),
+        )
     strongest_delay = case(
         (_json_bool(complaint, "review_delay_over_120_days"), 120),
         (_json_bool(complaint, "review_delay_over_90_days"), 90),
@@ -802,21 +955,14 @@ def _facility_intelligence_complaint_facts(
             import_batch_ids=import_batch_ids,
             import_batch_query=import_batch_query,
         ),
-        complaint.c.source_record_key
-        == select(func.min(duplicate_complaint.c.source_record_key))
-        .where(
-            duplicate_complaint.c.entity_type == "complaint",
-            duplicate_complaint.c.stable_source_id
-            == complaint.c.stable_source_id,
-            _facility_intelligence_import_filter(
-                duplicate_complaint,
-                import_batch_id=import_batch_id,
-                import_batch_ids=import_batch_ids,
-                import_batch_query=import_batch_query,
-            ),
-        )
-        .scalar_subquery(),
     ]
+    if source_facility_ids or source_record_keys:
+        where_clauses.append(
+            or_(
+                complaint.c.facility_id.in_(source_facility_ids),
+                complaint.c.source_record_key.in_(source_record_keys),
+            )
+        )
     if apply_active_filters:
         if filters.start_date is not None:
             where_clauses.append(activity_date >= filters.start_date)
@@ -845,6 +991,39 @@ def _facility_intelligence_complaint_facts(
                     escape="\\",
                 )
             )
+    if projection == "hydration":
+        return (
+            select(
+                complaint.c.source_record_key.label("source_record_key"),
+                complaint.c.source_document_id.label("source_document_id"),
+                complaint.c.facility_id.label("source_facility_id"),
+                facility.c.source_record_key.label("facility_source_record_key"),
+                facility_identity.label("facility_identity"),
+            )
+            .select_from(facts_from)
+            .where(and_(*where_clauses))
+            .cte(cte_name)
+        )
+    if projection == "identity":
+        return (
+            select(
+                complaint.c.import_batch_id.label("import_batch_id"),
+                facility_identity.label("facility_identity"),
+            )
+            .select_from(facts_from)
+            .where(and_(*where_clauses))
+            .cte(cte_name)
+        )
+    if projection == "count":
+        return (
+            select(
+                facility_identity.label("facility_identity"),
+                case((source_available, 1), else_=0).label("source_available"),
+            )
+            .select_from(facts_from)
+            .where(and_(*where_clauses))
+            .cte(cte_name)
+        )
     return (
         select(
             complaint.c.source_record_key.label("source_record_key"),
@@ -852,6 +1031,7 @@ def _facility_intelligence_complaint_facts(
             complaint.c.import_batch_id.label("import_batch_id"),
             complaint.c.source_document_id.label("source_document_id"),
             complaint.c.facility_id.label("source_facility_id"),
+            facility.c.source_record_key.label("facility_source_record_key"),
             facility_identity.label("facility_identity"),
             facility_number.label("facility_number"),
             resolved_name.label("facility_name"),
@@ -864,25 +1044,7 @@ def _facility_intelligence_complaint_facts(
             case((missing_dates, 1), else_=0).label("missing_dates"),
             case((source_available, 1), else_=0).label("source_available"),
         )
-        .select_from(
-            complaint.outerjoin(
-                facility,
-                and_(
-                    facility.c.entity_type == "facility",
-                    facility.c.facility_id == complaint.c.facility_id,
-                    facility.c.import_batch_id == complaint.c.import_batch_id,
-                    facility.c.source_record_key
-                    == select(func.min(duplicate_facility.c.source_record_key))
-                    .where(
-                        duplicate_facility.c.entity_type == "facility",
-                        duplicate_facility.c.import_batch_id
-                        == facility.c.import_batch_id,
-                        duplicate_facility.c.facility_id == facility.c.facility_id,
-                    )
-                    .scalar_subquery(),
-                ),
-            )
-        )
+        .select_from(facts_from)
         .where(and_(*where_clauses))
         .cte(cte_name)
     )
@@ -919,6 +1081,13 @@ def _facility_intelligence_facilities(
         ),
         func.max(facts.c.facility_type).label("facility_type"),
         func.max(facts.c.geography).label("geography"),
+        func.min(facts.c.source_facility_id).label("source_facility_id"),
+        func.min(facts.c.facility_source_record_key).label(
+            "facility_source_record_key"
+        ),
+        func.min(facts.c.source_record_key).label(
+            "representative_source_record_key"
+        ),
         complaint_count,
         substantiated_count,
         strongest_delay,
@@ -936,6 +1105,28 @@ def _facility_intelligence_facilities(
     elif filters.coverage == "unavailable":
         statement = statement.having(source_available_count == 0)
     return statement.cte("facility_intelligence_facilities")
+
+
+def _facility_intelligence_count_facilities(
+    facts: Any,
+    *,
+    filters: FacilityIntelligenceReadFilters,
+) -> Any:
+    complaint_count = func.count()
+    source_available_count = func.sum(facts.c.source_available)
+    statement = select(facts.c.facility_identity).group_by(
+        facts.c.facility_identity
+    )
+    if filters.coverage == "available":
+        statement = statement.having(source_available_count == complaint_count)
+    elif filters.coverage == "partial":
+        statement = statement.having(
+            source_available_count > 0,
+            source_available_count < complaint_count,
+        )
+    elif filters.coverage == "unavailable":
+        statement = statement.having(source_available_count == 0)
+    return statement.cte("facility_intelligence_count_facilities")
 
 
 def _facility_intelligence_order_spec(
@@ -1080,32 +1271,43 @@ def _facility_intelligence_row_order_values(
 def _facility_intelligence_hydrated_records(
     connection: Connection,
     *,
-    facts: Any,
-    facility_identities: tuple[str, ...],
+    filters: FacilityIntelligenceReadFilters,
+    source_facility_ids: tuple[str, ...],
+    facility_source_record_keys: tuple[str, ...],
+    fallback_source_record_keys: tuple[str, ...],
     import_batch_id: str | None,
     import_batch_ids: tuple[str, ...] | None,
     import_batch_query: Select[Any] | CompoundSelect[Any] | None,
 ) -> tuple[SourceDerivedRecordRead, ...]:
-    if not facility_identities:
+    if not source_facility_ids and not fallback_source_record_keys:
         return ()
-    selected_keys = select(facts.c.source_record_key).where(
-        facts.c.facility_identity.in_(facility_identities)
-    ).cte("facility_intelligence_selected_complaints")
-    selected_documents = select(
-        hosted_source_derived_records.c.source_document_id
-    ).where(
-        hosted_source_derived_records.c.source_record_key.in_(
-            select(selected_keys.c.source_record_key)
+    reference_facts = _facility_intelligence_complaint_facts(
+        connection,
+        filters=filters,
+        import_batch_id=import_batch_id,
+        import_batch_ids=import_batch_ids,
+        import_batch_query=import_batch_query,
+        apply_active_filters=True,
+        cte_name="facility_intelligence_hydration_references",
+        include_priority_signals=False,
+        projection="hydration",
+        source_facility_ids=source_facility_ids,
+        source_record_keys=fallback_source_record_keys,
+    )
+    selected_complaints = connection.execute(
+        select(
+            reference_facts.c.source_record_key,
+            reference_facts.c.source_document_id,
+            reference_facts.c.source_facility_id,
         )
-    )
-    selected_facilities = select(
-        hosted_source_derived_records.c.facility_id
-    ).where(
-        hosted_source_derived_records.c.source_record_key.in_(
-            select(selected_keys.c.source_record_key)
-        ),
-        hosted_source_derived_records.c.facility_id.is_not(None),
-    )
+    ).mappings()
+    selected_keys: list[str] = []
+    selected_documents: set[str] = set()
+    for row in selected_complaints:
+        selected_keys.append(str(row["source_record_key"]))
+        selected_documents.add(str(row["source_document_id"]))
+    if not selected_keys:
+        return ()
     related_filter = _facility_intelligence_import_filter(
         hosted_source_derived_records,
         import_batch_id=import_batch_id,
@@ -1115,21 +1317,19 @@ def _facility_intelligence_hydrated_records(
     query = _source_derived_read_query().where(
         related_filter,
         or_(
-            hosted_source_derived_records.c.source_record_key.in_(
-                select(selected_keys.c.source_record_key)
-            ),
+            hosted_source_derived_records.c.source_record_key.in_(selected_keys),
             and_(
                 hosted_source_derived_records.c.entity_type.in_(
                     ("source_document", "allegation", "event")
                 ),
                 hosted_source_derived_records.c.source_document_id.in_(
-                    selected_documents
+                    selected_documents,
                 ),
             ),
             and_(
                 hosted_source_derived_records.c.entity_type == "facility",
-                hosted_source_derived_records.c.facility_id.in_(
-                    selected_facilities
+                hosted_source_derived_records.c.source_record_key.in_(
+                    facility_source_record_keys,
                 ),
             ),
         ),
@@ -1146,13 +1346,25 @@ def _facility_intelligence_hydrated_records(
 
 def _facility_intelligence_filter_options(
     connection: Connection,
-    base_facts: Any,
+    *,
+    import_batch_id: str | None,
+    import_batch_ids: tuple[str, ...] | None,
+    import_batch_query: Select[Any] | CompoundSelect[Any] | None,
 ) -> FacilityIntelligenceFilterOptions:
-    def distinct_values(column: Any) -> tuple[str, ...]:
+    def distinct_values(
+        column: Any,
+        from_clause: Any,
+        *where_clauses: Any,
+    ) -> tuple[str, ...]:
         statement = (
             select(column)
-            .where(column.is_not(None), func.trim(column) != "")
-            .distinct()
+            .select_from(from_clause)
+            .where(
+                column.is_not(None),
+                func.trim(column) != "",
+                *where_clauses,
+            )
+            .group_by(column)
             .order_by(func.lower(column), column)
         )
         return tuple(
@@ -1166,6 +1378,117 @@ def _facility_intelligence_filter_options(
             ).scalars()
         )
 
+    complaint = hosted_source_derived_records.alias(
+        "facility_intelligence_option_complaint"
+    )
+    facility = hosted_source_derived_records.alias(
+        "facility_intelligence_option_facility"
+    )
+    duplicate_facility = hosted_source_derived_records.alias(
+        "facility_intelligence_option_duplicate_facility"
+    )
+    complaint_facility_ids = (
+        select(complaint.c.import_batch_id, complaint.c.facility_id)
+        .where(
+            complaint.c.entity_type == "complaint",
+            complaint.c.facility_id.is_not(None),
+            _facility_intelligence_import_filter(
+                complaint,
+                import_batch_id=import_batch_id,
+                import_batch_ids=import_batch_ids,
+                import_batch_query=import_batch_query,
+            ),
+        )
+    )
+    facility_keys = (
+        select(
+            duplicate_facility.c.import_batch_id,
+            duplicate_facility.c.facility_id,
+            func.min(duplicate_facility.c.source_record_key).label(
+                "source_record_key"
+            ),
+        )
+        .where(
+            duplicate_facility.c.entity_type == "facility",
+            tuple_(
+                duplicate_facility.c.import_batch_id,
+                duplicate_facility.c.facility_id,
+            ).in_(
+                complaint_facility_ids
+            ),
+            _facility_intelligence_import_filter(
+                duplicate_facility,
+                import_batch_id=import_batch_id,
+                import_batch_ids=import_batch_ids,
+                import_batch_query=import_batch_query,
+            ),
+        )
+        .group_by(
+            duplicate_facility.c.import_batch_id,
+            duplicate_facility.c.facility_id,
+        )
+        .cte("facility_intelligence_option_facility_keys")
+    )
+    facility_options_from = facility_keys.join(
+        facility,
+        facility.c.source_record_key == facility_keys.c.source_record_key,
+    )
+    facility_name = _first_nonblank_text(
+        _json_text(facility, "facility_name"),
+        _json_text(facility, "name"),
+    )
+    facility_number = _first_nonblank_text(
+        _json_text(facility, "external_facility_number"),
+        _json_text(facility, "facility_number"),
+        _json_text(facility, "license_number"),
+        facility.c.facility_id,
+    )
+    resolved_name = func.coalesce(
+        facility_name,
+        case(
+            (facility_number.is_not(None), literal("Facility ID ") + facility_number),
+            else_=literal("Unknown facility"),
+        ),
+    )
+    facility_type = func.coalesce(
+        _first_nonblank_text(
+            _json_text(facility, "facility_type"),
+            _json_text(facility, "facility_type_description"),
+            _json_text(facility, "type"),
+        ),
+        case(
+            (
+                func.lower(resolved_name).like("%foster family agency%"),
+                literal("Foster Family Agency"),
+            ),
+            else_=literal("unknown"),
+        ),
+    )
+    geography = _facility_intelligence_geography(facility)
+    finding = func.coalesce(_json_text(complaint, "finding"), literal("unknown"))
+    missing_facility_statement = select(literal(1)).select_from(complaint).where(
+        complaint.c.entity_type == "complaint",
+        _facility_intelligence_import_filter(
+            complaint,
+            import_batch_id=import_batch_id,
+            import_batch_ids=import_batch_ids,
+            import_batch_query=import_batch_query,
+        ),
+        or_(
+            complaint.c.facility_id.is_(None),
+            tuple_(complaint.c.import_batch_id, complaint.c.facility_id).not_in(
+                select(facility_keys.c.import_batch_id, facility_keys.c.facility_id)
+            ),
+        ),
+    )
+    has_missing_facility = connection.execute(
+        _facility_intelligence_bounded_limit(
+            missing_facility_statement,
+            1,
+            dialect_name=connection.dialect.name,
+        )
+    ).first() is not None
+
     allegation = hosted_source_derived_records.alias(
         "facility_intelligence_option_allegation"
     )
@@ -1173,10 +1496,11 @@ def _facility_intelligence_filter_options(
         select(_json_text(allegation, "allegation_category"))
         .where(
             allegation.c.entity_type == "allegation",
-            allegation.c.import_batch_id.in_(
-                select(func.distinct(base_facts.c.import_batch_id)).select_from(
-                    base_facts
-                )
+            _facility_intelligence_import_filter(
+                allegation,
+                import_batch_id=import_batch_id,
+                import_batch_ids=import_batch_ids,
+                import_batch_query=import_batch_query,
             ),
         )
         .distinct()
@@ -1200,10 +1524,11 @@ def _facility_intelligence_filter_options(
     )
     cue_statement = select(literal(1)).where(
             allegation.c.entity_type == "allegation",
-            allegation.c.import_batch_id.in_(
-                select(func.distinct(base_facts.c.import_batch_id)).select_from(
-                    base_facts
-                )
+            _facility_intelligence_import_filter(
+                allegation,
+                import_batch_id=import_batch_id,
+                import_batch_ids=import_batch_ids,
+                import_batch_query=import_batch_query,
             ),
             normalized_category.in_(("", "unknown")),
             or_(
@@ -1234,10 +1559,27 @@ def _facility_intelligence_filter_options(
     if cue_exists is not None:
         serious_topic_values.add("Possible keyword cue")
     serious_topics = tuple(sorted(serious_topic_values, key=str.casefold))
+    facility_types = set(
+        distinct_values(facility_type, facility_options_from)
+    )
+    geographies = set(distinct_values(geography, facility_options_from))
+    if has_missing_facility:
+        facility_types.add("unknown")
+        geographies.add("unknown")
     return FacilityIntelligenceFilterOptions(
-        facility_types=distinct_values(base_facts.c.facility_type),
-        geographies=distinct_values(base_facts.c.geography),
-        findings=distinct_values(base_facts.c.finding),
+        facility_types=tuple(sorted(facility_types, key=str.casefold)),
+        geographies=tuple(sorted(geographies, key=str.casefold)),
+        findings=distinct_values(
+            finding,
+            complaint,
+            complaint.c.entity_type == "complaint",
+            _facility_intelligence_import_filter(
+                complaint,
+                import_batch_id=import_batch_id,
+                import_batch_ids=import_batch_ids,
+                import_batch_query=import_batch_query,
+            ),
+        ),
         serious_topics=serious_topics,
     )
 
@@ -1306,23 +1648,34 @@ def _facility_intelligence_activity_date(
     return func.nullif(latest, "")
 
 
-def _facility_intelligence_substantiated_expression(
-    complaint: Any,
-    complaint_id: Any,
+def _facility_intelligence_related_substantiated(
+    *,
+    cte_name: str,
+    import_batch_id: str | None,
+    import_batch_ids: tuple[str, ...] | None,
+    import_batch_query: Select[Any] | CompoundSelect[Any] | None,
 ) -> Any:
     allegation = hosted_source_derived_records.alias(
-        "facility_intelligence_substantiated_allegation"
+        f"{cte_name}_substantiated_allegation"
     )
     event = hosted_source_derived_records.alias(
-        "facility_intelligence_substantiated_event"
+        f"{cte_name}_substantiated_event"
     )
-    complaint_match = _substantiated_values_expression(complaint)
-    allegation_match = select(literal(1)).where(
+    allegation_complaint_id = _json_text(allegation, "complaint_id")
+    allegation_matches = select(
+        allegation.c.import_batch_id.label("import_batch_id"),
+        allegation_complaint_id.label("complaint_id"),
+    ).where(
         allegation.c.entity_type == "allegation",
-        allegation.c.import_batch_id == complaint.c.import_batch_id,
-        _json_text(allegation, "complaint_id") == complaint_id,
+        _facility_intelligence_import_filter(
+            allegation,
+            import_batch_id=import_batch_id,
+            import_batch_ids=import_batch_ids,
+            import_batch_query=import_batch_query,
+        ),
+        allegation_complaint_id.is_not(None),
         _substantiated_values_expression(allegation),
-    ).exists()
+    )
     event_context = func.lower(
         func.coalesce(
             _first_nonblank_text(
@@ -1355,16 +1708,32 @@ def _facility_intelligence_substantiated_expression(
             for key in ("event_text", "summary", "description", "text")
         )
     )
-    event_match = select(literal(1)).where(
+    event_complaint_id = _json_text(event, "complaint_id")
+    event_matches = select(
+        event.c.import_batch_id.label("import_batch_id"),
+        event_complaint_id.label("complaint_id"),
+    ).where(
         event.c.entity_type == "event",
-        event.c.import_batch_id == complaint.c.import_batch_id,
-        _json_text(event, "complaint_id") == complaint_id,
+        _facility_intelligence_import_filter(
+            event,
+            import_batch_id=import_batch_id,
+            import_batch_ids=import_batch_ids,
+            import_batch_query=import_batch_query,
+        ),
+        event_complaint_id.is_not(None),
         or_(
             _substantiated_values_expression(event),
             and_(event_context_matches, event_text_matches),
         ),
-    ).exists()
-    return or_(complaint_match, allegation_match, event_match)
+    )
+    matches = allegation_matches.union_all(event_matches).cte(
+        f"{cte_name}_substantiated_matches"
+    )
+    return (
+        select(matches.c.import_batch_id, matches.c.complaint_id)
+        .distinct()
+        .cte(f"{cte_name}_related_substantiated")
+    )
 
 
 def _substantiated_values_expression(table: Any) -> Any:
