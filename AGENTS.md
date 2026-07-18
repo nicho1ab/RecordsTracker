@@ -25,6 +25,65 @@ Before making code, schema, extraction, hosted reviewer, export, QNAP, or user-f
 
 Read only the context needed for the task; do not rewrite governance just because it exists.
 
+## Capability authorization
+
+The following capability model defines the maximum authority that a task may
+grant. It does not create tools or access that the active environment does not
+provide. An agent may use a capability only when repository governance
+authorizes it and the active environment supports it. If a required capability
+or tool is unavailable, stop and report the limitation; do not substitute
+another mechanism.
+
+- **RO — read and report only:** May inspect repository content, issue and PR
+  state, provenance, and supporting evidence. It cannot edit, mutate, create
+  lifecycle state, or use browser verification authority.
+- **II — isolated implementation:** May edit the assigned worktree and allowed
+  files and run authorized local validation. It cannot create its own branch or
+  worktree, commit, push, create or update a PR, merge, clean up, use browser or
+  network access unless separately granted, or access remote infrastructure.
+- **HV-READ — browser read-only verification:** May use an approved browser and
+  network allowlist for GET/navigation, responsive checks, keyboard and
+  accessibility inspection, print inspection, screenshots, and evidence. It
+  cannot mutate data.
+- **HV-WORKFLOW — controlled ordinary-user workflow:** May perform only
+  explicitly named ordinary-user mutations using a designated account. Every
+  task must define routes, allowed mutations, maximum scope, cleanup or state
+  disposition, expected evidence, and stop point. It never grants operator,
+  infrastructure, authentication administration, QNAP, database, deployment,
+  rollback, restore, or Cloudflare authority.
+- **RL-PREPARE — repository lifecycle preparation:** May create the assigned
+  branch and worktree, verify the base SHA, commit, push, create or update one
+  PR, and monitor required checks. It never includes merge or cleanup authority.
+- **RL-MERGE — separately authorized merge and cleanup:** May squash merge and
+  clean up only after a separate current-task user authorization, successful
+  required checks, no merge blockers, and completion of all required review and
+  evidence gates.
+- **HQ — human QNAP operator:** The user alone performs archive transfer and
+  every QNAP, deployment, rollback, database, restore, and Cloudflare operation.
+
+Capabilities expire at the exact task stop point and do not carry into another
+task or conversation.
+
+Every agent task must state the task name, repository, base branch, full
+verified base SHA, granted capabilities, whether continuous execution across
+phases is authorized, authorized phase sequence, required stop points, exact
+branch, exact worktree, allowed files, prohibited files, browser allowlist,
+network allowlist, any HV-WORKFLOW mutations and cleanup, validation, evidence,
+required checks, whether RL-MERGE is granted, exact final stop point, and
+prohibited actions.
+
+The preferred phase sequence is:
+
+1. II implements and validates, then stops and reports.
+2. HV-READ or HV-WORKFLOW captures authorized evidence, then stops and reports.
+3. RL-PREPARE commits, pushes, creates or updates one PR, and monitors checks,
+   then stops and reports.
+4. RL-MERGE runs only after separate current-task user authorization.
+
+A session with multiple capabilities must stop between phases unless the
+current task explicitly authorizes continuous execution and names the exact
+phase sequence. No session may continue into another issue or roadmap task.
+
 ## Product direction
 
 - Keep work moving toward a user-facing hosted tester/pilot build of RecordsTracker.
@@ -39,12 +98,24 @@ Read only the context needed for the task; do not rewrite governance just becaus
 - Do not read, print, store, commit, or document secrets, private host details, passwords, tokens, cookies, private keys, GitHub PATs, Cloudflare tokens, QNAP passwords, or local `.env` values.
 - Do not add secrets to tests, fixtures, screenshots, docs, examples, or handoffs.
 - Use placeholders such as `<repo-root>`, `<local-project-path>`, `<qnap-host>`, and `<repository-name>` for machine-specific or private values.
-- Do not enable MCP servers, browser/computer-use, remote-control features, or external network access unless explicitly requested in the current task.
+- Use browser/computer-use only under HV-READ or HV-WORKFLOW. Use external
+  network access only when the granted capability needs it, including RO for
+  allowlisted issue or PR inspection, and only within the task's allowlists and
+  stop point. MCP or remote-control tooling remains unavailable unless
+  explicitly authorized and supported.
 
 ## QNAP and deployment boundaries
 
-- QNAP is an operator-controlled pilot runtime. Do not SSH to QNAP, edit QNAP `.env`, run QNAP Docker commands, configure Cloudflare, invite testers, or perform destructive reset/import/retrieval actions unless the user explicitly requests that exact action in the current task.
+- QNAP is a permanently human-operated pilot runtime. Agents never invoke SSH,
+  run remote shell or QNAP Docker/Compose commands, inspect or edit QNAP `.env`,
+  connect to QNAP PostgreSQL, transfer an archive, deploy, roll back, restore,
+  or administer Cloudflare. The user alone performs those actions as HQ through
+  the approved local transfer workflow and standalone SSH client.
 - It is acceptable to improve QNAP docs, local validation scripts, and copy/paste-safe operator command blocks when the task calls for it.
+- When authorized, agents may verify a release SHA locally, prepare and inspect
+  a clean local archive, calculate its hash, generate local archive-transfer or
+  runbook-derived QNAP command text, prepare hosted-acceptance checklists, and
+  interpret safe output pasted by the user.
 - Keep QNAP-specific host paths and credentials out of application code. Use docs, placeholders, environment variables, or operator notes instead.
 
 ## Change behavior
@@ -58,6 +129,15 @@ Read only the context needed for the task; do not rewrite governance just becaus
 - Do not use LLM extraction for fields that can be deterministically parsed.
 - Do not introduce inaccessible user-facing output.
 - If generated stakeholder XLSX behavior changes, require manual regeneration and workbook review after merge.
+
+For implementation tasks, use one bounded branch/worktree and do not grant
+overlapping write authority. Before branch/worktree creation or assignment,
+inspect the current branch and status, local `main` SHA, `origin/main` SHA,
+branches, worktrees, unpushed commits, active branches, and possible file
+overlap. Create from a clean, synchronized current `main`. Stop on unexplained
+dirty state, unpushed work, branch ownership, or active-task overlap. Never copy
+`.env` files, secrets, private operator values, generated evidence packets, or
+private configuration into an agent worktree.
 
 ## Validation expectations
 
@@ -94,8 +174,9 @@ Do not fake validation results. If validation was not run, say so and explain wh
 
 - Do not commit directly to `main`.
 - Use a feature branch with a focused name.
-- It is acceptable to prepare commits after validation passes.
-- Do not push, create PRs, merge PRs, delete branches, or modify repository settings unless explicitly allowed in the current task.
+- Commit, push, and create or update one PR only under RL-PREPARE. Merge and
+  cleanup require separately granted RL-MERGE. Repository settings are never
+  implied by either capability and require their own explicit authorization.
 - Before any merge recommendation, required checks must be confirmed: `validate`, `docs-check`, `fixtures`, and `security`.
 - If required checks/rulesets are missing, stop before merge and report the blocker.
 

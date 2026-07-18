@@ -14,6 +14,7 @@ End users need plain-language instructions for browsing, searching, filtering, u
 
 - `docs/developer/setup.md`
 - `docs/developer/copilot-workflow.md`
+- `docs/developer/codex-workflow.md`
 - `docs/developer/architecture.md`
 - `docs/developer/adding-a-source.md`
 - `docs/developer/testing.md`
@@ -98,6 +99,29 @@ Documentation checks prevent stale, missing, or misleading documentation. They
 should not become the default next milestone when validation is passing and the
 documentation is current; future work should then come from the active roadmap
 backlog.
+
+## ChatGPT Project Sources precedence and currency
+
+Repository `main` is authoritative. ChatGPT Project Sources are static
+contextual copies and do not automatically update from GitHub. A Project Source
+that mirrors a repository file must remain an exact unchanged copy; do not
+prepend source metadata to the mirrored file.
+
+A separate steering-only ChatGPT Project Source named
+`CCLD RecordsTracker Project Sources Manifest.md` tracks each source's display
+name, repository path or steering-only status, source commit SHA, upload date,
+and current/stale status. The manifest is not part of this repository and must
+not be created or committed here.
+
+Similar filenames are not sufficient evidence that two Project Sources are
+duplicates. Remove a superseded source only after verifying its identity,
+replacement, readability, and lack of unique content.
+
+Merged repository governance becomes authoritative immediately. Mirrored
+Project Sources must be replaced before a ChatGPT Project relies on them as
+current, but replacement is not a prerequisite for Codex to follow repository
+`main` directly. Between merge and Project Source replacement, planning chats
+must inspect repository `main`.
 
 ## Public documentation hygiene
 
