@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Added the approved RecordsTracker favicon to browser tabs across all
+  server-rendered pages through the shared HTML head, with the canonical local
+  icon served at `/favicon.ico`.
 - Expanded `/ccld/facilities/detail` into the per-facility review hub for the
   authorized loaded complaint corpus. The hub now reuses the cross-facility
   intelligence calculations for stable complaint deduplication, finding and

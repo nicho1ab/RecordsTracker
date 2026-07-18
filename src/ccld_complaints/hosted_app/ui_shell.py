@@ -10,6 +10,7 @@ from dataclasses import dataclass
 APP_TITLE = "CCLD RecordsTracker"
 WORKSPACE_LABEL = "Reviewer Workspace"
 EYEBROW_TEXT = ""
+FAVICON_PATH = "/favicon.ico"
 PRIMARY_NAV_LINKS: tuple[tuple[str, str], ...] = (
     ("Home", "/"),
     ("Facilities", "/ccld/facilities"),
@@ -124,16 +125,13 @@ def render_page_shell(
     body_class = "ds-page-bg civic-ledger-page"
     header_markup = _civic_ledger_header(links, runtime_mode, badge_class)
     footer_markup = _civic_ledger_footer()
+    document_head = render_document_head(
+        title=f"{title} - {APP_TITLE}",
+        styles=SHARED_CSS,
+    )
     return f"""<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{html.escape(title)} - {APP_TITLE}</title>
-  <style>
-{SHARED_CSS}
-  </style>
-</head>
+{document_head}
 <body class="{body_class}">
   <a class="skip-link" href="#main-content">{html.escape(skip_label)}</a>
 {header_markup}
@@ -152,6 +150,16 @@ def render_page_shell(
 </body>
 </html>
 """
+
+
+def render_document_head(*, title: str, styles: str | None = None) -> str:
+    style_markup = f"\n  <style>\n{styles}\n  </style>" if styles is not None else ""
+    return f"""<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="{FAVICON_PATH}" sizes="any" type="image/x-icon">
+  <title>{html.escape(title)}</title>{style_markup}
+</head>"""
 
 
 def _civic_ledger_header(links: str, runtime_mode: str, badge_class: str) -> str:

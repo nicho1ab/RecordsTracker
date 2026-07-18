@@ -129,7 +129,11 @@ from ccld_complaints.hosted_app.source_derived_routes import (
     SourceDerivedApiContext,
     route_source_derived_api_response,
 )
-from ccld_complaints.hosted_app.ui_shell import render_page_shell
+from ccld_complaints.hosted_app.ui_shell import (
+    FAVICON_PATH,
+    render_document_head,
+    render_page_shell,
+)
 
 APP_NAME = "CCLD Records Review"
 SCAFFOLD_NOTICE = "Local/test scaffold only: not a production reviewer workflow."
@@ -146,6 +150,7 @@ PUBLIC_SOURCE_FACILITY_FIXTURE_DIR = (
     / "fixtures"
     / "public_source_facilities"
 )
+FAVICON_FILE = Path(__file__).resolve().parent / "static" / "favicon.ico"
 SOURCE_COVERAGE_FACILITY_FIXTURE = "chhs_facility_master_tiny.csv"
 _DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT: ReviewerUiContext | None = None
 
@@ -809,11 +814,7 @@ def render_source_record_list(filters: SourceRecordFilters | None = None) -> str
     )
     return f"""<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sample source-derived records - {html.escape(APP_NAME)}</title>
-</head>
+{render_document_head(title=f"Sample source-derived records - {APP_NAME}")}
 <body>
   <header>
     <p>{html.escape(SAMPLE_DATA_NOTICE)}</p>
@@ -863,11 +864,7 @@ def render_source_record_list(filters: SourceRecordFilters | None = None) -> str
 def render_source_record_detail(record: SampleSourceRecord) -> str:
     return f"""<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{html.escape(record.complaint_control_number)} - {html.escape(APP_NAME)}</title>
-</head>
+{render_document_head(title=f"{record.complaint_control_number} - {APP_NAME}")}
 <body>
   <header>
     <p>{html.escape(SAMPLE_DATA_NOTICE)}</p>
@@ -941,11 +938,7 @@ def render_facility_list() -> str:
     )
     return f"""<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sample facility master records - {html.escape(APP_NAME)}</title>
-</head>
+{render_document_head(title=f"Sample facility master records - {APP_NAME}")}
 <body>
   <header>
     <p>{html.escape(SAMPLE_DATA_NOTICE)}</p>
@@ -994,11 +987,7 @@ def render_facility_list() -> str:
 def render_facility_detail(record: SampleFacilityRecord) -> str:
     return f"""<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{html.escape(record.facility_number)} - {html.escape(APP_NAME)}</title>
-</head>
+{render_document_head(title=f"{record.facility_number} - {APP_NAME}")}
 <body>
   <header>
     <p>{html.escape(SAMPLE_DATA_NOTICE)}</p>
@@ -1089,6 +1078,10 @@ def route_response(
 ) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
     parsed_path = parsed_url.path
+    if parsed_path == FAVICON_PATH:
+        if not FAVICON_FILE.is_file():
+            return 404, "text/plain; charset=utf-8", b"Not found"
+        return 200, "image/x-icon", FAVICON_FILE.read_bytes()
     active_auth_config = _active_auth_runtime_config(auth_runtime_config)
     active_page_data_mode = _active_page_data_mode(page_data_mode)
     if parsed_path in {AUTH_LOGIN_PATH, AUTH_LOGOUT_PATH}:
