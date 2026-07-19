@@ -90,6 +90,7 @@ from ccld_complaints.hosted_app.reviewer_workflow_shell import (
     route_reviewer_workflow_shell_response,
 )
 from ccld_complaints.hosted_app.seeded_import import (
+    SeededCorpusArtifact,
     SourceDerivedEntityType,
     hosted_seeded_import_metadata,
     import_seeded_corpus_artifact,
@@ -142,6 +143,29 @@ LOCAL_REVIEWER_UI_SCOPE = HostedAccessScope(
 POSTGRES_REVIEWER_UI_SCOPE = CCLD_RETRIEVAL_CORPUS_SCOPE
 LOCAL_REVIEWER_UI_FIXTURE = Path(
     "tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json"
+)
+_LOCAL_RT_SRC_002_VISUAL_FIXTURES: tuple[tuple[Path, str], ...] = (
+    (
+        Path(
+            "tests/fixtures/ccld/expected/"
+            "157806098_inx47_investigation_finding_heading.json"
+        ),
+        "supported",
+    ),
+    (
+        Path(
+            "tests/fixtures/ccld/expected/"
+            "157806098_inx50_dashed_finding_label.json"
+        ),
+        "document-only",
+    ),
+    (
+        Path(
+            "tests/fixtures/ccld/expected/"
+            "157806098_inx41_inline_received_date.json"
+        ),
+        "source-unavailable",
+    ),
 )
 
 _SECRET_HTML_MARKERS = (
@@ -664,6 +688,17 @@ class SourceRecordIndexes:
     by_source_record_key: Mapping[str, Mapping[str, Any]]
 
 
+@dataclass(frozen=True)
+class FirstInvestigationActivityEvidence:
+    state: str
+    displayed_date: str
+    event_sentence: str
+    source_section: str
+    report_identity: str
+    preserved_source_status: str
+    source_url: str
+
+
 _DEFAULT_REVIEWER_UI_CONTEXT: ReviewerUiContext | None = None
 
 
@@ -676,7 +711,9 @@ def build_local_test_reviewer_ui_context() -> ReviewerUiContext:
     hosted_seeded_import_metadata.create_all(engine)
     connection = engine.connect()
     transaction = connection.begin()
-    artifact = load_seeded_corpus_artifact(LOCAL_REVIEWER_UI_FIXTURE)
+    artifact = _with_local_rt_src_002_visual_fixture_records(
+        load_seeded_corpus_artifact(LOCAL_REVIEWER_UI_FIXTURE)
+    )
     import_seeded_corpus_artifact(connection, artifact)
     transaction.commit()
     return ReviewerUiContext(
@@ -686,6 +723,72 @@ def build_local_test_reviewer_ui_context() -> ReviewerUiContext:
             scope=LOCAL_REVIEWER_UI_SCOPE,
         ),
         engine=engine,
+    )
+
+
+def _with_local_rt_src_002_visual_fixture_records(
+    artifact: SeededCorpusArtifact,
+) -> SeededCorpusArtifact:
+    visual_records: list[Mapping[str, Any]] = []
+    for path, state in _LOCAL_RT_SRC_002_VISUAL_FIXTURES:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(loaded, dict):
+            raise ValueError(f"Local visual fixture must be a JSON object: {path}")
+        source_document = loaded.get("source_document")
+        complaint = loaded.get("complaint")
+        events = loaded.get("events")
+        if not isinstance(source_document, dict) or not isinstance(complaint, dict):
+            raise ValueError(f"Local visual fixture is missing required records: {path}")
+        if not isinstance(events, list):
+            raise ValueError(f"Local visual fixture events must be a list: {path}")
+
+        local_source_document = dict(source_document)
+        identity_suffix = f"rt-src-002-{state}-fixture"
+        document_id = f"{local_source_document['document_id']}-{identity_suffix}"
+        complaint_id = f"{complaint['complaint_id']}-{identity_suffix}"
+        local_source_document["document_id"] = document_id
+        local_complaint = dict(complaint)
+        local_complaint["complaint_id"] = complaint_id
+        local_complaint["document_id"] = document_id
+        local_events: tuple[Mapping[str, Any], ...] = tuple(
+            {
+                **event,
+                "event_id": f"{event['event_id']}-{identity_suffix}",
+                "complaint_id": complaint_id,
+            }
+            for event in events
+            if isinstance(event, dict)
+        )
+        if state == "document-only":
+            local_events = ()
+        elif state == "source-unavailable":
+            local_source_document["source_url"] = "unavailable"
+
+        visual_records.append(
+            {
+                "source_document": local_source_document,
+                "complaint": local_complaint,
+                "events": local_events,
+            }
+        )
+
+    record_counts = dict(artifact.record_counts)
+    record_counts["source_document"] = record_counts.get("source_document", 0) + 3
+    record_counts["complaint"] = record_counts.get("complaint", 0) + 3
+    record_counts["event"] = record_counts.get("event", 0) + 2
+    return replace(
+        artifact,
+        source_artifact_identity=(
+            f"{artifact.source_artifact_identity} + local RT-SRC-002 visual fixtures"
+        ),
+        record_counts=record_counts,
+        warnings=artifact.warnings
+        + (
+            "Three deterministic RT-SRC-002 records are available only in the "
+            "local fixture/demo reviewer context; they do not represent source "
+            "coverage.",
+        ),
+        records=artifact.records + tuple(visual_records),
     )
 
 
@@ -9168,7 +9271,155 @@ document.querySelectorAll('[data-copy-value]').forEach(function (button) {
     }
   });
 });
+function setFirstActivityEvidenceExpanded(button, expanded) {
+  var regionId = button.getAttribute('aria-controls');
+  var region = regionId ? document.getElementById(regionId) : null;
+  if (!region) {
+    return;
+  }
+  var label = button.querySelector('[data-source-evidence-toggle-label]');
+  region.hidden = !expanded;
+  button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  button.setAttribute(
+    'aria-label',
+    (expanded ? 'Close' : 'View') + ' source evidence for First investigation activity date'
+  );
+  if (label) {
+    label.textContent = expanded ? 'Close source evidence' : 'View source evidence';
+  }
+  if (!expanded) {
+    window.requestAnimationFrame(function () { button.focus(); });
+  }
+}
+document.querySelectorAll('[data-source-evidence-toggle]').forEach(function (button) {
+  button.addEventListener('click', function () {
+    setFirstActivityEvidenceExpanded(
+      button,
+      button.getAttribute('aria-expanded') !== 'true'
+    );
+  });
+  if (window.location.hash === '#' + button.getAttribute('aria-controls')) {
+    setFirstActivityEvidenceExpanded(button, true);
+  }
+  if (window.location.hash === '#' + button.id) {
+    button.focus();
+  }
+});
 </script>"""
+
+
+_FIRST_ACTIVITY_EVIDENCE_STYLE = """<style>
+  .first-activity-claim {
+    align-content: start;
+  }
+  .source-evidence-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    justify-content: center;
+    margin-top: 0.38rem;
+    min-width: 0;
+  }
+  .source-evidence-copy,
+  .source-evidence-toggle {
+    background: #fffdf8;
+    border: 1px solid #b8b1a5;
+    border-radius: 4px;
+    color: #14283d;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 800;
+    min-height: 2.75rem;
+    overflow-wrap: anywhere;
+    padding: 0.38rem 0.48rem;
+  }
+  .source-evidence-region {
+    background: #fffdf8;
+    border: 1px solid #c9b889;
+    border-left: 4px solid #9b7418;
+    border-radius: 4px;
+    display: grid;
+    gap: 0.62rem;
+    margin-top: 0.8rem;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0.82rem 0.92rem;
+  }
+  .source-evidence-region[hidden] {
+    display: none;
+  }
+  .source-evidence-region h4,
+  .source-evidence-region p {
+    margin: 0;
+  }
+  .source-evidence-facts {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+    min-width: 0;
+  }
+  .source-evidence-facts > div {
+    border-top: 1px solid #ded6c9;
+    min-width: 0;
+    padding-top: 0.42rem;
+  }
+  .source-evidence-facts dt {
+    color: #4c5967;
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+  .source-evidence-facts dd,
+  .source-evidence-print-url span {
+    margin: 0.14rem 0 0;
+    overflow-wrap: anywhere;
+  }
+  .source-evidence-print-url span::after {
+    content: attr(data-print-url);
+  }
+  .source-evidence-original {
+    justify-self: start;
+  }
+  .source-evidence-print-url {
+    display: none;
+  }
+  @media (max-width: 760px) {
+    .source-evidence-actions {
+      align-items: stretch;
+      display: grid;
+      justify-content: stretch;
+      width: 100%;
+    }
+    .source-evidence-facts {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .source-evidence-original {
+      justify-self: stretch;
+      text-align: center;
+    }
+  }
+  @media print {
+    .reviewer-detail-context,
+    .reviewer-detail-page .overview-side-panel,
+    .source-evidence-actions,
+    .source-evidence-original {
+      display: none !important;
+    }
+    .source-evidence-region[hidden],
+    .source-evidence-print-url {
+      display: block !important;
+    }
+    .source-evidence-region {
+      background: #fff;
+      border-color: #000;
+      break-inside: avoid;
+      color: #000;
+    }
+  }
+</style>"""
 
 
 def _quick_timing_value(original_values: Mapping[str, Any]) -> str:
@@ -9972,7 +10223,7 @@ def _render_complaint_overview_card(
           {_render_top_facility_fact_strip(related_records, return_context)}
           {_render_overview_review_cues(source_record, detail, related_records)}
           {_render_overview_source_narrative(source_record, related_records)}
-          {_render_overview_timeline(source_record)}
+          {_render_overview_timeline(source_record, related_records)}
         </div>
         <div class="overview-side-panel">
           {_render_review_actions(source_record_key, detail, return_context)}
@@ -10109,22 +10360,31 @@ def _render_overview_source_narrative(
       </section>"""
 
 
-def _render_overview_timeline(source_record: Mapping[str, Any]) -> str:
+def _render_overview_timeline(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> str:
     original_values = _mapping(source_record, "original_values")
     milestone_rows = (
         ("Complaint received", "received", "complaint_received_date"),
-        ("First investigation activity", "activity", "first_investigation_activity_date"),
         ("Visit", "visit", "visit_date"),
         ("Report", "report", "report_date"),
         ("Signed", "signed", "date_signed"),
     )
-    milestone_items = "\n".join(
+    ordinary_milestones = [
         f"""          <li class="timeline-item timeline-item--{_escape(marker)}">
             <span class="timeline-marker timeline-marker--{_escape(marker)} rt-timeline__marker rt-timeline__marker--{_escape(marker)}" aria-hidden="true"></span>
             <span class="timeline-label rt-timeline__label">{_escape(label)}</span>
             <strong class="rt-timeline__date">{_presentation_markup(presentation_value_for_field(original_values, field_name), f"timing-{field_name}")}</strong>
           </li>"""
         for label, marker, field_name in milestone_rows
+    ]
+    first_activity_milestone, evidence_region = _render_first_activity_milestone(
+        source_record,
+        related_records,
+    )
+    milestone_items = "\n".join(
+        (*ordinary_milestones[:1], first_activity_milestone, *ordinary_milestones[1:])
     )
     timing_rows = "\n".join(
         f"""          <div class="timing-fact">
@@ -10144,7 +10404,7 @@ def _render_overview_timeline(source_record: Mapping[str, Any]) -> str:
             f"{'s do' if len(conflict_labels) > 1 else ' does'} not match the displayed milestone dates. Check the source."
             "</p>"
         )
-    return f"""<section class="overview-timeline" aria-labelledby="complaint-timeline-heading">
+    return f"""{_FIRST_ACTIVITY_EVIDENCE_STYLE}<section class="overview-timeline" aria-labelledby="complaint-timeline-heading">
         <h3 id="complaint-timeline-heading">Key dates and timing</h3>
         <div class="rt-timeline rt-timeline--linear">
         <div class="rt-timeline__line" aria-hidden="true"></div>
@@ -10152,12 +10412,239 @@ def _render_overview_timeline(source_record: Mapping[str, Any]) -> str:
 {milestone_items}
         </ol>
         </div>
+{evidence_region}
         <h4 class="timing-summary-heading">Elapsed days</h4>
         <dl class="timing-summary" aria-label="Stored elapsed days between complaint milestones">
 {timing_rows}
         </dl>
 {conflict_cue}
       </section>"""
+
+
+def _render_first_activity_milestone(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> tuple[str, str]:
+    original_values = _mapping(source_record, "original_values")
+    presentation = presentation_value_for_field(
+        original_values,
+        "first_investigation_activity_date",
+    )
+    date_markup = _presentation_markup(
+        presentation,
+        "timing-first_investigation_activity_date",
+    )
+    if presentation.state != "present":
+        return (
+            f"""          <li class="timeline-item timeline-item--activity">
+            <span class="timeline-marker timeline-marker--activity rt-timeline__marker rt-timeline__marker--activity" aria-hidden="true"></span>
+            <span class="timeline-label rt-timeline__label">First investigation activity</span>
+            <strong class="rt-timeline__date">{date_markup}</strong>
+          </li>""",
+            "",
+        )
+
+    evidence = _first_investigation_activity_evidence(
+        source_record,
+        related_records,
+        displayed_date=presentation.display_text,
+    )
+    copy_control = (
+        '<button class="source-evidence-copy" type="button" '
+        f'data-copy-value="{_escape(evidence.displayed_date)}" '
+        'data-copy-feedback="Copied" '
+        'aria-label="Copy First investigation activity date">Copy date</button>'
+        '<span class="copy-feedback" data-copy-status hidden '
+        'aria-live="polite" aria-atomic="true"></span>'
+    )
+    toggle_control = (
+        '<button id="first-investigation-evidence-toggle" '
+        'class="source-evidence-toggle" type="button" '
+        'data-source-evidence-toggle '
+        'aria-expanded="false" '
+        'aria-controls="first-investigation-evidence" '
+        'aria-label="View source evidence for First investigation activity date">'
+        '<span data-source-evidence-toggle-label>View source evidence</span>'
+        "</button>"
+    )
+    milestone = f"""          <li class="timeline-item timeline-item--activity first-activity-claim">
+            <span class="timeline-marker timeline-marker--activity rt-timeline__marker rt-timeline__marker--activity" aria-hidden="true"></span>
+            <span class="timeline-label rt-timeline__label">First investigation activity</span>
+            <strong class="rt-timeline__date">{date_markup}</strong>
+            <span class="source-evidence-actions">{copy_control}{toggle_control}</span>
+          </li>"""
+    return milestone, _render_first_activity_evidence_region(evidence)
+
+
+def _first_investigation_activity_evidence(
+    source_record: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+    *,
+    displayed_date: str,
+) -> FirstInvestigationActivityEvidence:
+    original_values = _mapping(source_record, "original_values")
+    source_document = _mapping(source_record, "source_document")
+    event = _matching_first_activity_event(original_values, related_records)
+    event_values = _mapping(event, "original_values") if event is not None else {}
+    event_sentence = _bounded_source_event_sentence(event_values.get("event_text"))
+    source_section = _clean_source_evidence_text(
+        event_values.get("extracted_from_section")
+    )
+    source_url = (
+        _optional_string(source_document, "source_url")
+        if _source_url_available(source_document)
+        else ""
+    )
+    if not source_url:
+        state = "source-unavailable"
+    elif event is None:
+        state = "document-only"
+    elif not event_sentence or not source_section:
+        state = "field-partial"
+    else:
+        state = "supported"
+    complaint_identity = _clean_source_evidence_text(
+        original_values.get("complaint_control_number")
+    )
+    report_identity = (
+        f"Complaint/report {complaint_identity}"
+        if complaint_identity
+        else "Complaint/report identity is not available from this record."
+    )
+    preserved_source_status = _preserved_source_status(source_document)
+    state_prefix = {
+        "document-only": "Document-level source only.",
+        "field-partial": "Field evidence incomplete.",
+        "source-unavailable": "Source document unavailable.",
+    }.get(state, "")
+    if state_prefix:
+        preserved_source_status = f"{state_prefix} {preserved_source_status}"
+    return FirstInvestigationActivityEvidence(
+        state=state,
+        displayed_date=displayed_date,
+        event_sentence=event_sentence,
+        source_section=source_section,
+        report_identity=report_identity,
+        preserved_source_status=preserved_source_status,
+        source_url=source_url,
+    )
+
+
+def _matching_first_activity_event(
+    complaint_values: Mapping[str, Any],
+    related_records: list[Mapping[str, Any]],
+) -> Mapping[str, Any] | None:
+    complaint_id = _clean_source_evidence_text(complaint_values.get("complaint_id"))
+    claim_date = _clean_source_evidence_text(
+        complaint_values.get("first_investigation_activity_date")
+    )
+    if not complaint_id or not claim_date:
+        return None
+    candidates: list[Mapping[str, Any]] = []
+    for record in related_records:
+        if _optional_string(record, "entity_type") != "event":
+            continue
+        values = _mapping(record, "original_values")
+        event_type = re.sub(
+            r"[^a-z0-9]+",
+            " ",
+            _clean_source_evidence_text(values.get("event_type")).casefold(),
+        ).strip()
+        if (
+            _clean_source_evidence_text(values.get("complaint_id")) != complaint_id
+            or _clean_source_evidence_text(values.get("event_date")) != claim_date
+            or event_type != "investigation activity"
+        ):
+            continue
+        candidates.append(record)
+    if not candidates:
+        return None
+    return sorted(candidates, key=_first_activity_event_sort_key)[0]
+
+
+def _first_activity_event_sort_key(record: Mapping[str, Any]) -> tuple[int, int, str, str]:
+    values = _mapping(record, "original_values")
+    has_text = bool(_clean_source_evidence_text(values.get("event_text")))
+    has_section = bool(
+        _clean_source_evidence_text(values.get("extracted_from_section"))
+    )
+    return (
+        -int(has_text),
+        -int(has_section),
+        _optional_string(record, "stable_source_id"),
+        _optional_string(record, "source_record_key"),
+    )
+
+
+def _bounded_source_event_sentence(value: object, *, limit: int = 360) -> str:
+    text = _clean_source_evidence_text(value)
+    if not text:
+        return ""
+    sentence_match = re.match(r"^(.+?[.!?])(?:\s|$)", text)
+    sentence = sentence_match.group(1) if sentence_match else text
+    if len(sentence) <= limit:
+        return sentence
+    truncated = sentence[: limit - 1].rsplit(" ", 1)[0].rstrip(".,;:")
+    return f"{truncated}\N{HORIZONTAL ELLIPSIS}"
+
+
+def _clean_source_evidence_text(value: object) -> str:
+    if not isinstance(value, str):
+        return ""
+    return " ".join(value.split())
+
+
+def _preserved_source_status(source_document: Mapping[str, Any]) -> str:
+    source_recorded = _has_display_value(source_document.get("raw_path"))
+    source_openable = _source_url_available(source_document)
+    if source_recorded and source_openable:
+        return "A preserved source copy is recorded and the original public source can be opened."
+    if source_recorded:
+        return "A preserved source copy is recorded, but the original public source cannot currently be opened."
+    if source_openable:
+        return "The original public source can be opened; preserved-source status is not available from this record."
+    return "A preserved source document is not available from this record."
+
+
+def _render_first_activity_evidence_region(
+    evidence: FirstInvestigationActivityEvidence,
+) -> str:
+    event_sentence = (
+        evidence.event_sentence
+        if evidence.event_sentence
+        else "A supporting source event sentence is not available for this date."
+    )
+    source_section = (
+        evidence.source_section
+        if evidence.source_section
+        else "The source section is not available for this date."
+    )
+    original_source_action = ""
+    original_source_print = ""
+    if evidence.source_url:
+        original_source_action = (
+            f'<a class="button button-secondary source-evidence-original" href="{_escape(evidence.source_url)}" '
+            'target="_blank" rel="noopener noreferrer" '
+            'aria-label="Open original source for First investigation activity date">'
+            "Open original source</a>"
+        )
+        original_source_print = (
+            '<p class="source-evidence-print-url"><strong>Original source URL:</strong> '
+            f'<span data-print-url="{_escape(evidence.source_url)}"></span></p>'
+        )
+    return f"""        <div id="first-investigation-evidence" class="source-evidence-region" data-source-evidence-region data-evidence-state="{_escape(evidence.state)}" role="region" aria-labelledby="first-investigation-evidence-heading" tabindex="-1" hidden>
+          <p class="launch-kicker">Source-derived evidence</p>
+          <h4 id="first-investigation-evidence-heading">First investigation activity date evidence</h4>
+          <dl class="source-evidence-facts">
+            <div><dt>Displayed date</dt><dd>{_escape(evidence.displayed_date)}</dd></div>
+            <div><dt>Supporting source event</dt><dd>{_escape(event_sentence)}</dd></div>
+            <div><dt>Source section</dt><dd>{_escape(source_section)}</dd></div>
+            <div><dt>Complaint or report</dt><dd>{_escape(evidence.report_identity)}</dd></div>
+            <div><dt>Preserved source status</dt><dd>{_escape(evidence.preserved_source_status)}</dd></div>
+          </dl>
+          {original_source_action}
+          {original_source_print}
+        </div>"""
 
 
 def _timing_conflict_labels(original_values: Mapping[str, Any]) -> tuple[str, ...]:

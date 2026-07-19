@@ -29,6 +29,125 @@ def plain_output(result: subprocess.CompletedProcess[str]) -> str:
     return " ".join(without_ansi.split())
 
 
+def powershell_function(function_name: str, next_function_name: str) -> str:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    start = script.index(f"function {function_name}")
+    end = script.index(f"\nfunction {next_function_name}", start)
+    return script[start:end]
+
+
+def run_screenshot_tool_resolution(
+    requested: str,
+    *,
+    require_interaction: bool,
+    candidates: list[dict[str, object]],
+) -> dict[str, object]:
+    resolver = powershell_function("Resolve-ScreenshotTool", "Join-NativeArgument")
+    candidates_json = json.dumps(candidates)
+    interaction_literal = "$true" if require_interaction else "$false"
+    ps_script = (
+        resolver
+        + "\n$candidates = @(ConvertFrom-Json -InputObject @'\n"
+        + candidates_json
+        + "\n'@)\n"
+        + "$validator = { param($candidate) [pscustomobject]@{ "
+        + "Usable = [bool]$candidate.ProbeUsable; Status = [string]$candidate.ProbeStatus } }\n"
+        + f"Resolve-ScreenshotTool -Requested '{requested}' "
+        + f"-RequireInteractionAware {interaction_literal} "
+        + "-Candidates $candidates -Validator $validator | ConvertTo-Json -Depth 8\n"
+    )
+    result = subprocess.run(
+        [powershell(), "-NoProfile", "-Command", ps_script],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, plain_output(result)
+    return json.loads(result.stdout)
+
+
+def run_issue_498_scenario_contract(state: str, kind: str = "state") -> dict[str, object]:
+    contract_function = powershell_function(
+        "Get-Issue498ScenarioContract", "Invoke-Issue498BrowserCapture"
+    )
+    ps_script = (
+        contract_function
+        + "\n$route = @{ Name = 'contract-test'; Issue498State = '"
+        + state
+        + "'; Issue498Kind = '"
+        + kind
+        + "' }\n"
+        + "Get-Issue498ScenarioContract -Route $route | ConvertTo-Json -Depth 8\n"
+    )
+    result = subprocess.run(
+        [powershell(), "-NoProfile", "-Command", ps_script],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, plain_output(result)
+    return json.loads(result.stdout)
+
+
+def run_interaction_browser_session_constructor() -> dict[str, object]:
+    constructor = powershell_function(
+        "New-InteractionBrowserSessionState", "Start-InteractionAwareBrowserSession"
+    )
+    ps_script = (
+        constructor
+        + "\n$output = @(New-InteractionBrowserSessionState "
+        + "-Socket ([pscustomobject]@{ Name = 'socket' }) "
+        + "-Process ([pscustomobject]@{ Name = 'process' }) -ProfileDir 'profile')\n"
+        + "$state = $output[0]\n"
+        + "$before = $state.NextId\n"
+        + "$state.NextId = 1\n"
+        + "[ordered]@{ Count = $output.Count; Type = $state.GetType().FullName; "
+        + "Properties = @($state.PSObject.Properties.Name); NextIdBefore = $before; "
+        + "NextIdAfter = $state.NextId } | ConvertTo-Json -Depth 8\n"
+    )
+    result = subprocess.run(
+        [powershell(), "-NoProfile", "-Command", ps_script],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, plain_output(result)
+    return json.loads(result.stdout)
+
+
+def run_malformed_cdp_session_checks() -> dict[str, object]:
+    cdp_command = powershell_function("Invoke-CdpCommand", "Invoke-CdpEvaluate")
+    ps_script = (
+        cdp_command
+        + "\nfunction Get-GuardMessage { param([object]$Value) "
+        + "try { Invoke-CdpCommand -Session $Value -Method 'test' | Out-Null; 'NO_ERROR' } "
+        + "catch { $_.Exception.Message } }\n"
+        + "$arrayState = @([pscustomobject]@{ NextId = 0 }, [pscustomobject]@{ NextId = 0 })\n"
+        + "$missingState = [pscustomobject]@{ NextId = 0 }\n"
+        + "$readOnlyState = [pscustomobject]@{ Socket = 's'; Process = 'p'; ProfileDir = 'd' }\n"
+        + "$readOnlyState | Add-Member -MemberType ScriptProperty -Name NextId -Value { 0 }\n"
+        + "$incrementState = [pscustomobject]@{ Socket = $null; Process = 'p'; "
+        + "ProfileDir = 'd'; NextId = 0 }\n"
+        + "try { Invoke-CdpCommand -Session $incrementState -Method 'test' | Out-Null } catch { }\n"
+        + "[ordered]@{ Null = Get-GuardMessage $null; Array = Get-GuardMessage $arrayState; "
+        + "Missing = Get-GuardMessage $missingState; ReadOnly = Get-GuardMessage $readOnlyState; "
+        + "Incremented = $incrementState.NextId } "
+        + "| ConvertTo-Json -Depth 8\n"
+    )
+    result = subprocess.run(
+        [powershell(), "-NoProfile", "-Command", ps_script],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, plain_output(result)
+    return json.loads(result.stdout)
+
+
 def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
 
@@ -43,11 +162,14 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "$TimeoutSeconds = 10",
         "$IncludeHtml = $true",
         "$IncludeScreenshots = $true",
+        '[ValidateSet("auto", "playwright", "edge", "chrome")]',
+        '$ScreenshotToolPreference = "auto"',
         "AllowUnavailable",
         "Issue415",
         "Issue416",
         "Issue417",
         "Issue418",
+        "Issue498",
         "manifest.json",
         "route-status.csv",
         "route-assertions.csv",
@@ -139,6 +261,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     assert "-Issue416" in script
     assert "-Issue417" in script
     assert "-Issue418" in script
+    assert "-Issue498" in script
     for issue_415_route in (
         "/reviewer/records/substantiated?facility=107207198",
         "/reviewer/records/substantiated?facility_type=FOSTER%20FAMILY%20AGENCY",
@@ -209,6 +332,477 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "issue418 safe aggregate output",
     ):
         assert issue_418_assertion in script
+    for issue_498_scenario in (
+        "rt-src-002-supported-closed",
+        "rt-src-002-supported-open",
+        "rt-src-002-supported-open-narrow-desktop",
+        "rt-src-002-supported-open-mobile-compact",
+        "rt-src-002-supported-open-200-percent-reflow-approximation",
+        "rt-src-002-keyboard-focus",
+        "rt-src-002-document-only",
+        "rt-src-002-field-partial",
+        "rt-src-002-source-unavailable",
+        "rt-src-002-print",
+        "rt-src-002-focus-return",
+    ):
+        assert issue_498_scenario in script
+    for issue_498_contract in (
+        "issue498 intended evidence state",
+        "issue498 supported evidence fields",
+        "issue498 document-only boundaries",
+        "issue498 field-partial boundary",
+        "issue498 unavailable source action",
+        "issue498 keyboard focus contract",
+        "issue498 print contract",
+        "Issue #498 evidence routes are local fixture/demo-only",
+        "exact true browser zoom remains manual visual evidence",
+        "Invoke-RoutePrint",
+        "Invoke-Issue498BrowserCapture",
+    ):
+        assert issue_498_contract in script
+    for fixture_key in (
+        "ccld-complaint-32-CR-20240603151515-rt-src-002-supported-fixture",
+        "ccld-complaint-32-CR-20240610181818-rt-src-002-document-only-fixture",
+        "complaint%3Accld%3Acomplaint%3A32-CR-20220407124448",
+        "ccld-complaint-32-CR-20240120111111-rt-src-002-source-unavailable-fixture",
+    ):
+        assert fixture_key in script
+
+
+def test_capture_script_issue_498_defines_interaction_aware_standard_artifacts() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+
+    for expected in (
+        'Label = "rt-src-002-01-supported-closed"',
+        'Label = "rt-src-002-02-supported-open"',
+        'Label = "rt-src-002-03-supported-open-narrow-desktop"',
+        "ViewportWidth = 1024; ViewportHeight = 900",
+        'Label = "rt-src-002-04-supported-open-mobile-compact"',
+        "ViewportWidth = 390; ViewportHeight = 844",
+        'Label = "rt-src-002-05-supported-open-200-percent-reflow-approximation"',
+        "ViewportWidth = 720; ViewportHeight = 600",
+        'Label = "rt-src-002-06-keyboard-focus"',
+        'Label = "rt-src-002-07-document-only"',
+        'Label = "rt-src-002-08-field-partial"',
+        'Label = "rt-src-002-09-source-unavailable"',
+        'Label = "rt-src-002-10-print"',
+        'Label = "rt-src-002-11-focus-return"',
+        "#first-investigation-evidence-toggle",
+        'Path = "$issue498SupportedPath#first-investigation-evidence"',
+        "[data-source-evidence-region]",
+        "toggle.click()",
+        "toggle.getAttribute('aria-expanded')",
+        "region.hidden",
+        "document.activeElement === toggle",
+        "Keyboard focus indicator is not visibly styled.",
+        "Expected visible evidence text missing:",
+        "Expected enabled original-source action is missing.",
+        "Unavailable-source state exposes an enabled original-source action.",
+        "Open evidence component extends outside the viewport horizontally.",
+        "Page-level horizontal overflow was detected.",
+        "required visual targets exceed the governed viewport height.",
+        "Layout did not reach a stable frame.",
+        "document.fonts.ready",
+        "Page.captureScreenshot",
+        "Emulation.setEmulatedMedia",
+        "Page.printToPDF",
+        "displayHeaderFooter = $false",
+        "preferCSSPageSize = $true",
+        "Print claim content is incomplete.",
+        "Print-hidden control remains visible:",
+        "-browser-state.json",
+        "Issue #498 live-state capture failed:",
+        'Check "workflow step" -Status "WARN"',
+        'Check "keyboard flow text" -Status "WARN"',
+    ):
+        assert expected in script
+    for expected_live_text in (
+        "06/12/2024",
+        "VISIT DATE: 06/12/2024",
+        "report header",
+        "Document-level source only.",
+        "A supporting source event sentence is not available for this date.",
+        "The source section is not available for this date.",
+        "Field evidence incomplete.",
+        "investigation findings",
+        "Source document unavailable.",
+        "A preserved source copy is recorded and the original public source can be opened.",
+        (
+            "A preserved source copy is recorded, but the original public source "
+            "cannot currently be opened."
+        ),
+    ):
+        assert expected_live_text in script
+    assert "--format=A4" not in script
+    assert "rt-src-002-10-print.pdf" not in script
+
+
+def test_issue_498_contract_separates_claim_date_from_region_text() -> None:
+    expected_contracts = {
+        "supported": (
+            "06/12/2024",
+            [
+                "VISIT DATE: 06/12/2024",
+                "report header",
+                "A preserved source copy is recorded and the original public source can be opened.",
+            ],
+        ),
+        "document-only": (
+            "06/20/2024",
+            [
+                "Document-level source only.",
+                "A supporting source event sentence is not available for this date.",
+                "The source section is not available for this date.",
+                "A preserved source copy is recorded and the original public source can be opened.",
+            ],
+        ),
+        "field-partial": (
+            "04/14/2022",
+            [
+                "Field evidence incomplete.",
+                "A supporting source event sentence is not available for this date.",
+                "investigation findings",
+                "A preserved source copy is recorded and the original public source can be opened.",
+            ],
+        ),
+        "source-unavailable": (
+            "02/10/2024",
+            [
+                "Source document unavailable.",
+                "VISIT DATE: 02/10/2024",
+                "report header",
+                (
+                    "A preserved source copy is recorded, but the original public source "
+                    "cannot currently be opened."
+                ),
+            ],
+        ),
+    }
+
+    resolved_contracts: dict[str, dict[str, object]] = {}
+    for state, (expected_date, expected_region_texts) in expected_contracts.items():
+        contract = run_issue_498_scenario_contract(state)
+        resolved_contracts[state] = contract
+        assert contract["expectedDate"] == expected_date
+        assert contract["expectedRegionTexts"] == expected_region_texts
+        assert "expectedTexts" not in contract
+        assert contract["closedAccessibleName"] == (
+            "View source evidence for First investigation activity date"
+        )
+        assert contract["openAccessibleName"] == (
+            "Close source evidence for First investigation activity date"
+        )
+
+    assert "06/20/2024" not in resolved_contracts["document-only"]["expectedRegionTexts"]
+    assert "04/14/2022" not in resolved_contracts["field-partial"]["expectedRegionTexts"]
+
+
+def test_issue_498_capture_positions_and_verifies_visual_targets() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+
+    for positioning_contract in (
+        "scrollIntoView({ behavior: 'instant', block: 'center', inline: 'nearest' })",
+        "window.scrollTo({ top: centeredTop, left: 0, behavior: 'instant' })",
+        "await stableFrames()",
+        "fullyWithinViewport(dateElement)",
+        "intersectsViewport(region)",
+        "fullyWithinViewport(evidenceHeading)",
+        "fullyWithinViewport(sourceEventValue)",
+        "fullyWithinViewport(sourceSectionValue)",
+        "fullyWithinViewport(sourceStatusValue)",
+        "fullyWithinViewport(toggle)",
+        "fullyWithinViewport(sourceAction)",
+        "horizontallyWithinViewport(claim)",
+        "horizontallyWithinViewport(region)",
+        "document.documentElement.scrollWidth <= window.innerWidth + 1",
+        "document.body.scrollWidth <= window.innerWidth + 1",
+    ):
+        assert positioning_contract in script
+    assert "getClientRects().length" in script
+    assert "getClientRects().length" not in script.split(
+        "const intersectsViewport = (element) =>", maxsplit=1
+    )[1].split("const fullyWithinViewport", maxsplit=1)[0]
+
+
+def test_issue_498_keyboard_focus_uses_bounded_cdp_tab_navigation() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+
+    for keyboard_contract in (
+        'Method "Input.dispatchKeyEvent"',
+        '-Key "Tab" -Code "Tab" -VirtualKeyCode 9',
+        "$maximumTabPresses = 64",
+        "$tabIndex -le $maximumTabPresses",
+        'document.activeElement.id === \'first-investigation-evidence-toggle\'',
+        "Keyboard navigation did not reach the evidence trigger within",
+        "toggle.matches(':focus-visible')",
+        "Keyboard focus indicator is not visibly styled.",
+    ):
+        assert keyboard_contract in script
+    assert "toggle.focus()" not in script
+    assert "document.body.focus()" not in script
+
+
+def test_issue_498_keyboard_initial_state_is_awaited_before_native_navigation() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    initialization_start = script.index(
+        "$keyboardInitialization = Invoke-CdpEvaluate"
+    )
+    initialization_end = script.index(
+        "$keyboardTargetReached = $false", initialization_start
+    )
+    initialization = script[initialization_start:initialization_end]
+
+    for contract in (
+        "-AwaitPromise $true",
+        "(async function ()",
+        "const initialState = readState();",
+        "initialState.expanded === 'true' || initialState.regionVisible === true",
+        "toggle.click();",
+        "const closedState = await waitForClosedState();",
+        "requestAnimationFrame(resolve)",
+        "const maximumClosedStateFrames = 120",
+        "consecutiveClosedFrames >= 2",
+        "state.expanded === 'false'",
+        "state.hidden === true",
+        "state.regionVisible === false",
+        "state.accessibleName === closedAccessibleName",
+        "Keyboard initial state is inconsistent and cannot be resolved by one setup activation",
+        (
+            "Keyboard initial state normalization did not reach the verified closed "
+            "state after at most one setup activation"
+        ),
+        "keyboardInitialExpanded",
+        "keyboardInitialRegionVisible",
+        "keyboardInitialAccessibleName",
+        "keyboardInitialStateNormalized",
+        "keyboardClosedStateVerified",
+    ):
+        assert contract in initialization
+
+    assert initialization.index("const closedState = await waitForClosedState();") < (
+        initialization.index("start.focus();")
+    )
+    assert (
+        "if (-not [bool]$keyboardInitialization.keyboardClosedStateVerified)"
+        in initialization
+    )
+    for diagnostic in (
+        "keyboardInitialExpanded",
+        "keyboardInitialRegionVisible",
+        "keyboardInitialAccessibleName",
+        "keyboardInitialStateNormalized",
+        "keyboardClosedStateVerified",
+    ):
+        assert f"-NotePropertyName {diagnostic}" in script
+
+
+def test_issue_498_capture_verifies_governed_accessible_names_and_failure_cleanup() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+
+    assert "View source evidence for First investigation activity date" in script
+    assert "Close source evidence for First investigation activity date" in script
+    assert "toggle.getAttribute('aria-label')" in script
+    assert "Closed evidence trigger accessible name is incorrect." in script
+    assert "Open evidence trigger accessible name is incorrect during focus-return" in script
+    assert "Focus-return closed accessible name is incorrect." in script
+    assert "document.activeElement !== toggle || !region.hidden" in script
+    assert "Remove-Item -LiteralPath $ScreenshotPath" in script
+    assert "Issue #498 live-state capture failed:" in script
+    assert "ScreenshotCreated = $false" in script
+
+
+def test_issue_498_reflow_approximation_uses_governed_upper_and_lower_captures() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+
+    assert 'Label = "rt-src-002-05-supported-open-200-percent-reflow-approximation"' in script
+    assert (
+        'SupplementalScreenshotFileName = '
+        '"rt-src-002-05b-supported-open-200-percent-reflow-approximation-lower.png"'
+    ) in script
+    assert script.count("SupplementalScreenshotFileName =") == 1
+    assert "supplementalScreenshotPath" in script
+    assert "SupplementalScreenshotCreated" in script
+    assert "captureSegments" in script
+    assert "name: 'upper'" in script
+    assert "name: 'lower'" in script
+    assert script.count("viewportWidth: window.innerWidth") >= 2
+    assert script.count("viewportHeight: window.innerHeight") >= 2
+    assert "window.innerWidth !== 720 || window.innerHeight !== 600" in script
+    assert "elementBounds: { claimDate:" in script
+    assert "evidenceHeading: bounds(evidenceHeading)" in script
+    assert "sourceEvent: bounds(sourceEventValue)" in script
+    assert "elementBounds: { sourceSection:" in script
+    assert "preservedSourceStatus: bounds(sourceStatusValue)" in script
+    assert "originalSourceAction: bounds(sourceAction)" in script
+    assert script.count("scrollPosition: { x: window.scrollX, y: window.scrollY }") == 2
+
+
+def test_issue_498_reflow_segments_preserve_clipping_and_failure_cleanup() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+
+    for contract in (
+        "fullyWithinViewport(dateElement)",
+        "fullyWithinViewport(evidenceHeading)",
+        "fullyWithinViewport(sourceEventValue)",
+        "fullyWithinViewport(sourceSectionValue)",
+        "fullyWithinViewport(sourceStatusValue)",
+        "fullyWithinViewport(sourceAction)",
+        "Lower reflow evidence region does not intersect the screenshot viewport.",
+        "Lower reflow evidence region extends outside the viewport horizontally.",
+        "Lower reflow page-level horizontal overflow was detected.",
+        "Upper and lower reflow evidence segments were not both verified.",
+        "Remove-Item -LiteralPath $SupplementalScreenshotPath",
+        "Remove-Item -LiteralPath $supplementalShotFile",
+    ):
+        assert contract in script
+
+
+def test_issue_498_focus_return_uses_trusted_native_space_activation() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    focus_return_start = script.index("if ($scenarioContract.shouldReturnFocus)")
+    focus_return_end = script.index("$scenarioScript =", focus_return_start)
+    focus_return_contract = script[focus_return_start:focus_return_end]
+
+    for contract in (
+        "Invoke-CdpSpaceActivation -Session $Session",
+        'key = " "',
+        'code = "Space"',
+        "windowsVirtualKeyCode = 32",
+        "nativeVirtualKeyCode = 32",
+        'text = " "',
+        'unmodifiedText = " "',
+        'type = "rawKeyDown"',
+        'type = "keyUp"',
+        "__rtSrc002KeyboardOpenClick",
+        "__rtSrc002KeyboardCloseClick",
+        "event.isTrusted === true",
+        "count === 1",
+        "keyboardActivationKey",
+        "keyboardOpenTrustedClick",
+        "keyboardCloseTrustedClick",
+        "focusReturnOpenAccessibleName",
+        "document.activeElement.id === 'first-investigation-evidence-toggle'",
+    ):
+        assert contract in script
+    assert "toggle.click()" not in focus_return_contract
+    assert '-Key "Enter"' not in script
+
+
+def test_interaction_browser_session_constructor_returns_one_mutable_state_object() -> None:
+    result = run_interaction_browser_session_constructor()
+
+    assert result == {
+        "Count": 1,
+        "Type": "System.Management.Automation.PSCustomObject",
+        "Properties": ["Socket", "Process", "ProfileDir", "NextId"],
+        "NextIdBefore": 0,
+        "NextIdAfter": 1,
+    }
+
+
+def test_browser_session_startup_suppresses_connection_output_and_guards_shape() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+
+    assert (
+        "$null = $socket.ConnectAsync([Uri]$target.webSocketDebuggerUrl, "
+        "$connectTimeout.Token).GetAwaiter().GetResult()"
+    ) in script
+    assert (
+        "$null = $Session.Socket.SendAsync([ArraySegment[byte]]::new($bytes), "
+        "[System.Net.WebSockets.WebSocketMessageType]::Text, $true, "
+        "$sendTimeout.Token).GetAwaiter().GetResult()"
+    ) in script
+    assert (
+        "$browserSessionOutput = @(Start-InteractionAwareBrowserSession "
+        "-Tool $resolvedScreenshotTool)"
+    ) in script
+    assert "$browserSessionOutput.Count -ne 1" in script
+    assert "Returned types: $returnedTypeSummary" in script
+    assert '$requiredSessionProperties = @("Socket", "Process", "ProfileDir", "NextId")' in script
+    assert "$missingSessionProperties.Count -gt 0" in script
+
+
+def test_cdp_command_rejects_malformed_session_state_before_socket_use() -> None:
+    messages = run_malformed_cdp_session_checks()
+
+    assert messages["Null"] == "Malformed CDP session state: session is null."
+    assert "expected one session object, received array type" in messages["Array"]
+    assert "missing required properties: Socket, Process, ProfileDir" in messages["Missing"]
+    assert "NextId is not writable" in messages["ReadOnly"]
+    assert messages["Incremented"] == 1
+
+
+def test_screenshot_tool_auto_resolution_skips_noninteractive_candidate() -> None:
+    resolution = run_screenshot_tool_resolution(
+        "auto",
+        require_interaction=True,
+        candidates=[
+            {
+                "Name": "playwright",
+                "Kind": "playwright",
+                "Command": "playwright.cmd",
+                "FullPage": True,
+                "InteractionAware": False,
+                "Discovery": "test",
+                "ProbeUsable": True,
+                "ProbeStatus": "usable Playwright CLI and browser executable",
+            },
+            {
+                "Name": "msedge-headless",
+                "Kind": "edge",
+                "Command": "msedge.exe",
+                "FullPage": False,
+                "InteractionAware": True,
+                "Discovery": "test",
+                "ProbeUsable": True,
+                "ProbeStatus": "usable headless browser executable",
+            },
+        ],
+    )
+
+    assert resolution["Requested"] == "auto"
+    assert resolution["Resolved"] == "msedge-headless"
+    assert resolution["SupportsInteractionAwareCapture"] is True
+    assert len(resolution["Attempts"]) == 2
+    assert "rejected because interaction-aware capture is required" in resolution[
+        "Attempts"
+    ][0]["validation"]
+
+
+def test_explicit_screenshot_tool_failure_does_not_silently_fallback() -> None:
+    resolution = run_screenshot_tool_resolution(
+        "playwright",
+        require_interaction=True,
+        candidates=[
+            {
+                "Name": "playwright",
+                "Kind": "playwright",
+                "Command": "playwright.cmd",
+                "FullPage": True,
+                "InteractionAware": False,
+                "Discovery": "test",
+                "ProbeUsable": False,
+                "ProbeStatus": "Playwright browser validation failed: missing executable",
+            },
+            {
+                "Name": "msedge-headless",
+                "Kind": "edge",
+                "Command": "msedge.exe",
+                "FullPage": False,
+                "InteractionAware": True,
+                "Discovery": "test",
+                "ProbeUsable": True,
+                "ProbeStatus": "usable headless browser executable",
+            },
+        ],
+    )
+
+    assert resolution["Requested"] == "playwright"
+    assert resolution["Resolved"] == "none"
+    assert resolution["SupportsInteractionAwareCapture"] is False
+    assert len(resolution["Attempts"]) == 1
+    assert "missing executable" in resolution["ValidationStatus"]
+    assert "Explicit screenshot tool 'playwright' is unusable" in resolution["Error"]
 
 
 def issue_417_assertion_function() -> str:
@@ -817,6 +1411,105 @@ def test_capture_script_issue_418_mode_writes_focused_artifacts() -> None:
         assert "issue418 h1" in assertions_csv
         assert "-Issue418" in capture_command
         assert "Focused issue #418 complaint trend evidence" in manifest["evidencePurpose"]
+    finally:
+        shutil.rmtree(output_dir, ignore_errors=True)
+
+
+def test_capture_script_issue_498_mode_writes_named_local_fixture_scenarios() -> None:
+    output_dir = ROOT / "data" / "processed" / "ui-evidence-test"
+    shutil.rmtree(output_dir, ignore_errors=True)
+    try:
+        result = subprocess.run(
+            [
+                powershell(),
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(CAPTURE_SCRIPT),
+                "-BaseUrl",
+                "http://127.0.0.1:9",
+                "-Mode",
+                "fixture",
+                "-OutputDir",
+                "data/processed/ui-evidence-test",
+                "-TimeoutSeconds",
+                "1",
+                "-IncludeScreenshots:$false",
+                "-Issue498",
+                "-AllowUnavailable",
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        output = plain_output(result)
+
+        assert result.returncode == 0, output
+        packets = sorted(output_dir.glob("*-fixture-issue-498"))
+        assert packets, output
+        packet = packets[-1]
+        zip_packet = packet.with_suffix(".zip")
+        manifest = json.loads((packet / "manifest.json").read_text(encoding="utf-8-sig"))
+        route_status_header = (packet / "route-status.csv").read_text(
+            encoding="utf-8-sig"
+        ).splitlines()[0]
+        capture_command = (packet / "diagnostics" / "capture-command.txt").read_text(
+            encoding="utf-8-sig"
+        )
+
+        assert manifest["issue498"]["enabled"] is True
+        for standard_file in (
+            "manifest.json",
+            "route-status.csv",
+            "route-assertions.csv",
+            "route-text-markers.txt",
+            "README.txt",
+        ):
+            assert (packet / standard_file).exists()
+        for standard_directory in (
+            "html",
+            "text",
+            "accessibility",
+            "diagnostics",
+            "screenshots",
+            "print",
+        ):
+            assert (packet / standard_directory).is_dir()
+        assert zip_packet.exists()
+        assert manifest["issue498"]["routeCount"] == 11
+        assert manifest["output"]["counts"]["issue498"] == 11
+        assert len(manifest["routeList"]) == 11
+        assert "supplementalScreenshotPath" in route_status_header
+        assert all(route["supplementalScreenshotPath"] == "" for route in manifest["routes"])
+        assert manifest["issue498"]["scenarios"] == [
+            "rt-src-002-supported-closed",
+            "rt-src-002-supported-open",
+            "rt-src-002-supported-open-narrow-desktop",
+            "rt-src-002-supported-open-mobile-compact",
+            "rt-src-002-supported-open-200-percent-reflow-approximation",
+            "rt-src-002-keyboard-focus",
+            "rt-src-002-document-only",
+            "rt-src-002-field-partial",
+            "rt-src-002-source-unavailable",
+            "rt-src-002-print",
+            "rt-src-002-focus-return",
+        ]
+        assert manifest["screenshotTool"] == {
+            "requested": "auto",
+            "resolved": "none",
+            "validationStatus": "screenshots not requested",
+            "executable": "",
+            "supportsInteractionAwareCapture": False,
+            "attempts": [],
+        }
+        assert "exact true browser zoom remains manual visual evidence" in manifest[
+            "issue498"
+        ]["zoomLimitation"]
+        assert "-Issue498" in capture_command
+        assert "-ScreenshotToolPreference auto" in capture_command
+        assert "Focused RT-SRC-002 local fixture evidence" in manifest["evidencePurpose"]
     finally:
         shutil.rmtree(output_dir, ignore_errors=True)
 
