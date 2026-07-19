@@ -1,0 +1,6 @@
+{
+  "objectIdFieldName": "OBJECTID",
+  "features": [
+    {"attributes": {"OBJECTID": 3, "FAC_NBR": "100003", "NAME": "Synthetic Center Three", "FAC_TYPE_CODE": 700, "FAC_TYPE_DESC": "Synthetic Center", "STATUS": "CLOSED", "FAC_ADDR1": "3 Public Way", "FAC_CITY": "Gamma", "FAC_STATE": "CA", "FAC_ZIP": "90003", "COUNTY_NAME": "Example", "CAPACITY": 12, "LICENSEE": "Public Licensee Three", "FAC_ADMIN": "", "FAC_PHONE": "555-0103", "FAC_DO_DESC": "North", "FAC_LIC_FIRST_DATE": 1640995200000, "FAC_CLOSED_DATE": 1704067200000, "FILE_DATE": 1717200000000}}
+  ]
+}
