@@ -211,6 +211,15 @@ the governed primary future review experience.
   terms/license conflict, content freshness, and code `733` remain unresolved.
   No connector, import, backfill, UI, database, scheduling, deployment,
   Cloudflare, or QNAP activation was approved or performed.
+- Added Issue #516 as the Build Week completion-scope decision. Issue #490 stays
+  completed evaluation evidence, but the final Build Week release now requires
+  the sequenced ArcGIS production work in the
+  [Build Week ArcGIS facility-reference completion plan](docs/planning/build-week-2026-arcgis-facility-reference-completion-plan.md).
+  The statewide candidate remains inactive until a new shadow comparison and
+  explicit adopt, supplement, or reject gate pass. If adoption is supported,
+  ArcGIS becomes the governed normal production facility-reference source; the
+  program CSV snapshots remain retained for provenance, history, comparison,
+  and controlled fallback rather than normal active use.
 - Added design and usability governance for the local Datasette review
 	experience.
 - Documented delay review flags as screening aids, not conclusions.
@@ -687,6 +696,14 @@ the governed primary future review experience.
 
 ## Near-term milestones
 
+- Execute the Build Week ArcGIS completion phases in order: (A) governed shadow
+  connector and ArcGIS/CSV/PostgreSQL comparison; (B) explicit source decision
+  and cutover authorization; (C) Issue #482 unified facility identity and
+  controlled provenance-preserving backfill; (D) Issue #453/#477 source-to-
+  screen and operator reconciliation; (E) Issue #478 scheduled refresh,
+  locking, checkpoints, and recovery; and (F) deployment, automated Hosted
+  acceptance, final documentation, final SHA, and release tag. A later phase
+  cannot infer an earlier phase passed merely because code merged.
 - Use Issue #453's v1 producer and Issue #477's read-only dashboard through the
   completed production-auth/runtime-package bridge while preserving explicit
   fixture, runtime, and unavailable evidence labels. Hosted acceptance still
@@ -744,6 +761,12 @@ resolve a concrete MVP-blocking risk. Deferred readiness work stays tracked, but
 it should be sequenced by user value and MVP risk rather than by implementation
 convenience.
 
+For the remainder of Build Week, Issue #516 and the ArcGIS completion plan are
+the governing priority. They supersede the earlier general deferral of
+production facility-reference synchronization only for this bounded sequence;
+all evidence, authorization, provenance, accessibility, deployment, and Hosted
+acceptance gates remain mandatory.
+
 Before reviewer-facing UI implementation begins, use the numbered
 RecordsTracker UI/product improvement inventory in `DESIGN_AND_USABILITY.md` as
 the approval gate. Implementation branches should name the approved item
@@ -767,6 +790,9 @@ deployment, QNAP runtime, or production auth work.
 	execution, deployment, database-backed lookup, persisted feedback, and non-CCLD
 	sources only when they unlock a user-facing milestone or remove a concrete
 	MVP-blocking risk.
+
+The numbered list above continues to guide other product work. It must not be
+used to displace or abbreviate the required Build Week ArcGIS phases.
 
 ## Production-discovery transition path
 
@@ -835,9 +861,15 @@ define the smallest useful product shape:
 	facility numbers.
 - Source-verification planning/checklists, production auth/provider readiness,
 	audit UI/export, export packet generation, reset/reload execution, production
-	deployment, database-backed facility lookup, production facility reference
-	import/sync, non-CCLD sources, persisted tester feedback, and broader reviewer
+	deployment outside the approved Build Week release sequence, non-CCLD sources,
+	persisted tester feedback, and broader reviewer
 	workflow layers remain tracked but deferred until the product-benefit gate says
 	they are needed. Controlled browser-triggered CCLD retrieval now has a first
 	implemented slice for complaint records; broader retrieval capabilities remain
 	bounded by ADR-0016 and future user value.
+
+Production ArcGIS facility-reference import/sync, the unified facility identity
+projection, source-to-screen/operator reconciliation, and scheduled governed
+refresh are not deferred Build Week items: they are required phases under
+Issues #482, #453, #477, #478, and #516. Their implementation remains gated by
+the completion plan and must not be confused with statewide complaint crawling.

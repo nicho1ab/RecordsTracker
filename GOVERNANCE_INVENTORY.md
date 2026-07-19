@@ -169,6 +169,29 @@
   terms/license conflict, content freshness, and code `733` mapping remain
   unresolved adoption gates. No source activation or production behavior was
   approved.
+- Build Week facility-reference completion status: Issue #516 makes full
+  production implementation of the ArcGIS replacement sequence required before
+  the final Build Week release. This forward scope does not change Issue #490's
+  verdict or activate the candidate. The governed sequence is: shadow connector
+  and ArcGIS/CSV/PostgreSQL comparison; explicit adopt/supplement/reject
+  decision; Issue #482 unified identity and controlled backfill; Issue
+  #453/#477 source-to-screen and operator reconciliation; Issue #478 scheduled
+  refresh and checkpoint recovery; then deployment, automated Hosted
+  acceptance, final documentation, final SHA, and release tag. See the
+  [Build Week ArcGIS facility-reference completion plan](docs/planning/build-week-2026-arcgis-facility-reference-completion-plan.md).
+- Active-source preservation rule: until the decision and cutover gates pass,
+  the program-specific CSV family remains the governed active source family. If
+  adoption is supported, ArcGIS becomes the normal active production source
+  only after a validated cutover. CSV snapshots remain immutable provenance,
+  history, comparison, and controlled-fallback evidence. Content change is
+  determined from preserved bytes, normalized content, schema/domain
+  fingerprints, and Facility ID sets, never catalog timestamps alone.
+- Identity and label rule: one governed facility identity projection must serve
+  search, facility hub, queue, complaint detail, packet views, exports, and
+  operator reporting. Current reference values retain field-level provenance
+  and conflicts without rewriting historical complaint context. Raw `733`
+  remains unresolved unless verified source or governed mapping evidence proves
+  a descriptive label.
 - Source-to-screen operator coverage status: Issue #453's deterministic v1
   producer is connected to Issue #477's read-only dashboard through the stable
   `source_to_screen_coverage` boundary. The consumer uses producer-owned schema,
@@ -240,16 +263,21 @@
 
 ## Remaining deferred decisions
 
-- Issue #477 retry, dry-run start, apply, confirmation, cancel, resume,
-  backfill, retrieval/import execution, job/checkpoint mutation, persistence,
-  scheduling, live package discovery, and mutation-specific audit behavior.
-  Coverage-package retention duration also remains undecided; disposition stays
-  `pending_policy` and automated cleanup remains unauthorized.
-- Statewide facility-source adoption remains deferred until a current statewide
-  ArcGIS service and matching stable export are jointly profiled; same-title
-  source succession, publisher terms and license, candidate-specific system-of-
-  record and maintainer status, content-change behavior, facility-type domains,
-  code `733`, and provenance-preserving precedence are explicitly resolved.
+- Issue #477's broad mutation console remains unapproved. Build Week requires
+  only read-only monitoring and the minimum separately governed operational
+  actions needed to observe and safely control ArcGIS refresh and backfill jobs.
+  Each action still requires an explicit permission, finite state contract,
+  audit/evidence behavior, and fail-closed tests. Coverage-package retention
+  duration remains undecided; disposition stays `pending_policy` and automated
+  cleanup remains unauthorized unless separately approved.
+- Statewide facility-source adoption is a required Build Week decision, not a
+  preselected result. A current ArcGIS service and matching stable export must
+  be jointly profiled in shadow mode; same-title source succession, publisher
+  terms and license, candidate-specific system-of-record and maintainer status,
+  normalized content-change behavior, facility-type domains, `733`, and
+  provenance-preserving precedence must be resolved or carried as explicit
+  blockers. Failure of those gates results in supplement/reject and preserves
+  the active CSV source rather than forcing adoption.
 - Concrete frontend framework, API framework, concrete auth provider instance
   and configuration, hosting platform, deployment pipeline, retention durations
   and automation, backup/restore policy, final design system, and production
@@ -297,6 +325,14 @@ clear forms, efficient facility lookup, understandable result states,
 accessible structure, contextual help, low-friction reviewer actions, and useful
 feedback capture are product requirements when they reduce tester confusion
 without creating avoidable rework.
+
+Issue #516 supersedes the deferral below for the bounded ArcGIS facility-
+reference replacement sequence. Database-backed facility lookup, controlled
+production facility-reference import/sync, operator reconciliation, scheduled
+refresh, and the associated approved deployment are required Build Week phases,
+subject to the completion plan's evidence and authorization gates. The table
+continues to govern unrelated product work and must not be read as permission to
+skip those phases.
 
 | Deferred item | Why deferred | User-facing milestone first | Necessary when | Needed before |
 |---|---|---|---|---|

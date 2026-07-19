@@ -341,10 +341,27 @@ The repository establishes this boundary:
   `bb5b1246fbf677a328c70abad48af3023fa1ebb0`
 - **First eligible Build Week commit:**
   `508102077ec57dcf673142620e412ad2bf7078b1`
+- **Current deployed Build Week checkpoint (not the final release):**
+  `d7e9b1fff9e1826c3387a7313777d14c1480d3b4`
 - **Final Build Week release:**
-  `<FINAL BUILD WEEK COMMIT>`
+  `<PENDING FINAL BUILD WEEK COMMIT>`
 - **Release tag:**
-  `openai-build-week-2026`
+  `openai-build-week-2026` (must eventually point to the final accepted SHA)
+
+The current deployed checkpoint is an intermediate accepted checkpoint. It must
+not be described or tagged as the final Build Week release. Build Week
+completion includes the complete governed ArcGIS facility-reference replacement
+sequence in the
+[ArcGIS facility-reference completion plan](docs/planning/build-week-2026-arcgis-facility-reference-completion-plan.md):
+immutable snapshot retrieval, normalized-content change detection, shadow
+comparison, an explicit source decision, controlled cutover and PostgreSQL
+backfill, one facility identity projection, source-to-screen and operator
+reconciliation, scheduled refresh with checkpoint recovery, production
+deployment, and automated Hosted acceptance.
+
+Until every required phase is merged, deployed, and accepted, the final Build
+Week SHA remains pending and tag `openai-build-week-2026` must not be moved to
+the current checkpoint.
 
 During Build Week, I added or materially expanded:
 
@@ -361,10 +378,17 @@ During Build Week, I added or materially expanded:
 - Responsive and accessible Civic Ledger implementation.
 - Large-corpus pagination and exact-route UI evidence.
 - Public facility-reference enrichment.
-- Readable facility-type resolution.
-- Complete facility identity projection across reviewer pages.
+- Governed display of verified facility-type labels in current loaded data.
+- Expanded facility identity projection across current reviewer pages.
 - Freshness metadata and source-precedence rules.
 - Production-oriented deployment, backup, validation, and release procedures.
+
+Those completed extensions do not establish that the ArcGIS candidate is
+currently active, statewide-complete, current, or authoritative. Issue #490
+ended with an inconclusive evaluation and the program-specific CSV source family
+remains active pending the governed replacement sequence. The final Build Week
+release must add the remaining ArcGIS production implementation without
+inventing a descriptive label for raw type value `733`.
 
 These changes transformed RecordsTracker from a promising early application into a substantially more complete public-record intelligence platform.
 
