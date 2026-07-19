@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://recordstracker.example/schemas/issue-490-statewide-facility-source-profile.schema.json",
+  "title": "Issue 490 statewide facility source evaluation output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "output_type",
+    "generated_at",
+    "status",
+    "warnings",
+    "data"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": "issue-490.source-profile.v1"
+    },
+    "output_type": {
+      "enum": [
+        "source-endpoints",
+        "snapshot-manifest",
+        "schema-profile",
+        "pagination-equivalence",
+        "facility-profile",
+        "content-change",
+        "validation-summary"
+      ]
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "status": {
+      "enum": [
+        "pass",
+        "fail",
+        "warning",
+        "blocked",
+        "inconclusive",
+        "not_applicable"
+      ]
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      }
+    },
+    "data": {
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "output_type": {
+            "const": "source-endpoints"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "required": [
+              "endpoints",
+              "candidate_identities",
+              "proposed_endpoints"
+            ],
+            "properties": {
+              "endpoints": {
+                "type": "array"
+              },
+              "candidate_identities": {
+                "type": "array"
+              },
+              "proposed_endpoints": {
+                "type": "array"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "output_type": {
+            "const": "snapshot-manifest"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "required": [
+              "artifacts",
+              "sanitized_redirect_chain"
+            ],
+            "properties": {
+              "artifacts": {
+                "type": "array"
+              },
+              "sanitized_redirect_chain": {
+                "type": "array"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "output_type": {
+            "const": "schema-profile"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "required": [
+              "sources"
+            ],
+            "properties": {
+              "sources": {
+                "type": "array"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "output_type": {
+            "const": "pagination-equivalence"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "required": [
+              "arcgis",
+              "datastores",
+              "download_service_equivalence"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "output_type": {
+            "const": "facility-profile"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "required": [
+              "sources",
+              "aggregate",
+              "code_733"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "output_type": {
+            "const": "content-change"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "required": [
+              "comparisons"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "output_type": {
+            "const": "validation-summary"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "required": [
+              "checks",
+              "deliverables"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

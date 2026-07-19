@@ -1,0 +1,46 @@
+{
+  "objectIdFieldName": "OBJECTID",
+  "fields": [
+    {
+      "name": "OBJECTID",
+      "type": "esriFieldTypeOID"
+    },
+    {
+      "name": "facility_number",
+      "type": "esriFieldTypeString"
+    },
+    {
+      "name": "facility_type_code",
+      "type": "esriFieldTypeInteger"
+    },
+    {
+      "name": "facility_type_label",
+      "type": "esriFieldTypeString"
+    },
+    {
+      "name": "status",
+      "type": "esriFieldTypeString"
+    }
+  ],
+  "features": [
+    {
+      "attributes": {
+        "OBJECTID": 1,
+        "facility_number": "100001",
+        "facility_type_code": 101,
+        "facility_type_label": "Synthetic Center",
+        "status": "LICENSED"
+      }
+    },
+    {
+      "attributes": {
+        "OBJECTID": 2,
+        "facility_number": "100002",
+        "facility_type_code": 101,
+        "facility_type_label": "Synthetic Center",
+        "status": "CLOSED"
+      }
+    }
+  ],
+  "exceededTransferLimit": true
+}

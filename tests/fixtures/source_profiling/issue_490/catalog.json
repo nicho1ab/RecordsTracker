@@ -1,0 +1,12 @@
+{
+  "title": "Synthetic statewide facility catalog",
+  "publisher": "Synthetic public agency",
+  "dataset_id": "synthetic-statewide",
+  "resources": [
+    {
+      "id": "synthetic-download",
+      "format": "CSV",
+      "url": "https://public.example.test/facilities.csv"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "objectIdFieldName": "OBJECTID",
+  "features": [
+    {
+      "attributes": {
+        "OBJECTID": 1,
+        "facility_number": "100001",
+        "facility_type_code": 101,
+        "facility_type_label": "Synthetic Center",
+        "status": "CLOSED"
+      }
+    },
+    {
+      "attributes": {
+        "OBJECTID": 4,
+        "facility_number": "100004",
+        "facility_type_code": 101,
+        "facility_type_label": "Synthetic Center",
+        "status": "LICENSED"
+      }
+    }
+  ]
+}

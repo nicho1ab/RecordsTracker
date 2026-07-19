@@ -1,0 +1,15 @@
+{
+  "objectIdFieldName": "OBJECTID",
+  "features": [
+    {
+      "attributes": {
+        "OBJECTID": 3,
+        "facility_number": "100003",
+        "facility_type_code": null,
+        "facility_type_label": "Unresolved Type",
+        "status": "INACTIVE"
+      }
+    }
+  ],
+  "exceededTransferLimit": false
+}

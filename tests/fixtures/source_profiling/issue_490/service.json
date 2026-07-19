@@ -1,0 +1,13 @@
+{
+  "currentVersion": 11.3,
+  "serviceDescription": "Synthetic facility service",
+  "capabilities": "Query",
+  "supportedQueryFormats": "JSON, geoJSON",
+  "maxRecordCount": 2,
+  "layers": [
+    {
+      "id": 0,
+      "name": "Synthetic Facilities"
+    }
+  ]
+}
