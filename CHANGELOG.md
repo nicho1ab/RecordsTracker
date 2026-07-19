@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Added the approved reviewer-detail source-evidence interaction for First
+  investigation activity date. The readable date now has separate copy,
+  bounded evidence, and original-source actions; deterministic matching uses
+  complaint identity, date, investigation-activity semantics, completeness,
+  and stable source identity, with truthful document-only, field-partial, and
+  source-unavailable states plus accessible focus return, responsive reflow,
+  and print-safe evidence without changing source-derived or reviewer-created
+  data.
 - Added the approved RecordsTracker favicon to browser tabs across all
   server-rendered pages through the shared HTML head, with the canonical local
   icon served at `/favicon.ico`.

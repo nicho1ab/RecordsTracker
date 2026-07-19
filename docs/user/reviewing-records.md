@@ -123,6 +123,24 @@ verified numeric value `0`. When valid displayed milestone dates do not agree
 with a governed stored duration, reviewer detail keeps both source-derived facts
 and shows a concise **Timing mismatch** cue so the source can be checked.
 
+When a First investigation activity date is available, use **Copy date** to
+copy only its readable `MM/DD/YYYY` value. Use **View source evidence** to open
+the bounded evidence associated with that date; the date remains visible and
+the action changes to **Close source evidence**. The evidence shows at most one
+supporting investigation-activity sentence, its source section, the complaint
+or report identity, and a reviewer-safe preserved-source status. **Open original
+source** remains a separate action and opens the existing public CCLD source.
+
+Fallback wording is deliberately limited. **Document-level source only** means
+the report link exists but no matching investigation-activity event supports
+the displayed date. **Field evidence incomplete** identifies a missing event
+sentence or source section without claiming the report is complete. **Source
+document unavailable** keeps the readable date but does not show an active
+original-source action. If the First investigation activity date itself is not
+provided, the evidence controls are not shown. Opening, closing, or copying this
+evidence does not change source-derived facts, reviewer-created status or notes,
+audit rows, or import state.
+
 The attorney-tier detail uses the source-derived finding/status and shows
 governed allegation categories with allegations and findings; there is no
 separate canonical complaint-type field to invent or display. Internal complaint,

@@ -4413,6 +4413,14 @@ def test_reviewer_ui_detail_render_is_non_mutating() -> None:
     }
     assert "Complaint overview" in html
     assert "Key dates" in html
+    assert 'data-evidence-state="field-partial"' in html
+    assert "Field evidence incomplete." in html
+    assert 'aria-label="Copy First investigation activity date"' in html
+    assert 'aria-label="View source evidence for First investigation activity date"' in html
+    assert "A supporting source event sentence is not available for this date." in html
+    assert "investigation findings" in html
+    assert "Complaint/report 32-CR-20220407124448" in html
+    assert "Open original source" in html
     assert "Status and note" in html
     assert "Field-note guidance" not in html
     assert "feedback item for this record" not in html
