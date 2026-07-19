@@ -30,6 +30,14 @@ print or export, and submit feedback. Product and architecture requirements
 must preserve deeper operator and developer visibility, but separate those
 diagnostics from the default reviewer surface.
 
+For OpenAI Build Week 2026, the current deployed checkpoint
+`d7e9b1fff9e1826c3387a7313777d14c1480d3b4` is intermediate, not final. The
+remaining completion scope is the governed production replacement of the normal
+program-specific CSV facility-reference path with the statewide ArcGIS source,
+but only after shadow comparison and an explicit evidence-supported source
+decision. The required sequence is defined in the
+[Build Week ArcGIS facility-reference completion plan](docs/planning/build-week-2026-arcgis-facility-reference-completion-plan.md).
+
 ## Primary goal
 
 Advance a governed public-record review solution that ingests public facility
@@ -42,6 +50,14 @@ accessibility, and exports.
 Datasette is retained as a validation, inspection, debugging, local exploration,
 and export-support layer. It is no longer the governed primary future review
 experience.
+
+The Build Week facility-reference goal is one provenance-preserving identity
+projection across search, facility hub, queue, complaint detail, packet views,
+exports, and operator reporting; controlled ArcGIS backfill and reconciliation;
+scheduled refresh with recovery; and automated Hosted acceptance. The program
+CSV snapshots remain retained as history and controlled fallback. Raw type
+value `733` must not receive a descriptive label without verified source or
+governed mapping evidence.
 
 ## Initial source
 
@@ -72,6 +88,9 @@ Initial facility:
 - Documentation is generated and maintained for developer and end-user audiences.
 - The presentation layer meets ADA digital accessibility requirements.
 - The project can add future source connectors without rewriting the architecture.
+- The final Build Week release is set only after the complete ArcGIS replacement
+  sequence is merged, deployed, reconciled, and accepted through automated
+  Hosted evidence.
 
 ## Non-goals
 

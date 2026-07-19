@@ -1,5 +1,18 @@
 # Known Limitations
 
+- The deployed Build Week checkpoint
+  `d7e9b1fff9e1826c3387a7313777d14c1480d3b4` is not the final Build Week
+  release. The statewide ArcGIS facility-reference candidate is not yet a
+  production connector or active source. Issue #490 remains a completed,
+  inconclusive evaluation; the program-specific CSV family remains the current
+  governed source family while the shadow comparison, source decision,
+  controlled cutover/backfill, unified identity projection, source-to-screen
+  reconciliation, scheduled refresh/recovery, deployment, and automated Hosted
+  acceptance in the
+  [Build Week ArcGIS completion plan](docs/planning/build-week-2026-arcgis-facility-reference-completion-plan.md)
+  remain incomplete. Statewide access/equivalence, authority and license,
+  normalized content freshness, conflicts, cadence, and raw type value `733`
+  remain unresolved until those gates produce evidence.
 - The authenticated operator source-coverage dashboard consumes validated
   Issue #453 v1 packages and exposes only GET summary, facility, job, aggregate
   CSV, and grouped Facility ID reads. Production requests require a fully
@@ -289,12 +302,16 @@
     completeness, statewide coverage, legal conclusions, or facility-wide
     conduct. Reviewer-created note text and raw traceability internals remain
     outside the hub.
-- Production-readiness items such as source-verification planning, auth provider
-    integration, audit UI/export, export packet generation, reset/reload execution,
-    public deployment, production monitoring, database-backed lookup, non-CCLD
-    sources, and persisted tester feedback remain deferred
+- Production-readiness items such as unrelated source-verification planning,
+    auth provider integration beyond the approved production boundary, audit
+    UI/export, export packet generation, reset/reload execution, public
+    deployment outside the governed release sequence, non-CCLD sources, and
+    persisted tester feedback remain deferred
     unless they directly unlock tester value or resolve a concrete MVP-blocking
-    risk.
+    risk. The ArcGIS facility-reference replacement, PostgreSQL backfill,
+    operator reconciliation, and scheduled refresh are required Build Week
+    phases rather than deferred items, but remain unavailable until their
+    evidence and authorization gates pass.
 - The QNAP-first Docker Compose runtime is a production-like container envelope
     for the hosted scaffold and PostgreSQL. It is not production authentication,
     public URL approval, fully production-ready hosted CCLD retrieval, production import
