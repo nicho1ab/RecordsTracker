@@ -1,0 +1,30 @@
+{
+  "id": 0,
+  "name": "Synthetic Facilities",
+  "objectIdField": "OBJECTID",
+  "maxRecordCount": 2,
+  "fields": [
+    {
+      "name": "OBJECTID",
+      "alias": "Object ID",
+      "type": "esriFieldTypeOID",
+      "nullable": false,
+      "domain": null
+    },
+    {
+      "name": "facility_type_code",
+      "alias": "Facility Type Code",
+      "type": "esriFieldTypeInteger",
+      "nullable": true,
+      "domain": {
+        "type": "codedValue",
+        "codedValues": [
+          {
+            "code": 101,
+            "name": "Changed Synthetic Label"
+          }
+        ]
+      }
+    }
+  ]
+}

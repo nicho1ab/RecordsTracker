@@ -1,0 +1,4 @@
+OBJECTID,facility_number,facility_type_code,facility_type_label,status,facility_name,county,capacity,closed_date
+1,100001,101,Synthetic Center,LICENSED,Synthetic North,Alpha,12,
+2,100002,101,Synthetic Center,CLOSED,Synthetic South,Beta,8,2026-01-02
+3,100003,,Unresolved Type,INACTIVE,Synthetic East,,invalid,

@@ -1,0 +1,4 @@
+facility_number,facility_type,status,facility_name,county,capacity
+100001,Synthetic Center,LICENSED,Synthetic North,Alpha,12
+100002,Synthetic Center,CLOSED,Synthetic South Changed,Beta,8
+200001,Synthetic Program Only,LICENSED,Synthetic Program Only,Gamma,4

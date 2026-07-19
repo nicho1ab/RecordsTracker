@@ -1,0 +1,57 @@
+{
+  "id": 0,
+  "name": "Synthetic Facilities",
+  "type": "Feature Layer",
+  "geometryType": "esriGeometryPoint",
+  "objectIdField": "OBJECTID",
+  "maxRecordCount": 2,
+  "advancedQueryCapabilities": {
+    "supportsPagination": true,
+    "supportsOrderBy": true
+  },
+  "fields": [
+    {
+      "name": "OBJECTID",
+      "alias": "Object ID",
+      "type": "esriFieldTypeOID",
+      "nullable": false,
+      "domain": null
+    },
+    {
+      "name": "facility_number",
+      "alias": "Facility Number",
+      "type": "esriFieldTypeString",
+      "nullable": true,
+      "domain": null
+    },
+    {
+      "name": "facility_type_code",
+      "alias": "Facility Type Code",
+      "type": "esriFieldTypeInteger",
+      "nullable": true,
+      "domain": {
+        "type": "codedValue",
+        "codedValues": [
+          {
+            "code": 101,
+            "name": "Synthetic Center"
+          }
+        ]
+      }
+    },
+    {
+      "name": "facility_type_label",
+      "alias": "Facility Type",
+      "type": "esriFieldTypeString",
+      "nullable": true,
+      "domain": null
+    },
+    {
+      "name": "status",
+      "alias": "Status",
+      "type": "esriFieldTypeString",
+      "nullable": true,
+      "domain": null
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "redirect": {
+    "status": 302,
+    "location": "https://unapproved.example.test/facilities.zip"
+  },
+  "rate_limit": {
+    "status": 429,
+    "retry_after": "60"
+  },
+  "timeout": {
+    "kind": "timeout"
+  },
+  "malformed_response": "{not-json",
+  "unsupported_format": {
+    "status": 400,
+    "message": "Unsupported output format"
+  },
+  "result_cap": {
+    "requested": 3,
+    "returned": 2,
+    "exceededTransferLimit": true
+  }
+}
