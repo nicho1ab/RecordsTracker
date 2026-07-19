@@ -36,7 +36,9 @@ PostgreSQL; or administer Cloudflare.
 - The user uses Windows PowerShell only for local Git verification, archive
   creation, and archive transfer.
 - The user runs all QNAP commands directly in the standalone SSH client.
-- Preserve the active `.env` and `docker-compose.qnap.yml`.
+- Preserve the active host-local `.env`. Back up the active
+  `docker-compose.qnap.yml`, but retain the release's tracked Compose file when
+  it contains reviewed release changes.
 - Application and PostgreSQL runtime data use Docker named volumes unless inspection proves otherwise.
 - Never restore PostgreSQL during an application rollback unless separately authorized.
 
@@ -59,18 +61,27 @@ depend on that private store, and no agent may create a private PSD1 file.
    - copies of `.env`, `docker-compose.qnap.yml`, and the prior `.deployed-commit`;
    - a non-empty PostgreSQL dump.
 8. Extract the archive into a new versioned release directory.
-9. Copy only `.env` and `docker-compose.qnap.yml` into the new release.
-10. Do not copy the old `.deployed-commit` into the new release.
-11. Validate the new release with `docker compose config` before activation.
-12. Stop only the `app` service; leave PostgreSQL running.
-13. Rename the active directory to a timestamped previous-release directory.
-14. Rename the validated versioned release directory to `/share/Public/RecordsTracker`.
-15. Rebuild and recreate only the `app` service with `--no-deps`.
-16. Verify the app is running, healthy, and has zero restarts after recreation.
-17. Verify PostgreSQL remains running and healthy; report its restart count without assuming it began at zero.
-18. Verify Alembic current is at head, logs contain no deployment-blocking errors, the health route returns 200, and required routes return no 5xx responses.
-19. Write the new full commit to `.deployed-commit` only after all verification succeeds.
-20. Retain the prior release directory and backups until hosted acceptance and stakeholder confirmation are complete.
+9. Copy the active host-local `.env` into the new release. Do not replace the
+   release's tracked `docker-compose.qnap.yml` with the previously deployed
+   file.
+10. Compare the backed-up active Compose file with the release's tracked Compose
+    file. Accept only reviewed, expected release changes. If the old file has an
+    unexpected host-specific difference, stop deployment and resolve it through
+    review; do not copy or merge it into the release ad hoc.
+11. Do not copy the old `.deployed-commit` into the new release.
+12. Run `sudo docker compose -f docker-compose.qnap.yml --env-file .env config`
+    from the new release and require it to pass before activation.
+13. Stop only the `app` service; leave PostgreSQL running. Never recreate the
+    `postgres` service or its volume for this application-only release.
+14. Rename the active directory to a timestamped previous-release directory;
+    its prior tracked Compose file remains with that prior application release.
+15. Rename the validated versioned release directory to `/share/Public/RecordsTracker`.
+16. Rebuild and recreate only the `app` service with `--no-deps`.
+17. Verify the app is running, healthy, and has zero restarts after recreation.
+18. Verify PostgreSQL remains running and healthy; report its restart count without assuming it began at zero.
+19. Verify Alembic current is at head, logs contain no deployment-blocking errors, the health route returns 200, and required routes return no 5xx responses.
+20. Write the new full commit to `.deployed-commit` only after all verification succeeds.
+21. Retain the prior release directory and backups until hosted acceptance and stakeholder confirmation are complete.
 
 ## Prohibited deployment approaches
 
@@ -97,14 +108,18 @@ Direct unauthenticated checks may return an expected authentication response, bu
 
 ## Application rollback
 
-Rollback restores the preserved previous application directory only:
+Rollback restores the preserved previous application directory together with
+its prior tracked Compose file:
 
 1. Stop the `app` service.
 2. Rename the failed active directory to a timestamped failed-release path.
 3. Rename the preserved previous-release directory back to `/share/Public/RecordsTracker`.
-4. Rebuild and recreate only the `app` service with `--no-deps`.
+4. Restore the preserved host-local `.env`, require
+   `sudo docker compose -f docker-compose.qnap.yml --env-file .env config` to
+   pass, and rebuild and recreate only the `app` service with `--no-deps`.
 5. Verify app and PostgreSQL health and the health route.
-6. Do not restore PostgreSQL unless a separately reviewed database rollback is required.
+6. Do not recreate the `postgres` service or volume. Do not restore PostgreSQL
+   unless a separately reviewed database rollback is required.
 
 ## Hosted acceptance
 
@@ -119,6 +134,51 @@ After deployment:
 - record evidence locations, limitations, scenarios, and stakeholder confirmation in the governing issue.
 
 Controlled fixture evidence remains authoritative for loading, forced error, no-data, partial-source, unavailable-source, and other states that should not be induced by damaging the hosted runtime.
+
+### Operator coverage runtime acceptance
+
+Before generating coverage, the human operator configures
+`CCLD_OPERATOR_COVERAGE_ALLOWED_EMAILS` with exact operator email addresses and
+keeps `CCLD_OPERATOR_COVERAGE_PACKAGE_DIR` at its deployed default
+`/app/data/processed/source-to-screen-audit/runtime-current` unless a reviewed
+deployment requires another persistent processed-data path. A configured tester
+domain does not grant operator access.
+
+The user runs each command below directly in the standalone QNAP SSH client
+from `/share/Public/RecordsTracker`. Agents must not run or proxy these commands.
+
+1. Generate the read-only structural audit and atomically publish the validated
+   contract package:
+
+   ```sh
+   sudo docker compose -f docker-compose.qnap.yml exec -T app python -m ccld_complaints.source_to_screen_audit --mode runtime --output-dir /app/data/processed/source-to-screen-audit/runtime-audit --coverage-output-dir /app/data/processed/source-to-screen-audit/runtime-current
+   ```
+
+2. Revalidate package hashes and reconcile its Facility ID totals with a safe
+   deployed-database aggregate query:
+
+   ```sh
+   sudo docker compose -f docker-compose.qnap.yml exec -T app python -m ccld_complaints.operator_coverage_runtime_verify --package-dir /app/data/processed/source-to-screen-audit/runtime-current
+   ```
+
+Both commands are read-only with respect to PostgreSQL. The producer publishes
+files only after complete stable-consumer validation and preserves the prior
+accepted package on failure. The verifier prints safe aggregate JSON only and
+exits nonzero when validation or reconciliation fails. Neither command retrieves
+public sources, imports data, changes jobs or checkpoints, or mutates reviewer
+state.
+
+After both commands pass, run the automated Hosted acceptance procedure in
+`docs/developer/operator-source-coverage-dashboard.md` from the authorized local
+workstation. It requires an approved in-memory Cloudflare header-provider
+command; do not copy browser cookies or profiles and do not persist assertions.
+The unavailable-package state remains a local controlled acceptance scenario and
+must not be induced against the deployed runtime.
+
+This coverage is diagnostic for the deployed rows and available governed read
+boundaries. It is not proof of statewide completeness, freshness, absence of
+complaints, legal conclusions, or correct rendering without the automated UI
+evidence.
 
 ## Operator command standards
 

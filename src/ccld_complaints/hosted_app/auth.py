@@ -4,7 +4,7 @@ import base64
 import hashlib
 import json
 import os
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Literal, cast
@@ -52,6 +52,7 @@ CLOUDFLARE_ACCESS_ALLOWED_EMAIL_DOMAINS_ENV = (
     "CCLD_CLOUDFLARE_ACCESS_ALLOWED_EMAIL_DOMAINS"
 )
 CLOUDFLARE_ACCESS_ALLOWED_EMAILS_ENV = "CCLD_CLOUDFLARE_ACCESS_ALLOWED_EMAILS"
+OPERATOR_COVERAGE_ALLOWED_EMAILS_ENV = "CCLD_OPERATOR_COVERAGE_ALLOWED_EMAILS"
 CLOUDFLARE_ACCESS_JWKS_CACHE_SECONDS_ENV = (
     "CCLD_CLOUDFLARE_ACCESS_JWKS_CACHE_SECONDS"
 )
@@ -514,6 +515,61 @@ def authenticate_cloudflare_access_request(
         now=now,
         jwks_fetcher=jwks_fetcher,
     )
+
+
+def authenticate_cloudflare_access_operator_request(
+    headers: Mapping[str, str],
+    config: HostedCloudflareAccessRuntimeConfig,
+    *,
+    scope: HostedAccessScope,
+    operator_allowed_emails: Sequence[str],
+    now: datetime | None = None,
+    jwks_fetcher: JwksFetcher | None = None,
+) -> AuthenticatedActor:
+    """Create the narrow operator actor only after full Access JWT validation."""
+
+    actor = authenticate_cloudflare_access_request(
+        headers,
+        config,
+        scope=scope,
+        now=now,
+        jwks_fetcher=jwks_fetcher,
+    )
+    allowed_emails = tuple(email.strip().casefold() for email in operator_allowed_emails)
+    if actor.email is None or actor.email not in allowed_emails:
+        raise CloudflareAccessAuthError(
+            "Cloudflare Access identity is not authorized for operator source coverage."
+        )
+    return AuthenticatedActor(
+        provider_subject=actor.provider_subject,
+        provider_issuer=actor.provider_issuer,
+        display_name=actor.display_name,
+        email=actor.email,
+        actor_category="operator",
+        account_status="active",
+        roles=("developer_operator",),
+        scopes=(scope,),
+    )
+
+
+def load_operator_coverage_allowed_emails(
+    environ: Mapping[str, str] | None = None,
+) -> tuple[str, ...]:
+    """Load the exact-email operator allowlist without accepting domain entries."""
+
+    active_environ = os.environ if environ is None else environ
+    values = _normalized_config_list(
+        _optional_config_value(active_environ, OPERATOR_COVERAGE_ALLOWED_EMAILS_ENV)
+    )
+    for email in values:
+        local_part, separator, domain = email.rpartition("@")
+        if not separator or not local_part or not domain or any(
+            character.isspace() for character in email
+        ):
+            raise HostedAuthConfigError(
+                f"{OPERATOR_COVERAGE_ALLOWED_EMAILS_ENV} must contain exact email addresses."
+            )
+    return values
 
 
 def authenticate_cloudflare_access_token(

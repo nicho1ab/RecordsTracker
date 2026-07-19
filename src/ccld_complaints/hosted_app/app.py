@@ -1108,9 +1108,15 @@ def route_response(
     ):
         active_operator_coverage_context = operator_coverage_context
         if active_operator_coverage_context is None:
-            active_operator_coverage_context = default_operator_coverage_context(
-                active_auth_config
-            )
+            try:
+                active_operator_coverage_context = default_operator_coverage_context(
+                    active_auth_config,
+                    request_headers=request_headers or {},
+                    cloudflare_jwks_fetcher=cloudflare_jwks_fetcher,
+                    cloudflare_auth_now=cloudflare_auth_now,
+                )
+            except CloudflareAccessAuthError as error:
+                return _cloudflare_access_auth_blocked_response(error)
         return route_operator_coverage_response(
             path,
             active_operator_coverage_context,

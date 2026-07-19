@@ -29,15 +29,31 @@ The exact routes are GET-only:
 - `/operator/source-coverage/facility-ids.csv?group=<allowed-group>`
 
 Every route reuses the existing `audit_read` permission, existing scope match,
-and existing `audit_event` authorization target. An active `admin` or
-`developer_operator` actor with the requested scope can read the package.
-Unauthenticated, disabled, revoked, reviewer/tester-role, and out-of-scope actors
-are denied before a package path is read or package data is serialized.
+and existing `audit_event` authorization target. Local fixture mode remains an
+explicit development-only adapter. In production mode the route reuses the
+existing Cloudflare Access JWT verifier, including signature, issuer, audience,
+expiry, not-before, and configured tester email/domain validation. Only the
+verified JWT email's exact, case-insensitive match in
+`CCLD_OPERATOR_COVERAGE_ALLOWED_EMAILS` creates the minimum existing
+`developer_operator` actor with `audit_read` for the runtime coverage scope. A
+broad tester domain never grants operator authority.
 
-The route module does not add a role, permission, provider, session, claim,
-cookie, or login behavior. Production-style runtime without an explicitly
-configured validated package fails closed as `Coverage report unavailable`; it
-never silently substitutes fixture data.
+The route does not trust an email or role header, forwarding header, query
+parameter, cookie, or unverified claim. Unauthenticated, disabled, revoked,
+reviewer/tester-role, non-allowlisted, and out-of-scope actors are denied before
+the configured package path is read or package data is serialized. Existing
+feedback authentication behavior and defaults are unchanged.
+
+Production configuration uses exactly:
+
+- `CCLD_OPERATOR_COVERAGE_ALLOWED_EMAILS`, a comma- or semicolon-separated list
+  of complete email addresses; domain-only entries are invalid;
+- `CCLD_OPERATOR_COVERAGE_PACKAGE_DIR`, whose deployed default is
+  `/app/data/processed/source-to-screen-audit/runtime-current`.
+
+An absent or invalid operator configuration or validated package fails closed
+as an authentication denial or `Coverage report unavailable`; production never
+silently substitutes fixture data.
 
 ## Stable producer-consumer boundary
 
@@ -82,6 +98,31 @@ JSON is `application/json`, JSONL is `application/x-ndjson`, and CSV is
 `text/csv`. Job rows use `checkpoint_identity`. Release and reconciliation
 statuses are read from their producer-owned objects rather than a fixture-only
 flattened shape.
+
+## PostgreSQL runtime publication
+
+Run the read-only producer inside the deployed application container:
+
+```sh
+python -m ccld_complaints.source_to_screen_audit --mode runtime --output-dir /app/data/processed/source-to-screen-audit/runtime-audit --coverage-output-dir /app/data/processed/source-to-screen-audit/runtime-current
+```
+
+The runtime adapter issues aggregate PostgreSQL `SELECT` queries only. It uses
+the governed field registry to publish population coverage and creates the safe
+Facility ID index from deployed source-derived rows when that approved read
+boundary is available. It does not retrieve public sources, import data, start
+or update jobs, change checkpoints, mutate reviewer state, or write to the
+database. Operational or job dimensions without a complete approved read
+boundary are explicitly unavailable; zero, success, freshness, and completeness
+are never fabricated.
+
+Publication takes an exclusive sibling lock, writes to a temporary sibling,
+validates the complete contract package through the stable consumer, and only
+then atomically promotes it to `runtime-current`. A generation, validation, or
+promotion failure leaves the previous accepted package active. Superseded
+accepted packages are retained as immutable instances because retention remains
+`pending_policy`; automated deletion is not authorized. The sibling status file
+records only safe status, time, and accepted report identity.
 
 ## UI states and behavior
 
@@ -133,6 +174,49 @@ evidence.
 
 ## Automated validation and evidence
 
+Production-auth acceptance uses:
+
+```powershell
+.\scripts\capture-hosted-operator-coverage-acceptance.ps1 -Mode LocalProductionAuth -OutputRoot data\processed\ui-evidence
+```
+
+`LocalProductionAuth` generates ephemeral deterministic signed JWT/JWKS test
+material in memory, publishes a package through the real read-only adapter,
+serves the production authentication branch, captures every authorized route and
+denial state with headless automation, reconciles safe database/package/UI
+totals, and produces an ignored evidence directory and ZIP. No token, private
+key, cookie, browser profile, private header, or host name is persisted.
+
+For a deployed endpoint, set a process-local
+`CCLD_OPERATOR_COVERAGE_ACCEPTANCE_HEADER_PROVIDER_COMMAND` to an approved
+command that emits only a JSON object containing a current
+`Cf-Access-Jwt-Assertion` for the requested `operator` or `tester` role, then
+run from a clean `main` worktree whose HEAD and local `origin/main` both equal
+the exact deployed squash-merge SHA:
+
+```powershell
+.\scripts\capture-hosted-operator-coverage-acceptance.ps1 -Mode Hosted -BaseUrl <operator-approved-direct-origin> -ExpectedCommitSha <deployed-merge-sha> -OutputRoot data\processed\ui-evidence
+```
+
+`-BaseUrl` must be an operator-approved direct origin or endpoint where the
+in-memory `Cf-Access-Jwt-Assertion` reaches RecordsTracker. Do not describe a
+public Cloudflare edge URL as accepting a client-supplied origin assertion. A
+deployed LAN origin may be used only from the operator-controlled network.
+
+The provider output is consumed in memory and suppressed on error. The script
+does not read browser cookies or profiles and refuses Hosted mode without this
+mechanism. Cookies, browser profiles, stored assertions, service-token secrets,
+and authentication headers must not enter evidence. An absent approved provider
+is a precise automation blocker, not permission to bypass Access. Hosted mode
+also refuses a feature branch, dirty worktree, unresolved `origin/main`, or any
+HEAD/origin/expected-SHA mismatch; the evidence manifest records the validated
+deployed merge SHA. A hosted run validates the current deployed package; the
+controlled unavailable-package state remains automated by
+`LocalProductionAuth` because acceptance must not damage deployed state.
+
+The current fixture-only visual regression procedure remains available for
+deterministic dashboard states:
+
 Run the focused tests before capture:
 
 ```powershell
@@ -170,6 +254,9 @@ commit it by default.
 A later decision must set retention duration; until then `policy_id` remains
 null, disposition is `pending_policy`, and automated cleanup is not authorized.
 
-Mutation routes, retry/apply/cancel/resume/backfill execution, persistence,
-schedules, live package discovery, and every QNAP/deployment concern require
-separately authorized work.
+Mutation routes, retry/apply/cancel/resume/backfill execution, retrieval/import,
+job/checkpoint mutation, persistence, and schedules require separately
+authorized work. Runtime coverage is a diagnostic of the measured deployed
+rows and governed boundaries. It is not proof of statewide completeness,
+freshness, absence of complaints, legal conclusions, or correct rendering
+without corresponding automated UI evidence.

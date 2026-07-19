@@ -64,12 +64,28 @@ ID is `issues-453-477-coverage-report-v1`.
 Run this inside the deployed application container:
 
 ```sh
-docker compose -f docker-compose.qnap.yml exec app python -m ccld_complaints.source_to_screen_audit --mode runtime --output-dir /app/data/processed/source-to-screen-audit/runtime-post-deploy
+python -m ccld_complaints.source_to_screen_audit --mode runtime --output-dir /app/data/processed/source-to-screen-audit/runtime-audit --coverage-output-dir /app/data/processed/source-to-screen-audit/runtime-current
 ```
 
-Runtime mode requires the configured PostgreSQL database. Its queries return aggregate
-population counts only. The generated files must stay in the ignored processed-data
-directory and must not be committed.
+Runtime mode requires the configured PostgreSQL database. Its adapter issues
+aggregate `SELECT` queries only and publishes contract `1.0.0` field/stage
+coverage from the governed catalog plus a safe Facility ID index when the
+deployed source-derived-record read boundary is available. It does not retrieve
+sources, import rows, create or update jobs, update checkpoints, change reviewer
+state, or write to PostgreSQL. Operational and job dimensions remain explicitly
+unavailable unless an existing governed read boundary proves every required
+contract fact.
+
+The coverage output path is published fail-closed. The producer acquires an
+exclusive sibling lock, generates into a temporary sibling, validates the whole
+package through `source_to_screen_coverage.load_validated_coverage_package()`,
+and only then atomically promotes it. A failed generation, validation, or
+promotion keeps the previous accepted `runtime-current` package active.
+Superseded accepted packages are retained under the sibling immutable-instance
+directory and are not automatically deleted while retention disposition is
+`pending_policy`. A sibling status file contains only safe status, generation
+time, and accepted report identity. Generated files must stay in the ignored
+processed-data directory and must not be committed.
 
 ## Generated outputs
 
@@ -182,10 +198,11 @@ stack traces, SQL, and uncontrolled errors.
 - Contract packages retain immutable generation instances by report ID. Until a
   separate retention policy is approved, policy ID and retain-until remain null,
   disposition is `pending_policy`, and no automated deletion is authorized.
-- The current runtime command above remains the read-only structural PostgreSQL
-  audit shape. Wiring its aggregate result plus existing operational read
-  boundaries into a production-style contract generation is pending integration
-  evidence; fixtures are never substituted for runtime data.
+- The runtime package describes the measured deployed rows and approved read
+  boundaries. It is diagnostic, not proof of statewide completeness, freshness,
+  absence of complaints, legal conclusions, or correct rendering without
+  corresponding automated UI evidence. Fixtures are never substituted for
+  runtime data.
 - Issue #490 remains controlling: existing program-specific sources are retained
   for the evaluated scope, every statewide candidate stays inactive, no
   statewide completeness baseline or refresh cadence is approved, and raw `733`

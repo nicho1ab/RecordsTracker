@@ -175,9 +175,13 @@
   hashes, identities, media types, CSV header, reconciliation, release, and
   controlled source-layout values without recounting. Shared operator
   navigation is authorized-page-only; reviewer/tester navigation and access do
-  not expose the surface. Issue #477 mutation, persistence, scheduling, live
-  discovery, deployment, and retention automation are not approved by this
-  phase.
+  not expose the surface. The production-style read-only bridge reuses verified
+  Cloudflare Access JWTs plus an exact operator-email allowlist and atomically
+  publishes stable-consumer-validated contract packages from SELECT-only
+  PostgreSQL aggregates. Missing operational/job read boundaries remain
+  explicitly unavailable. Issue #477 mutation, persistence, scheduling,
+  retrieval/import, job/checkpoint mutation, deployment, and retention
+  automation are not approved or performed by this phase.
 
 ## Completed ADR decisions
 

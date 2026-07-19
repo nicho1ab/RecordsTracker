@@ -7,6 +7,7 @@ import io
 import json
 import os
 import re
+import shutil
 import sqlite3
 import sys
 from collections import Counter
@@ -16,6 +17,7 @@ from datetime import UTC, datetime
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Literal, cast
+from uuid import uuid4
 
 from jsonschema import ValidationError as JsonSchemaValidationError
 from jsonschema import validate as jsonschema_validate
@@ -2856,7 +2858,13 @@ def _reject_prohibited_coverage_content(value: Any) -> None:
     if isinstance(value, Mapping):
         for key, item in value.items():
             normalized_key = str(key).casefold()
-            if any(part in normalized_key for part in _COVERAGE_PROHIBITED_KEY_PARTS):
+            governed_field_id = re.fullmatch(
+                r"data\.[a-z0-9_]+\.[a-z0-9_]+\.[a-z0-9_]+",
+                normalized_key,
+            )
+            if governed_field_id is None and any(
+                part in normalized_key for part in _COVERAGE_PROHIBITED_KEY_PARTS
+            ):
                 raise CoverageContractError("Coverage input contains a prohibited field.")
             _reject_prohibited_coverage_content(item)
         return
@@ -4809,6 +4817,619 @@ def validate_coverage_package(
     return manifest
 
 
+def _runtime_population_stats(
+    audit_result: AuditResult,
+) -> Mapping[str, PopulationStats]:
+    stats: dict[str, PopulationStats] = {}
+    for row in audit_result.inventory:
+        eligible = row.get("eligible_record_count")
+        populated = row.get("imported_populated_count")
+        if not isinstance(eligible, int) or not isinstance(populated, int):
+            continue
+        stats[str(row["data_element_id"])] = PopulationStats(
+            eligible_record_count=eligible,
+            populated_count=populated,
+            missing_key_count=int(row.get("missing_key_count") or 0),
+            null_count=int(row.get("null_count") or 0),
+            blank_count=int(row.get("blank_count") or 0),
+            literal_unknown_count=int(row.get("literal_unknown_count") or 0),
+            literal_unavailable_count=int(row.get("literal_unavailable_count") or 0),
+            literal_not_applicable_count=int(
+                row.get("literal_not_applicable_count") or 0
+            ),
+            date_unavailable_count=int(row.get("date_unavailable_count") or 0),
+            verified_zero_count=int(row.get("verified_zero_count") or 0),
+        )
+    return dict(sorted(stats.items()))
+
+
+def _runtime_stage_count(
+    eligible: int,
+    *,
+    successful: int = 0,
+    blank: int = 0,
+    absent: int = 0,
+    unavailable: int = 0,
+) -> Mapping[str, int]:
+    values = {
+        "successful": successful,
+        "blank": blank,
+        "absent": absent,
+        "unavailable": unavailable,
+        "unsupported": 0,
+        "conflict": 0,
+        "failure": 0,
+        "skipped": 0,
+    }
+    if sum(values.values()) != eligible:
+        return _runtime_stage_count(eligible, unavailable=eligible)
+    return {
+        "eligible_count": eligible,
+        **{f"{name}_count": values[name] for name in COVERAGE_STAGE_STATES},
+    }
+
+
+def _runtime_coverage_measurements(
+    specs: Sequence[ElementSpec],
+    stats_by_id: Mapping[str, PopulationStats],
+) -> tuple[Mapping[str, Any], tuple[str, ...]]:
+    terminal_overrides: dict[str, str] = {}
+    count_overrides: dict[str, Mapping[str, Mapping[str, int]]] = {}
+    for spec in specs:
+        stats = stats_by_id.get(spec.data_element_id)
+        if spec.gap_classification == "INTENTIONALLY_INTERNAL":
+            terminal = "intentionally_internal"
+        elif stats is None or stats.eligible_record_count == 0:
+            terminal = "source_artifact_unavailable"
+        elif stats.null_blank_count:
+            terminal = "present_blank"
+        elif stats.populated_count:
+            terminal = "stored_but_not_read"
+        else:
+            terminal = "allocated_but_not_imported"
+        terminal_overrides[spec.data_element_id] = terminal
+
+        if stats is None:
+            unavailable = _runtime_stage_count(1, unavailable=1)
+            count_overrides[spec.data_element_id] = {
+                stage: unavailable
+                for stage in COVERAGE_STAGES
+                if not (
+                    stage == "complaint_page_rendering"
+                    and "/reviewer/records/detail"
+                    not in spec.current_display_route_or_export
+                )
+                and not (
+                    stage == "facility_hub_rendering"
+                    and "/ccld/facilities/detail"
+                    not in spec.current_display_route_or_export
+                )
+            }
+            continue
+
+        eligible = stats.eligible_record_count
+        measured = _runtime_stage_count(
+            eligible,
+            successful=stats.populated_count,
+            blank=stats.null_count + stats.blank_count,
+            absent=stats.missing_key_count,
+        )
+        unavailable = _runtime_stage_count(eligible, unavailable=eligible)
+        field_counts: dict[str, Mapping[str, int]] = {
+            "source_presence": unavailable,
+            "extraction": measured,
+            "normalization": measured,
+            "canonical_allocation": measured,
+            "postgresql_population": measured,
+            "read_model_exposure": unavailable,
+        }
+        if "/reviewer/records/detail" in spec.current_display_route_or_export:
+            field_counts["complaint_page_rendering"] = unavailable
+        if "/ccld/facilities/detail" in spec.current_display_route_or_export:
+            field_counts["facility_hub_rendering"] = unavailable
+        count_overrides[spec.data_element_id] = field_counts
+    return (
+        {
+            "terminal_overrides": terminal_overrides,
+            "stage_overrides": {},
+            "stage_count_overrides": count_overrides,
+        },
+        (
+            "source_presence",
+            "read_model_exposure",
+            "complaint_page_rendering",
+            "facility_hub_rendering",
+            "release_baseline_comparison",
+            "statewide_completeness_baseline",
+            "refresh_cadence",
+        ),
+    )
+
+
+def _runtime_facility_index(
+    connection: Connection,
+    *,
+    source_snapshot_id: str,
+) -> tuple[Mapping[str, Any], tuple[str, ...]]:
+    from ccld_complaints.hosted_app.seeded_import import (
+        hosted_import_batches,
+        hosted_source_derived_records,
+    )
+
+    tables = set(inspect(connection).get_table_names())
+    required_tables = {
+        hosted_import_batches.name,
+        hosted_source_derived_records.name,
+    }
+    if not required_tables.issubset(tables):
+        return (
+            {
+                "availability": "unavailable",
+                "reason_category": "read_boundary_unavailable",
+                "rows": [],
+            },
+            ("operator_facility_index",),
+        )
+
+    external_id = hosted_source_derived_records.c.original_values[
+        "external_facility_number"
+    ].as_string()
+    conflicts = func.coalesce(
+        func.json_array_length(
+            hosted_source_derived_records.c.source_traceability["refresh_conflicts"]
+        ),
+        0,
+    )
+    facility_rows = connection.execute(
+        select(
+            hosted_source_derived_records.c.facility_id,
+            hosted_source_derived_records.c.import_batch_id,
+            hosted_source_derived_records.c.retrieved_at,
+            external_id.label("external_facility_number"),
+            case((conflicts > 0, True), else_=False).label("governed_conflict"),
+        )
+        .where(hosted_source_derived_records.c.entity_type == "facility")
+        .order_by(hosted_source_derived_records.c.stable_source_id)
+    ).mappings()
+    facilities = tuple(dict(row) for row in facility_rows)
+    document_rows = connection.execute(
+        select(
+            hosted_source_derived_records.c.facility_id,
+            func.count(func.distinct(hosted_source_derived_records.c.source_document_id)).label(
+                "document_count"
+            ),
+            func.max(hosted_source_derived_records.c.retrieved_at).label(
+                "last_retrieved_at"
+            ),
+        )
+        .where(hosted_source_derived_records.c.entity_type == "source_document")
+        .group_by(hosted_source_derived_records.c.facility_id)
+    ).mappings()
+    document_index = {
+        str(row["facility_id"]): dict(row)
+        for row in document_rows
+        if row["facility_id"] is not None
+    }
+    batch_rows = connection.execute(
+        select(
+            hosted_import_batches.c.import_batch_id,
+            hosted_import_batches.c.raw_hash_validation_status,
+        )
+    ).mappings()
+    validated_batches = {
+        str(row["import_batch_id"])
+        for row in batch_rows
+        if row["raw_hash_validation_status"] == "validated"
+    }
+
+    output_rows: list[Mapping[str, Any]] = []
+    seen_ids: set[str] = set()
+    for row in facilities:
+        facility_id = row.get("external_facility_number")
+        if (
+            not isinstance(facility_id, str)
+            or not _COVERAGE_FACILITY_ID_RE.fullmatch(facility_id)
+            or facility_id.casefold() in seen_ids
+        ):
+            return (
+                {
+                    "availability": "unavailable",
+                    "reason_category": "read_boundary_unavailable",
+                    "rows": [],
+                },
+                ("operator_facility_index",),
+            )
+        seen_ids.add(facility_id.casefold())
+        internal_facility_id = str(row.get("facility_id") or "")
+        documents = document_index.get(internal_facility_id, {})
+        retrieved_at = documents.get("last_retrieved_at") or row.get("retrieved_at")
+        governed_conflict = bool(row["governed_conflict"])
+        hash_valid = str(row["import_batch_id"]) in validated_batches
+        output_rows.append(
+            {
+                "facility_id": facility_id,
+                "source_snapshot_id": source_snapshot_id,
+                "refresh_eligibility": "unknown",
+                "preserved_source_document_count": int(
+                    documents.get("document_count") or 0
+                ),
+                "last_retrieval_attempt_at": _runtime_timestamp(retrieved_at),
+                "last_successful_retrieval_at": _runtime_timestamp(retrieved_at),
+                "last_refresh_attempt_at": None,
+                "last_successful_refresh_at": None,
+                "pipeline_version": "runtime-postgresql-v1",
+                "preserved_artifact_state": "unavailable",
+                "hash_validation_state": "valid" if hash_valid else "unavailable",
+                "source_layout_classification": "supported",
+                "processing_outcome": "successful",
+                "change_outcome": "not_evaluated",
+                "refresh_state": "unavailable",
+                "retrieval_state": "successful",
+                "import_state": "successful",
+                "governed_conflict": governed_conflict,
+                "operational_failure_category": (
+                    "conflicting_sources" if governed_conflict else "none"
+                ),
+                "retry_eligibility": "not_evaluated",
+                "operator_intervention_required": governed_conflict,
+                "checkpoint_state": "unavailable",
+                "last_job_id": None,
+            }
+        )
+    return (
+        {"availability": "available", "reason_category": "none", "rows": output_rows},
+        (
+            "artifact_filesystem_state",
+            "refresh_eligibility",
+            "refresh_state",
+            "change_outcome",
+            "checkpoint_state",
+        ),
+    )
+
+
+def _runtime_timestamp(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip().replace("+00:00", "Z")
+    if "." in normalized:
+        prefix, suffix = normalized.split(".", 1)
+        if suffix.endswith("Z"):
+            normalized = prefix + "Z"
+    if _COVERAGE_TIMESTAMP_RE.fullmatch(normalized):
+        return normalized
+    return None
+
+
+def _runtime_source_snapshot(
+    connection: Connection,
+    *,
+    audit_result: AuditResult,
+    specs: Sequence[ElementSpec],
+) -> tuple[Mapping[str, Any], Mapping[str, Any]]:
+    from ccld_complaints.hosted_app.seeded_import import (
+        hosted_import_batches,
+        hosted_source_derived_records,
+    )
+
+    tables = set(inspect(connection).get_table_names())
+    available = hosted_source_derived_records.name in tables
+    row_count: int | None = None
+    observed_at: str | None = None
+    input_manifest_id = "runtime-import-boundary-unavailable"
+    if available:
+        aggregate = connection.execute(
+            select(
+                func.count().label("row_count"),
+                func.max(hosted_source_derived_records.c.retrieved_at).label(
+                    "observed_at"
+                ),
+            )
+        ).mappings().one()
+        row_count = int(aggregate["row_count"] or 0)
+        observed_at = _runtime_timestamp(aggregate["observed_at"])
+        if hosted_import_batches.name in tables:
+            batch_ids = tuple(
+                str(value)
+                for value in connection.execute(
+                    select(hosted_import_batches.c.import_batch_id).order_by(
+                        hosted_import_batches.c.import_batch_id
+                    )
+                ).scalars()
+            )
+            input_manifest_id = "runtime-import-set-" + _coverage_sha256(
+                _canonical_json_bytes(list(batch_ids))
+            )
+    stats_by_id = _runtime_population_stats(audit_result)
+    schema_fingerprint = _coverage_sha256(
+        _canonical_json_bytes([spec.data_element_id for spec in specs])
+    )
+    content_fingerprint = _coverage_sha256(
+        _canonical_json_bytes(
+            {
+                field_id: {
+                    "eligible": stats.eligible_record_count,
+                    "populated": stats.populated_count,
+                    "missing": stats.missing_key_count,
+                    "null": stats.null_count,
+                    "blank": stats.blank_count,
+                    "zero": stats.verified_zero_count,
+                }
+                for field_id, stats in stats_by_id.items()
+            }
+        )
+    )
+    snapshot_id = "runtime-postgresql-" + content_fingerprint[:24]
+    snapshot = {
+        "source_snapshot_id": snapshot_id,
+        "source_family_id": "ccld-program-specific",
+        "selection_state": "retained_existing",
+        "safe_version_label": "runtime-postgresql-v1",
+        "observed_at": observed_at,
+        "row_count": row_count,
+        "schema_fingerprint": schema_fingerprint if available else None,
+        "content_fingerprint": content_fingerprint if available else None,
+        "availability": "available" if available else "unavailable",
+        "reason_category": "none" if available else "read_boundary_unavailable",
+        "cadence_status": "not_approved",
+    }
+    return snapshot, {"input_manifest_id": input_manifest_id}
+
+
+def build_runtime_coverage_input(
+    connection: Connection,
+    audit_result: AuditResult,
+    *,
+    repo_root: Path | None = None,
+    previous_accepted_report_id: str | None = None,
+) -> Mapping[str, Any]:
+    """Build the v1 package input using SELECT-only runtime measurements."""
+
+    root = (repo_root or Path(__file__).resolve().parents[2]).resolve()
+    specs = discover_element_specs(root, include_retained_artifacts=False)
+    stats_by_id = _runtime_population_stats(audit_result)
+    coverage, unavailable = _runtime_coverage_measurements(specs, stats_by_id)
+    runtime_snapshot, snapshot_metadata = _runtime_source_snapshot(
+        connection,
+        audit_result=audit_result,
+        specs=specs,
+    )
+    facility_index, facility_unavailable = _runtime_facility_index(
+        connection,
+        source_snapshot_id=str(runtime_snapshot["source_snapshot_id"]),
+    )
+    existing_facility_total = (
+        len(cast(Sequence[Any], facility_index["rows"]))
+        if facility_index["availability"] == "available"
+        else 0
+    )
+    required_stage_success_total = sum(
+        int(stage["successful_count"])
+        for field in cast(Mapping[str, Any], coverage["stage_count_overrides"]).values()
+        for stage in cast(Mapping[str, Mapping[str, int]], field).values()
+    )
+    unavailable_dimensions = set(unavailable) | set(facility_unavailable)
+    unavailable_dimensions.add("operator_job_index")
+    return {
+        "fixture_id": "runtime-governed-registry-v1",
+        "contract_version": COVERAGE_CONTRACT_VERSION,
+        "evaluation_id": "runtime-postgresql-read-boundary-v1",
+        "criteria_set_id": "runtime-diagnostic-no-prior-baseline-v1",
+        "scope_id": "runtime-deployed-postgresql",
+        "producer_schema_id": COVERAGE_PRODUCER_SCHEMA_ID,
+        "producer_version": COVERAGE_PRODUCER_VERSION,
+        "generation_mode": "read_only_boundary",
+        "source_snapshots": [
+            runtime_snapshot,
+            {
+                "source_snapshot_id": "statewide-candidate-unavailable-v1",
+                "source_family_id": "ccld-statewide-candidate",
+                "selection_state": "inactive_candidate",
+                "safe_version_label": None,
+                "observed_at": None,
+                "row_count": None,
+                "schema_fingerprint": None,
+                "content_fingerprint": None,
+                "availability": "unavailable",
+                "reason_category": "read_boundary_unavailable",
+                "cadence_status": "not_approved",
+            },
+        ],
+        "criteria": {
+            "baseline_metrics": {
+                "existing_facility_total": existing_facility_total,
+                "previously_populated_governed_field_total": sum(
+                    stats.populated_count for stats in stats_by_id.values()
+                ),
+                "verified_descriptive_facility_type_label_total": 0,
+                "required_stage_success_total": required_stage_success_total,
+                "unresolved_identity_or_type_total": 0,
+            },
+            "thresholds": {
+                "maximum_facility_count_decline": 0,
+                "maximum_new_blank_regressions": 0,
+                "maximum_label_regressions": 0,
+                "maximum_stage_regressions": 0,
+                "maximum_unresolved_identity_or_type_total": 0,
+            },
+            "observed_metrics": {
+                "previously_populated_now_blank_total": 0,
+                "verified_label_to_unresolved_regression_total": 0,
+                "required_stage_regression_total": 0,
+                "unresolved_identity_or_type_total": 0,
+            },
+            "reviewed_exceptions": [],
+        },
+        "coverage": coverage,
+        "operational": {
+            "facility_index": facility_index,
+            "job_index": {
+                "availability": "unavailable",
+                "reason_category": "read_boundary_unavailable",
+                "rows": [],
+            },
+            "declared_totals": {},
+        },
+        "retention": {
+            "policy_id": None,
+            "disposition": "pending_policy",
+            "retain_until": None,
+            "previous_accepted_report_id": previous_accepted_report_id,
+        },
+        "provenance": {
+            "input_manifest_ids": [snapshot_metadata["input_manifest_id"]],
+            "governed_fixture_ids": [],
+        },
+        "unavailable_dimensions": sorted(unavailable_dimensions),
+    }
+
+
+def _runtime_generation_status_path(output_dir: Path) -> Path:
+    return output_dir.parent / f"{output_dir.name}-generation-status.json"
+
+
+def _write_runtime_generation_status(
+    output_dir: Path,
+    *,
+    status: str,
+    report_id: str | None,
+    recorded_at: datetime,
+) -> None:
+    payload = {
+        "status": status,
+        "report_id": report_id,
+        "recorded_at": recorded_at.astimezone(UTC)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z"),
+    }
+    status_path = _runtime_generation_status_path(output_dir)
+    temporary = status_path.with_name(f".{status_path.name}.{uuid4().hex}.tmp")
+    temporary.write_bytes(_canonical_json_bytes(payload))
+    os.replace(temporary, status_path)
+
+
+def _runtime_previous_manifest(output_dir: Path) -> Mapping[str, Any] | None:
+    if not output_dir.is_dir():
+        return None
+    from ccld_complaints.source_to_screen_coverage import (
+        load_validated_coverage_package,
+    )
+
+    package = load_validated_coverage_package(output_dir)
+    return package.manifest
+
+
+def _unused_runtime_archive_path(
+    output_dir: Path,
+    *,
+    report_id: str,
+    generated_at: str,
+) -> Path:
+    timestamp = generated_at.replace("-", "").replace(":", "")
+    instances = output_dir.parent / f"{output_dir.name}-instances"
+    base = instances / f"{timestamp}-{report_id}"
+    candidate = base
+    sequence = 1
+    while candidate.exists():
+        candidate = instances / f"{base.name}-{sequence}"
+        sequence += 1
+    return candidate
+
+
+def publish_runtime_coverage_package(
+    connection: Connection,
+    audit_result: AuditResult,
+    *,
+    output_dir: Path,
+    repo_root: Path | None = None,
+    generated_at: datetime | None = None,
+) -> CoveragePackageResult:
+    """Generate, stable-consumer validate, and fail-closed publish runtime coverage."""
+
+    root = (repo_root or Path(__file__).resolve().parents[2]).resolve()
+    effective_output_dir = output_dir if output_dir.is_absolute() else root / output_dir
+    effective_output_dir.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = effective_output_dir.parent / f".{effective_output_dir.name}.lock"
+    try:
+        lock_descriptor = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError as exc:
+        raise CoverageContractError(
+            "Runtime coverage generation is already active; no package was published."
+        ) from exc
+    os.close(lock_descriptor)
+    publication_time = generated_at or datetime.now(UTC)
+    if publication_time.tzinfo is None:
+        publication_time = publication_time.replace(tzinfo=UTC)
+    temporary_dir = effective_output_dir.parent / (
+        f".{effective_output_dir.name}.tmp-{uuid4().hex}"
+    )
+    report_id: str | None = None
+    archived_path: Path | None = None
+    try:
+        previous_manifest = _runtime_previous_manifest(effective_output_dir)
+        previous_report_id = (
+            None
+            if previous_manifest is None
+            else str(previous_manifest["report_id"])
+        )
+        runtime_input = build_runtime_coverage_input(
+            connection,
+            audit_result,
+            repo_root=root,
+            previous_accepted_report_id=previous_report_id,
+        )
+        package = generate_coverage_package(
+            runtime_input,
+            output_dir=temporary_dir,
+            repo_root=root,
+            generated_at=publication_time,
+        )
+        report_id = package.report_id
+        from ccld_complaints.source_to_screen_coverage import (
+            load_validated_coverage_package,
+        )
+
+        load_validated_coverage_package(temporary_dir)
+        if effective_output_dir.exists():
+            if previous_manifest is None:
+                raise CoverageContractError(
+                    "The active runtime package changed during locked publication."
+                )
+            archived_path = _unused_runtime_archive_path(
+                effective_output_dir,
+                report_id=str(previous_manifest["report_id"]),
+                generated_at=str(previous_manifest["generated_at"]),
+            )
+            archived_path.parent.mkdir(parents=True, exist_ok=True)
+            os.replace(effective_output_dir, archived_path)
+        try:
+            os.replace(temporary_dir, effective_output_dir)
+        except OSError:
+            if archived_path is not None and not effective_output_dir.exists():
+                os.replace(archived_path, effective_output_dir)
+            raise
+        _write_runtime_generation_status(
+            effective_output_dir,
+            status="published",
+            report_id=report_id,
+            recorded_at=publication_time,
+        )
+        return package
+    except Exception:
+        if temporary_dir.exists():
+            shutil.rmtree(temporary_dir)
+        _write_runtime_generation_status(
+            effective_output_dir,
+            status="generation_failed",
+            report_id=report_id,
+            recorded_at=publication_time,
+        )
+        raise
+    finally:
+        lock_path.unlink(missing_ok=True)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
@@ -4826,6 +5447,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir",
         type=Path,
         help="directory for generated, untracked audit artifacts",
+    )
+    parser.add_argument(
+        "--coverage-output-dir",
+        type=Path,
+        help="validated runtime contract package directory (runtime mode only)",
     )
     parser.add_argument(
         "--write-tracked-baseline",
@@ -4885,6 +5511,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"{package.report_id}, {len(package.facility_index)} facility rows"
             )
             return 0
+        if args.coverage_output_dir is not None and args.mode != "runtime":
+            raise CoverageContractError(
+                "--coverage-output-dir is supported only with --mode runtime."
+            )
         if args.coverage_scenario is not None or args.generated_at is not None:
             raise CoverageContractError(
                 "Coverage scenario metadata requires --coverage-fixture."
@@ -4892,12 +5522,44 @@ def main(argv: Sequence[str] | None = None) -> int:
         output_dir = args.output_dir or Path(
             f"data/processed/source-to-screen-audit/{args.mode}"
         )
-        result = run_audit(
-            mode=cast(AuditMode, args.mode),
-            output_dir=output_dir,
-            write_tracked_baseline=bool(args.write_tracked_baseline),
-        )
-    except (AuditExecutionError, CoverageContractError, ValueError) as exc:
+        if args.coverage_output_dir is not None:
+            environment = os.environ
+            engine = _runtime_engine(environment)
+            try:
+                if engine.dialect.name != "postgresql":
+                    raise AuditExecutionError(
+                        "Runtime coverage generation requires PostgreSQL."
+                    )
+                with engine.connect() as connection:
+                    result = run_audit(
+                        mode="runtime",
+                        output_dir=output_dir,
+                        write_tracked_baseline=False,
+                        runtime_connection=connection,
+                    )
+                    package = publish_runtime_coverage_package(
+                        connection,
+                        result,
+                        output_dir=args.coverage_output_dir,
+                    )
+            finally:
+                engine.dispose()
+            print(
+                "source-to-screen runtime coverage package complete: "
+                f"{package.report_id}"
+            )
+        else:
+            result = run_audit(
+                mode=cast(AuditMode, args.mode),
+                output_dir=output_dir,
+                write_tracked_baseline=bool(args.write_tracked_baseline),
+            )
+    except (
+        AuditExecutionError,
+        CoverageContractError,
+        HostedDatabaseConfigError,
+        ValueError,
+    ) as exc:
         print(
             "source-to-screen audit failed: "
             + redact_sensitive_text(str(exc), redact_urls=True),
