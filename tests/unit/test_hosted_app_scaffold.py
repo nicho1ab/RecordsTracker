@@ -9,6 +9,7 @@ from pytest import MonkeyPatch
 
 from ccld_complaints.hosted_app.app import (
     SourceRecordFilters,
+    _content_disposition_header,
     build_source_traceability_summary,
     filter_sample_source_records,
     get_sample_facility_record,
@@ -20,6 +21,12 @@ from ccld_complaints.hosted_app.app import (
     source_record_filters_from_query,
 )
 from ccld_complaints.hosted_app.auth import load_hosted_auth_runtime_config
+from ccld_complaints.hosted_app.operator_coverage_dashboard import (
+    OPERATOR_COVERAGE_EXPORT_PATH,
+    OPERATOR_COVERAGE_FACILITY_IDS_PATH,
+    OPERATOR_COVERAGE_SUMMARY_PATH,
+    local_fixture_operator_coverage_context,
+)
 from ccld_complaints.hosted_app.smoke import run_scaffold_smoke_check
 from ccld_complaints.hosted_app.ui_shell import render_page_shell
 
@@ -1661,3 +1668,43 @@ def test_live_mode_facility_lookup_not_configured_shows_safe_fallback_messaging(
     # Does not use fixture/mock/scaffold wording for live users
     assert "scaffold" not in normalized_html
     assert "mock" not in normalized_html
+
+
+def test_operator_coverage_dispatch_download_headers_and_reviewer_tier_absence() -> None:
+    context = local_fixture_operator_coverage_context(
+        ROOT / "tests/fixtures/hosted_operator_coverage_dashboard/complete-balanced",
+        scenario="complete-balanced",
+    )
+
+    status, content_type, body = route_response(
+        OPERATOR_COVERAGE_SUMMARY_PATH,
+        operator_coverage_context=context,
+    )
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert b"Fixture coverage data" in body
+
+    aggregate_header = _content_disposition_header(
+        OPERATOR_COVERAGE_EXPORT_PATH,
+        200,
+        "text/csv; charset=utf-8",
+    )
+    group_header = _content_disposition_header(
+        f"{OPERATOR_COVERAGE_FACILITY_IDS_PATH}?group=failed",
+        200,
+        "text/csv; charset=utf-8",
+    )
+    assert aggregate_header == (
+        'attachment; filename="operator-source-coverage-aggregate.csv"'
+    )
+    assert group_header == (
+        'attachment; filename="operator-source-coverage-failed-facility-ids.csv"'
+    )
+
+    for reviewer_path in ("/", "/reviewer", "/ccld"):
+        reviewer_status, _reviewer_content_type, reviewer_body = route_response(
+            reviewer_path,
+            page_data_mode="fixture-demo",
+        )
+        assert reviewer_status in {200, 401, 503}
+        assert OPERATOR_COVERAGE_SUMMARY_PATH.encode("utf-8") not in reviewer_body

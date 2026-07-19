@@ -1,0 +1,120 @@
+{
+  "contract_version": "1.0.0",
+  "coverage": {
+    "stage_rows": [
+      {
+        "absent_count": 0,
+        "blank_count": 1,
+        "conflict_count": 0,
+        "eligible_count": 1,
+        "failure_count": 0,
+        "field_id": "facility.facility_type",
+        "skipped_count": 0,
+        "stage": "facility_hub_rendering",
+        "successful_count": 0,
+        "unavailable_count": 0,
+        "unsupported_count": 0
+      }
+    ],
+    "terminal_classification_counts": {
+      "allocated_but_not_imported": 0,
+      "conflicting_sources": 0,
+      "extracted_but_not_allocated": 0,
+      "intentionally_internal": 0,
+      "not_applicable": 0,
+      "present_and_populated": 0,
+      "present_blank": 0,
+      "present_but_not_extracted": 0,
+      "read_but_not_rendered": 0,
+      "rendered_incorrectly": 1,
+      "source_artifact_unavailable": 0,
+      "source_label_absent": 0,
+      "stored_but_not_read": 0,
+      "unsupported_layout": 0
+    }
+  },
+  "extractor_version": "deterministic-extractor-v1",
+  "generated_at": "2026-07-20T01:02:03Z",
+  "operations": {
+    "change_outcome_counts": {
+      "changed": 0,
+      "not_evaluated": 1,
+      "unchanged": 0
+    },
+    "eligible_facility_total": 1,
+    "existing_facility_total": 1,
+    "governed_conflict_facility_total": 0,
+    "hash_validation_state_counts": {
+      "failed": 0,
+      "not_applicable": 0,
+      "not_checked": 0,
+      "unavailable": 0,
+      "valid": 1
+    },
+    "import_state_counts": {
+      "failed": 0,
+      "not_attempted": 0,
+      "skipped": 0,
+      "successful": 1,
+      "unavailable": 0
+    },
+    "ineligible_facility_total": 0,
+    "job_state_counts": {
+      "active": 0,
+      "completed": 1,
+      "failed": 0,
+      "interrupted": 0,
+      "queued": 0
+    },
+    "last_refresh_attempt_at": "2026-07-19T02:00:00Z",
+    "last_successful_refresh_at": "2026-07-19T02:00:00Z",
+    "operator_intervention_required_total": 0,
+    "preserved_artifact_facility_total": 1,
+    "preserved_artifact_state_counts": {
+      "missing": 0,
+      "not_applicable": 0,
+      "preserved": 1,
+      "unavailable": 0
+    },
+    "processing_outcome_counts": {
+      "failed": 0,
+      "not_yet_processed": 0,
+      "skipped": 0,
+      "successful": 1,
+      "warning": 0
+    },
+    "refresh_state_counts": {
+      "completed": 1,
+      "completed_with_warnings": 0,
+      "eligible": 0,
+      "failed": 0,
+      "in_progress": 0,
+      "not_started": 0,
+      "unavailable": 0
+    },
+    "retrieval_state_counts": {
+      "failed": 0,
+      "not_attempted": 0,
+      "successful": 1,
+      "unavailable": 0,
+      "warning": 0
+    },
+    "retry_eligibility_counts": {
+      "eligible": 0,
+      "ineligible": 1,
+      "not_evaluated": 0
+    },
+    "unknown_eligibility_total": 0
+  },
+  "package_availability": "available",
+  "pipeline_version": "coverage-pipeline-v1",
+  "reconciliation_invariant_ids": [
+    "coverage.stage_counts",
+    "operations.facility_totals"
+  ],
+  "reconciliation_status": "passed",
+  "release_assessment": "reviewed_exception_required",
+  "report_id": "coverage-report-v1-a24b2e81735505a91890c67440b28c192c89b3d62c1f8bc7a1e66bda3ffd862e",
+  "unavailable_dimensions": [],
+  "warnings": []
+}
