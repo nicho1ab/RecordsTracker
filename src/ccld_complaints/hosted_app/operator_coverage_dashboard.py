@@ -32,6 +32,23 @@ from ccld_complaints.hosted_app.auth import (
     require_permission,
 )
 from ccld_complaints.hosted_app.ui_shell import render_page_shell
+from ccld_complaints.source_to_screen_coverage import (
+    COVERAGE_ARTIFACT_MEDIA_TYPES,
+    COVERAGE_CHANGE_OUTCOMES,
+    COVERAGE_CONTRACT_VERSION,
+    COVERAGE_HASH_VALIDATION_STATES,
+    COVERAGE_IMPORT_STATES,
+    COVERAGE_JOB_STATES,
+    COVERAGE_OPERATIONAL_FAILURE_CATEGORIES,
+    COVERAGE_PRESERVED_ARTIFACT_STATES,
+    COVERAGE_PROCESSING_OUTCOMES,
+    COVERAGE_REFRESH_STATES,
+    COVERAGE_RETRIEVAL_STATES,
+    COVERAGE_STAGES,
+    COVERAGE_TERMINAL_CLASSIFICATIONS,
+    CoverageReadError,
+    load_validated_coverage_package,
+)
 
 OPERATOR_COVERAGE_PREFIX = "/operator/source-coverage"
 OPERATOR_COVERAGE_SUMMARY_PATH = OPERATOR_COVERAGE_PREFIX
@@ -51,7 +68,7 @@ OPERATOR_COVERAGE_PATHS = frozenset(
     }
 )
 
-CONTRACT_VERSION = "1.0.0"
+CONTRACT_VERSION = COVERAGE_CONTRACT_VERSION
 CONSUMER_VERSION = "1.0.0"
 CONTRACT_COMPATIBILITY = ">=1.0.0,<2.0.0"
 FIXTURE_MODE_ENV = "CCLD_OPERATOR_COVERAGE_FIXTURE_MODE"
@@ -90,86 +107,23 @@ SELECTION_STATES = frozenset(
         "unavailable",
     }
 )
-PIPELINE_STAGES = frozenset(
-    {
-        "source_presence",
-        "extraction",
-        "normalization",
-        "canonical_allocation",
-        "postgresql_population",
-        "read_model_exposure",
-        "complaint_page_rendering",
-        "facility_hub_rendering",
-    }
-)
-TERMINAL_CLASSIFICATIONS = frozenset(
-    {
-        "present_and_populated",
-        "present_but_not_extracted",
-        "extracted_but_not_allocated",
-        "allocated_but_not_imported",
-        "stored_but_not_read",
-        "read_but_not_rendered",
-        "rendered_incorrectly",
-        "present_blank",
-        "source_label_absent",
-        "source_artifact_unavailable",
-        "unsupported_layout",
-        "conflicting_sources",
-        "intentionally_internal",
-        "not_applicable",
-    }
-)
-REFRESH_STATES = frozenset(
-    {
-        "not_started",
-        "eligible",
-        "in_progress",
-        "completed",
-        "completed_with_warnings",
-        "failed",
-        "unavailable",
-    }
-)
-PROCESSING_OUTCOMES = frozenset(
-    {"successful", "skipped", "warning", "failed", "not_yet_processed"}
-)
-CHANGE_OUTCOMES = frozenset({"changed", "unchanged", "not_evaluated"})
-RETRIEVAL_STATES = frozenset(
-    {"not_attempted", "successful", "warning", "failed", "unavailable"}
-)
-IMPORT_STATES = frozenset(
-    {"not_attempted", "successful", "skipped", "failed", "unavailable"}
-)
-PRESERVED_ARTIFACT_STATES = frozenset(
-    {"preserved", "missing", "unavailable", "not_applicable"}
-)
-HASH_VALIDATION_STATES = frozenset(
-    {"valid", "failed", "not_checked", "unavailable", "not_applicable"}
-)
+PIPELINE_STAGES = frozenset(COVERAGE_STAGES)
+TERMINAL_CLASSIFICATIONS = frozenset(COVERAGE_TERMINAL_CLASSIFICATIONS)
+REFRESH_STATES = frozenset(COVERAGE_REFRESH_STATES)
+PROCESSING_OUTCOMES = frozenset(COVERAGE_PROCESSING_OUTCOMES)
+CHANGE_OUTCOMES = frozenset(COVERAGE_CHANGE_OUTCOMES)
+RETRIEVAL_STATES = frozenset(COVERAGE_RETRIEVAL_STATES)
+IMPORT_STATES = frozenset(COVERAGE_IMPORT_STATES)
+PRESERVED_ARTIFACT_STATES = frozenset(COVERAGE_PRESERVED_ARTIFACT_STATES)
+HASH_VALIDATION_STATES = frozenset(COVERAGE_HASH_VALIDATION_STATES)
 REFRESH_ELIGIBILITY = frozenset({"eligible", "ineligible", "unknown"})
 RETRY_ELIGIBILITY = frozenset({"eligible", "ineligible", "not_evaluated"})
 CHECKPOINT_STATES = frozenset(
     {"not_started", "available", "complete", "interrupted", "failed", "unavailable"}
 )
-JOB_STATES = frozenset({"queued", "active", "completed", "interrupted", "failed"})
+JOB_STATES = frozenset(COVERAGE_JOB_STATES)
 EXECUTION_MODES = frozenset({"dry_run", "apply"})
-FAILURE_CATEGORIES = frozenset(
-    {
-        "none",
-        "retrieval_failed",
-        "import_failed",
-        "validation_failed",
-        "missing_artifact",
-        "hash_validation_failed",
-        "unsupported_layout",
-        "conflicting_sources",
-        "checkpoint_interrupted",
-        "contract_unavailable",
-        "contract_version_mismatch",
-        "controlled_unknown_failure",
-    }
-)
+FAILURE_CATEGORIES = frozenset(COVERAGE_OPERATIONAL_FAILURE_CATEGORIES)
 RELEASE_ASSESSMENTS = frozenset(
     {"passed", "warning", "failed", "reviewed_exception_required"}
 )
@@ -269,12 +223,7 @@ ALLOWED_ARTIFACTS = frozenset(
         "aggregate-coverage.csv",
     }
 )
-ARTIFACT_MEDIA_TYPES: Mapping[str, str] = {
-    "coverage-report.json": "application/json",
-    "operator-facility-index.jsonl": "application/x-ndjson",
-    "operator-job-index.jsonl": "application/x-ndjson",
-    "aggregate-coverage.csv": "text/csv",
-}
+ARTIFACT_MEDIA_TYPES = COVERAGE_ARTIFACT_MEDIA_TYPES
 FACILITY_ID_GROUPS = frozenset(
     {"changed", "unchanged", "warning", "failed", "missing_artifact", "retry_eligible"}
 )
@@ -482,7 +431,10 @@ def route_operator_coverage_response(
         return _message_response(403, "Operator scope denied", str(error))
 
     try:
-        package = load_coverage_package(active_context.package_dir)
+        package = load_coverage_package(
+            active_context.package_dir,
+            allow_legacy_fixture=active_context.fixture_mode,
+        )
         if parsed.path == OPERATOR_COVERAGE_SUMMARY_PATH:
             return _html_response(
                 200,
@@ -508,7 +460,9 @@ def route_operator_coverage_response(
     return 404, "text/plain; charset=utf-8", b"Not found"
 
 
-def load_coverage_package(package_dir: Path | None) -> CoveragePackage:
+def load_coverage_package(
+    package_dir: Path | None, *, allow_legacy_fixture: bool = False
+) -> CoveragePackage:
     if package_dir is None:
         raise CoveragePackageError(
             "unavailable",
@@ -525,6 +479,36 @@ def load_coverage_package(package_dir: Path | None) -> CoveragePackage:
             "unavailable",
             "Coverage report unavailable. The required manifest is missing.",
         )
+    try:
+        validated = load_validated_coverage_package(package_dir)
+    except CoverageReadError as error:
+        if allow_legacy_fixture and _is_legacy_fixture_package(manifest_path):
+            return _load_legacy_fixture_coverage_package(package_dir)
+        raise CoveragePackageError(error.state, str(error)) from error
+    return CoveragePackage(
+        package_dir=validated.package_dir,
+        manifest=validated.manifest,
+        report=validated.report,
+        facility_rows=validated.facility_rows,
+        job_rows=validated.job_rows,
+        aggregate_csv=validated.aggregate_csv,
+        state=validated.state,
+        unavailable_dimensions=validated.unavailable_dimensions,
+    )
+
+
+def _is_legacy_fixture_package(manifest_path: Path) -> bool:
+    try:
+        manifest = _load_json_object(manifest_path, "legacy fixture manifest")
+    except CoveragePackageError:
+        return False
+    return manifest.get("producer_schema_id") == "coverage.report.schema.v1"
+
+
+def _load_legacy_fixture_coverage_package(package_dir: Path) -> CoveragePackage:
+    """Load Issue 477's deterministic UI scenarios, never a production package."""
+
+    manifest_path = package_dir / "manifest.json"
     manifest = _load_json_object(manifest_path, "manifest")
     _validate_prohibited_content(manifest)
     version = _required_string(manifest, "contract_version")
@@ -1436,7 +1420,7 @@ def _render_summary_page(
           <td>{_nonnegative_int(_mapping(row, "stage row").get("unavailable_count"), "unavailable_count")}</td>
           <td>{_nonnegative_int(_mapping(row, "stage row").get("failure_count"), "failure_count")}</td>
         </tr>"""
-        for row in _required_list(coverage, "stage_rows")
+        for row in _coverage_stage_rows(coverage)
     )
     terminal_rows = _count_map_rows(
         _required_mapping(coverage, "terminal_classification_counts")
@@ -1454,7 +1438,10 @@ def _render_summary_page(
             "retry_eligibility_counts",
             "job_state_counts",
         )
+        if field in operations
     )
+    release_status = _release_assessment_status(report)
+    reconciliation_status = _reconciliation_status(report)
     source_rows = "\n".join(
         _source_snapshot_row(_mapping(item, "source snapshot"))
         for item in _required_list(package.manifest, "source_snapshots")
@@ -1473,7 +1460,7 @@ def _render_summary_page(
     <section class="operator-section" aria-labelledby="coverage-heading">
       <div class="section-heading-row">
         <div><p class="section-kicker">Source-to-screen</p><h2 id="coverage-heading">Coverage through reviewer surfaces</h2></div>
-        <span class="{_status_class(_required_string(report, 'release_assessment'))}">Release assessment: {_humanize(_required_string(report, 'release_assessment'))}</span>
+        <span class="{_status_class(release_status)}">Release assessment: {_humanize(release_status)}</span>
       </div>
       <p>Coverage reports whether governed fields moved through each named stage. It does not describe whether a refresh job ran successfully.</p>
       <div class="operator-table-wrap">
@@ -1494,7 +1481,7 @@ def _render_summary_page(
     <section class="operator-section" aria-labelledby="operations-heading">
       <div class="section-heading-row">
         <div><p class="section-kicker">Operations</p><h2 id="operations-heading">Retrieval, import, artifacts, checkpoints, and jobs</h2></div>
-        <span class="{_status_class(_required_string(report, 'reconciliation_status'))}">Reconciliation: {_humanize(_required_string(report, 'reconciliation_status'))}</span>
+        <span class="{_status_class(reconciliation_status)}">Reconciliation: {_humanize(reconciliation_status)}</span>
       </div>
       <p>Operational status reports recorded processing facts. A successful operation does not prove correct rendering, and a coverage gap does not prove an operational failure.</p>
       <dl class="operator-facts">
@@ -1598,7 +1585,7 @@ def _render_jobs_page(
     <nav class="operator-subnav evidence-controls" aria-label="Operator coverage views"><a href="{OPERATOR_COVERAGE_SUMMARY_PATH}">Summary</a><a href="{OPERATOR_COVERAGE_FACILITIES_PATH}">Facilities</a><a aria-current="page" href="{OPERATOR_COVERAGE_JOBS_PATH}">Jobs</a></nav>
     <section class="operator-section" aria-labelledby="job-results-heading">
       <div class="section-heading-row"><div><p class="section-kicker">Recorded facts only</p><h2 id="job-results-heading">Refresh job metadata</h2></div></div>
-      <p>Execution mode, checkpoint state, and retry eligibility are descriptive facts from the validated package. No job action is available on this page.</p>
+      <p>Execution mode and checkpoint state are descriptive facts from the validated package. No job action is available on this page.</p>
       <div class="operator-table-wrap"><table><caption>Safe job metadata for the active report</caption><thead><tr><th scope="col">Job ID</th><th scope="col">State</th><th scope="col">Mode</th><th scope="col">Checkpoint</th><th scope="col">Processed / selected</th><th scope="col">Changed / unchanged</th><th scope="col">Warnings / failed</th><th scope="col">Failure / intervention</th></tr></thead><tbody>{rows}</tbody></table></div>
     </section>
     <p class="operator-boundary">No retry, dry-run start, apply, confirmation, cancel, resume, job creation, checkpoint update, or database mutation is implemented.</p>
@@ -1680,9 +1667,9 @@ def _facility_row(row: Mapping[str, Any]) -> str:
 
 def _job_row(row: Mapping[str, Any]) -> str:
     checkpoint = _humanize(_required_string(row, "checkpoint_state"))
-    checkpoint_id = row.get("checkpoint_id")
-    if checkpoint_id:
-        checkpoint = f"{checkpoint} ({checkpoint_id})"
+    checkpoint_identity = row.get("checkpoint_identity", row.get("checkpoint_id"))
+    if checkpoint_identity:
+        checkpoint = f"{checkpoint} ({checkpoint_identity})"
     return f"""<tr>
       <th scope="row"><code>{html.escape(_required_string(row, 'job_id'))}</code></th>
       <td><span class="{_status_class(_required_string(row, 'job_state'))}">{html.escape(_humanize(_required_string(row, 'job_state')))}</span></td>
@@ -1708,6 +1695,29 @@ def _count_map_rows(values: Mapping[str, Any]) -> str:
         f'<tr><th scope="row">{html.escape(_humanize(key))}</th><td>{_nonnegative_int(value, key)}</td></tr>'
         for key, value in values.items()
     )
+
+
+def _coverage_stage_rows(coverage: Mapping[str, Any]) -> list[Any]:
+    field = (
+        "field_stage_coverage"
+        if "field_stage_coverage" in coverage
+        else "stage_rows"
+    )
+    return _required_list(coverage, field)
+
+
+def _release_assessment_status(report: Mapping[str, Any]) -> str:
+    assessment = report.get("release_assessment")
+    if isinstance(assessment, Mapping):
+        return _required_string(assessment, "status")
+    return _required_string(report, "release_assessment")
+
+
+def _reconciliation_status(report: Mapping[str, Any]) -> str:
+    reconciliation = report.get("reconciliation")
+    if isinstance(reconciliation, Mapping):
+        return _required_string(reconciliation, "reconciliation_status")
+    return _required_string(report, "reconciliation_status")
 
 
 def _pagination_markup(filters: FacilityFilters, page: FacilityPage) -> str:
@@ -1775,8 +1785,9 @@ def _render_page(title: str, heading: str, main: str, context: OperatorCoverageD
         heading=heading,
         main=main,
         skip_label="Skip to operator coverage content",
-        active_path=None,
+        active_path=OPERATOR_COVERAGE_SUMMARY_PATH,
         mode_label=FIXTURE_LABEL if context.fixture_mode else "Operator diagnostics",
+        show_operator_navigation=True,
     )
     return rendered.replace("</head>", f"  <style>\n{_OPERATOR_CSS}\n  </style>\n</head>", 1)
 

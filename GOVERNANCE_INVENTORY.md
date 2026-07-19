@@ -169,6 +169,15 @@
   terms/license conflict, content freshness, and code `733` mapping remain
   unresolved adoption gates. No source activation or production behavior was
   approved.
+- Source-to-screen operator coverage status: Issue #453's deterministic v1
+  producer is connected to Issue #477's read-only dashboard through the stable
+  `source_to_screen_coverage` boundary. The consumer uses producer-owned schema,
+  hashes, identities, media types, CSV header, reconciliation, release, and
+  controlled source-layout values without recounting. Shared operator
+  navigation is authorized-page-only; reviewer/tester navigation and access do
+  not expose the surface. Issue #477 mutation, persistence, scheduling, live
+  discovery, deployment, and retention automation are not approved by this
+  phase.
 
 ## Completed ADR decisions
 
@@ -227,6 +236,11 @@
 
 ## Remaining deferred decisions
 
+- Issue #477 retry, dry-run start, apply, confirmation, cancel, resume,
+  backfill, retrieval/import execution, job/checkpoint mutation, persistence,
+  scheduling, live package discovery, and mutation-specific audit behavior.
+  Coverage-package retention duration also remains undecided; disposition stays
+  `pending_policy` and automated cleanup remains unauthorized.
 - Statewide facility-source adoption remains deferred until a current statewide
   ArcGIS service and matching stable export are jointly profiled; same-title
   source succession, publisher terms and license, candidate-specific system-of-

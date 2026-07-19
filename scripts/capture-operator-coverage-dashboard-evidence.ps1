@@ -24,7 +24,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$expectedBranch = "issue-477-operator-coverage-dashboard"
+$expectedBranch = "integrate-453-477-coverage-dashboard"
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 $fixtureRoot = Join-Path $repoRoot "tests\fixtures\hosted_operator_coverage_dashboard"
 $processedRoot = [IO.Path]::GetFullPath((Join-Path $repoRoot "data\processed"))
@@ -39,9 +39,17 @@ if ($LASTEXITCODE -ne 0 -or $branch -ne $expectedBranch -or -not $commitSha) {
     throw "Evidence capture must run from branch $expectedBranch at a resolved HEAD."
 }
 
+$gitCommonDir = (& git -C $repoRoot rev-parse --git-common-dir).Trim()
+if (-not $gitCommonDir) { throw "The shared Git directory could not be resolved." }
+$resolvedGitCommonDir = if ([IO.Path]::IsPathRooted($gitCommonDir)) {
+    [IO.Path]::GetFullPath($gitCommonDir)
+} else {
+    [IO.Path]::GetFullPath((Join-Path $repoRoot $gitCommonDir))
+}
+$sharedRepoRoot = Split-Path $resolvedGitCommonDir -Parent
 $pythonCandidates = @(
     (Join-Path $repoRoot ".venv\Scripts\python.exe"),
-    (Join-Path ($repoRoot -replace "-issue-477$", "") ".venv\Scripts\python.exe")
+    (Join-Path $sharedRepoRoot ".venv\Scripts\python.exe")
 ) | Select-Object -Unique
 $python = $pythonCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
 if (-not $python) {
@@ -69,12 +77,104 @@ if (Test-LoopbackPortInUse -Number $Port) {
 }
 
 $timestamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmss'Z'")
-$packetDir = Join-Path $resolvedOutputRoot "$timestamp-issue-477-operator-coverage"
+$packetDir = Join-Path $resolvedOutputRoot "$timestamp-issues-453-477-operator-coverage"
 $screenshotsDir = Join-Path $packetDir "screenshots"
 $htmlDir = Join-Path $packetDir "html"
 $downloadsDir = Join-Path $packetDir "downloads"
 $diagnosticsDir = Join-Path $packetDir "diagnostics"
 New-Item -ItemType Directory -Force -Path $screenshotsDir, $htmlDir, $downloadsDir, $diagnosticsDir | Out-Null
+
+$producerPackageDir = Join-Path $packetDir "producer-package"
+$producerResultPath = Join-Path $diagnosticsDir "producer-contract-result.json"
+$producerHelper = Join-Path $diagnosticsDir "generate-producer-package.py"
+$producerSource = @'
+from __future__ import annotations
+
+import csv
+import io
+import json
+import sys
+from datetime import UTC, datetime
+from pathlib import Path
+
+repo_root = Path(sys.argv[1]).resolve()
+sys.path.insert(0, str(repo_root / "src"))
+
+from ccld_complaints.source_to_screen_audit import (
+    COVERAGE_AGGREGATE_CSV_FIELDNAMES,
+    generate_coverage_package,
+    load_coverage_fixture_scenario,
+    validate_coverage_package,
+)
+from ccld_complaints.source_to_screen_coverage import (
+    COVERAGE_ARTIFACT_MEDIA_TYPES,
+    load_validated_coverage_package,
+)
+
+package_dir = Path(sys.argv[2]).resolve()
+result_path = Path(sys.argv[3]).resolve()
+fixture = load_coverage_fixture_scenario(
+    repo_root / "tests" / "fixtures" / "source_to_screen_coverage" / "scenarios.json",
+    "complete-balanced",
+)
+generated = generate_coverage_package(
+    fixture,
+    output_dir=package_dir,
+    repo_root=repo_root,
+    generated_at=datetime(2026, 7, 19, 12, 0, tzinfo=UTC),
+)
+validate_coverage_package(package_dir, repo_root=repo_root)
+validated = load_validated_coverage_package(package_dir)
+media_types = {
+    item["name"]: item["media_type"] for item in validated.manifest["artifacts"]
+}
+if media_types != COVERAGE_ARTIFACT_MEDIA_TYPES:
+    raise SystemExit("producer artifact media types do not match the consumer contract")
+reader = csv.DictReader(io.StringIO(validated.aggregate_csv.decode("utf-8"), newline=""))
+if tuple(reader.fieldnames or ()) != COVERAGE_AGGREGATE_CSV_FIELDNAMES:
+    raise SystemExit("producer aggregate CSV header does not match the consumer contract")
+result = {
+    "report_id": generated.report_id,
+    "producer_schema_id": validated.manifest["producer_schema_id"],
+    "generation_mode": validated.manifest["provenance"]["generation_mode"],
+    "package_availability": validated.state,
+    "facility_rows": len(validated.facility_rows),
+    "job_rows": len(validated.job_rows),
+    "artifact_media_types": media_types,
+    "aggregate_csv_header": list(reader.fieldnames or ()),
+    "source_layout_classifications": sorted(
+        {row["source_layout_classification"] for row in validated.facility_rows}
+    ),
+}
+result_path.write_text(
+    json.dumps(result, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+    newline="\n",
+)
+'@
+Set-Content -LiteralPath $producerHelper -Value $producerSource -Encoding utf8
+& $python $producerHelper $repoRoot $producerPackageDir $producerResultPath
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $producerResultPath)) {
+    throw "The real Issue 453 producer package did not pass the stable consumer boundary."
+}
+$producerContract = Get-Content -LiteralPath $producerResultPath -Raw | ConvertFrom-Json
+
+$serverLauncher = Join-Path $diagnosticsDir "launch-worktree-server.py"
+$serverSource = @'
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+repo_root = Path(sys.argv[1]).resolve()
+sys.path.insert(0, str(repo_root / "src"))
+sys.argv = [sys.argv[0], *sys.argv[2:]]
+
+from ccld_complaints.hosted_app.app import main
+
+raise SystemExit(main())
+'@
+Set-Content -LiteralPath $serverLauncher -Value $serverSource -Encoding utf8
 
 $browserHelper = Join-Path $diagnosticsDir "capture-browser.py"
 $browserSource = @'
@@ -233,8 +333,8 @@ with sync_playwright() as playwright:
                     "detail": f"scroll {metrics['scrollWidth']}; client {metrics['clientWidth']}",
                 },
                 {
-                    "name": "operator absent from primary reviewer navigation",
-                    "passed": metrics["primaryOperatorLinks"] == 0,
+                    "name": "operator link present once in operator navigation",
+                    "passed": metrics["primaryOperatorLinks"] == 1,
                     "detail": f"primary operator links {metrics['primaryOperatorLinks']}",
                 },
                 {
@@ -300,6 +400,14 @@ output_path.write_text(json.dumps(results, indent=2, sort_keys=True) + "\n", enc
 Set-Content -LiteralPath $browserHelper -Value $browserSource -Encoding utf8
 
 $scenarios = @(
+    [ordered]@{
+        Name = "producer-complete-balanced"; Package = "producer-package"; ProducerContract = $true; Captures = @(
+            [ordered]@{ Label = "00a-producer-summary"; Path = "/operator/source-coverage"; Width = 1440; Height = 1100; ExpectedStatus = 200; Contains = @("Coverage through reviewer surfaces", "Release assessment: Passed", "Reconciliation: Passed") },
+            [ordered]@{ Label = "00b-producer-facilities"; Path = "/operator/source-coverage/facilities"; Width = 720; Height = 900; ExpectedStatus = 200; Contains = @("Facility coverage details", "supported") },
+            [ordered]@{ Label = "00c-producer-jobs"; Path = "/operator/source-coverage/jobs"; Width = 1440; Height = 1100; ExpectedStatus = 200; Contains = @("Refresh job metadata", "Complete") },
+            [ordered]@{ Label = "00d-producer-aggregate-download"; Path = "/operator/source-coverage/export.csv"; ExpectedStatus = 200; Kind = "download"; Filename = "producer-aggregate-coverage.csv" }
+        )
+    },
     [ordered]@{
         Name = "complete-balanced"; Package = "complete-balanced"; Captures = @(
             [ordered]@{ Label = "01-complete-summary-desktop"; Path = "/operator/source-coverage"; Width = 1440; Height = 1100; ExpectedStatus = 200; Contains = @("Coverage through reviewer surfaces", "Retrieval, import, artifacts, checkpoints, and jobs", "Seven existing program-specific sources") },
@@ -367,7 +475,13 @@ try {
         $env:CCLD_HOSTED_TESTER_AUTH_MODE = "local-dev"
         $env:CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH = "enabled"
         $env:CCLD_OPERATOR_COVERAGE_FIXTURE_MODE = $FixtureMode
-        $env:CCLD_OPERATOR_COVERAGE_PACKAGE_DIR = Join-Path $fixtureRoot $scenario.Package
+        $env:CCLD_OPERATOR_COVERAGE_PACKAGE_DIR = if (
+            $scenario.Contains("ProducerContract") -and $scenario.ProducerContract
+        ) {
+            $producerPackageDir
+        } else {
+            Join-Path $fixtureRoot $scenario.Package
+        }
         $env:CCLD_OPERATOR_COVERAGE_FIXTURE_SCENARIO = $scenario.Name
         $env:CCLD_OPERATOR_COVERAGE_COMMIT_SHA = $commitSha
         $env:CCLD_OPERATOR_COVERAGE_BRANCH = $branch
@@ -375,7 +489,7 @@ try {
         $stdoutLog = Join-Path $diagnosticsDir "$($scenario.Name)-server.stdout.txt"
         $stderrLog = Join-Path $diagnosticsDir "$($scenario.Name)-server.stderr.txt"
         $server = Start-Process -FilePath $python -ArgumentList @(
-            "-m", "ccld_complaints.hosted_app", "--host", "127.0.0.1", "--port", $Port
+            $serverLauncher, $repoRoot, "--host", "127.0.0.1", "--port", $Port
         ) -WorkingDirectory $repoRoot -PassThru -WindowStyle Hidden -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
         try {
             $health = $null
@@ -464,6 +578,9 @@ $assertionRows -join "`n" | Set-Content -LiteralPath (Join-Path $packetDir "rout
 $routeRows -join "`n" | Set-Content -LiteralPath (Join-Path $packetDir "route-status.csv") -Encoding utf8
 
 $reviewerAbsenceCommand = @'
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / "src"))
 from ccld_complaints.hosted_app.app import route_response
 for route in ("/reviewer", "/ccld"):
     status, _content_type, body = route_response(route, page_data_mode="fixture-demo")
@@ -476,7 +593,7 @@ if ($LASTEXITCODE -ne 0) { $failedAssertions++; throw "Reviewer-tier absence ass
 Add-Content -LiteralPath (Join-Path $packetDir "route-assertions.csv") -Value '"in-process","reviewer-tier-absence","/reviewer and /ccld","operator route absent from reviewer HTML","PASS","No browser navigation outside the exact allowlist was used"' -Encoding utf8
 
 $manifest = [ordered]@{
-    evidence_kind = "issue-477-read-only-operator-coverage"
+    evidence_kind = "issues-453-477-producer-to-read-only-operator-coverage"
     fixture_mode = $FixtureMode
     fixture_label = "Fixture coverage data"
     generated_at_utc = (Get-Date).ToUniversalTime().ToString("o")
@@ -486,6 +603,7 @@ $manifest = [ordered]@{
     get_only = $true
     server_fresh_per_scenario = $true
     scenarios = @($scenarios.Name)
+    producer_contract = $producerContract
     captures = $allResults.Count
     assertions_failed = $failedAssertions
     viewports = @("1440x1100", "720x900", "390x844", "360x450 at device scale factor 2")
@@ -495,7 +613,7 @@ $manifest = [ordered]@{
 }
 $manifest | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $packetDir "manifest.json") -Encoding utf8
 
-Remove-Item -LiteralPath $browserHelper -Force
+Remove-Item -LiteralPath $browserHelper, $producerHelper, $serverLauncher -Force
 $zipPath = "$packetDir.zip"
 Compress-Archive -LiteralPath $packetDir -DestinationPath $zipPath -Force
 if ($failedAssertions -ne 0) {

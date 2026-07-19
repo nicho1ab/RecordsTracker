@@ -9,8 +9,10 @@ checkpoint, and job facts. It does not calculate coverage or infer a coverage
 classification from an operational state.
 
 The surface is not part of the attorney/reviewer tier. It is intentionally absent
-from primary reviewer navigation, reviewer pages, reviewer APIs, and reviewer
-exports. Shared operator navigation remains an integration-owned follow-up.
+from reviewer navigation, reviewer pages, reviewer APIs, and reviewer exports.
+The integration-owned shared shell adds `Source coverage` only while rendering
+an authorized operator coverage page; the operator route still authorizes before
+reading a package.
 
 This phase provides no retry, dry-run start, apply, confirmation, cancel, resume,
 backfill, retrieval, import, job creation, checkpoint update, database write, or
@@ -37,10 +39,14 @@ cookie, or login behavior. Production-style runtime without an explicitly
 configured validated package fails closed as `Coverage report unavailable`; it
 never silently substitutes fixture data.
 
-## Contract adapter
+## Stable producer-consumer boundary
 
-The narrow adapter consumes contract version `1.0.0` from an explicit package
-directory. It validates:
+The dashboard imports only the stable
+`ccld_complaints.source_to_screen_coverage` read boundary. That boundary invokes
+Issue #453's public package validator and consumes contract version `1.0.0`
+from an explicit package directory. The dashboard does not import the producer
+implementation directly and does not recount or reclassify producer results.
+The boundary validates:
 
 - compatible semantic version and minimum consumer version;
 - deterministic report identity from the six governed identity inputs;
@@ -60,14 +66,22 @@ directory. It validates:
 The dashboard summary reads only `coverage-report.json`. Facility and job indexes
 support authorized drill-down, filters, keyset pagination, and explicit Facility
 ID lists; they do not replace producer aggregate calculations. Tiny fixture
-indexes may be held in memory only by this explicit fixture adapter. No live
-source, database, or producer implementation module is imported.
+indexes may be held in memory only by the explicit legacy fixture adapter. That
+adapter requires fixture mode and the legacy `coverage.report.schema.v1`
+producer-schema marker; production-style package reads cannot select it.
 
-The shared contract describes `source_layout_classification` as a finite governed
-enum but does not enumerate its members. This consumer therefore validates it as
-a safe stable identifier and exposes only values already present in the validated
-package. Producer/consumer integration must reconcile that missing enum list
-before a live package is connected; this phase does not invent one.
+The producer's controlled `source_layout_classification` members are
+`supported`, `unsupported`, `unavailable`, and `not_applicable`. The stable
+boundary accepts only those values for real producer packages. Legacy fixture
+labels remain isolated to deterministic UI-state testing and do not extend the
+production contract.
+
+The real producer CSV header is exactly
+`contract_version,report_id,dimension,field_id,stage,category,numerator_count,denominator_count,percentage,status,criteria_set_id,source_snapshot_id`.
+JSON is `application/json`, JSONL is `application/x-ndjson`, and CSV is
+`text/csv`. Job rows use `checkpoint_identity`. Release and reconciliation
+statuses are read from their producer-owned objects rather than a fixture-only
+flattened shape.
 
 ## UI states and behavior
 
@@ -133,10 +147,11 @@ Then use one unused loopback port:
 ```
 
 The capture script refuses an occupied port, checks the exact branch and HEAD,
-starts a fresh fixture process for each scenario, and verifies branch, commit,
-and fixture-mode markers through `/health`. Browser traffic is limited to the
-five operator routes; reviewer-tier absence is checked in-process so browser
-authority is not expanded.
+generates and validates a real deterministic Issue #453 package through the
+stable boundary, starts a fresh fixture process for each scenario, and verifies
+branch, commit, and fixture-mode markers through `/health`. Browser traffic is
+limited to the five operator routes; reviewer-tier absence is checked in-process
+so browser authority is not expanded.
 
 The ignored packet and zip contain a manifest, route status, route assertions,
 sanitized local HTML, CSV samples, screenshots, and a print PDF. Automated
@@ -150,14 +165,11 @@ The packet classifies `RT-DOM-001`, `RT-TIER-001`, `RT-STATE-001`,
 Generated evidence stays under ignored `data/processed/ui-evidence`. Do not
 commit it by default.
 
-## Deferred integration decisions
+## Deferred decisions
 
-Before live producer output is connected, integration must compare the Issue
-#453 producer package and Issue #477 fixture package for exact schema, aggregate
-CSV columns, artifact media types, source-layout enum members, deterministic
-identity encoding, and reconciliation behavior. A later decision must also set
-retention duration; until then `policy_id` remains null, disposition is
-`pending_policy`, and automated cleanup is not authorized.
+A later decision must set retention duration; until then `policy_id` remains
+null, disposition is `pending_policy`, and automated cleanup is not authorized.
 
-Mutation routes, persistence, schedules, operator navigation, live package
-discovery, and every QNAP/deployment concern require separately authorized work.
+Mutation routes, retry/apply/cancel/resume/backfill execution, persistence,
+schedules, live package discovery, and every QNAP/deployment concern require
+separately authorized work.

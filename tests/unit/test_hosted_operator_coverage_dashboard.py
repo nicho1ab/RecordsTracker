@@ -3,7 +3,10 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import subprocess
+import sys
 from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 from urllib.parse import parse_qs, urlparse
@@ -35,6 +38,16 @@ from ccld_complaints.hosted_app.operator_coverage_dashboard import (
     load_coverage_package,
     route_operator_coverage_response,
 )
+from ccld_complaints.source_to_screen_audit import (
+    COVERAGE_AGGREGATE_CSV_FIELDNAMES,
+    generate_coverage_package,
+    load_coverage_fixture_scenario,
+)
+from ccld_complaints.source_to_screen_coverage import (
+    COVERAGE_ARTIFACT_MEDIA_TYPES,
+    COVERAGE_PRODUCER_SCHEMA_ID,
+    COVERAGE_SOURCE_LAYOUT_CLASSIFICATIONS,
+)
 
 FIXTURE_ROOT = Path("tests/fixtures/hosted_operator_coverage_dashboard")
 TEST_SCOPE = HostedAccessScope("test_project", "scope.fixture.operator")
@@ -65,7 +78,9 @@ def test_contract_fixture_matrix_is_complete_and_adapter_states_are_truthful() -
         "pagination-adjacent-pages": ("available", 6, 1),
     }
     for scenario, outcome in expected.items():
-        package = load_coverage_package(FIXTURE_ROOT / scenario)
+        package = load_coverage_package(
+            FIXTURE_ROOT / scenario, allow_legacy_fixture=True
+        )
         assert (package.state, len(package.facility_rows), len(package.job_rows)) == outcome
         assert package.manifest["contract_version"] == CONTRACT_VERSION
         assert package.report["report_id"] == package.manifest["report_id"]
@@ -78,8 +93,84 @@ def test_contract_fixture_matrix_is_complete_and_adapter_states_are_truthful() -
     }
     for scenario, state in failures.items():
         with pytest.raises(CoveragePackageError) as captured:
-            load_coverage_package(FIXTURE_ROOT / scenario)
+            load_coverage_package(
+                FIXTURE_ROOT / scenario, allow_legacy_fixture=True
+            )
         assert captured.value.state == state
+
+
+def test_real_issue_453_package_loads_through_stable_contract_boundary(
+    tmp_path: Path,
+) -> None:
+    fixture = load_coverage_fixture_scenario(
+        Path("tests/fixtures/source_to_screen_coverage/scenarios.json"),
+        "complete-balanced",
+    )
+    generated = generate_coverage_package(
+        fixture,
+        output_dir=tmp_path,
+        repo_root=Path.cwd(),
+        generated_at=datetime(2026, 7, 19, 12, 0, tzinfo=UTC),
+    )
+
+    package = load_coverage_package(tmp_path)
+
+    assert package.report_id == generated.report_id
+    assert package.manifest["producer_schema_id"] == COVERAGE_PRODUCER_SCHEMA_ID
+    assert {
+        item["name"]: item["media_type"]
+        for item in package.manifest["artifacts"]
+    } == COVERAGE_ARTIFACT_MEDIA_TYPES
+    assert tuple(package.aggregate_csv.splitlines()[0].decode("utf-8").split(",")) == (
+        COVERAGE_AGGREGATE_CSV_FIELDNAMES
+    )
+    assert package.facility_rows
+    assert {
+        row["source_layout_classification"] for row in package.facility_rows
+    } <= set(COVERAGE_SOURCE_LAYOUT_CLASSIFICATIONS)
+    assert package.job_rows[0]["checkpoint_identity"]
+
+    context = OperatorCoverageDashboardContext(
+        actor=_actor(),
+        scope=TEST_SCOPE,
+        package_dir=tmp_path,
+        fixture_mode=True,
+        fixture_scenario="producer-complete-balanced",
+    )
+    status, content_type, body = route_operator_coverage_response(
+        OPERATOR_COVERAGE_SUMMARY_PATH,
+        context,
+    )
+    markup = body.decode("utf-8")
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert generated.report_id in markup
+    assert "Release assessment: Passed" in markup
+    assert "Reconciliation: Passed" in markup
+
+
+def test_producer_first_import_order_does_not_create_a_hosted_app_cycle() -> None:
+    command = (
+        "import sys;sys.path.insert(0, 'src');"
+        "from ccld_complaints.source_to_screen_audit import generate_coverage_package;"
+        "from ccld_complaints.hosted_app.operator_coverage_dashboard import "
+        "load_coverage_package;"
+        "assert callable(generate_coverage_package) and callable(load_coverage_package)"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", command],
+        cwd=Path.cwd(),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_legacy_dashboard_scenarios_require_explicit_fixture_mode() -> None:
+    with pytest.raises(CoveragePackageError) as captured:
+        load_coverage_package(FIXTURE_ROOT / "complete-balanced")
+    assert captured.value.state == "unavailable"
 
 
 def test_adapter_validates_deterministic_report_and_facility_entry_identities(
@@ -93,7 +184,7 @@ def test_adapter_validates_deterministic_report_and_facility_entry_identities(
     manifest_path.write_text(_pretty_json(manifest), encoding="utf-8", newline="\n")
 
     with pytest.raises(CoveragePackageError, match="deterministic identity"):
-        load_coverage_package(report_copy)
+        load_coverage_package(report_copy, allow_legacy_fixture=True)
 
     facility_copy = tmp_path / "facility-identity"
     shutil.copytree(FIXTURE_ROOT / "complete-balanced", facility_copy)
@@ -105,7 +196,7 @@ def test_adapter_validates_deterministic_report_and_facility_entry_identities(
     _refresh_manifest_artifact(facility_copy, "operator-facility-index.jsonl")
 
     with pytest.raises(CoveragePackageError, match="Facility entry deterministic"):
-        load_coverage_package(facility_copy)
+        load_coverage_package(facility_copy, allow_legacy_fixture=True)
 
 
 def test_adapter_rejects_unknown_closed_enum_without_reclassifying(
@@ -120,7 +211,7 @@ def test_adapter_rejects_unknown_closed_enum_without_reclassifying(
     _refresh_manifest_artifact(package_copy, "coverage-report.json")
 
     with pytest.raises(CoveragePackageError, match="invalid closed enum"):
-        load_coverage_package(package_copy)
+        load_coverage_package(package_copy, allow_legacy_fixture=True)
 
 
 def test_adapter_rejects_unexpected_artifact_media_type(tmp_path: Path) -> None:
@@ -137,7 +228,7 @@ def test_adapter_rejects_unexpected_artifact_media_type(tmp_path: Path) -> None:
     manifest_path.write_text(_pretty_json(manifest), encoding="utf-8", newline="\n")
 
     with pytest.raises(CoveragePackageError, match="media type"):
-        load_coverage_package(package_copy)
+        load_coverage_package(package_copy, allow_legacy_fixture=True)
 
 
 def test_complete_summary_separates_coverage_from_operations_and_is_safe() -> None:
@@ -156,6 +247,8 @@ def test_complete_summary_separates_coverage_from_operations_and_is_safe() -> No
     assert "successful operation does not prove correct rendering" in markup
     assert "Producer-supplied source-to-screen stage counts" in markup
     assert "Authorization permission: audit_read" in markup
+    assert '>Source coverage</a>' in markup
+    assert 'aria-current="page" href="/operator/source-coverage"' in markup
     assert 'method="post"' not in markup.casefold()
     assert "source body" not in markup.casefold()
     assert "facility name" not in markup.casefold()
@@ -242,7 +335,9 @@ def test_facility_filters_sort_and_filtered_empty_state_are_allowlisted() -> Non
 
 
 def test_adjacent_keyset_pages_have_no_duplicates_or_omissions() -> None:
-    package = load_coverage_package(FIXTURE_ROOT / "pagination-adjacent-pages")
+    package = load_coverage_package(
+        FIXTURE_ROOT / "pagination-adjacent-pages", allow_legacy_fixture=True
+    )
     filters = facility_filters_from_query("limit=2", package)
     pages = []
     while True:
@@ -284,7 +379,9 @@ def test_adjacent_keyset_pages_have_no_duplicates_or_omissions() -> None:
 
 
 def test_downloads_preserve_aggregate_and_explicit_facility_id_boundaries() -> None:
-    package = load_coverage_package(FIXTURE_ROOT / "complete-balanced")
+    package = load_coverage_package(
+        FIXTURE_ROOT / "complete-balanced", allow_legacy_fixture=True
+    )
     status, content_type, body = _route(
         OPERATOR_COVERAGE_EXPORT_PATH,
         scenario="complete-balanced",
@@ -334,7 +431,10 @@ def test_downloads_preserve_aggregate_and_explicit_facility_id_boundaries() -> N
 def test_authorization_happens_before_fixture_or_package_read(
     monkeypatch: MonkeyPatch,
 ) -> None:
-    def fail_if_read(_package_dir: Path | None) -> dashboard.CoveragePackage:
+    def fail_if_read(
+        _package_dir: Path | None, *, allow_legacy_fixture: bool = False
+    ) -> dashboard.CoveragePackage:
+        del allow_legacy_fixture
         raise AssertionError("package must not be read before authorization")
 
     monkeypatch.setattr(dashboard, "load_coverage_package", fail_if_read)
@@ -416,7 +516,9 @@ def test_all_gets_leave_fixture_package_bytes_unchanged() -> None:
 
 
 def test_issue_490_source_selection_cadence_and_raw_733_boundary() -> None:
-    package = load_coverage_package(FIXTURE_ROOT / "raw-733-unresolved")
+    package = load_coverage_package(
+        FIXTURE_ROOT / "raw-733-unresolved", allow_legacy_fixture=True
+    )
     snapshots = package.manifest["source_snapshots"]
     assert [item["selection_state"] for item in snapshots] == [
         "retained_existing",
@@ -462,11 +564,20 @@ def test_production_style_context_never_silently_substitutes_fixture(
     assert b"No coverage package data was read or serialized" in body
 
 
-def test_implementation_has_no_offset_or_producer_import() -> None:
+def test_shared_navigation_hides_operator_link_from_reviewer_pages() -> None:
+    for path in ("/reviewer", "/ccld"):
+        status, _content_type, body = route_response(
+            path, page_data_mode="fixture-demo"
+        )
+        assert status in {200, 401}
+        assert b"/operator/source-coverage" not in body
+
+
+def test_implementation_has_no_offset_or_direct_producer_import() -> None:
     source = Path(dashboard.__file__).read_text(encoding="utf-8")
     assert " OFFSET " not in source.upper()
-    assert "issue_453" not in source
-    assert "coverage_report_generator" not in source
+    assert "source_to_screen_audit" not in source
+    assert "source_to_screen_coverage" in source
     assert "sqlalchemy" not in source
 
 

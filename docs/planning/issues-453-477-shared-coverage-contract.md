@@ -749,3 +749,21 @@ Any ambiguity that would require either workstream to guess another enum,
 invariant, field meaning, source approval, cadence, authorization rule, or shared
 file is an integration blocker. The workstream stops and reports it instead of
 extending this contract unilaterally.
+
+## Integration resolution
+
+The integration branch resolved the independent fixture differences through the
+stable `ccld_complaints.source_to_screen_coverage` read boundary. The dashboard
+imports that boundary and does not import the producer implementation directly.
+The boundary delegates schema, canonical serialization, hashes, deterministic
+identity, reconciliation, and closed-enum validation to the producer's public
+validator, then exposes only validated manifest, report, facility index, job
+index, and aggregate CSV values.
+
+For real producer packages, `source_layout_classification` is exactly
+`supported`, `unsupported`, `unavailable`, or `not_applicable`; no business
+label is inferred. JSON uses `application/json`, JSONL uses
+`application/x-ndjson`, and CSV uses `text/csv`. The aggregate CSV header and
+`checkpoint_identity` job field remain producer-owned. The older Issue #477
+scenario shape is available only behind explicit fixture mode and its legacy
+producer-schema marker. It is not a production compatibility contract.

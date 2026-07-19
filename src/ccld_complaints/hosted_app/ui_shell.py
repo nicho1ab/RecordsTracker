@@ -19,6 +19,9 @@ PRIMARY_NAV_LINKS: tuple[tuple[str, str], ...] = (
     ("Feedback", "/feedback"),
     ("Help", "/ccld/help"),
 )
+OPERATOR_NAV_LINKS: tuple[tuple[str, str], ...] = (
+    ("Source coverage", "/operator/source-coverage"),
+)
 
 @dataclass(frozen=True)
 class ActionItem:
@@ -110,9 +113,13 @@ def render_page_shell(
     step_id: str | None = None,
     next_action: str | None = None,
     show_workflow_indicator: bool = False,
+    show_operator_navigation: bool = False,
 ) -> str:
     runtime_mode = mode_label or _runtime_mode_label()
-    links = _nav_links(active_path=active_path)
+    links = _nav_links(
+        active_path=active_path,
+        show_operator_navigation=show_operator_navigation,
+    )
     current_step = step_id or _step_id_for_path(active_path)
     stepper = _guided_stepper(current_step, next_action) if show_workflow_indicator else ""
     actor_markup = (
@@ -229,10 +236,11 @@ def _action_anchor(item: ActionItem, class_name: str) -> str:
     )
 
 
-def _nav_links(*, active_path: str | None) -> str:
+def _nav_links(*, active_path: str | None, show_operator_navigation: bool = False) -> str:
     seen: set[str] = set()
     items: list[str] = []
-    for label, href in PRIMARY_NAV_LINKS:
+    links = PRIMARY_NAV_LINKS + (OPERATOR_NAV_LINKS if show_operator_navigation else ())
+    for label, href in links:
         if href in seen:
             continue
         seen.add(href)

@@ -8,3 +8,4 @@
 *.html text eol=lf
 tests/fixtures/hosted_operator_coverage_dashboard/**/*.jsonl text eol=lf
 tests/fixtures/hosted_operator_coverage_dashboard/**/*.csv text eol=lf
+tests/fixtures/source_profiling/issue_490/*.csv text eol=lf
