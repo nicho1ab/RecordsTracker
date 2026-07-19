@@ -265,6 +265,17 @@ actions unless a separate task grants more. It does not authorize statewide
 source selection, cadence, deployment, QNAP, database mutation, or the later
 Issue #477 mutation phase.
 
+### Integration outcome
+
+The reserved integration branch added the stable
+`src/ccld_complaints/source_to_screen_coverage.py` boundary, connected the
+dashboard to real Issue #453 output, and added shared operator-only navigation.
+The Issue #477 legacy vectors remain explicit fixtures; they no longer define
+the production-shaped package contract. Reserved changelog, roadmap,
+governance, limitation, developer, and phase-report updates belong to this
+integration change. No parallel-owned producer or dashboard fixture bytes were
+rewritten.
+
 ## Evidence exchange
 
 ### Workstream A handoff

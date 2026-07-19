@@ -37,7 +37,7 @@ def test_operator_evidence_script_starts_fresh_branch_bound_fixture_servers() ->
     script = SCRIPT.read_text(encoding="utf-8")
 
     for marker in (
-        'expectedBranch = "issue-477-operator-coverage-dashboard"',
+        'expectedBranch = "integrate-453-477-coverage-dashboard"',
         "git -C $repoRoot branch --show-current",
         "git -C $repoRoot rev-parse HEAD",
         "Test-LoopbackPortInUse",
@@ -82,6 +82,7 @@ def test_operator_evidence_covers_required_states_viewports_and_accessibility() 
     script = SCRIPT.read_text(encoding="utf-8")
 
     for scenario in (
+        "producer-complete-balanced",
         "complete-balanced",
         "empty-verified",
         "partial-unavailable-stage",
@@ -109,7 +110,7 @@ def test_operator_evidence_covers_required_states_viewports_and_accessibility() 
         "semantic heading order",
         "single h1",
         "keyboard focus reaches visible control",
-        "operator absent from primary reviewer navigation",
+        "operator link present once in operator navigation",
         "GET-only forms",
         "no mutation controls",
     ):
@@ -126,6 +127,23 @@ def test_operator_evidence_covers_required_states_viewports_and_accessibility() 
         "RT-SAFE-001",
     ):
         assert requirement in script
+
+
+def test_operator_evidence_uses_real_producer_package_through_stable_boundary() -> None:
+    script = SCRIPT.read_text(encoding="utf-8")
+
+    for marker in (
+        "load_coverage_fixture_scenario",
+        "generate_coverage_package",
+        "validate_coverage_package",
+        "load_validated_coverage_package",
+        "COVERAGE_ARTIFACT_MEDIA_TYPES",
+        "COVERAGE_AGGREGATE_CSV_FIELDNAMES",
+        'Name = "producer-complete-balanced"',
+        'producer_contract = $producerContract',
+        "The real Issue 453 producer package did not pass the stable consumer boundary",
+    ):
+        assert marker in script
 
 
 def test_operator_evidence_proves_reviewer_absence_without_browser_scope_expansion() -> None:

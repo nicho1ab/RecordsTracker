@@ -875,6 +875,25 @@ It does not delete, truncate, overwrite, archive, import, reload, create new
 dry-run audit events, execute persisted metadata, run live crawling, execute
 connectors, or implement a production API framework.
 
+The operator source-coverage surface is separate from the reviewer tier. After
+`audit_read` and scope authorization, its shared shell adds `Source coverage`
+navigation and serves only these GET routes:
+
+- `/operator/source-coverage`;
+- `/operator/source-coverage/facilities`;
+- `/operator/source-coverage/jobs`;
+- `/operator/source-coverage/export.csv`; and
+- `/operator/source-coverage/facility-ids.csv?group=<allowed-group>`.
+
+The dashboard reads Issue #453 v1 packages through the stable
+`source_to_screen_coverage` boundary. Production-shaped reads use producer-owned
+schema, hash, identity, reconciliation, media-type, aggregate CSV, facility,
+job, and controlled source-layout validation. Legacy Issue #477 scenario
+packages require explicit fixture mode. Reviewer/tester navigation and access
+do not expose these routes. No retry, apply, cancel, resume, backfill,
+retrieval/import execution, job mutation, persistence, database write, or
+retention cleanup is implemented.
+
 To run migrations or load a seeded corpus into a local PostgreSQL-compatible
 test database, set `CCLD_HOSTED_TESTER_DATABASE_URL` outside the repository and
 run Alembic before the import command:

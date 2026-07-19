@@ -1,5 +1,13 @@
 # Known Limitations
 
+- The authenticated operator source-coverage dashboard consumes validated
+  Issue #453 v1 packages and exposes only GET summary, facility, job, aggregate
+  CSV, and grouped Facility ID reads. It does not discover live packages or
+  execute retry, apply, cancel, resume, backfill, retrieval, import, job or
+  checkpoint mutation, persistence, scheduling, database writes, or retention
+  cleanup. Retention remains `pending_policy`. Automated local fixture evidence
+  does not prove current runtime, statewide completeness, freshness,
+  deployment, or QNAP behavior.
 - Reviewer aggregates report their loaded-record universe, denominator,
   selected date dimension/range, source coverage, and explicit zero,
   unavailable, partial, or truncated cause. These counts describe authorized

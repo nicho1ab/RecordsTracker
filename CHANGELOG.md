@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Integrated the deterministic Issue #453 source-to-screen coverage producer
+  with the GET-only Issue #477 operator dashboard through a stable validated
+  read boundary. Real packages now drive exact schema, identities, media types,
+  aggregate CSV columns, facility/job indexes, controlled source-layout values,
+  release assessment, and reconciliation rendering; legacy dashboard scenarios
+  are fixture-only. Authorized operator pages receive shared `Source coverage`
+  navigation while reviewer/tester pages remain unchanged. Retry, apply,
+  cancel, resume, backfill, retrieval, persistence, scheduling, and all other
+  mutation behavior remain deferred.
 - Completed the Issue #490 governed statewide facility-source evaluation. The
   final verdict is **inconclusive; retain existing program-specific sources and
   keep the statewide candidate inactive**: seven program datastores were
