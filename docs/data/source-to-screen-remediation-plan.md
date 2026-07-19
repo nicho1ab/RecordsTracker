@@ -191,9 +191,21 @@ Related stable gaps:
 - `gap.data.facility.facility_fixture_chhs_facility_master_tiny.res_street_addr.stored_query_omission`
 - `gap.query.source-derived-default-100-row-cap`
 
-## P2: Automate source-to-screen coverage reporting
+## P2 implementation available: automate source-to-screen coverage reporting
 
 Run the aggregate-only audit against governed local fixtures and the deployed database without retaining record values or source bodies.
+
+Contract `1.0.0` producer code, its closed JSON Schema, deterministic scenario
+bundle, aggregate-only report/CSV, safe operator indexes, reconciliation, and
+release assessment are implemented in the Issue #453 workstream. The existing
+program-specific source family remains the evaluated retained scope; statewide
+candidates, cadence, and raw `733` mapping remain unapproved.
+
+This is not a completion claim. Production-style evidence still requires the
+later authorized integration to supply validated aggregate field/stage and
+operational read-boundary input without fixture substitution, then compare the
+producer package with the independent Issue #477 consumer fixtures. Retention
+duration also remains pending policy.
 
 Dependencies:
 

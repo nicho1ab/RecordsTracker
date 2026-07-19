@@ -1,0 +1,482 @@
+{
+  "fixture_bundle_id": "issue-453-coverage-scenarios-v1",
+  "base": {
+    "contract_version": "1.0.0",
+    "evaluation_id": "fixture.complete-balanced.v1",
+    "criteria_set_id": "retained-existing-scope-v1",
+    "scope_id": "governed-fixture-scope",
+    "producer_schema_id": "issues-453-477-coverage-report-v1",
+    "producer_version": "source-to-screen-audit-v1",
+    "generation_mode": "governed_fixture",
+    "source_snapshots": [
+      {
+        "source_snapshot_id": "program-specific-snapshot-v1",
+        "source_family_id": "ccld-program-specific",
+        "selection_state": "retained_existing",
+        "safe_version_label": "program-snapshot-v1",
+        "observed_at": "2026-07-19T12:00:00Z",
+        "row_count": 2,
+        "schema_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "content_fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "availability": "available",
+        "reason_category": "none",
+        "cadence_status": "not_approved"
+      },
+      {
+        "source_snapshot_id": "statewide-candidate-unavailable-v1",
+        "source_family_id": "ccld-statewide-candidate",
+        "selection_state": "inactive_candidate",
+        "safe_version_label": null,
+        "observed_at": null,
+        "row_count": null,
+        "schema_fingerprint": null,
+        "content_fingerprint": null,
+        "availability": "unavailable",
+        "reason_category": "read_boundary_unavailable",
+        "cadence_status": "not_approved"
+      }
+    ],
+    "criteria": {
+      "baseline_metrics": {
+        "existing_facility_total": 2,
+        "previously_populated_governed_field_total": 12,
+        "verified_descriptive_facility_type_label_total": 1,
+        "required_stage_success_total": 24,
+        "unresolved_identity_or_type_total": 0
+      },
+      "thresholds": {
+        "maximum_facility_count_decline": 0,
+        "maximum_new_blank_regressions": 0,
+        "maximum_label_regressions": 0,
+        "maximum_stage_regressions": 0,
+        "maximum_unresolved_identity_or_type_total": 0
+      },
+      "observed_metrics": {
+        "previously_populated_now_blank_total": 0,
+        "verified_label_to_unresolved_regression_total": 0,
+        "required_stage_regression_total": 0,
+        "unresolved_identity_or_type_total": 0
+      },
+      "reviewed_exceptions": []
+    },
+    "coverage": {
+      "terminal_overrides": {},
+      "stage_overrides": {}
+    },
+    "operational": {
+      "facility_index": {
+        "availability": "available",
+        "reason_category": "none",
+        "rows": [
+          {
+            "facility_id": "100000002",
+            "source_snapshot_id": "program-specific-snapshot-v1",
+            "refresh_eligibility": "eligible",
+            "preserved_source_document_count": 1,
+            "last_retrieval_attempt_at": "2026-07-19T11:00:00Z",
+            "last_successful_retrieval_at": "2026-07-19T11:00:00Z",
+            "last_refresh_attempt_at": "2026-07-19T11:05:00Z",
+            "last_successful_refresh_at": "2026-07-19T11:05:00Z",
+            "pipeline_version": "pipeline-v1",
+            "preserved_artifact_state": "preserved",
+            "hash_validation_state": "valid",
+            "source_layout_classification": "supported",
+            "processing_outcome": "successful",
+            "change_outcome": "unchanged",
+            "refresh_state": "completed",
+            "retrieval_state": "successful",
+            "import_state": "successful",
+            "governed_conflict": false,
+            "operational_failure_category": "none",
+            "retry_eligibility": "ineligible",
+            "operator_intervention_required": false,
+            "checkpoint_state": "complete",
+            "last_job_id": "job-complete-v1"
+          },
+          {
+            "facility_id": "100000001",
+            "source_snapshot_id": "program-specific-snapshot-v1",
+            "refresh_eligibility": "eligible",
+            "preserved_source_document_count": 2,
+            "last_retrieval_attempt_at": "2026-07-19T10:00:00Z",
+            "last_successful_retrieval_at": "2026-07-19T10:00:00Z",
+            "last_refresh_attempt_at": "2026-07-19T10:05:00Z",
+            "last_successful_refresh_at": "2026-07-19T10:05:00Z",
+            "pipeline_version": "pipeline-v1",
+            "preserved_artifact_state": "preserved",
+            "hash_validation_state": "valid",
+            "source_layout_classification": "supported",
+            "processing_outcome": "successful",
+            "change_outcome": "changed",
+            "refresh_state": "completed",
+            "retrieval_state": "successful",
+            "import_state": "successful",
+            "governed_conflict": false,
+            "operational_failure_category": "none",
+            "retry_eligibility": "ineligible",
+            "operator_intervention_required": false,
+            "checkpoint_state": "complete",
+            "last_job_id": "job-complete-v1"
+          }
+        ]
+      },
+      "job_index": {
+        "availability": "available",
+        "reason_category": "none",
+        "rows": [
+          {
+            "job_id": "job-complete-v1",
+            "job_state": "completed",
+            "execution_mode": "dry_run",
+            "started_at": "2026-07-19T10:00:00Z",
+            "completed_at": "2026-07-19T11:06:00Z",
+            "last_successful_refresh_at": "2026-07-19T11:05:00Z",
+            "pipeline_version": "pipeline-v1",
+            "checkpoint_state": "complete",
+            "checkpoint_identity": "checkpoint-complete-v1",
+            "selected_count": 2,
+            "processed_count": 2,
+            "changed_count": 1,
+            "unchanged_count": 1,
+            "skipped_count": 0,
+            "warning_count": 0,
+            "failed_count": 0,
+            "operational_failure_category": "none",
+            "previous_accepted_dataset_active": false,
+            "operator_intervention_required": false
+          }
+        ]
+      },
+      "declared_totals": {}
+    },
+    "retention": {
+      "policy_id": null,
+      "disposition": "pending_policy",
+      "retain_until": null,
+      "previous_accepted_report_id": null
+    },
+    "provenance": {
+      "input_manifest_ids": ["program-fixture-manifest-v1"],
+      "governed_fixture_ids": ["issue-453-coverage-scenarios-v1"]
+    },
+    "unavailable_dimensions": []
+  },
+  "scenarios": {
+    "complete-balanced": {},
+    "empty-verified": {
+      "evaluation_id": "fixture.empty-verified.v1",
+      "source_snapshots": [
+        {
+          "source_snapshot_id": "program-specific-snapshot-v1",
+          "source_family_id": "ccld-program-specific",
+          "selection_state": "retained_existing",
+          "safe_version_label": "program-snapshot-v1",
+          "observed_at": "2026-07-19T12:00:00Z",
+          "row_count": 0,
+          "schema_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "content_fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "availability": "available",
+          "reason_category": "none",
+          "cadence_status": "not_approved"
+        },
+        {
+          "source_snapshot_id": "statewide-candidate-unavailable-v1",
+          "source_family_id": "ccld-statewide-candidate",
+          "selection_state": "inactive_candidate",
+          "safe_version_label": null,
+          "observed_at": null,
+          "row_count": null,
+          "schema_fingerprint": null,
+          "content_fingerprint": null,
+          "availability": "unavailable",
+          "reason_category": "read_boundary_unavailable",
+          "cadence_status": "not_approved"
+        }
+      ],
+      "criteria": {
+        "baseline_metrics": {
+          "existing_facility_total": 0
+        }
+      },
+      "operational": {
+        "facility_index": {
+          "rows": []
+        },
+        "job_index": {
+          "rows": []
+        }
+      }
+    },
+    "partial-unavailable-stage": {
+      "evaluation_id": "fixture.partial-unavailable-stage.v1",
+      "coverage": {
+        "terminal_overrides": {
+          "data.facility.facility.facility_type": "source_artifact_unavailable"
+        }
+      },
+      "operational": {
+        "job_index": {
+          "availability": "unavailable",
+          "reason_category": "read_boundary_unavailable",
+          "rows": []
+        }
+      },
+      "unavailable_dimensions": ["postgresql_population"]
+    },
+    "failed-reconciliation": {
+      "evaluation_id": "fixture.failed-reconciliation.v1",
+      "operational": {
+        "declared_totals": {
+          "existing_facility_total": 3
+        }
+      }
+    },
+    "version-mismatch": {
+      "contract_version": "2.0.0",
+      "evaluation_id": "fixture.version-mismatch.v1"
+    },
+    "hash-validation-failure": {
+      "evaluation_id": "fixture.hash-validation-failure.v1",
+      "criteria": {
+        "baseline_metrics": {
+          "existing_facility_total": 1
+        }
+      },
+      "operational": {
+        "facility_index": {
+          "rows": [
+            {
+              "facility_id": "100000001",
+              "source_snapshot_id": "program-specific-snapshot-v1",
+              "refresh_eligibility": "eligible",
+              "preserved_source_document_count": 1,
+              "last_retrieval_attempt_at": "2026-07-19T10:00:00Z",
+              "last_successful_retrieval_at": null,
+              "last_refresh_attempt_at": "2026-07-19T10:05:00Z",
+              "last_successful_refresh_at": null,
+              "pipeline_version": "pipeline-v1",
+              "preserved_artifact_state": "preserved",
+              "hash_validation_state": "failed",
+              "source_layout_classification": "supported",
+              "processing_outcome": "failed",
+              "change_outcome": "not_evaluated",
+              "refresh_state": "failed",
+              "retrieval_state": "successful",
+              "import_state": "not_attempted",
+              "governed_conflict": false,
+              "operational_failure_category": "hash_validation_failed",
+              "retry_eligibility": "eligible",
+              "operator_intervention_required": true,
+              "checkpoint_state": "failed",
+              "last_job_id": "job-hash-failed-v1"
+            }
+          ]
+        },
+        "job_index": {
+          "rows": [
+            {
+              "job_id": "job-hash-failed-v1",
+              "job_state": "failed",
+              "execution_mode": "dry_run",
+              "started_at": "2026-07-19T10:00:00Z",
+              "completed_at": "2026-07-19T10:06:00Z",
+              "last_successful_refresh_at": null,
+              "pipeline_version": "pipeline-v1",
+              "checkpoint_state": "failed",
+              "checkpoint_identity": "checkpoint-hash-failed-v1",
+              "selected_count": 1,
+              "processed_count": 1,
+              "changed_count": 0,
+              "unchanged_count": 0,
+              "skipped_count": 0,
+              "warning_count": 0,
+              "failed_count": 1,
+              "operational_failure_category": "hash_validation_failed",
+              "previous_accepted_dataset_active": false,
+              "operator_intervention_required": true
+            }
+          ]
+        }
+      }
+    },
+    "interrupted-job-previous-accepted-active": {
+      "evaluation_id": "fixture.interrupted-job-previous-accepted-active.v1",
+      "operational": {
+        "job_index": {
+          "rows": [
+            {
+              "job_id": "job-interrupted-v1",
+              "job_state": "interrupted",
+              "execution_mode": "apply",
+              "started_at": "2026-07-19T10:00:00Z",
+              "completed_at": null,
+              "last_successful_refresh_at": "2026-07-18T10:00:00Z",
+              "pipeline_version": "pipeline-v1",
+              "checkpoint_state": "interrupted",
+              "checkpoint_identity": "checkpoint-interrupted-v1",
+              "selected_count": 2,
+              "processed_count": 1,
+              "changed_count": 1,
+              "unchanged_count": 0,
+              "skipped_count": 0,
+              "warning_count": 0,
+              "failed_count": 0,
+              "operational_failure_category": "checkpoint_interrupted",
+              "previous_accepted_dataset_active": true,
+              "operator_intervention_required": true
+            }
+          ]
+        }
+      },
+      "retention": {
+        "previous_accepted_report_id": "coverage-report-v1-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      }
+    },
+    "raw-733-unresolved": {
+      "evaluation_id": "fixture.raw-733-unresolved.v1",
+      "coverage": {
+        "terminal_overrides": {
+          "data.facility.facility.facility_type": "conflicting_sources"
+        }
+      },
+      "criteria": {
+        "thresholds": {
+          "maximum_unresolved_identity_or_type_total": 1
+        },
+        "observed_metrics": {
+          "unresolved_identity_or_type_total": 1
+        }
+      }
+    },
+    "pagination-adjacent-pages": {
+      "evaluation_id": "fixture.pagination-adjacent-pages.v1",
+      "criteria": {
+        "baseline_metrics": {
+          "existing_facility_total": 4
+        }
+      },
+      "operational": {
+        "facility_index": {
+          "rows": [
+            {
+              "facility_id": "100000010",
+              "source_snapshot_id": "program-specific-snapshot-v1",
+              "refresh_eligibility": "unknown",
+              "preserved_source_document_count": 0,
+              "last_retrieval_attempt_at": null,
+              "last_successful_retrieval_at": null,
+              "last_refresh_attempt_at": null,
+              "last_successful_refresh_at": null,
+              "pipeline_version": "pipeline-v1",
+              "preserved_artifact_state": "missing",
+              "hash_validation_state": "not_checked",
+              "source_layout_classification": "unavailable",
+              "processing_outcome": "not_yet_processed",
+              "change_outcome": "not_evaluated",
+              "refresh_state": "not_started",
+              "retrieval_state": "not_attempted",
+              "import_state": "not_attempted",
+              "governed_conflict": false,
+              "operational_failure_category": "missing_artifact",
+              "retry_eligibility": "not_evaluated",
+              "operator_intervention_required": true,
+              "checkpoint_state": "not_started",
+              "last_job_id": null
+            },
+            {
+              "facility_id": "100000002",
+              "source_snapshot_id": "program-specific-snapshot-v1",
+              "refresh_eligibility": "eligible",
+              "preserved_source_document_count": 1,
+              "last_retrieval_attempt_at": "2026-07-19T11:00:00Z",
+              "last_successful_retrieval_at": "2026-07-19T11:00:00Z",
+              "last_refresh_attempt_at": "2026-07-19T11:05:00Z",
+              "last_successful_refresh_at": "2026-07-19T11:05:00Z",
+              "pipeline_version": "pipeline-v1",
+              "preserved_artifact_state": "preserved",
+              "hash_validation_state": "valid",
+              "source_layout_classification": "supported",
+              "processing_outcome": "warning",
+              "change_outcome": "unchanged",
+              "refresh_state": "completed_with_warnings",
+              "retrieval_state": "warning",
+              "import_state": "successful",
+              "governed_conflict": true,
+              "operational_failure_category": "conflicting_sources",
+              "retry_eligibility": "ineligible",
+              "operator_intervention_required": true,
+              "checkpoint_state": "complete",
+              "last_job_id": "job-complete-v1"
+            },
+            {
+              "facility_id": "100000001",
+              "source_snapshot_id": "program-specific-snapshot-v1",
+              "refresh_eligibility": "eligible",
+              "preserved_source_document_count": 1,
+              "last_retrieval_attempt_at": "2026-07-19T10:00:00Z",
+              "last_successful_retrieval_at": "2026-07-19T10:00:00Z",
+              "last_refresh_attempt_at": "2026-07-19T10:05:00Z",
+              "last_successful_refresh_at": "2026-07-19T10:05:00Z",
+              "pipeline_version": "pipeline-v1",
+              "preserved_artifact_state": "preserved",
+              "hash_validation_state": "valid",
+              "source_layout_classification": "supported",
+              "processing_outcome": "successful",
+              "change_outcome": "changed",
+              "refresh_state": "completed",
+              "retrieval_state": "successful",
+              "import_state": "successful",
+              "governed_conflict": false,
+              "operational_failure_category": "none",
+              "retry_eligibility": "ineligible",
+              "operator_intervention_required": false,
+              "checkpoint_state": "complete",
+              "last_job_id": "job-complete-v1"
+            },
+            {
+              "facility_id": "100000003",
+              "source_snapshot_id": "program-specific-snapshot-v1",
+              "refresh_eligibility": "ineligible",
+              "preserved_source_document_count": 0,
+              "last_retrieval_attempt_at": null,
+              "last_successful_retrieval_at": null,
+              "last_refresh_attempt_at": null,
+              "last_successful_refresh_at": null,
+              "pipeline_version": "pipeline-v1",
+              "preserved_artifact_state": "not_applicable",
+              "hash_validation_state": "not_applicable",
+              "source_layout_classification": "not_applicable",
+              "processing_outcome": "skipped",
+              "change_outcome": "not_evaluated",
+              "refresh_state": "eligible",
+              "retrieval_state": "not_attempted",
+              "import_state": "skipped",
+              "governed_conflict": false,
+              "operational_failure_category": "none",
+              "retry_eligibility": "ineligible",
+              "operator_intervention_required": false,
+              "checkpoint_state": "not_started",
+              "last_job_id": null
+            }
+          ]
+        },
+        "declared_totals": {
+          "governed_conflict_facility_total": 1,
+          "operator_intervention_required_total": 2
+        }
+      }
+    },
+    "prohibited-content-rejected": {
+      "evaluation_id": "fixture.prohibited-content-rejected.v1",
+      "operational": {
+        "facility_index": {
+          "rows": [
+            {
+              "narrative": "synthetic prohibited content"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

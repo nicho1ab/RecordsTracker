@@ -3,25 +3,38 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+from collections.abc import Mapping
+from copy import deepcopy
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
+from jsonschema import Draft202012Validator, ValidationError
+from jsonschema import validate as jsonschema_validate
 from sqlalchemy import JSON, Column, Integer, MetaData, String, Table, create_engine
 
 from ccld_complaints.source_to_screen_audit import (
+    COVERAGE_CONTRACT_VERSION,
+    COVERAGE_INVARIANT_IDS,
+    COVERAGE_STAGE_STATES,
+    COVERAGE_STAGES,
+    COVERAGE_TERMINAL_CLASSIFICATIONS,
     MANDATORY_OUTPUTS,
     AuditResult,
+    CoverageContractError,
     classify_scalar,
     deduplicate_recommended_issues,
     detect_raw_artifact_fields,
+    generate_coverage_package,
     inspect_raw_artifacts,
     inspect_runtime_store,
     inspect_sqlite_store,
+    load_coverage_fixture_scenario,
     redact_sensitive_text,
     run_audit,
+    validate_coverage_package,
 )
 from ccld_complaints.source_to_screen_catalog import (
     GAP_CLASSIFICATIONS,
@@ -33,6 +46,10 @@ from ccld_complaints.source_to_screen_catalog import (
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RECORD_VALUE_CANARY = "synthetic-record-value-must-not-escape"
+COVERAGE_FIXTURE_BUNDLE = (
+    REPO_ROOT / "tests" / "fixtures" / "source_to_screen_coverage" / "scenarios.json"
+)
+COVERAGE_FIXED_TIME = datetime(2026, 7, 19, 18, 0, 0, tzinfo=UTC)
 
 
 def _spec(**overrides: Any) -> ElementSpec:
@@ -72,6 +89,21 @@ def _spec(**overrides: Any) -> ElementSpec:
     }
     values.update(overrides)
     return ElementSpec(**values)
+
+
+def _coverage_fixture(scenario: str) -> Mapping[str, Any]:
+    return load_coverage_fixture_scenario(COVERAGE_FIXTURE_BUNDLE, scenario)
+
+
+def _generate_coverage_scenario(
+    tmp_path: Path, scenario: str, *, directory_name: str | None = None
+) -> Any:
+    return generate_coverage_package(
+        _coverage_fixture(scenario),
+        output_dir=tmp_path / (directory_name or scenario),
+        repo_root=REPO_ROOT,
+        generated_at=COVERAGE_FIXED_TIME,
+    )
 
 
 def test_gap_classification_vocabulary_is_exact() -> None:
@@ -649,3 +681,375 @@ def test_audit_result_shape_cannot_hold_source_bodies_by_default() -> None:
     assert "source_values" not in fields
     assert "source_document_bodies" not in fields
     assert "record_narratives" not in fields
+
+
+def test_coverage_catalog_consumes_the_tracked_inventory_only() -> None:
+    inventory_text = (REPO_ROOT / "docs" / "data" / "source-to-screen-inventory.md").read_text(
+        encoding="utf-8"
+    )
+    tracked_ids = set(
+        re.findall(r"^\| `(data\.[^`]+)` \|", inventory_text, flags=re.MULTILINE)
+    )
+    discovered_ids = {spec.data_element_id for spec in discover_element_specs(REPO_ROOT)}
+
+    assert discovered_ids == tracked_ids
+    assert all("issue-490" not in field_id for field_id in discovered_ids)
+    assert all("issues-453-477" not in field_id for field_id in discovered_ids)
+
+
+def test_coverage_contract_schema_is_closed_and_valid(tmp_path: Path) -> None:
+    schema = json.loads(
+        (
+            REPO_ROOT
+            / "schemas"
+            / "issues-453-477-coverage-report-v1.schema.json"
+        ).read_text(encoding="utf-8")
+    )
+    Draft202012Validator.check_schema(schema)
+    report = deepcopy(
+        _generate_coverage_scenario(
+            tmp_path,
+            "complete-balanced",
+            directory_name="schema-closed-fixture",
+        ).report
+    )
+
+    jsonschema_validate(instance=report, schema=schema)
+    report["coverage"]["field_stage_coverage"][0]["stage"] = "unknown_stage"
+    with pytest.raises(ValidationError):
+        jsonschema_validate(instance=report, schema=schema)
+
+    report = deepcopy(
+        _generate_coverage_scenario(
+            tmp_path,
+            "complete-balanced",
+            directory_name="schema-closed-fixture",
+        ).report
+    )
+    report["record_values"] = []
+    with pytest.raises(ValidationError):
+        jsonschema_validate(instance=report, schema=schema)
+
+
+def test_coverage_package_is_deterministic_portable_reconciled_and_value_free(
+    tmp_path: Path,
+) -> None:
+    first = _generate_coverage_scenario(tmp_path, "complete-balanced", directory_name="first")
+    second = _generate_coverage_scenario(tmp_path, "complete-balanced", directory_name="second")
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+
+    assert first == second
+    assert first.report_id == (
+        "coverage-report-v1-"
+        "ae70bf79d50bb9d3ea399f3d39f10ae829bb98370df575d62dc22f41f36c8c81"
+    )
+    assert re.fullmatch(r"coverage-report-v1-[0-9a-f]{64}", first.report_id)
+    assert validate_coverage_package(first_dir, repo_root=REPO_ROOT) == first.manifest
+    assert validate_coverage_package(second_dir, repo_root=REPO_ROOT) == second.manifest
+
+    first_files = {path.name: path.read_bytes() for path in sorted(first_dir.iterdir())}
+    second_files = {path.name: path.read_bytes() for path in sorted(second_dir.iterdir())}
+    assert first_files == second_files
+    assert set(first_files) == {
+        "aggregate-coverage.csv",
+        "coverage-report.json",
+        "manifest.json",
+        "operator-facility-index.jsonl",
+        "operator-job-index.jsonl",
+    }
+    assert b"\r" not in b"".join(first_files.values())
+    assert first.manifest["generated_at"] == first.report["generated_at"]
+    assert first.manifest["contract_version"] == COVERAGE_CONTRACT_VERSION
+    assert first.manifest["package_availability"] == "available"
+
+    specs = discover_element_specs(REPO_ROOT)
+    coverage = first.report["coverage"]
+    stage_rows = coverage["field_stage_coverage"]
+    assert coverage["inventory_field_total"] == len(specs)
+    assert len(stage_rows) == len(specs) * len(COVERAGE_STAGES)
+    assert {row["stage"] for row in stage_rows} == set(COVERAGE_STAGES)
+    assert {row["field_id"] for row in stage_rows} == {
+        spec.data_element_id for spec in specs
+    }
+    for row in stage_rows:
+        assert row["eligible_count"] == sum(
+            row[f"{state}_count"] for state in COVERAGE_STAGE_STATES
+        )
+    reconciliation = first.report["reconciliation"]
+    assert reconciliation["reconciliation_status"] == "passed"
+    assert tuple(row["invariant_id"] for row in reconciliation["invariants"]) == (
+        COVERAGE_INVARIANT_IDS
+    )
+    assert all(
+        row["status"] in {"passed", "not_applicable"}
+        for row in reconciliation["invariants"]
+    )
+    assert first.report["release_assessment"]["status"] == "passed"
+
+    report_bytes = first_files["coverage-report.json"]
+    csv_bytes = first_files["aggregate-coverage.csv"]
+    assert b"100000001" not in report_bytes + csv_bytes
+    assert b"100000002" not in report_bytes + csv_bytes
+    assert b"facility_id" not in csv_bytes.splitlines()[0]
+    assert RECORD_VALUE_CANARY.encode() not in b"".join(first_files.values())
+    assert b"STRTP" not in b"".join(first_files.values())
+    assert b"C:\\Users\\" not in b"".join(first_files.values())
+    assert b"C:/Users/" not in b"".join(first_files.values())
+    assert b"http://" not in b"".join(first_files.values())
+    assert b"https://" not in b"".join(first_files.values())
+
+    allowed_facility_fields = {
+        "contract_version",
+        "report_id",
+        "facility_entry_id",
+        "facility_id",
+        "source_snapshot_id",
+        "refresh_eligibility",
+        "preserved_source_document_count",
+        "last_retrieval_attempt_at",
+        "last_successful_retrieval_at",
+        "last_refresh_attempt_at",
+        "last_successful_refresh_at",
+        "pipeline_version",
+        "preserved_artifact_state",
+        "hash_validation_state",
+        "source_layout_classification",
+        "processing_outcome",
+        "change_outcome",
+        "refresh_state",
+        "governed_conflict",
+        "operational_failure_category",
+        "retry_eligibility",
+        "operator_intervention_required",
+        "checkpoint_state",
+        "last_job_id",
+    }
+    assert all(set(row) == allowed_facility_fields for row in first.facility_index)
+
+
+def test_every_terminal_and_stage_category_remains_distinct(tmp_path: Path) -> None:
+    fixture = deepcopy(_coverage_fixture("complete-balanced"))
+    fixture["evaluation_id"] = "fixture.all-coverage-categories.v1"
+    field_ids = [spec.data_element_id for spec in discover_element_specs(REPO_ROOT)]
+    fixture["coverage"]["terminal_overrides"] = dict(
+        zip(field_ids, COVERAGE_TERMINAL_CLASSIFICATIONS, strict=False)
+    )
+
+    package = generate_coverage_package(
+        fixture,
+        output_dir=tmp_path / "all-coverage-categories",
+        repo_root=REPO_ROOT,
+        generated_at=COVERAGE_FIXED_TIME,
+    )
+
+    terminal_counts = package.report["coverage"]["terminal_classification_counts"]
+    assert set(terminal_counts) == set(COVERAGE_TERMINAL_CLASSIFICATIONS)
+    assert all(terminal_counts[name] > 0 for name in COVERAGE_TERMINAL_CLASSIFICATIONS)
+    stage_totals = {
+        state: sum(
+            row[f"{state}_count"]
+            for row in package.report["coverage"]["field_stage_coverage"]
+        )
+        for state in COVERAGE_STAGE_STATES
+    }
+    assert all(stage_totals[state] > 0 for state in COVERAGE_STAGE_STATES)
+
+
+def test_aggregate_stage_and_terminal_counts_can_exceed_one_per_field(
+    tmp_path: Path,
+) -> None:
+    fixture = deepcopy(_coverage_fixture("complete-balanced"))
+    fixture["evaluation_id"] = "fixture.aggregate-counts.v1"
+    field_id = discover_element_specs(REPO_ROOT)[0].data_element_id
+    fixture["coverage"]["stage_count_overrides"] = {
+        field_id: {
+            "source_presence": {
+                "eligible_count": 4,
+                "successful_count": 3,
+                "blank_count": 1,
+                "absent_count": 0,
+                "unavailable_count": 0,
+                "unsupported_count": 0,
+                "conflict_count": 0,
+                "failure_count": 0,
+                "skipped_count": 0,
+            }
+        }
+    }
+    fixture["coverage"]["terminal_classification_eligible_count"] = 7
+    fixture["coverage"]["terminal_classification_counts"] = {
+        name: 0 for name in COVERAGE_TERMINAL_CLASSIFICATIONS
+    }
+    fixture["coverage"]["terminal_classification_counts"][
+        "present_and_populated"
+    ] = 5
+    fixture["coverage"]["terminal_classification_counts"]["present_blank"] = 2
+
+    package = generate_coverage_package(
+        fixture,
+        output_dir=tmp_path / "aggregate-counts",
+        repo_root=REPO_ROOT,
+        generated_at=COVERAGE_FIXED_TIME,
+    )
+
+    stage_row = next(
+        row
+        for row in package.report["coverage"]["field_stage_coverage"]
+        if row["field_id"] == field_id and row["stage"] == "source_presence"
+    )
+    assert stage_row["eligible_count"] == 4
+    assert stage_row["successful_count"] == 3
+    assert stage_row["blank_count"] == 1
+    assert package.report["coverage"][
+        "terminal_classification_eligible_count"
+    ] == 7
+    assert package.report["reconciliation"]["reconciliation_status"] == "passed"
+    validate_coverage_package(tmp_path / "aggregate-counts", repo_root=REPO_ROOT)
+
+
+def test_empty_partial_and_failed_reconciliation_scenarios_fail_closed(
+    tmp_path: Path,
+) -> None:
+    empty = _generate_coverage_scenario(tmp_path, "empty-verified")
+    assert empty.report["operations"]["existing_facility_total"] == 0
+    assert empty.facility_index == ()
+    assert (tmp_path / "empty-verified" / "operator-facility-index.jsonl").read_bytes() == b""
+    validate_coverage_package(tmp_path / "empty-verified", repo_root=REPO_ROOT)
+
+    partial = _generate_coverage_scenario(tmp_path, "partial-unavailable-stage")
+    assert partial.report["package_availability"] == "partial"
+    assert partial.report["unavailable_dimensions"] == [
+        "operator_job_index",
+        "postgresql_population",
+    ]
+    assert not (tmp_path / "partial-unavailable-stage" / "operator-job-index.jsonl").exists()
+    validate_coverage_package(tmp_path / "partial-unavailable-stage", repo_root=REPO_ROOT)
+
+    failed = _generate_coverage_scenario(tmp_path, "failed-reconciliation")
+    assert failed.report["package_availability"] == "reconciliation_failed"
+    assert failed.report["reconciliation"]["reconciliation_status"] == "failed"
+    assert failed.report["release_assessment"]["status"] == "failed"
+    assert any(
+        row["status"] == "failed"
+        for row in failed.report["reconciliation"]["invariants"]
+    )
+    with pytest.raises(CoverageContractError, match="reconciliation failed"):
+        validate_coverage_package(tmp_path / "failed-reconciliation", repo_root=REPO_ROOT)
+
+
+def test_version_mismatch_and_prohibited_content_are_rejected() -> None:
+    with pytest.raises(CoverageContractError, match="version is not supported"):
+        generate_coverage_package(
+            _coverage_fixture("version-mismatch"),
+            output_dir=Path("data/processed/source-to-screen-audit/version-mismatch"),
+            repo_root=REPO_ROOT,
+            generated_at=COVERAGE_FIXED_TIME,
+        )
+    with pytest.raises(CoverageContractError, match="prohibited field"):
+        _coverage_fixture("prohibited-content-rejected")
+
+
+def test_hash_failure_is_operationally_distinct_and_package_hashes_fail_closed(
+    tmp_path: Path,
+) -> None:
+    package = _generate_coverage_scenario(tmp_path, "hash-validation-failure")
+    assert package.report["operations"]["hash_validation_state_counts"]["failed"] == 1
+    assert package.facility_index[0]["operational_failure_category"] == (
+        "hash_validation_failed"
+    )
+    validate_coverage_package(tmp_path / "hash-validation-failure", repo_root=REPO_ROOT)
+
+    report_path = tmp_path / "hash-validation-failure" / "coverage-report.json"
+    corrupted = bytearray(report_path.read_bytes())
+    corrupted[-2] = ord("]")
+    report_path.write_bytes(corrupted)
+    with pytest.raises(CoverageContractError, match="hash validation failed"):
+        validate_coverage_package(tmp_path / "hash-validation-failure", repo_root=REPO_ROOT)
+
+
+def test_interrupted_operation_retains_previous_accepted_coverage_independently(
+    tmp_path: Path,
+) -> None:
+    package = _generate_coverage_scenario(
+        tmp_path, "interrupted-job-previous-accepted-active"
+    )
+
+    assert package.job_index[0]["job_state"] == "interrupted"
+    assert package.job_index[0]["previous_accepted_dataset_active"] is True
+    assert package.manifest["retention"]["previous_accepted_report_id"].startswith(
+        "coverage-report-v1-"
+    )
+    assert package.report["reconciliation"]["reconciliation_status"] == "passed"
+    assert package.report["operations"]["processing_outcome_counts"]["successful"] == 2
+    assert package.report["coverage"]["terminal_classification_counts"][
+        "read_but_not_rendered"
+    ] > 0
+
+
+def test_raw_733_stays_unresolved_without_a_descriptive_label(tmp_path: Path) -> None:
+    package = _generate_coverage_scenario(tmp_path, "raw-733-unresolved")
+    emitted = b"".join(
+        path.read_bytes() for path in sorted((tmp_path / "raw-733-unresolved").iterdir())
+    )
+
+    assert package.report["issue_490_boundaries"] == {
+        "retained_source_scope": "existing_program_specific_sources",
+        "statewide_candidate_selection_state": "inactive_candidate",
+        "statewide_completeness_baseline": "not_established",
+        "cadence_status": "not_approved",
+        "raw_733_mapping_status": "unresolved",
+        "raw_733_descriptive_label_emitted": False,
+    }
+    assert package.report["release_assessment"]["status"] == "warning"
+    assert b"STRTP" not in emitted
+    assert b"Short-Term Residential" not in emitted
+
+
+def test_adjacent_facility_pages_have_stable_order_without_duplicates(
+    tmp_path: Path,
+) -> None:
+    package = _generate_coverage_scenario(tmp_path, "pagination-adjacent-pages")
+    facility_ids = [row["facility_id"] for row in package.facility_index]
+    entry_ids = [row["facility_entry_id"] for row in package.facility_index]
+    first_page = entry_ids[:2]
+    second_page = entry_ids[2:4]
+
+    assert facility_ids == ["100000001", "100000002", "100000003", "100000010"]
+    assert set(first_page).isdisjoint(second_page)
+    assert first_page + second_page == entry_ids
+    assert len(set(entry_ids)) == len(entry_ids)
+    processing = package.report["operations"]["processing_outcome_counts"]
+    assert processing["successful"] == 1
+    assert processing["skipped"] == 1
+    assert processing["warning"] == 1
+    assert processing["not_yet_processed"] == 1
+    assert package.report["operations"]["change_outcome_counts"] == {
+        "changed": 1,
+        "not_evaluated": 2,
+        "unchanged": 1,
+    }
+
+
+def test_same_evaluation_identity_cannot_overwrite_different_results(
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "immutable-evaluation"
+    fixture = deepcopy(_coverage_fixture("complete-balanced"))
+    generate_coverage_package(
+        fixture,
+        output_dir=output_dir,
+        repo_root=REPO_ROOT,
+        generated_at=COVERAGE_FIXED_TIME,
+    )
+    fixture["criteria"]["observed_metrics"][
+        "previously_populated_now_blank_total"
+    ] = 1
+
+    with pytest.raises(CoverageContractError, match="immutable"):
+        generate_coverage_package(
+            fixture,
+            output_dir=output_dir,
+            repo_root=REPO_ROOT,
+            generated_at=COVERAGE_FIXED_TIME,
+        )

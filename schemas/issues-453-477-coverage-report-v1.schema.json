@@ -1,0 +1,894 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://recordstracker.invalid/schemas/issues-453-477-coverage-report-v1.schema.json",
+  "title": "Issues 453 and 477 coverage package contract v1",
+  "oneOf": [
+    { "$ref": "#/$defs/coverageReport" },
+    { "$ref": "#/$defs/manifest" },
+    { "$ref": "#/$defs/facilityIndexRow" },
+    { "$ref": "#/$defs/jobIndexRow" }
+  ],
+  "$defs": {
+    "safeId": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._:-]*$"
+    },
+    "reportId": {
+      "type": "string",
+      "pattern": "^coverage-report-v1-[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "nullableTimestamp": {
+      "oneOf": [
+        { "$ref": "#/$defs/timestamp" },
+        { "type": "null" }
+      ]
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "packageAvailability": {
+      "enum": [
+        "available",
+        "partial",
+        "unavailable",
+        "version_mismatch",
+        "hash_failed",
+        "reconciliation_failed"
+      ]
+    },
+    "reasonCategory": {
+      "enum": [
+        "none",
+        "fixture_not_provided",
+        "read_boundary_unavailable",
+        "stage_unavailable",
+        "not_applicable"
+      ]
+    },
+    "sourceSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_snapshot_id",
+        "source_family_id",
+        "selection_state",
+        "safe_version_label",
+        "observed_at",
+        "row_count",
+        "schema_fingerprint",
+        "content_fingerprint",
+        "availability",
+        "reason_category",
+        "cadence_status"
+      ],
+      "properties": {
+        "source_snapshot_id": { "$ref": "#/$defs/safeId" },
+        "source_family_id": { "$ref": "#/$defs/safeId" },
+        "selection_state": {
+          "enum": [
+            "retained_existing",
+            "active_accepted",
+            "inactive_candidate",
+            "superseded_retained",
+            "unavailable"
+          ]
+        },
+        "safe_version_label": {
+          "oneOf": [
+            { "$ref": "#/$defs/safeId" },
+            { "type": "null" }
+          ]
+        },
+        "observed_at": { "$ref": "#/$defs/nullableTimestamp" },
+        "row_count": {
+          "oneOf": [
+            { "$ref": "#/$defs/count" },
+            { "type": "null" }
+          ]
+        },
+        "schema_fingerprint": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "content_fingerprint": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "availability": { "enum": ["available", "partial", "unavailable"] },
+        "reason_category": { "$ref": "#/$defs/reasonCategory" },
+        "cadence_status": { "const": "not_approved" }
+      }
+    },
+    "stageRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field_id",
+        "stage",
+        "eligible_count",
+        "successful_count",
+        "blank_count",
+        "absent_count",
+        "unavailable_count",
+        "unsupported_count",
+        "conflict_count",
+        "failure_count",
+        "skipped_count"
+      ],
+      "properties": {
+        "field_id": { "$ref": "#/$defs/safeId" },
+        "stage": {
+          "enum": [
+            "source_presence",
+            "extraction",
+            "normalization",
+            "canonical_allocation",
+            "postgresql_population",
+            "read_model_exposure",
+            "complaint_page_rendering",
+            "facility_hub_rendering"
+          ]
+        },
+        "eligible_count": { "$ref": "#/$defs/count" },
+        "successful_count": { "$ref": "#/$defs/count" },
+        "blank_count": { "$ref": "#/$defs/count" },
+        "absent_count": { "$ref": "#/$defs/count" },
+        "unavailable_count": { "$ref": "#/$defs/count" },
+        "unsupported_count": { "$ref": "#/$defs/count" },
+        "conflict_count": { "$ref": "#/$defs/count" },
+        "failure_count": { "$ref": "#/$defs/count" },
+        "skipped_count": { "$ref": "#/$defs/count" }
+      }
+    },
+    "terminalCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "present_and_populated",
+        "present_but_not_extracted",
+        "extracted_but_not_allocated",
+        "allocated_but_not_imported",
+        "stored_but_not_read",
+        "read_but_not_rendered",
+        "rendered_incorrectly",
+        "present_blank",
+        "source_label_absent",
+        "source_artifact_unavailable",
+        "unsupported_layout",
+        "conflicting_sources",
+        "intentionally_internal",
+        "not_applicable"
+      ],
+      "properties": {
+        "present_and_populated": { "$ref": "#/$defs/count" },
+        "present_but_not_extracted": { "$ref": "#/$defs/count" },
+        "extracted_but_not_allocated": { "$ref": "#/$defs/count" },
+        "allocated_but_not_imported": { "$ref": "#/$defs/count" },
+        "stored_but_not_read": { "$ref": "#/$defs/count" },
+        "read_but_not_rendered": { "$ref": "#/$defs/count" },
+        "rendered_incorrectly": { "$ref": "#/$defs/count" },
+        "present_blank": { "$ref": "#/$defs/count" },
+        "source_label_absent": { "$ref": "#/$defs/count" },
+        "source_artifact_unavailable": { "$ref": "#/$defs/count" },
+        "unsupported_layout": { "$ref": "#/$defs/count" },
+        "conflicting_sources": { "$ref": "#/$defs/count" },
+        "intentionally_internal": { "$ref": "#/$defs/count" },
+        "not_applicable": { "$ref": "#/$defs/count" }
+      }
+    },
+    "refreshStateCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "not_started",
+        "eligible",
+        "in_progress",
+        "completed",
+        "completed_with_warnings",
+        "failed",
+        "unavailable"
+      ],
+      "properties": {
+        "not_started": { "$ref": "#/$defs/count" },
+        "eligible": { "$ref": "#/$defs/count" },
+        "in_progress": { "$ref": "#/$defs/count" },
+        "completed": { "$ref": "#/$defs/count" },
+        "completed_with_warnings": { "$ref": "#/$defs/count" },
+        "failed": { "$ref": "#/$defs/count" },
+        "unavailable": { "$ref": "#/$defs/count" }
+      }
+    },
+    "processingOutcomeCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["successful", "skipped", "warning", "failed", "not_yet_processed"],
+      "properties": {
+        "successful": { "$ref": "#/$defs/count" },
+        "skipped": { "$ref": "#/$defs/count" },
+        "warning": { "$ref": "#/$defs/count" },
+        "failed": { "$ref": "#/$defs/count" },
+        "not_yet_processed": { "$ref": "#/$defs/count" }
+      }
+    },
+    "changeOutcomeCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["changed", "unchanged", "not_evaluated"],
+      "properties": {
+        "changed": { "$ref": "#/$defs/count" },
+        "unchanged": { "$ref": "#/$defs/count" },
+        "not_evaluated": { "$ref": "#/$defs/count" }
+      }
+    },
+    "retrievalStateCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["not_attempted", "successful", "warning", "failed", "unavailable"],
+      "properties": {
+        "not_attempted": { "$ref": "#/$defs/count" },
+        "successful": { "$ref": "#/$defs/count" },
+        "warning": { "$ref": "#/$defs/count" },
+        "failed": { "$ref": "#/$defs/count" },
+        "unavailable": { "$ref": "#/$defs/count" }
+      }
+    },
+    "importStateCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["not_attempted", "successful", "skipped", "failed", "unavailable"],
+      "properties": {
+        "not_attempted": { "$ref": "#/$defs/count" },
+        "successful": { "$ref": "#/$defs/count" },
+        "skipped": { "$ref": "#/$defs/count" },
+        "failed": { "$ref": "#/$defs/count" },
+        "unavailable": { "$ref": "#/$defs/count" }
+      }
+    },
+    "preservedArtifactStateCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preserved", "missing", "unavailable", "not_applicable"],
+      "properties": {
+        "preserved": { "$ref": "#/$defs/count" },
+        "missing": { "$ref": "#/$defs/count" },
+        "unavailable": { "$ref": "#/$defs/count" },
+        "not_applicable": { "$ref": "#/$defs/count" }
+      }
+    },
+    "hashValidationStateCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["valid", "failed", "not_checked", "unavailable", "not_applicable"],
+      "properties": {
+        "valid": { "$ref": "#/$defs/count" },
+        "failed": { "$ref": "#/$defs/count" },
+        "not_checked": { "$ref": "#/$defs/count" },
+        "unavailable": { "$ref": "#/$defs/count" },
+        "not_applicable": { "$ref": "#/$defs/count" }
+      }
+    },
+    "jobStateCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["queued", "active", "completed", "interrupted", "failed"],
+      "properties": {
+        "queued": { "$ref": "#/$defs/count" },
+        "active": { "$ref": "#/$defs/count" },
+        "completed": { "$ref": "#/$defs/count" },
+        "interrupted": { "$ref": "#/$defs/count" },
+        "failed": { "$ref": "#/$defs/count" }
+      }
+    },
+    "operations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "existing_facility_total",
+        "preserved_artifact_facility_total",
+        "eligible_facility_total",
+        "ineligible_facility_total",
+        "unknown_eligibility_total",
+        "refresh_state_counts",
+        "processing_outcome_counts",
+        "change_outcome_counts",
+        "retrieval_state_counts",
+        "import_state_counts",
+        "preserved_artifact_state_counts",
+        "hash_validation_state_counts",
+        "governed_conflict_facility_total",
+        "operator_intervention_required_total",
+        "job_state_counts"
+      ],
+      "properties": {
+        "existing_facility_total": { "$ref": "#/$defs/count" },
+        "preserved_artifact_facility_total": { "$ref": "#/$defs/count" },
+        "eligible_facility_total": { "$ref": "#/$defs/count" },
+        "ineligible_facility_total": { "$ref": "#/$defs/count" },
+        "unknown_eligibility_total": { "$ref": "#/$defs/count" },
+        "refresh_state_counts": { "$ref": "#/$defs/refreshStateCounts" },
+        "processing_outcome_counts": { "$ref": "#/$defs/processingOutcomeCounts" },
+        "change_outcome_counts": { "$ref": "#/$defs/changeOutcomeCounts" },
+        "retrieval_state_counts": { "$ref": "#/$defs/retrievalStateCounts" },
+        "import_state_counts": { "$ref": "#/$defs/importStateCounts" },
+        "preserved_artifact_state_counts": {
+          "$ref": "#/$defs/preservedArtifactStateCounts"
+        },
+        "hash_validation_state_counts": {
+          "$ref": "#/$defs/hashValidationStateCounts"
+        },
+        "governed_conflict_facility_total": { "$ref": "#/$defs/count" },
+        "operator_intervention_required_total": { "$ref": "#/$defs/count" },
+        "job_state_counts": { "$ref": "#/$defs/jobStateCounts" }
+      }
+    },
+    "criteria": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseline_metrics",
+        "thresholds",
+        "observed_metrics",
+        "reviewed_exceptions"
+      ],
+      "properties": {
+        "baseline_metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "existing_facility_total",
+            "previously_populated_governed_field_total",
+            "required_stage_success_total",
+            "unresolved_identity_or_type_total",
+            "verified_descriptive_facility_type_label_total"
+          ],
+          "properties": {
+            "existing_facility_total": { "$ref": "#/$defs/count" },
+            "previously_populated_governed_field_total": { "$ref": "#/$defs/count" },
+            "required_stage_success_total": { "$ref": "#/$defs/count" },
+            "unresolved_identity_or_type_total": { "$ref": "#/$defs/count" },
+            "verified_descriptive_facility_type_label_total": {
+              "$ref": "#/$defs/count"
+            }
+          }
+        },
+        "thresholds": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maximum_facility_count_decline",
+            "maximum_label_regressions",
+            "maximum_new_blank_regressions",
+            "maximum_stage_regressions",
+            "maximum_unresolved_identity_or_type_total"
+          ],
+          "properties": {
+            "maximum_facility_count_decline": { "$ref": "#/$defs/count" },
+            "maximum_label_regressions": { "$ref": "#/$defs/count" },
+            "maximum_new_blank_regressions": { "$ref": "#/$defs/count" },
+            "maximum_stage_regressions": { "$ref": "#/$defs/count" },
+            "maximum_unresolved_identity_or_type_total": { "$ref": "#/$defs/count" }
+          }
+        },
+        "observed_metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "previously_populated_now_blank_total",
+            "required_stage_regression_total",
+            "unresolved_identity_or_type_total",
+            "verified_label_to_unresolved_regression_total"
+          ],
+          "properties": {
+            "previously_populated_now_blank_total": { "$ref": "#/$defs/count" },
+            "required_stage_regression_total": { "$ref": "#/$defs/count" },
+            "unresolved_identity_or_type_total": { "$ref": "#/$defs/count" },
+            "verified_label_to_unresolved_regression_total": { "$ref": "#/$defs/count" }
+          }
+        },
+        "reviewed_exceptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["criterion_id", "exception_id"],
+            "properties": {
+              "criterion_id": { "$ref": "#/$defs/releaseCriterion" },
+              "exception_id": { "$ref": "#/$defs/safeId" }
+            }
+          }
+        }
+      }
+    },
+    "releaseCriterion": {
+      "enum": [
+        "release.previously-populated-field-became-blank",
+        "release.verified-label-regressed-to-unresolved",
+        "release.facility-count-decline",
+        "release.source-to-screen-stage-regression",
+        "release.aggregate-reconciliation",
+        "release.unresolved-or-conflicting-identity-type"
+      ]
+    },
+    "releaseCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "criterion_id",
+        "status",
+        "baseline_count",
+        "observed_count",
+        "threshold_count",
+        "exception_id"
+      ],
+      "properties": {
+        "criterion_id": { "$ref": "#/$defs/releaseCriterion" },
+        "status": {
+          "enum": ["passed", "warning", "failed", "reviewed_exception_required"]
+        },
+        "baseline_count": { "$ref": "#/$defs/count" },
+        "observed_count": { "$ref": "#/$defs/count" },
+        "threshold_count": { "$ref": "#/$defs/count" },
+        "exception_id": {
+          "oneOf": [
+            { "$ref": "#/$defs/safeId" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "invariant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["invariant_id", "status", "expected_count", "actual_count"],
+      "properties": {
+        "invariant_id": {
+          "enum": [
+            "coverage.facility-eligibility-total",
+            "coverage.processing-outcome-total",
+            "coverage.refresh-state-total",
+            "coverage.change-outcome-total",
+            "coverage.retrieval-state-total",
+            "coverage.import-state-total",
+            "coverage.preserved-artifact-state-total",
+            "coverage.hash-validation-state-total",
+            "coverage.preserved-artifact-total",
+            "coverage.governed-conflict-total",
+            "coverage.operator-facility-conflict-total",
+            "coverage.operator-intervention-total",
+            "coverage.job-state-total",
+            "coverage.field-stage-balances",
+            "coverage.field-stage-inventory",
+            "coverage.terminal-classification-total"
+          ]
+        },
+        "status": { "enum": ["passed", "failed", "not_applicable"] },
+        "expected_count": { "$ref": "#/$defs/count" },
+        "actual_count": { "$ref": "#/$defs/count" }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "availability",
+        "reason_category",
+        "byte_count",
+        "sha256",
+        "media_type"
+      ],
+      "properties": {
+        "name": {
+          "enum": [
+            "coverage-report.json",
+            "operator-facility-index.jsonl",
+            "operator-job-index.jsonl",
+            "aggregate-coverage.csv"
+          ]
+        },
+        "availability": { "enum": ["available", "unavailable"] },
+        "reason_category": { "$ref": "#/$defs/reasonCategory" },
+        "byte_count": { "$ref": "#/$defs/count" },
+        "sha256": {
+          "oneOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "media_type": {
+          "enum": ["application/json", "application/x-ndjson", "text/csv"]
+        }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "disposition",
+        "retain_until",
+        "previous_accepted_report_id"
+      ],
+      "properties": {
+        "policy_id": {
+          "oneOf": [
+            { "$ref": "#/$defs/safeId" },
+            { "type": "null" }
+          ]
+        },
+        "disposition": {
+          "enum": ["retained", "superseded_retained", "expired", "pending_policy"]
+        },
+        "retain_until": { "$ref": "#/$defs/nullableTimestamp" },
+        "previous_accepted_report_id": {
+          "oneOf": [
+            { "$ref": "#/$defs/reportId" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version",
+        "minimum_consumer_version",
+        "report_id",
+        "generated_at",
+        "evaluation_id",
+        "criteria_set_id",
+        "scope_id",
+        "producer_schema_id",
+        "producer_version",
+        "package_availability",
+        "source_snapshots",
+        "artifacts",
+        "provenance",
+        "retention"
+      ],
+      "properties": {
+        "contract_version": { "const": "1.0.0" },
+        "minimum_consumer_version": { "const": "1.0.0" },
+        "report_id": { "$ref": "#/$defs/reportId" },
+        "generated_at": { "$ref": "#/$defs/timestamp" },
+        "evaluation_id": { "$ref": "#/$defs/safeId" },
+        "criteria_set_id": { "$ref": "#/$defs/safeId" },
+        "scope_id": { "$ref": "#/$defs/safeId" },
+        "producer_schema_id": { "const": "issues-453-477-coverage-report-v1" },
+        "producer_version": { "$ref": "#/$defs/safeId" },
+        "package_availability": { "$ref": "#/$defs/packageAvailability" },
+        "source_snapshots": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/sourceSnapshot" }
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": { "$ref": "#/$defs/artifact" }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["input_manifest_ids", "governed_fixture_ids", "generation_mode"],
+          "properties": {
+            "input_manifest_ids": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/safeId" }
+            },
+            "governed_fixture_ids": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/safeId" }
+            },
+            "generation_mode": { "enum": ["governed_fixture", "read_only_boundary"] }
+          }
+        },
+        "retention": { "$ref": "#/$defs/retention" }
+      }
+    },
+    "coverageReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version",
+        "report_id",
+        "generated_at",
+        "evaluation_id",
+        "criteria_set_id",
+        "scope_id",
+        "producer_schema_id",
+        "package_availability",
+        "source_snapshots",
+        "coverage",
+        "operations",
+        "criteria",
+        "reconciliation",
+        "release_assessment",
+        "unavailable_dimensions",
+        "issue_490_boundaries"
+      ],
+      "properties": {
+        "contract_version": { "const": "1.0.0" },
+        "report_id": { "$ref": "#/$defs/reportId" },
+        "generated_at": { "$ref": "#/$defs/timestamp" },
+        "evaluation_id": { "$ref": "#/$defs/safeId" },
+        "criteria_set_id": { "$ref": "#/$defs/safeId" },
+        "scope_id": { "$ref": "#/$defs/safeId" },
+        "producer_schema_id": { "const": "issues-453-477-coverage-report-v1" },
+        "package_availability": { "$ref": "#/$defs/packageAvailability" },
+        "source_snapshots": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/sourceSnapshot" }
+        },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "inventory_field_total",
+            "field_stage_coverage",
+            "terminal_classification_eligible_count",
+            "terminal_classification_counts"
+          ],
+          "properties": {
+            "inventory_field_total": { "$ref": "#/$defs/count" },
+            "field_stage_coverage": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/stageRow" }
+            },
+            "terminal_classification_eligible_count": { "$ref": "#/$defs/count" },
+            "terminal_classification_counts": { "$ref": "#/$defs/terminalCounts" }
+          }
+        },
+        "operations": { "$ref": "#/$defs/operations" },
+        "criteria": { "$ref": "#/$defs/criteria" },
+        "reconciliation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reconciliation_status", "failure_category", "invariants"],
+          "properties": {
+            "reconciliation_status": { "enum": ["passed", "failed"] },
+            "failure_category": { "enum": ["none", "validation_failed"] },
+            "invariants": {
+              "type": "array",
+              "minItems": 16,
+              "maxItems": 16,
+              "items": { "$ref": "#/$defs/invariant" }
+            }
+          }
+        },
+        "release_assessment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "checks"],
+          "properties": {
+            "status": {
+              "enum": ["passed", "warning", "failed", "reviewed_exception_required"]
+            },
+            "checks": {
+              "type": "array",
+              "minItems": 6,
+              "maxItems": 6,
+              "items": { "$ref": "#/$defs/releaseCheck" }
+            }
+          }
+        },
+        "unavailable_dimensions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/safeId" }
+        },
+        "issue_490_boundaries": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "retained_source_scope",
+            "statewide_candidate_selection_state",
+            "statewide_completeness_baseline",
+            "cadence_status",
+            "raw_733_mapping_status",
+            "raw_733_descriptive_label_emitted"
+          ],
+          "properties": {
+            "retained_source_scope": { "const": "existing_program_specific_sources" },
+            "statewide_candidate_selection_state": { "const": "inactive_candidate" },
+            "statewide_completeness_baseline": { "const": "not_established" },
+            "cadence_status": { "const": "not_approved" },
+            "raw_733_mapping_status": { "const": "unresolved" },
+            "raw_733_descriptive_label_emitted": { "const": false }
+          }
+        }
+      }
+    },
+    "facilityIndexRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version",
+        "report_id",
+        "facility_entry_id",
+        "facility_id",
+        "source_snapshot_id",
+        "refresh_eligibility",
+        "preserved_source_document_count",
+        "last_retrieval_attempt_at",
+        "last_successful_retrieval_at",
+        "last_refresh_attempt_at",
+        "last_successful_refresh_at",
+        "pipeline_version",
+        "preserved_artifact_state",
+        "hash_validation_state",
+        "source_layout_classification",
+        "processing_outcome",
+        "change_outcome",
+        "refresh_state",
+        "governed_conflict",
+        "operational_failure_category",
+        "retry_eligibility",
+        "operator_intervention_required",
+        "checkpoint_state",
+        "last_job_id"
+      ],
+      "properties": {
+        "contract_version": { "const": "1.0.0" },
+        "report_id": { "$ref": "#/$defs/reportId" },
+        "facility_entry_id": {
+          "type": "string",
+          "pattern": "^facility-v1-[0-9a-f]{64}$"
+        },
+        "facility_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+        },
+        "source_snapshot_id": { "$ref": "#/$defs/safeId" },
+        "refresh_eligibility": { "enum": ["eligible", "ineligible", "unknown"] },
+        "preserved_source_document_count": { "$ref": "#/$defs/count" },
+        "last_retrieval_attempt_at": { "$ref": "#/$defs/nullableTimestamp" },
+        "last_successful_retrieval_at": { "$ref": "#/$defs/nullableTimestamp" },
+        "last_refresh_attempt_at": { "$ref": "#/$defs/nullableTimestamp" },
+        "last_successful_refresh_at": { "$ref": "#/$defs/nullableTimestamp" },
+        "pipeline_version": { "$ref": "#/$defs/safeId" },
+        "preserved_artifact_state": {
+          "enum": ["preserved", "missing", "unavailable", "not_applicable"]
+        },
+        "hash_validation_state": {
+          "enum": ["valid", "failed", "not_checked", "unavailable", "not_applicable"]
+        },
+        "source_layout_classification": {
+          "enum": ["supported", "unsupported", "unavailable", "not_applicable"]
+        },
+        "processing_outcome": {
+          "enum": ["successful", "skipped", "warning", "failed", "not_yet_processed"]
+        },
+        "change_outcome": { "enum": ["changed", "unchanged", "not_evaluated"] },
+        "refresh_state": {
+          "enum": [
+            "not_started",
+            "eligible",
+            "in_progress",
+            "completed",
+            "completed_with_warnings",
+            "failed",
+            "unavailable"
+          ]
+        },
+        "governed_conflict": { "type": "boolean" },
+        "operational_failure_category": {
+          "enum": [
+            "none",
+            "retrieval_failed",
+            "import_failed",
+            "validation_failed",
+            "missing_artifact",
+            "hash_validation_failed",
+            "unsupported_layout",
+            "conflicting_sources",
+            "checkpoint_interrupted",
+            "contract_unavailable",
+            "contract_version_mismatch",
+            "controlled_unknown_failure"
+          ]
+        },
+        "retry_eligibility": { "enum": ["eligible", "ineligible", "not_evaluated"] },
+        "operator_intervention_required": { "type": "boolean" },
+        "checkpoint_state": {
+          "enum": ["not_started", "available", "complete", "interrupted", "failed", "unavailable"]
+        },
+        "last_job_id": {
+          "oneOf": [
+            { "$ref": "#/$defs/safeId" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "jobIndexRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "job_id",
+        "contract_version",
+        "report_id",
+        "job_state",
+        "execution_mode",
+        "started_at",
+        "completed_at",
+        "last_successful_refresh_at",
+        "pipeline_version",
+        "checkpoint_state",
+        "checkpoint_identity",
+        "selected_count",
+        "processed_count",
+        "changed_count",
+        "unchanged_count",
+        "skipped_count",
+        "warning_count",
+        "failed_count",
+        "operational_failure_category",
+        "previous_accepted_dataset_active",
+        "operator_intervention_required"
+      ],
+      "properties": {
+        "job_id": { "$ref": "#/$defs/safeId" },
+        "contract_version": { "const": "1.0.0" },
+        "report_id": { "$ref": "#/$defs/reportId" },
+        "job_state": { "enum": ["queued", "active", "completed", "interrupted", "failed"] },
+        "execution_mode": { "enum": ["dry_run", "apply"] },
+        "started_at": { "$ref": "#/$defs/nullableTimestamp" },
+        "completed_at": { "$ref": "#/$defs/nullableTimestamp" },
+        "last_successful_refresh_at": { "$ref": "#/$defs/nullableTimestamp" },
+        "pipeline_version": { "$ref": "#/$defs/safeId" },
+        "checkpoint_state": {
+          "enum": ["not_started", "available", "complete", "interrupted", "failed", "unavailable"]
+        },
+        "checkpoint_identity": {
+          "oneOf": [
+            { "$ref": "#/$defs/safeId" },
+            { "type": "null" }
+          ]
+        },
+        "selected_count": { "$ref": "#/$defs/count" },
+        "processed_count": { "$ref": "#/$defs/count" },
+        "changed_count": { "$ref": "#/$defs/count" },
+        "unchanged_count": { "$ref": "#/$defs/count" },
+        "skipped_count": { "$ref": "#/$defs/count" },
+        "warning_count": { "$ref": "#/$defs/count" },
+        "failed_count": { "$ref": "#/$defs/count" },
+        "operational_failure_category": {
+          "enum": [
+            "none",
+            "retrieval_failed",
+            "import_failed",
+            "validation_failed",
+            "missing_artifact",
+            "hash_validation_failed",
+            "unsupported_layout",
+            "conflicting_sources",
+            "checkpoint_interrupted",
+            "contract_unavailable",
+            "contract_version_mismatch",
+            "controlled_unknown_failure"
+          ]
+        },
+        "previous_accepted_dataset_active": { "type": "boolean" },
+        "operator_intervention_required": { "type": "boolean" }
+      }
+    }
+  }
+}

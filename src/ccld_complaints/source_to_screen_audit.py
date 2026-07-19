@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
+import io
 import json
 import os
 import re
@@ -15,6 +17,8 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Literal, cast
 
+from jsonschema import ValidationError as JsonSchemaValidationError
+from jsonschema import validate as jsonschema_validate
 from sqlalchemy import (
     MetaData,
     String,
@@ -47,6 +51,144 @@ from ccld_complaints.source_to_screen_catalog import (
 AuditMode = Literal["local", "runtime"]
 
 AUDIT_SCHEMA_VERSION = 1
+COVERAGE_CONTRACT_VERSION = "1.0.0"
+COVERAGE_MINIMUM_CONSUMER_VERSION = "1.0.0"
+COVERAGE_PRODUCER_SCHEMA_ID = "issues-453-477-coverage-report-v1"
+COVERAGE_PRODUCER_VERSION = "source-to-screen-audit-v1"
+COVERAGE_SCHEMA_PATH = Path("schemas/issues-453-477-coverage-report-v1.schema.json")
+COVERAGE_STAGES = (
+    "source_presence",
+    "extraction",
+    "normalization",
+    "canonical_allocation",
+    "postgresql_population",
+    "read_model_exposure",
+    "complaint_page_rendering",
+    "facility_hub_rendering",
+)
+COVERAGE_STAGE_STATES = (
+    "successful",
+    "blank",
+    "absent",
+    "unavailable",
+    "unsupported",
+    "conflict",
+    "failure",
+    "skipped",
+)
+COVERAGE_TERMINAL_CLASSIFICATIONS = (
+    "present_and_populated",
+    "present_but_not_extracted",
+    "extracted_but_not_allocated",
+    "allocated_but_not_imported",
+    "stored_but_not_read",
+    "read_but_not_rendered",
+    "rendered_incorrectly",
+    "present_blank",
+    "source_label_absent",
+    "source_artifact_unavailable",
+    "unsupported_layout",
+    "conflicting_sources",
+    "intentionally_internal",
+    "not_applicable",
+)
+COVERAGE_REFRESH_STATES = (
+    "not_started",
+    "eligible",
+    "in_progress",
+    "completed",
+    "completed_with_warnings",
+    "failed",
+    "unavailable",
+)
+COVERAGE_PROCESSING_OUTCOMES = (
+    "successful",
+    "skipped",
+    "warning",
+    "failed",
+    "not_yet_processed",
+)
+COVERAGE_CHANGE_OUTCOMES = ("changed", "unchanged", "not_evaluated")
+COVERAGE_RETRIEVAL_STATES = (
+    "not_attempted",
+    "successful",
+    "warning",
+    "failed",
+    "unavailable",
+)
+COVERAGE_IMPORT_STATES = (
+    "not_attempted",
+    "successful",
+    "skipped",
+    "failed",
+    "unavailable",
+)
+COVERAGE_PRESERVED_ARTIFACT_STATES = (
+    "preserved",
+    "missing",
+    "unavailable",
+    "not_applicable",
+)
+COVERAGE_HASH_VALIDATION_STATES = (
+    "valid",
+    "failed",
+    "not_checked",
+    "unavailable",
+    "not_applicable",
+)
+COVERAGE_JOB_STATES = ("queued", "active", "completed", "interrupted", "failed")
+COVERAGE_OPERATIONAL_FAILURE_CATEGORIES = (
+    "none",
+    "retrieval_failed",
+    "import_failed",
+    "validation_failed",
+    "missing_artifact",
+    "hash_validation_failed",
+    "unsupported_layout",
+    "conflicting_sources",
+    "checkpoint_interrupted",
+    "contract_unavailable",
+    "contract_version_mismatch",
+    "controlled_unknown_failure",
+)
+COVERAGE_SOURCE_LAYOUT_CLASSIFICATIONS = (
+    "supported",
+    "unsupported",
+    "unavailable",
+    "not_applicable",
+)
+COVERAGE_INVARIANT_IDS = (
+    "coverage.facility-eligibility-total",
+    "coverage.processing-outcome-total",
+    "coverage.refresh-state-total",
+    "coverage.change-outcome-total",
+    "coverage.retrieval-state-total",
+    "coverage.import-state-total",
+    "coverage.preserved-artifact-state-total",
+    "coverage.hash-validation-state-total",
+    "coverage.preserved-artifact-total",
+    "coverage.governed-conflict-total",
+    "coverage.operator-facility-conflict-total",
+    "coverage.operator-intervention-total",
+    "coverage.job-state-total",
+    "coverage.field-stage-balances",
+    "coverage.field-stage-inventory",
+    "coverage.terminal-classification-total",
+)
+COVERAGE_AGGREGATE_CSV_FIELDNAMES = (
+    "contract_version",
+    "report_id",
+    "dimension",
+    "field_id",
+    "stage",
+    "category",
+    "numerator_count",
+    "denominator_count",
+    "percentage",
+    "status",
+    "criteria_set_id",
+    "source_snapshot_id",
+)
 DEFAULT_SQLITE_PATH = Path("data/processed/ccld.sqlite")
 SQLITE_PATH_ENV = "CCLD_SOURCE_TO_SCREEN_SQLITE_PATH"
 TRACKED_BASELINE_DIR = Path("docs/data")
@@ -328,6 +470,16 @@ class AuditResult:
     aggregate_feature_readiness: tuple[Mapping[str, Any], ...]
     gap_register: tuple[Mapping[str, Any], ...]
     recommended_issues: tuple[Mapping[str, Any], ...]
+
+
+@dataclass(frozen=True)
+class CoveragePackageResult:
+    report_id: str
+    manifest: Mapping[str, Any]
+    report: Mapping[str, Any]
+    facility_index: tuple[Mapping[str, Any], ...]
+    job_index: tuple[Mapping[str, Any], ...]
+    artifact_hashes: Mapping[str, str]
 
 
 class _VisibleTextParser(HTMLParser):
@@ -2626,6 +2778,2037 @@ def run_audit(
     return result
 
 
+class CoverageContractError(RuntimeError):
+    """A controlled coverage-contract validation or generation failure."""
+
+
+_COVERAGE_SAFE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._:-]*$")
+_COVERAGE_FACILITY_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+_COVERAGE_TIMESTAMP_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"
+)
+_COVERAGE_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_COVERAGE_HTML_RE = re.compile(r"(?i)<(?:!doctype|html|body|script|style|[a-z]+\s+[^>]*)")
+_COVERAGE_SQL_RE = re.compile(
+    r"(?is)\b(?:select\s+.+\s+from|insert\s+into|delete\s+from|"
+    r"update\s+.+\s+set|create\s+table)\b"
+)
+_COVERAGE_STACK_RE = re.compile(
+    r"(?i)(?:traceback \(most recent call last\)|stack trace|"
+    r"\b(?:exception|error)\s*:\s*.+)"
+)
+_COVERAGE_PROHIBITED_KEY_PARTS = (
+    "narrative",
+    "raw_html",
+    "source_body",
+    "source_url",
+    "raw_path",
+    "absolute_path",
+    "private_url",
+    "connection_string",
+    "credential",
+    "password",
+    "token",
+    "cookie",
+    "authentication_claim",
+    "stack_trace",
+    "sql_text",
+    "container_name",
+    "database_host",
+    "qnap",
+)
+_COVERAGE_AVAILABILITY_REASON_CATEGORIES = (
+    "none",
+    "fixture_not_provided",
+    "read_boundary_unavailable",
+    "stage_unavailable",
+    "not_applicable",
+)
+
+
+def _coverage_mapping(value: Any, *, context: str) -> Mapping[str, Any]:
+    if not isinstance(value, Mapping) or not all(isinstance(key, str) for key in value):
+        raise CoverageContractError(f"{context} must be an object.")
+    return cast(Mapping[str, Any], value)
+
+
+def _coverage_sequence(value: Any, *, context: str) -> Sequence[Any]:
+    if isinstance(value, (str, bytes)) or not isinstance(value, Sequence):
+        raise CoverageContractError(f"{context} must be an array.")
+    return value
+
+
+def _coverage_exact_keys(
+    value: Mapping[str, Any],
+    *,
+    context: str,
+    required: Sequence[str],
+    optional: Sequence[str] = (),
+) -> None:
+    allowed = set(required) | set(optional)
+    if set(value) - allowed:
+        raise CoverageContractError(f"{context} contains a prohibited or unknown field.")
+    if set(required) - set(value):
+        raise CoverageContractError(f"{context} is missing a required field.")
+
+
+def _reject_prohibited_coverage_content(value: Any) -> None:
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            normalized_key = str(key).casefold()
+            if any(part in normalized_key for part in _COVERAGE_PROHIBITED_KEY_PARTS):
+                raise CoverageContractError("Coverage input contains a prohibited field.")
+            _reject_prohibited_coverage_content(item)
+        return
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        for item in value:
+            _reject_prohibited_coverage_content(item)
+        return
+    if not isinstance(value, str):
+        return
+    if (
+        _CONNECTION_STRING_RE.search(value)
+        or _SECRET_ASSIGNMENT_RE.search(value)
+        or _URL_RE.search(value)
+        or _ABSOLUTE_WINDOWS_PATH_RE.search(value)
+        or _ABSOLUTE_PRIVATE_POSIX_PATH_RE.search(value)
+        or _COVERAGE_HTML_RE.search(value)
+        or _COVERAGE_SQL_RE.search(value)
+        or _COVERAGE_STACK_RE.search(value)
+    ):
+        raise CoverageContractError("Coverage input contains prohibited content.")
+
+
+def _coverage_identifier(value: Any, *, context: str) -> str:
+    if not isinstance(value, str) or not _COVERAGE_SAFE_ID_RE.fullmatch(value):
+        raise CoverageContractError(f"{context} must be a stable safe identifier.")
+    return value
+
+
+def _coverage_timestamp(value: Any, *, context: str, nullable: bool = False) -> str | None:
+    if value is None and nullable:
+        return None
+    if not isinstance(value, str) or not _COVERAGE_TIMESTAMP_RE.fullmatch(value):
+        raise CoverageContractError(f"{context} must be a UTC timestamp in Z form.")
+    try:
+        datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+    except ValueError as exc:
+        raise CoverageContractError(
+            f"{context} must be a valid UTC timestamp in Z form."
+        ) from exc
+    return value
+
+
+def _coverage_count(value: Any, *, context: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise CoverageContractError(f"{context} must be a nonnegative integer.")
+    return value
+
+
+def _coverage_enum(value: Any, allowed: Sequence[str], *, context: str) -> str:
+    if not isinstance(value, str) or value not in allowed:
+        raise CoverageContractError(f"{context} contains an unsupported value.")
+    return value
+
+
+def _canonical_json_text(value: Any) -> str:
+    try:
+        return json.dumps(
+            value,
+            ensure_ascii=False,
+            allow_nan=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+    except (TypeError, ValueError) as exc:
+        raise CoverageContractError("Coverage data is not canonical JSON.") from exc
+
+
+def _canonical_json_bytes(value: Any) -> bytes:
+    return (_canonical_json_text(value) + "\n").encode("utf-8")
+
+
+def _coverage_sha256(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+def _deep_merge_coverage_fixture(
+    base: Mapping[str, Any], override: Mapping[str, Any]
+) -> dict[str, Any]:
+    merged: dict[str, Any] = dict(base)
+    for key, value in override.items():
+        existing = merged.get(key)
+        if isinstance(existing, Mapping) and isinstance(value, Mapping):
+            merged[key] = _deep_merge_coverage_fixture(
+                cast(Mapping[str, Any], existing),
+                cast(Mapping[str, Any], value),
+            )
+        else:
+            merged[key] = value
+    return merged
+
+
+def load_coverage_fixture_scenario(path: Path, scenario: str) -> Mapping[str, Any]:
+    """Load one named deterministic scenario without exposing fixture paths in output."""
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise CoverageContractError("The governed coverage fixture could not be loaded.") from exc
+    bundle = _coverage_mapping(payload, context="coverage fixture bundle")
+    _coverage_exact_keys(
+        bundle,
+        context="coverage fixture bundle",
+        required=("fixture_bundle_id", "base", "scenarios"),
+    )
+    _coverage_identifier(bundle["fixture_bundle_id"], context="fixture_bundle_id")
+    scenarios = _coverage_mapping(bundle["scenarios"], context="coverage scenarios")
+    if scenario not in scenarios:
+        raise CoverageContractError("The requested governed fixture scenario is unavailable.")
+    base = _coverage_mapping(bundle["base"], context="coverage fixture base")
+    override = _coverage_mapping(scenarios[scenario], context="coverage fixture scenario")
+    merged = _deep_merge_coverage_fixture(base, override)
+    merged["fixture_id"] = _coverage_identifier(scenario, context="fixture scenario")
+    _reject_prohibited_coverage_content(merged)
+    return merged
+
+
+def _coverage_generated_at(value: datetime | None) -> str:
+    generated_at = value or datetime.now(UTC)
+    if generated_at.tzinfo is None:
+        generated_at = generated_at.replace(tzinfo=UTC)
+    generated_at = generated_at.astimezone(UTC).replace(microsecond=0)
+    return generated_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _terminal_from_catalog_gap(gap_classification: str) -> str:
+    mapping = {
+        "SOURCE_NOT_PROVIDED": "source_label_absent",
+        "RAW_PRESENT_EXTRACTION_MISSING": "present_but_not_extracted",
+        "EXTRACTED_CANONICAL_MAPPING_MISSING": "extracted_but_not_allocated",
+        "CANONICAL_IMPORT_NOT_POPULATED": "allocated_but_not_imported",
+        "SQLITE_POSTGRES_DIVERGENCE": "allocated_but_not_imported",
+        "STORED_QUERY_OMISSION": "stored_but_not_read",
+        "UI_DISPLAY_OMISSION": "read_but_not_rendered",
+        "UNEXPLAINED_BLANK": "present_blank",
+        "AGGREGATE_DATA_INSUFFICIENT": "source_artifact_unavailable",
+        "FIXTURE_RUNTIME_DIVERGENCE": "conflicting_sources",
+        "INTENTIONALLY_INTERNAL": "intentionally_internal",
+        "NOT_APPLICABLE": "present_and_populated",
+    }
+    try:
+        return mapping[gap_classification]
+    except KeyError as exc:
+        raise CoverageContractError(
+            "The governed inventory contains an unsupported gap classification."
+        ) from exc
+
+
+def _terminal_stage_states(
+    classification: str,
+    *,
+    complaint_page_required: bool,
+    facility_hub_required: bool,
+) -> Mapping[str, str | None]:
+    states: dict[str, str | None] = {stage: "skipped" for stage in COVERAGE_STAGES}
+    if classification == "not_applicable":
+        return {stage: None for stage in COVERAGE_STAGES}
+    if classification == "source_artifact_unavailable":
+        return {stage: "unavailable" for stage in COVERAGE_STAGES}
+    if classification == "present_blank":
+        states["source_presence"] = "blank"
+    elif classification == "source_label_absent":
+        states["source_presence"] = "absent"
+    elif classification == "unsupported_layout":
+        states["source_presence"] = "successful"
+        states["extraction"] = "unsupported"
+    elif classification == "conflicting_sources":
+        states["source_presence"] = "conflict"
+    else:
+        failure_stage = {
+            "present_but_not_extracted": "extraction",
+            "extracted_but_not_allocated": "canonical_allocation",
+            "allocated_but_not_imported": "postgresql_population",
+            "stored_but_not_read": "read_model_exposure",
+        }.get(classification)
+        for stage in COVERAGE_STAGES:
+            if stage in {"complaint_page_rendering", "facility_hub_rendering"}:
+                continue
+            if failure_stage is None or COVERAGE_STAGES.index(stage) < COVERAGE_STAGES.index(
+                failure_stage
+            ):
+                states[stage] = "successful"
+            elif stage == failure_stage:
+                states[stage] = "failure"
+        if classification in {
+            "present_and_populated",
+            "read_but_not_rendered",
+            "rendered_incorrectly",
+            "intentionally_internal",
+        }:
+            for stage in COVERAGE_STAGES[:6]:
+                states[stage] = "successful"
+
+    if complaint_page_required:
+        states["complaint_page_rendering"] = (
+            "failure"
+            if classification in {"read_but_not_rendered", "rendered_incorrectly"}
+            else states["complaint_page_rendering"]
+        )
+        if classification in {"present_and_populated", "intentionally_internal"}:
+            states["complaint_page_rendering"] = "successful"
+    else:
+        states["complaint_page_rendering"] = None
+    if facility_hub_required:
+        states["facility_hub_rendering"] = (
+            "failure"
+            if classification in {"read_but_not_rendered", "rendered_incorrectly"}
+            else states["facility_hub_rendering"]
+        )
+        if classification in {"present_and_populated", "intentionally_internal"}:
+            states["facility_hub_rendering"] = "successful"
+    else:
+        states["facility_hub_rendering"] = None
+    if classification == "intentionally_internal":
+        states["complaint_page_rendering"] = None
+        states["facility_hub_rendering"] = None
+    return states
+
+
+def _coverage_rows_from_inventory(
+    specs: Sequence[ElementSpec], coverage_input: Mapping[str, Any]
+) -> tuple[tuple[Mapping[str, Any], ...], Mapping[str, int], int]:
+    _coverage_exact_keys(
+        coverage_input,
+        context="coverage input",
+        required=("terminal_overrides", "stage_overrides"),
+        optional=(
+            "stage_count_overrides",
+            "terminal_classification_counts",
+            "terminal_classification_eligible_count",
+        ),
+    )
+    terminal_overrides = _coverage_mapping(
+        coverage_input["terminal_overrides"], context="terminal overrides"
+    )
+    stage_overrides = _coverage_mapping(
+        coverage_input["stage_overrides"], context="stage overrides"
+    )
+    stage_count_overrides = _coverage_mapping(
+        coverage_input.get("stage_count_overrides", {}),
+        context="stage count overrides",
+    )
+    known_field_ids = {spec.data_element_id for spec in specs}
+    if (
+        set(terminal_overrides) - known_field_ids
+        or set(stage_overrides) - known_field_ids
+        or set(stage_count_overrides) - known_field_ids
+    ):
+        raise CoverageContractError(
+            "Coverage overrides must reference the governed source-to-screen inventory."
+        )
+    rows: list[Mapping[str, Any]] = []
+    terminal_counts = {name: 0 for name in COVERAGE_TERMINAL_CLASSIFICATIONS}
+    for spec in sorted(specs, key=lambda item: item.data_element_id):
+        terminal = _coverage_enum(
+            terminal_overrides.get(
+                spec.data_element_id,
+                _terminal_from_catalog_gap(spec.gap_classification),
+            ),
+            COVERAGE_TERMINAL_CLASSIFICATIONS,
+            context="terminal classification",
+        )
+        terminal_counts[terminal] += 1
+        route = spec.current_display_route_or_export
+        states = dict(
+            _terminal_stage_states(
+                terminal,
+                complaint_page_required="/reviewer/records/detail" in route,
+                facility_hub_required="/ccld/facilities/detail" in route,
+            )
+        )
+        field_stage_overrides = _coverage_mapping(
+            stage_overrides.get(spec.data_element_id, {}),
+            context="field stage overrides",
+        )
+        field_count_overrides = _coverage_mapping(
+            stage_count_overrides.get(spec.data_element_id, {}),
+            context="field stage count overrides",
+        )
+        if set(field_stage_overrides) - set(COVERAGE_STAGES):
+            raise CoverageContractError("Coverage input contains an unsupported stage.")
+        if set(field_count_overrides) - set(COVERAGE_STAGES):
+            raise CoverageContractError("Coverage input contains an unsupported count stage.")
+        if set(field_stage_overrides) & set(field_count_overrides):
+            raise CoverageContractError(
+                "A coverage stage cannot use state and count overrides together."
+            )
+        for stage, state in field_stage_overrides.items():
+            states[stage] = _coverage_enum(
+                state,
+                COVERAGE_STAGE_STATES,
+                context="coverage stage state",
+            )
+        for stage in COVERAGE_STAGES:
+            state = states[stage]
+            row: dict[str, Any] = {
+                "field_id": spec.data_element_id,
+                "stage": stage,
+                "eligible_count": 0 if state is None else 1,
+            }
+            row.update({f"{name}_count": 0 for name in COVERAGE_STAGE_STATES})
+            if state is not None:
+                row[f"{state}_count"] = 1
+            if stage in field_count_overrides:
+                count_override = _coverage_mapping(
+                    field_count_overrides[stage], context="stage count override"
+                )
+                required_count_fields = (
+                    "eligible_count",
+                    *(f"{name}_count" for name in COVERAGE_STAGE_STATES),
+                )
+                _coverage_exact_keys(
+                    count_override,
+                    context="stage count override",
+                    required=required_count_fields,
+                )
+                row = {
+                    name: _coverage_count(
+                        count_override[name], context=f"stage count {name}"
+                    )
+                    for name in required_count_fields
+                }
+                row["field_id"] = spec.data_element_id
+                row["stage"] = stage
+            rows.append(row)
+    terminal_count_input = coverage_input.get("terminal_classification_counts")
+    if terminal_count_input is not None:
+        provided_counts = _coverage_mapping(
+            terminal_count_input, context="terminal classification counts"
+        )
+        _coverage_exact_keys(
+            provided_counts,
+            context="terminal classification counts",
+            required=COVERAGE_TERMINAL_CLASSIFICATIONS,
+        )
+        terminal_counts = {
+            name: _coverage_count(
+                provided_counts[name], context=f"terminal classification {name}"
+            )
+            for name in COVERAGE_TERMINAL_CLASSIFICATIONS
+        }
+    terminal_eligible_count = _coverage_count(
+        coverage_input.get(
+            "terminal_classification_eligible_count", sum(terminal_counts.values())
+        ),
+        context="terminal classification eligible count",
+    )
+    return tuple(rows), dict(sorted(terminal_counts.items())), terminal_eligible_count
+
+
+def _coverage_source_snapshots(value: Any) -> tuple[Mapping[str, Any], ...]:
+    snapshots: list[Mapping[str, Any]] = []
+    for item in _coverage_sequence(value, context="source snapshots"):
+        snapshot = _coverage_mapping(item, context="source snapshot")
+        _coverage_exact_keys(
+            snapshot,
+            context="source snapshot",
+            required=(
+                "source_snapshot_id",
+                "source_family_id",
+                "selection_state",
+                "safe_version_label",
+                "observed_at",
+                "row_count",
+                "schema_fingerprint",
+                "content_fingerprint",
+                "availability",
+                "reason_category",
+                "cadence_status",
+            ),
+        )
+        source_snapshot_id = _coverage_identifier(
+            snapshot["source_snapshot_id"], context="source_snapshot_id"
+        )
+        source_family_id = _coverage_identifier(
+            snapshot["source_family_id"], context="source_family_id"
+        )
+        selection_state = _coverage_enum(
+            snapshot["selection_state"],
+            (
+                "retained_existing",
+                "active_accepted",
+                "inactive_candidate",
+                "superseded_retained",
+                "unavailable",
+            ),
+            context="source selection state",
+        )
+        cadence_status = _coverage_enum(
+            snapshot["cadence_status"],
+            ("not_approved",),
+            context="source cadence status",
+        )
+        if selection_state == "inactive_candidate" and cadence_status != "not_approved":
+            raise CoverageContractError(
+                "Inactive statewide candidates must retain unapproved cadence."
+            )
+        safe_version_label = snapshot["safe_version_label"]
+        if safe_version_label is not None:
+            safe_version_label = _coverage_identifier(
+                safe_version_label, context="safe_version_label"
+            )
+        observed_at = _coverage_timestamp(
+            snapshot["observed_at"], context="source observed_at", nullable=True
+        )
+        row_count = snapshot["row_count"]
+        if row_count is not None:
+            row_count = _coverage_count(row_count, context="source row_count")
+        fingerprints: dict[str, str | None] = {}
+        for name in ("schema_fingerprint", "content_fingerprint"):
+            fingerprint = snapshot[name]
+            if fingerprint is not None and (
+                not isinstance(fingerprint, str)
+                or not _COVERAGE_SHA256_RE.fullmatch(fingerprint)
+            ):
+                raise CoverageContractError("Source fingerprints must be lowercase SHA-256.")
+            fingerprints[name] = fingerprint
+        snapshots.append(
+            {
+                "source_snapshot_id": source_snapshot_id,
+                "source_family_id": source_family_id,
+                "selection_state": selection_state,
+                "safe_version_label": safe_version_label,
+                "observed_at": observed_at,
+                "row_count": row_count,
+                **fingerprints,
+                "availability": _coverage_enum(
+                    snapshot["availability"],
+                    ("available", "partial", "unavailable"),
+                    context="source availability",
+                ),
+                "reason_category": _coverage_enum(
+                    snapshot["reason_category"],
+                    _COVERAGE_AVAILABILITY_REASON_CATEGORIES,
+                    context="source availability reason",
+                ),
+                "cadence_status": cadence_status,
+            }
+        )
+    ordered = tuple(sorted(snapshots, key=lambda item: str(item["source_snapshot_id"])))
+    if not ordered:
+        raise CoverageContractError("At least one governed source snapshot is required.")
+    if len({str(item["source_snapshot_id"]) for item in ordered}) != len(ordered):
+        raise CoverageContractError("Source snapshot identifiers must be unique.")
+    if not any(item["selection_state"] == "retained_existing" for item in ordered):
+        raise CoverageContractError("The retained existing source family must be represented.")
+    if not any(item["selection_state"] == "inactive_candidate" for item in ordered):
+        raise CoverageContractError("The inactive statewide candidate must be represented.")
+    return ordered
+
+
+def _coverage_index_input(value: Any, *, context: str) -> Mapping[str, Any]:
+    index = _coverage_mapping(value, context=context)
+    _coverage_exact_keys(
+        index,
+        context=context,
+        required=("availability", "reason_category", "rows"),
+    )
+    availability = _coverage_enum(
+        index["availability"], ("available", "unavailable"), context=f"{context} availability"
+    )
+    reason = _coverage_enum(
+        index["reason_category"],
+        _COVERAGE_AVAILABILITY_REASON_CATEGORIES,
+        context=f"{context} reason",
+    )
+    rows = _coverage_sequence(index["rows"], context=f"{context} rows")
+    if availability == "unavailable" and rows:
+        raise CoverageContractError(f"{context} cannot retain rows while unavailable.")
+    if availability == "available" and reason != "none":
+        raise CoverageContractError(f"{context} must use reason none when available.")
+    if availability == "unavailable" and reason == "none":
+        raise CoverageContractError(f"{context} requires a controlled unavailable reason.")
+    return {"availability": availability, "reason_category": reason, "rows": rows}
+
+
+def _coverage_facility_rows(
+    value: Sequence[Any],
+    *,
+    report_id: str,
+    source_snapshots: Sequence[Mapping[str, Any]],
+) -> tuple[Mapping[str, Any], ...]:
+    snapshots_by_id = {
+        str(snapshot["source_snapshot_id"]): snapshot for snapshot in source_snapshots
+    }
+    rows: list[tuple[str, Mapping[str, Any]]] = []
+    input_fields = (
+        "facility_id",
+        "source_snapshot_id",
+        "refresh_eligibility",
+        "preserved_source_document_count",
+        "last_retrieval_attempt_at",
+        "last_successful_retrieval_at",
+        "last_refresh_attempt_at",
+        "last_successful_refresh_at",
+        "pipeline_version",
+        "preserved_artifact_state",
+        "hash_validation_state",
+        "source_layout_classification",
+        "processing_outcome",
+        "change_outcome",
+        "refresh_state",
+        "retrieval_state",
+        "import_state",
+        "governed_conflict",
+        "operational_failure_category",
+        "retry_eligibility",
+        "operator_intervention_required",
+        "checkpoint_state",
+        "last_job_id",
+    )
+    for item in value:
+        row = _coverage_mapping(item, context="operator facility input row")
+        _coverage_exact_keys(
+            row,
+            context="operator facility input row",
+            required=input_fields,
+        )
+        facility_id = row["facility_id"]
+        if not isinstance(facility_id, str) or not _COVERAGE_FACILITY_ID_RE.fullmatch(
+            facility_id
+        ):
+            raise CoverageContractError("Facility ID must be a safe public identifier.")
+        normalized_facility_id = facility_id.strip().casefold()
+        source_snapshot_id = _coverage_identifier(
+            row["source_snapshot_id"], context="facility source_snapshot_id"
+        )
+        if source_snapshot_id not in snapshots_by_id:
+            raise CoverageContractError("Facility rows must reference a package source snapshot.")
+        source_family_id = str(snapshots_by_id[source_snapshot_id]["source_family_id"])
+        entry_digest = _coverage_sha256(
+            _canonical_json_text(
+                {
+                    "facility_id": normalized_facility_id,
+                    "source_family_id": source_family_id,
+                }
+            ).encode("utf-8")
+        )
+        last_job_id = row["last_job_id"]
+        if last_job_id is not None:
+            last_job_id = _coverage_identifier(last_job_id, context="last_job_id")
+        pipeline_version = _coverage_identifier(
+            row["pipeline_version"], context="pipeline_version"
+        )
+        output_row: dict[str, Any] = {
+            "contract_version": COVERAGE_CONTRACT_VERSION,
+            "report_id": report_id,
+            "facility_entry_id": f"facility-v1-{entry_digest}",
+            "facility_id": facility_id,
+            "source_snapshot_id": source_snapshot_id,
+            "refresh_eligibility": _coverage_enum(
+                row["refresh_eligibility"],
+                ("eligible", "ineligible", "unknown"),
+                context="refresh eligibility",
+            ),
+            "preserved_source_document_count": _coverage_count(
+                row["preserved_source_document_count"],
+                context="preserved source document count",
+            ),
+            "pipeline_version": pipeline_version,
+            "preserved_artifact_state": _coverage_enum(
+                row["preserved_artifact_state"],
+                COVERAGE_PRESERVED_ARTIFACT_STATES,
+                context="preserved artifact state",
+            ),
+            "hash_validation_state": _coverage_enum(
+                row["hash_validation_state"],
+                COVERAGE_HASH_VALIDATION_STATES,
+                context="hash validation state",
+            ),
+            "source_layout_classification": _coverage_enum(
+                row["source_layout_classification"],
+                COVERAGE_SOURCE_LAYOUT_CLASSIFICATIONS,
+                context="source layout classification",
+            ),
+            "processing_outcome": _coverage_enum(
+                row["processing_outcome"],
+                COVERAGE_PROCESSING_OUTCOMES,
+                context="processing outcome",
+            ),
+            "change_outcome": _coverage_enum(
+                row["change_outcome"],
+                COVERAGE_CHANGE_OUTCOMES,
+                context="change outcome",
+            ),
+            "refresh_state": _coverage_enum(
+                row["refresh_state"], COVERAGE_REFRESH_STATES, context="refresh state"
+            ),
+            "governed_conflict": row["governed_conflict"],
+            "operational_failure_category": _coverage_enum(
+                row["operational_failure_category"],
+                COVERAGE_OPERATIONAL_FAILURE_CATEGORIES,
+                context="operational failure category",
+            ),
+            "retry_eligibility": _coverage_enum(
+                row["retry_eligibility"],
+                ("eligible", "ineligible", "not_evaluated"),
+                context="retry eligibility",
+            ),
+            "operator_intervention_required": row["operator_intervention_required"],
+            "checkpoint_state": _coverage_enum(
+                row["checkpoint_state"],
+                ("not_started", "available", "complete", "interrupted", "failed", "unavailable"),
+                context="checkpoint state",
+            ),
+            "last_job_id": last_job_id,
+        }
+        for name in (
+            "last_retrieval_attempt_at",
+            "last_successful_retrieval_at",
+            "last_refresh_attempt_at",
+            "last_successful_refresh_at",
+        ):
+            output_row[name] = _coverage_timestamp(
+                row[name], context=name, nullable=True
+            )
+        if not isinstance(output_row["governed_conflict"], bool) or not isinstance(
+            output_row["operator_intervention_required"], bool
+        ):
+            raise CoverageContractError("Operator facility flags must be boolean.")
+        output_row["retrieval_state"] = _coverage_enum(
+            row["retrieval_state"],
+            COVERAGE_RETRIEVAL_STATES,
+            context="retrieval state",
+        )
+        output_row["import_state"] = _coverage_enum(
+            row["import_state"], COVERAGE_IMPORT_STATES, context="import state"
+        )
+        rows.append((normalized_facility_id, output_row))
+    ordered = tuple(
+        item[1]
+        for item in sorted(
+            rows,
+            key=lambda item: (item[0], str(item[1]["facility_entry_id"])),
+        )
+    )
+    if len({str(row["facility_entry_id"]) for row in ordered}) != len(ordered):
+        raise CoverageContractError("Operator facility identities must be unique.")
+    return ordered
+
+
+def _coverage_job_rows(
+    value: Sequence[Any], *, report_id: str
+) -> tuple[Mapping[str, Any], ...]:
+    required = (
+        "job_id",
+        "job_state",
+        "execution_mode",
+        "started_at",
+        "completed_at",
+        "last_successful_refresh_at",
+        "pipeline_version",
+        "checkpoint_state",
+        "checkpoint_identity",
+        "selected_count",
+        "processed_count",
+        "changed_count",
+        "unchanged_count",
+        "skipped_count",
+        "warning_count",
+        "failed_count",
+        "operational_failure_category",
+        "previous_accepted_dataset_active",
+        "operator_intervention_required",
+    )
+    rows: list[Mapping[str, Any]] = []
+    for item in value:
+        row = _coverage_mapping(item, context="operator job input row")
+        _coverage_exact_keys(row, context="operator job input row", required=required)
+        checkpoint_identity = row["checkpoint_identity"]
+        if checkpoint_identity is not None:
+            checkpoint_identity = _coverage_identifier(
+                checkpoint_identity, context="checkpoint identity"
+            )
+        output: dict[str, Any] = {
+            "job_id": _coverage_identifier(row["job_id"], context="job_id"),
+            "contract_version": COVERAGE_CONTRACT_VERSION,
+            "report_id": report_id,
+            "job_state": _coverage_enum(
+                row["job_state"], COVERAGE_JOB_STATES, context="job state"
+            ),
+            "execution_mode": _coverage_enum(
+                row["execution_mode"], ("dry_run", "apply"), context="execution mode"
+            ),
+            "pipeline_version": _coverage_identifier(
+                row["pipeline_version"], context="job pipeline_version"
+            ),
+            "checkpoint_state": _coverage_enum(
+                row["checkpoint_state"],
+                ("not_started", "available", "complete", "interrupted", "failed", "unavailable"),
+                context="job checkpoint state",
+            ),
+            "checkpoint_identity": checkpoint_identity,
+            "operational_failure_category": _coverage_enum(
+                row["operational_failure_category"],
+                COVERAGE_OPERATIONAL_FAILURE_CATEGORIES,
+                context="job failure category",
+            ),
+            "previous_accepted_dataset_active": row[
+                "previous_accepted_dataset_active"
+            ],
+            "operator_intervention_required": row["operator_intervention_required"],
+        }
+        for name in ("started_at", "completed_at", "last_successful_refresh_at"):
+            output[name] = _coverage_timestamp(row[name], context=name, nullable=True)
+        for name in (
+            "selected_count",
+            "processed_count",
+            "changed_count",
+            "unchanged_count",
+            "skipped_count",
+            "warning_count",
+            "failed_count",
+        ):
+            output[name] = _coverage_count(row[name], context=name)
+        if not isinstance(output["previous_accepted_dataset_active"], bool) or not isinstance(
+            output["operator_intervention_required"], bool
+        ):
+            raise CoverageContractError("Operator job flags must be boolean.")
+        rows.append(output)
+    ordered = tuple(sorted(rows, key=lambda item: str(item["job_id"])))
+    if len({str(row["job_id"]) for row in ordered}) != len(ordered):
+        raise CoverageContractError("Operator job identifiers must be unique.")
+    return ordered
+
+
+def _coverage_enum_counts(
+    rows: Sequence[Mapping[str, Any]], field: str, values: Sequence[str]
+) -> Mapping[str, int]:
+    counts = {value: 0 for value in values}
+    for row in rows:
+        counts[str(row[field])] += 1
+    return dict(sorted(counts.items()))
+
+
+def _coverage_operations(
+    operational_input: Mapping[str, Any],
+    *,
+    report_id: str,
+    source_snapshots: Sequence[Mapping[str, Any]],
+) -> tuple[
+    Mapping[str, Any],
+    tuple[Mapping[str, Any], ...],
+    tuple[Mapping[str, Any], ...],
+    Mapping[str, Any],
+]:
+    _coverage_exact_keys(
+        operational_input,
+        context="operational input",
+        required=("facility_index", "job_index", "declared_totals"),
+    )
+    facility_index_input = _coverage_index_input(
+        operational_input["facility_index"], context="operator facility index"
+    )
+    job_index_input = _coverage_index_input(
+        operational_input["job_index"], context="operator job index"
+    )
+    facility_rows = _coverage_facility_rows(
+        _coverage_sequence(
+            facility_index_input["rows"], context="operator facility index rows"
+        ),
+        report_id=report_id,
+        source_snapshots=source_snapshots,
+    )
+    job_rows = _coverage_job_rows(
+        _coverage_sequence(job_index_input["rows"], context="operator job index rows"),
+        report_id=report_id,
+    )
+    declared = _coverage_mapping(
+        operational_input["declared_totals"], context="declared operational totals"
+    )
+    _coverage_exact_keys(
+        declared,
+        context="declared operational totals",
+        required=(),
+        optional=(
+            "existing_facility_total",
+            "preserved_artifact_facility_total",
+            "governed_conflict_facility_total",
+            "operator_intervention_required_total",
+        ),
+    )
+    computed_existing = len(facility_rows)
+    existing_total = _coverage_count(
+        declared.get("existing_facility_total", computed_existing),
+        context="existing facility total",
+    )
+    preserved_counts = _coverage_enum_counts(
+        facility_rows, "preserved_artifact_state", COVERAGE_PRESERVED_ARTIFACT_STATES
+    )
+    computed_preserved = preserved_counts["preserved"]
+    preserved_total = _coverage_count(
+        declared.get("preserved_artifact_facility_total", computed_preserved),
+        context="preserved artifact facility total",
+    )
+    computed_conflicts = sum(bool(row["governed_conflict"]) for row in facility_rows)
+    governed_conflict_total = _coverage_count(
+        declared.get("governed_conflict_facility_total", computed_conflicts),
+        context="governed conflict facility total",
+    )
+    computed_interventions = sum(
+        bool(row["operator_intervention_required"]) for row in facility_rows
+    )
+    intervention_total = _coverage_count(
+        declared.get(
+            "operator_intervention_required_total", computed_interventions
+        ),
+        context="operator intervention required total",
+    )
+    eligibility_counts = _coverage_enum_counts(
+        facility_rows,
+        "refresh_eligibility",
+        ("eligible", "ineligible", "unknown"),
+    )
+    operations: Mapping[str, Any] = {
+        "existing_facility_total": existing_total,
+        "preserved_artifact_facility_total": preserved_total,
+        "eligible_facility_total": eligibility_counts["eligible"],
+        "ineligible_facility_total": eligibility_counts["ineligible"],
+        "unknown_eligibility_total": eligibility_counts["unknown"],
+        "refresh_state_counts": _coverage_enum_counts(
+            facility_rows, "refresh_state", COVERAGE_REFRESH_STATES
+        ),
+        "processing_outcome_counts": _coverage_enum_counts(
+            facility_rows, "processing_outcome", COVERAGE_PROCESSING_OUTCOMES
+        ),
+        "change_outcome_counts": _coverage_enum_counts(
+            facility_rows, "change_outcome", COVERAGE_CHANGE_OUTCOMES
+        ),
+        "retrieval_state_counts": _coverage_enum_counts(
+            facility_rows, "retrieval_state", COVERAGE_RETRIEVAL_STATES
+        ),
+        "import_state_counts": _coverage_enum_counts(
+            facility_rows, "import_state", COVERAGE_IMPORT_STATES
+        ),
+        "preserved_artifact_state_counts": preserved_counts,
+        "hash_validation_state_counts": _coverage_enum_counts(
+            facility_rows, "hash_validation_state", COVERAGE_HASH_VALIDATION_STATES
+        ),
+        "governed_conflict_facility_total": governed_conflict_total,
+        "operator_intervention_required_total": intervention_total,
+        "job_state_counts": _coverage_enum_counts(
+            job_rows, "job_state", COVERAGE_JOB_STATES
+        ),
+    }
+    metadata = {
+        "facility_index_availability": facility_index_input["availability"],
+        "facility_index_reason_category": facility_index_input["reason_category"],
+        "job_index_availability": job_index_input["availability"],
+        "job_index_reason_category": job_index_input["reason_category"],
+        "computed_existing_facility_total": computed_existing,
+        "computed_preserved_artifact_facility_total": computed_preserved,
+        "computed_governed_conflict_facility_total": computed_conflicts,
+        "computed_operator_intervention_required_total": computed_interventions,
+    }
+    return operations, facility_rows, job_rows, metadata
+
+
+def _coverage_invariant(
+    invariant_id: str,
+    *,
+    expected: int,
+    actual: int,
+    applicable: bool = True,
+) -> Mapping[str, Any]:
+    if invariant_id not in COVERAGE_INVARIANT_IDS:
+        raise CoverageContractError("The producer attempted an unknown invariant ID.")
+    status = "not_applicable" if not applicable else (
+        "passed" if expected == actual else "failed"
+    )
+    return {
+        "invariant_id": invariant_id,
+        "status": status,
+        "expected_count": expected,
+        "actual_count": actual,
+    }
+
+
+def _coverage_reconciliation(
+    *,
+    operations: Mapping[str, Any],
+    facility_rows: Sequence[Mapping[str, Any]],
+    job_rows: Sequence[Mapping[str, Any]],
+    operation_metadata: Mapping[str, Any],
+    stage_rows: Sequence[Mapping[str, Any]],
+    terminal_counts: Mapping[str, int],
+    terminal_eligible_count: int,
+    field_count: int,
+) -> Mapping[str, Any]:
+    existing = int(operations["existing_facility_total"])
+    invariants = [
+        _coverage_invariant(
+            "coverage.facility-eligibility-total",
+            expected=existing,
+            actual=(
+                int(operations["eligible_facility_total"])
+                + int(operations["ineligible_facility_total"])
+                + int(operations["unknown_eligibility_total"])
+            ),
+        ),
+        _coverage_invariant(
+            "coverage.processing-outcome-total",
+            expected=existing,
+            actual=sum(cast(Mapping[str, int], operations["processing_outcome_counts"]).values()),
+        ),
+        _coverage_invariant(
+            "coverage.refresh-state-total",
+            expected=existing,
+            actual=sum(cast(Mapping[str, int], operations["refresh_state_counts"]).values()),
+        ),
+        _coverage_invariant(
+            "coverage.change-outcome-total",
+            expected=existing,
+            actual=sum(cast(Mapping[str, int], operations["change_outcome_counts"]).values()),
+        ),
+        _coverage_invariant(
+            "coverage.retrieval-state-total",
+            expected=existing,
+            actual=sum(cast(Mapping[str, int], operations["retrieval_state_counts"]).values()),
+        ),
+        _coverage_invariant(
+            "coverage.import-state-total",
+            expected=existing,
+            actual=sum(cast(Mapping[str, int], operations["import_state_counts"]).values()),
+        ),
+        _coverage_invariant(
+            "coverage.preserved-artifact-state-total",
+            expected=existing,
+            actual=sum(
+                cast(
+                    Mapping[str, int], operations["preserved_artifact_state_counts"]
+                ).values()
+            ),
+        ),
+        _coverage_invariant(
+            "coverage.hash-validation-state-total",
+            expected=existing,
+            actual=sum(
+                cast(
+                    Mapping[str, int], operations["hash_validation_state_counts"]
+                ).values()
+            ),
+        ),
+        _coverage_invariant(
+            "coverage.preserved-artifact-total",
+            expected=int(operations["preserved_artifact_facility_total"]),
+            actual=int(
+                cast(
+                    Mapping[str, int], operations["preserved_artifact_state_counts"]
+                )["preserved"]
+            ),
+        ),
+        _coverage_invariant(
+            "coverage.governed-conflict-total",
+            expected=int(operations["governed_conflict_facility_total"]),
+            actual=int(operation_metadata["computed_governed_conflict_facility_total"]),
+        ),
+        _coverage_invariant(
+            "coverage.operator-facility-conflict-total",
+            expected=int(operations["governed_conflict_facility_total"]),
+            actual=sum(bool(row["governed_conflict"]) for row in facility_rows),
+            applicable=operation_metadata["facility_index_availability"] == "available",
+        ),
+        _coverage_invariant(
+            "coverage.operator-intervention-total",
+            expected=int(operations["operator_intervention_required_total"]),
+            actual=int(
+                operation_metadata["computed_operator_intervention_required_total"]
+            ),
+            applicable=operation_metadata["facility_index_availability"] == "available",
+        ),
+        _coverage_invariant(
+            "coverage.job-state-total",
+            expected=len(job_rows),
+            actual=sum(cast(Mapping[str, int], operations["job_state_counts"]).values()),
+            applicable=operation_metadata["job_index_availability"] == "available",
+        ),
+        _coverage_invariant(
+            "coverage.field-stage-balances",
+            expected=0,
+            actual=sum(
+                int(row["eligible_count"])
+                != sum(int(row[f"{state}_count"]) for state in COVERAGE_STAGE_STATES)
+                for row in stage_rows
+            ),
+        ),
+        _coverage_invariant(
+            "coverage.field-stage-inventory",
+            expected=field_count * len(COVERAGE_STAGES),
+            actual=len(stage_rows),
+        ),
+        _coverage_invariant(
+            "coverage.terminal-classification-total",
+            expected=terminal_eligible_count,
+            actual=sum(terminal_counts.values()),
+        ),
+    ]
+    status = "failed" if any(row["status"] == "failed" for row in invariants) else "passed"
+    return {
+        "reconciliation_status": status,
+        "failure_category": "validation_failed" if status == "failed" else "none",
+        "invariants": invariants,
+    }
+
+
+_COVERAGE_CRITERION_IDS = (
+    "release.previously-populated-field-became-blank",
+    "release.verified-label-regressed-to-unresolved",
+    "release.facility-count-decline",
+    "release.source-to-screen-stage-regression",
+    "release.aggregate-reconciliation",
+    "release.unresolved-or-conflicting-identity-type",
+)
+
+
+def _coverage_criteria(value: Any) -> Mapping[str, Any]:
+    criteria = _coverage_mapping(value, context="coverage criteria")
+    _coverage_exact_keys(
+        criteria,
+        context="coverage criteria",
+        required=(
+            "baseline_metrics",
+            "thresholds",
+            "observed_metrics",
+            "reviewed_exceptions",
+        ),
+    )
+    baseline = _coverage_mapping(criteria["baseline_metrics"], context="baseline metrics")
+    _coverage_exact_keys(
+        baseline,
+        context="baseline metrics",
+        required=(
+            "existing_facility_total",
+            "previously_populated_governed_field_total",
+            "verified_descriptive_facility_type_label_total",
+            "required_stage_success_total",
+            "unresolved_identity_or_type_total",
+        ),
+    )
+    thresholds = _coverage_mapping(criteria["thresholds"], context="coverage thresholds")
+    _coverage_exact_keys(
+        thresholds,
+        context="coverage thresholds",
+        required=(
+            "maximum_facility_count_decline",
+            "maximum_new_blank_regressions",
+            "maximum_label_regressions",
+            "maximum_stage_regressions",
+            "maximum_unresolved_identity_or_type_total",
+        ),
+    )
+    observed = _coverage_mapping(
+        criteria["observed_metrics"], context="observed regression metrics"
+    )
+    _coverage_exact_keys(
+        observed,
+        context="observed regression metrics",
+        required=(
+            "previously_populated_now_blank_total",
+            "verified_label_to_unresolved_regression_total",
+            "required_stage_regression_total",
+            "unresolved_identity_or_type_total",
+        ),
+    )
+    baseline_counts = {
+        name: _coverage_count(item, context=f"baseline {name}")
+        for name, item in baseline.items()
+    }
+    threshold_counts = {
+        name: _coverage_count(item, context=f"threshold {name}")
+        for name, item in thresholds.items()
+    }
+    observed_counts = {
+        name: _coverage_count(item, context=f"observed {name}")
+        for name, item in observed.items()
+    }
+    exceptions: dict[str, str] = {}
+    for item in _coverage_sequence(
+        criteria["reviewed_exceptions"], context="reviewed exceptions"
+    ):
+        exception = _coverage_mapping(item, context="reviewed exception")
+        _coverage_exact_keys(
+            exception,
+            context="reviewed exception",
+            required=("criterion_id", "exception_id"),
+        )
+        criterion_id = _coverage_enum(
+            exception["criterion_id"],
+            _COVERAGE_CRITERION_IDS,
+            context="reviewed exception criterion",
+        )
+        exceptions[criterion_id] = _coverage_identifier(
+            exception["exception_id"], context="reviewed exception ID"
+        )
+    return {
+        "baseline_metrics": dict(sorted(baseline_counts.items())),
+        "thresholds": dict(sorted(threshold_counts.items())),
+        "observed_metrics": dict(sorted(observed_counts.items())),
+        "reviewed_exceptions": [
+            {"criterion_id": criterion_id, "exception_id": exception_id}
+            for criterion_id, exception_id in sorted(exceptions.items())
+        ],
+    }
+
+
+def _coverage_release_assessment(
+    *,
+    criteria: Mapping[str, Any],
+    operations: Mapping[str, Any],
+    reconciliation: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    baseline = cast(Mapping[str, int], criteria["baseline_metrics"])
+    thresholds = cast(Mapping[str, int], criteria["thresholds"])
+    observed = cast(Mapping[str, int], criteria["observed_metrics"])
+    exceptions = {
+        str(item["criterion_id"]): str(item["exception_id"])
+        for item in cast(Sequence[Mapping[str, Any]], criteria["reviewed_exceptions"])
+    }
+    facility_decline = max(
+        0,
+        baseline["existing_facility_total"] - int(operations["existing_facility_total"]),
+    )
+    values = (
+        (
+            "release.previously-populated-field-became-blank",
+            baseline["previously_populated_governed_field_total"],
+            observed["previously_populated_now_blank_total"],
+            thresholds["maximum_new_blank_regressions"],
+            False,
+        ),
+        (
+            "release.verified-label-regressed-to-unresolved",
+            baseline["verified_descriptive_facility_type_label_total"],
+            observed["verified_label_to_unresolved_regression_total"],
+            thresholds["maximum_label_regressions"],
+            False,
+        ),
+        (
+            "release.facility-count-decline",
+            baseline["existing_facility_total"],
+            facility_decline,
+            thresholds["maximum_facility_count_decline"],
+            False,
+        ),
+        (
+            "release.source-to-screen-stage-regression",
+            baseline["required_stage_success_total"],
+            observed["required_stage_regression_total"],
+            thresholds["maximum_stage_regressions"],
+            False,
+        ),
+        (
+            "release.aggregate-reconciliation",
+            0,
+            0 if reconciliation["reconciliation_status"] == "passed" else 1,
+            0,
+            False,
+        ),
+        (
+            "release.unresolved-or-conflicting-identity-type",
+            baseline["unresolved_identity_or_type_total"],
+            observed["unresolved_identity_or_type_total"],
+            thresholds["maximum_unresolved_identity_or_type_total"],
+            True,
+        ),
+    )
+    checks: list[Mapping[str, Any]] = []
+    for criterion_id, baseline_count, observed_count, threshold_count, warn_nonzero in values:
+        breached = observed_count > threshold_count
+        exception_id = exceptions.get(criterion_id)
+        if breached and exception_id is not None:
+            status = "reviewed_exception_required"
+        elif breached:
+            status = "failed"
+        elif warn_nonzero and observed_count > 0:
+            status = "warning"
+        else:
+            status = "passed"
+        checks.append(
+            {
+                "criterion_id": criterion_id,
+                "status": status,
+                "baseline_count": baseline_count,
+                "observed_count": observed_count,
+                "threshold_count": threshold_count,
+                "exception_id": exception_id,
+            }
+        )
+    statuses = {str(check["status"]) for check in checks}
+    overall = (
+        "failed"
+        if "failed" in statuses
+        else "reviewed_exception_required"
+        if "reviewed_exception_required" in statuses
+        else "warning"
+        if "warning" in statuses
+        else "passed"
+    )
+    return {"status": overall, "checks": checks}
+
+
+_COVERAGE_FACILITY_OUTPUT_FIELDS = (
+    "contract_version",
+    "report_id",
+    "facility_entry_id",
+    "facility_id",
+    "source_snapshot_id",
+    "refresh_eligibility",
+    "preserved_source_document_count",
+    "last_retrieval_attempt_at",
+    "last_successful_retrieval_at",
+    "last_refresh_attempt_at",
+    "last_successful_refresh_at",
+    "pipeline_version",
+    "preserved_artifact_state",
+    "hash_validation_state",
+    "source_layout_classification",
+    "processing_outcome",
+    "change_outcome",
+    "refresh_state",
+    "governed_conflict",
+    "operational_failure_category",
+    "retry_eligibility",
+    "operator_intervention_required",
+    "checkpoint_state",
+    "last_job_id",
+)
+
+
+def _coverage_public_facility_rows(
+    rows: Sequence[Mapping[str, Any]],
+) -> tuple[Mapping[str, Any], ...]:
+    return tuple(
+        {name: row[name] for name in _COVERAGE_FACILITY_OUTPUT_FIELDS} for row in rows
+    )
+
+
+def _coverage_jsonl_bytes(rows: Sequence[Mapping[str, Any]]) -> bytes:
+    return b"".join(_canonical_json_bytes(row) for row in rows)
+
+
+def _coverage_percentage(numerator: int, denominator: int) -> str:
+    if denominator == 0:
+        return ""
+    return f"{numerator * 100 / denominator:.2f}"
+
+
+def _coverage_csv_bytes(
+    *,
+    report_id: str,
+    criteria_set_id: str,
+    source_snapshots: Sequence[Mapping[str, Any]],
+    stage_rows: Sequence[Mapping[str, Any]],
+    terminal_counts: Mapping[str, int],
+    terminal_eligible_count: int,
+    operations: Mapping[str, Any],
+    release_assessment: Mapping[str, Any],
+) -> bytes:
+    rows: list[Mapping[str, Any]] = []
+    blank = ""
+    for stage_row in stage_rows:
+        denominator = int(stage_row["eligible_count"])
+        for state in COVERAGE_STAGE_STATES:
+            numerator = int(stage_row[f"{state}_count"])
+            rows.append(
+                {
+                    "contract_version": COVERAGE_CONTRACT_VERSION,
+                    "report_id": report_id,
+                    "dimension": "field_stage",
+                    "field_id": stage_row["field_id"],
+                    "stage": stage_row["stage"],
+                    "category": state,
+                    "numerator_count": numerator,
+                    "denominator_count": denominator,
+                    "percentage": _coverage_percentage(numerator, denominator),
+                    "status": blank,
+                    "criteria_set_id": criteria_set_id,
+                    "source_snapshot_id": blank,
+                }
+            )
+    for category, numerator in terminal_counts.items():
+        rows.append(
+            {
+                "contract_version": COVERAGE_CONTRACT_VERSION,
+                "report_id": report_id,
+                "dimension": "terminal_classification",
+                "field_id": blank,
+                "stage": blank,
+                "category": category,
+                "numerator_count": numerator,
+                "denominator_count": terminal_eligible_count,
+                "percentage": _coverage_percentage(
+                    numerator, terminal_eligible_count
+                ),
+                "status": blank,
+                "criteria_set_id": criteria_set_id,
+                "source_snapshot_id": blank,
+            }
+        )
+    existing_total = int(operations["existing_facility_total"])
+    for dimension, field, categories in (
+        ("refresh_state", "refresh_state_counts", COVERAGE_REFRESH_STATES),
+        (
+            "processing_outcome",
+            "processing_outcome_counts",
+            COVERAGE_PROCESSING_OUTCOMES,
+        ),
+        ("change_outcome", "change_outcome_counts", COVERAGE_CHANGE_OUTCOMES),
+        ("retrieval_state", "retrieval_state_counts", COVERAGE_RETRIEVAL_STATES),
+        ("import_state", "import_state_counts", COVERAGE_IMPORT_STATES),
+        (
+            "preserved_artifact_state",
+            "preserved_artifact_state_counts",
+            COVERAGE_PRESERVED_ARTIFACT_STATES,
+        ),
+        (
+            "hash_validation_state",
+            "hash_validation_state_counts",
+            COVERAGE_HASH_VALIDATION_STATES,
+        ),
+    ):
+        counts = cast(Mapping[str, int], operations[field])
+        for category in categories:
+            numerator = counts[category]
+            rows.append(
+                {
+                    "contract_version": COVERAGE_CONTRACT_VERSION,
+                    "report_id": report_id,
+                    "dimension": dimension,
+                    "field_id": blank,
+                    "stage": blank,
+                    "category": category,
+                    "numerator_count": numerator,
+                    "denominator_count": existing_total,
+                    "percentage": _coverage_percentage(numerator, existing_total),
+                    "status": blank,
+                    "criteria_set_id": criteria_set_id,
+                    "source_snapshot_id": blank,
+                }
+            )
+    job_counts = cast(Mapping[str, int], operations["job_state_counts"])
+    job_total = sum(job_counts.values())
+    for category in COVERAGE_JOB_STATES:
+        numerator = job_counts[category]
+        rows.append(
+            {
+                "contract_version": COVERAGE_CONTRACT_VERSION,
+                "report_id": report_id,
+                "dimension": "job_state",
+                "field_id": blank,
+                "stage": blank,
+                "category": category,
+                "numerator_count": numerator,
+                "denominator_count": job_total,
+                "percentage": _coverage_percentage(numerator, job_total),
+                "status": blank,
+                "criteria_set_id": criteria_set_id,
+                "source_snapshot_id": blank,
+            }
+        )
+    for check in cast(Sequence[Mapping[str, Any]], release_assessment["checks"]):
+        rows.append(
+            {
+                "contract_version": COVERAGE_CONTRACT_VERSION,
+                "report_id": report_id,
+                "dimension": "release_assessment",
+                "field_id": blank,
+                "stage": blank,
+                "category": check["criterion_id"],
+                "numerator_count": check["observed_count"],
+                "denominator_count": check["threshold_count"],
+                "percentage": blank,
+                "status": check["status"],
+                "criteria_set_id": criteria_set_id,
+                "source_snapshot_id": blank,
+            }
+        )
+    for snapshot in source_snapshots:
+        row_count = snapshot["row_count"]
+        rows.append(
+            {
+                "contract_version": COVERAGE_CONTRACT_VERSION,
+                "report_id": report_id,
+                "dimension": "source_snapshot",
+                "field_id": blank,
+                "stage": blank,
+                "category": snapshot["selection_state"],
+                "numerator_count": blank if row_count is None else row_count,
+                "denominator_count": blank,
+                "percentage": blank,
+                "status": snapshot["availability"],
+                "criteria_set_id": criteria_set_id,
+                "source_snapshot_id": snapshot["source_snapshot_id"],
+            }
+        )
+    rows.sort(
+        key=lambda row: tuple(
+            str(row[name])
+            for name in (
+                "dimension",
+                "field_id",
+                "stage",
+                "category",
+                "source_snapshot_id",
+            )
+        )
+    )
+    stream = io.StringIO(newline="")
+    writer = csv.DictWriter(
+        stream,
+        fieldnames=COVERAGE_AGGREGATE_CSV_FIELDNAMES,
+        lineterminator="\n",
+    )
+    writer.writeheader()
+    writer.writerows(rows)
+    return stream.getvalue().encode("utf-8")
+
+
+def _coverage_artifact_entry(
+    *,
+    name: str,
+    availability: str,
+    reason_category: str,
+    media_type: str,
+    content: bytes | None,
+) -> Mapping[str, Any]:
+    return {
+        "name": name,
+        "availability": availability,
+        "reason_category": reason_category,
+        "byte_count": 0 if content is None else len(content),
+        "sha256": None if content is None else _coverage_sha256(content),
+        "media_type": media_type,
+    }
+
+
+def _coverage_retention(value: Any) -> Mapping[str, Any]:
+    retention = _coverage_mapping(value, context="coverage retention")
+    _coverage_exact_keys(
+        retention,
+        context="coverage retention",
+        required=(
+            "policy_id",
+            "disposition",
+            "retain_until",
+            "previous_accepted_report_id",
+        ),
+    )
+    if retention["policy_id"] is not None:
+        raise CoverageContractError("No coverage retention policy is currently approved.")
+    if retention["disposition"] != "pending_policy" or retention["retain_until"] is not None:
+        raise CoverageContractError("Coverage retention duration remains pending policy.")
+    previous_report_id = retention["previous_accepted_report_id"]
+    if previous_report_id is not None and (
+        not isinstance(previous_report_id, str)
+        or not re.fullmatch(r"coverage-report-v1-[0-9a-f]{64}", previous_report_id)
+    ):
+        raise CoverageContractError("Previous accepted report ID is invalid.")
+    return {
+        "policy_id": None,
+        "disposition": "pending_policy",
+        "retain_until": None,
+        "previous_accepted_report_id": previous_report_id,
+    }
+
+
+def _coverage_provenance(value: Any, *, fixture_id: str) -> Mapping[str, Any]:
+    provenance = _coverage_mapping(value, context="coverage provenance")
+    _coverage_exact_keys(
+        provenance,
+        context="coverage provenance",
+        required=("input_manifest_ids", "governed_fixture_ids"),
+    )
+    input_manifest_ids = sorted(
+        {
+            _coverage_identifier(item, context="input manifest ID")
+            for item in _coverage_sequence(
+                provenance["input_manifest_ids"], context="input manifest IDs"
+            )
+        }
+    )
+    governed_fixture_ids = sorted(
+        {
+            _coverage_identifier(item, context="governed fixture ID")
+            for item in _coverage_sequence(
+                provenance["governed_fixture_ids"], context="governed fixture IDs"
+            )
+        }
+    )
+    if fixture_id not in governed_fixture_ids:
+        governed_fixture_ids.append(fixture_id)
+        governed_fixture_ids.sort()
+    return {
+        "input_manifest_ids": input_manifest_ids,
+        "governed_fixture_ids": governed_fixture_ids,
+    }
+
+
+def _coverage_schema(repo_root: Path) -> Mapping[str, Any]:
+    schema_path = repo_root / COVERAGE_SCHEMA_PATH
+    try:
+        payload = json.loads(schema_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise CoverageContractError("The coverage report schema could not be loaded.") from exc
+    return _coverage_mapping(payload, context="coverage report schema")
+
+
+def _validate_coverage_schema_payload(
+    payload: Mapping[str, Any], *, schema: Mapping[str, Any]
+) -> None:
+    try:
+        jsonschema_validate(instance=payload, schema=schema)
+    except JsonSchemaValidationError as exc:
+        location = exc.json_path or "$"
+        validator = str(exc.validator or "contract")
+        raise CoverageContractError(
+            "Coverage output failed closed-schema validation at "
+            f"{location} ({validator})."
+        ) from exc
+
+
+def _coverage_identity(
+    *,
+    evaluation_id: str,
+    source_snapshots: Sequence[Mapping[str, Any]],
+    criteria_set_id: str,
+    scope_id: str,
+    producer_schema_id: str,
+) -> str:
+    identity = {
+        "contract_major": 1,
+        "evaluation_id": evaluation_id,
+        "source_snapshot_ids": [
+            str(snapshot["source_snapshot_id"]) for snapshot in source_snapshots
+        ],
+        "criteria_set_id": criteria_set_id,
+        "scope_id": scope_id,
+        "producer_schema_id": producer_schema_id,
+    }
+    return "coverage-report-v1-" + _coverage_sha256(
+        _canonical_json_text(identity).encode("utf-8")
+    )
+
+
+def _coverage_fixture_input(value: Mapping[str, Any]) -> Mapping[str, Any]:
+    _coverage_exact_keys(
+        value,
+        context="coverage fixture",
+        required=(
+            "fixture_id",
+            "contract_version",
+            "evaluation_id",
+            "criteria_set_id",
+            "scope_id",
+            "producer_schema_id",
+            "producer_version",
+            "generation_mode",
+            "source_snapshots",
+            "criteria",
+            "coverage",
+            "operational",
+            "retention",
+            "provenance",
+        ),
+        optional=("unavailable_dimensions",),
+    )
+    _reject_prohibited_coverage_content(value)
+    if value["contract_version"] != COVERAGE_CONTRACT_VERSION:
+        raise CoverageContractError("Coverage contract version is not supported.")
+    if value["producer_schema_id"] != COVERAGE_PRODUCER_SCHEMA_ID:
+        raise CoverageContractError("Coverage producer schema version is not supported.")
+    _coverage_enum(
+        value["generation_mode"],
+        ("governed_fixture", "read_only_boundary"),
+        context="coverage generation mode",
+    )
+    return value
+
+
+def generate_coverage_package(
+    fixture: Mapping[str, Any],
+    *,
+    output_dir: Path,
+    repo_root: Path | None = None,
+    generated_at: datetime | None = None,
+) -> CoveragePackageResult:
+    """Generate the deterministic Issues #453/#477 v1 aggregate contract package."""
+
+    root = (repo_root or Path(__file__).resolve().parents[2]).resolve()
+    fixture = _coverage_fixture_input(fixture)
+    fixture_id = _coverage_identifier(fixture["fixture_id"], context="fixture_id")
+    evaluation_id = _coverage_identifier(
+        fixture["evaluation_id"], context="evaluation_id"
+    )
+    criteria_set_id = _coverage_identifier(
+        fixture["criteria_set_id"], context="criteria_set_id"
+    )
+    scope_id = _coverage_identifier(fixture["scope_id"], context="scope_id")
+    producer_schema_id = _coverage_identifier(
+        fixture["producer_schema_id"], context="producer_schema_id"
+    )
+    producer_version = _coverage_identifier(
+        fixture["producer_version"], context="producer_version"
+    )
+    source_snapshots = _coverage_source_snapshots(fixture["source_snapshots"])
+    report_id = _coverage_identity(
+        evaluation_id=evaluation_id,
+        source_snapshots=source_snapshots,
+        criteria_set_id=criteria_set_id,
+        scope_id=scope_id,
+        producer_schema_id=producer_schema_id,
+    )
+    specs = discover_element_specs(root)
+    if not specs:
+        raise CoverageContractError("The governed source-to-screen inventory is empty.")
+    stage_rows, terminal_counts, terminal_eligible_count = (
+        _coverage_rows_from_inventory(
+            specs,
+            _coverage_mapping(fixture["coverage"], context="coverage input"),
+        )
+    )
+    operations, internal_facility_rows, job_rows, operation_metadata = (
+        _coverage_operations(
+            _coverage_mapping(fixture["operational"], context="operational input"),
+            report_id=report_id,
+            source_snapshots=source_snapshots,
+        )
+    )
+    facility_rows = _coverage_public_facility_rows(internal_facility_rows)
+    reconciliation = _coverage_reconciliation(
+        operations=operations,
+        facility_rows=internal_facility_rows,
+        job_rows=job_rows,
+        operation_metadata=operation_metadata,
+        stage_rows=stage_rows,
+        terminal_counts=terminal_counts,
+        terminal_eligible_count=terminal_eligible_count,
+        field_count=len(specs),
+    )
+    criteria = _coverage_criteria(fixture["criteria"])
+    release_assessment = _coverage_release_assessment(
+        criteria=criteria,
+        operations=operations,
+        reconciliation=reconciliation,
+    )
+    retention = _coverage_retention(fixture["retention"])
+    provenance = _coverage_provenance(fixture["provenance"], fixture_id=fixture_id)
+    unavailable_dimensions = {
+        _coverage_identifier(item, context="unavailable dimension")
+        for item in _coverage_sequence(
+            fixture.get("unavailable_dimensions", []),
+            context="unavailable dimensions",
+        )
+    }
+    if operation_metadata["facility_index_availability"] == "unavailable":
+        unavailable_dimensions.add("operator_facility_index")
+    if operation_metadata["job_index_availability"] == "unavailable":
+        unavailable_dimensions.add("operator_job_index")
+    package_availability = (
+        "reconciliation_failed"
+        if reconciliation["reconciliation_status"] == "failed"
+        else "partial"
+        if unavailable_dimensions
+        else "available"
+    )
+    generated_at_value = _coverage_generated_at(generated_at)
+    report: Mapping[str, Any] = {
+        "contract_version": COVERAGE_CONTRACT_VERSION,
+        "report_id": report_id,
+        "generated_at": generated_at_value,
+        "evaluation_id": evaluation_id,
+        "criteria_set_id": criteria_set_id,
+        "scope_id": scope_id,
+        "producer_schema_id": producer_schema_id,
+        "package_availability": package_availability,
+        "source_snapshots": list(source_snapshots),
+        "coverage": {
+            "inventory_field_total": len(specs),
+            "field_stage_coverage": list(stage_rows),
+            "terminal_classification_eligible_count": terminal_eligible_count,
+            "terminal_classification_counts": terminal_counts,
+        },
+        "operations": operations,
+        "criteria": criteria,
+        "reconciliation": reconciliation,
+        "release_assessment": release_assessment,
+        "unavailable_dimensions": sorted(unavailable_dimensions),
+        "issue_490_boundaries": {
+            "retained_source_scope": "existing_program_specific_sources",
+            "statewide_candidate_selection_state": "inactive_candidate",
+            "statewide_completeness_baseline": "not_established",
+            "cadence_status": "not_approved",
+            "raw_733_mapping_status": "unresolved",
+            "raw_733_descriptive_label_emitted": False,
+        },
+    }
+    report_bytes = _canonical_json_bytes(report)
+    facility_bytes = (
+        _coverage_jsonl_bytes(facility_rows)
+        if operation_metadata["facility_index_availability"] == "available"
+        else None
+    )
+    job_bytes = (
+        _coverage_jsonl_bytes(job_rows)
+        if operation_metadata["job_index_availability"] == "available"
+        else None
+    )
+    csv_bytes = _coverage_csv_bytes(
+        report_id=report_id,
+        criteria_set_id=criteria_set_id,
+        source_snapshots=source_snapshots,
+        stage_rows=stage_rows,
+        terminal_counts=terminal_counts,
+        terminal_eligible_count=terminal_eligible_count,
+        operations=operations,
+        release_assessment=release_assessment,
+    )
+    artifacts = (
+        _coverage_artifact_entry(
+            name="coverage-report.json",
+            availability="available",
+            reason_category="none",
+            media_type="application/json",
+            content=report_bytes,
+        ),
+        _coverage_artifact_entry(
+            name="operator-facility-index.jsonl",
+            availability=str(operation_metadata["facility_index_availability"]),
+            reason_category=str(operation_metadata["facility_index_reason_category"]),
+            media_type="application/x-ndjson",
+            content=facility_bytes,
+        ),
+        _coverage_artifact_entry(
+            name="operator-job-index.jsonl",
+            availability=str(operation_metadata["job_index_availability"]),
+            reason_category=str(operation_metadata["job_index_reason_category"]),
+            media_type="application/x-ndjson",
+            content=job_bytes,
+        ),
+        _coverage_artifact_entry(
+            name="aggregate-coverage.csv",
+            availability="available",
+            reason_category="none",
+            media_type="text/csv",
+            content=csv_bytes,
+        ),
+    )
+    manifest: Mapping[str, Any] = {
+        "contract_version": COVERAGE_CONTRACT_VERSION,
+        "minimum_consumer_version": COVERAGE_MINIMUM_CONSUMER_VERSION,
+        "report_id": report_id,
+        "generated_at": generated_at_value,
+        "evaluation_id": evaluation_id,
+        "criteria_set_id": criteria_set_id,
+        "scope_id": scope_id,
+        "producer_schema_id": producer_schema_id,
+        "producer_version": producer_version,
+        "package_availability": package_availability,
+        "source_snapshots": list(source_snapshots),
+        "artifacts": sorted(artifacts, key=lambda item: str(item["name"])),
+        "provenance": {
+            **provenance,
+            "generation_mode": fixture["generation_mode"],
+        },
+        "retention": retention,
+    }
+    _reject_prohibited_coverage_content(
+        {
+            "manifest": manifest,
+            "report": report,
+            "facility_index": facility_rows,
+            "job_index": job_rows,
+        }
+    )
+    schema = _coverage_schema(root)
+    _validate_coverage_schema_payload(report, schema=schema)
+    _validate_coverage_schema_payload(manifest, schema=schema)
+    for row in (*facility_rows, *job_rows):
+        _validate_coverage_schema_payload(row, schema=schema)
+    manifest_bytes = _canonical_json_bytes(manifest)
+    effective_output_dir = output_dir if output_dir.is_absolute() else root / output_dir
+    effective_output_dir.mkdir(parents=True, exist_ok=True)
+    outputs: Mapping[str, bytes | None] = {
+        "manifest.json": manifest_bytes,
+        "coverage-report.json": report_bytes,
+        "operator-facility-index.jsonl": facility_bytes,
+        "operator-job-index.jsonl": job_bytes,
+        "aggregate-coverage.csv": csv_bytes,
+    }
+    for name, content in outputs.items():
+        path = effective_output_dir / name
+        if path.exists():
+            if content is None or not path.is_file() or path.read_bytes() != content:
+                raise CoverageContractError(
+                    "A coverage generation instance is immutable and cannot be overwritten."
+                )
+            continue
+        if content is not None:
+            path.write_bytes(content)
+    artifact_hashes = {
+        str(artifact["name"]): str(artifact["sha256"])
+        for artifact in artifacts
+        if artifact["availability"] == "available"
+    }
+    return CoveragePackageResult(
+        report_id=report_id,
+        manifest=manifest,
+        report=report,
+        facility_index=facility_rows,
+        job_index=job_rows,
+        artifact_hashes=dict(sorted(artifact_hashes.items())),
+    )
+
+
+def _read_canonical_coverage_json(path: Path) -> Mapping[str, Any]:
+    try:
+        content = path.read_bytes()
+        payload = json.loads(content.decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise CoverageContractError("A required coverage JSON artifact is unavailable.") from exc
+    mapping = _coverage_mapping(payload, context="coverage JSON artifact")
+    if content != _canonical_json_bytes(mapping):
+        raise CoverageContractError("Coverage JSON serialization is not canonical.")
+    return mapping
+
+
+def _read_canonical_coverage_jsonl(path: Path) -> tuple[Mapping[str, Any], ...]:
+    try:
+        content = path.read_bytes()
+    except OSError as exc:
+        raise CoverageContractError("A coverage JSONL artifact is unavailable.") from exc
+    if b"\r" in content or (content and not content.endswith(b"\n")):
+        raise CoverageContractError("Coverage JSONL serialization is not canonical.")
+    rows: list[Mapping[str, Any]] = []
+    for line in content.splitlines():
+        try:
+            payload = json.loads(line.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise CoverageContractError("A coverage JSONL row is invalid.") from exc
+        row = _coverage_mapping(payload, context="coverage JSONL row")
+        if line + b"\n" != _canonical_json_bytes(row):
+            raise CoverageContractError("Coverage JSONL serialization is not canonical.")
+        rows.append(row)
+    return tuple(rows)
+
+
+def validate_coverage_package(
+    package_dir: Path, *, repo_root: Path | None = None
+) -> Mapping[str, Any]:
+    """Validate identities, hashes, schema, serialization, and fail-closed state."""
+
+    root = (repo_root or Path(__file__).resolve().parents[2]).resolve()
+    schema = _coverage_schema(root)
+    manifest_path = package_dir / "manifest.json"
+    manifest = _read_canonical_coverage_json(manifest_path)
+    _validate_coverage_schema_payload(manifest, schema=schema)
+    if manifest["contract_version"] != COVERAGE_CONTRACT_VERSION:
+        raise CoverageContractError("Coverage package version is not supported.")
+    artifacts = _coverage_sequence(manifest["artifacts"], context="manifest artifacts")
+    expected_artifacts = {
+        "coverage-report.json",
+        "operator-facility-index.jsonl",
+        "operator-job-index.jsonl",
+        "aggregate-coverage.csv",
+    }
+    artifact_names = {
+        str(_coverage_mapping(item, context="artifact")["name"]) for item in artifacts
+    }
+    if artifact_names != expected_artifacts:
+        raise CoverageContractError("Coverage manifest artifact set is invalid.")
+    loaded_jsonl: dict[str, tuple[Mapping[str, Any], ...]] = {}
+    report: Mapping[str, Any] | None = None
+    for item in artifacts:
+        artifact = _coverage_mapping(item, context="manifest artifact")
+        name = str(artifact["name"])
+        path = package_dir / name
+        availability = str(artifact["availability"])
+        if availability == "unavailable":
+            if path.exists():
+                raise CoverageContractError("An unavailable artifact must not retain bytes.")
+            continue
+        try:
+            content = path.read_bytes()
+        except OSError as exc:
+            raise CoverageContractError("An available coverage artifact is missing.") from exc
+        if len(content) != int(artifact["byte_count"]):
+            raise CoverageContractError("Coverage artifact byte count validation failed.")
+        if _coverage_sha256(content) != artifact["sha256"]:
+            raise CoverageContractError("Coverage artifact hash validation failed.")
+        if name == "coverage-report.json":
+            report = _read_canonical_coverage_json(path)
+            _validate_coverage_schema_payload(report, schema=schema)
+        elif name.endswith(".jsonl"):
+            rows = _read_canonical_coverage_jsonl(path)
+            for row in rows:
+                _validate_coverage_schema_payload(row, schema=schema)
+                if row["contract_version"] != manifest["contract_version"] or row[
+                    "report_id"
+                ] != manifest["report_id"]:
+                    raise CoverageContractError("Coverage artifact identity mismatch.")
+            loaded_jsonl[name] = rows
+        elif name == "aggregate-coverage.csv":
+            if b"\r" in content:
+                raise CoverageContractError("Aggregate CSV must use LF line endings.")
+            try:
+                csv_text = content.decode("utf-8")
+                reader = csv.DictReader(io.StringIO(csv_text, newline=""))
+                csv_rows = tuple(reader)
+            except (UnicodeDecodeError, csv.Error) as exc:
+                raise CoverageContractError("Aggregate CSV serialization is invalid.") from exc
+            if tuple(reader.fieldnames or ()) != COVERAGE_AGGREGATE_CSV_FIELDNAMES:
+                raise CoverageContractError("Aggregate CSV header is invalid.")
+            for row in csv_rows:
+                if (
+                    row["contract_version"] != manifest["contract_version"]
+                    or row["report_id"] != manifest["report_id"]
+                ):
+                    raise CoverageContractError("Aggregate CSV identity mismatch.")
+    if report is None:
+        raise CoverageContractError("The aggregate coverage report is unavailable.")
+    for name in (
+        "contract_version",
+        "report_id",
+        "generated_at",
+        "evaluation_id",
+        "criteria_set_id",
+        "scope_id",
+        "producer_schema_id",
+        "package_availability",
+    ):
+        if report[name] != manifest[name]:
+            raise CoverageContractError("Coverage report and manifest do not reconcile.")
+    if report["source_snapshots"] != manifest["source_snapshots"]:
+        raise CoverageContractError("Coverage source snapshots do not reconcile.")
+    if report["reconciliation"]["reconciliation_status"] != "passed":
+        raise CoverageContractError("Coverage package reconciliation failed.")
+    if manifest["package_availability"] in {
+        "unavailable",
+        "version_mismatch",
+        "hash_failed",
+        "reconciliation_failed",
+    }:
+        raise CoverageContractError("Coverage package failed closed validation.")
+    facility_rows = loaded_jsonl.get("operator-facility-index.jsonl", ())
+    normalized_order = tuple(
+        (str(row["facility_id"]).strip().casefold(), str(row["facility_entry_id"]))
+        for row in facility_rows
+    )
+    if normalized_order != tuple(sorted(normalized_order)):
+        raise CoverageContractError("Operator facility ordering is not canonical.")
+    return manifest
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
@@ -2649,21 +4832,72 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="update the four safe tracked baseline documents (local mode only)",
     )
+    parser.add_argument(
+        "--coverage-fixture",
+        type=Path,
+        help="governed scenario bundle for an Issues #453/#477 contract package",
+    )
+    parser.add_argument(
+        "--coverage-scenario",
+        help="named scenario in --coverage-fixture",
+    )
+    parser.add_argument(
+        "--generated-at",
+        help="optional fixed UTC Z timestamp for deterministic fixture validation",
+    )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    output_dir = args.output_dir or Path(
-        f"data/processed/source-to-screen-audit/{args.mode}"
-    )
     try:
+        if args.coverage_fixture is not None:
+            if not args.coverage_scenario:
+                raise CoverageContractError(
+                    "A named coverage scenario is required with a governed fixture."
+                )
+            if args.mode != "local" or args.write_tracked_baseline:
+                raise CoverageContractError(
+                    "Governed fixture package generation is local and does not write baselines."
+                )
+            fixed_time: datetime | None = None
+            if args.generated_at is not None:
+                timestamp = _coverage_timestamp(
+                    args.generated_at, context="generated_at", nullable=False
+                )
+                assert timestamp is not None
+                fixed_time = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ").replace(
+                    tzinfo=UTC
+                )
+            output_dir = args.output_dir or Path(
+                "data/processed/source-to-screen-audit/" + args.coverage_scenario
+            )
+            fixture = load_coverage_fixture_scenario(
+                args.coverage_fixture, args.coverage_scenario
+            )
+            package = generate_coverage_package(
+                fixture,
+                output_dir=output_dir,
+                generated_at=fixed_time,
+            )
+            print(
+                "source-to-screen coverage package complete: "
+                f"{package.report_id}, {len(package.facility_index)} facility rows"
+            )
+            return 0
+        if args.coverage_scenario is not None or args.generated_at is not None:
+            raise CoverageContractError(
+                "Coverage scenario metadata requires --coverage-fixture."
+            )
+        output_dir = args.output_dir or Path(
+            f"data/processed/source-to-screen-audit/{args.mode}"
+        )
         result = run_audit(
             mode=cast(AuditMode, args.mode),
             output_dir=output_dir,
             write_tracked_baseline=bool(args.write_tracked_baseline),
         )
-    except (AuditExecutionError, ValueError) as exc:
+    except (AuditExecutionError, CoverageContractError, ValueError) as exc:
         print(
             "source-to-screen audit failed: "
             + redact_sensitive_text(str(exc), redact_urls=True),

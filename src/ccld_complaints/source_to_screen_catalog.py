@@ -20,6 +20,15 @@ from typing import Any, cast
 
 from ccld_complaints.source_profiling import FACILITY_SOURCE_COLUMN_MAPPINGS
 
+_CANONICAL_SCHEMA_ENTITIES = (
+    "allegation",
+    "complaint",
+    "event",
+    "extraction_audit",
+    "facility",
+    "source_document",
+)
+
 GAP_CLASSIFICATIONS: tuple[str, ...] = (
     "SOURCE_NOT_PROVIDED",
     "RAW_PRESENT_EXTRACTION_MISSING",
@@ -723,7 +732,15 @@ def discover_element_specs(
 
     specs: list[ElementSpec] = []
     schema_dir = repo_root / "schemas"
-    schema_paths = tuple(sorted(schema_dir.glob("*.schema.json"), key=lambda path: path.name))
+    schema_paths = tuple(
+        sorted(
+            (
+                schema_dir / f"{entity}.schema.json"
+                for entity in _CANONICAL_SCHEMA_ENTITIES
+            ),
+            key=lambda path: path.name,
+        )
+    )
     if not schema_paths:
         raise FileNotFoundError("No canonical schema files were found under schemas/.")
     facility_properties: set[str] = set()
