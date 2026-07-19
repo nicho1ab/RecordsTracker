@@ -1,6 +1,18 @@
 # Changelog
 
 ## Unreleased
+- Added the production-style read-only Issues #453/#477 runtime bridge. Exact
+  operator emails authenticated by the existing verified Cloudflare Access JWT
+  boundary receive only the existing `developer_operator`/`audit_read`
+  authority; broad tester domains remain insufficient. A SELECT-only PostgreSQL
+  adapter now atomically publishes and stable-consumer-validates contract
+  `1.0.0` coverage at the persistent runtime path, preserves prior accepted
+  instances on failure, emits a safe Facility ID index and explicit unavailable
+  dimensions, and supports safe container reconciliation plus automated
+  local-production-auth/hosted evidence capture without persisting assertions,
+  cookies, private headers, or host names. No retrieval, import, database,
+  reviewer-state, job, checkpoint, retry, apply, cancel, resume, or backfill
+  mutation was added; retention remains `pending_policy`.
 - Integrated the deterministic Issue #453 source-to-screen coverage producer
   with the GET-only Issue #477 operator dashboard through a stable validated
   read boundary. Real packages now drive exact schema, identities, media types,

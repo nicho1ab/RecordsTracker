@@ -294,6 +294,30 @@ def test_compose_runtime_uses_postgres_named_volumes_and_healthchecks() -> None:
     assert "qnap" not in compose.casefold()
 
 
+def test_release_runbook_preserves_reviewed_compose_and_application_only_rollback() -> None:
+    runbook = read_repo_text("docs/developer/qnap-release-deployment-runbook.md")
+
+    for required_text in (
+        "Back up the active",
+        "retain the release's tracked Compose file",
+        "Compare the backed-up active Compose file",
+        "Accept only reviewed, expected release changes",
+        "unexpected host-specific difference, stop deployment",
+        "active host-local `.env`",
+        "sudo docker compose -f docker-compose.qnap.yml --env-file .env config",
+        "prior tracked Compose file remains with that prior application release",
+        "Do not recreate the `postgres` service or volume",
+        "sudo docker compose -f docker-compose.qnap.yml exec -T app python -m "
+        "ccld_complaints.source_to_screen_audit",
+        "sudo docker compose -f docker-compose.qnap.yml exec -T app python -m "
+        "ccld_complaints.operator_coverage_runtime_verify",
+    ):
+        assert required_text in runbook
+
+    assert "Copy only `.env` and `docker-compose.qnap.yml`" not in runbook
+    assert "docker compose -f docker-compose.qnap.yml exec app python" not in runbook
+
+
 def test_qnap_pilot_workflow_script_checks_env_compose_and_routes() -> None:
     script = read_repo_text("scripts/verify-qnap-pilot-workflow.ps1")
 

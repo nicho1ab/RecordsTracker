@@ -196,8 +196,13 @@ the governed primary future review experience.
   dashboard through a stable consumer boundary. Exact GET routes, auth-before-
   read, shared operator-only navigation, controlled source-layout values,
   keyset pagination, fail-closed validation states, and automated local hosted
-  evidence are included. Issue #477 mutation, persistence, scheduling, live
-  package discovery, and retention automation remain deferred.
+  evidence are included. Added the production-style bridge that authenticates a
+  narrowly allowlisted operator through the existing verified Cloudflare Access
+  JWT boundary, publishes a validated contract `1.0.0` package atomically from
+  SELECT-only PostgreSQL aggregates, reconciles the safe Facility ID index, and
+  supports automated local-production-auth and header-provider hosted
+  acceptance. Issue #477 mutation, persistence, scheduling, retrieval/import,
+  job/checkpoint mutation, and retention automation remain deferred.
 - Completed the Issue #490 statewide facility-source evaluation with the final
   verdict **inconclusive; retain existing program-specific sources and keep the
   statewide candidate inactive**. The seven program datastores were technically
@@ -682,11 +687,14 @@ the governed primary future review experience.
 
 ## Near-term milestones
 
-- Treat Issue #453's v1 producer boundary as ready for hosted acceptance while
-  preserving its fixture/runtime evidence labels. Continue Issue #477 only as a
-  separately authorized mutation phase; do not infer retry, apply, cancel,
-  resume, backfill, persistence, scheduling, or retention authority from the
-  completed read-only dashboard.
+- Use Issue #453's v1 producer and Issue #477's read-only dashboard through the
+  completed production-auth/runtime-package bridge while preserving explicit
+  fixture, runtime, and unavailable evidence labels. Hosted acceptance still
+  requires deployment by the human QNAP operator and a user-approved ephemeral
+  Cloudflare assertion provider. Continue Issue #477 only as a separately
+  authorized mutation phase; do not infer retry, apply, cancel, resume,
+  backfill, persistence, scheduling, retrieval/import, job/checkpoint mutation,
+  or retention authority from the completed read-only bridge.
 - Keep the local hosted scaffold runnable, prerequisite-checked, smoke-tested,
 	and focused on the CCLD facility/license number plus optional date-range
 	record request flow into the hosted reviewer UI. After ADR-0016, the next

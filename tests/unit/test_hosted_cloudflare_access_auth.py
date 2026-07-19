@@ -4,6 +4,7 @@ import base64
 import json
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
 
@@ -11,6 +12,7 @@ import pytest
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
+from ccld_complaints.hosted_app import operator_coverage_dashboard as dashboard
 from ccld_complaints.hosted_app.app import route_response
 from ccld_complaints.hosted_app.auth import (
     AUTH_MODE_ENV,
@@ -22,13 +24,21 @@ from ccld_complaints.hosted_app.auth import (
     CLOUDFLARE_ACCESS_PROVIDER_CLASS,
     CLOUDFLARE_ACCESS_TEAM_DOMAIN_ENV,
     LOCAL_DEV_AUTH_ENV,
+    OPERATOR_COVERAGE_ALLOWED_EMAILS_ENV,
     CloudflareAccessAuthError,
     HostedAuthConfigError,
     authenticate_cloudflare_access_token,
     load_hosted_auth_runtime_config,
 )
 from ccld_complaints.hosted_app.feedback import GitHubFeedbackConfig
+from ccld_complaints.hosted_app.operator_coverage_dashboard import (
+    OPERATOR_COVERAGE_SUMMARY_PATH,
+)
 from ccld_complaints.hosted_app.reviewer_ui import LOCAL_REVIEWER_UI_SCOPE
+from ccld_complaints.source_to_screen_audit import (
+    generate_coverage_package,
+    load_coverage_fixture_scenario,
+)
 
 TEAM_DOMAIN = "example.cloudflareaccess.com"
 AUDIENCE = "placeholder-aud-tag"
@@ -245,6 +255,148 @@ def test_cloudflare_access_status_summary_is_safe() -> None:
         assert forbidden not in serialized
 
 
+def test_cloudflare_access_exact_operator_email_enables_production_dashboard(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    operator_email = "operator@example.invalid"
+    package_dir = tmp_path / "runtime-current"
+    generate_coverage_package(
+        load_coverage_fixture_scenario(
+            Path("tests/fixtures/source_to_screen_coverage/scenarios.json"),
+            "complete-balanced",
+        ),
+        output_dir=package_dir,
+        generated_at=NOW,
+    )
+    monkeypatch.setenv(OPERATOR_COVERAGE_ALLOWED_EMAILS_ENV, operator_email)
+    monkeypatch.setenv(
+        dashboard.FIXTURE_PACKAGE_DIR_ENV,
+        str(package_dir),
+    )
+    monkeypatch.delenv(dashboard.FIXTURE_MODE_ENV, raising=False)
+
+    status, _content_type, body = route_response(
+        OPERATOR_COVERAGE_SUMMARY_PATH,
+        request_headers={
+            CLOUDFLARE_ACCESS_ASSERTION_HEADER: _token(email=operator_email)
+        },
+        auth_runtime_config=_cloudflare_auth_config(),
+        cloudflare_jwks_fetcher=_jwks_fetcher,
+        cloudflare_auth_now=NOW,
+    )
+
+    assert status == 200
+    assert b"Authorization permission: audit_read" in body
+    assert b"Fixture coverage data" not in body
+
+
+def test_cloudflare_access_tester_domain_never_grants_operator_or_reads_package(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        OPERATOR_COVERAGE_ALLOWED_EMAILS_ENV, "operator@example.invalid"
+    )
+    monkeypatch.setenv(
+        dashboard.FIXTURE_PACKAGE_DIR_ENV,
+        "tests/fixtures/hosted_operator_coverage_dashboard/complete-balanced",
+    )
+
+    def fail_if_read(*_args: Any, **_kwargs: Any) -> None:
+        raise AssertionError("operator package was read before exact-email authorization")
+
+    monkeypatch.setattr(dashboard, "load_coverage_package", fail_if_read)
+    status, _content_type, body = route_response(
+        OPERATOR_COVERAGE_SUMMARY_PATH,
+        request_headers={
+            CLOUDFLARE_ACCESS_ASSERTION_HEADER: _token(
+                email="ordinary-tester@example.invalid"
+            )
+        },
+        auth_runtime_config=_cloudflare_auth_config(),
+        cloudflare_jwks_fetcher=_jwks_fetcher,
+        cloudflare_auth_now=NOW,
+    )
+
+    assert status == 403
+    assert b"not authorized for operator source coverage" in body
+
+
+@pytest.mark.parametrize(
+    ("raw_token", "token_kwargs"),
+    (
+        ("not-a-jwt", {}),
+        (
+            "",
+            {
+                "email": "operator@example.invalid",
+                "expires_delta": timedelta(seconds=-1),
+            },
+        ),
+        ("", {"email": "operator@example.invalid", "audience": "wrong-audience"}),
+        (
+            "",
+            {
+                "email": "operator@example.invalid",
+                "issuer": "https://wrong.example.invalid",
+            },
+        ),
+        (
+            "",
+            {
+                "email": "operator@example.invalid",
+                "not_before_delta": timedelta(minutes=5),
+            },
+        ),
+    ),
+)
+def test_operator_dashboard_rejects_invalid_cloudflare_assertions(
+    monkeypatch: pytest.MonkeyPatch,
+    raw_token: str,
+    token_kwargs: dict[str, Any],
+) -> None:
+    monkeypatch.setenv(
+        OPERATOR_COVERAGE_ALLOWED_EMAILS_ENV, "operator@example.invalid"
+    )
+    status, _content_type, body = route_response(
+        OPERATOR_COVERAGE_SUMMARY_PATH,
+        request_headers={
+            CLOUDFLARE_ACCESS_ASSERTION_HEADER: raw_token or _token(**token_kwargs)
+        },
+        auth_runtime_config=_cloudflare_auth_config(),
+        cloudflare_jwks_fetcher=_jwks_fetcher,
+        cloudflare_auth_now=NOW,
+    )
+    assert status == 403
+    assert RAW_ASSERTION_MARKER.encode() not in body
+
+
+def test_operator_dashboard_rejects_missing_and_invalid_signature_assertions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        OPERATOR_COVERAGE_ALLOWED_EMAILS_ENV, "operator@example.invalid"
+    )
+    valid_token = _token(email="operator@example.invalid")
+    invalid_signature = valid_token.rsplit(".", 1)[0] + "." + _b64url(b"invalid")
+    missing_status = route_response(
+        OPERATOR_COVERAGE_SUMMARY_PATH,
+        request_headers={},
+        auth_runtime_config=_cloudflare_auth_config(),
+        cloudflare_jwks_fetcher=_jwks_fetcher,
+        cloudflare_auth_now=NOW,
+    )[0]
+    invalid_status = route_response(
+        OPERATOR_COVERAGE_SUMMARY_PATH,
+        request_headers={CLOUDFLARE_ACCESS_ASSERTION_HEADER: invalid_signature},
+        auth_runtime_config=_cloudflare_auth_config(),
+        cloudflare_jwks_fetcher=_jwks_fetcher,
+        cloudflare_auth_now=NOW,
+    )[0]
+    assert missing_status == 401
+    assert invalid_status == 403
+
+
 def _github_config() -> GitHubFeedbackConfig:
     credential = "github-" + "token-" + "not-rendered"
     return GitHubFeedbackConfig(
@@ -278,12 +430,13 @@ def _token(
     audience: str = AUDIENCE,
     issuer: str = f"https://{TEAM_DOMAIN}",
     expires_delta: timedelta = timedelta(minutes=5),
+    not_before_delta: timedelta = timedelta(minutes=-1),
 ) -> str:
     claims: dict[str, object] = {
         "iss": issuer,
         "aud": audience,
         "exp": int((NOW + expires_delta).timestamp()),
-        "nbf": int((NOW - timedelta(minutes=1)).timestamp()),
+        "nbf": int((NOW + not_before_delta).timestamp()),
         "email": email,
         "raw_marker": RAW_ASSERTION_MARKER,
     }
@@ -346,4 +499,3 @@ def assert_no_secret_output(markup: str) -> None:
         "github-token-not-rendered",
     ):
         assert marker not in lowered
-

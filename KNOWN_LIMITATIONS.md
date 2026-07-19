@@ -2,12 +2,21 @@
 
 - The authenticated operator source-coverage dashboard consumes validated
   Issue #453 v1 packages and exposes only GET summary, facility, job, aggregate
-  CSV, and grouped Facility ID reads. It does not discover live packages or
-  execute retry, apply, cancel, resume, backfill, retrieval, import, job or
-  checkpoint mutation, persistence, scheduling, database writes, or retention
-  cleanup. Retention remains `pending_policy`. Automated local fixture evidence
-  does not prove current runtime, statewide completeness, freshness,
-  deployment, or QNAP behavior.
+  CSV, and grouped Facility ID reads. Production requests require a fully
+  verified Cloudflare Access JWT and an exact operator email allowlist match;
+  an allowed tester domain alone never grants operator authority. The read-only
+  PostgreSQL adapter publishes aggregate field/stage coverage and a safe
+  Facility ID index atomically, but existing read boundaries do not establish
+  every contract-required job/checkpoint/change fact, so those dimensions remain
+  explicitly unavailable. The dashboard does not execute retry, apply, cancel,
+  resume, backfill, retrieval, import, job or checkpoint mutation, persistence,
+  scheduling, database writes, or retention cleanup. Retention remains
+  `pending_policy`. Runtime coverage describes measured deployed rows; it does
+  not prove statewide completeness, freshness, absence of complaints, legal
+  conclusions, correct rendering without UI evidence, deployment success, or
+  QNAP behavior. Fully automated Hosted capture also requires a user-approved
+  process-local header-provider command; no token or browser-cookie fallback is
+  implemented.
 - Reviewer aggregates report their loaded-record universe, denominator,
   selected date dimension/range, source coverage, and explicit zero,
   unavailable, partial, or truncated cause. These counts describe authorized

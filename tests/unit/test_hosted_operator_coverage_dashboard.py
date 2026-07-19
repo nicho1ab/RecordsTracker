@@ -559,9 +559,9 @@ def test_production_style_context_never_silently_substitutes_fixture(
         monkeypatch.delenv(key, raising=False)
 
     status, _content_type, body = route_response(OPERATOR_COVERAGE_SUMMARY_PATH)
-    assert status == 401
+    assert status == 403
+    assert b"Operator source coverage requires the Cloudflare Access provider" in body
     assert b"Fixture coverage data" not in body
-    assert b"No coverage package data was read or serialized" in body
 
 
 def test_shared_navigation_hides_operator_link_from_reviewer_pages() -> None:

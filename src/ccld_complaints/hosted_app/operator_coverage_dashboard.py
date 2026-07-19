@@ -13,6 +13,7 @@ import os
 import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from functools import cmp_to_key
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -20,15 +21,21 @@ from urllib.parse import parse_qs, urlencode, urlparse
 
 from ccld_complaints.hosted_app.auth import (
     AUDIT_READ_PERMISSION,
+    CLOUDFLARE_ACCESS_PROVIDER_CLASS,
     AuthenticatedActor,
     AuthorizationDecision,
     AuthorizationTarget,
+    CloudflareAccessAuthError,
     HostedAccessScope,
     HostedAccountDisabledError,
+    HostedAuthConfigError,
     HostedAuthenticationRequiredError,
     HostedAuthRuntimeConfig,
     HostedRoleDeniedError,
     HostedScopeDeniedError,
+    JwksFetcher,
+    authenticate_cloudflare_access_operator_request,
+    load_operator_coverage_allowed_emails,
     require_permission,
 )
 from ccld_complaints.hosted_app.ui_shell import render_page_shell
@@ -77,6 +84,10 @@ FIXTURE_SCENARIO_ENV = "CCLD_OPERATOR_COVERAGE_FIXTURE_SCENARIO"
 FIXTURE_MODE = "contract-v1"
 FIXTURE_LABEL = "Fixture coverage data"
 DEFAULT_SCOPE = HostedAccessScope("corpus", "operator-source-coverage-fixture")
+PRODUCTION_SCOPE = HostedAccessScope("corpus", "operator-source-coverage-runtime")
+DEFAULT_RUNTIME_PACKAGE_DIR = Path(
+    "/app/data/processed/source-to-screen-audit/runtime-current"
+)
 
 PackageState = Literal[
     "available",
@@ -386,16 +397,44 @@ def local_fixture_operator_coverage_context(
 def default_operator_coverage_context(
     auth_runtime_config: HostedAuthRuntimeConfig,
     environ: Mapping[str, str] | None = None,
+    *,
+    request_headers: Mapping[str, str] | None = None,
+    cloudflare_jwks_fetcher: JwksFetcher | None = None,
+    cloudflare_auth_now: datetime | None = None,
 ) -> OperatorCoverageDashboardContext | None:
     active_environ = os.environ if environ is None else environ
-    if not auth_runtime_config.local_dev_actor_allowed:
+    if auth_runtime_config.local_dev_actor_allowed:
+        if active_environ.get(FIXTURE_MODE_ENV, "").strip() != FIXTURE_MODE:
+            return None
+        raw_package_dir = active_environ.get(FIXTURE_PACKAGE_DIR_ENV, "").strip()
+        package_dir = Path(raw_package_dir) if raw_package_dir else None
+        scenario = active_environ.get(FIXTURE_SCENARIO_ENV, "").strip() or None
+        return local_fixture_operator_coverage_context(package_dir, scenario=scenario)
+    if not auth_runtime_config.production_mode:
         return None
-    if active_environ.get(FIXTURE_MODE_ENV, "").strip() != FIXTURE_MODE:
-        return None
+    if auth_runtime_config.provider_class != CLOUDFLARE_ACCESS_PROVIDER_CLASS:
+        raise CloudflareAccessAuthError(
+            "Operator source coverage requires the Cloudflare Access provider."
+        )
+    try:
+        operator_allowed_emails = load_operator_coverage_allowed_emails(active_environ)
+    except HostedAuthConfigError as error:
+        raise CloudflareAccessAuthError(str(error)) from error
+    actor = authenticate_cloudflare_access_operator_request(
+        request_headers or {},
+        auth_runtime_config.cloudflare_access,
+        scope=PRODUCTION_SCOPE,
+        operator_allowed_emails=operator_allowed_emails,
+        now=cloudflare_auth_now,
+        jwks_fetcher=cloudflare_jwks_fetcher,
+    )
     raw_package_dir = active_environ.get(FIXTURE_PACKAGE_DIR_ENV, "").strip()
-    package_dir = Path(raw_package_dir) if raw_package_dir else None
-    scenario = active_environ.get(FIXTURE_SCENARIO_ENV, "").strip() or None
-    return local_fixture_operator_coverage_context(package_dir, scenario=scenario)
+    package_dir = Path(raw_package_dir) if raw_package_dir else DEFAULT_RUNTIME_PACKAGE_DIR
+    return OperatorCoverageDashboardContext(
+        actor=actor,
+        scope=PRODUCTION_SCOPE,
+        package_dir=package_dir,
+    )
 
 
 def route_operator_coverage_response(
