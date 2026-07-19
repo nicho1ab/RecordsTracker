@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Completed the Issue #490 governed statewide facility-source evaluation. The
+  final verdict is **inconclusive; retain existing program-specific sources and
+  keep the statewide candidate inactive**: seven program datastores were
+  profiled as a bounded 68,527-row source family, while the statewide
+  service/export pair, same-title catalog succession, source authority,
+  terms/license conflict, content freshness, and code `733` remain unresolved.
+  No production connector, import, backfill, UI, database, schedule, deployment,
+  Cloudflare, or QNAP activation was approved or performed.
 - Added the approved reviewer-detail source-evidence interaction for First
   investigation activity date. The readable date now has separate copy,
   bounded evidence, and original-source actions; deterministic matching uses

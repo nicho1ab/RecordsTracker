@@ -161,6 +161,14 @@
   GitHub intake planning without approving imports, connectors, schemas, hosted
   behavior, issue automation, role-based UI, multi-state support, or legal
   conclusions.
+- Statewide facility-source evaluation status: Issue #490 is evaluated, not
+  adopted. The final verdict is **inconclusive; retain existing program-specific
+  sources and keep the statewide candidate inactive**. The seven current program
+  datastores were technically profiled, while the statewide service/export pair,
+  same-title catalog succession, system-of-record and maintainer status,
+  terms/license conflict, content freshness, and code `733` mapping remain
+  unresolved adoption gates. No source activation or production behavior was
+  approved.
 
 ## Completed ADR decisions
 
@@ -219,6 +227,11 @@
 
 ## Remaining deferred decisions
 
+- Statewide facility-source adoption remains deferred until a current statewide
+  ArcGIS service and matching stable export are jointly profiled; same-title
+  source succession, publisher terms and license, candidate-specific system-of-
+  record and maintainer status, content-change behavior, facility-type domains,
+  code `733`, and provenance-preserving precedence are explicitly resolved.
 - Concrete frontend framework, API framework, concrete auth provider instance
   and configuration, hosting platform, deployment pipeline, retention durations
   and automation, backup/restore policy, final design system, and production

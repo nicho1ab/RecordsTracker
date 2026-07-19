@@ -31,29 +31,56 @@ hosted tester MVP ADR boundaries.
 | Source candidate | Source type | Source URL status | Update frequency status | Planning use | Known limitations and parsing risks | Traceability requirements |
 |---|---|---|---|---|---|---|
 | CCLD individual complaint report pages | HTML portal/detail pages | Existing connector records page-level source URLs during discovery. | Unknown; depends on public portal updates. | Primary complaint report source path for current extraction and review workflows. | HTML layouts vary; reports may have missing fields, wrapped allegations, label variants, punctuation variants, or changed public availability. Reports are public-source records, not complete facility conclusions. | Preserve source URL, raw path when available, raw SHA-256 hash, retrieval timestamp, connector name and version, report index where available, extraction audit rows, and parser warnings. |
-| CHHS/CDSS Community Care Licensing Facilities dataset | Structured CSV/open-data source plus metadata/catalog page | Official dataset URL: `https://data.chhs.ca.gov/dataset/ccl-facilities`; dataset slug: `ccl-facilities`. Stable resource IDs and dataset metadata should drive future download/profile logic because direct temporary CSV filenames and resolved URLs may change. | Unknown until dataset metadata is profiled. | Authoritative public facility reference source for the RecordsTracker facility preload path. | Open-data field names and update cadence may differ from CCLD complaint/report data. Facility rows must not overwrite complaint-report-derived source facts without approved import/sync and conflict rules. | Preserve official dataset/catalog URL, resource ID when available, resource name, publisher, access/download timestamp, source file name or resolved download URL when available, file/snapshot date when present, row count, column count, parser warnings, and source column mapping/version when implemented later. Raw hash is optional diagnostic metadata. |
+| CHHS/CDSS Community Care Licensing Facilities program datastores | Structured CSV/open-data source plus metadata/catalog page | Official legacy dataset URL: `https://data.chhs.ca.gov/dataset/ccl-facilities`; dataset slug: `ccl-facilities`. Issue #490 successfully profiled the seven named program datastores. Stable resource IDs and dataset metadata should drive future download/profile logic because direct temporary CSV filenames and resolved URLs may change. | Content freshness remains unverified. Catalog, resource, and file dates are metadata and do not prove row changes. | Validated current program-specific facility-source family for the Issue #490 evaluation. Existing governed preload behavior continues only for its separately approved target subset. This does not establish statewide completeness, source-of-record status, or universal facility coverage. | The bounded Issue #490 snapshot contains 68,527 rows across seven programs. Open-data field names and dates differ by resource. Facility rows must not overwrite complaint-report-derived historical source facts without approved import/sync, precedence, and conflict rules. | Preserve official dataset/catalog URL, resource ID, resource name, CDSS publisher and CCLD program labels, access/download timestamp, source file name or resolved download URL, file/snapshot date when present, row and column counts, parser warnings, source column mapping/version, and evaluation limitations. Raw hash remains optional diagnostic metadata for the governed product contract. |
+| Statewide ArcGIS-backed Community Care Licensing Facilities candidate evaluated in Issue #490 | Structured ArcGIS/open-data candidate plus catalog and export metadata | Multiple same-titled California catalog records link a statewide-looking ArcGIS item/service and several exports. Their succession or equivalence is unresolved. The current statewide service and a corresponding stable export were not jointly profiled; the legacy ZIP returned sanitized HTTP `403` after its approved redirect. | Unknown. Catalog modification dates and resource dates do not prove content freshness or justify a refresh cadence. | Inactive evaluation candidate only. Issue #490 verdict: **inconclusive; retain existing program-specific sources and keep the statewide candidate inactive**. | Statewide schema, row count, pagination, service/export equivalence, facility-ID coverage, duplicates, fields/domains, conflicts, content change, terms, license, system-of-record, maintainer, and code `733` mapping remain unresolved. The separately profiled 15-row City of Placentia layer is not a statewide comparison source. | Before reconsideration, preserve and reconcile the selected catalog, item, service, layer, and stable export identities; sanitized retrieval metadata; original-byte and canonical-row hashes; schema/domain fingerprints; complete pagination and equivalence evidence; publisher/maintainer/terms/license decisions; row/field coverage; conflicts; and unresolved codes. See the [Issue #490 completion report](docs/analysis/issue-490-completion-report.md). |
 | CCLD public download CSVs outside the target facility resource set | Structured CSV/open-data sources | Exact download URLs or catalog records must be recorded during local profiling or future connector planning. | Unknown until source metadata or portal notes are reviewed. | Candidate source for licensing, program, or complaint summary context outside the current facility preload target set. | CSV columns may change; encodings, delimiters, headers, dates, missing values, and program-specific fields may vary. Summary rows may not equal complaint-level source facts. | Preserve download/catalog URL, resource ID when available, retrieved_at timestamp, original file name or resolved download URL, row count, column count, parser profile, parser warnings, and source-specific known limitations. Raw hash is optional diagnostic metadata for structured facility CSV resources. |
-| Facility master data | Structured CSV/open-data source | Identified through CHHS/CDSS Community Care Licensing Facilities dataset metadata or future confirmed CCLD/CHHS/CDSS source metadata. | Unknown. | Authoritative facility identity and facility context source only after an approved preload/import task. | Must not overwrite complaint-report-derived source facts without approved import/sync and conflict rules. | Preserve stable source-derived identity, official dataset/catalog URL, resource ID when available, resource name, access/download timestamp, source file name or resolved download URL, row count, column count, parser warnings, and mapping rationale. Raw hash is optional diagnostic metadata. |
-| Program-specific facility/licensing/complaint summary CSVs | Structured CSV/open-data sources | The current target facility resources are listed below. Other program CSVs need source metadata confirmation before implementation. | Unknown; file names may include snapshot dates. | Authoritative facility reference sources for the target facility preload path only when they are confirmed CHHS/CDSS Community Care Licensing Facilities resources; otherwise candidate context. | Program files may use different schemas, date formats, status codes, and summary definitions. Snapshot dates in file names are not proof of official update cadence. | Preserve official dataset/catalog URL, resource ID when available, resource name, access/download timestamp, source file name or resolved download URL, file/snapshot date when present, row count, column count, parser profile, parser warnings, and program scope notes. Raw hash is optional diagnostic metadata. |
+| Facility master data | Structured CSV/open-data source | Identified through CHHS/CDSS Community Care Licensing Facilities dataset metadata or future confirmed CCLD/CHHS/CDSS source metadata. | Unknown. | Inactive candidate for facility identity and context unless a later evaluation and separate approval qualify an exact source and use. | Issue #490 did not establish a statewide candidate's source-of-record status, stable access path, coverage, freshness, terms, or precedence. It must not overwrite complaint-report-derived source facts without approved import/sync and conflict rules. | Preserve stable source-derived identity, official dataset/catalog URL, resource ID when available, resource name, access/download timestamp, source file name or resolved download URL, row count, column count, parser warnings, and mapping rationale. Raw hash is optional diagnostic metadata. |
+| Program-specific facility/licensing/complaint summary CSVs | Structured CSV/open-data sources | The evaluated and current preload-target resources are distinguished below. Other program CSVs need source metadata confirmation before implementation. | Unknown; file names may include snapshot dates. | Current governed facility-reference inputs only for an explicitly approved named resource and preload scope; otherwise candidate context. | Program files may use different schemas, date formats, status codes, and summary definitions. Snapshot dates in file names are not proof of official update cadence or statewide completeness. | Preserve official dataset/catalog URL, resource ID when available, resource name, access/download timestamp, source file name or resolved download URL, file/snapshot date when present, row count, column count, parser profile, parser warnings, and program scope notes. Raw hash is optional diagnostic metadata. |
 | Metadata files | Metadata/catalog pages or CSV metadata exports | Exact source URL must be recorded when known. | Unknown. | Candidate field descriptions, publisher, license, refresh, and catalog context. | Metadata may be incomplete, stale, or inconsistent with downloaded files. | Preserve metadata URL, access timestamp, raw hash, file name, row count, column count, and field descriptions. |
 
 ## Authoritative facility CSV resources
 
-RecordsTracker treats the CHHS/CDSS Community Care Licensing Facilities dataset
-as the authoritative public facility reference source family for the facility
-preload path. This branch records source framing only; it does not approve
-import code, schemas, migrations, database tables, hosted behavior, deployment,
-UI changes, connector implementation, raw CSV commits, or generated profiling
-outputs.
+In this existing product-contract heading, `authoritative` is limited to a
+separately approved named structured resource and its governed preload scope. It
+does not mean statewide completeness, current content freshness, universal
+program coverage, legal authority, or operational system-of-record status.
+RecordsTracker currently uses the named CHHS/CDSS Community Care Licensing
+Facilities program resources as the governed facility reference family for the
+existing preload path. Issue #490 successfully profiled the seven current
+program datastores as a bounded 68,527-row evaluation snapshot.
+
+Issue #490 did not approve or activate the separately cataloged statewide
+ArcGIS-backed candidate. The final verdict is **inconclusive; retain existing
+program-specific sources and keep the statewide candidate inactive**. See the
+[Issue #490 completion report](docs/analysis/issue-490-completion-report.md).
+This inventory records source framing only; it does not approve import code,
+schemas, migrations, database tables, hosted behavior, deployment, UI changes,
+connector implementation, raw CSV commits, or generated profiling outputs.
 
 Parent dataset:
 
 - Dataset name: Community Care Licensing Facilities.
 - Dataset slug: `ccl-facilities`.
 - Official dataset URL: `https://data.chhs.ca.gov/dataset/ccl-facilities`.
-- Publisher/agency: CHHS/CDSS / California Community Care Licensing Division.
+- Publisher: California Department of Social Services (CDSS).
+- Program label: Community Care Licensing Division (CCLD).
+- Catalog host: California Health and Human Services Open Data Portal.
 
-Current target facility resource set:
+Issue #490 validated this seven-resource program-source family for its bounded
+technical evaluation. The row counts do not establish statewide completeness or
+current content freshness:
+
+| Evaluated program resource | Official CHHS resource ID | Evaluated rows |
+|---|---|---:|
+| Child Care Centers | `7aed8063-cea7-4367-8651-c81643164ae0` | 19,426 |
+| Residential Care Facilities for the Elderly | `744d1583-f9eb-45b6-b0f8-b9a9dab936a6` | 12,522 |
+| 24-Hour Residential Care for Children | `c9df723a-437f-4dcd-be37-ec73ae518bb9` | 1,960 |
+| Foster Family Agencies | `5f5f7124-1a38-4b61-93b9-4e4be3b3b07d` | 709 |
+| Home Care Organization | `b4d78b7f-12df-4b0c-a81a-ff40b949bc75` | 3,654 |
+| Family Child Care Homes | `4b5cc48d-03b1-4f42-a7d1-b9816903eb2b` | 19,758 |
+| Adult Residential Facilities | `9f5d1d00-6b24-4f44-a158-9cbe4b43f117` | 10,498 |
+
+Current preload target resource set, unchanged by Issue #490:
 
 | Target resource name | Official CHHS resource ID | Local example filename, when already known |
 |---|---|---|

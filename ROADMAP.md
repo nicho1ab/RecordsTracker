@@ -191,6 +191,14 @@ the governed primary future review experience.
 
 ## Completed governance and review experience improvements
 
+- Completed the Issue #490 statewide facility-source evaluation with the final
+  verdict **inconclusive; retain existing program-specific sources and keep the
+  statewide candidate inactive**. The seven program datastores were technically
+  profiled as a bounded 68,527-row source family, while the statewide
+  service/export pair, same-title catalog succession, source authority,
+  terms/license conflict, content freshness, and code `733` remain unresolved.
+  No connector, import, backfill, UI, database, scheduling, deployment,
+  Cloudflare, or QNAP activation was approved or performed.
 - Added design and usability governance for the local Datasette review
 	experience.
 - Documented delay review flags as screening aids, not conclusions.
