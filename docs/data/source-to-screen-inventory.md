@@ -137,3 +137,31 @@ The generated audit under `data/processed/source-to-screen-audit/` is the author
 ## Interpretation
 
 `NOT_APPLICABLE` means the audit found no action represented by the selected primary classification. `INTENTIONALLY_INTERNAL` records a deliberate attorney-tier boundary; it is not permission to expose technical metadata in the primary reviewer workflow.
+
+## Contract coverage projection
+
+Contract `1.0.0` uses every `data_element_id` in this table as its field
+inventory. Non-canonical report schemas, including the Issue #490 technical
+profile and the Issues #453/#477 package schema, are not field catalogs and do
+not add data elements.
+
+For every field, the producer emits rows for `source_presence`, `extraction`,
+`normalization`, `canonical_allocation`, `postgresql_population`,
+`read_model_exposure`, `complaint_page_rendering`, and
+`facility_hub_rendering`. Each eligible row balances exactly across successful,
+blank, absent, unavailable, unsupported, conflict, failure, and skipped counts.
+A surface that is not applicable to a field remains a zero-eligible stage; it is
+not reported as missing. A governed aggregate adapter may contribute more than
+one observation to a catalog field/stage. Terminal categories therefore expose
+a separate eligible count, and reconciliation requires both stage and terminal
+count distributions to balance exactly.
+
+The terminal contract categories are `present_and_populated`,
+`present_but_not_extracted`, `extracted_but_not_allocated`,
+`allocated_but_not_imported`, `stored_but_not_read`,
+`read_but_not_rendered`, `rendered_incorrectly`, `present_blank`,
+`source_label_absent`, `source_artifact_unavailable`, `unsupported_layout`,
+`conflicting_sources`, `intentionally_internal`, and `not_applicable`.
+Issue-language aliases `source_absent`, `source_unavailable`, and
+`conflicting_source` serialize as `source_label_absent`,
+`source_artifact_unavailable`, and `conflicting_sources` respectively.
