@@ -1,0 +1,3 @@
+report_id,dimension,category,numerator_count,denominator_count,percentage,status,criteria_set_id,source_family_id
+coverage-report-v1-5092739d3e9f36bd7313298d02416feb3d9afdd8009aa1c7ffc0c9789996216a,coverage,facility_hub_rendering,2,2,100,partial,criteria.fixture.v1,ccld.program.sources
+coverage-report-v1-5092739d3e9f36bd7313298d02416feb3d9afdd8009aa1c7ffc0c9789996216a,operations,existing_facilities,2,2,100,available,criteria.fixture.v1,ccld.program.sources

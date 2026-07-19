@@ -1,0 +1,87 @@
+{
+  "artifacts": [
+    {
+      "availability": "available",
+      "byte_count": 3183,
+      "media_type": "application/json",
+      "name": "coverage-report.json",
+      "reason_category": null,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "availability": "available",
+      "byte_count": 4129,
+      "media_type": "application/x-ndjson",
+      "name": "operator-facility-index.jsonl",
+      "reason_category": null,
+      "sha256": "8ea0b5e998a749856887a7b7296ffa3a9b9220a00b4f0d82d6e0f79400772995"
+    },
+    {
+      "availability": "available",
+      "byte_count": 1492,
+      "media_type": "application/x-ndjson",
+      "name": "operator-job-index.jsonl",
+      "reason_category": null,
+      "sha256": "c077eb993e38850d91752163a1bcf833142654eb204e19c01f3600f711e3e647"
+    },
+    {
+      "availability": "available",
+      "byte_count": 463,
+      "media_type": "text/csv",
+      "name": "aggregate-coverage.csv",
+      "reason_category": null,
+      "sha256": "ca574d8ee1775d9d57a2246e77e44e4dbe5be3c15c4c4bb62ac92ee8dee020cd"
+    }
+  ],
+  "contract_version": "1.0.0",
+  "criteria_set_id": "criteria.fixture.v1",
+  "evaluation_id": "evaluation.fixture.hash-validation-failure",
+  "generated_at": "2026-07-20T01:02:03Z",
+  "minimum_consumer_version": "1.0.0",
+  "producer_schema_id": "coverage.report.schema.v1",
+  "producer_version": "fixture-producer-v1",
+  "provenance": {
+    "fixture_scenario_id": "hash-validation-failure",
+    "generation_mode": "fixture",
+    "governed_fixture_ids": [
+      "fixture.hash-validation-failure"
+    ],
+    "input_manifest_ids": [
+      "input.fixture.v1"
+    ]
+  },
+  "report_id": "coverage-report-v1-5abd5714e3fec1e07fad7b0f0de922b0e08d627e0b91654f704479d2e3f493d2",
+  "retention": {
+    "disposition": "pending_policy",
+    "policy_id": null,
+    "previous_accepted_report_id": null,
+    "retain_until": null
+  },
+  "scope_id": "scope.fixture.operator",
+  "source_snapshots": [
+    {
+      "availability": "available",
+      "cadence_status": "not_approved",
+      "observed_at": "2026-07-19T00:00:00Z",
+      "row_count": 4,
+      "safe_content_fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "safe_schema_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "safe_version_label": "evaluated-program-family",
+      "selection_state": "retained_existing",
+      "source_family_id": "ccld.program.sources",
+      "source_snapshot_id": "snapshot.program.retained"
+    },
+    {
+      "availability": "unavailable",
+      "cadence_status": "not_approved",
+      "observed_at": null,
+      "row_count": null,
+      "safe_content_fingerprint": null,
+      "safe_schema_fingerprint": null,
+      "safe_version_label": "candidate-inactive",
+      "selection_state": "inactive_candidate",
+      "source_family_id": "ccld.statewide.candidate",
+      "source_snapshot_id": "snapshot.statewide.inactive"
+    }
+  ]
+}

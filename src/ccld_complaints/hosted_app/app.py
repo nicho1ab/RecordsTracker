@@ -84,6 +84,14 @@ from ccld_complaints.hosted_app.feedback import (
     load_github_feedback_config,
     route_feedback_response,
 )
+from ccld_complaints.hosted_app.operator_coverage_dashboard import (
+    OPERATOR_COVERAGE_EXPORT_PATH,
+    OPERATOR_COVERAGE_FACILITY_IDS_PATH,
+    OPERATOR_COVERAGE_PREFIX,
+    OperatorCoverageDashboardContext,
+    default_operator_coverage_context,
+    route_operator_coverage_response,
+)
 from ccld_complaints.hosted_app.persistence import (
     HostedDatabaseConfigError,
     load_hosted_database_config,
@@ -480,7 +488,7 @@ def _check_source_data_loaded() -> bool:
 
 
 def health_response() -> dict[str, object]:
-    return {
+    payload: dict[str, object] = {
         "status": "ok",
         "service": "hosted-tester-mvp-scaffold",
         "scaffold_only": True,
@@ -489,6 +497,16 @@ def health_response() -> dict[str, object]:
         "authentication_implemented": False,
         "source_data_loaded": _check_source_data_loaded(),
     }
+    fixture_mode = os.environ.get("CCLD_OPERATOR_COVERAGE_FIXTURE_MODE", "").strip()
+    fixture_commit = os.environ.get("CCLD_OPERATOR_COVERAGE_COMMIT_SHA", "").strip()
+    fixture_branch = os.environ.get("CCLD_OPERATOR_COVERAGE_BRANCH", "").strip()
+    if fixture_mode:
+        payload["operator_coverage_fixture_mode"] = fixture_mode
+    if fixture_commit:
+        payload["operator_coverage_commit_sha"] = fixture_commit
+    if fixture_branch:
+        payload["operator_coverage_branch"] = fixture_branch
+    return payload
 
 
 def get_sample_source_record(record_id: str) -> SampleSourceRecord | None:
@@ -1048,7 +1066,7 @@ def render_facility_detail(record: SampleFacilityRecord) -> str:
 def route_response(
     path: str,
     *,
-  method: str = "GET",
+    method: str = "GET",
     request_body: bytes | None = None,
     request_headers: dict[str, str] | None = None,
     audit_coverage_plan_context: AuditCoveragePlanContext | None = None,
@@ -1075,6 +1093,7 @@ def route_response(
     cloudflare_auth_now: datetime | None = None,
     reviewer_ui_context: ReviewerUiContext | None = None,
     ccld_record_request_ui_context: CcldRecordRequestUiContext | None = None,
+    operator_coverage_context: OperatorCoverageDashboardContext | None = None,
 ) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
     parsed_path = parsed_url.path
@@ -1084,6 +1103,19 @@ def route_response(
         return 200, "image/x-icon", FAVICON_FILE.read_bytes()
     active_auth_config = _active_auth_runtime_config(auth_runtime_config)
     active_page_data_mode = _active_page_data_mode(page_data_mode)
+    if parsed_path == OPERATOR_COVERAGE_PREFIX or parsed_path.startswith(
+        f"{OPERATOR_COVERAGE_PREFIX}/"
+    ):
+        active_operator_coverage_context = operator_coverage_context
+        if active_operator_coverage_context is None:
+            active_operator_coverage_context = default_operator_coverage_context(
+                active_auth_config
+            )
+        return route_operator_coverage_response(
+            path,
+            active_operator_coverage_context,
+            method=method,
+        )
     if parsed_path in {AUTH_LOGIN_PATH, AUTH_LOGOUT_PATH}:
         return _auth_placeholder_response(parsed_path, active_auth_config)
     if parsed_path == AUTH_STATUS_PATH:
@@ -1675,9 +1707,20 @@ def _content_disposition_header(path: str, status: int, content_type: str) -> st
     if status != 200 or not content_type.startswith("text/csv"):
         return None
     parsed = urlparse(path)
-    if parsed.path != REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH:
+    if parsed.path == REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH:
+        filename = complaint_export_attachment_filename(parsed.query)
+    elif parsed.path == OPERATOR_COVERAGE_EXPORT_PATH:
+        filename = "operator-source-coverage-aggregate.csv"
+    elif parsed.path == OPERATOR_COVERAGE_FACILITY_IDS_PATH:
+        group = _first_query_value(
+            parse_qs(parsed.query, keep_blank_values=True),
+            "group",
+        )
+        if not group:
+            return None
+        filename = f"operator-source-coverage-{group}-facility-ids.csv"
+    else:
         return None
-    filename = complaint_export_attachment_filename(parsed.query)
     return f'attachment; filename="{filename}"'
 
 
