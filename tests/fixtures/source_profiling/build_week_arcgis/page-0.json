@@ -1,0 +1,7 @@
+{
+  "objectIdFieldName": "OBJECTID",
+  "features": [
+    {"attributes": {"OBJECTID": 1, "FAC_NBR": "100001", "NAME": "Synthetic Center One", "FAC_TYPE_CODE": 700, "FAC_TYPE_DESC": "Synthetic Center", "STATUS": "LICENSED", "FAC_ADDR1": "1 Public Way", "FAC_CITY": "Alpha", "FAC_STATE": "CA", "FAC_ZIP": "90001", "COUNTY_NAME": "Example", "CAPACITY": 10, "LICENSEE": "Public Licensee One", "FAC_ADMIN": "", "FAC_PHONE": "555-0101", "FAC_DO_DESC": "North", "FAC_LIC_FIRST_DATE": 1704067200000, "FAC_CLOSED_DATE": null, "FILE_DATE": 1717200000000}},
+    {"attributes": {"OBJECTID": 2, "FAC_NBR": "100002", "NAME": "Synthetic Home Two", "FAC_TYPE_CODE": 701, "FAC_TYPE_DESC": "Synthetic Home", "STATUS": "INACTIVE", "FAC_ADDR1": "2 Public Way", "FAC_CITY": "Beta", "FAC_STATE": "CA", "FAC_ZIP": "90002", "COUNTY_NAME": "Example", "CAPACITY": 8, "LICENSEE": "Public Licensee Two", "FAC_ADMIN": "", "FAC_PHONE": "555-0102", "FAC_DO_DESC": "South", "FAC_LIC_FIRST_DATE": 1672531200000, "FAC_CLOSED_DATE": null, "FILE_DATE": 1717200000000}}
+  ]
+}

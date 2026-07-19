@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://recordstracker.example/schemas/build-week-2026-arcgis-shadow-evaluation.schema.json",
+  "title": "Build Week 2026 ArcGIS shadow evaluation output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "output_type",
+    "observed_at",
+    "status",
+    "warnings",
+    "data"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": "build-week-2026.arcgis-shadow-evaluation.v1"
+    },
+    "output_type": {
+      "enum": [
+        "source-inventory",
+        "snapshot-manifest",
+        "schema-profile",
+        "pagination-profile",
+        "export-query-equivalence",
+        "program-comparison",
+        "content-change",
+        "decision",
+        "validation-summary"
+      ]
+    },
+    "observed_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "status": {
+      "enum": [
+        "pass",
+        "fail",
+        "warning",
+        "blocked",
+        "inconclusive",
+        "not_applicable"
+      ]
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 500
+      }
+    },
+    "data": {
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"output_type": {"const": "source-inventory"}}},
+      "then": {"properties": {"data": {"required": ["catalog_records", "source_identity", "endpoint_inventory", "redirect_outcomes"]}}}
+    },
+    {
+      "if": {"properties": {"output_type": {"const": "snapshot-manifest"}}},
+      "then": {"properties": {"data": {"required": ["artifacts", "retention_boundary"]}}}
+    },
+    {
+      "if": {"properties": {"output_type": {"const": "schema-profile"}}},
+      "then": {"properties": {"data": {"required": ["layer", "field_mapping", "code_733"]}}}
+    },
+    {
+      "if": {"properties": {"output_type": {"const": "pagination-profile"}}},
+      "then": {"properties": {"data": {"required": ["pagination", "object_id_batch_equivalence"]}}}
+    },
+    {
+      "if": {"properties": {"output_type": {"const": "export-query-equivalence"}}},
+      "then": {"properties": {"data": {"required": ["equivalence", "export_container"]}}}
+    },
+    {
+      "if": {"properties": {"output_type": {"const": "program-comparison"}}},
+      "then": {"properties": {"data": {"required": ["comparison", "program_sources"]}}}
+    },
+    {
+      "if": {"properties": {"output_type": {"const": "content-change"}}},
+      "then": {"properties": {"data": {"required": ["observations", "comparison"]}}}
+    },
+    {
+      "if": {"properties": {"output_type": {"const": "decision"}}},
+      "then": {
+        "properties": {
+          "data": {
+            "required": [
+              "recommendation",
+              "source_identity",
+              "gates",
+              "field_ownership",
+              "precedence",
+              "blank_handling",
+              "conflict_preservation",
+              "disappearance_handling",
+              "current_vs_historical",
+              "snapshot_validation",
+              "prior_accepted_behavior",
+              "rollback",
+              "cadence_status"
+            ],
+            "properties": {
+              "recommendation": {
+                "enum": ["ADOPT", "SUPPLEMENT", "REJECT", "INCONCLUSIVE"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"output_type": {"const": "validation-summary"}}},
+      "then": {"properties": {"data": {"required": ["checks", "generated_outputs", "privacy_scan"]}}}
+    }
+  ]
+}

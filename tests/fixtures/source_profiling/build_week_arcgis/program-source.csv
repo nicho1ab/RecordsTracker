@@ -1,0 +1,4 @@
+facility_number,facility_name,facility_type,facility_status,facility_address,facility_city,facility_state,facility_zip,county_name,facility_capacity,licensee,facility_administrator,facility_telephone_number,regional_office,license_first_date,closed_date,file_date
+100001,Synthetic Center One,Synthetic Center,LICENSED,1 Public Way,Alpha,CA,90001,Example,10,Public Licensee One,,555-0101,North,2024-01-01,,2024-05-01
+100002,Synthetic Home Two,Synthetic Home,CLOSED,2 Public Way,Beta,CA,90002,Example,8,Public Licensee Two,,555-0102,South,2023-01-01,2024-02-01,2024-05-01
+100099,Program Only Facility,Synthetic Program,LICENSED,99 Public Way,Zeta,CA,90099,Example,6,Public Licensee Program,,555-0199,South,2020-01-01,,2024-05-01
