@@ -2,23 +2,25 @@
 
 ## Status and completion boundary
 
-This document defines the remaining Build Week 2026 production sequence for
-replacing the normal program-specific CSV facility-reference path with a
-governed statewide ArcGIS/FeatureServer source when, and only when, the required
-evidence supports adoption. It implements the completion-scope decision in
-Issue #516; it does not itself authorize source activation, database mutation,
-deployment, or issue closure.
+This document defines the Build Week 2026 production sequence for implementing
+the governed ArcGIS facility-reference **SUPPLEMENT** decision. Program-specific
+snapshots remain the primary source family. ArcGIS is a separate supplementary
+current-reference source; it does not replace the program sources. This plan
+does not itself authorize source activation, database mutation, deployment, or
+issue closure.
 
-Issue #490 remains a completed evaluation with the verdict **inconclusive;
-retain existing program-specific sources and keep the statewide candidate
-inactive**. Its preserved evidence is an input to this sequence, not proof that
-the candidate is fit for production. The current deployed Build Week checkpoint
-is `d7e9b1fff9e1826c3387a7313777d14c1480d3b4`; it is not the final Build Week
+Issue #490 remains completed historical evaluation evidence. The definitive
+Phase A evaluation under Issue #516 merged at
+`41d512127febdfd086432e7f082d0651da232e9f` and returned **SUPPLEMENT**. The
+current deployed Build Week checkpoint is
+`d7e9b1fff9e1826c3387a7313777d14c1480d3b4`; it is not the final Build Week
 release.
 
-The phases below are sequential. A phase may use parallel work only with
-exclusive ownership and an explicit integration gate. No later phase may infer
-that an earlier phase passed merely because code merged or a source responded.
+The phases below are sequential. Safe parallel implementation starts only after
+the Phase C identity and reconciliation contract is merged, and then only with
+exclusive file/behavior ownership plus an explicit integration gate. No later
+phase may infer that an earlier phase passed merely because code merged or a
+source responded.
 
 ## Governing invariants
 
@@ -30,6 +32,12 @@ that an earlier phase passed merely because code merged or a source responded.
 - Keep complaint-report identity and facility facts as historical source-
   reported context. A current facility-reference snapshot must not rewrite that
   history.
+- Keep program and ArcGIS snapshots, observations, identities, and lifecycle
+  state separate. Neither source overwrites or erases the other.
+- Blank ArcGIS values never erase nonblank program values. Identical values may
+  reconcile while retaining both observations. Conflicting nonblank values
+  retain both originals and conflict state; no global ArcGIS-wins or
+  program-wins rule is approved.
 - Preserve original values, field-level provenance, source/effective dates,
   conflicts, blanks, invalid values, disappearances, and unresolved mappings.
 - Existing PostgreSQL rows are persistence state, not independent source truth.
@@ -41,147 +49,151 @@ that an earlier phase passed merely because code merged or a source responded.
   acceptance preserves the last accepted source version and the prior
   application release. Failure never authorizes silent fallback, deletion, or
   bypass.
+- Facility disappearance does not mean closure or deletion. Failed candidates
+  never partially apply, and rollback selects complete prior accepted snapshots.
+- ArcGIS source-row identity is immutable snapshot identity plus `ObjectId`.
+  Facility number is a non-unique matching/grouping value and cannot be a unique
+  ArcGIS database or upsert key.
+- Scheduling remains blocked until a governed cadence is approved.
 
-## Phase A — governed shadow connector and comparison
+## Phase A — completed ArcGIS evaluation and SUPPLEMENT decision
 
 ### Required outcome
 
-Implement a production-quality ArcGIS/FeatureServer connector that resolves the
-approved catalog, item, service, layer, and stable export identities; performs
-bounded complete retrieval; stores immutable raw responses before parsing; and
-emits deterministic normalized snapshots. Run it in shadow mode against the
-retained program CSV snapshots and existing PostgreSQL facility-reference rows
-without changing active production reads.
+Completed the governed ArcGIS shadow evaluation and recorded **SUPPLEMENT** as
+the authoritative decision. The evaluated ArcGIS source contains 29,871 rows,
+29,714 unique nonblank facility numbers, and 129 duplicated facility numbers
+across 286 rows. Query and export differ on 47 shared Facility IDs. The retained
+program sources contain 68,526 unique nonblank Facility IDs: 27,831 shared,
+1,883 ArcGIS-only, and 40,695 program-only.
 
-The comparison must report schema and domain fingerprints, original-byte and
-normalized-content hashes, pagination/export equivalence, row and Facility ID
-coverage, duplicates, additions, changes, disappearances, field population,
-conflicts, status values, type codes and labels, and unresolved values including
-`733`.
+Phase A established snapshot identity plus `ObjectId` as ArcGIS source-row
+identity and facility number as a non-unique matching/grouping value. Raw `733`
+remains unmapped. Refresh cadence, exact license version and attribution,
+system-of-record status, maintainer, steward, and update owner remain unresolved.
+Phase A did not activate ArcGIS or change runtime/database behavior.
 
 ### Dependencies
 
-- Issue #490 reports and preserved technical evidence.
-- Confirmed public source identity, publisher/maintainer relationship, permitted
-  use, attribution, and a bounded stable retrieval contract.
-- Existing source connector and data contracts.
-- Approved network, raw-snapshot, privacy, and retention boundaries.
+- Completed Issue #490 reports and preserved technical evidence.
+- The bounded Issue #516 authorization for the exact public source identities
+  and retrieval path.
+- Existing source/data contracts and approved raw-snapshot/privacy boundaries.
 
 ### Prohibited shortcuts
 
 - No catalog timestamp as content-change proof.
-- No first-page, default-limit, row-count-only, or service-only completeness
-  claim; no unapproved redirect or browser scraping.
-- No import, active-source switch, PostgreSQL write, renderer dictionary, or
-  deletion during shadow mode.
-- No assumption that an omitted row is closed or that `733` has a label.
+- No row-count-only equivalence claim or assumption that query/export are one
+  atomic snapshot.
+- No import, activation, PostgreSQL write, backfill, renderer dictionary,
+  scheduling, or deletion.
+- No assumption that disappearance means closure or that `733` has a label.
 
 ### Tests
 
-- Fixture-backed discovery, redirect, pagination, ordering, terminal-page,
-  timeout, throttling, malformed-response, and schema/domain-drift tests.
-- Raw-before-parse preservation and deterministic hash tests.
-- Full export versus complete query reconciliation by stable identity and row
-  fingerprint, including same-count mismatches.
-- Shadow comparison tests for blanks, invalid values, duplicates, conflicts,
-  disappearance, and repeat-run determinism, with zero live network calls.
+- Fixture-backed source policy, redirect/query redaction, pagination,
+  terminal-page, malformed-response, and schema/domain-drift tests.
+- Raw-before-parse preservation, deterministic hash, duplicate, conflict,
+  comparison, and repeat-run determinism tests.
+- Full export/query and retained-program reconciliation by source identity and
+  row fingerprint, including same-count value mismatches.
 
 ### Evidence
 
-- Immutable snapshot manifest with source identities, retrieval times, hashes,
-  byte counts, schema/domain fingerprints, and validation status.
-- Deterministic ArcGIS-to-CSV and ArcGIS-to-PostgreSQL comparison packages with
-  safe aggregate summaries and bounded conflict evidence.
-- Reproducible test and validation results plus explicit blocked or inconclusive
-  checks.
+- The merged [Phase A comparison](../analysis/build-week-2026-arcgis-shadow-comparison.md)
+  and [SUPPLEMENT recommendation](../analysis/build-week-2026-arcgis-source-recommendation.md).
+- Immutable 100-artifact manifest, original/normalized hashes, schema/domain
+  fingerprints, two observations, program reconciliation, and safe summaries.
+- Explicit unresolved authority, license/attribution, ownership, cadence, and
+  `733` findings.
 
 ### Completion gate
 
-Complete only when the selected source path is reproducible, pagination is
-complete, service/export results reconcile or one method is explicitly
-qualified, normalized-content change detection is deterministic, and shadow
-evidence is sufficient for the Phase B decision. An unresolved authority,
-license, source identity, material coverage, or critical data-quality question
-blocks the gate.
+Complete. Phase A merged at `41d512127febdfd086432e7f082d0651da232e9f`
+with **SUPPLEMENT**. The unresolved findings constrain later implementation;
+they do not authorize replacement or activation.
 
 ### Rollback or preservation rule
 
-Shadow mode cannot alter the active source. Retain every accepted CSV snapshot,
-the prior PostgreSQL state, all immutable ArcGIS snapshots and manifests, and a
-safe record of failed attempts. Reject incomplete or invalid ArcGIS versions
-without changing the last accepted source.
+Phase A altered no active source. Retain its immutable evidence and all program
+history. Invalid future candidates must not change either source family's last
+accepted snapshot.
 
-## Phase B — source decision and production cutover authorization
+## Phase B — separate governed source snapshots under #518
 
 ### Required outcome
 
-Review Phase A evidence and record an explicit **adopt**, **supplement**, or
-**reject** decision. The decision must name source ownership by field and
-program, precedence, effective/source-date handling, conflict and disappearance
-rules, accepted quality thresholds, fallback conditions, attribution, and the
-exact source version eligible for cutover.
+Under Issue #518, implement separate immutable program and ArcGIS snapshots;
+source-specific row identities; original-byte and normalized-content hashes;
+schema, domain, count, identity, duplicate, disappearance, and conflict
+validation; and candidate, validated, accepted, active, rejected, and
+prior-accepted lifecycle state per source family.
 
-If adoption is supported, authorize ArcGIS as the governed normal production
-facility-reference source. The program CSV snapshots remain retained for
-provenance, history, comparison, and controlled fallback, but cease to be the
-normal active production source only after the authorized cutover gate passes.
+Keep ArcGIS query and export observations separately identified. Promotion and
+rollback operate on complete validated snapshots and preserve both histories.
+Phase B does not perform reviewer integration, canonical facility backfill,
+operator mutation, or scheduling.
 
 ### Dependencies
 
-- Passing Phase A evidence and reproducible manifests.
-- Human resolution of source authority, terms, license, attribution, and any
-  material unresolved source relationship.
-- Approved precedence, conflict, disappearance, validation-failure, and
-  last-accepted-version rules.
+- Completed Phase A evidence and **SUPPLEMENT** decision.
+- Issue #518's corrected dual-source boundary.
+- Approved persistence design for source-specific snapshots and lifecycle
+  pointers, plus explicit terms/authority blockers.
 
 ### Prohibited shortcuts
 
-- No adoption because the source is labeled statewide, newer, official-looking,
-  or similar in row count.
-- No ambiguous decision, implicit cutover, silent supplementation, or activation
-  before field ownership and fallback rules are approved.
+- No replacement model, overwrite-in-place sole source of truth, shared
+  source-row key, or unique ArcGIS facility-number key.
+- No collapsing duplicate ArcGIS rows, selecting a first/winning row, or
+  treating query/export as one observation.
+- No reviewer integration, canonical backfill, source activation, or scheduling.
 - No completeness, currency, legal, or source-of-record claim beyond evidence.
 
 ### Tests
 
-- Decision-contract tests for finite decision and reason states.
-- Threshold tests that block activation on partial retrieval, schema/domain
-  drift, duplicate identity, unexplained material disappearance, unresolved
-  critical mapping, or failed comparison.
-- Configuration tests proving the active-source choice is explicit and
-  fail-closed.
+- Source-specific snapshot identity, immutable storage, hash, validation, and
+  lifecycle-transition tests.
+- Tests for partial retrieval, schema/domain drift, duplicates, query/export
+  mismatch, disappearance, rejected candidates, and prior-accepted preservation.
+- Atomic promotion/rollback and repeat-run tests proving both source histories
+  remain intact.
 
 ### Evidence
 
-- Signed-off decision record linked to the exact Phase A manifests and hashes.
-- Field/program ownership matrix, accepted thresholds, known limitations,
-  attribution requirements, and cutover/fallback procedure.
-- Proof that no active-source configuration changed before approval.
+- Source-specific manifests and immutable artifacts with original/normalized
+  hashes, schema/domain fingerprints, validation decisions, and lifecycle state.
+- Separate query/export observation evidence and accepted/prior-accepted pointer
+  reconciliation.
+- Proof that Phase B did not change canonical/reviewer data or source precedence.
 
 ### Completion gate
 
-Complete when reviewers approve one evidence-supported decision. Only an
-**adopt** decision advances to ArcGIS production replacement; **supplement**
-must define its bounded ownership, and **reject** retains the CSV family as the
-normal active source and records why the replacement sequence stopped.
+Complete when both source families can stage, validate, reject, promote, and
+roll back complete snapshots independently and atomically, with deterministic
+reconciliation of lifecycle pointers and no canonical/reviewer mutation.
 
 ### Rollback or preservation rule
 
-Retain the decision inputs, rejected or superseded snapshots, and the complete
-CSV source history. The last accepted source remains active until a separately
-authorized, validated cutover succeeds.
+Retain every accepted, rejected, and superseded snapshot and manifest. A failed
+candidate never partially applies; rollback selects the complete prior accepted
+snapshot for that source family while preserving the other source unchanged.
 
 ## Phase C — unified facility identity and controlled backfill under #482
 
 ### Required outcome
 
-Under Issue #482, implement one governed facility identity projection and use it
-across search, facility hub, review queue, complaint detail, packet views,
-exports, and operator reporting. If Phase B authorizes ArcGIS adoption, perform
-a controlled PostgreSQL facility-reference backfill that applies only approved
-ArcGIS values with field-level source/version/effective-date provenance,
-retains conflicting nonblank values, preserves complaint history, and is
-idempotent and recoverable.
+Under Issue #482, implement one governed facility identity and reconciliation
+projection over the separate program and ArcGIS source snapshots. Define stable
+identity, source-specific row identity, governed matching, field-level
+ownership, source/effective-date handling, blank-preserving fallback, conflict
+retention, duplicate handling, and disappearance review.
+
+Implement a bounded dry-run/apply PostgreSQL backfill with explicit selection,
+checkpoints, repeat-run safety, failure isolation, and protection of
+reviewer-created state. Apply only approved supplementary values with field-
+level source/snapshot provenance. There is no global ArcGIS-wins or program-wins
+rule, and a current-reference value cannot rewrite historical complaint context.
 
 Facility-type identifiers must display verified descriptive labels. Raw `733`
 must remain raw and explicitly unresolved unless governed source or mapping
@@ -189,7 +201,7 @@ evidence proves its label.
 
 ### Dependencies
 
-- Phase B adoption or bounded supplement decision.
+- Completed Phase B source-specific snapshots and lifecycle model.
 - Issue #482 field ownership, stable-identity, alias/succession, and display
   rules.
 - Approved schema/migration and backfill plans where persistence changes are
@@ -200,6 +212,8 @@ evidence proves its label.
 
 - No page-local identity joins, renderer dictionaries, last-row-wins updates,
   lexical precedence, or silent overwrite of nonblank conflicts.
+- No unique ArcGIS facility-number key and no collapse of distinct `ObjectId`
+  rows.
 - No rewriting historical complaint-report values from current reference data.
 - No apply-by-default, physical deletion, inferred closure, or unbounded
   backfill.
@@ -209,24 +223,26 @@ evidence proves its label.
 - Stable identity, alias/succession, duplicate, null, conflict, and date-
   precedence tests across SQLite/PostgreSQL-supported boundaries.
 - Dry-run/apply idempotence, checkpoint, failure, recovery, and rollback tests.
-- Cross-surface contract tests proving every named consumer uses the same
-  projection and unresolved `733` never gains an invented label.
-- Export and print tests preserving provenance and reviewer-safe display.
+- Tests proving identical values retain both observations, blanks do not erase,
+  conflicts retain both originals, and disappearance does not infer closure.
+- Tests proving reviewer-created state is unchanged and unresolved `733` never
+  gains an invented label.
 
 ### Evidence
 
 - Versioned identity and backfill manifests with planned/applied/unchanged/
   conflicted/rejected counts and field-level provenance samples.
-- Before/after aggregate reconciliation against the approved ArcGIS snapshot,
-  with no unexplained loss or overwrite.
-- Automated route, export, print, accessibility, responsive, and keyboard
-  evidence for the shared projection.
+- Before/after aggregate reconciliation against both accepted source snapshots,
+  with no unexplained loss, overwrite, or source-history collapse.
+- Checkpoint, repeat-run, failure-isolation, reviewer-state-preservation, and
+  rollback evidence.
 
 ### Completion gate
 
-Complete when the approved source values reconcile to PostgreSQL, the backfill
-is idempotent and recoverable, conflicts and unresolved values remain visible at
-the appropriate tier, and every named consumer passes shared identity tests.
+Complete when the identity/reconciliation contract is merged, approved source
+values reconcile to PostgreSQL, dry-run/apply is bounded, idempotent, and
+recoverable, every source observation remains traceable, and reviewer-created
+state is unchanged. Only then may safe parallel implementation begin.
 
 ### Rollback or preservation rule
 
@@ -235,26 +251,81 @@ snapshots, field-level prior values, conflict records, and checkpoint. Rollback
 restores the prior accepted application/database state without deleting source
 history or reconstructing truth from current rows.
 
-## Phase D — source-to-screen and operator reconciliation under #453/#477
+## Phase D — shared facility projection across reviewer and export surfaces
 
 ### Required outcome
 
-Extend Issue #453 source-to-screen coverage through the active ArcGIS snapshot,
-normalized facility identity, approved PostgreSQL values, read models, every
-named user surface, exports, and operator reports. Extend Issue #477 with
-read-only monitoring plus only the minimum separately authorized operational
-actions necessary to observe and safely control ArcGIS refresh and backfill
-jobs.
+Use the merged Phase C facility projection across search, facility hub, review
+queue, complaint detail, packet views, and exports. Every surface must consume
+the same identity, field-ownership, blank, conflict, disappearance, and current-
+versus-historical rules rather than reimplementing page-local precedence.
 
-Operator diagnostics must show active source and snapshot, last attempted and
-successful refresh, content and schema state, row/Facility ID reconciliation,
-added/changed/missing/conflicted facilities, unresolved codes, backfill and
-checkpoint state, failures, and bounded retry eligibility without exposing raw
-records or secrets.
+Reviewer surfaces remain concise and distinguish current-reference supplement
+context from historically source-reported complaint facts. Raw `733` remains
+unmapped everywhere.
 
 ### Dependencies
 
-- Completed Phase C identity/backfill reconciliation.
+- Merged Phase C identity and reconciliation contract plus successful controlled
+  backfill evidence.
+- Existing approved reviewer/export design and accessibility requirements.
+- Source-traceable read models that expose the shared projection.
+
+### Prohibited shortcuts
+
+- No page-local joins, fallback dictionaries, first-row selection, duplicated
+  precedence logic, or source-specific display forks.
+- No silent replacement of historical complaint context with current ArcGIS
+  values.
+- No raw provenance internals moved into the primary reviewer tier.
+
+### Tests
+
+- Cross-surface contract tests proving every named consumer uses the shared
+  projection and renders the same governed identity/value state.
+- Conflict, blank, disappearance, duplicate, current/historical, and unresolved
+  `733` regression tests.
+- Route, export, print, accessibility, responsive, zoom, and keyboard tests.
+
+### Evidence
+
+- Deterministic route and export assertions linked to the exact Phase C contract,
+  source snapshots, backfill manifest, database state, and application SHA.
+- Automated screenshots/text/export captures for populated, blank, conflict,
+  duplicate, unavailable, and unresolved-code states.
+- Reconciliation showing every named consumer uses the shared projection.
+
+### Completion gate
+
+Complete when search, facility hub, review queue, complaint detail, packet views,
+and exports pass shared-projection and source-traceability assertions with no
+page-local ownership or precedence divergence.
+
+### Rollback or preservation rule
+
+Preserve the last accepted projection/read model, source snapshots, backfill
+manifest, and prior application release. A consumer failure must not rewrite
+source history or authorize a page-local fallback.
+
+## Phase E — source-to-screen and operator reconciliation under #453/#477
+
+### Required outcome
+
+Extend Issue #453 source-to-screen coverage through both source-specific
+snapshots, the shared facility projection, approved PostgreSQL values, read
+models, every named user surface, exports, and operator reports. Extend Issue
+#477 beginning with read-only monitoring. Any minimum operational action needed
+later to safely control refresh/backfill jobs requires separate authorization.
+
+Operator diagnostics must show source family and snapshot identity, separate
+query/export observations, content and schema state, row/Facility ID
+reconciliation, duplicate groups, conflicts, disappearance, drift, rejected
+candidates, last accepted/prior accepted state, backfill/checkpoint state, and
+failures without exposing raw records or secrets.
+
+### Dependencies
+
+- Completed Phase D shared-projection integration and Phase C reconciliation.
 - Existing Issue #453 contract adapter and Issue #477 production authorization
   boundary.
 - Separately approved permissions and finite job/action contracts for any
@@ -263,14 +334,16 @@ records or secrets.
 ### Prohibited shortcuts
 
 - No duplicated coverage calculation in the dashboard or page-local consumer.
-- No operator action inferred from read access; no broad job console, raw source
-  viewer, arbitrary command, silent retry, or auth bypass.
+- No operator action inferred from read access. Begin with read-only monitoring;
+  no broad job console, raw source viewer, arbitrary command, silent retry, or
+  auth bypass.
 - No coverage claim based only on PostgreSQL row presence or route success.
 
 ### Tests
 
-- Deterministic producer/adapter/consumer contract tests for ArcGIS source,
-  identity, field, stage, route, export, conflict, and unresolved-code coverage.
+- Deterministic producer/adapter/consumer contract tests for both source
+  families, identity, field, stage, route, export, conflict, disappearance,
+  duplicate, drift, rejected-candidate, and unresolved-code coverage.
 - Authorization tests proving authentication before reads and action-specific
   operator permission before every mutation.
 - Fail-closed unavailable/invalid/stale/partial package tests and bounded action
@@ -280,8 +353,8 @@ records or secrets.
 
 ### Evidence
 
-- Versioned source-to-screen package linked to exact source, backfill, database,
-  and deployed commit identities.
+- Versioned source-to-screen package linked to exact program/ArcGIS snapshots,
+  backfill, database, projection, and deployed commit identities.
 - Route and authorization assertion results, screenshots, text/CSV captures,
   manifest hashes, and reconciliation summaries.
 - Explicit unavailable, blocked, partial, failed, and retry-eligible states.
@@ -289,9 +362,10 @@ records or secrets.
 ### Completion gate
 
 Complete when every named source-to-screen path reconciles, the operator can
-diagnose failures and safely control only authorized jobs, authorization fails
-closed, and automated evidence contains no credentials, assertions, cookies,
-headers, private host details, or raw sensitive records.
+diagnose failures through read-only monitoring, authorization fails closed, and
+automated evidence contains no credentials, assertions, cookies, headers,
+private host details, or raw sensitive records. Separately authorized actions,
+if any, must pass their own finite state and permission gates.
 
 ### Rollback or preservation rule
 
@@ -299,16 +373,16 @@ Retain the last valid coverage package and job history. A producer, adapter,
 authorization, or action failure must not change the active source or erase
 prior evidence; disable the affected action while preserving read-only status.
 
-## Phase E — scheduled governed refresh and checkpoint recovery under #478
+## Phase F — separate governed refresh and checkpoint recovery under #478
 
 ### Required outcome
 
-Under Issue #478, schedule governed ArcGIS refresh through discovery, immutable
-snapshot retrieval, normalization, validation, shadow comparison,
-decision/activation checks, controlled backfill, reconciliation, evidence
-publication, and notification. Prevent overlap with a lock, persist finite
-checkpoints, support bounded retry/cancel/resume and recovery, and publish safe
-summaries.
+Under Issue #478, implement separate governed program-source and ArcGIS refresh
+workflows through discovery, immutable snapshot retrieval, normalization,
+validation, accepted-pointer update, reconciliation, evidence publication, and
+notification. Record attempts and finite state, prevent unsafe overlap with
+locks, persist checkpoints, and support bounded recovery and eligible retries.
+Any controlled backfill remains a separately gated downstream stage.
 
 Cadence must be justified by measured source behavior and published limits.
 Refresh must compare normalized content and schema/identity signals, not catalog
@@ -316,7 +390,8 @@ timestamps alone.
 
 ### Dependencies
 
-- Completed Phases A-D and an active-source decision.
+- Completed Phases A-E and accepted source-specific lifecycle, identity,
+  reconciliation, shared-projection, and monitoring contracts.
 - Approved cadence, lock ownership/expiry, checkpoint, retry classification,
   notification, retention, disappearance, and recovery policies.
 - Human-operated deployment/rollback procedure for the target runtime.
@@ -326,12 +401,15 @@ timestamps alone.
 - No overlapping run, timestamp-only no-op decision, unbounded retry, automatic
   acceptance of drift, physical deletion, or cleanup without retention policy.
 - No resume from an unvalidated or mismatched checkpoint.
-- No replacement of the previous accepted version after a failed run.
+- No replacement of either source family's previous accepted snapshot after a
+  failed run and no cross-source pointer update from a single-source failure.
+- No schedule is enabled until cadence is approved.
 
 ### Tests
 
-- Schedule, lock contention/expiry, idempotence, checkpoint, retry category,
-  cancel, resume, crash recovery, and notification tests.
+- Per-source schedule, lock contention/expiry, attempt state, idempotence,
+  checkpoint, retry category, cancel, resume, crash recovery, and notification
+  tests.
 - Schema/domain drift, partial retrieval, duplicate, disappearance, source
   outage, content-no-change, content-change, backfill failure, and reconciliation
   failure tests.
@@ -340,8 +418,9 @@ timestamps alone.
 
 ### Evidence
 
-- Run manifest and timeline with source/content hashes, lock/checkpoint states,
-  validation and reconciliation outcomes, actions, and safe failure summaries.
+- Per-source run manifests and timelines with source/content hashes,
+  lock/attempt/checkpoint states, validation and reconciliation outcomes,
+  actions, and safe failure summaries.
 - Proof that unchanged normalized content causes no backfill and that changed
   content cannot activate before all gates pass.
 - Recovery evidence from representative interrupted stages.
@@ -350,17 +429,18 @@ timestamps alone.
 
 Complete when scheduled runs cannot overlap, all stages are observable and
 recoverable, unchanged and changed content are distinguished deterministically,
-activation is validation-gated, reconciliation is mandatory, and failures
-preserve the last accepted source and database state.
+accepted-pointer changes are validation-gated, reconciliation is mandatory,
+notifications are safe, and failures preserve both source families' prior
+accepted snapshots and database state.
 
 ### Rollback or preservation rule
 
-Retain immutable source versions, manifests, checkpoints, run history, and the
-prior accepted database/application release according to approved policy.
-Rollback selects a previously accepted version; it never refetches or rebuilds
-historical truth from mutable current state.
+Retain immutable source versions, manifests, attempts, checkpoints, run history,
+and the prior accepted database/application release according to approved
+policy. Rollback selects complete previously accepted source snapshots; it
+never refetches or rebuilds historical truth from mutable current state.
 
-## Phase F — production deployment, Hosted acceptance, and final release
+## Phase G — production deployment, Hosted acceptance, and final release
 
 ### Required outcome
 
@@ -368,9 +448,9 @@ Merge all required implementation phases through normal review, deploy the
 exact accepted merge SHA through the human-operated release process, verify
 application and database health without recreating PostgreSQL, and run automated
 Hosted acceptance against the deployed production-auth path. Reconcile the
-deployed ArcGIS snapshot, PostgreSQL state, source-to-screen package, operator
-diagnostics, scheduled refresh state, named reviewer routes, exports, and
-evidence manifests.
+deployed program and ArcGIS snapshots, shared facility projection, PostgreSQL
+state, source-to-screen package, operator diagnostics, separate refresh state,
+named reviewer routes, exports, and evidence manifests.
 
 After all required checks, deployment verification, automated Hosted acceptance,
 documentation, and issue completion gates pass, record the final Build Week SHA
@@ -378,7 +458,7 @@ and move tag `openai-build-week-2026` to that exact accepted SHA.
 
 ### Dependencies
 
-- Completed and merged Phases A-E with required CI checks passing.
+- Completed and merged Phases A-F with required CI checks passing.
 - Human QNAP operator deployment authorization and approved release archive.
 - Approved production authentication and ephemeral Hosted evidence provider;
   absence remains a blocker and never authorizes bypass.
@@ -412,7 +492,8 @@ and move tag `openai-build-week-2026` to that exact accepted SHA.
   evidence path/hash/captures/assertions/statuses.
 - Retained prior release, Compose, environment, source, database, and evidence
   backups, with no secrets copied into evidence.
-- Final documentation and issue linkage for #482, #453, #477, #478, and #516.
+- Final documentation and issue linkage for #518, #482, #453, #477, #478, and
+  #516.
 
 ### Completion gate
 
@@ -426,25 +507,29 @@ the final Build Week SHA and release remain pending.
 
 Keep the previous application release with its Compose file, the host-local
 environment, PostgreSQL data and backup, last accepted source package, and
-evidence. Roll back application and active-source selection together under the
-approved runbook; never discard immutable snapshots, field provenance,
-conflicts, checkpoints, or the prior accepted release.
+evidence. Roll back the application and complete source-family accepted-pointer
+set together under the approved runbook; never discard immutable snapshots,
+field provenance, conflicts, checkpoints, or the prior accepted release.
 
 ## Issue linkage and state
 
-- **#490:** completed evaluation evidence; remains complete and is not reopened
-  or recharacterized as production adoption.
+- **#490:** completed historical evaluation evidence; remains complete and is
+  not reopened or recharacterized as production adoption.
+- **#518:** owns Phase B separate program/ArcGIS snapshots, source-specific
+  identity and lifecycle, validation, accepted/prior-accepted pointers, and
+  atomic rollback. It does not own reviewer integration or canonical backfill.
 - **#482:** required Build Week implementation for the unified facility identity
-  projection and controlled ArcGIS backfill.
+  and reconciliation projection plus controlled dual-source backfill.
 - **#453:** remains open for blocked Hosted evidence and additional ArcGIS
   source-to-screen verification.
-- **#477:** remains required for read-only monitoring and the minimum separately
-  governed operational actions necessary to observe and safely control ArcGIS
-  refresh and backfill jobs.
-- **#478:** required Build Week implementation for scheduled governed refresh,
-  locking, checkpoints, recovery, and reconciliation.
-- **#516:** governs this completion-scope alignment; it does not by itself mark
-  any implementation phase complete.
+- **#477:** remains required for read-only-first monitoring. Any minimum
+  operational action necessary to control refresh/backfill jobs remains
+  separately governed.
+- **#478:** owns separate source refresh workflows, locking, attempts,
+  checkpoints, recovery, retries, reconciliation, notifications, and approved
+  cadence.
+- **#516:** governs this completion-scope alignment and records Phase A as
+  complete with **SUPPLEMENT**; it does not mark later phases complete.
 
 No new issue is required by this plan. Issue state changes occur only after the
 applicable implementation, deployment, evidence, and review gates pass.
@@ -457,7 +542,7 @@ commit remains `508102077ec57dcf673142620e412ad2bf7078b1`. The current deployed
 checkpoint is `d7e9b1fff9e1826c3387a7313777d14c1480d3b4`, but the final Build Week
 release is pending.
 
-The final release must include this complete ArcGIS replacement sequence and
-may be named only after every required phase is merged, deployed, and accepted.
-Tag `openai-build-week-2026` must eventually point to that exact final accepted
-SHA, not to the current checkpoint.
+The final release must include this complete dual-source ArcGIS supplement
+sequence and may be named only after every required phase is merged, deployed,
+and accepted. Tag `openai-build-week-2026` must eventually point to that exact
+final accepted SHA, not to the current checkpoint.

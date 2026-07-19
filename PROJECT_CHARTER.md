@@ -32,10 +32,12 @@ diagnostics from the default reviewer surface.
 
 For OpenAI Build Week 2026, the current deployed checkpoint
 `d7e9b1fff9e1826c3387a7313777d14c1480d3b4` is intermediate, not final. The
-remaining completion scope is the governed production replacement of the normal
-program-specific CSV facility-reference path with the statewide ArcGIS source,
-but only after shadow comparison and an explicit evidence-supported source
-decision. The required sequence is defined in the
+governed Phase A evaluation merged at
+`41d512127febdfd086432e7f082d0651da232e9f` and concluded **SUPPLEMENT**, not
+replacement. The remaining completion scope is a governed dual-source model:
+program-specific snapshots remain the primary facility-reference source family,
+and ArcGIS is a separately versioned supplementary current-reference source.
+The required sequence is defined in the
 [Build Week ArcGIS facility-reference completion plan](docs/planning/build-week-2026-arcgis-facility-reference-completion-plan.md).
 
 ## Primary goal
@@ -53,11 +55,12 @@ experience.
 
 The Build Week facility-reference goal is one provenance-preserving identity
 projection across search, facility hub, queue, complaint detail, packet views,
-exports, and operator reporting; controlled ArcGIS backfill and reconciliation;
-scheduled refresh with recovery; and automated Hosted acceptance. The program
-CSV snapshots remain retained as history and controlled fallback. Raw type
-value `733` must not receive a descriptive label without verified source or
-governed mapping evidence.
+exports, and operator reporting; controlled dual-source reconciliation and
+backfill; separate governed refresh workflows with recovery; and automated
+Hosted acceptance. Program snapshots remain the primary source family, while
+ArcGIS may supply only approved supplementary current-reference fields. Neither
+source erases the other. Raw type value `733` must not receive a descriptive
+label without verified source or governed mapping evidence.
 
 ## Initial source
 
@@ -88,9 +91,9 @@ Initial facility:
 - Documentation is generated and maintained for developer and end-user audiences.
 - The presentation layer meets ADA digital accessibility requirements.
 - The project can add future source connectors without rewriting the architecture.
-- The final Build Week release is set only after the complete ArcGIS replacement
-  sequence is merged, deployed, reconciled, and accepted through automated
-  Hosted evidence.
+- The final Build Week release is set only after the complete ArcGIS supplement
+  and dual-source reconciliation sequence is merged, deployed, reconciled, and
+  accepted through automated Hosted evidence.
 
 ## Non-goals
 

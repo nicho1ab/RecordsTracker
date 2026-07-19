@@ -205,21 +205,26 @@ the governed primary future review experience.
   job/checkpoint mutation, and retention automation remain deferred.
 - Completed the Issue #490 statewide facility-source evaluation with the final
   verdict **inconclusive; retain existing program-specific sources and keep the
-  statewide candidate inactive**. The seven program datastores were technically
-  profiled as a bounded 68,527-row source family, while the statewide
-  service/export pair, same-title catalog succession, source authority,
-  terms/license conflict, content freshness, and code `733` remain unresolved.
-  No connector, import, backfill, UI, database, scheduling, deployment,
-  Cloudflare, or QNAP activation was approved or performed.
-- Added Issue #516 as the Build Week completion-scope decision. Issue #490 stays
-  completed evaluation evidence, but the final Build Week release now requires
-  the sequenced ArcGIS production work in the
+  statewide candidate inactive**. That result remains historical evaluation
+  evidence. No connector, import, backfill, UI, database, scheduling,
+  deployment, Cloudflare, or QNAP activation was approved by #490.
+- Completed the governed Phase A evaluation under #516 at
+  `41d512127febdfd086432e7f082d0651da232e9f` with the authoritative
+  **SUPPLEMENT** decision. ArcGIS contains 29,871 rows and 29,714 unique
+  facility numbers; 129 facility numbers cover 286 rows, so ArcGIS source-row
+  identity is immutable snapshot identity plus `ObjectId`, while facility
+  number is only a non-unique match/grouping value. Query and export differ on
+  47 shared Facility IDs. The seven program sources contain 68,526 unique
+  nonblank Facility IDs: 27,831 shared, 1,883 ArcGIS-only, and 40,695
+  program-only. Raw `733`, cadence, exact license/attribution, and operational
+  authority/ownership remain unresolved.
+- Issue #516 now governs the Build Week dual-source completion scope. Program
+  snapshots remain primary and ArcGIS remains a separate current-reference
+  supplement. Issue #518 owns the next source-boundary implementation, and the
+  final Build Week release requires the remaining sequenced work in the
   [Build Week ArcGIS facility-reference completion plan](docs/planning/build-week-2026-arcgis-facility-reference-completion-plan.md).
-  The statewide candidate remains inactive until a new shadow comparison and
-  explicit adopt, supplement, or reject gate pass. If adoption is supported,
-  ArcGIS becomes the governed normal production facility-reference source; the
-  program CSV snapshots remain retained for provenance, history, comparison,
-  and controlled fallback rather than normal active use.
+  ArcGIS is not activated by Phase A, and it must not replace or erase program
+  observations.
 - Added design and usability governance for the local Datasette review
 	experience.
 - Documented delay review flags as screening aids, not conclusions.
@@ -696,14 +701,16 @@ the governed primary future review experience.
 
 ## Near-term milestones
 
-- Execute the Build Week ArcGIS completion phases in order: (A) governed shadow
-  connector and ArcGIS/CSV/PostgreSQL comparison; (B) explicit source decision
-  and cutover authorization; (C) Issue #482 unified facility identity and
-  controlled provenance-preserving backfill; (D) Issue #453/#477 source-to-
-  screen and operator reconciliation; (E) Issue #478 scheduled refresh,
-  locking, checkpoints, and recovery; and (F) deployment, automated Hosted
-  acceptance, final documentation, final SHA, and release tag. A later phase
-  cannot infer an earlier phase passed merely because code merged.
+- Execute the corrected Build Week ArcGIS phases in order: (A) completed
+  evaluation and **SUPPLEMENT** decision; (B) Issue #518 separate immutable
+  program/ArcGIS snapshots and source lifecycle; (C) Issue #482 shared facility
+  identity, reconciliation, and controlled backfill; (D) use that projection
+  across every named reviewer/export surface; (E) Issue #453/#477 source-to-
+  screen and read-only-first operator reconciliation; (F) Issue #478 separate
+  refresh workflows, locking, attempts, checkpoints, recovery, retry, and
+  notification; and (G) deployment, automated Hosted acceptance, final
+  documentation, final SHA, and release tag. Safe parallel implementation may
+  begin only after the Phase C identity and reconciliation contract is merged.
 - Use Issue #453's v1 producer and Issue #477's read-only dashboard through the
   completed production-auth/runtime-package bridge while preserving explicit
   fixture, runtime, and unavailable evidence labels. Hosted acceptance still
@@ -761,11 +768,12 @@ resolve a concrete MVP-blocking risk. Deferred readiness work stays tracked, but
 it should be sequenced by user value and MVP risk rather than by implementation
 convenience.
 
-For the remainder of Build Week, Issue #516 and the ArcGIS completion plan are
-the governing priority. They supersede the earlier general deferral of
-production facility-reference synchronization only for this bounded sequence;
-all evidence, authorization, provenance, accessibility, deployment, and Hosted
-acceptance gates remain mandatory.
+For the remainder of Build Week, Issue #516 and the corrected ArcGIS completion
+plan are the governing priority. Phase A is complete; the remaining bounded
+dual-source supplement sequence supersedes the earlier general deferral of
+production facility-reference synchronization. All evidence, authorization,
+provenance, accessibility, deployment, and Hosted acceptance gates remain
+mandatory.
 
 Before reviewer-facing UI implementation begins, use the numbered
 RecordsTracker UI/product improvement inventory in `DESIGN_AND_USABILITY.md` as
@@ -868,8 +876,9 @@ define the smallest useful product shape:
 	implemented slice for complaint records; broader retrieval capabilities remain
 	bounded by ADR-0016 and future user value.
 
-Production ArcGIS facility-reference import/sync, the unified facility identity
-projection, source-to-screen/operator reconciliation, and scheduled governed
-refresh are not deferred Build Week items: they are required phases under
-Issues #482, #453, #477, #478, and #516. Their implementation remains gated by
-the completion plan and must not be confused with statewide complaint crawling.
+Production dual-source facility-reference snapshots, ArcGIS supplement
+integration, the unified facility identity projection, source-to-screen/operator
+reconciliation, and scheduled governed refresh are not deferred Build Week
+items: they are required phases under Issues #518, #482, #453, #477, #478, and
+#516. Their implementation remains gated by the completion plan and must not be
+confused with statewide complaint crawling.

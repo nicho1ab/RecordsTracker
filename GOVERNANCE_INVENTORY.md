@@ -163,35 +163,37 @@
   conclusions.
 - Statewide facility-source evaluation status: Issue #490 is evaluated, not
   adopted. The final verdict is **inconclusive; retain existing program-specific
-  sources and keep the statewide candidate inactive**. The seven current program
-  datastores were technically profiled, while the statewide service/export pair,
-  same-title catalog succession, system-of-record and maintainer status,
-  terms/license conflict, content freshness, and code `733` mapping remain
-  unresolved adoption gates. No source activation or production behavior was
-  approved.
-- Build Week facility-reference completion status: Issue #516 makes full
-  production implementation of the ArcGIS replacement sequence required before
-  the final Build Week release. This forward scope does not change Issue #490's
-  verdict or activate the candidate. The governed sequence is: shadow connector
-  and ArcGIS/CSV/PostgreSQL comparison; explicit adopt/supplement/reject
-  decision; Issue #482 unified identity and controlled backfill; Issue
-  #453/#477 source-to-screen and operator reconciliation; Issue #478 scheduled
-  refresh and checkpoint recovery; then deployment, automated Hosted
-  acceptance, final documentation, final SHA, and release tag. See the
+  sources and keep the statewide candidate inactive**. That remains completed
+  historical evaluation evidence and did not activate a source.
+- Build Week facility-reference completion status: Phase A under Issue #516
+  merged at `41d512127febdfd086432e7f082d0651da232e9f` with the authoritative
+  **SUPPLEMENT** decision. Program snapshots remain the primary source family;
+  ArcGIS is a separate supplementary current-reference source. ArcGIS has
+  29,871 rows, 29,714 unique facility numbers, and 129 duplicated facility
+  numbers across 286 rows. Query/export values differ on 47 shared Facility
+  IDs. Program sources have 68,526 unique nonblank Facility IDs: 27,831 shared,
+  1,883 ArcGIS-only, and 40,695 program-only. The remaining sequence is Issue
+  #518 source-specific snapshots; Issue #482 identity/reconciliation and
+  controlled backfill; shared downstream projection; Issue #453/#477 coverage
+  and read-only-first operator reconciliation; Issue #478 separate refresh
+  workflows; then deployment, automated Hosted acceptance, final documentation,
+  final SHA, and release tag. See the
   [Build Week ArcGIS facility-reference completion plan](docs/planning/build-week-2026-arcgis-facility-reference-completion-plan.md).
-- Active-source preservation rule: until the decision and cutover gates pass,
-  the program-specific CSV family remains the governed active source family. If
-  adoption is supported, ArcGIS becomes the normal active production source
-  only after a validated cutover. CSV snapshots remain immutable provenance,
-  history, comparison, and controlled-fallback evidence. Content change is
-  determined from preserved bytes, normalized content, schema/domain
+- Dual-source preservation rule: program-specific snapshots remain primary;
+  ArcGIS snapshots remain separate and supplementary. Neither source overwrites
+  or erases the other. Identical values may reconcile while retaining both
+  observations; conflicting nonblank values retain both originals and conflict
+  state. No global ArcGIS-wins or program-wins rule is approved. Content change
+  is determined from preserved bytes, normalized content, schema/domain
   fingerprints, and Facility ID sets, never catalog timestamps alone.
 - Identity and label rule: one governed facility identity projection must serve
   search, facility hub, queue, complaint detail, packet views, exports, and
   operator reporting. Current reference values retain field-level provenance
-  and conflicts without rewriting historical complaint context. Raw `733`
-  remains unresolved unless verified source or governed mapping evidence proves
-  a descriptive label.
+  and conflicts without rewriting historical complaint context. ArcGIS
+  source-row identity is snapshot identity plus `ObjectId`; facility number is
+  a non-unique match/grouping value and cannot be a unique ArcGIS database key.
+  Raw `733` remains unresolved unless verified source or governed mapping
+  evidence proves a descriptive label.
 - Source-to-screen operator coverage status: Issue #453's deterministic v1
   producer is connected to Issue #477's read-only dashboard through the stable
   `source_to_screen_coverage` boundary. The consumer uses producer-owned schema,
@@ -270,14 +272,13 @@
   audit/evidence behavior, and fail-closed tests. Coverage-package retention
   duration remains undecided; disposition stays `pending_policy` and automated
   cleanup remains unauthorized unless separately approved.
-- Statewide facility-source adoption is a required Build Week decision, not a
-  preselected result. A current ArcGIS service and matching stable export must
-  be jointly profiled in shadow mode; same-title source succession, publisher
-  terms and license, candidate-specific system-of-record and maintainer status,
-  normalized content-change behavior, facility-type domains, `733`, and
-  provenance-preserving precedence must be resolved or carried as explicit
-  blockers. Failure of those gates results in supplement/reject and preserves
-  the active CSV source rather than forcing adoption.
+- Phase A resolved the source decision as **SUPPLEMENT**. Exact license version,
+  attribution, candidate-specific system-of-record status, maintainer, steward,
+  update owner, and refresh cadence remain unresolved and must be carried as
+  explicit blockers. Phase B must preserve separate query/export observations,
+  source-specific identities and histories, accepted/prior-accepted pointers,
+  and whole-snapshot rollback. Scheduling remains blocked until cadence is
+  approved.
 - Concrete frontend framework, API framework, concrete auth provider instance
   and configuration, hosting platform, deployment pipeline, retention durations
   and automation, backup/restore policy, final design system, and production
@@ -326,13 +327,13 @@ accessible structure, contextual help, low-friction reviewer actions, and useful
 feedback capture are product requirements when they reduce tester confusion
 without creating avoidable rework.
 
-Issue #516 supersedes the deferral below for the bounded ArcGIS facility-
-reference replacement sequence. Database-backed facility lookup, controlled
-production facility-reference import/sync, operator reconciliation, scheduled
-refresh, and the associated approved deployment are required Build Week phases,
-subject to the completion plan's evidence and authorization gates. The table
-continues to govern unrelated product work and must not be read as permission to
-skip those phases.
+Issue #516 supersedes the deferral below for the bounded dual-source ArcGIS
+facility-reference supplement sequence. Source-specific snapshot persistence,
+database-backed facility reconciliation, controlled backfill, operator
+reconciliation, separate scheduled refresh, and the associated approved
+deployment are required Build Week phases, subject to the completion plan's
+evidence and authorization gates. The table continues to govern unrelated
+product work and must not be read as permission to skip those phases.
 
 | Deferred item | Why deferred | User-facing milestone first | Necessary when | Needed before |
 |---|---|---|---|---|

@@ -349,15 +349,16 @@ The repository establishes this boundary:
   `openai-build-week-2026` (must eventually point to the final accepted SHA)
 
 The current deployed checkpoint is an intermediate accepted checkpoint. It must
-not be described or tagged as the final Build Week release. Build Week
-completion includes the complete governed ArcGIS facility-reference replacement
-sequence in the
+not be described or tagged as the final Build Week release. Phase A merged at
+`41d512127febdfd086432e7f082d0651da232e9f` with the evidence-supported
+**SUPPLEMENT** decision. Build Week completion therefore includes the complete
+governed dual-source ArcGIS facility-reference supplement sequence in the
 [ArcGIS facility-reference completion plan](docs/planning/build-week-2026-arcgis-facility-reference-completion-plan.md):
-immutable snapshot retrieval, normalized-content change detection, shadow
-comparison, an explicit source decision, controlled cutover and PostgreSQL
-backfill, one facility identity projection, source-to-screen and operator
-reconciliation, scheduled refresh with checkpoint recovery, production
-deployment, and automated Hosted acceptance.
+separate immutable program and ArcGIS snapshots, one facility identity and
+reconciliation projection, controlled PostgreSQL backfill, shared downstream
+consumers, source-to-screen and operator reconciliation, separate governed
+refresh workflows with checkpoint recovery, production deployment, and
+automated Hosted acceptance.
 
 Until every required phase is merged, deployed, and accepted, the final Build
 Week SHA remains pending and tag `openai-build-week-2026` must not be moved to
@@ -383,12 +384,14 @@ During Build Week, I added or materially expanded:
 - Freshness metadata and source-precedence rules.
 - Production-oriented deployment, backup, validation, and release procedures.
 
-Those completed extensions do not establish that the ArcGIS candidate is
-currently active, statewide-complete, current, or authoritative. Issue #490
-ended with an inconclusive evaluation and the program-specific CSV source family
-remains active pending the governed replacement sequence. The final Build Week
-release must add the remaining ArcGIS production implementation without
-inventing a descriptive label for raw type value `733`.
+Those completed extensions do not establish that ArcGIS is currently active,
+statewide-complete, current, authoritative, or a replacement for the program
+sources. Issue #490 remains completed historical evaluation evidence, and the
+governed Phase A evaluation under #516 now establishes **SUPPLEMENT**: the
+program-specific snapshots remain the primary source family while ArcGIS is a
+separately versioned current-reference supplement. The final Build Week release
+must add the remaining dual-source implementation without inventing a
+descriptive label for raw type value `733`.
 
 These changes transformed RecordsTracker from a promising early application into a substantially more complete public-record intelligence platform.
 
