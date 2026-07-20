@@ -710,21 +710,24 @@ the governed primary future review experience.
 
 - Execute the corrected Build Week ArcGIS phases in order: (A) completed
   evaluation and **SUPPLEMENT** decision; (B) Issue #518 separate immutable
-  program/ArcGIS snapshots and source lifecycle; (C) Issue #482 shared facility
-  identity, reconciliation, and controlled backfill; (D) use that projection
-  across every named reviewer/export surface; (E) Issue #453/#477 source-to-
-  screen and read-only-first operator reconciliation; (F) Issue #478 separate
-  refresh workflows, locking, attempts, checkpoints, recovery, retry, and
-  notification; and (G) deployment, automated Hosted acceptance, final
-  documentation, final SHA, and release tag. Safe parallel implementation may
-  begin only after the Phase C identity and reconciliation contract is merged.
+  program/ArcGIS snapshots and source lifecycle; (C) extend Issue #482's shared
+  facility identity, reconciliation, and controlled backfill to the approved
+  ArcGIS supplement; (D) verify that ArcGIS extension across the named
+  reviewer/export surfaces already migrated under #522/#523; (E) extend Issue
+  #453 coverage through the completed #477 read-only operator boundary, with any
+  new ArcGIS-specific operator capability separately authorized; (F) Issue #478
+  separate refresh workflows, locking, attempts, checkpoints, recovery, retry,
+  and notification; and (G) deployment, automated Hosted acceptance, final
+  documentation, final SHA, and release tag. The exact next repository issue is
+  #518. Safe parallel implementation may begin only after the ArcGIS-specific
+  Phase C identity and reconciliation contract is merged.
 - Use Issue #453's v1 producer and Issue #477's read-only dashboard through the
   completed production-auth/runtime-package bridge while preserving explicit
   fixture, runtime, and unavailable evidence labels. Hosted acceptance still
   requires deployment by the human QNAP operator and a user-approved ephemeral
-  Cloudflare assertion provider. Issue #477 is repository-complete for its
-  supported read-only dashboard and can close after its completion evidence
-  merges. Any later operational or mutation phase requires separate issue
+  Cloudflare assertion provider. Issue #477 is closed and repository-complete
+  for its supported read-only dashboard. Any later operational or mutation
+  phase requires separate issue
   authority; do not infer retry, apply, cancel, resume, backfill, persistence,
   scheduling, retrieval/import, job/checkpoint mutation, deployment, or
   retention authority from the completed read-only bridge.

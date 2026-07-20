@@ -354,11 +354,12 @@ not be described or tagged as the final Build Week release. Phase A merged at
 **SUPPLEMENT** decision. Build Week completion therefore includes the complete
 governed dual-source ArcGIS facility-reference supplement sequence in the
 [ArcGIS facility-reference completion plan](docs/planning/build-week-2026-arcgis-facility-reference-completion-plan.md):
-separate immutable program and ArcGIS snapshots, one facility identity and
-reconciliation projection, controlled PostgreSQL backfill, shared downstream
-consumers, source-to-screen and operator reconciliation, separate governed
-refresh workflows with checkpoint recovery, production deployment, and
-automated Hosted acceptance.
+separate immutable program and ArcGIS snapshots; ArcGIS-specific extension of
+the shared facility identity, reconciliation, controlled backfill, and downstream
+consumer work already completed for eligible program-reference data under
+#521-#523; source-to-screen and operator reconciliation; separate governed refresh
+workflows with checkpoint recovery; production deployment; and automated Hosted
+acceptance.
 
 Until every required phase is merged, deployed, and accepted, the final Build
 Week SHA remains pending and tag `openai-build-week-2026` must not be moved to
@@ -390,8 +391,10 @@ sources. Issue #490 remains completed historical evaluation evidence, and the
 governed Phase A evaluation under #516 now establishes **SUPPLEMENT**: the
 program-specific snapshots remain the primary source family while ArcGIS is a
 separately versioned current-reference supplement. The final Build Week release
-must add the remaining dual-source implementation without inventing a
-descriptive label for raw type value `733`.
+must add the remaining ArcGIS-specific dual-source implementation without
+inventing a descriptive label for raw type value `733`. The original #516
+replacement premise is superseded by this merged decision; it is not an
+authorization to cut over, activate, or backfill ArcGIS.
 
 These changes transformed RecordsTracker from a promising early application into a substantially more complete public-record intelligence platform.
 

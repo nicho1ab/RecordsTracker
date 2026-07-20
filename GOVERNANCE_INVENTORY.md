@@ -180,11 +180,13 @@
   numbers across 286 rows. Query/export values differ on 47 shared Facility
   IDs. Program sources have 68,526 unique nonblank Facility IDs: 27,831 shared,
   1,883 ArcGIS-only, and 40,695 program-only. The remaining sequence is Issue
-  #518 source-specific snapshots; Issue #482 identity/reconciliation and
-  controlled backfill; shared downstream projection; Issue #453/#477 coverage
-  and read-only-first operator reconciliation; Issue #478 separate refresh
-  workflows; then deployment, automated Hosted acceptance, final documentation,
-  final SHA, and release tag. See the
+  #518 source-specific snapshots; ArcGIS-specific extension of Issue #482's
+  identity/reconciliation and controlled backfill plus the downstream projection
+  work completed under #521-#523; Issue #453 coverage through the completed #477
+  read-only operator boundary; Issue #478 separate refresh workflows; then
+  deployment, automated Hosted acceptance, final documentation, final SHA, and
+  release tag. The original #516 replacement premise is superseded by the merged
+  **SUPPLEMENT** decision, and #518 is the exact next repository issue. See the
   [Build Week ArcGIS facility-reference completion plan](docs/planning/build-week-2026-arcgis-facility-reference-completion-plan.md).
 - Dual-source preservation rule: program-specific snapshots remain primary;
   ArcGIS snapshots remain separate and supplementary. Neither source overwrites
@@ -216,6 +218,12 @@
   job/checkpoint mutation, deployment, Hosted execution, and retention
   automation remain separately governed or human-controlled and are not
   approved by the completed dashboard scope.
+- Shared facility projection status: #521 established the governed read-only
+  projection for eligible existing program-reference and complaint-linked data;
+  #522 migrated the named reviewer surfaces; and #523 aligned the governed
+  exports and bounded existing backfill. Those issues are complete, but none
+  consumed or activated ArcGIS. ArcGIS-specific reconciliation, provenance,
+  backfill, and cross-surface evidence remain future #482 work after #518.
 
 ## Completed ADR decisions
 
