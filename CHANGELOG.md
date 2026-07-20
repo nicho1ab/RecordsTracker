@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Added the governed development-loop label taxonomy for Issue #530, including
+  fail-closed eligibility and conflict rules, human authority, a deterministic
+  machine-readable contract, an idempotent GitHub CLI create/update and verify
+  script, and automated tests. The labels provide routing metadata only and do
+  not start work, grant capabilities, select issues, merge, or deploy.
 - Completed the repository evidence for Issue #477's supported read-only
   operator source-coverage dashboard. The merged dashboard/runtime bridge
   already provides authorization-before-read, operator/reviewer separation,
