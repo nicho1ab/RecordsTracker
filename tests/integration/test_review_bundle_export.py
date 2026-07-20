@@ -47,6 +47,7 @@ def test_export_review_bundle_writes_source_traceable_csvs(tmp_path: Path) -> No
     assert manifest["date_dimension"] == "complaint_received_date"
     assert manifest["explicit_limit"] is None
     assert manifest["truncated"] is False
+    assert "shared governed projection" in manifest["facility_identity_contract"]
     assert len(manifest["exports"]) == len(exported_paths)
     complaint_manifest = next(
         item
@@ -67,6 +68,10 @@ def test_export_review_bundle_writes_source_traceable_csvs(tmp_path: Path) -> No
     assert complaint_rows[0]["connector_version"] == "0.1.0"
     assert complaint_rows[0]["retrieved_at"] == "2026-06-10T00:00:00+00:00"
     assert complaint_rows[0]["report_index"] == "3"
+    assert complaint_rows[0]["facility_identity_context"] == "Complaint-time record"
+    assert complaint_rows[0]["facility_identity_conflicts"] == (
+        "No conflicting source values"
+    )
     assert complaint_rows[0]["first_investigation_activity_date"] == "2022-04-14"
     assert complaint_rows[0][
         "Days from Complaint Received to First Investigation Activity"
@@ -115,6 +120,13 @@ def test_export_review_bundle_writes_source_traceable_csvs(tmp_path: Path) -> No
     assert comparison_rows[0]["comparison_scope_note"] == (
         "screening aid; verify source records before citing"
     )
+    for exported_file in result.files:
+        with exported_file.path.open("r", encoding="utf-8", newline="") as csv_file:
+            headers = csv.DictReader(csv_file).fieldnames or []
+        assert "facility_number" in headers
+        assert "facility_identity_context" in headers
+        assert "facility_identity_conflicts" in headers
+        assert "facility_id" not in headers
 
 
 def test_export_review_bundle_writes_accessible_review_notes(tmp_path: Path) -> None:

@@ -8,6 +8,13 @@ from typing import Any, cast
 from sqlalchemy import inspect, select
 from sqlalchemy.engine import Connection
 
+from ccld_complaints.hosted_app.facility_identity_projection import (
+    FacilityProjectionField,
+    FacilityProjectionSourceAvailability,
+    FacilitySourceKind,
+    facility_projection_candidate_from_values,
+    project_facility_identity,
+)
 from ccld_complaints.hosted_app.facility_reference_preload import (
     FACILITY_REFERENCE_DATASET_SLUG,
     FACILITY_REFERENCE_TABLE_NAME,
@@ -17,6 +24,13 @@ from ccld_complaints.source_profiling import FACILITY_SOURCE_REGISTRY
 
 FACILITY_REFERENCE_EXTRACTION_METHOD = "approved_ccld_facility_reference"
 FACILITY_REFERENCE_FIELD_NAMES = ("facility_type", "county", "status")
+_REFERENCE_PROJECTION_FIELDS = {
+    "facility_type": FacilityProjectionField.FACILITY_TYPE,
+    "county": FacilityProjectionField.COUNTY,
+    "status": FacilityProjectionField.STATUS,
+}
+_REFERENCE_FIELD_PROVENANCE_KEY = "_projection_field_provenance"
+_REFERENCE_CONFLICTS_KEY = "_projection_reference_conflicts"
 _UNSAFE_REFERENCE_MARKERS = frozenset(
     {"fixture", "mock", "synthetic", "sample", "tiny", "test-only", "test_only"}
 )
@@ -87,10 +101,41 @@ def prepare_ccld_hosted_source_records(
             raise ValueError("CCLD hosted refresh extraction_audit must be a list.")
         provenance: dict[str, Any] = {}
         conflicts: list[dict[str, Any]] = []
+        projection_conflicts = reference.get(_REFERENCE_CONFLICTS_KEY)
+        if isinstance(projection_conflicts, Mapping):
+            for field_name in FACILITY_REFERENCE_FIELD_NAMES:
+                conflict_values = projection_conflicts.get(field_name)
+                if not isinstance(conflict_values, Sequence) or isinstance(
+                    conflict_values, str
+                ):
+                    continue
+                conflict_count += 1
+                conflicts.append(
+                    {
+                        "field_name": field_name,
+                        "report_or_existing_value": _optional_text(
+                            facility, field_name
+                        ),
+                        "facility_reference_values": list(conflict_values),
+                        "resolution": "unresolved_same_precedence_reference_conflict",
+                    }
+                )
+                warnings.append(
+                    "Eligible approved facility-reference rows disagree; the shared "
+                    "projection left one canonical allocation field unchanged."
+                )
+        field_provenance = reference.get(_REFERENCE_FIELD_PROVENANCE_KEY)
         for field_name in FACILITY_REFERENCE_FIELD_NAMES:
             incoming = _optional_text(reference, field_name)
             if incoming is None:
                 continue
+            source_reference = (
+                field_provenance.get(field_name)
+                if isinstance(field_provenance, Mapping)
+                else None
+            )
+            if not isinstance(source_reference, Mapping):
+                source_reference = reference
             previous = facility.get(field_name)
             conflict = _nonblank(previous) and str(previous).strip() != incoming
             if conflict:
@@ -102,26 +147,34 @@ def prepare_ccld_hosted_source_records(
                         "facility_reference_value": incoming,
                         "resolution": "approved_facility_reference_precedence",
                         "source_resource_id": _required_text(
-                            reference, "source_resource_id"
+                            source_reference, "source_resource_id"
                         ),
                         "source_dataset_slug": _required_text(
-                            reference, "source_dataset_slug"
+                            source_reference, "source_dataset_slug"
                         ),
                         "source_field": f"{FACILITY_REFERENCE_TABLE_NAME}.{field_name}",
-                        "snapshot_date": _optional_text(reference, "snapshot_date"),
+                        "snapshot_date": _optional_text(
+                            source_reference, "snapshot_date"
+                        ),
                         "source_accessed_at": _required_text(
-                            reference, "source_accessed_at"
+                            source_reference, "source_accessed_at"
                         ),
                     }
                 )
             facility[field_name] = incoming
             provenance[field_name] = {
                 "source_kind": "approved_facility_reference",
-                "source_resource_id": _required_text(reference, "source_resource_id"),
-                "source_dataset_slug": _required_text(reference, "source_dataset_slug"),
+                "source_resource_id": _required_text(
+                    source_reference, "source_resource_id"
+                ),
+                "source_dataset_slug": _required_text(
+                    source_reference, "source_dataset_slug"
+                ),
                 "source_field": f"{FACILITY_REFERENCE_TABLE_NAME}.{field_name}",
-                "snapshot_date": _optional_text(reference, "snapshot_date"),
-                "source_accessed_at": _required_text(reference, "source_accessed_at"),
+                "snapshot_date": _optional_text(source_reference, "snapshot_date"),
+                "source_accessed_at": _required_text(
+                    source_reference, "source_accessed_at"
+                ),
             }
             audits.append(
                 {
@@ -142,7 +195,7 @@ def prepare_ccld_hosted_source_records(
                     ),
                 }
             )
-        if provenance:
+        if provenance or conflicts:
             record["hosted_refresh"] = {
                 "facility_field_provenance": provenance,
                 "facility_reference_conflicts": conflicts,
@@ -223,6 +276,8 @@ def _approved_reference_rows(
 def _merge_reference_candidates(
     candidates: Sequence[Mapping[str, Any]],
 ) -> Mapping[str, Any]:
+    """Adapt approved rows to the shared projection without selecting locally."""
+
     ordered = sorted(
         candidates,
         key=lambda row: (
@@ -233,15 +288,55 @@ def _merge_reference_candidates(
         reverse=True,
     )
     selected = dict(ordered[0])
-    for field_name in FACILITY_REFERENCE_FIELD_NAMES:
-        selected[field_name] = next(
-            (
-                str(row[field_name]).strip()
-                for row in ordered
-                if _nonblank(row.get(field_name))
-            ),
-            None,
+    facility_number = _required_text(selected, "facility_number")
+    row_by_identity: dict[str, Mapping[str, Any]] = {}
+    projection_candidates = []
+    for row in ordered:
+        source_resource_id = _required_text(row, "source_resource_id")
+        row_identity = f"{source_resource_id}:{facility_number}"
+        row_by_identity[row_identity] = row
+        projection_candidates.append(
+            facility_projection_candidate_from_values(
+                row,
+                source_kind=FacilitySourceKind.PROGRAM_REFERENCE,
+                source_row_identity=row_identity,
+                snapshot_identity=(
+                    f"{source_resource_id}:"
+                    f"{str(row.get('snapshot_date') or row.get('source_accessed_at') or '')}"
+                ),
+                observed_at=_optional_text(row, "source_accessed_at"),
+            )
         )
+    projection = project_facility_identity(
+        facility_number,
+        projection_candidates,
+        availability=FacilityProjectionSourceAvailability(
+            program_reference=True,
+            complaint_linked_facility=False,
+        ),
+    )
+    field_provenance: dict[str, Mapping[str, Any]] = {}
+    projection_conflicts: dict[str, tuple[str, ...]] = {}
+    for field_name, projection_field in _REFERENCE_PROJECTION_FIELDS.items():
+        result = projection.field(projection_field)
+        if result.conflict:
+            projection_conflicts[field_name] = tuple(
+                dict.fromkeys(
+                    str(alternative.raw_value)
+                    for alternative in result.alternatives
+                    if alternative.raw_value is not None
+                )
+            )
+        selected[field_name] = (
+            str(result.display_value) if result.display_value is not None else None
+        )
+        source_identity = result.source_identity
+        if source_identity is not None:
+            field_provenance[field_name] = row_by_identity[
+                source_identity.source_row_identity
+            ]
+    selected[_REFERENCE_FIELD_PROVENANCE_KEY] = field_provenance
+    selected[_REFERENCE_CONFLICTS_KEY] = projection_conflicts
     return selected
 
 

@@ -14,6 +14,7 @@ param(
     [string]$Operation = "all",
     [ValidateRange(1, 1000)]
     [int]$BatchSize = 100,
+    [int]$MaxFacilities = 0,
     [string]$CheckpointFile,
     [switch]$Restart,
     [switch]$Apply,
@@ -31,8 +32,23 @@ if ($selectionCount -ne 1) {
 if ($Apply -and $DryRun) {
     throw "Use either -Apply or -DryRun, not both. Omit both for dry-run."
 }
+if ($MaxFacilities -lt 0 -or $MaxFacilities -gt 1000) {
+    throw "-MaxFacilities must be between 1 and 1000 when provided."
+}
+if ($Apply -and $MaxFacilities -eq 0) {
+    throw "-Apply requires an explicit -MaxFacilities bound."
+}
+if ($Apply -and [string]::IsNullOrWhiteSpace($CheckpointFile)) {
+    throw "-Apply requires -CheckpointFile for durable recovery."
+}
+if ($Apply -and $Operation -ne "facility-reference") {
+    throw "-Apply supports only -Operation facility-reference."
+}
 
 $arguments = @("scripts/backfill_hosted_ccld_data.py", "--operation", $Operation, "--batch-size", "$BatchSize")
+if ($MaxFacilities -gt 0) {
+    $arguments += @("--max-facilities", "$MaxFacilities")
+}
 if ($AllExisting) {
     $arguments += "--all-existing"
 }

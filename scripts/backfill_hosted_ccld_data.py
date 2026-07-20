@@ -42,6 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
         default="all",
     )
     parser.add_argument("--batch-size", type=int, default=100)
+    parser.add_argument("--max-facilities", type=int)
     parser.add_argument("--checkpoint-file", type=Path)
     parser.add_argument("--restart", action="store_true")
     mode = parser.add_mutually_exclusive_group()
@@ -62,6 +63,7 @@ def main(argv: list[str] | None = None) -> int:
             apply_changes=bool(args.apply),
             checkpoint_file=args.checkpoint_file,
             restart=bool(args.restart),
+            max_facilities=args.max_facilities,
         )
         with open_configured_facility_reference_connection() as connection:
             result = run_ccld_hosted_backfill(connection, request)
@@ -83,8 +85,11 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Hosted CCLD backfill mode: {mode}")
     print(
         "Totals: "
+        f"candidates={result.candidates}, "
+        f"excluded={result.excluded}, "
         f"examined={result.examined}, "
         f"eligible={result.eligible}, "
+        f"intended_updates={result.intended_updates}, "
         f"updated={result.updated}, "
         f"unchanged={result.unchanged}, "
         f"skipped={result.skipped}, "
@@ -123,6 +128,9 @@ def _safe_error(error: Exception) -> str:
         "Facility-reference configuration",
         "Hosted source-derived tables",
         "batch_size",
+        "max_facilities",
+        "explicit max_facilities",
+        "approved facility-reference canonical allocation",
         "Facility numbers",
         "At least one facility number",
         "checkpoint",

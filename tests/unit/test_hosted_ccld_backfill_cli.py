@@ -39,8 +39,11 @@ def test_cli_defaults_to_dry_run_and_prints_only_safe_aggregates(
         captured_request.append(request)
         return CcldHostedBackfillResult(
             apply_changes=False,
+            candidates=2,
+            excluded=1,
             examined=1,
             eligible=1,
+            intended_updates=1,
             updated=1,
             unchanged=0,
             skipped=0,
@@ -59,6 +62,9 @@ def test_cli_defaults_to_dry_run_and_prints_only_safe_aggregates(
     assert connection.rollbacks == 1
     assert "mode: dry-run" in output
     assert "examined=1" in output
+    assert "candidates=2" in output
+    assert "excluded=1" in output
+    assert "intended_updates=1" in output
     assert "no live calls" in output
     assert "https://" not in output
     assert "COMPLAINT INVESTIGATION REPORT" not in output
@@ -91,7 +97,19 @@ def test_cli_apply_commits_and_failure_exit_is_nonzero(
         ),
     )
 
-    assert cli.main(["--facility-number", "425802141", "--apply"]) == 1
+    assert cli.main(
+        [
+            "--facility-number",
+            "425802141",
+            "--apply",
+            "--operation",
+            "facility-reference",
+            "--checkpoint-file",
+            "checkpoint.json",
+            "--max-facilities",
+            "1",
+        ]
+    ) == 1
     assert connection.commits == 1
     assert connection.rollbacks == 0
     assert "failed=1" in capsys.readouterr().out
@@ -110,6 +128,7 @@ def test_powershell_wrapper_exposes_bounded_restartable_interface() -> None:
         "$AllExisting",
         "$Operation",
         "$BatchSize",
+        "$MaxFacilities",
         "$CheckpointFile",
         "$Restart",
         "$Apply",

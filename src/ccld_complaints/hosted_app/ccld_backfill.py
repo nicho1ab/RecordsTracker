@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -36,6 +38,7 @@ class CcldHostedBackfillRequest:
     apply_changes: bool = False
     checkpoint_file: Path | None = None
     restart: bool = False
+    max_facilities: int | None = None
 
 
 @dataclass(frozen=True)
@@ -49,6 +52,16 @@ class CcldHostedBackfillResult:
     conflicted: int
     warnings: int
     failed: int
+    candidates: int = 0
+    excluded: int = 0
+    intended_updates: int = 0
+
+
+@dataclass
+class _BackfillCheckpoint:
+    selected_facility_numbers: tuple[str, ...]
+    completed_facility_numbers: set[str]
+    failed_attempts: dict[str, int]
 
 
 def run_ccld_hosted_backfill(
@@ -58,28 +71,67 @@ def run_ccld_hosted_backfill(
     now: datetime | None = None,
 ) -> CcldHostedBackfillResult:
     _validate_request(connection, request)
-    selected = _selected_facilities(connection, request)
-    completed = _load_checkpoint(request)
+    selected, candidate_count, selection_conflicts, missing_count = _selected_facilities(
+        connection, request
+    )
+    selected_by_number = dict(selected)
+    checkpoint = _load_checkpoint(request)
+    new_checkpoint = checkpoint is None
+    frozen_selection_excluded = 0
+    if checkpoint is not None:
+        unavailable = tuple(
+            value
+            for value in checkpoint.selected_facility_numbers
+            if value not in selected_by_number
+        )
+        if unavailable:
+            raise ValueError(
+                "Backfill checkpoint selection is no longer available; restart is required."
+            )
+        selected = tuple(
+            (value, selected_by_number[value])
+            for value in checkpoint.selected_facility_numbers
+        )
+        frozen_selection_excluded = len(selected_by_number) - len(selected)
+    else:
+        checkpoint = _BackfillCheckpoint(
+            selected_facility_numbers=tuple(value for value, _row in selected),
+            completed_facility_numbers=set(),
+            failed_attempts={},
+        )
+    completed = checkpoint.completed_facility_numbers
     pending = tuple(item for item in selected if item[0] not in completed)
+    limit = request.max_facilities or len(pending)
+    active_pending = pending[:limit]
+    deferred_count = len(pending) - len(active_pending)
     if request.apply_changes and _uses_facility_reference(request.operation):
         validate_approved_facility_reference_configuration(
             connection,
-            tuple(facility_number for facility_number, _facility in pending),
+            tuple(facility_number for facility_number, _facility in active_pending),
         )
+    if request.apply_changes and new_checkpoint:
+        _write_checkpoint(request, checkpoint)
 
     counts = {
         "examined": 0,
         "eligible": 0,
         "updated": 0,
         "unchanged": 0,
-        "skipped": len(selected) - len(pending),
-        "conflicted": 0,
+        "skipped": (
+            len(selected)
+            - len(pending)
+            + missing_count
+            + selection_conflicts
+            + deferred_count
+            + frozen_selection_excluded
+        ),
+        "conflicted": selection_conflicts,
         "warnings": 0,
         "failed": 0,
     }
     active_now = now or datetime.now(UTC)
-    for offset in range(0, len(pending), request.batch_size):
-        batch = pending[offset : offset + request.batch_size]
+    for offset in range(0, len(active_pending), request.batch_size):
+        batch = active_pending[offset : offset + request.batch_size]
         for facility_number, facility_row in batch:
             counts["examined"] += 1
             transaction = connection.begin_nested()
@@ -95,6 +147,7 @@ def run_ccld_hosted_backfill(
                     transaction.rollback()
                 else:
                     transaction.commit()
+                    connection.commit()
                 counts["eligible"] += int(outcome["eligible"])
                 counts["updated"] += int(outcome["updated"])
                 counts["unchanged"] += int(outcome["unchanged"])
@@ -103,15 +156,32 @@ def run_ccld_hosted_backfill(
                 counts["warnings"] += int(outcome["warnings"])
                 if request.apply_changes:
                     completed.add(facility_number)
-                    _write_checkpoint(request.checkpoint_file, completed)
+                    checkpoint.failed_attempts.pop(facility_number, None)
+                    _write_checkpoint(request, checkpoint)
             except Exception:
-                transaction.rollback()
+                if transaction.is_active:
+                    transaction.rollback()
+                else:
+                    connection.rollback()
                 counts["failed"] += 1
+                if request.apply_changes:
+                    checkpoint.failed_attempts[facility_number] = (
+                        checkpoint.failed_attempts.get(facility_number, 0) + 1
+                    )
+                    _write_checkpoint(request, checkpoint)
 
     return CcldHostedBackfillResult(
         apply_changes=request.apply_changes,
+        candidates=candidate_count,
+        excluded=(
+            missing_count
+            + selection_conflicts
+            + deferred_count
+            + frozen_selection_excluded
+        ),
         examined=counts["examined"],
         eligible=counts["eligible"],
+        intended_updates=counts["updated"],
         updated=counts["updated"],
         unchanged=counts["unchanged"],
         skipped=counts["skipped"],
@@ -373,7 +443,12 @@ def _deduplicate_facility_projections(
 def _selected_facilities(
     connection: Connection,
     request: CcldHostedBackfillRequest,
-) -> tuple[tuple[str, Mapping[str, Any]], ...]:
+) -> tuple[
+    tuple[tuple[str, Mapping[str, Any]], ...],
+    int,
+    int,
+    int,
+]:
     rows = tuple(
         dict(row)
         for row in connection.execute(
@@ -383,15 +458,24 @@ def _selected_facilities(
         ).mappings()
     )
     requested = set(request.facility_numbers)
-    selected: list[tuple[str, Mapping[str, Any]]] = []
+    candidates_by_number: dict[str, list[Mapping[str, Any]]] = {}
     for row in rows:
         values = cast(Mapping[str, Any], row["original_values"])
         facility_number = _optional_text(values.get("external_facility_number"))
         if facility_number is None:
             continue
         if request.all_existing or facility_number in requested:
-            selected.append((facility_number, row))
-    return tuple(selected)
+            candidates_by_number.setdefault(facility_number, []).append(row)
+    selected = tuple(
+        (facility_number, candidates[0])
+        for facility_number, candidates in sorted(candidates_by_number.items())
+        if len(candidates) == 1
+    )
+    ambiguous_count = sum(
+        len(candidates) > 1 for candidates in candidates_by_number.values()
+    )
+    missing_count = 0 if request.all_existing else len(requested - candidates_by_number.keys())
+    return selected, len(candidates_by_number), ambiguous_count, missing_count
 
 
 def _backfill_artifact(
@@ -461,31 +545,100 @@ def _validate_request(connection: Connection, request: CcldHostedBackfillRequest
         raise ValueError("Facility numbers must contain digits only.")
     if request.restart and request.checkpoint_file is None:
         raise ValueError("restart requires a checkpoint file.")
+    if request.max_facilities is not None and not 1 <= request.max_facilities <= 1000:
+        raise ValueError("max_facilities must be between 1 and 1000.")
+    if request.apply_changes and request.checkpoint_file is None:
+        raise ValueError("apply requires a durable checkpoint file.")
+    if request.apply_changes and request.max_facilities is None:
+        raise ValueError("apply requires an explicit max_facilities bound.")
+    if request.apply_changes and request.operation != "facility-reference":
+        raise ValueError(
+            "apply supports only the approved facility-reference canonical allocation."
+        )
 
 
-def _load_checkpoint(request: CcldHostedBackfillRequest) -> set[str]:
+def _load_checkpoint(request: CcldHostedBackfillRequest) -> _BackfillCheckpoint | None:
     path = request.checkpoint_file
     if path is None or request.restart or not path.exists():
-        return set()
+        return None
     loaded = json.loads(path.read_text(encoding="utf-8"))
-    values = loaded.get("completed_facility_numbers") if isinstance(loaded, dict) else None
-    if not isinstance(values, list) or any(not isinstance(value, str) for value in values):
+    if not isinstance(loaded, dict) or loaded.get("version") != 2:
         raise ValueError("Backfill checkpoint is not valid.")
-    return set(values)
-
-
-def _write_checkpoint(path: Path | None, completed: set[str]) -> None:
-    if path is None:
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(
-            {"version": 1, "completed_facility_numbers": sorted(completed)},
-            indent=2,
+    if loaded.get("operation") != request.operation:
+        raise ValueError("Backfill checkpoint operation does not match the request.")
+    selector = loaded.get("request_selector")
+    if selector != _checkpoint_request_selector(request):
+        raise ValueError("Backfill checkpoint selection does not match the request.")
+    selected = loaded.get("selected_facility_numbers")
+    completed = loaded.get("completed_facility_numbers")
+    failed = loaded.get("failed_attempts")
+    if (
+        not isinstance(selected, list)
+        or not isinstance(completed, list)
+        or not isinstance(failed, dict)
+        or any(not isinstance(value, str) or not value.isdigit() for value in selected)
+        or any(not isinstance(value, str) or value not in selected for value in completed)
+        or any(
+            not isinstance(key, str)
+            or key not in selected
+            or not isinstance(value, int)
+            or value < 1
+            for key, value in failed.items()
         )
-        + "\n",
-        encoding="utf-8",
+    ):
+        raise ValueError("Backfill checkpoint is not valid.")
+    return _BackfillCheckpoint(
+        selected_facility_numbers=tuple(selected),
+        completed_facility_numbers=set(completed),
+        failed_attempts=dict(failed),
     )
+
+
+def _write_checkpoint(
+    request: CcldHostedBackfillRequest,
+    checkpoint: _BackfillCheckpoint,
+) -> None:
+    path = request.checkpoint_file
+    if path is None:
+        raise ValueError("Apply-mode backfill requires a durable checkpoint file.")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(
+        {
+            "version": 2,
+            "operation": request.operation,
+            "request_selector": _checkpoint_request_selector(request),
+            "selected_facility_numbers": list(checkpoint.selected_facility_numbers),
+            "completed_facility_numbers": sorted(
+                checkpoint.completed_facility_numbers
+            ),
+            "failed_attempts": dict(sorted(checkpoint.failed_attempts.items())),
+        },
+        indent=2,
+        sort_keys=True,
+    )
+    temporary_name: str | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary:
+            temporary_name = temporary.name
+            temporary.write(payload + "\n")
+            temporary.flush()
+            os.fsync(temporary.fileno())
+        os.replace(temporary_name, path)
+    finally:
+        if temporary_name is not None:
+            Path(temporary_name).unlink(missing_ok=True)
+
+
+def _checkpoint_request_selector(request: CcldHostedBackfillRequest) -> list[str]:
+    return ["all_existing"] if request.all_existing else sorted(request.facility_numbers)
 
 
 def _resolved_raw_path(value: str) -> Path:

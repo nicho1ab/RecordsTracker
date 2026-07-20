@@ -73,6 +73,8 @@ def test_serious_topics_worklist_lists_deterministic_categories_without_narrativ
     assert "Source category" in html
     assert "Review topic" in html
     assert "source-derived allegation_category" in html
+    assert "Complaint-time record" in html
+    assert "No conflicting source values" in html
     for expected in (
         "Mistreatment-topic",
         "Care-omission topic",

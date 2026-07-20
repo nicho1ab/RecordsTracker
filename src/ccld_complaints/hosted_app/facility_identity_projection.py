@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from types import MappingProxyType
 from typing import Any, TypeAlias
@@ -324,6 +324,58 @@ def project_facility_identity(
     )
 
 
+def facility_projection_candidate_from_values(
+    values: Mapping[str, Any],
+    *,
+    source_kind: FacilitySourceKind,
+    source_row_identity: str,
+    snapshot_identity: str,
+    observed_at: str | None,
+    canonical_internal_identity: str | None = None,
+) -> FacilityProjectionCandidate:
+    """Adapt an existing governed facility observation to the shared projector.
+
+    Callers provide observation identity and provenance context, while this
+    adapter owns the canonical/reference aliases and field-presence rules. It
+    intentionally does not select a winner or translate presentation wording.
+    """
+
+    aliases: Mapping[FacilityProjectionField, tuple[str, ...]] = (
+        {
+            field: (_REFERENCE_TYPED_COLUMNS[field], *_REFERENCE_FIELD_ALIASES[field])
+            for field in PUBLIC_FACILITY_FIELDS
+        }
+        if source_kind is FacilitySourceKind.PROGRAM_REFERENCE
+        else _CANONICAL_FIELD_ALIASES
+    )
+    candidate_values: dict[FacilityProjectionField, Any] = {}
+    present_fields: set[FacilityProjectionField] = set()
+    source_fields: dict[FacilityProjectionField, str] = {}
+    for field in PUBLIC_FACILITY_FIELDS:
+        source_value = _present_alias_value(values, aliases[field])
+        if source_value is None:
+            continue
+        source_field, value = source_value
+        candidate_values[field] = value
+        present_fields.add(field)
+        source_fields[field] = source_field
+    return FacilityProjectionCandidate(
+        source_kind=source_kind,
+        source_row_identity=_clean_text(source_row_identity),
+        snapshot_identity=_clean_text(snapshot_identity),
+        observed_at=_optional_text(observed_at),
+        context=(
+            FacilityValueContext.CURRENT_REFERENCE
+            if source_kind is FacilitySourceKind.PROGRAM_REFERENCE
+            else FacilityValueContext.HISTORICAL_COMPLAINT
+        ),
+        values=candidate_values,
+        present_fields=frozenset(present_fields),
+        source_fields=source_fields,
+        canonical_internal_identity=canonical_internal_identity,
+    )
+
+
 def load_authorized_facility_identity_projection(
     connection: Connection,
     actor: AuthenticatedActor | None,
@@ -352,6 +404,7 @@ def load_authorized_facility_identity_projections(
     public_facility_ids: Sequence[str],
     import_batch_id: str | None = None,
     allow_test_candidates: bool = False,
+    authorized_source_records: Sequence[SourceDerivedRecordRead] | None = None,
 ) -> Mapping[str, FacilityIdentityProjection]:
     from ccld_complaints.hosted_app.facility_reference_preload import (
         FACILITY_REFERENCE_TABLE_NAME,
@@ -375,14 +428,22 @@ def load_authorized_facility_identity_projections(
         facility_id: [] for facility_id in facility_ids
     }
     complaint_matching_counts = dict.fromkeys(facility_ids, 0)
-    complaint_available = inspector.has_table(hosted_source_derived_records.name)
+    complaint_available = (
+        True
+        if authorized_source_records is not None
+        else inspector.has_table(hosted_source_derived_records.name)
+    )
     if complaint_available:
-        source_records = list_authorized_source_derived_records(
-            connection,
-            actor,
-            scope=scope,
-            entity_type="facility",
-            import_batch_id=import_batch_id,
+        source_records = (
+            authorized_source_records
+            if authorized_source_records is not None
+            else list_authorized_source_derived_records(
+                connection,
+                actor,
+                scope=scope,
+                entity_type="facility",
+                import_batch_id=import_batch_id,
+            )
         )
         facility_id_set = set(facility_ids)
         for record in source_records:
@@ -673,64 +734,57 @@ def _candidate_from_reference_row(
 
     original_values = row.get("original_row_json")
     original = original_values if isinstance(original_values, Mapping) else {}
-    values: dict[FacilityProjectionField, Any] = {}
-    present_fields: set[FacilityProjectionField] = set()
-    source_fields: dict[FacilityProjectionField, str] = {}
+    values: dict[str, Any] = dict(original)
     for field in PUBLIC_FACILITY_FIELDS:
         typed_column = _REFERENCE_TYPED_COLUMNS[field]
         typed_value = row.get(typed_column)
-        source_value = _present_alias_value(original, _REFERENCE_FIELD_ALIASES[field])
         if typed_value is not None:
-            values[field] = typed_value
-            present_fields.add(field)
-            source_fields[field] = f"{FACILITY_REFERENCE_TABLE_NAME}.{typed_column}"
-        elif source_value is not None:
-            source_field, value = source_value
-            values[field] = value
-            present_fields.add(field)
-            source_fields[field] = f"original_row_json.{source_field}"
+            values[_REFERENCE_FIELD_ALIASES[field][0]] = typed_value
     source_resource_id = str(row.get("source_resource_id") or "").strip()
     snapshot_marker = str(row.get("snapshot_date") or row.get("source_accessed_at") or "")
-    return FacilityProjectionCandidate(
+    candidate = facility_projection_candidate_from_values(
+        values,
         source_kind=FacilitySourceKind.PROGRAM_REFERENCE,
         source_row_identity=(
             f"{source_resource_id}:{str(row.get('facility_number') or '').strip()}"
         ),
         snapshot_identity=f"{source_resource_id}:{snapshot_marker}",
         observed_at=_optional_text(row.get("source_accessed_at")),
-        context=FacilityValueContext.CURRENT_REFERENCE,
-        values=values,
-        present_fields=frozenset(present_fields),
-        source_fields=source_fields,
+    )
+    return replace(
+        candidate,
+        source_fields=MappingProxyType(
+            {
+                field: (
+                    f"{FACILITY_REFERENCE_TABLE_NAME}.{_REFERENCE_TYPED_COLUMNS[field]}"
+                    if row.get(_REFERENCE_TYPED_COLUMNS[field]) is not None
+                    else f"original_row_json.{candidate.source_fields[field]}"
+                )
+                for field in candidate.present_fields
+            }
+        ),
     )
 
 
 def _candidate_from_source_record(
     record: SourceDerivedRecordRead,
 ) -> FacilityProjectionCandidate:
-    values: dict[FacilityProjectionField, Any] = {}
-    present_fields: set[FacilityProjectionField] = set()
-    source_fields: dict[FacilityProjectionField, str] = {}
-    for field in PUBLIC_FACILITY_FIELDS:
-        source_value = _present_alias_value(
-            record.original_values,
-            _CANONICAL_FIELD_ALIASES[field],
-        )
-        if source_value is not None:
-            source_field, value = source_value
-            values[field] = value
-            present_fields.add(field)
-            source_fields[field] = f"original_values.{source_field}"
-    return FacilityProjectionCandidate(
+    candidate = facility_projection_candidate_from_values(
+        record.original_values,
         source_kind=FacilitySourceKind.COMPLAINT_LINKED_FACILITY,
         source_row_identity=record.stable_source_id,
         snapshot_identity=record.import_batch.source_artifact_identity,
         observed_at=record.retrieved_at,
-        context=FacilityValueContext.HISTORICAL_COMPLAINT,
-        values=values,
-        present_fields=frozenset(present_fields),
-        source_fields=source_fields,
         canonical_internal_identity=record.source_record_key,
+    )
+    return replace(
+        candidate,
+        source_fields=MappingProxyType(
+            {
+                field: f"original_values.{source_field}"
+                for field, source_field in candidate.source_fields.items()
+            }
+        ),
     )
 
 

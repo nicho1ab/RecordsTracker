@@ -29,6 +29,12 @@ _STATE_TEXT = {
     FacilityValueState.INVALID: "Invalid source value",
 }
 
+_CONTEXT_TEXT = {
+    FacilityValueContext.CURRENT_REFERENCE: "Current facility reference",
+    FacilityValueContext.HISTORICAL_COMPLAINT: "Complaint-time record",
+    FacilityValueContext.INTERNAL: "Internal only",
+}
+
 
 def present_facility_field(result: FacilityFieldResult) -> FacilityFieldPresentation:
     value = result.display_value
@@ -70,3 +76,27 @@ def projected_selected_text(
     return "" if value is None else str(value)
 
 
+def projected_context_text(
+    projection: FacilityIdentityProjection,
+    field: FacilityProjectionField,
+) -> str:
+    context = projection.field(field).context
+    return (
+        _CONTEXT_TEXT[context]
+        if context is not None
+        else "No selected source context"
+    )
+
+
+def projected_conflict_text(
+    projection: FacilityIdentityProjection,
+    fields: tuple[FacilityProjectionField, ...],
+) -> str:
+    notes = tuple(
+        dict.fromkeys(
+            presentation.conflict_note
+            for field in fields
+            if (presentation := present_facility_field(projection.field(field))).conflict_note
+        )
+    )
+    return "; ".join(notes) if notes else "No conflicting source values"

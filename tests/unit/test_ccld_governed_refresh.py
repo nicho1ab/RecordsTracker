@@ -137,6 +137,54 @@ def test_production_refresh_rejects_fixture_reference_provenance() -> None:
             prepare_ccld_hosted_source_records(connection, (_normalized_fixture(),))
 
 
+def test_same_precedence_reference_conflict_is_explicit_and_order_independent() -> None:
+    outcomes: list[tuple[object, ...]] = []
+    references = (
+        (APPROVED_RESOURCE_ID, "Reference Type A"),
+        ("7aed8063-cea7-4367-8651-c81643164ae0", "Reference Type B"),
+    )
+    for ordered in (references, tuple(reversed(references))):
+        engine = create_engine("sqlite+pysqlite:///:memory:")
+        hosted_seeded_import_metadata.create_all(engine)
+        hosted_facility_reference_metadata.create_all(engine)
+        with engine.begin() as connection:
+            for source_resource_id, facility_type in ordered:
+                _insert_reference(
+                    connection,
+                    source_resource_id=source_resource_id,
+                    facility_type=facility_type,
+                )
+            prepared = prepare_ccld_hosted_source_records(
+                connection,
+                (_normalized_fixture(),),
+            )
+        [record] = prepared.records
+        facility = cast(dict[str, Any], record["facility"])
+        refresh = cast(dict[str, Any], record["hosted_refresh"])
+        outcomes.append(
+            (
+                facility["facility_type"],
+                prepared.conflicted_field_count,
+                prepared.warnings,
+                refresh["facility_reference_conflicts"],
+            )
+        )
+
+    assert outcomes[0] == outcomes[1]
+    facility_type, conflict_count, warnings, conflicts = outcomes[0]
+    assert facility_type == "733"
+    assert conflict_count == 1
+    assert "shared projection left one canonical allocation field unchanged" in warnings[0]
+    assert conflicts[0]["field_name"] == "facility_type"
+    assert conflicts[0]["resolution"] == (
+        "unresolved_same_precedence_reference_conflict"
+    )
+    assert set(conflicts[0]["facility_reference_values"]) == {
+        "Reference Type A",
+        "Reference Type B",
+    }
+
+
 def test_hosted_merge_fills_missing_values_preserves_blanks_and_traces_conflicts() -> None:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     hosted_seeded_import_metadata.create_all(engine)
@@ -207,13 +255,15 @@ def _insert_reference(
     connection: Any,
     *,
     source_file_name: str = "24HourResidentialCareforChildren06072026.csv",
+    source_resource_id: str = APPROVED_RESOURCE_ID,
+    facility_type: str = "Children's Residential Facility",
 ) -> None:
     connection.execute(
         hosted_facility_reference_records.insert().values(
-            source_resource_id=APPROVED_RESOURCE_ID,
+            source_resource_id=source_resource_id,
             facility_number="425802141",
             facility_name="GOVERNED REFRESH FIXTURE FACILITY",
-            facility_type="Children's Residential Facility",
+            facility_type=facility_type,
             program_type="Residential",
             client_served=None,
             licensee_name=None,
