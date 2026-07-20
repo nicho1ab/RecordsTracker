@@ -1,12 +1,9 @@
 {
-  "contract_version": "1.0.0",
-  "fixture_kind": "repository_synthetic_fixture",
-  "source_family_id": "arcgis-ccl-facilities-supplement",
-  "observation_kind": "synthetic_query",
-  "recorded_at": "2026-07-20T12:00:00+00:00",
-  "raw_payload_ref": "snapshot-a-raw.json",
-  "raw_payload_sha256": "3f44fd755dba0d2a86fdb2f25bad8c09cf7fd2c0c9a2abe6db7c51dcee0a9aa3",
-  "schema_fields": [
+  "id": 0,
+  "name": "Master_CCL_County_Intersect_2023",
+  "objectIdField": "ObjectId",
+  "maxRecordCount": 1000,
+  "fields": [
     {"name": "FAC_LATITUDE", "type": "esriFieldTypeString", "nullable": true, "domain": null},
     {"name": "FAC_LONGITUDE", "type": "esriFieldTypeString", "nullable": true, "domain": null},
     {"name": "FAC_NBR", "type": "esriFieldTypeInteger", "nullable": true, "domain": null},

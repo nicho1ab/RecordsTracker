@@ -84,7 +84,7 @@ def test_semantic_states_distinguish_null_blank_unavailable_absent_and_invalid()
 
     assert second["source_latitude_raw"]["state"] == "null"
     assert second["program_type_source"]["state"] == "blank"
-    assert second["telephone_source"]["state"] == "unavailable"
+    assert second["telephone_source"]["state"] == "populated"
     assert third["facility_number"]["state"] == "null"
     assert third["county_source"]["state"] == "unavailable"
     assert rejected_row["city_source"]["state"] == "absent"
@@ -158,7 +158,7 @@ def test_snapshot_and_object_id_form_identity_while_facility_number_is_nonunique
     grouped_rows = lifecycle_connection.execute(
         sa.select(source_snapshot_rows).where(
             source_snapshot_rows.c.snapshot_id == first.snapshot_id,
-            source_snapshot_rows.c.facility_number == "SYNTHETIC-GROUP-A",
+            source_snapshot_rows.c.facility_number == "990000001",
         )
     ).mappings().all()
     shared_object_id_rows = lifecycle_connection.execute(

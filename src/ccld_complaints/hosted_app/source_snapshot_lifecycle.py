@@ -27,54 +27,39 @@ from sqlalchemy import (
 )
 from sqlalchemy.engine import Connection
 
+from ccld_complaints.connectors.arcgis_ccl_facilities.contract import (
+    ARCGIS_DATASET_TITLE,
+    ARCGIS_ITEM_ID,
+    ARCGIS_ITEM_URL,
+    ARCGIS_LAYER_ID,
+    ARCGIS_LAYER_NAME,
+    ARCGIS_LAYER_URL,
+    ARCGIS_LICENSE_DESIGNATION,
+    ARCGIS_PUBLISHER,
+    ARCGIS_QUERY_URL,
+    ARCGIS_RAW_FIELDS,
+    ARCGIS_SERVICE_NAME,
+    ARCGIS_SERVICE_URL,
+    ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+    CATALOG_URL,
+    LICENSES_URL,
+    LIVE_QUERY_OBSERVATION_KIND,
+    LIVE_QUERY_SCOPE,
+    SNAPSHOT_CONTRACT_VERSION,
+    live_snapshot_id,
+    normalize_arcgis_source_row,
+    provisional_attribution,
+    validate_arcgis_schema_fields,
+)
+from ccld_complaints.connectors.arcgis_ccl_facilities.contract import (
+    ARCGIS_NORMALIZED_FIELD_SOURCES as _ARCGIS_NORMALIZED_FIELD_SOURCES,
+)
 from ccld_complaints.statewide_facility_source_evaluation import canonical_fingerprint
 
-ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID = "arcgis-ccl-facilities-supplement"
 OFFLINE_FIXTURE_SCOPE = "repository_synthetic_fixture"
 OFFLINE_FIXTURE_NOTICE = "SYNTHETIC TEST DATA - NO REAL FACILITIES"
-SNAPSHOT_CONTRACT_VERSION = "1.0.0"
-
-ARCGIS_RAW_FIELDS = (
-    "FAC_LATITUDE",
-    "FAC_LONGITUDE",
-    "FAC_NBR",
-    "TYPE",
-    "PROGRAM_TYPE",
-    "STATUS",
-    "CLIENT_SERVED",
-    "CAPACITY",
-    "NAME",
-    "RES_STREET_ADDR",
-    "RES_CITY",
-    "RES_STATE",
-    "RES_ZIP_CODE",
-    "FAC_PHONE_NBR",
-    "FAC_CO_NBR",
-    "COUNTY",
-    "FAC_DO_DESC",
-    "FAC_TYPE_DESC",
-    "ObjectId",
-)
-
-ARCGIS_NORMALIZED_FIELD_SOURCES: Mapping[str, str] = {
-    "object_id": "ObjectId",
-    "facility_number": "FAC_NBR",
-    "source_latitude_raw": "FAC_LATITUDE",
-    "source_longitude_raw": "FAC_LONGITUDE",
-    "raw_type_code": "TYPE",
-    "program_type_source": "PROGRAM_TYPE",
-    "raw_status_code": "STATUS",
-    "capacity_source": "CAPACITY",
-    "facility_name_source": "NAME",
-    "street_address_source": "RES_STREET_ADDR",
-    "city_source": "RES_CITY",
-    "state_source": "RES_STATE",
-    "postal_code_source": "RES_ZIP_CODE",
-    "telephone_source": "FAC_PHONE_NBR",
-    "county_source": "COUNTY",
-    "regional_office_source": "FAC_DO_DESC",
-    "facility_type_description_source": "FAC_TYPE_DESC",
-}
+ISOLATED_NONPRODUCTION_SCOPE = "isolated_nonproduction"
+ARCGIS_NORMALIZED_FIELD_SOURCES = _ARCGIS_NORMALIZED_FIELD_SOURCES
 
 _MANIFEST_FIELDS = frozenset(
     {
@@ -88,33 +73,32 @@ _MANIFEST_FIELDS = frozenset(
         "schema_fields",
     }
 )
+_LIVE_MANIFEST_FIELDS = frozenset(
+    {
+        "contract_version",
+        "evidence_kind",
+        "source_family_id",
+        "observation_kind",
+        "snapshot_id",
+        "recorded_at",
+        "accessed_date",
+        "catalog_identity",
+        "source_identity",
+        "provisional_attribution",
+        "raw_payload_ref",
+        "raw_payload_sha256",
+        "normalized_content_sha256",
+        "schema_fingerprint",
+        "domain_fingerprint",
+        "schema_fields",
+        "retrieval_artifacts",
+        "raw_response_set_sha256",
+        "id_evidence",
+        "page_evidence",
+        "validation",
+    }
+)
 _OBSERVATION_KINDS = ("synthetic_query", "synthetic_export")
-_UNAVAILABLE_VALUES = frozenset({"n/a", "na", "not available", "unavailable", "unknown"})
-_INTEGER_FIELDS = frozenset({"ObjectId", "TYPE", "STATUS", "CAPACITY"})
-_NUMBER_FIELDS = frozenset({"FAC_LATITUDE", "FAC_LONGITUDE"})
-_EXPECTED_FIELD_TYPES: Mapping[str, tuple[str, bool]] = {
-    "FAC_LATITUDE": ("esriFieldTypeDouble", True),
-    "FAC_LONGITUDE": ("esriFieldTypeDouble", True),
-    "FAC_NBR": ("esriFieldTypeString", True),
-    "TYPE": ("esriFieldTypeInteger", True),
-    "PROGRAM_TYPE": ("esriFieldTypeString", True),
-    "STATUS": ("esriFieldTypeInteger", True),
-    "CLIENT_SERVED": ("esriFieldTypeString", True),
-    "CAPACITY": ("esriFieldTypeInteger", True),
-    "NAME": ("esriFieldTypeString", True),
-    "RES_STREET_ADDR": ("esriFieldTypeString", True),
-    "RES_CITY": ("esriFieldTypeString", True),
-    "RES_STATE": ("esriFieldTypeString", True),
-    "RES_ZIP_CODE": ("esriFieldTypeString", True),
-    "FAC_PHONE_NBR": ("esriFieldTypeString", True),
-    "FAC_CO_NBR": ("esriFieldTypeString", True),
-    "COUNTY": ("esriFieldTypeString", True),
-    "FAC_DO_DESC": ("esriFieldTypeString", True),
-    "FAC_TYPE_DESC": ("esriFieldTypeString", True),
-    "ObjectId": ("esriFieldTypeOID", False),
-}
-
-SemanticState = Literal["populated", "null", "blank", "absent", "unavailable", "invalid"]
 LifecycleState = Literal["candidate", "validated", "rejected", "accepted"]
 
 source_snapshot_metadata = MetaData()
@@ -148,11 +132,11 @@ source_snapshots = Table(
     Column("rejected_at", String(40), nullable=True),
     Column("accepted_at", String(40), nullable=True),
     CheckConstraint(
-        "fixture_scope = 'repository_synthetic_fixture'",
+        "fixture_scope IN ('repository_synthetic_fixture', 'governed_live_query')",
         name="ck_hosted_source_snapshots_fixture_scope",
     ),
     CheckConstraint(
-        "observation_kind IN ('synthetic_query', 'synthetic_export')",
+        "observation_kind IN ('synthetic_query', 'synthetic_export', 'live_query')",
         name="ck_hosted_source_snapshots_observation_kind",
     ),
     CheckConstraint(
@@ -271,6 +255,7 @@ class OfflineSnapshotLifecycleError(ValueError):
 class SnapshotInspection:
     snapshot_id: str
     source_family_id: str
+    storage_scope: str
     observation_kind: str
     manifest_ref: str
     manifest_sha256: str
@@ -305,10 +290,49 @@ def inspect_arcgis_fixture_package(
     baseline_schema_fingerprint: str | None = None,
     baseline_domain_fingerprint: str | None = None,
 ) -> SnapshotInspection:
+    return _inspect_arcgis_package(
+        manifest_path,
+        storage_scope=OFFLINE_FIXTURE_SCOPE,
+        prior_rows=prior_rows,
+        prior_snapshot_id=prior_snapshot_id,
+        baseline_schema_fingerprint=baseline_schema_fingerprint,
+        baseline_domain_fingerprint=baseline_domain_fingerprint,
+    )
+
+
+def inspect_arcgis_live_query_package(
+    manifest_path: Path,
+    *,
+    execution_scope: str,
+    prior_rows: Sequence[Mapping[str, Any]] = (),
+    prior_snapshot_id: str | None = None,
+    baseline_schema_fingerprint: str | None = None,
+    baseline_domain_fingerprint: str | None = None,
+) -> SnapshotInspection:
+    _require_isolated_nonproduction(execution_scope)
+    return _inspect_arcgis_package(
+        manifest_path,
+        storage_scope=LIVE_QUERY_SCOPE,
+        prior_rows=prior_rows,
+        prior_snapshot_id=prior_snapshot_id,
+        baseline_schema_fingerprint=baseline_schema_fingerprint,
+        baseline_domain_fingerprint=baseline_domain_fingerprint,
+    )
+
+
+def _inspect_arcgis_package(
+    manifest_path: Path,
+    *,
+    storage_scope: str,
+    prior_rows: Sequence[Mapping[str, Any]],
+    prior_snapshot_id: str | None,
+    baseline_schema_fingerprint: str | None,
+    baseline_domain_fingerprint: str | None,
+) -> SnapshotInspection:
     manifest_bytes = manifest_path.read_bytes()
-    manifest = _json_object(manifest_bytes, label="fixture manifest")
+    manifest = _json_object(manifest_bytes, label="snapshot manifest")
     manifest_sha256 = _sha256(manifest_bytes)
-    manifest_rejections = _validate_manifest(manifest)
+    manifest_rejections = _validate_manifest(manifest, storage_scope=storage_scope)
     raw_ref = _required_text(manifest, "raw_payload_ref")
     raw_path = _resolve_fixture_reference(manifest_path, raw_ref)
     raw_bytes = raw_path.read_bytes()
@@ -317,9 +341,12 @@ def inspect_arcgis_fixture_package(
     if raw_sha256 != expected_raw_sha256:
         manifest_rejections.append("raw_payload_sha256 does not match the fixture bytes")
 
-    raw_payload = _json_object(raw_bytes, label="fixture raw payload")
-    if raw_payload.get("fixture_notice") != OFFLINE_FIXTURE_NOTICE:
-        manifest_rejections.append("raw payload is not marked as fictional synthetic data")
+    raw_payload = _json_object(raw_bytes, label="snapshot raw payload")
+    if storage_scope == OFFLINE_FIXTURE_SCOPE:
+        if raw_payload.get("fixture_notice") != OFFLINE_FIXTURE_NOTICE:
+            manifest_rejections.append("raw payload is not marked as fictional synthetic data")
+    elif raw_payload.get("source_kind") != LIVE_QUERY_SCOPE:
+        manifest_rejections.append("raw payload is not marked as a governed live query")
     raw_records = raw_payload.get("records")
     if not isinstance(raw_records, list):
         raise OfflineSnapshotLifecycleError("Fixture raw payload records must be a JSON array.")
@@ -334,7 +361,7 @@ def inspect_arcgis_fixture_package(
         if isinstance(field, Mapping)
     ]
     domain_fingerprint = canonical_fingerprint(domains)
-    schema_rejections = _validate_schema_fields(schema_fields)
+    schema_rejections = validate_arcgis_schema_fields(schema_fields)
     if baseline_schema_fingerprint and schema_fingerprint != baseline_schema_fingerprint:
         schema_rejections.append("schema fingerprint differs from the active accepted snapshot")
     if baseline_domain_fingerprint and domain_fingerprint != baseline_domain_fingerprint:
@@ -361,7 +388,7 @@ def inspect_arcgis_fixture_package(
         if extra:
             row_rejections.append(f"row {row_index} adds fields: {', '.join(extra)}")
 
-        normalized = _normalize_row(raw_record)
+        normalized = normalize_arcgis_source_row(raw_record)
         invalid_fields = sorted(
             field_name
             for field_name, value in normalized.items()
@@ -420,6 +447,15 @@ def inspect_arcgis_fixture_package(
             for row in normalized_rows
         ]
     )
+    if storage_scope == LIVE_QUERY_SCOPE:
+        if manifest.get("normalized_content_sha256") != normalized_content_sha256:
+            manifest_rejections.append(
+                "normalized_content_sha256 does not match the lifecycle normalization"
+            )
+        if manifest.get("schema_fingerprint") != schema_fingerprint:
+            manifest_rejections.append("schema_fingerprint does not match schema_fields")
+        if manifest.get("domain_fingerprint") != domain_fingerprint:
+            manifest_rejections.append("domain_fingerprint does not match schema_fields")
     disappearances = _find_disappearances(
         normalized_rows,
         prior_rows=prior_rows,
@@ -451,16 +487,20 @@ def inspect_arcgis_fixture_package(
         "closure_inferred": False,
         "canonical_or_reviewer_fields_written": False,
     }
-    snapshot_id = "arcgis-fixture-" + canonical_fingerprint(
-        {
-            "source_family_id": ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
-            "manifest_sha256": manifest_sha256,
-            "raw_payload_sha256": raw_sha256,
-        }
-    )[:48]
+    if storage_scope == OFFLINE_FIXTURE_SCOPE:
+        snapshot_id = "arcgis-fixture-" + canonical_fingerprint(
+            {
+                "source_family_id": ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+                "manifest_sha256": manifest_sha256,
+                "raw_payload_sha256": raw_sha256,
+            }
+        )[:48]
+    else:
+        snapshot_id = _required_text(manifest, "snapshot_id")
     return SnapshotInspection(
         snapshot_id=snapshot_id,
         source_family_id=ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+        storage_scope=storage_scope,
         observation_kind=_required_text(manifest, "observation_kind"),
         manifest_ref=manifest_path.name,
         manifest_sha256=manifest_sha256,
@@ -480,6 +520,36 @@ def stage_arcgis_fixture_snapshot(
     connection: Connection,
     manifest_path: Path,
 ) -> SnapshotInspection:
+    return _stage_arcgis_snapshot(
+        connection,
+        manifest_path,
+        storage_scope=OFFLINE_FIXTURE_SCOPE,
+        execution_scope=None,
+    )
+
+
+def stage_arcgis_live_query_snapshot(
+    connection: Connection,
+    manifest_path: Path,
+    *,
+    execution_scope: str,
+) -> SnapshotInspection:
+    _require_isolated_nonproduction(execution_scope)
+    return _stage_arcgis_snapshot(
+        connection,
+        manifest_path,
+        storage_scope=LIVE_QUERY_SCOPE,
+        execution_scope=execution_scope,
+    )
+
+
+def _stage_arcgis_snapshot(
+    connection: Connection,
+    manifest_path: Path,
+    *,
+    storage_scope: str,
+    execution_scope: str | None,
+) -> SnapshotInspection:
     active = _active_snapshot_record(connection, ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID)
     prior_rows: Sequence[Mapping[str, Any]] = ()
     prior_snapshot_id: str | None = None
@@ -498,13 +568,23 @@ def stage_arcgis_fixture_snapshot(
             ).mappings()
         )
 
-    inspection = inspect_arcgis_fixture_package(
-        manifest_path,
-        prior_rows=prior_rows,
-        prior_snapshot_id=prior_snapshot_id,
-        baseline_schema_fingerprint=baseline_schema,
-        baseline_domain_fingerprint=baseline_domain,
-    )
+    if storage_scope == OFFLINE_FIXTURE_SCOPE:
+        inspection = inspect_arcgis_fixture_package(
+            manifest_path,
+            prior_rows=prior_rows,
+            prior_snapshot_id=prior_snapshot_id,
+            baseline_schema_fingerprint=baseline_schema,
+            baseline_domain_fingerprint=baseline_domain,
+        )
+    else:
+        inspection = inspect_arcgis_live_query_package(
+            manifest_path,
+            execution_scope=execution_scope or "",
+            prior_rows=prior_rows,
+            prior_snapshot_id=prior_snapshot_id,
+            baseline_schema_fingerprint=baseline_schema,
+            baseline_domain_fingerprint=baseline_domain,
+        )
     existing = connection.execute(
         select(source_snapshots).where(source_snapshots.c.snapshot_id == inspection.snapshot_id)
     ).mappings().one_or_none()
@@ -518,7 +598,7 @@ def stage_arcgis_fixture_snapshot(
         source_snapshots.insert().values(
             snapshot_id=inspection.snapshot_id,
             source_family_id=inspection.source_family_id,
-            fixture_scope=OFFLINE_FIXTURE_SCOPE,
+            fixture_scope=inspection.storage_scope,
             observation_kind=inspection.observation_kind,
             lifecycle_state="candidate",
             manifest_ref=inspection.manifest_ref,
@@ -559,7 +639,39 @@ def validate_arcgis_fixture_snapshot(
     *,
     validated_at: str,
 ) -> LifecycleState:
+    return _validate_arcgis_snapshot(
+        connection,
+        snapshot_id,
+        expected_scope=OFFLINE_FIXTURE_SCOPE,
+        validated_at=validated_at,
+    )
+
+
+def validate_arcgis_live_query_snapshot(
+    connection: Connection,
+    snapshot_id: str,
+    *,
+    validated_at: str,
+    execution_scope: str,
+) -> LifecycleState:
+    _require_isolated_nonproduction(execution_scope)
+    return _validate_arcgis_snapshot(
+        connection,
+        snapshot_id,
+        expected_scope=LIVE_QUERY_SCOPE,
+        validated_at=validated_at,
+    )
+
+
+def _validate_arcgis_snapshot(
+    connection: Connection,
+    snapshot_id: str,
+    *,
+    expected_scope: str,
+    validated_at: str,
+) -> LifecycleState:
     snapshot = _snapshot_record(connection, snapshot_id)
+    _assert_snapshot_scope(snapshot, expected_scope)
     state = str(snapshot["lifecycle_state"])
     if state != "candidate":
         raise OfflineSnapshotLifecycleError(
@@ -586,7 +698,39 @@ def accept_arcgis_fixture_snapshot(
     *,
     accepted_at: str,
 ) -> None:
+    _accept_arcgis_snapshot(
+        connection,
+        snapshot_id,
+        expected_scope=OFFLINE_FIXTURE_SCOPE,
+        accepted_at=accepted_at,
+    )
+
+
+def accept_arcgis_live_query_snapshot(
+    connection: Connection,
+    snapshot_id: str,
+    *,
+    accepted_at: str,
+    execution_scope: str,
+) -> None:
+    _require_isolated_nonproduction(execution_scope)
+    _accept_arcgis_snapshot(
+        connection,
+        snapshot_id,
+        expected_scope=LIVE_QUERY_SCOPE,
+        accepted_at=accepted_at,
+    )
+
+
+def _accept_arcgis_snapshot(
+    connection: Connection,
+    snapshot_id: str,
+    *,
+    expected_scope: str,
+    accepted_at: str,
+) -> None:
     snapshot = _snapshot_record(connection, snapshot_id)
+    _assert_snapshot_scope(snapshot, expected_scope)
     state = str(snapshot["lifecycle_state"])
     if state == "accepted":
         return
@@ -607,8 +751,39 @@ def promote_arcgis_fixture_snapshot(
     *,
     promoted_at: str,
 ) -> SnapshotPointer:
+    return _promote_arcgis_snapshot(
+        connection,
+        snapshot_id,
+        expected_scope=OFFLINE_FIXTURE_SCOPE,
+        promoted_at=promoted_at,
+    )
+
+
+def promote_arcgis_live_query_snapshot(
+    connection: Connection,
+    snapshot_id: str,
+    *,
+    promoted_at: str,
+    execution_scope: str,
+) -> SnapshotPointer:
+    _require_isolated_nonproduction(execution_scope)
+    return _promote_arcgis_snapshot(
+        connection,
+        snapshot_id,
+        expected_scope=LIVE_QUERY_SCOPE,
+        promoted_at=promoted_at,
+    )
+
+
+def _promote_arcgis_snapshot(
+    connection: Connection,
+    snapshot_id: str,
+    *,
+    expected_scope: str,
+    promoted_at: str,
+) -> SnapshotPointer:
     snapshot = _snapshot_record(connection, snapshot_id)
-    _assert_accepted_arcgis_snapshot(snapshot)
+    _assert_accepted_arcgis_snapshot(snapshot, expected_scope=expected_scope)
     pointer = _pointer_record(connection, ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID)
     if pointer is None:
         connection.execute(
@@ -653,6 +828,40 @@ def rollback_arcgis_fixture_snapshot(
     expected_active_snapshot_id: str,
     rolled_back_at: str,
 ) -> SnapshotPointer:
+    return _rollback_arcgis_snapshot(
+        connection,
+        expected_active_snapshot_id=expected_active_snapshot_id,
+        expected_active_scope=OFFLINE_FIXTURE_SCOPE,
+        expected_prior_scope=OFFLINE_FIXTURE_SCOPE,
+        rolled_back_at=rolled_back_at,
+    )
+
+
+def rollback_arcgis_live_query_snapshot(
+    connection: Connection,
+    *,
+    expected_active_snapshot_id: str,
+    rolled_back_at: str,
+    execution_scope: str,
+) -> SnapshotPointer:
+    _require_isolated_nonproduction(execution_scope)
+    return _rollback_arcgis_snapshot(
+        connection,
+        expected_active_snapshot_id=expected_active_snapshot_id,
+        expected_active_scope=LIVE_QUERY_SCOPE,
+        expected_prior_scope=None,
+        rolled_back_at=rolled_back_at,
+    )
+
+
+def _rollback_arcgis_snapshot(
+    connection: Connection,
+    *,
+    expected_active_snapshot_id: str,
+    expected_active_scope: str,
+    expected_prior_scope: str | None,
+    rolled_back_at: str,
+) -> SnapshotPointer:
     pointer = _pointer_record(connection, ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID)
     if pointer is None:
         raise OfflineSnapshotLifecycleError("No active ArcGIS fixture snapshot can be rolled back.")
@@ -660,13 +869,25 @@ def rollback_arcgis_fixture_snapshot(
     prior = _optional_text(pointer.get("prior_accepted_snapshot_id"))
     if active != expected_active_snapshot_id:
         if prior == expected_active_snapshot_id:
+            _assert_accepted_arcgis_snapshot(
+                _snapshot_record(connection, expected_active_snapshot_id),
+                expected_scope=expected_active_scope,
+            )
             return SnapshotPointer(ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID, active, prior)
         raise OfflineSnapshotLifecycleError(
             "The active ArcGIS fixture snapshot changed before rollback."
         )
     if prior is None:
-        raise OfflineSnapshotLifecycleError("No prior accepted ArcGIS fixture snapshot exists.")
-    _assert_accepted_arcgis_snapshot(_snapshot_record(connection, prior))
+        raise OfflineSnapshotLifecycleError("No prior accepted ArcGIS snapshot exists.")
+    active_snapshot = _snapshot_record(connection, active)
+    _assert_accepted_arcgis_snapshot(
+        active_snapshot,
+        expected_scope=expected_active_scope,
+    )
+    _assert_accepted_arcgis_snapshot(
+        _snapshot_record(connection, prior),
+        expected_scope=expected_prior_scope,
+    )
     connection.execute(
         update(source_snapshot_pointers)
         .where(
@@ -682,7 +903,13 @@ def rollback_arcgis_fixture_snapshot(
     return SnapshotPointer(ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID, prior, active)
 
 
-def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
+def _validate_manifest(
+    manifest: Mapping[str, Any],
+    *,
+    storage_scope: str,
+) -> list[str]:
+    if storage_scope == LIVE_QUERY_SCOPE:
+        return _validate_live_manifest(manifest)
     rejections: list[str] = []
     missing = sorted(_MANIFEST_FIELDS - set(manifest))
     extra = sorted(set(manifest) - _MANIFEST_FIELDS)
@@ -701,67 +928,111 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
     return rejections
 
 
-def _validate_schema_fields(schema_fields: Sequence[object]) -> list[str]:
+def _validate_live_manifest(manifest: Mapping[str, Any]) -> list[str]:
     rejections: list[str] = []
-    names = [
-        str(field.get("name", "")) if isinstance(field, Mapping) else ""
-        for field in schema_fields
-    ]
-    if tuple(names) != ARCGIS_RAW_FIELDS:
-        rejections.append("schema field order or allowlist differs from the approved 19 fields")
-    for index, field in enumerate(schema_fields, start=1):
-        if not isinstance(field, Mapping):
-            rejections.append(f"schema field {index} is not an object")
-            continue
-        if set(field) != {"name", "type", "nullable", "domain"}:
-            rejections.append(f"schema field {index} has an unauthorized metadata shape")
-        field_name = field.get("name")
-        expected = _EXPECTED_FIELD_TYPES.get(str(field_name))
-        if expected is not None and (field.get("type"), field.get("nullable")) != expected:
-            rejections.append(
-                f"schema field {field_name} type or nullability differs from approved metadata"
-            )
-        if field.get("domain") is not None:
-            rejections.append(f"schema field {field_name or index} adds an unapproved domain")
-    return rejections
+    missing = sorted(_LIVE_MANIFEST_FIELDS - set(manifest))
+    extra = sorted(set(manifest) - _LIVE_MANIFEST_FIELDS)
+    if missing:
+        rejections.append("manifest omits fields: " + ", ".join(missing))
+    if extra:
+        rejections.append("manifest adds fields: " + ", ".join(extra))
+    if manifest.get("contract_version") != SNAPSHOT_CONTRACT_VERSION:
+        rejections.append("manifest contract_version is not 1.0.0")
+    if manifest.get("evidence_kind") != LIVE_QUERY_SCOPE:
+        rejections.append("manifest is not a governed live query package")
+    if manifest.get("source_family_id") != ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID:
+        rejections.append("manifest source family is not the inactive ArcGIS supplement")
+    if manifest.get("observation_kind") != LIVE_QUERY_OBSERVATION_KIND:
+        rejections.append("manifest observation_kind is not live_query")
 
+    accessed_date = manifest.get("accessed_date")
+    recorded_at = manifest.get("recorded_at")
+    snapshot_id = manifest.get("snapshot_id")
+    if not isinstance(accessed_date, str) or not accessed_date:
+        rejections.append("manifest accessed_date is not a nonblank string")
+    if not isinstance(snapshot_id, str) or not snapshot_id:
+        rejections.append("manifest snapshot_id is not a nonblank string")
+    if not isinstance(recorded_at, str) or not recorded_at:
+        rejections.append("manifest recorded_at is not a nonblank string")
+    if (
+        isinstance(accessed_date, str)
+        and isinstance(recorded_at, str)
+        and accessed_date != recorded_at[:10]
+    ):
+        rejections.append("manifest accessed_date does not match recorded_at")
+    if isinstance(accessed_date, str) and isinstance(snapshot_id, str):
+        if manifest.get("provisional_attribution") != provisional_attribution(
+            snapshot_id, accessed_date
+        ):
+            rejections.append("manifest provisional attribution differs from approval")
 
-def _normalize_row(raw_record: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
-    return {
-        normalized_name: _semantic_value(source_name, raw_record)
-        for normalized_name, source_name in ARCGIS_NORMALIZED_FIELD_SOURCES.items()
+    catalog_identity = manifest.get("catalog_identity")
+    expected_catalog_identity = {
+        "catalog_url": CATALOG_URL,
+        "licenses_url": LICENSES_URL,
+        "publisher": ARCGIS_PUBLISHER,
+        "dataset_title": ARCGIS_DATASET_TITLE,
+        "license_designation": ARCGIS_LICENSE_DESIGNATION,
+        "license_version": None,
     }
+    if catalog_identity != expected_catalog_identity:
+        rejections.append("manifest catalog identity differs from the approved source")
 
+    source_identity = manifest.get("source_identity")
+    expected_source_identity = {
+        "item_id": ARCGIS_ITEM_ID,
+        "service_name": ARCGIS_SERVICE_NAME,
+        "layer_id": ARCGIS_LAYER_ID,
+        "layer_name": ARCGIS_LAYER_NAME,
+        "item_url": ARCGIS_ITEM_URL,
+        "service_url": ARCGIS_SERVICE_URL,
+        "layer_url": ARCGIS_LAYER_URL,
+        "query_url": ARCGIS_QUERY_URL,
+    }
+    if source_identity != expected_source_identity:
+        rejections.append("manifest source identity differs from the approved ArcGIS layer")
 
-def _semantic_value(source_name: str, raw_record: Mapping[str, Any]) -> Mapping[str, Any]:
-    if source_name not in raw_record:
-        return {"source_field": source_name, "state": "absent", "value": None}
-    value = raw_record[source_name]
-    state, normalized = _normalize_source_value(source_name, value)
-    return {"source_field": source_name, "state": state, "value": normalized}
+    validation = manifest.get("validation")
+    if not isinstance(validation, Mapping) or validation.get("status") != "validated":
+        rejections.append("manifest retrieval validation is not complete")
+    id_evidence = manifest.get("id_evidence")
+    object_id_set_sha256 = (
+        id_evidence.get("object_id_set_sha256") if isinstance(id_evidence, Mapping) else None
+    )
+    if not isinstance(object_id_set_sha256, str):
+        rejections.append("manifest ID evidence omits object_id_set_sha256")
 
-
-def _normalize_source_value(source_name: str, value: Any) -> tuple[SemanticState, Any]:
-    if value is None:
-        return "null", None
-    if isinstance(value, str):
-        normalized = " ".join(value.split())
-        if not normalized:
-            return "blank", ""
-        if normalized.casefold() in _UNAVAILABLE_VALUES:
-            return "unavailable", normalized
-        if source_name in _INTEGER_FIELDS or source_name in _NUMBER_FIELDS:
-            return "invalid", value
-        return "populated", normalized
-    if source_name in _INTEGER_FIELDS:
-        if isinstance(value, bool) or not isinstance(value, int):
-            return "invalid", value
-        return "populated", value
-    if source_name in _NUMBER_FIELDS:
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
-            return "invalid", value
-        return "populated", value
-    return "invalid", value
+    fingerprint_fields = (
+        "raw_payload_sha256",
+        "normalized_content_sha256",
+        "schema_fingerprint",
+        "domain_fingerprint",
+        "raw_response_set_sha256",
+    )
+    fingerprint_values = {field: manifest.get(field) for field in fingerprint_fields}
+    for field, value in fingerprint_values.items():
+        if not isinstance(value, str) or len(value) != 64:
+            rejections.append(f"manifest {field} is not a SHA-256 value")
+    if (
+        isinstance(snapshot_id, str)
+        and isinstance(recorded_at, str)
+        and isinstance(object_id_set_sha256, str)
+        and all(isinstance(value, str) for value in fingerprint_values.values())
+    ):
+        expected_snapshot_id = live_snapshot_id(
+            recorded_at=recorded_at,
+            raw_payload_sha256=str(fingerprint_values["raw_payload_sha256"]),
+            normalized_content_sha256=str(
+                fingerprint_values["normalized_content_sha256"]
+            ),
+            schema_fingerprint=str(fingerprint_values["schema_fingerprint"]),
+            domain_fingerprint=str(fingerprint_values["domain_fingerprint"]),
+            object_id_set_sha256=object_id_set_sha256,
+            raw_response_set_sha256=str(fingerprint_values["raw_response_set_sha256"]),
+        )
+        if snapshot_id != expected_snapshot_id:
+            rejections.append("manifest snapshot_id does not match governed fingerprints")
+    return rejections
 
 
 def _find_disappearances(
@@ -851,6 +1122,7 @@ def _stored_inspection(
     return SnapshotInspection(
         snapshot_id=snapshot_id,
         source_family_id=str(snapshot["source_family_id"]),
+        storage_scope=str(snapshot["fixture_scope"]),
         observation_kind=str(snapshot["observation_kind"]),
         manifest_ref=str(snapshot["manifest_ref"]),
         manifest_sha256=str(snapshot["manifest_sha256"]),
@@ -866,13 +1138,34 @@ def _stored_inspection(
     )
 
 
-def _assert_accepted_arcgis_snapshot(snapshot: Mapping[str, Any]) -> None:
+def _assert_accepted_arcgis_snapshot(
+    snapshot: Mapping[str, Any],
+    *,
+    expected_scope: str | None,
+) -> None:
     if snapshot["source_family_id"] != ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID:
         raise OfflineSnapshotLifecycleError("Snapshot belongs to a different source family.")
-    if snapshot["fixture_scope"] != OFFLINE_FIXTURE_SCOPE:
-        raise OfflineSnapshotLifecycleError("Only a repository synthetic fixture may be promoted.")
+    if expected_scope is not None:
+        _assert_snapshot_scope(snapshot, expected_scope)
+    elif snapshot["fixture_scope"] not in (OFFLINE_FIXTURE_SCOPE, LIVE_QUERY_SCOPE):
+        raise OfflineSnapshotLifecycleError("Snapshot has an unsupported source storage scope.")
     if snapshot["lifecycle_state"] != "accepted":
         raise OfflineSnapshotLifecycleError("Only an accepted snapshot may be promoted.")
+
+
+def _assert_snapshot_scope(snapshot: Mapping[str, Any], expected_scope: str) -> None:
+    if snapshot["fixture_scope"] != expected_scope:
+        raise OfflineSnapshotLifecycleError(
+            f"Snapshot scope is not the required {expected_scope} boundary."
+        )
+
+
+def _require_isolated_nonproduction(execution_scope: str) -> None:
+    if execution_scope != ISOLATED_NONPRODUCTION_SCOPE:
+        raise OfflineSnapshotLifecycleError(
+            "Live ArcGIS lifecycle operations require the explicit isolated_nonproduction "
+            "execution scope."
+        )
 
 
 def _assert_same_immutable_snapshot(
@@ -881,6 +1174,7 @@ def _assert_same_immutable_snapshot(
 ) -> None:
     expected = {
         "source_family_id": inspection.source_family_id,
+        "fixture_scope": inspection.storage_scope,
         "manifest_sha256": inspection.manifest_sha256,
         "raw_payload_sha256": inspection.raw_payload_sha256,
         "normalized_content_sha256": inspection.normalized_content_sha256,
@@ -937,7 +1231,11 @@ def _populated_text(value: object) -> str | None:
     if not isinstance(value, Mapping) or value.get("state") != "populated":
         return None
     candidate = value.get("value")
-    return candidate if isinstance(candidate, str) else None
+    if isinstance(candidate, str):
+        return candidate
+    if isinstance(candidate, int) and not isinstance(candidate, bool):
+        return str(candidate)
+    return None
 
 
 def _sha256(content: bytes) -> str:

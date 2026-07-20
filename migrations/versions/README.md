@@ -26,6 +26,11 @@ metadata and rows, disappearance evidence, and one active/prior pointer per
 source family. It neither backfills the existing facility-reference table nor
 creates a live connector, production activation, canonical allocation, or
 reviewer-created-state write path.
+Revision `20260720_0009` extends only the existing snapshot scope and observation
+constraints for `governed_live_query`/`live_query` candidates. It adds no table,
+canonical bridge, reviewer write, production command, scheduler, or deployment
+behavior. Downgrade refuses to discard the live-scope contract while retained
+live-query snapshot history exists.
 These revisions do not implement full review workflows, annotations,
 corrections, full audit policy coverage, audit UI, audit export, export state,
 feedback, retention automation, destructive reset, reload execution, archive
