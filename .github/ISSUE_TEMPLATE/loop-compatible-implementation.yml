@@ -1,0 +1,165 @@
+name: Loop-compatible implementation
+description: Define bounded, independently verifiable work for human readiness review
+title: "[Loop-compatible implementation] "
+body:
+  - type: textarea
+    id: observable_outcome
+    attributes:
+      label: Observable outcome
+      description: Describe the user, reviewer, developer, or operational result that must be observable when the work is complete.
+      placeholder: A reviewer can...; an operator can...; the repository demonstrates...
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_problem
+    attributes:
+      label: Current problem
+      description: Describe the current deficient behavior and provide a reproducible example or source-backed evidence where available.
+      placeholder: Today, when... the current app or workflow...
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope_boundaries
+    attributes:
+      label: In-scope and out-of-scope work
+      description: State both the permitted change and explicit exclusions. Keep the work suitable for one bounded branch and pull request.
+      value: |
+        In scope:
+        -
+
+        Out of scope:
+        -
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Independently verifiable acceptance criteria
+      description: >-
+        List observable, testable results that an independent reviewer can verify.
+        Criteria such as "make it better," "clean this up," "improve the UX,"
+        "modernize the page," or "improve performance" are not acceptable without
+        a measurable result.
+      value: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation_suggestions
+    attributes:
+      label: Optional implementation suggestions
+      description: >-
+        Record non-binding ideas separately from required outcomes. A suggestion
+        becomes required only when the issue author also places it in the scope or
+        acceptance criteria.
+      placeholder: Optional approach, files to inspect, or prior art. Leave blank when there is no suggestion.
+
+  - type: textarea
+    id: validation_and_evidence
+    attributes:
+      label: Required validation and evidence
+      description: >-
+        Identify exact checks and the evidence an independent reviewer must inspect.
+        Passing checks alone may not prove every criterion.
+      value: |
+        Required validation:
+        -
+
+        Required evidence:
+        -
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies_blockers_decisions
+    attributes:
+      label: Dependencies, blockers, and unresolved human decisions
+      description: >-
+        List each category explicitly. Use "None" only after checking it. Any
+        unresolved product, UX, privacy, security, legal, data, schema, ingestion,
+        or deployment decision makes the issue not ready or blocked.
+      value: |
+        Dependencies:
+        -
+
+        Blockers:
+        -
+
+        Unresolved human decisions:
+        -
+    validations:
+      required: true
+
+  - type: dropdown
+    id: risk_classification
+    attributes:
+      label: Risk classification
+      description: >-
+        This records issue data only and does not create or apply a label. Explain
+        the classification in the issue body when it is not self-evident.
+      options:
+        - Low - bounded, reversible, and strongly testable
+        - Medium - broader impact or additional verification needed
+        - High - material governed-boundary or operational risk
+        - Needs human classification
+    validations:
+      required: true
+
+  - type: textarea
+    id: governed_boundaries
+    attributes:
+      label: Governed boundaries potentially affected
+      description: >-
+        Replace every status with "No impact," "May affect," or "Unresolved,"
+        and explain every May affect or Unresolved entry. An unresolved entry is a
+        governed stop.
+      value: |
+        - Database schema or migrations: REPLACE STATUS
+        - Source ingestion or source-connector contracts: REPLACE STATUS
+        - Facility or complaint data semantics: REPLACE STATUS
+        - Production data correction or backfill: REPLACE STATUS
+        - Privacy or security boundaries: REPLACE STATUS
+        - Authentication or authorization: REPLACE STATUS
+        - Deployment or infrastructure: REPLACE STATUS
+        - Accessibility: REPLACE STATUS
+        - Repository governance: REPLACE STATUS
+        - Material user-visible product or UX decisions: REPLACE STATUS
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: readiness_confirmations
+    attributes:
+      label: Readiness confirmations
+      description: >-
+        Check only statements supported by the completed issue. Every confirmation
+        is required for Ready; unchecked items make the issue Not ready or Blocked.
+      options:
+        - label: Acceptance criteria are observable and testable.
+        - label: Required dependencies are resolved or explicitly represented above.
+        - label: Blockers are identified above.
+        - label: Required human decisions are resolved.
+        - label: The work is independently verifiable.
+        - label: Completion does not require unauthorized production deployment.
+        - label: >-
+            The implementing agent is not expected to invent product, UX, privacy,
+            security, legal, data, schema, ingestion, or deployment decisions.
+
+  - type: dropdown
+    id: loop_readiness
+    attributes:
+      label: Loop-readiness declaration
+      description: >-
+        This author assessment is not approval. An authorized human determines
+        readiness from the full issue and current repository governance.
+      options:
+        - Ready for human readiness review - every confirmation is supported
+        - Not ready - required information or a human decision is incomplete
+        - Blocked - a dependency, decision, or governed boundary prevents execution
+    validations:
+      required: true
