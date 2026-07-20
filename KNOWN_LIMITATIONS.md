@@ -21,13 +21,14 @@
   conflict, unresolved-code, and current/historical context. Issue #522 migrates
   the core facility lookup/suggestion, request selector/results and feedback
   checklist, facility hub, reviewer list/detail, and packet preview/draft
-  consumers to that projection and one shared presentation vocabulary. Facility
-  intelligence, priorities, trends, substantiated, and serious-topic aggregate
-  views remain on their existing specialized read models because changing their
-  grouping, filtering, and ordering safely requires a separate aggregate phase;
-  exports remain assigned to the later export/backfill child. The projection
-  does not consume or activate ArcGIS, change schemas, migrate or backfill
-  PostgreSQL, execute refresh, add operator actions, or prove hosted acceptance.
+  consumers to that projection and one shared presentation vocabulary. Issue
+  #523 aligns reviewer matrix/substantiated CSVs, substantiated and serious-topic
+  facility presentation, stakeholder CSV/XLSX outputs, and review-bundle CSVs;
+  it also bounds the existing three-field hosted backfill with durable recovery.
+  Facility intelligence, priorities, and trends remain on their specialized
+  aggregate read models. This work does not consume or activate ArcGIS, change
+  schemas, schedule refresh, add operator actions, deploy, or prove hosted
+  acceptance.
   Raw `733` remains unresolved, and production-style reads exclude fixture,
   demo, synthetic, sample, mock, and test-only candidates rather than displaying
   them as facility truth.

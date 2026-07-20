@@ -3,10 +3,21 @@ from __future__ import annotations
 import csv
 import json
 import sqlite3
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
 from ccld_complaints.aggregate_results import build_aggregate_result
+from ccld_complaints.facility_identity_exports import (
+    load_sqlite_facility_identity_projections,
+    projected_facility_export_conflicts,
+    projected_facility_export_context,
+    projected_facility_export_text,
+)
+from ccld_complaints.hosted_app.facility_identity_projection import (
+    FacilityIdentityProjection,
+    FacilityProjectionField,
+)
 from ccld_complaints.presentation_values import presentation_value_for_field
 
 DEFAULT_REVIEW_BUNDLE_DIR = Path("data/processed/review-bundle")
@@ -178,12 +189,14 @@ def export_review_bundle(
 
     with sqlite3.connect(db_path) as conn:
         conn.row_factory = sqlite3.Row
+        facility_projections = load_sqlite_facility_identity_projections(conn)
         for filename, sql in EXPORTS:
             output_path = output_dir / filename
             row_count, source_coverage_count, source_unavailable_count = _write_csv(
                 conn,
                 sql,
                 output_path,
+                facility_projections=facility_projections,
             )
             exported_files.append(
                 ReviewBundleFile(
@@ -213,10 +226,26 @@ def _write_csv(
     conn: sqlite3.Connection,
     sql: str,
     output_path: Path,
+    *,
+    facility_projections: Mapping[str, FacilityIdentityProjection],
 ) -> tuple[int, int, int]:
     cursor = conn.execute(sql)
     column_names = [description[0] for description in cursor.description or ()]
-    rows = cursor.fetchall()
+    rows = _project_export_rows(
+        cursor.fetchall(),
+        column_names,
+        facility_projections,
+    )
+    if "facility_number" in column_names:
+        insertion_index = (
+            column_names.index("facility_name") + 1
+            if "facility_name" in column_names
+            else column_names.index("facility_number") + 1
+        )
+        column_names[insertion_index:insertion_index] = [
+            "facility_identity_context",
+            "facility_identity_conflicts",
+        ]
     with output_path.open("w", encoding="utf-8", newline="") as csv_file:
         writer = csv.writer(csv_file)
         writer.writerow(column_names)
@@ -237,6 +266,41 @@ def _write_csv(
         for row in rows
     )
     return len(rows), source_coverage_count, len(rows) - source_coverage_count
+
+
+def _project_export_rows(
+    rows: list[sqlite3.Row],
+    column_names: list[str],
+    facility_projections: Mapping[str, FacilityIdentityProjection],
+) -> list[dict[str, object]]:
+    projected_rows: list[dict[str, object]] = []
+    for row in rows:
+        values = {column_name: row[column_name] for column_name in column_names}
+        facility_number = str(values.get("facility_number") or "").strip()
+        projection = facility_projections.get(facility_number)
+        if projection is not None:
+            values["facility_number"] = projection.public_facility_id
+            if "facility_name" in values:
+                values["facility_name"] = projected_facility_export_text(
+                    projection,
+                    FacilityProjectionField.FACILITY_NAME,
+                )
+            values["facility_identity_context"] = projected_facility_export_context(
+                projection,
+                (FacilityProjectionField.FACILITY_NAME,),
+            )
+            values["facility_identity_conflicts"] = projected_facility_export_conflicts(
+                projection,
+                (FacilityProjectionField.FACILITY_NAME,),
+            )
+        elif "facility_number" in values:
+            values["facility_number"] = (
+                facility_number if facility_number.isdigit() else "Invalid source value"
+            )
+            values["facility_identity_context"] = "No selected source context"
+            values["facility_identity_conflicts"] = "No conflicting source values"
+        projected_rows.append(values)
+    return projected_rows
 
 
 def _bundle_manifest(files: list[ReviewBundleFile]) -> dict[str, object]:
@@ -263,6 +327,10 @@ def _bundle_manifest(files: list[ReviewBundleFile]) -> dict[str, object]:
         "presentation_value_contract": (
             "Stored values remain unchanged; CSV labels distinguish verified zero, "
             "not provided, date not provided, unavailable, not applicable, and invalid states."
+        ),
+        "facility_identity_contract": (
+            "Public Facility ID and facility presentation use the shared governed projection; "
+            "current-reference and complaint-time context and conflicts remain explicit."
         ),
         "date_dimension": "complaint_received_date",
         "query_start": None,
@@ -342,6 +410,13 @@ def _bundle_readme() -> str:
         "",
         "## Review Notes",
         "",
+        (
+            "- Public Facility ID and facility presentation use the shared governed "
+            "projection. The facility_identity_context and facility_identity_conflicts "
+            "columns distinguish current facility-reference values, complaint-time "
+            "observations, and unresolved conflicts; internal facility record identities "
+            "never replace public Facility IDs."
+        ),
         (
             "- Delay review flags are screening aids for closer review, not conclusions "
             "that an investigation was delayed."

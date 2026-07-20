@@ -101,6 +101,8 @@ def _assert_aggregate_export_fieldnames(fieldnames: list[str] | None) -> None:
     assert {
         "Facility Name",
         "Facility/License Number",
+        "Facility Identity Context",
+        "Facility Identity Conflicts",
         "Complaint Received Date",
         "First Investigation Activity Date",
         "Date Dimension",
@@ -556,6 +558,8 @@ def test_reviewer_ui_substantiated_triage_lists_cross_facility_matches() -> None
     assert "Category or summary" in html
     assert "Facility type" in html
     assert "Geography" in html
+    assert "Complaint-time record" in html
+    assert "No conflicting source values" in html
     assert "Original public report" in html
     assert "Open complaint review workspace" in html
     assert (
@@ -1061,7 +1065,7 @@ def test_facility_type_classification_leaves_ambiguous_names_unknown() -> None:
         assert classification.display_value == "unknown"
 
 
-def test_reviewer_ui_substantiated_worklist_facility_type_filter_uses_derived_ffa() -> None:
+def test_reviewer_ui_substantiated_worklist_does_not_infer_type_from_name() -> None:
     with _seeded_connection() as connection:
         derived_key = _insert_substantiated_complaint_for_facility(
             connection,
@@ -1127,18 +1131,13 @@ def test_reviewer_ui_substantiated_worklist_facility_type_filter_uses_derived_ff
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert f"source_record_key={quote(derived_key)}" in html
-    assert f"source_record_key={quote(null_type_key)}" in html
+    assert f"source_record_key={quote(derived_key)}" not in html
+    assert f"source_record_key={quote(null_type_key)}" not in html
     assert f"source_record_key={quote(ambiguous_key)}" not in html
     assert f"source_record_key={quote(explicit_nonmatch_key)}" not in html
-    assert "4EVERGREEN FOSTER FAMILY AGENCY, INC." in html
-    assert "CLEAR FOSTER FAMILY AGENCY" in html
-    assert "EVERGREEN FFA RESOURCE CENTER" not in html
-    assert "SOURCE VALUE PRECEDENCE FOSTER FAMILY AGENCY" not in html
-    assert "Foster Family Agency (derived from facility name)" in html
+    assert "No loaded substantiated/equivalent complaint records matched." in html
+    assert "Foster Family Agency (derived from facility name)" not in html
     assert "Facility type Children&#x27;s Center" not in html
-    assert "Open original public report for 32-CR-20260701000001" in html
-    assert "Open complaint review workspace" in html
     assert_no_secret_html(html)
 
 
@@ -1245,11 +1244,27 @@ def test_postgres_corpus_substantiated_worklist_uses_authorized_retrieval_batche
             connection,
             substantiated,
             scope=POSTGRES_REVIEWER_UI_SCOPE,
+            production_safe=True,
         )
         _insert_representative_live_public_retrieval_batch(
             connection,
             unsubstantiated,
             scope=POSTGRES_REVIEWER_UI_SCOPE,
+            production_safe=True,
+        )
+        connection.execute(
+            update(hosted_import_batches)
+            .where(hosted_import_batches.c.import_batch_id.like("ccld-retrieval-batch:%"))
+            .values(source_artifact_identity="governed-live-public-retrieval")
+        )
+        connection.execute(
+            update(hosted_source_derived_records)
+            .where(
+                hosted_source_derived_records.c.import_batch_id.like(
+                    "ccld-retrieval-batch:%"
+                )
+            )
+            .values(raw_path="data/raw/ccld/governed-live-public/report.html")
         )
         context = reviewer_ui_context_for_connection(
             connection,
@@ -1261,7 +1276,7 @@ def test_postgres_corpus_substantiated_worklist_uses_authorized_retrieval_batche
         )
         status, content_type, body = route_response(
             REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH
-            + "?facility=107207198&facility_type=Foster%20Family%20Agency",
+            + "?facility=107207198",
             reviewer_ui_context=context,
         )
         future_status, _content_type, future_body = route_response(
@@ -1282,7 +1297,8 @@ def test_postgres_corpus_substantiated_worklist_uses_authorized_retrieval_batche
     )
     assert "4EVERGREEN FOSTER FAMILY AGENCY, INC." in html
     assert "107207198" in html
-    assert "Foster Family Agency (derived from facility name)" in html
+    assert "Blank in source" in html
+    assert "Foster Family Agency (derived from facility name)" not in html
     assert "24-CR-20260508083927" in html
     assert ">Substantiated<" in html
     assert "425802141" not in html
@@ -1501,8 +1517,8 @@ def test_reviewer_ui_substantiated_triage_uses_safe_fallbacks() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Facility ID 157806098" in html
-    assert "Not provided" in html
+    assert "157806098" in html
+    assert "Blank in source" in html
     assert "Substantiated" in html
     assert "Date not provided" in html
     assert_no_secret_html(html)
@@ -1840,6 +1856,15 @@ def test_core_facility_surfaces_share_projected_identity_without_mutation() -> N
                 reviewer_ui_context=reviewer_context,
             ),
         }
+        matrix_response = route_response(
+            f"{REVIEWER_UI_MATRIX_EXPORT_PATH}?facility_number=157806098",
+            reviewer_ui_context=reviewer_context,
+        )
+        substantiated_response = route_response(
+            f"{REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH}?"
+            "status=all&facility=157806098",
+            reviewer_ui_context=reviewer_context,
+        )
 
         after_source_rows = _source_rows(connection)
         after_counts = _table_counts(connection)
@@ -1854,6 +1879,30 @@ def test_core_facility_surfaces_share_projected_identity_without_mutation() -> N
         assert spoofed_name not in html, surface
         assert "157806098" in html, surface
         assert_no_secret_html(html)
+    for surface, response in {
+        "matrix export": matrix_response,
+        "substantiated export": substantiated_response,
+    }.items():
+        status, content_type, body = response
+        assert status == 200, surface
+        assert content_type == "text/csv; charset=utf-8", surface
+        [row] = list(csv.DictReader(io.StringIO(body.decode("utf-8-sig"))))
+        name_key = "facility_name" if surface == "matrix export" else "Facility Name"
+        context_key = (
+            "facility_identity_context"
+            if surface == "matrix export"
+            else "Facility Identity Context"
+        )
+        conflict_key = (
+            "facility_identity_conflicts"
+            if surface == "matrix export"
+            else "Facility Identity Conflicts"
+        )
+        assert row[name_key] == resolved_name
+        assert row[context_key] == "Current facility reference"
+        assert row[conflict_key] == (
+            "Current facility reference and complaint-time records differ."
+        )
 
     request_html = responses["request results and feedback context"][2].decode("utf-8")
     detail_html = responses["reviewer detail"][2].decode("utf-8")
@@ -3254,6 +3303,7 @@ def test_reviewer_ui_matrix_export_returns_excel_ready_csv_without_mutation() ->
     assert len(reader.fieldnames) == len(set(reader.fieldnames))
     assert reader.fieldnames.count("facility_number") == 1
     assert reader.fieldnames.count("facility_name") == 1
+    assert "facility_id" not in reader.fieldnames
     assert "FAC_DO_DESC" not in reader.fieldnames
     assert "RES_STREET_ADDR" not in reader.fieldnames
     [row] = rows
@@ -3264,6 +3314,8 @@ def test_reviewer_ui_matrix_export_returns_excel_ready_csv_without_mutation() ->
     assert "open source links and reviewer detail" in row["review_guidance"]
     assert row["facility_number"] == "157806098"
     assert row["facility_name"] == "A. MIRIAM JAMISON CHILDREN'S CENTER"
+    assert row["facility_identity_context"] == "Complaint-time record"
+    assert row["facility_identity_conflicts"] == "No conflicting source values"
     assert row["request_start_date"] == "2022-08-01"
     assert row["request_end_date"] == "2022-08-31"
     assert row["source_record_key"] == COMPLAINT_KEY
@@ -3533,6 +3585,9 @@ def test_reviewer_ui_substantiated_export_returns_excel_ready_csv_without_mutati
     [row] = rows  # type: ignore[assignment]
     assert row["Facility Name"] == "A. MIRIAM JAMISON CHILDREN'S CENTER"
     assert row["Facility/License Number"] == "157806098"
+    assert row["Facility Identity Context"] == "Complaint-time record"
+    assert row["Facility Identity Conflicts"] == "No conflicting source values"
+    assert "facility_id" not in row
     assert row["Complaint Received Date"] == "2022-04-07"
     assert row["Visit Date"] == "2022-08-24"
     assert row["Finding/Status"] == "Substantiated"
@@ -5646,15 +5701,18 @@ def _insert_representative_live_public_retrieval_batch(
     representative: dict[str, str],
     *,
     scope: HostedAccessScope = TEST_SCOPE,
+    production_safe: bool = False,
 ) -> None:
-    job_id = f"fixture-job-{representative['facility_number']}-{representative['report_index']}"
+    job_label = "governed-job" if production_safe else "fixture-job"
+    job_id = f"{job_label}-{representative['facility_number']}-{representative['report_index']}"
     import_batch_id = retrieval_import_batch_id(job_id)
     source_url = _ccld_source_url(
         representative["facility_number"],
         representative["report_index"],
     )
     raw_sha256 = (representative["facility_number"] * 8)[:64]
-    artifact_identity = f"fixture-live-public-artifact:{job_id}"
+    artifact_label = "governed-live-public" if production_safe else "fixture-live-public"
+    artifact_identity = f"{artifact_label}-artifact:{job_id}"
     now = "2026-07-01T12:00:00+00:00"
     connection.execute(
         hosted_ccld_retrieval_jobs.insert().values(

@@ -322,8 +322,8 @@ class TestSafeFallbacks:
 
         facility_rows = _read_csv(result.facility_overview_path)
         sub_rows = _read_csv(result.substantiated_complaints_path)
-        assert facility_rows[0]["FacilityName"] == UNKNOWN
-        assert sub_rows[0]["FacilityName"] == UNKNOWN
+        assert facility_rows[0]["FacilityName"] == "Blank in source"
+        assert sub_rows[0]["FacilityName"] == "Blank in source"
 
     def test_null_dates_use_unknown(self, tmp_path: Path) -> None:
         conn = _make_db()
@@ -720,8 +720,10 @@ class TestFacilityReferenceInput:
         assert "facility" in str(exc_info.value).casefold()
         assert "number" in str(exc_info.value).casefold()
 
-    def test_duplicate_reference_rows_keep_first(self, tmp_path: Path) -> None:
-        """When the reference CSV has duplicate facility numbers, first row wins."""
+    def test_duplicate_reference_rows_remain_projection_observations(
+        self, tmp_path: Path
+    ) -> None:
+        """Duplicate Facility IDs are retained without an input-order winner."""
         ref_csv = tmp_path / "facilities.csv"
         _write_ref_csv(
             ref_csv,
@@ -734,8 +736,59 @@ class TestFacilityReferenceInput:
 
         records = read_facility_reference_csv(ref_csv)
 
-        assert len(records) == 1
-        assert records[0]["facility_name"] == "First Name"
+        assert len(records) == 2
+        assert [record["facility_name"] for record in records] == [
+            "First Name",
+            "Second Name",
+        ]
+
+    def test_duplicate_reference_conflict_is_insertion_order_independent(
+        self, tmp_path: Path
+    ) -> None:
+        rows = [
+            {"FacilityNumber": "100001", "FacilityName": "First Name"},
+            {"FacilityNumber": "100001", "FacilityName": "Second Name"},
+        ]
+        outputs: list[dict[str, str]] = []
+        for index, ordered in enumerate((rows, list(reversed(rows)))):
+            ref_csv = tmp_path / f"facilities-{index}.csv"
+            _write_ref_csv(
+                ref_csv,
+                ordered,
+                header=["FacilityNumber", "FacilityName"],
+            )
+            result = export_stakeholder_facility_overview(
+                tmp_path / "missing.sqlite",
+                tmp_path / f"extracts-{index}",
+                facility_reference_csv=ref_csv,
+            )
+            outputs.append(_read_csv(result.facility_overview_path)[0])
+
+        assert outputs[0] == outputs[1]
+        assert outputs[0]["FacilityNumber"] == "100001"
+        assert outputs[0]["FacilityName"] == "Conflicting source values"
+        assert outputs[0]["FacilityIdentityContext"] == "No selected source context"
+        assert outputs[0]["FacilityIdentityConflicts"] == (
+            "Eligible source records disagree; no value was selected."
+        )
+        assert "facility_id" not in {key.casefold() for key in outputs[0]}
+
+    def test_raw_facility_type_code_remains_unresolved(self, tmp_path: Path) -> None:
+        ref_csv = tmp_path / "facilities-raw-code.csv"
+        _write_ref_csv(
+            ref_csv,
+            [{"FacilityNumber": "100001", "FacilityType": "733"}],
+            header=["FacilityNumber", "FacilityType"],
+        )
+
+        result = export_stakeholder_facility_overview(
+            tmp_path / "missing.sqlite",
+            tmp_path / "raw-code-extract",
+            facility_reference_csv=ref_csv,
+        )
+
+        row = _read_csv(result.facility_overview_path)[0]
+        assert row["FacilityType"] == "Source code 733 — label not verified"
 
     def test_raw_ccld_headers_recognised(self, tmp_path: Path) -> None:
         """Raw CCLD column headers (FAC_NBR, NAME, etc.) are accepted as aliases."""
@@ -2356,4 +2409,3 @@ class TestExcelWorkbook:
                         f"{sheet_name!r} merged narrative row {mr.min_row} "
                         f"has leading space: {cell_val[:30]!r}"
                     )
-

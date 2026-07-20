@@ -122,6 +122,25 @@ presentation. This consumer migration does not change persistence ownership;
 specialized aggregate views, exports, backfill, ArcGIS, operator controls, and
 scheduled refresh remain separate phases.
 
+Issue #523 makes the same projection and presentation vocabulary authoritative
+for reviewer matrix and substantiated CSVs, substantiated and serious-topic
+facility presentation, stakeholder CSV/XLSX outputs, and all eight review-bundle
+CSVs. These consumers emit the digit-only public Facility ID, explicit
+current-reference or complaint-time context, and conflict wording; they never
+substitute the canonical internal facility record identity. Current-reference
+values remain presentation facts distinct from historical complaint-time
+observations.
+
+The Issue #523 controlled hosted backfill reuses the projection only for the
+already-approved canonical allocation fields `facility_type`, `county`, and
+`status`. Dry-run performs no writes and reports safe aggregate candidate,
+conflict, exclusion, and intended-update counts. Apply requires an explicit
+per-run Facility-ID bound and durable versioned checkpoint, commits one isolated
+facility before recording checkpoint completion, retains failed Facility IDs for
+retry, validates resume selection and operation, and remains idempotent on
+repeat. It does not change reviewer-created state, activate ArcGIS, schedule a
+refresh, or rewrite historical complaint observations.
+
 ## Public source inventory boundary
 
 `PUBLIC_SOURCE_DATA_INVENTORY.md` may document future source metadata, uploaded

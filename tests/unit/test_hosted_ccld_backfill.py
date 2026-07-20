@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 from collections.abc import Mapping
 from dataclasses import replace
 from datetime import UTC, datetime
@@ -8,10 +9,12 @@ from pathlib import Path
 from typing import Any, cast
 from urllib.parse import quote
 
+import pytest
 from sqlalchemy import create_engine, func, select
 
 from ccld_complaints.connectors.base import SourceDocument
 from ccld_complaints.connectors.ccld.facility_reports import CcldFacilityReportsConnector
+from ccld_complaints.hosted_app import ccld_backfill
 from ccld_complaints.hosted_app.audit_events import hosted_audit_events
 from ccld_complaints.hosted_app.auth import HostedAccessScope
 from ccld_complaints.hosted_app.ccld_backfill import (
@@ -54,6 +57,41 @@ SOURCE_URL = (
 )
 
 
+def test_apply_requires_explicit_bound_and_durable_checkpoint(tmp_path: Path) -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+    with engine.connect() as connection:
+        with pytest.raises(ValueError, match="durable checkpoint"):
+            run_ccld_hosted_backfill(
+                connection,
+                CcldHostedBackfillRequest(
+                    facility_numbers=("425802141",),
+                    apply_changes=True,
+                    max_facilities=1,
+                ),
+            )
+        with pytest.raises(ValueError, match="explicit max_facilities"):
+            run_ccld_hosted_backfill(
+                connection,
+                CcldHostedBackfillRequest(
+                    facility_numbers=("425802141",),
+                    apply_changes=True,
+                    checkpoint_file=tmp_path / "checkpoint.json",
+                ),
+            )
+        with pytest.raises(ValueError, match="approved facility-reference"):
+            run_ccld_hosted_backfill(
+                connection,
+                CcldHostedBackfillRequest(
+                    facility_numbers=("425802141",),
+                    operation="preserved-artifacts",
+                    apply_changes=True,
+                    checkpoint_file=tmp_path / "checkpoint.json",
+                    max_facilities=1,
+                ),
+            )
+
+
 def test_backfill_dry_run_apply_repeat_and_reviewer_state_preservation(
     tmp_path: Path,
 ) -> None:
@@ -72,20 +110,24 @@ def test_backfill_dry_run_apply_repeat_and_reviewer_state_preservation(
         initial_identities = _stable_identities(connection)
         initial_state = _reviewer_snapshot(connection)
         initial_traceability = _traceability_snapshot(connection)
+        initial_complaint = _entity_values(connection, "complaint")
 
         dry_run = run_ccld_hosted_backfill(
             connection,
             CcldHostedBackfillRequest(
                 facility_numbers=("425802141",),
-                operation="all",
+                operation="facility-reference",
                 batch_size=1,
             ),
             now=datetime(2026, 7, 13, tzinfo=UTC),
         )
 
         assert dry_run.apply_changes is False
+        assert dry_run.candidates == 1
+        assert dry_run.excluded == 0
         assert dry_run.examined == 1
         assert dry_run.eligible == 1
+        assert dry_run.intended_updates == 1
         assert dry_run.updated == 1
         assert dry_run.failed == 0
         assert _source_counts(connection) == initial_counts
@@ -95,10 +137,11 @@ def test_backfill_dry_run_apply_repeat_and_reviewer_state_preservation(
             connection,
             CcldHostedBackfillRequest(
                 facility_numbers=("425802141",),
-                operation="all",
+                operation="facility-reference",
                 batch_size=1,
                 apply_changes=True,
                 checkpoint_file=tmp_path / "checkpoint.json",
+                max_facilities=1,
             ),
             now=datetime(2026, 7, 13, tzinfo=UTC),
         )
@@ -112,10 +155,7 @@ def test_backfill_dry_run_apply_repeat_and_reviewer_state_preservation(
         assert facility["facility_type"] == "Children's Residential Facility"
         assert facility["county"] == "Los Angeles"
         assert facility["status"] == "Licensed"
-        assert complaint["visit_date"] == "2025-11-07"
-        assert complaint["first_investigation_activity_date"] == "2025-11-07"
-        assert complaint["days_received_to_first_activity"] == 561
-        assert complaint["missing_first_activity_date"] is False
+        assert complaint == initial_complaint
         assert _stable_identities(connection).issuperset(initial_identities)
         assert _reviewer_snapshot(connection) == initial_state
         assert _traceability_snapshot(connection) == initial_traceability
@@ -124,9 +164,12 @@ def test_backfill_dry_run_apply_repeat_and_reviewer_state_preservation(
             connection,
             CcldHostedBackfillRequest(
                 facility_numbers=("425802141",),
-                operation="all",
+                operation="facility-reference",
                 batch_size=1,
                 apply_changes=True,
+                checkpoint_file=tmp_path / "checkpoint.json",
+                restart=True,
+                max_facilities=1,
             ),
             now=datetime(2026, 7, 14, tzinfo=UTC),
         )
@@ -154,11 +197,12 @@ def test_backfill_dry_run_apply_repeat_and_reviewer_state_preservation(
     assert "Children&#x27;s Residential Facility" in html
     assert "Los Angeles" in html
     assert "Licensed" in html
-    assert "11/07/2025" in html
-    assert "561" in html
 
 
-def test_backfill_checkpoint_resume_and_failed_item_isolation(tmp_path: Path) -> None:
+def test_backfill_checkpoint_resume_and_failed_item_isolation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     hosted_seeded_import_metadata.create_all(engine)
     hosted_facility_reference_metadata.create_all(engine)
@@ -194,16 +238,40 @@ def test_backfill_checkpoint_resume_and_failed_item_isolation(tmp_path: Path) ->
         import_seeded_corpus_artifact(connection, _artifact("good", good))
         import_seeded_corpus_artifact(connection, _artifact("bad", bad))
         _insert_reference(connection)
+        _insert_reference(connection, facility_number="999999999")
         connection.commit()
+        real_process = ccld_backfill._process_facility
+
+        def fail_selected_facility(
+            process_connection: Any,
+            facility_number: str,
+            facility_row: Mapping[str, Any],
+            **kwargs: Any,
+        ) -> Mapping[str, int | bool]:
+            if facility_number == "999999999":
+                raise ValueError("controlled test failure")
+            return real_process(
+                process_connection,
+                facility_number,
+                facility_row,
+                **kwargs,
+            )
+
+        monkeypatch.setattr(
+            ccld_backfill,
+            "_process_facility",
+            fail_selected_facility,
+        )
         checkpoint = tmp_path / "resume.json"
         result = run_ccld_hosted_backfill(
             connection,
             CcldHostedBackfillRequest(
                 facility_numbers=("425802141", "999999999"),
-                operation="preserved-artifacts",
+                operation="facility-reference",
                 batch_size=1,
                 apply_changes=True,
                 checkpoint_file=checkpoint,
+                max_facilities=2,
             ),
         )
         connection.commit()
@@ -212,23 +280,115 @@ def test_backfill_checkpoint_resume_and_failed_item_isolation(tmp_path: Path) ->
             connection,
             CcldHostedBackfillRequest(
                 facility_numbers=("425802141", "999999999"),
-                operation="preserved-artifacts",
+                operation="facility-reference",
                 batch_size=1,
                 apply_changes=True,
                 checkpoint_file=checkpoint,
+                max_facilities=2,
             ),
         )
 
     assert result.examined == 2
     assert result.updated == 1
     assert result.failed == 1
-    assert good_values["facility_type"] == "733"
+    assert good_values["facility_type"] == "Children's Residential Facility"
     assert resumed.examined == 1
     assert resumed.skipped == 1
     assert resumed.failed == 1
+    checkpoint_payload = json.loads(checkpoint.read_text(encoding="utf-8"))
+    assert checkpoint_payload["version"] == 2
+    assert checkpoint_payload["completed_facility_numbers"] == ["425802141"]
+    assert checkpoint_payload["failed_attempts"] == {"999999999": 2}
 
 
-def test_preserved_artifact_repeat_is_unchanged_with_multiple_documents() -> None:
+def test_bounded_checkpoint_resume_finishes_frozen_selection_idempotently(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+    hosted_facility_reference_metadata.create_all(engine)
+    with engine.connect() as connection:
+        import_seeded_corpus_artifact(
+            connection,
+            _artifact("bounded-resume", _initial_missing_record()),
+        )
+        template = dict(
+            connection.execute(
+                select(hosted_source_derived_records).where(
+                    hosted_source_derived_records.c.entity_type == "facility"
+                )
+            ).mappings().one()
+        )
+        second = dict(template)
+        second.update(
+            source_record_key="facility:ccld-facility-425802142",
+            stable_source_id="ccld-facility-425802142",
+            facility_id="ccld-facility-425802142",
+            original_values={
+                **cast(Mapping[str, Any], template["original_values"]),
+                "facility_id": "ccld-facility-425802142",
+                "external_facility_number": "425802142",
+            },
+        )
+        connection.execute(hosted_source_derived_records.insert().values(**second))
+        _insert_reference(connection)
+        _insert_reference(connection, facility_number="425802142")
+        connection.commit()
+
+        processed: list[str] = []
+
+        def fake_process(
+            _connection: Any,
+            facility_number: str,
+            _facility_row: Mapping[str, Any],
+            **_kwargs: Any,
+        ) -> Mapping[str, int | bool]:
+            processed.append(facility_number)
+            return {
+                "eligible": True,
+                "updated": 1,
+                "unchanged": 0,
+                "skipped": 0,
+                "conflicted": 0,
+                "warnings": 0,
+            }
+
+        monkeypatch.setattr(ccld_backfill, "_process_facility", fake_process)
+        checkpoint = tmp_path / "bounded-resume.json"
+        request = CcldHostedBackfillRequest(
+            facility_numbers=("425802141", "425802142"),
+            operation="facility-reference",
+            apply_changes=True,
+            checkpoint_file=checkpoint,
+            max_facilities=1,
+        )
+
+        first = run_ccld_hosted_backfill(connection, request)
+        second_run = run_ccld_hosted_backfill(connection, request)
+        repeat = run_ccld_hosted_backfill(connection, request)
+
+    assert first.candidates == 2
+    assert first.examined == 1
+    assert first.excluded == 1
+    assert second_run.examined == 1
+    assert second_run.excluded == 0
+    assert repeat.examined == 0
+    assert repeat.skipped == 2
+    assert processed == ["425802141", "425802142"]
+    checkpoint_payload = json.loads(checkpoint.read_text(encoding="utf-8"))
+    assert checkpoint_payload["selected_facility_numbers"] == [
+        "425802141",
+        "425802142",
+    ]
+    assert checkpoint_payload["completed_facility_numbers"] == [
+        "425802141",
+        "425802142",
+    ]
+
+
+def test_preserved_artifact_dry_run_is_unchanged_with_multiple_documents(
+) -> None:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     hosted_seeded_import_metadata.create_all(engine)
     hosted_facility_reference_metadata.create_all(engine)
@@ -261,23 +421,21 @@ def test_preserved_artifact_repeat_is_unchanged_with_multiple_documents() -> Non
         import_seeded_corpus_artifact(connection, artifact)
         connection.commit()
 
-        first_apply = run_ccld_hosted_backfill(
+        first_dry_run = run_ccld_hosted_backfill(
             connection,
             CcldHostedBackfillRequest(
                 facility_numbers=("425802141",),
                 operation="preserved-artifacts",
                 batch_size=1,
-                apply_changes=True,
             ),
             now=datetime(2026, 7, 13, tzinfo=UTC),
         )
-        connection.commit()
         first_complaint = _entity_values(
             connection,
             "complaint",
             "ccld-complaint-31-CR-20240425094018",
         )
-        after_apply = _backfill_persistence_snapshot(connection)
+        after_dry_run = _backfill_persistence_snapshot(connection)
 
         repeat_dry_run = run_ccld_hosted_backfill(
             connection,
@@ -289,12 +447,12 @@ def test_preserved_artifact_repeat_is_unchanged_with_multiple_documents() -> Non
             now=datetime(2026, 7, 14, tzinfo=UTC),
         )
 
-        assert first_apply.updated == 1
-        assert first_apply.unchanged == 0
-        assert first_complaint["first_investigation_activity_date"] == "2025-11-07"
-        assert repeat_dry_run.updated == 0
-        assert repeat_dry_run.unchanged == 1
-        assert _backfill_persistence_snapshot(connection) == after_apply
+        assert first_dry_run.updated == 1
+        assert first_dry_run.unchanged == 0
+        assert first_complaint["first_investigation_activity_date"] is None
+        assert repeat_dry_run.updated == 1
+        assert repeat_dry_run.unchanged == 0
+        assert _backfill_persistence_snapshot(connection) == after_dry_run
 
 
 def test_repeated_supported_retrieval_refreshes_existing_rows_without_state_loss(
@@ -457,11 +615,15 @@ def _record_for_second_document(record: dict[str, object]) -> dict[str, object]:
     return record
 
 
-def _insert_reference(connection: Any) -> None:
+def _insert_reference(
+    connection: Any,
+    *,
+    facility_number: str = "425802141",
+) -> None:
     connection.execute(
         hosted_facility_reference_records.insert().values(
             source_resource_id="c9df723a-437f-4dcd-be37-ec73ae518bb9",
-            facility_number="425802141",
+            facility_number=facility_number,
             facility_name="GOVERNED REFRESH FIXTURE FACILITY",
             facility_type="Children's Residential Facility",
             program_type="Residential",
@@ -488,7 +650,7 @@ def _insert_reference(connection: Any) -> None:
             source_dataset_url=FACILITY_REFERENCE_DATASET_URL,
             source_accessed_at="2026-06-07T00:00:00+00:00",
             source_file_name="24HourResidentialCareforChildren06072026.csv",
-            original_row_json={"Facility Number": "425802141"},
+            original_row_json={"Facility Number": facility_number},
         )
     )
 

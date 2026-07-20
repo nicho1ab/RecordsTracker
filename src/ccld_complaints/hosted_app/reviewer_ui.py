@@ -65,6 +65,8 @@ from ccld_complaints.hosted_app.facility_case_brief import (
 )
 from ccld_complaints.hosted_app.facility_identity_presenter import (
     present_facility_field,
+    projected_conflict_text,
+    projected_context_text,
     projected_display_text,
     projected_selected_text,
 )
@@ -1127,6 +1129,10 @@ def _matrix_export_response(
         raise ValueError("Expected source-derived complaint bundle.")
     bundle = bundle_or_body
     records = bundle.records
+    projected_related_records = _records_with_projected_facility_identity(
+        context,
+        bundle.related_records,
+    )
     state_status, state_body = _reviewer_created_state_records_for_source_records(
         context,
         _source_record_keys_for_review_items(records),
@@ -1141,7 +1147,7 @@ def _matrix_export_response(
     csv_text = _render_complaint_review_matrix_csv(
         records,
         state_summaries,
-        bundle.related_records,
+        projected_related_records,
         return_context,
         date_dimension=date_dimension,
         explicit_limit=explicit_limit,
@@ -4030,7 +4036,7 @@ def _serious_topics_response(
         return _workflow_error_page(source_status, source_result)
     if isinstance(source_result, bytes):
         raise ValueError("Expected source-derived records.")
-    source_records = source_result
+    source_records = _records_with_projected_facility_identity(context, source_result)
     complaint_items = [
         _review_item_from_source_record(record)
         for record in source_records
@@ -4167,6 +4173,26 @@ def _serious_topic_items(
                 "facility_number": facility_number,
                 "facility_type": facility_type,
                 "geography": geography,
+                "facility_identity_context": _facility_identity_context_text(
+                    facility,
+                    (
+                        FacilityProjectionField.FACILITY_NAME,
+                        FacilityProjectionField.FACILITY_TYPE,
+                        FacilityProjectionField.CITY,
+                        FacilityProjectionField.STATE,
+                        FacilityProjectionField.COUNTY,
+                    ),
+                ),
+                "facility_identity_conflicts": _facility_identity_conflict_text(
+                    facility,
+                    (
+                        FacilityProjectionField.FACILITY_NAME,
+                        FacilityProjectionField.FACILITY_TYPE,
+                        FacilityProjectionField.CITY,
+                        FacilityProjectionField.STATE,
+                        FacilityProjectionField.COUNTY,
+                    ),
+                ),
                 "complaint_date": complaint_date,
                 "complaint_date_display": _substantiated_date_display(complaint_date),
                 "finding_value": _optional_string(original_values, "finding"),
@@ -4424,7 +4450,7 @@ def _render_serious_topic_row(item: Mapping[str, str]) -> str:
         else item["matched_fields"]
     )
     return f"""        <tr>
-          <th scope="row">{_escape(_reviewer_value_text(item['facility_display']))}</th>
+          <th scope="row">{_escape(_reviewer_value_text(item['facility_display']))}<span class="helper-text">{_escape(item['facility_identity_context'])}. {_escape(item['facility_identity_conflicts'])}.</span></th>
           <td>{_copyable_value("Facility ID", item['facility_number'])}</td>
           <td>{_escape(_reviewer_value_text(item['complaint_date_display']))}</td>
           <td>{_escape(_reviewer_value_text(item['finding_value']))}</td>
@@ -4633,7 +4659,7 @@ def _substantiated_triage_response(
         return _workflow_error_page(source_status, source_result)
     if isinstance(source_result, bytes):
         raise ValueError("Expected source-derived records.")
-    source_records = source_result
+    source_records = _records_with_projected_facility_identity(context, source_result)
     complaint_items = [
         _review_item_from_source_record(record)
         for record in source_records
@@ -4738,6 +4764,26 @@ def _substantiated_triage_items(
                 "facility_number": facility_number,
                 "facility_type": facility_type,
                 "geography": geography,
+                "facility_identity_context": _facility_identity_context_text(
+                    facility,
+                    (
+                        FacilityProjectionField.FACILITY_NAME,
+                        FacilityProjectionField.FACILITY_TYPE,
+                        FacilityProjectionField.CITY,
+                        FacilityProjectionField.STATE,
+                        FacilityProjectionField.COUNTY,
+                    ),
+                ),
+                "facility_identity_conflicts": _facility_identity_conflict_text(
+                    facility,
+                    (
+                        FacilityProjectionField.FACILITY_NAME,
+                        FacilityProjectionField.FACILITY_TYPE,
+                        FacilityProjectionField.CITY,
+                        FacilityProjectionField.STATE,
+                        FacilityProjectionField.COUNTY,
+                    ),
+                ),
                 "date_context": date_context,
                 "complaint_date": complaint_date,
                 "complaint_date_display": _substantiated_date_display(complaint_date),
@@ -5250,7 +5296,7 @@ def _render_substantiated_triage(
     else:
         rows = "\n".join(
             f"""        <tr>
-          <th scope=\"row\">{_escape(_reviewer_value_text(item['facility_display']))}</th>
+          <th scope=\"row\">{_escape(_reviewer_value_text(item['facility_display']))}<span class=\"helper-text\">{_escape(item['facility_identity_context'])}. {_escape(item['facility_identity_conflicts'])}.</span></th>
           <td>{_copyable_value("Facility ID", item['facility_number'])}</td>
           <td>{_escape(_reviewer_value_text(item['complaint_date_display']))}</td>
           <td>{_escape(_reviewer_value_text(item['finding_value']))}</td>
@@ -5585,7 +5631,12 @@ def _substantiated_source_records_response(
             "source_derived_read_failed",
             "Source-derived records could not be read.",
         )
-    return 200, [_source_derived_read_payload(record) for record in records]
+    payloads: list[Mapping[str, Any]] = []
+    for record in records:
+        payload = _source_derived_read_payload(record)
+        payload[_AUTHORIZED_SOURCE_RECORD_MARKER] = record
+        payloads.append(payload)
+    return 200, payloads
 
 
 def _source_derived_error_body(code: str, message: str) -> bytes:
@@ -5710,6 +5761,8 @@ def _substantiated_fieldnames() -> list[str]:
     return [
         "Facility Name",
         "Facility/License Number",
+        "Facility Identity Context",
+        "Facility Identity Conflicts",
         "Complaint Received Date",
         "First Investigation Activity Date",
         "Date Dimension",
@@ -5890,29 +5943,22 @@ def _substantiated_row_for_record(
     related_records = _related_source_records(source_record, all_source_records)
     facility = _facility_context(related_records)
     facility_name = _facility_context_value(facility, "facility_name")
-    # Fallback: try to find a facility record in all_source_records by facility id
-    if facility_name == "unknown":
-        try:
-            fid = return_context.facility_number or _optional_string(identity, "facility_id")
-            for rec in all_source_records:
-                try:
-                    if _string(rec, "entity_type") != "facility":
-                        continue
-                    # record identity may contain facility_id
-                    rec_ident = _mapping(rec, "identity")
-                    rec_fid = _optional_string(rec_ident, "facility_id")
-                    if rec_fid == fid:
-                        facility_name = _facility_context_value(_mapping(rec, "original_values"), "facility_name")
-                        break
-                except Exception:
-                    continue
-        except Exception:
-            pass
+    projection = _facility_projection(facility)
     return {
         "Facility Name": presentation_value(facility_name).export_text,
         "Facility/License Number": presentation_value(
-            _complaint_export_row_facility_number(source_record, return_context)
+            projection.public_facility_id
+            if projection is not None
+            else _complaint_export_row_facility_number(source_record, return_context)
         ).export_text,
+        "Facility Identity Context": _facility_identity_context_text(
+            facility,
+            (FacilityProjectionField.FACILITY_NAME,),
+        ),
+        "Facility Identity Conflicts": _facility_identity_conflict_text(
+            facility,
+            (FacilityProjectionField.FACILITY_NAME,),
+        ),
         "Complaint Received Date": _export_field(original_values, "complaint_received_date"),
         "First Investigation Activity Date": _export_field(
             original_values, "first_investigation_activity_date"
@@ -5992,7 +6038,7 @@ def _substantiated_export_response(
         return _workflow_error_page(related_status, related_result)
     if isinstance(related_result, bytes):
         raise ValueError("Expected source-derived records.")
-    related_records = related_result
+    related_records = _records_with_projected_facility_identity(context, related_result)
     # Let the renderer filter records for substantiated findings to avoid
     # mismatches between queue item shapes and source-derived records.
     csv_text = _render_substantiated_complaint_csv(
@@ -6212,6 +6258,8 @@ def _matrix_fieldnames() -> list[str]:
         "review_guidance",
         "facility_number",
         "facility_name",
+        "facility_identity_context",
+        "facility_identity_conflicts",
         "request_start_date",
         "request_end_date",
         "source_record_key",
@@ -6284,15 +6332,26 @@ def _matrix_row_for_record(
     summary = state_summaries.get(source_record_key, _empty_state_summary())
     related_records = _related_source_records(source_record, all_source_records)
     facility = _facility_context(related_records)
+    projection = _facility_projection(facility)
     return {
         "matrix_status": "loaded complaint record",
         "review_guidance": _matrix_review_guidance_text(),
         "facility_number": presentation_value(
-            return_context.facility_number or _optional_string(identity, "facility_id")
+            projection.public_facility_id
+            if projection is not None
+            else return_context.facility_number or _optional_string(identity, "facility_id")
         ).export_text,
         "facility_name": presentation_value(
             _facility_context_value(facility, "facility_name")
         ).export_text,
+        "facility_identity_context": _facility_identity_context_text(
+            facility,
+            (FacilityProjectionField.FACILITY_NAME,),
+        ),
+        "facility_identity_conflicts": _facility_identity_conflict_text(
+            facility,
+            (FacilityProjectionField.FACILITY_NAME,),
+        ),
         "request_start_date": return_context.start_date or NOT_APPLICABLE,
         "request_end_date": return_context.end_date or NOT_APPLICABLE,
         "source_record_key": source_record_key,
@@ -12649,6 +12708,7 @@ def _facility_context(
 
 
 _FACILITY_PROJECTION_MARKER = "_facility_identity_projection"
+_AUTHORIZED_SOURCE_RECORD_MARKER = "_authorized_source_record_read"
 _FACILITY_CONTEXT_PROJECTION_FIELDS = {
     "external_facility_number": FacilityProjectionField.PUBLIC_FACILITY_ID,
     "facility_number": FacilityProjectionField.PUBLIC_FACILITY_ID,
@@ -12692,6 +12752,14 @@ def _records_with_projected_facility_identity(
     )
     if not facility_ids:
         return records
+    facility_records = tuple(
+        record for record in records if _string(record, "entity_type") == "facility"
+    )
+    authorized_source_records = tuple(
+        cast(SourceDerivedRecordRead, source_record)
+        for record in facility_records
+        if (source_record := record.get(_AUTHORIZED_SOURCE_RECORD_MARKER)) is not None
+    )
     source_context = context.workflow_shell_context.source_derived_api_context
     projections = load_authorized_facility_identity_projections(
         source_context.connection,
@@ -12699,17 +12767,27 @@ def _records_with_projected_facility_identity(
         scope=source_context.scope,
         public_facility_ids=facility_ids,
         allow_test_candidates=source_context.scope == LOCAL_REVIEWER_UI_SCOPE,
+        authorized_source_records=(
+            authorized_source_records
+            if len(authorized_source_records) == len(facility_records)
+            else None
+        ),
     )
     projected_records: list[Mapping[str, Any]] = []
     for record in records:
+        public_record = {
+            key: value
+            for key, value in record.items()
+            if key != _AUTHORIZED_SOURCE_RECORD_MARKER
+        }
         if _string(record, "entity_type") != "facility":
-            projected_records.append(record)
+            projected_records.append(public_record)
             continue
         original_values = _mapping(record, "original_values")
         facility_id = _facility_public_id_from_values(original_values)
         projection = projections.get(facility_id or "")
         if projection is None:
-            projected_records.append(record)
+            projected_records.append(public_record)
             continue
         values = dict(original_values)
         values.update(
@@ -12719,7 +12797,7 @@ def _records_with_projected_facility_identity(
             }
         )
         values[_FACILITY_PROJECTION_MARKER] = projection
-        projected_records.append({**record, "original_values": values})
+        projected_records.append({**public_record, "original_values": values})
     return projected_records
 
 
@@ -12740,6 +12818,29 @@ def _facility_projection(
         return None
     projection = facility.get(_FACILITY_PROJECTION_MARKER)
     return projection if isinstance(projection, FacilityIdentityProjection) else None
+
+
+def _facility_identity_context_text(
+    facility: Mapping[str, Any] | None,
+    fields: tuple[FacilityProjectionField, ...],
+) -> str:
+    projection = _facility_projection(facility)
+    if projection is None:
+        return "No selected source context"
+    contexts = tuple(
+        dict.fromkeys(projected_context_text(projection, field) for field in fields)
+    )
+    return "; ".join(contexts)
+
+
+def _facility_identity_conflict_text(
+    facility: Mapping[str, Any] | None,
+    fields: tuple[FacilityProjectionField, ...],
+) -> str:
+    projection = _facility_projection(facility)
+    if projection is None:
+        return "No conflicting source values"
+    return projected_conflict_text(projection, fields)
 
 
 def _facility_context_value(

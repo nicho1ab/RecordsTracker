@@ -34,7 +34,8 @@ import csv
 import json
 import sqlite3
 import subprocess
-from dataclasses import dataclass, field
+from collections.abc import Mapping
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -42,6 +43,18 @@ from typing import Any
 import openpyxl
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+
+from ccld_complaints.facility_identity_exports import (
+    FACILITY_EXPORT_IDENTITY_FIELDS,
+    load_sqlite_facility_identity_projections,
+    projected_facility_export_conflicts,
+    projected_facility_export_context,
+    projected_facility_export_text,
+)
+from ccld_complaints.hosted_app.facility_identity_projection import (
+    FacilityIdentityProjection,
+    FacilityProjectionField,
+)
 
 DEFAULT_STAKEHOLDER_EXTRACT_ROOT = Path("data/processed/stakeholder-extracts")
 UNKNOWN = "not available"
@@ -205,6 +218,8 @@ class _FacilityRow:
     complaint_dates: list[str] = field(default_factory=list)
     source_traceability_ready: int = 0
     missing_traceability: int = 0
+    facility_identity_context: str = "No selected source context"
+    facility_identity_conflicts: str = "No conflicting source values"
 
 
 @dataclass(frozen=True)
@@ -219,6 +234,8 @@ class _SubstantiatedRow:
     raw_hash_or_artifact_reference: str
     reviewer_detail_path: str
     limitations: str
+    facility_identity_context: str = "No selected source context"
+    facility_identity_conflicts: str = "No conflicting source values"
 
 
 @dataclass(frozen=True)
@@ -241,6 +258,8 @@ class _ComplaintRecordRow:
     raw_hash_or_artifact_reference: str
     reviewer_detail_path: str
     limitations: str
+    facility_identity_context: str = "No selected source context"
+    facility_identity_conflicts: str = "No conflicting source values"
 
 
 @dataclass(frozen=True)
@@ -325,9 +344,10 @@ def export_stakeholder_facility_overview(
     If *db_path* does not exist or contains no facilities, produces empty
     CSVs with correct headers, README, manifest, and ZIP without failing.
 
-    If *facility_reference_csv* is provided its rows are merged into
-    facility-overview.csv. Facilities present in the reference CSV but
-    absent from the database are included with zero complaint counts.
+    If *facility_reference_csv* is provided its rows join the complaint-time
+    observations in the shared governed facility projection. Facilities present
+    in the reference CSV but absent from the database are included with zero
+    complaint counts.
     Complaint-derived counts are always based only on loaded records.
 
     If *only_facility_reference_rows* is True, only facilities whose
@@ -352,19 +372,39 @@ def export_stakeholder_facility_overview(
     else:
         facility_rows, substantiated_rows, complaint_sql_rows = [], [], []
 
-    # Merge optional facility reference CSV
+    # Load every optional reference observation; duplicate Facility IDs are
+    # reconciled by the shared projector rather than discarded by row order.
     ref_row_count = 0
     ref_matched_count = 0
     ref_csv_value = "none"
     ref_numbers: set[str] = set()
+    ref_records: list[dict[str, str]] = []
     if facility_reference_csv is not None:
         ref_records = read_facility_reference_csv(facility_reference_csv)
         ref_row_count = len(ref_records)
         ref_csv_value = facility_reference_csv.as_posix()
         ref_numbers = {r["facility_number"] for r in ref_records}
-        facility_rows, ref_matched_count = _merge_reference_facilities(
-            facility_rows, ref_records
-        )
+    existing_facility_numbers = {row.facility_number for row in facility_rows}
+    ref_matched_count = len(existing_facility_numbers & ref_numbers)
+    if db_exists:
+        with sqlite3.connect(db_path) as projection_connection:
+            projection_connection.row_factory = sqlite3.Row
+            projections = load_sqlite_facility_identity_projections(
+                projection_connection,
+                reference_records=ref_records,
+            )
+    else:
+        with sqlite3.connect(":memory:") as projection_connection:
+            projection_connection.row_factory = sqlite3.Row
+            projections = load_sqlite_facility_identity_projections(
+                projection_connection,
+                reference_records=ref_records,
+            )
+    facility_rows = _facility_rows_from_projections(facility_rows, projections)
+    substantiated_rows = _substantiated_rows_from_projections(
+        substantiated_rows,
+        projections,
+    )
 
     # Build enriched facility map (used to enrich complaint record rows)
     all_facility_map: dict[str, _FacilityRow] = {
@@ -607,6 +647,14 @@ def _build_complaint_records(
                 raw_hash_or_artifact_reference=_str(row, "raw_sha256") or UNKNOWN,
                 reviewer_detail_path=detail_path,
                 limitations=_limitations_sentence(),
+                facility_identity_context=(
+                    frow.facility_identity_context if frow else "No selected source context"
+                ),
+                facility_identity_conflicts=(
+                    frow.facility_identity_conflicts
+                    if frow
+                    else "No conflicting source values"
+                ),
             )
         )
     return rows
@@ -646,7 +694,8 @@ def read_facility_reference_csv(
     empty string.
 
     Raises FacilityReferenceError if no usable facility number column is
-    found.  Duplicate facility numbers keep the first occurrence.
+    found. Duplicate Facility IDs remain separate observations for the shared
+    governed projection to reconcile without an input-order winner.
     """
     with csv_path.open(encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
@@ -671,15 +720,11 @@ def read_facility_reference_csv(
     city_col = _match_alias(headers, _CITY_ALIASES)
     county_col = _match_alias(headers, _COUNTY_ALIASES)
 
-    seen: set[str] = set()
     result: list[dict[str, str]] = []
     for raw in raw_rows:
         fnum = (raw.get(fnum_col) or "").strip()
         if not fnum:
             continue  # skip rows with no facility number
-        if fnum in seen:
-            continue  # first occurrence wins
-        seen.add(fnum)
         result.append({
             "facility_number": fnum,
             "facility_name": (raw.get(name_col) or "").strip() if name_col else "",
@@ -691,77 +736,82 @@ def read_facility_reference_csv(
     return result
 
 
-def _merge_reference_facilities(
+def _facility_rows_from_projections(
     complaint_rows: list[_FacilityRow],
-    ref_records: list[dict[str, str]],
-) -> tuple[list[_FacilityRow], int]:
-    """Merge reference facility records with complaint-aggregated rows.
-
-    Returns (merged_rows, matched_count) where matched_count is the number
-    of reference facilities that already had loaded complaint records.
-
-    Reference metadata enriches existing rows (fills in blank city/name/type
-    from reference when the complaint aggregate returned UNKNOWN).  Reference
-    facilities with no loaded complaints are appended with zero counts.
-    """
-    complaint_map: dict[str, _FacilityRow] = {
-        row.facility_number: row for row in complaint_rows
-    }
-    matched = 0
-    for ref in ref_records:
-        fnum = ref["facility_number"]
-        if fnum in complaint_map:
-            matched += 1
-            existing = complaint_map[fnum]
-            # Enrich blank fields from reference without overwriting loaded data
-            complaint_map[fnum] = _FacilityRow(
-                facility_number=fnum,
-                facility_name=(
-                    existing.facility_name
-                    if existing.facility_name != UNKNOWN
-                    else (ref["facility_name"] or UNKNOWN)
+    projections: Mapping[str, FacilityIdentityProjection],
+) -> list[_FacilityRow]:
+    existing = {row.facility_number: row for row in complaint_rows}
+    rows: list[_FacilityRow] = []
+    for facility_number, projection in sorted(projections.items()):
+        prior = existing.get(facility_number, _FacilityRow(
+            facility_number=facility_number,
+            facility_name=UNKNOWN,
+            facility_type=UNKNOWN,
+            status=UNKNOWN,
+            city=UNKNOWN,
+            county=UNKNOWN,
+        ))
+        rows.append(
+            replace(
+                prior,
+                facility_number=projection.public_facility_id,
+                facility_name=projected_facility_export_text(
+                    projection, FacilityProjectionField.FACILITY_NAME
                 ),
-                facility_type=(
-                    existing.facility_type
-                    if existing.facility_type != UNKNOWN
-                    else (ref["facility_type"] or UNKNOWN)
+                facility_type=projected_facility_export_text(
+                    projection, FacilityProjectionField.FACILITY_TYPE
                 ),
-                status=(
-                    existing.status
-                    if existing.status != UNKNOWN
-                    else (ref["status"] or UNKNOWN)
+                status=projected_facility_export_text(
+                    projection, FacilityProjectionField.STATUS
                 ),
-                city=(
-                    existing.city
-                    if existing.city != UNKNOWN
-                    else (ref["city"] or UNKNOWN)
+                city=projected_facility_export_text(
+                    projection, FacilityProjectionField.CITY
                 ),
-                county=(
-                    existing.county
-                    if existing.county != UNKNOWN
-                    else (ref["county"] or UNKNOWN)
+                county=projected_facility_export_text(
+                    projection, FacilityProjectionField.COUNTY
                 ),
-                loaded_complaint_count=existing.loaded_complaint_count,
-                substantiated_count=existing.substantiated_count,
-                complaint_dates=existing.complaint_dates,
-                source_traceability_ready=existing.source_traceability_ready,
-                missing_traceability=existing.missing_traceability,
+                facility_identity_context=projected_facility_export_context(
+                    projection,
+                    FACILITY_EXPORT_IDENTITY_FIELDS,
+                ),
+                facility_identity_conflicts=projected_facility_export_conflicts(
+                    projection,
+                    FACILITY_EXPORT_IDENTITY_FIELDS,
+                ),
             )
-        else:
-            # Reference-only facility — zero loaded complaints
-            complaint_map[fnum] = _FacilityRow(
-                facility_number=fnum,
-                facility_name=ref["facility_name"] or UNKNOWN,
-                facility_type=ref["facility_type"] or UNKNOWN,
-                status=ref["status"] or UNKNOWN,
-                city=ref["city"] or UNKNOWN,
-                county=ref["county"] or UNKNOWN,
-            )
+        )
+    return rows
 
-    merged: list[_FacilityRow] = sorted(
-        complaint_map.values(), key=lambda r: r.facility_number
-    )
-    return merged, matched
+
+def _substantiated_rows_from_projections(
+    rows: list[_SubstantiatedRow],
+    projections: Mapping[str, FacilityIdentityProjection],
+) -> list[_SubstantiatedRow]:
+    projected: list[_SubstantiatedRow] = []
+    for row in rows:
+        projection = projections.get(row.facility_number)
+        if projection is None:
+            projected.append(row)
+            continue
+        projected.append(
+            replace(
+                row,
+                facility_number=projection.public_facility_id,
+                facility_name=projected_facility_export_text(
+                    projection,
+                    FacilityProjectionField.FACILITY_NAME,
+                ),
+                facility_identity_context=projected_facility_export_context(
+                    projection,
+                    (FacilityProjectionField.FACILITY_NAME,),
+                ),
+                facility_identity_conflicts=projected_facility_export_conflicts(
+                    projection,
+                    (FacilityProjectionField.FACILITY_NAME,),
+                ),
+            )
+        )
+    return projected
 
 
 # ---------------------------------------------------------------------------
@@ -775,6 +825,8 @@ _FACILITY_OVERVIEW_FIELDS = (
     "Status",
     "City",
     "County",
+    "FacilityIdentityContext",
+    "FacilityIdentityConflicts",
     "LoadedComplaintCount",
     "SubstantiatedOrEquivalentCount",
     "EarliestComplaintDate",
@@ -790,6 +842,8 @@ _FACILITY_OVERVIEW_FIELDS = (
 _SUBSTANTIATED_COMPLAINTS_FIELDS = (
     "FacilityNumber",
     "FacilityName",
+    "FacilityIdentityContext",
+    "FacilityIdentityConflicts",
     "ComplaintControlNumber",
     "ComplaintReceivedDate",
     "ReportDate",
@@ -827,6 +881,8 @@ def _write_facility_overview_csv(path: Path, facility_rows: list[_FacilityRow]) 
                     "Status": frow.status,
                     "City": frow.city,
                     "County": frow.county,
+                    "FacilityIdentityContext": frow.facility_identity_context,
+                    "FacilityIdentityConflicts": frow.facility_identity_conflicts,
                     "LoadedComplaintCount": frow.loaded_complaint_count,
                     "SubstantiatedOrEquivalentCount": frow.substantiated_count,
                     "EarliestComplaintDate": earliest,
@@ -852,6 +908,8 @@ def _write_substantiated_complaints_csv(
                 {
                     "FacilityNumber": row.facility_number,
                     "FacilityName": row.facility_name,
+                    "FacilityIdentityContext": row.facility_identity_context,
+                    "FacilityIdentityConflicts": row.facility_identity_conflicts,
                     "ComplaintControlNumber": row.complaint_control_number,
                     "ComplaintReceivedDate": row.complaint_received_date,
                     "ReportDate": row.report_date,
@@ -871,6 +929,8 @@ _COMPLAINT_RECORDS_FIELDS = (
     "Status",
     "City",
     "County",
+    "FacilityIdentityContext",
+    "FacilityIdentityConflicts",
     "ComplaintControlNumber",
     "ComplaintReceivedDate",
     "ReportDate",
@@ -890,6 +950,8 @@ _FACILITY_REVIEW_CUES_FIELDS = (
     "FacilityName",
     "Status",
     "County",
+    "FacilityIdentityContext",
+    "FacilityIdentityConflicts",
     "LoadedComplaintCount",
     "SubstantiatedOrEquivalentCount",
     "LoadedDateRange",
@@ -916,6 +978,8 @@ def _write_complaint_records_csv(
                     "Status": row.status,
                     "City": row.city,
                     "County": row.county,
+                    "FacilityIdentityContext": row.facility_identity_context,
+                    "FacilityIdentityConflicts": row.facility_identity_conflicts,
                     "ComplaintControlNumber": row.complaint_control_number,
                     "ComplaintReceivedDate": row.complaint_received_date,
                     "ReportDate": row.report_date,
@@ -971,6 +1035,15 @@ Verify important details against the public source before citing this extract.
 
 Counts are based only on currently loaded records. A facility may have additional
 complaint records in the public source that were not retrieved or loaded.
+
+## Facility identity
+
+Public Facility ID and facility fields use the shared governed projection.
+FacilityIdentityContext distinguishes current facility-reference values from
+complaint-time observations. FacilityIdentityConflicts keeps differing governed
+observations explicit. An unresolved numeric type such as 733 is shown only as
+a source code whose descriptive label has not been verified. Internal facility
+record identities are never substituted for the public Facility ID.
 
 ## Finding/resolution values
 
@@ -1040,6 +1113,11 @@ def _build_manifest(
         "facility_reference_row_count": facility_reference_row_count,
         "facility_reference_matched_count": facility_reference_matched_count,
         "only_facility_reference_rows": only_facility_reference_rows,
+        "facility_identity_contract": (
+            "Public Facility ID and facility presentation use the shared governed "
+            "projection; current-reference and complaint-time context and conflicts "
+            "remain explicit."
+        ),
         "limitations": limitations,
     }
 
@@ -1075,12 +1153,22 @@ _TAB_COLOR_SUBSTANTIATED = "C55A11"
 _TAB_COLOR_COMPLAINT_RECORDS = "538135"
 _TAB_COLOR_MANIFEST = "767171"
 # Column names that receive wrap_text alignment in data worksheets.
-_WRAP_COLS = frozenset({"Limitations", "ReviewCues", "SuggestedNextStep"})
+_WRAP_COLS = frozenset(
+    {
+        "Limitations",
+        "ReviewCues",
+        "SuggestedNextStep",
+        "FacilityIdentityContext",
+        "FacilityIdentityConflicts",
+    }
+)
 # Display headers for XLSX worksheets (stakeholder-friendly spacing/capitalisation).
 _XLSX_DISPLAY_HEADERS: dict[str, str] = {
     "FacilityNumber": "Facility Number",
     "FacilityName": "Facility Name",
     "FacilityType": "Facility Type",
+    "FacilityIdentityContext": "Facility Identity Context",
+    "FacilityIdentityConflicts": "Facility Identity Conflicts",
     "LoadedComplaintCount": "Loaded Complaint Count",
     "SubstantiatedOrEquivalentCount": "Substantiated Count",
     "EarliestComplaintDate": "Earliest Complaint Date",
@@ -1109,6 +1197,8 @@ _FACILITY_REVIEW_CUES_XLSX_FIELDS = (
     "FacilityName",
     "Status",
     "County",
+    "FacilityIdentityContext",
+    "FacilityIdentityConflicts",
     "LoadedComplaintCount",
     "SubstantiatedOrEquivalentCount",
     "LoadedDateRange",
@@ -1124,6 +1214,8 @@ _FACILITY_OVERVIEW_XLSX_FIELDS = (
     "Status",
     "City",
     "County",
+    "FacilityIdentityContext",
+    "FacilityIdentityConflicts",
     "LoadedComplaintCount",
     "SubstantiatedOrEquivalentCount",
     "EarliestComplaintDate",
@@ -1136,6 +1228,8 @@ _FACILITY_OVERVIEW_XLSX_FIELDS = (
 _SUBSTANTIATED_COMPLAINTS_XLSX_FIELDS = (
     "FacilityNumber",
     "FacilityName",
+    "FacilityIdentityContext",
+    "FacilityIdentityConflicts",
     "ComplaintControlNumber",
     "ComplaintReceivedDate",
     "ReportDate",
@@ -1149,6 +1243,8 @@ _COMPLAINT_RECORDS_XLSX_FIELDS = (
     "Status",
     "City",
     "County",
+    "FacilityIdentityContext",
+    "FacilityIdentityConflicts",
     "ComplaintControlNumber",
     "ComplaintReceivedDate",
     "ReportDate",
@@ -1174,6 +1270,7 @@ _MANIFEST_DISPLAY_LABELS: dict[str, str] = {
     "facility_reference_row_count": "Facility Reference Row Count",
     "facility_reference_matched_count": "Facility Reference Matched Count",
     "only_facility_reference_rows": "Reference-Only Filter Applied",
+    "facility_identity_contract": "Facility Identity Contract",
     "limitations": "Limitations",
 }
 
@@ -1200,6 +1297,8 @@ def _facility_overview_row_dicts(
                 "Status": frow.status,
                 "City": frow.city,
                 "County": frow.county,
+                "FacilityIdentityContext": frow.facility_identity_context,
+                "FacilityIdentityConflicts": frow.facility_identity_conflicts,
                 "LoadedComplaintCount": frow.loaded_complaint_count,
                 "SubstantiatedOrEquivalentCount": frow.substantiated_count,
                 "EarliestComplaintDate": earliest,
@@ -1223,6 +1322,8 @@ def _substantiated_row_dicts(
         {
             "FacilityNumber": row.facility_number,
             "FacilityName": row.facility_name,
+            "FacilityIdentityContext": row.facility_identity_context,
+            "FacilityIdentityConflicts": row.facility_identity_conflicts,
             "ComplaintControlNumber": row.complaint_control_number,
             "ComplaintReceivedDate": row.complaint_received_date,
             "ReportDate": row.report_date,
@@ -1248,6 +1349,8 @@ def _complaint_record_row_dicts(
             "Status": row.status,
             "City": row.city,
             "County": row.county,
+            "FacilityIdentityContext": row.facility_identity_context,
+            "FacilityIdentityConflicts": row.facility_identity_conflicts,
             "ComplaintControlNumber": row.complaint_control_number,
             "ComplaintReceivedDate": row.complaint_received_date,
             "ReportDate": row.report_date,
@@ -1317,6 +1420,8 @@ def _facility_review_cues_row_dicts(
                 "FacilityName": frow.facility_name,
                 "Status": frow.status,
                 "County": frow.county,
+                "FacilityIdentityContext": frow.facility_identity_context,
+                "FacilityIdentityConflicts": frow.facility_identity_conflicts,
                 "LoadedComplaintCount": frow.loaded_complaint_count,
                 "SubstantiatedOrEquivalentCount": frow.substantiated_count,
                 "LoadedDateRange": date_range,
