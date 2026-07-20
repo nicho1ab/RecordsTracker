@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import shutil
 from pathlib import Path
 from typing import Protocol, cast
 
@@ -26,6 +27,10 @@ class CheckDocsModule(Protocol):
         self, root: Path = Path("."), tracked_files: list[str] | None = None
     ) -> list[str]: ...
 
+    def find_reviewer_ui_governance_contract_violations(
+        self, root: Path = Path(".")
+    ) -> list[str]: ...
+
 
 def _load_check_docs_module() -> CheckDocsModule:
     path = Path("scripts/check_docs.py")
@@ -47,6 +52,100 @@ def test_required_public_output_guidance_is_documented() -> None:
     check_docs = _load_check_docs_module()
 
     assert check_docs.find_missing_required_content() == []
+
+
+def test_reviewer_ui_governance_contract_is_complete() -> None:
+    check_docs = _load_check_docs_module()
+
+    assert check_docs.find_reviewer_ui_governance_contract_violations() == []
+
+
+REVIEWER_UI_GOVERNANCE_SECTIONS = {
+    "AGENTS.md": "Reviewer-facing design enforcement",
+    ".github/copilot-instructions.md": "Reviewer-facing design implementation rules",
+    "DESIGN_AND_USABILITY.md": "Approved design implementation and primary-content rules",
+    "ACCESSIBILITY_REQUIREMENTS.md": "Primary record inventory and disclosure accessibility",
+    "TESTING_STRATEGY.md": "Reviewer UI design-conformance and source-to-screen tests",
+    "docs/product/records-tracker-product-ux-lead-charter.md": "Figma and Design Handoff",
+    "docs/product/records-tracker-approved-design-decisions.md": "Evidence-report format",
+    "docs/planning/records-tracker-ui-ux-data-completeness-remediation-plan.md": (
+        "Evidence review checklist"
+    ),
+    "docs/developer/ui-evidence-review.md": "Issue #479 reviewer-facing visual acceptance contract",
+    "docs/developer/hosted-reviewer-acceptance.md": "Reviewer-facing visual acceptance boundary",
+}
+
+
+def _copy_reviewer_ui_governance_files(tmp_path: Path) -> None:
+    for relative_path in REVIEWER_UI_GOVERNANCE_SECTIONS:
+        target = tmp_path / relative_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(relative_path, target)
+
+
+@pytest.mark.parametrize(
+    ("relative_path", "heading"), REVIEWER_UI_GOVERNANCE_SECTIONS.items()
+)
+def test_reviewer_ui_governance_requires_each_authoritative_section(
+    tmp_path: Path, relative_path: str, heading: str
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_reviewer_ui_governance_files(tmp_path)
+    path = tmp_path / relative_path
+    content = path.read_text(encoding="utf-8")
+    path.write_text(content.replace(f"## {heading}", f"## Removed {heading}", 1), encoding="utf-8")
+
+    assert (
+        f"{relative_path}: expected exactly one section heading: ## {heading}"
+        in check_docs.find_reviewer_ui_governance_contract_violations(tmp_path)
+    )
+
+
+@pytest.mark.parametrize(
+    "gate_id",
+    [
+        "RT-UI-GATE-003",
+        "RT-UI-GATE-004",
+        "RT-UI-GATE-006",
+        "RT-UI-GATE-007",
+    ],
+)
+def test_reviewer_ui_governance_rejects_missing_enforcement_gate(
+    tmp_path: Path, gate_id: str
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_reviewer_ui_governance_files(tmp_path)
+    path = tmp_path / "docs/developer/ui-evidence-review.md"
+    lines = path.read_text(encoding="utf-8").splitlines()
+    path.write_text(
+        "\n".join(line for line in lines if not line.startswith(f"| `{gate_id}` |"))
+        + "\n",
+        encoding="utf-8",
+    )
+
+    violations = check_docs.find_reviewer_ui_governance_contract_violations(tmp_path)
+    assert any("reviewer UI evidence gate IDs must be exactly" in item for item in violations)
+
+
+def test_reviewer_ui_governance_requires_evidence_and_blocking_result(
+    tmp_path: Path,
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_reviewer_ui_governance_files(tmp_path)
+    path = tmp_path / "docs/developer/ui-evidence-review.md"
+    lines = path.read_text(encoding="utf-8").splitlines()
+    for index, line in enumerate(lines):
+        if line.startswith("| `RT-UI-GATE-005` |"):
+            cells = [cell.strip() for cell in line.strip("|").split("|")]
+            cells[2] = ""
+            cells[4] = "WARN"
+            lines[index] = "| " + " | ".join(cells) + " |"
+            break
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    violations = check_docs.find_reviewer_ui_governance_contract_violations(tmp_path)
+    assert "RT-UI-GATE-005: required evidence cell is empty" in violations
+    assert "RT-UI-GATE-005: blocking result must be BLOCK" in violations
 
 
 def test_pull_request_template_contract_is_complete() -> None:

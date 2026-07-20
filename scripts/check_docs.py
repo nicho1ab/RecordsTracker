@@ -5,6 +5,41 @@ import subprocess
 from collections.abc import Iterable
 from pathlib import Path
 
+REVIEWER_UI_GOVERNANCE_SECTIONS = {
+    "AGENTS.md": "Reviewer-facing design enforcement",
+    ".github/copilot-instructions.md": "Reviewer-facing design implementation rules",
+    "DESIGN_AND_USABILITY.md": "Approved design implementation and primary-content rules",
+    "ACCESSIBILITY_REQUIREMENTS.md": "Primary record inventory and disclosure accessibility",
+    "TESTING_STRATEGY.md": "Reviewer UI design-conformance and source-to-screen tests",
+    "docs/product/records-tracker-product-ux-lead-charter.md": "Figma and Design Handoff",
+    "docs/product/records-tracker-approved-design-decisions.md": "Evidence-report format",
+    "docs/planning/records-tracker-ui-ux-data-completeness-remediation-plan.md": (
+        "Evidence review checklist"
+    ),
+    "docs/developer/ui-evidence-review.md": "Issue #479 reviewer-facing visual acceptance contract",
+    "docs/developer/hosted-reviewer-acceptance.md": "Reviewer-facing visual acceptance boundary",
+}
+
+REVIEWER_UI_EVIDENCE_GATE_CONTRACT = (
+    ("RT-UI-GATE-001", "design-authority"),
+    ("RT-UI-GATE-002", "pre-code-variance"),
+    ("RT-UI-GATE-003", "primary-content"),
+    ("RT-UI-GATE-004", "source-to-screen"),
+    ("RT-UI-GATE-005", "state-truthfulness"),
+    ("RT-UI-GATE-006", "token-and-tlp"),
+    ("RT-UI-GATE-007", "automated-route-capture"),
+    ("RT-UI-GATE-008", "accessibility-responsive"),
+    ("RT-UI-GATE-009", "visual-acceptance"),
+)
+
+REVIEWER_UI_EVIDENCE_TABLE_HEADER = (
+    "Gate ID",
+    "Rule family",
+    "Required evidence",
+    "Passing condition",
+    "Blocking result",
+)
+
 REQUIRED = [
     ".github/PULL_REQUEST_TEMPLATE.md",
     ".github/copilot-instructions.md",
@@ -851,6 +886,92 @@ def _markdown_section(content: str, heading: str) -> str:
     return content[section_start:next_heading]
 
 
+def _markdown_table_cells(line: str) -> tuple[str, ...]:
+    return tuple(cell.strip().strip("`") for cell in line.strip().strip("|").split("|"))
+
+
+def find_reviewer_ui_governance_contract_violations(
+    root: Path = Path("."),
+) -> list[str]:
+    violations = []
+    for relative_path, heading in REVIEWER_UI_GOVERNANCE_SECTIONS.items():
+        path = root / relative_path
+        if not path.exists():
+            violations.append(f"missing governance file: {relative_path}")
+            continue
+        content = path.read_text(encoding="utf-8")
+        marker = f"## {heading}"
+        if content.count(marker) != 1:
+            violations.append(
+                f"{relative_path}: expected exactly one section heading: {marker}"
+            )
+
+    evidence_path = root / "docs/developer/ui-evidence-review.md"
+    if not evidence_path.exists():
+        return violations
+
+    section = _markdown_section(
+        evidence_path.read_text(encoding="utf-8"),
+        REVIEWER_UI_GOVERNANCE_SECTIONS["docs/developer/ui-evidence-review.md"],
+    )
+    lines = section.splitlines()
+    header_index = next(
+        (
+            index
+            for index, line in enumerate(lines)
+            if line.startswith("|")
+            and _markdown_table_cells(line) == REVIEWER_UI_EVIDENCE_TABLE_HEADER
+        ),
+        None,
+    )
+    if header_index is None:
+        violations.append("reviewer UI evidence gate table header is missing")
+        return violations
+
+    rows: list[tuple[str, ...]] = []
+    for line in lines[header_index + 1 :]:
+        if not line.startswith("|"):
+            if rows:
+                break
+            continue
+        cells = _markdown_table_cells(line)
+        if cells and all(re.fullmatch(r"-+", cell) for cell in cells):
+            continue
+        rows.append(cells)
+
+    expected_ids = tuple(item[0] for item in REVIEWER_UI_EVIDENCE_GATE_CONTRACT)
+    actual_ids = tuple(row[0] for row in rows if row)
+    if actual_ids != expected_ids:
+        violations.append(
+            "reviewer UI evidence gate IDs must be exactly: " + ", ".join(expected_ids)
+        )
+
+    for index, (expected_id, expected_family) in enumerate(
+        REVIEWER_UI_EVIDENCE_GATE_CONTRACT
+    ):
+        if index >= len(rows):
+            continue
+        row = rows[index]
+        if len(row) != len(REVIEWER_UI_EVIDENCE_TABLE_HEADER):
+            violations.append(f"{expected_id}: expected five structured table cells")
+            continue
+        gate_id, family, evidence, passing_condition, blocking_result = row
+        if gate_id != expected_id:
+            continue
+        if family != expected_family:
+            violations.append(
+                f"{expected_id}: expected rule family {expected_family}, found {family}"
+            )
+        if not evidence:
+            violations.append(f"{expected_id}: required evidence cell is empty")
+        if not passing_condition:
+            violations.append(f"{expected_id}: passing condition cell is empty")
+        if blocking_result != "BLOCK":
+            violations.append(f"{expected_id}: blocking result must be BLOCK")
+
+    return violations
+
+
 def main() -> None:
     missing_files = find_missing_files()
     if missing_files:
@@ -888,6 +1009,15 @@ def main() -> None:
             "User-specific absolute repository paths found; replace the local "
             "repository prefix with <Repo Path>\\: "
             + "; ".join(user_specific_repository_paths)
+        )
+
+    reviewer_ui_governance_violations = (
+        find_reviewer_ui_governance_contract_violations()
+    )
+    if reviewer_ui_governance_violations:
+        raise SystemExit(
+            "Invalid reviewer UI governance contract: "
+            + "; ".join(reviewer_ui_governance_violations)
         )
 
     print("Documentation check passed.")

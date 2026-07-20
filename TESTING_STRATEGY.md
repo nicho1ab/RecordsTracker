@@ -665,3 +665,18 @@ Reviewer-facing facility hub and complaint-detail coverage must prove:
 - fields visibly present in governed sample reports cannot silently render as `Not provided` without an explicit availability or failure state;
 - a source-to-screen inventory reconciles source presence, extraction, normalization, canonical allocation, PostgreSQL population, read-model exposure, and required UI display;
 - the shared facility identity projection produces consistent facility name, type, address, county, capacity, and status behavior across queue, complaint detail, facility hub, packet, and export surfaces.
+
+Before a reviewer-facing visual or interaction implementation begins, its test
+plan must cite the applicable approved-design requirement IDs, exact Figma
+frames or approved artifacts, numbered page-change inventory, and pre-code
+variance inventory. If those inputs cannot be reconciled, implementation must
+stop rather than invent a design.
+
+After implementation, tests and automated evidence must satisfy the structured
+gate in `docs/developer/ui-evidence-review.md`. Screenshot capture is required
+for every approved viewport and named state applicable to the change. HTML-only
+or text-only evidence, a generated ZIP without visual review, or ad hoc manual
+browser inspection does not satisfy reviewer-facing visual acceptance. The
+final evidence report must classify each applicable approved-design requirement
+as `PASS`, `VARIANCE`, `REGRESSION`, or `NOT APPLICABLE`; identify the approver
+for any accepted variance; and record an explicit visual-acceptance decision.

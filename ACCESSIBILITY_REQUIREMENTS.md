@@ -172,6 +172,9 @@ Accessibility requirements apply to:
 
 - Navigation may be styled as tabs or buttons when semantic structure and
   keyboard operation remain clear.
+- Tabs may organize navigation or genuinely secondary context, but must not hide
+  the primary complaint inventory, allegations, findings, deficiencies, plans
+  of correction, or supporting complaint records.
 - In-page action groups must not mix links and buttons as visually equivalent
   controls.
 - Ordered lists must not be used to structure buttons, form controls, dropdowns,
@@ -215,3 +218,7 @@ A release cannot be marked stable if known accessibility blockers exist without 
 - At 200% zoom and supported narrow widths, the primary complaint inventory must remain visible and usable without converting each record into a collapsed disclosure-only element.
 - Topic, finding, source-availability, and reviewer-state filters must be keyboard operable and announce their active state and resulting record count.
 - Semantic colors, including traffic-light protocol colors, must always be paired with visible text, symbols, or accessible labels. Color token use must follow the approved design package and must not be replaced by an unapproved generic teal palette.
+- Missing, unavailable, unsupported, invalid, and not-loaded states must use
+  distinct visible wording that assistive technology can read. A visual badge,
+  icon, tooltip, position, or color difference alone does not establish the
+  state.

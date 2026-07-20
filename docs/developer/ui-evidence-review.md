@@ -47,6 +47,34 @@ The capture command performs GET-only requests against an already-running local 
 
 The packet never submits forms, triggers controlled retrieval, loads or imports data, mutates reviewer-created state, runs reset/reload, calls GitHub, performs production authentication, captures cookies, prints response headers, or records environment variable values.
 
+## Issue #479 reviewer-facing visual acceptance contract
+
+The following gate applies to every later reviewer-facing visual or interaction
+implementation. General HTML-only evidence remains useful for route diagnostics,
+but it cannot satisfy this gate. Every row is blocking until its required
+evidence is present and reviewed.
+
+| Gate ID | Rule family | Required evidence | Passing condition | Blocking result |
+|---|---|---|---|---|
+| `RT-UI-GATE-001` | `design-authority` | Exact approved Figma frame or approved artifact identifier, approval status, and applicable approved-design requirement IDs. | The implementation target and every applicable state map to an approved artifact. | `BLOCK` |
+| `RT-UI-GATE-002` | `pre-code-variance` | Numbered page-change inventory plus a pre-code variance inventory identifying each intended difference and its approval. | No material variance is unexplained or unapproved before coding. | `BLOCK` |
+| `RT-UI-GATE-003` | `primary-content` | Automated DOM and route assertions proving one canonical complaint inventory, unique stable complaint identities, meaningful source-backed labels, visible primary complaint content, and secondary-only disclosure use. | No accordion, `details`, collapsed card, tab, or disclosure widget hides primary allegations, findings, deficiencies, plans of correction, or supporting complaint records; no complaint inventory is duplicated. | `BLOCK` |
+| `RT-UI-GATE-004` | `source-to-screen` | A field matrix covering source label, extractor, normalized field, canonical allocation, persistence, import or backfill, read model, rendered component, and production-style route evidence. | Every source-present field in scope reaches the expected screen or has an identified blocking layer. | `BLOCK` |
+| `RT-UI-GATE-005` | `state-truthfulness` | Automated route evidence for populated, missing, unavailable, unsupported, invalid, and not-loaded states, plus any approved empty, partial, conflict, or error states. | Each state has distinct truthful wording and no application failure is presented as source omission. | `BLOCK` |
+| `RT-UI-GATE-006` | `token-and-tlp` | Approved token mapping, rendered token evidence, contrast results, and text or accessible labels paired with every TLP semantic color. | The approved palette and token roles are used; no unapproved generic teal-primary fallback or color-only meaning appears. | `BLOCK` |
+| `RT-UI-GATE-007` | `automated-route-capture` | Sanitized automated exact-route screenshots, capture manifest, route assertions, and approved-design references for every applicable desktop, narrow, compact/mobile, 200% zoom, focus, empty, partial, unavailable, error, and print state. | Screenshots exist for every applicable approved viewport and state and contain no private values or uncontrolled errors. | `BLOCK` |
+| `RT-UI-GATE-008` | `accessibility-responsive` | Automated and tool-generated evidence for keyboard order, visible focus, headings, landmarks, tables, accessible names, contrast, non-color meaning, responsive reflow, and assistive-technology expectations. | No applicable accessibility or responsive requirement is failed, obscured, or left unevaluated. | `BLOCK` |
+| `RT-UI-GATE-009` | `visual-acceptance` | Side-by-side approved-versus-rendered comparison and the requirement-ID report with `PASS`, `VARIANCE`, `REGRESSION`, or justified `NOT APPLICABLE` results, followed by an explicit acceptance decision. | Every regression is repaired, every variance is approved, and visual acceptance is explicitly recorded before merge. | `BLOCK` |
+
+The later implementation handoff must include the table above with evidence
+references filled in, not merely state that tests passed. Screenshot generation
+and screenshot comparison must be automated; visual acceptance remains an
+explicit reviewer decision based on that evidence.
+
+Merging this governance foundation does not complete Issue #479. The issue may
+close only after a later reviewer-facing implementation cites and satisfies this
+contract with the required automated visual evidence and acceptance decision.
+
 ## Port Convention
 
 Use these ports for UI evidence review unless a task handoff says otherwise:
@@ -147,9 +175,9 @@ want to stop the process currently listening on that port.
 
 ## Screenshot Support
 
-The capture command tries to use local Playwright first when available, then local Microsoft Edge or Chrome headless capture. If no screenshot tool is available, the command still writes `manifest.json`, `route-status.csv`, HTML snapshots, text summaries, assertion rows, and accessibility summaries. Screenshot absence is reported in the manifest and command output.
+The capture command tries to use local Playwright first when available, then local Microsoft Edge or Chrome headless capture. If no screenshot tool is available, the command still writes `manifest.json`, `route-status.csv`, HTML snapshots, text summaries, assertion rows, and accessibility summaries. Screenshot absence is reported in the manifest and command output. Such a packet may support nonvisual diagnostics, but it fails `RT-UI-GATE-007` for a reviewer-facing visual or interaction implementation.
 
-Do not add CI requirements for screenshot capture. Visual comparison screenshots are intentionally out of scope for CI because they are brittle and depend on workstation browser tooling.
+Do not add CI requirements for screenshot capture. Visual comparison screenshots remain outside CI because they depend on workstation browser tooling, but automated local evidence and explicit visual acceptance are still required before a reviewer-facing visual or interaction change can merge.
 
 ## Uploading For Review
 
