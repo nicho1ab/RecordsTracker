@@ -141,9 +141,10 @@ body:
         is required for Ready; unchecked items make the issue Not ready or Blocked.
       options:
         - label: Acceptance criteria are observable and testable.
-        - label: Required dependencies are resolved or explicitly represented above.
-        - label: Blockers are identified above.
-        - label: Required human decisions are resolved.
+        - label: All required dependencies are resolved.
+        - label: No unresolved blocker remains.
+        - label: All required human decisions are resolved.
+        - label: No governed-boundary entry remains Unresolved.
         - label: The work is independently verifiable.
         - label: Completion does not require unauthorized production deployment.
         - label: >-
