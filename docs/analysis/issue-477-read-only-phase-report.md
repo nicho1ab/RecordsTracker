@@ -1,5 +1,8 @@
 # Issue #477 read-only operator coverage phase report
 
+> Historical phase record. The final repository-completion decision is in the
+> [Issue #477 operator source-coverage dashboard completion report](issue-477-completion-report.md).
+
 ## Phase result
 
 The read-only operator phase is implemented and integrated with Issue #453's

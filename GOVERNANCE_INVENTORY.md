@@ -194,7 +194,7 @@
   a non-unique match/grouping value and cannot be a unique ArcGIS database key.
   Raw `733` remains unresolved unless verified source or governed mapping
   evidence proves a descriptive label.
-- Source-to-screen operator coverage status: Issue #453's deterministic v1
+- Source-to-screen operator coverage completion status: Issue #453's deterministic v1
   producer is connected to Issue #477's read-only dashboard through the stable
   `source_to_screen_coverage` boundary. The consumer uses producer-owned schema,
   hashes, identities, media types, CSV header, reconciliation, release, and
@@ -204,9 +204,11 @@
   Cloudflare Access JWTs plus an exact operator-email allowlist and atomically
   publishes stable-consumer-validated contract packages from SELECT-only
   PostgreSQL aggregates. Missing operational/job read boundaries remain
-  explicitly unavailable. Issue #477 mutation, persistence, scheduling,
-  retrieval/import, job/checkpoint mutation, deployment, and retention
-  automation are not approved or performed by this phase.
+  explicitly unavailable. The supported read-only Issue #477 repository scope
+  is complete. Mutation, persistence, scheduling, retrieval/import,
+  job/checkpoint mutation, deployment, Hosted execution, and retention
+  automation remain separately governed or human-controlled and are not
+  approved by the completed dashboard scope.
 
 ## Completed ADR decisions
 
@@ -265,13 +267,14 @@
 
 ## Remaining deferred decisions
 
-- Issue #477's broad mutation console remains unapproved. Build Week requires
-  only read-only monitoring and the minimum separately governed operational
-  actions needed to observe and safely control ArcGIS refresh and backfill jobs.
-  Each action still requires an explicit permission, finite state contract,
-  audit/evidence behavior, and fail-closed tests. Coverage-package retention
-  duration remains undecided; disposition stays `pending_policy` and automated
-  cleanup remains unauthorized unless separately approved.
+- Issue #477 is complete for read-only monitoring. Its original broad mutation
+  console remains unapproved and outside the issue's completed repository
+  scope. Any minimum operational action needed to observe or safely control
+  ArcGIS refresh or backfill jobs requires separate issue authority, an
+  explicit permission, finite state contract, audit/evidence behavior, and
+  fail-closed tests. Coverage-package retention duration remains undecided;
+  disposition stays `pending_policy` and automated cleanup remains unauthorized
+  unless separately approved.
 - Phase A resolved the source decision as **SUPPLEMENT**. Exact license version,
   attribution, candidate-specific system-of-record status, maintainer, steward,
   update owner, and refresh cadence remain unresolved and must be carried as

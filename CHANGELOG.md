@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Completed the repository evidence for Issue #477's supported read-only
+  operator source-coverage dashboard. The merged dashboard/runtime bridge
+  already provides authorization-before-read, operator/reviewer separation,
+  deterministic contract reconciliation, bounded keyset reads, safe exports,
+  truthful unavailable/failure states, and automated accessibility/privacy
+  evidence. Mutation, scheduling, retention automation, deployment, and Hosted
+  execution remain separately governed or human-controlled and are not added
+  by this completion record.
 - Added the production-style read-only Issues #453/#477 runtime bridge. Exact
   operator emails authenticated by the existing verified Cloudflare Access JWT
   boundary receive only the existing `developer_operator`/`audit_read`
