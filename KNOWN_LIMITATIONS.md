@@ -14,6 +14,18 @@
   remain incomplete. Query/export atomicity failed for 47 shared Facility IDs;
   exact license/attribution, system-of-record status, maintainer, steward,
   update owner, cadence, and raw type value `733` remain unresolved.
+- Issue #521 now provides a shared read-only facility identity projection over
+  eligible existing program-reference rows and authorized complaint-linked
+  canonical facility rows. It preserves separate public, internal canonical,
+  source-row, and snapshot identities plus field-level blank, unavailable,
+  conflict, unresolved-code, and current/historical context. It is an internal
+  service boundary only: existing facility lookup, hub, queue, complaint,
+  packet, print, and export consumers have not yet migrated to it. It does not
+  consume or activate ArcGIS, change schemas, migrate or backfill PostgreSQL,
+  execute refresh, add operator actions, or prove hosted acceptance. Raw `733`
+  remains unresolved, and production-style reads exclude fixture, demo,
+  synthetic, sample, mock, and test-only candidates rather than displaying
+  them as facility truth.
 - The authenticated operator source-coverage dashboard consumes validated
   Issue #453 v1 packages and exposes only GET summary, facility, job, aggregate
   CSV, and grouped Facility ID reads. Production requests require a fully

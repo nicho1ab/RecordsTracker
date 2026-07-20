@@ -44,6 +44,63 @@ string; an unavailable source column remains null. These projections do not add
 canonical facility fields or place raw reference details on the primary
 reviewer page.
 
+## Shared governed facility identity projection
+
+The Issue #521 read-only facility identity projection accepts a digit-only
+public Facility ID and an authorized corpus scope. It reads eligible existing
+program-reference rows and authorized complaint-linked canonical facility rows;
+it does not create a canonical entity, write a database row, accept a
+query-carried name as evidence, or consume ArcGIS runtime data. Public Facility
+ID, internal canonical record key, source-resource row identity, and snapshot or
+import-batch identity remain separate typed values. An internal record key is
+intentionally non-displayable and can never become a public Facility ID.
+
+Each supported field returns a typed display value when one can be selected,
+normalized comparison value, semantic state, source row and snapshot identity,
+observation time, conflict indicator, preserved alternatives, and either
+`current_reference` or `historical_complaint` context. Supported public fields
+are facility name, public Facility ID, facility type, status, full address,
+city, state, ZIP, county, capacity, administrator, licensee, telephone, and
+regional office. Coordinates remain outside this projection.
+
+The finite semantic states include `populated`, `blank`, `absent`,
+`unavailable`, `unresolved_raw_code`, `conflicting`, `internal_only`, and
+`invalid`. They are application data states, not page copy. A present blank
+remains distinct from an absent field and from an unavailable eligible source.
+Blank never erases eligible nonblank data. Identical normalized observations
+reconcile while every observation retains provenance. Differing nonblank
+observations retain their original values and conflict metadata even when a
+field rule selects a safe current-reference display value. Tied same-source,
+same-observation conflicts have no implicit winner; input or database row order
+never decides the result.
+
+Precedence is defined per field for this current-reference projection:
+
+| Field | First eligible current presentation | Historical fallback and preservation rule |
+| --- | --- | --- |
+| Facility name | Newest nonblank program-reference observation | Complaint-linked name is fallback and retained historical context; conflict remains explicit. |
+| Public Facility ID | Matching program-reference observation | Matching complaint-linked Facility ID is fallback; no source row or internal key can replace it. |
+| Facility type | Newest nonblank program-reference descriptive observation | Complaint-reported type is fallback and retained; a numeric raw type such as `733` remains unresolved without governed label evidence. |
+| Status | Newest nonblank program-reference status text | Complaint-reported status is fallback and retained; no page-local status-code label becomes shared truth. |
+| Full address | Newest nonblank program-reference address | Complaint-reported address is fallback and retained historical context. |
+| City | Newest nonblank program-reference city | Complaint-reported city is fallback and retained historical context. |
+| State | Newest nonblank program-reference state | Complaint-reported state is fallback and retained historical context. |
+| ZIP | Newest nonblank program-reference ZIP | Complaint-reported ZIP is fallback and retained historical context. |
+| County | Newest nonblank program-reference county | Complaint-reported county is fallback and retained historical context. |
+| Capacity | Newest valid nonblank program-reference integer | Complaint-reported capacity is fallback and retained historical context; explicit zero remains zero. |
+| Administrator | Newest nonblank program-reference administrator | Complaint-reported administrator is fallback and retained historical context. |
+| Licensee | Newest nonblank program-reference licensee | Complaint-reported licensee is fallback and retained historical context. |
+| Telephone | Newest nonblank program-reference telephone | Complaint-reported telephone is fallback and retained historical context. |
+| Regional office | Newest nonblank program-reference regional-office text | Complaint-reported office is fallback and retained historical context. |
+
+These are read-model rules, not persistence ownership or a cross-source
+canonical backfill. Current-reference selection never rewrites historical
+complaint values. Multiple eligible rows for one Facility ID remain separate;
+same-source observations at the same timestamp with different normalized values
+remain conflicting with no selected value. Synthetic, fixture, demo, sample,
+mock, or test-only candidates are unavailable by default in production-style
+service reads.
+
 ## Public source inventory boundary
 
 `PUBLIC_SOURCE_DATA_INVENTORY.md` may document future source metadata, uploaded
