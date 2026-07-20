@@ -11,6 +11,7 @@ import pytest
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.engine import Connection
 
+from ccld_complaints.connectors.ccld import facility_reports as ccld_facility_reports
 from ccld_complaints.hosted_app.batch_complaint_retrieval import (
     BatchComplaintRetrievalOptions,
     build_parser,
@@ -221,9 +222,17 @@ def test_force_reruns_already_loaded_window(tmp_path: Path) -> None:
     assert client.facility_detail_calls == ["157806098"]
 
 
-def test_resume_skips_succeeded_manifest_entries(tmp_path: Path) -> None:
+def test_resume_skips_succeeded_manifest_entries(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     client = MockBatchRetrievalClient()
     manifest_path = tmp_path / "manifest.jsonl"
+
+    def empty_report_list(source_url: str) -> bytes:
+        assert source_url.endswith("/157806099")
+        return b'{"REPORTARRAY": []}'
+
+    monkeypatch.setattr(ccld_facility_reports, "_fetch_url", empty_report_list)
     with _empty_connection() as connection:
         _insert_facility(connection, facility_number="157806098", name="Alpha")
         _insert_facility(connection, facility_number="157806099", name="Beta")
