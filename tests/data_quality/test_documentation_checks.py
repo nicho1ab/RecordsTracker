@@ -12,6 +12,10 @@ class CheckDocsModule(Protocol):
 
     def find_missing_required_content(self) -> list[str]: ...
 
+    def find_pull_request_template_contract_violations(
+        self, root: Path = Path(".")
+    ) -> list[str]: ...
+
     def find_forbidden_content(self) -> list[str]: ...
 
     def find_stale_roadmap_priorities(
@@ -43,6 +47,92 @@ def test_required_public_output_guidance_is_documented() -> None:
     check_docs = _load_check_docs_module()
 
     assert check_docs.find_missing_required_content() == []
+
+
+def test_pull_request_template_contract_is_complete() -> None:
+    check_docs = _load_check_docs_module()
+
+    assert check_docs.find_pull_request_template_contract_violations() == []
+
+
+def _write_pull_request_template(tmp_path: Path, content: str) -> None:
+    template = tmp_path / ".github" / "PULL_REQUEST_TEMPLATE.md"
+    template.parent.mkdir()
+    template.write_text(content, encoding="utf-8")
+
+
+def test_pull_request_template_required_sections_are_ordered(tmp_path: Path) -> None:
+    check_docs = _load_check_docs_module()
+    content = Path(".github/PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
+    first = "## Governing issue and intended outcome"
+    second = "## Implementation scope"
+    content = content.replace(first, "## TEMP", 1).replace(second, first, 1)
+    content = content.replace("## TEMP", second, 1)
+    _write_pull_request_template(tmp_path, content)
+
+    assert "required headings are out of order" in (
+        check_docs.find_pull_request_template_contract_violations(tmp_path)
+    )
+
+
+def test_pull_request_template_keeps_ui_evidence_conditional(tmp_path: Path) -> None:
+    check_docs = _load_check_docs_module()
+    content = Path(".github/PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
+    content = content.replace(
+        "Complete this section only for UI or accessibility changes.",
+        "Complete this section for every change.",
+    )
+    _write_pull_request_template(tmp_path, content)
+
+    assert (
+        "missing marker: Complete this section only for UI or accessibility changes."
+        in check_docs.find_pull_request_template_contract_violations(tmp_path)
+    )
+
+
+@pytest.mark.parametrize(
+    "marker",
+    [
+        "Implementation-caused failures:",
+        "Pre-existing failures:",
+        "Environmental failures:",
+    ],
+)
+def test_pull_request_template_requires_each_failure_classification(
+    tmp_path: Path, marker: str
+) -> None:
+    check_docs = _load_check_docs_module()
+    content = Path(".github/PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
+    _write_pull_request_template(tmp_path, content.replace(marker, "", 1))
+
+    assert f"missing marker: {marker}" in (
+        check_docs.find_pull_request_template_contract_violations(tmp_path)
+    )
+
+
+@pytest.mark.parametrize(
+    "marker",
+    [
+        "| Schemas and migrations |",
+        "| Ingestion and source-connector contracts |",
+        "| Security and privacy |",
+        "| Production data and correction behavior |",
+        "| Deployment and infrastructure |",
+        "| Repository governance |",
+        "| Tests or checks weakened to obtain passage |",
+        '"all tests passed" does not satisfy this review.',
+    ],
+)
+def test_pull_request_template_requires_each_governed_boundary(
+    tmp_path: Path, marker: str
+) -> None:
+    check_docs = _load_check_docs_module()
+    content = Path(".github/PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
+    _write_pull_request_template(tmp_path, content.replace(marker, "", 1))
+
+    assert f"missing marker: {marker}" in (
+        check_docs.find_pull_request_template_contract_violations(tmp_path)
+    )
 
 
 def test_stale_public_readme_language_is_not_present() -> None:

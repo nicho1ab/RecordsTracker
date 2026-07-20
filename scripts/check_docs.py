@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 REQUIRED = [
+    ".github/PULL_REQUEST_TEMPLATE.md",
     ".github/copilot-instructions.md",
     "README.md",
     "PROJECT_CHARTER.md",
@@ -698,6 +699,42 @@ USER_SPECIFIC_REPOSITORY_PATH = re.compile(
     r"(?i)c:[\\/]+users[\\/]+andre[\\/]+onedrive[\\/]+desktop[\\/]+repos[\\/]+"
 )
 
+PULL_REQUEST_TEMPLATE_SECTIONS = (
+    "Governing issue and intended outcome",
+    "Implementation scope",
+    "Acceptance-criteria evidence",
+    "Validation and failure classification",
+    "UI and accessibility evidence (when applicable)",
+    "Documentation, assumptions, and remaining risks",
+    "Governed-boundary review",
+    "Required GitHub checks",
+)
+
+PULL_REQUEST_TEMPLATE_MARKERS = (
+    "Governing issue:",
+    "Intended outcome:",
+    "Major files or components changed:",
+    "| Acceptance criterion | Evidence and result |",
+    "| Exact command | Result | Failure classification, if applicable |",
+    "Implementation-caused failures:",
+    "Pre-existing failures:",
+    "Environmental failures:",
+    "Complete this section only for UI or accessibility changes.",
+    "| Schemas and migrations |",
+    "| Ingestion and source-connector contracts |",
+    "| Security and privacy |",
+    "| Production data and correction behavior |",
+    "| Deployment and infrastructure |",
+    "| Repository governance |",
+    "| Tests or checks weakened to obtain passage |",
+    '"all tests passed" does not satisfy this review.',
+    "Self-reported evidence supplements, and never replaces,",
+    "`validate`",
+    "`docs-check`",
+    "`fixtures`",
+    "`security`",
+)
+
 
 def find_missing_files(root: Path = Path(".")) -> list[str]:
     return [item for item in REQUIRED if not (root / item).exists()]
@@ -714,6 +751,36 @@ def find_missing_required_content(root: Path = Path(".")) -> list[str]:
             if phrase not in content:
                 missing.append(f"{relative_path}: {phrase}")
     return missing
+
+
+def find_pull_request_template_contract_violations(
+    root: Path = Path("."),
+) -> list[str]:
+    path = root / ".github/PULL_REQUEST_TEMPLATE.md"
+    if not path.exists():
+        return ["missing .github/PULL_REQUEST_TEMPLATE.md"]
+
+    content = path.read_text(encoding="utf-8")
+    violations = []
+    section_positions = []
+    for section in PULL_REQUEST_TEMPLATE_SECTIONS:
+        heading = f"## {section}"
+        count = content.count(heading)
+        if count != 1:
+            violations.append(f"expected exactly one heading: {heading}")
+            continue
+        section_positions.append(content.index(heading))
+
+    if len(section_positions) == len(PULL_REQUEST_TEMPLATE_SECTIONS) and (
+        section_positions != sorted(section_positions)
+    ):
+        violations.append("required headings are out of order")
+
+    for marker in PULL_REQUEST_TEMPLATE_MARKERS:
+        if marker not in content:
+            violations.append(f"missing marker: {marker}")
+
+    return violations
 
 
 def find_forbidden_content(root: Path = Path(".")) -> list[str]:
@@ -793,6 +860,13 @@ def main() -> None:
     if missing_content:
         raise SystemExit(
             "Missing required documentation content: " + "; ".join(missing_content)
+        )
+
+    pull_request_template_violations = find_pull_request_template_contract_violations()
+    if pull_request_template_violations:
+        raise SystemExit(
+            "Invalid pull-request template contract: "
+            + "; ".join(pull_request_template_violations)
         )
 
     forbidden_content = find_forbidden_content()
