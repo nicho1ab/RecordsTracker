@@ -18,11 +18,6 @@ from ccld_complaints.hosted_app.auth import (
     list_authorized_source_derived_records,
     require_permission,
 )
-from ccld_complaints.hosted_app.facility_reference_preload import (
-    FACILITY_REFERENCE_DATASET_SLUG,
-    FACILITY_REFERENCE_TABLE_NAME,
-    hosted_facility_reference_records,
-)
 from ccld_complaints.hosted_app.seeded_import import (
     hosted_source_derived_records,
 )
@@ -116,6 +111,7 @@ class FacilityIdentityProjection:
     public_facility_id: str
     fields: Mapping[FacilityProjectionField, FacilityFieldResult]
     canonical_internal_identity: FacilityFieldResult
+    ineligible_candidate_excluded: bool = False
 
     def field(self, field: FacilityProjectionField) -> FacilityFieldResult:
         if field is FacilityProjectionField.CANONICAL_INTERNAL_IDENTITY:
@@ -307,6 +303,7 @@ def project_facility_identity(
     candidates: Sequence[FacilityProjectionCandidate],
     *,
     availability: FacilityProjectionSourceAvailability | None = None,
+    ineligible_candidate_excluded: bool = False,
 ) -> FacilityIdentityProjection:
     facility_id = _validated_public_facility_id(public_facility_id)
     source_availability = availability or FacilityProjectionSourceAvailability()
@@ -323,6 +320,7 @@ def project_facility_identity(
         public_facility_id=facility_id,
         fields=MappingProxyType(fields),
         canonical_internal_identity=_project_internal_identity(eligible),
+        ineligible_candidate_excluded=ineligible_candidate_excluded,
     )
 
 
@@ -336,15 +334,47 @@ def load_authorized_facility_identity_projection(
     allow_test_candidates: bool = False,
 ) -> FacilityIdentityProjection:
     facility_id = _validated_public_facility_id(public_facility_id)
+    return load_authorized_facility_identity_projections(
+        connection,
+        actor,
+        scope=scope,
+        public_facility_ids=(facility_id,),
+        import_batch_id=import_batch_id,
+        allow_test_candidates=allow_test_candidates,
+    )[facility_id]
+
+
+def load_authorized_facility_identity_projections(
+    connection: Connection,
+    actor: AuthenticatedActor | None,
+    *,
+    scope: HostedAccessScope,
+    public_facility_ids: Sequence[str],
+    import_batch_id: str | None = None,
+    allow_test_candidates: bool = False,
+) -> Mapping[str, FacilityIdentityProjection]:
+    from ccld_complaints.hosted_app.facility_reference_preload import (
+        FACILITY_REFERENCE_TABLE_NAME,
+        hosted_facility_reference_records,
+    )
+
+    facility_ids = tuple(
+        dict.fromkeys(_validated_public_facility_id(value) for value in public_facility_ids)
+    )
+    if not facility_ids:
+        return MappingProxyType({})
     require_permission(
         actor,
         permission=SOURCE_DERIVED_READ_PERMISSION,
         scope=scope,
-        target=AuthorizationTarget("source_derived_record_list", facility_id),
+        target=AuthorizationTarget("source_derived_record_list", ",".join(facility_ids)),
     )
     inspector = inspect(connection)
 
-    complaint_candidates: tuple[FacilityProjectionCandidate, ...] = ()
+    complaint_candidates: dict[str, list[FacilityProjectionCandidate]] = {
+        facility_id: [] for facility_id in facility_ids
+    }
+    complaint_matching_counts = dict.fromkeys(facility_ids, 0)
     complaint_available = inspector.has_table(hosted_source_derived_records.name)
     if complaint_available:
         source_records = list_authorized_source_derived_records(
@@ -354,52 +384,78 @@ def load_authorized_facility_identity_projection(
             entity_type="facility",
             import_batch_id=import_batch_id,
         )
-        matching_source_records = tuple(
-            record
-            for record in source_records
-            if _source_record_matches_facility(record, facility_id)
-        )
-        safe_source_records = tuple(
-            record
-            for record in matching_source_records
-            if allow_test_candidates or not _unsafe_source_record(record)
-        )
-        if matching_source_records and not safe_source_records:
-            complaint_available = False
-        complaint_candidates = tuple(
-            _candidate_from_source_record(record) for record in safe_source_records
-        )
+        facility_id_set = set(facility_ids)
+        for record in source_records:
+            matching_id = _source_record_public_facility_id(record)
+            if matching_id not in facility_id_set:
+                continue
+            complaint_matching_counts[matching_id] += 1
+            if allow_test_candidates or not _unsafe_source_record(record):
+                complaint_candidates[matching_id].append(
+                    _candidate_from_source_record(record)
+                )
 
-    reference_candidates: tuple[FacilityProjectionCandidate, ...] = ()
+    reference_candidates: dict[str, list[FacilityProjectionCandidate]] = {
+        facility_id: [] for facility_id in facility_ids
+    }
+    reference_matching_counts = dict.fromkeys(facility_ids, 0)
     reference_available = inspector.has_table(FACILITY_REFERENCE_TABLE_NAME)
     if reference_available:
         reference_rows = tuple(
             dict(row)
             for row in connection.execute(
                 select(hosted_facility_reference_records).where(
-                    hosted_facility_reference_records.c.facility_number == facility_id
+                    hosted_facility_reference_records.c.facility_number.in_(facility_ids)
                 )
             ).mappings()
         )
-        eligible_reference_rows = tuple(
-            row
-            for row in reference_rows
-            if _eligible_reference_row(row)
-            and (allow_test_candidates or not _unsafe_reference_row(row))
-        )
-        if reference_rows and not eligible_reference_rows:
-            reference_available = False
-        reference_candidates = tuple(
-            _candidate_from_reference_row(row) for row in eligible_reference_rows
-        )
+        for row in reference_rows:
+            matching_id = _clean_text(row.get("facility_number"))
+            if matching_id not in reference_candidates:
+                continue
+            reference_matching_counts[matching_id] += 1
+            if _eligible_reference_row(row) and (
+                allow_test_candidates or not _unsafe_reference_row(row)
+            ):
+                reference_candidates[matching_id].append(
+                    _candidate_from_reference_row(row)
+                )
 
-    return project_facility_identity(
-        facility_id,
-        (*reference_candidates, *complaint_candidates),
-        availability=FacilityProjectionSourceAvailability(
-            program_reference=reference_available,
-            complaint_linked_facility=complaint_available,
-        ),
+    return MappingProxyType(
+        {
+            facility_id: project_facility_identity(
+                facility_id,
+                (
+                    *reference_candidates[facility_id],
+                    *complaint_candidates[facility_id],
+                ),
+                availability=FacilityProjectionSourceAvailability(
+                    program_reference=(
+                        reference_available
+                        and not (
+                            reference_matching_counts[facility_id]
+                            and not reference_candidates[facility_id]
+                        )
+                    ),
+                    complaint_linked_facility=(
+                        complaint_available
+                        and not (
+                            complaint_matching_counts[facility_id]
+                            and not complaint_candidates[facility_id]
+                        )
+                    ),
+                ),
+                ineligible_candidate_excluded=(
+                    not reference_candidates[facility_id]
+                    and not complaint_candidates[facility_id]
+                    and (
+                        reference_matching_counts[facility_id] > 0
+                        or complaint_matching_counts[facility_id] > 0
+                    )
+                ),
+            )
+            for facility_id in facility_ids
+        }
     )
 
 
@@ -550,7 +606,10 @@ def _normalize_value(
         if not text.isdigit():
             return None, FacilityValueState.INVALID
         normalized = text
-    if field is FacilityProjectionField.FACILITY_TYPE and text.isdigit():
+    if field in {
+        FacilityProjectionField.FACILITY_TYPE,
+        FacilityProjectionField.STATUS,
+    } and text.isdigit():
         return normalized, FacilityValueState.UNRESOLVED_RAW_CODE
     return normalized, FacilityValueState.POPULATED
 
@@ -608,6 +667,10 @@ def _select_alternative(
 def _candidate_from_reference_row(
     row: Mapping[str, Any],
 ) -> FacilityProjectionCandidate:
+    from ccld_complaints.hosted_app.facility_reference_preload import (
+        FACILITY_REFERENCE_TABLE_NAME,
+    )
+
     original_values = row.get("original_row_json")
     original = original_values if isinstance(original_values, Mapping) else {}
     values: dict[FacilityProjectionField, Any] = {}
@@ -679,21 +742,23 @@ def _candidate_matches_public_facility_id(
     return _clean_text(source_value) == facility_id
 
 
-def _source_record_matches_facility(
+def _source_record_public_facility_id(
     record: SourceDerivedRecordRead,
-    facility_id: str,
-) -> bool:
+) -> str | None:
     for alias in _CANONICAL_FIELD_ALIASES[
         FacilityProjectionField.PUBLIC_FACILITY_ID
     ]:
-        if alias in record.original_values and _clean_text(
-            record.original_values.get(alias)
-        ) == facility_id:
-            return True
-    return False
+        if alias in record.original_values:
+            facility_id = _clean_text(record.original_values.get(alias))
+            return facility_id if facility_id.isdigit() else None
+    return None
 
 
 def _eligible_reference_row(row: Mapping[str, Any]) -> bool:
+    from ccld_complaints.hosted_app.facility_reference_preload import (
+        FACILITY_REFERENCE_DATASET_SLUG,
+    )
+
     return (
         _clean_text(row.get("source_resource_id")) in _APPROVED_REFERENCE_RESOURCE_IDS
         and _clean_text(row.get("source_dataset_slug"))

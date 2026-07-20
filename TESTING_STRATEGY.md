@@ -432,8 +432,18 @@ no first-row winner. Service-level tests must also prove query-carried names are
 not authority, fixture/demo/synthetic candidates are unavailable by default in
 production-style reads, authorization is required, reads execute no data
 mutation, and reviewer-created state is unchanged. Route, template, packet,
-export, ArcGIS, backfill, operator, refresh, deployment, and hosted-acceptance
-tests remain later issue phases.
+and presenter tests for the Issue #522 core consumer migration must additionally
+prove one Facility ID resolves consistently across facility lookup/suggestions,
+request selector/results and feedback context, facility hub, reviewer
+list/detail, and packet preview/draft; query-carried names cannot override the
+resolved identity; same-ID duplicate rows produce insertion-order-independent
+UI; server and JavaScript status/type text agree; raw codes remain unresolved;
+conflict and missing-state wording stays consistent; internal IDs do not replace
+public Facility IDs; print/accessibility semantics remain present; and all reads
+preserve reviewer-created state. Specialized facility intelligence, priorities,
+trends, substantiated, and serious-topic aggregate tests, plus export, ArcGIS,
+backfill, operator, refresh, deployment, and hosted-acceptance tests, remain
+later issue phases.
 
 Issue #447 canonical-allocation evidence tests must cover the exact 12-field
 registry, canonical importer population, null versus verified zero, date-list

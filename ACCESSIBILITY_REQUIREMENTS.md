@@ -124,6 +124,14 @@ Accessibility requirements apply to:
 	must have meaningful text such as "Use this facility", and empty, no-match,
 	too-many-results, active-reference-source, fallback, and malformed-CSV states
 	must be visible without relying on color.
+	Facility identity values repeated across lookup, request, reviewer, hub,
+	packet, print, and feedback context must use the shared semantic presentation
+	wording. Missing, unavailable, unresolved-code, invalid, and conflict states
+	must be readable text; conflict and status meaning must not rely on badge color,
+	title text, JavaScript, or visual position. Server-rendered values and enhanced
+	suggestions must expose the same status/type text and meaningful accessible
+	names. Packet print output must retain the resolved public Facility ID and name
+	without exposing an internal identity or trusting a query-carried name.
 - The tester feedback page must provide accessible labels for feedback type and
 	description, expose validation errors as visible text, provide safe
 	unconfigured, success, and failure states, and keep submit controls keyboard

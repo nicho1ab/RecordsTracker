@@ -1471,11 +1471,12 @@ def test_facility_hub_renders_complaint_context_without_directory_row() -> None:
                 f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098"
                 "&origin=facility_intelligence"
                 "&date_dimension=complaint_received_date"
+                "&lookup_facility_name=Untrusted+Query+Facility"
             ),
             page_data_mode="postgres",
             ccld_record_request_ui_context=ccld_context,
         )
-        unknown_status, _unknown_type, unknown_body = route_response(
+        unknown_status, unknown_content_type, unknown_body = route_response(
             f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=999999999",
             page_data_mode="postgres",
             ccld_record_request_ui_context=ccld_context,
@@ -1486,7 +1487,13 @@ def test_facility_hub_renders_complaint_context_without_directory_row() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Facility-directory result not found" not in html
-    assert "Facility-directory record not available" in html
+    assert "Facility-directory record not available" not in html
+    assert "Corpus Only Center" in html
+    assert "Children&#x27;s Center" in html
+    assert "Kern" in html
+    assert "Not found in source" in html
+    assert "ccld:facility:157806098" not in html
+    assert "Untrusted Query Facility" not in html
     assert "Review summary" in html
     assert "Review next" in html
     assert "Opened from</dt><dd>Facility review intelligence" in html
@@ -1497,9 +1504,14 @@ def test_facility_hub_renders_complaint_context_without_directory_row() -> None:
     assert "A. MIRIAM JAMISON CHILDREN" not in html
     assert "Fixture/mock demo" not in html
     assert unknown_status == 200
-    assert "Facility-directory result not found" in unknown_html
-    assert "Review summary" not in unknown_html
-    assert "Review next" not in unknown_html
+    assert unknown_content_type == "text/html; charset=utf-8"
+    assert "Facility-directory result not found" not in unknown_html
+    assert "Not found in source" in unknown_html
+    assert "999999999" in unknown_html
+    assert "No loaded complaint records are currently available" in unknown_html
+    assert "Corpus Only Center" not in unknown_html
+    assert "ccld:facility:999999999" not in unknown_html
+    assert "Untrusted Query Facility" not in unknown_html
 
 
 def _priority_connection() -> Connection:

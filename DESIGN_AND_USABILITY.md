@@ -1293,6 +1293,19 @@ Facility name, facility type, address, city, state, ZIP, capacity, administrator
 
 Source precedence and fallback must be explicit. Distinguish at least: populated value, blank on source, field absent from source, source artifact unavailable, extraction or mapping failure, conflicting sources, and intentionally internal data. An extraction or import defect must not be presented as though the public source omitted the value.
 
+Migrated facility surfaces must use the shared governed facility presenter, not
+page-specific missing-value or status/type labels. Present `Blank in source`,
+`Not found in source`, `Source unavailable`, `Source code <value> — label not
+verified`, `Conflicting source values`, and `Invalid source value` for their
+corresponding projection states. Never display internal-only identity as a
+public Facility ID. A selected value with differing current-reference and
+complaint-time observations may keep the value and add one concise conflict
+sentence; it must not expose hashes, row keys, or other provenance mechanics in
+the primary reviewer tier. Query-carried facility names may preserve navigation
+context only and must be replaced by the resolved projected name before display
+or repeated feedback context. Server-rendered and JavaScript-enhanced facility
+status/type text must come from the same projected presentation values.
+
 ### Source-to-screen completion rule
 
 A source field is not implemented merely because it is extracted. Completion requires verified extraction, normalization, canonical allocation, persistence, import and backfill behavior, read-model exposure, required UI rendering, missing-state semantics, and production-style evidence.

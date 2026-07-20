@@ -433,17 +433,39 @@ def search_facility_reference_records(
         )
     filters = tuple(_search_token_filter(token) for token in query_tokens)
     total_match_count = connection.execute(
-        select(func.count()).select_from(hosted_facility_reference_records).where(and_(*filters))
-    ).scalar_one()
-    rows = connection.execute(
-        select(hosted_facility_reference_records)
+        select(func.count(func.distinct(hosted_facility_reference_records.c.facility_number)))
+        .select_from(hosted_facility_reference_records)
         .where(and_(*filters))
+    ).scalar_one()
+    matching_id_rows = connection.execute(
+        select(
+            hosted_facility_reference_records.c.facility_number,
+            func.min(hosted_facility_reference_records.c.facility_name).label(
+                "sort_name"
+            ),
+        )
+        .where(and_(*filters))
+        .group_by(hosted_facility_reference_records.c.facility_number)
         .order_by(
-            hosted_facility_reference_records.c.facility_name,
+            func.min(hosted_facility_reference_records.c.facility_name),
             hosted_facility_reference_records.c.facility_number,
         )
         .limit(result_limit)
     ).mappings()
+    matching_ids = tuple(str(row["facility_number"]) for row in matching_id_rows)
+    rows = (
+        connection.execute(
+            select(hosted_facility_reference_records)
+            .where(hosted_facility_reference_records.c.facility_number.in_(matching_ids))
+            .order_by(
+                hosted_facility_reference_records.c.facility_name,
+                hosted_facility_reference_records.c.facility_number,
+                hosted_facility_reference_records.c.source_resource_id,
+            )
+        ).mappings()
+        if matching_ids
+        else ()
+    )
     records = tuple(_lookup_record_from_reference_row(dict(row)) for row in rows)
     return CcldFacilityLookupResult(
         query=query.strip(),

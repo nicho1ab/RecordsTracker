@@ -74,6 +74,19 @@ field rule selects a safe current-reference display value. Tied same-source,
 same-observation conflicts have no implicit winner; input or database row order
 never decides the result.
 
+The shared presenter maps those states consistently for migrated HTML and
+suggestion consumers: a populated value is shown as selected, `blank` is
+`Blank in source`, `absent` is `Not found in source`, `unavailable` is
+`Source unavailable`, a raw code is `Source code <value> — label not verified`,
+an unselected conflict is `Conflicting source values`, and `invalid` is
+`Invalid source value`. Internal-only identity remains non-displayable. When a
+safe current value is selected despite a historical difference, the concise
+conflict explanation states that current facility reference and complaint-time
+records differ. A separate exclusion indicator distinguishes a matching but
+ineligible production candidate from a Facility ID with no matching source row,
+so a synthetic identity cannot leak while a legitimate missing request scope
+remains usable.
+
 Precedence is defined per field for this current-reference projection:
 
 | Field | First eligible current presentation | Historical fallback and preservation rule |
@@ -81,7 +94,7 @@ Precedence is defined per field for this current-reference projection:
 | Facility name | Newest nonblank program-reference observation | Complaint-linked name is fallback and retained historical context; conflict remains explicit. |
 | Public Facility ID | Matching program-reference observation | Matching complaint-linked Facility ID is fallback; no source row or internal key can replace it. |
 | Facility type | Newest nonblank program-reference descriptive observation | Complaint-reported type is fallback and retained; a numeric raw type such as `733` remains unresolved without governed label evidence. |
-| Status | Newest nonblank program-reference status text | Complaint-reported status is fallback and retained; no page-local status-code label becomes shared truth. |
+| Status | Newest nonblank program-reference status text | Complaint-reported status is fallback and retained; a numeric raw status remains unresolved, and no page-local status-code label becomes shared truth. |
 | Full address | Newest nonblank program-reference address | Complaint-reported address is fallback and retained historical context. |
 | City | Newest nonblank program-reference city | Complaint-reported city is fallback and retained historical context. |
 | State | Newest nonblank program-reference state | Complaint-reported state is fallback and retained historical context. |
@@ -100,6 +113,14 @@ same-source observations at the same timestamp with different normalized values
 remain conflicting with no selected value. Synthetic, fixture, demo, sample,
 mock, or test-only candidates are unavailable by default in production-style
 service reads.
+
+Issue #522 routes the core facility lookup and suggestions, record-request
+selector/results and feedback checklist, facility hub, reviewer worklist/list
+and detail, and packet preview/draft through this projection and presenter.
+Query-carried facility names are replaced by resolved projected names before
+presentation. This consumer migration does not change persistence ownership;
+specialized aggregate views, exports, backfill, ArcGIS, operator controls, and
+scheduled refresh remain separate phases.
 
 ## Public source inventory boundary
 

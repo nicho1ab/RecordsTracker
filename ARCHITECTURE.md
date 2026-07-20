@@ -188,7 +188,11 @@ Facility ID plus authorized scope, loads eligible program-reference and
 complaint-linked canonical facility observations, and returns typed per-field
 values, semantic states, source/snapshot identities, conflicts, alternatives,
 and current-reference versus historical complaint context without a schema,
-migration, route, template, export, backfill, or reviewer-state mutation,
+migration, export, backfill, or reviewer-state mutation. Core facility lookup,
+suggestion, request, hub, reviewer list/detail, packet preview/draft, and repeated
+feedback-context reads consume that projection through one shared presenter;
+query-carried names remain navigation context and authorized list reads resolve
+the visible Facility IDs in one batch rather than per row,
 a local/test authenticated reset/reload dry-run route seam, and a local/test
 authenticated reset/reload execution-plan route seam: a
 no-secret database URL configuration seam, an Alembic script location, one
@@ -361,9 +365,10 @@ retention implementation PRs validate the concrete layer.
   erase nonblank values, identical observations reconcile without losing
   provenance, conflicts retain every original, and current-reference selection
   does not rewrite complaint-time facts. Raw numeric facility type `733` remains
-  unresolved. ArcGIS observations, database backfill, route and export
-  migrations, and operator or scheduled refresh behavior remain outside this
-  slice.
+  unresolved. Specialized facility intelligence, priority, trend,
+  substantiated, and serious-topic aggregate migration; exports; ArcGIS
+  observations; database backfill; and operator or scheduled refresh behavior
+  remain outside the core consumer migration.
 - Production stack selection belongs in future ADRs after production-discovery
   requirements are documented.
 - The preferred hosted tester MVP direction is hybrid, not Datasette-primary:

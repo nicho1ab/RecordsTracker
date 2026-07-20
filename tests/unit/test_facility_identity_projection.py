@@ -16,8 +16,12 @@ from ccld_complaints.hosted_app.auth import (
 from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
     hosted_ccld_retrieval_jobs,
 )
+from ccld_complaints.hosted_app.facility_identity_presenter import (
+    present_facility_field,
+)
 from ccld_complaints.hosted_app.facility_identity_projection import (
     PUBLIC_FACILITY_FIELDS,
+    FacilityFieldResult,
     FacilityProjectionCandidate,
     FacilityProjectionField,
     FacilityProjectionSourceAvailability,
@@ -186,6 +190,39 @@ def test_raw_733_remains_an_unresolved_type_code() -> None:
     assert result.normalized_value == "733"
     assert result.state is FacilityValueState.UNRESOLVED_RAW_CODE
     assert result.conflict is False
+    assert present_facility_field(result).text == "Source code 733 — label not verified"
+
+
+@pytest.mark.parametrize(
+    ("state", "expected"),
+    (
+        (FacilityValueState.BLANK, "Blank in source"),
+        (FacilityValueState.ABSENT, "Not found in source"),
+        (FacilityValueState.UNAVAILABLE, "Source unavailable"),
+        (FacilityValueState.CONFLICTING, "Conflicting source values"),
+        (FacilityValueState.INTERNAL_ONLY, "Internal only"),
+        (FacilityValueState.INVALID, "Invalid source value"),
+    ),
+)
+def test_presenter_uses_one_approved_phrase_for_each_empty_state(
+    state: FacilityValueState,
+    expected: str,
+) -> None:
+    presentation = present_facility_field(
+        FacilityFieldResult(
+            field=FacilityProjectionField.FACILITY_NAME,
+            display_value=None,
+            normalized_value=None,
+            state=state,
+            source_identity=None,
+            observed_at=None,
+            conflict=state is FacilityValueState.CONFLICTING,
+            alternatives=(),
+            context=None,
+        )
+    )
+
+    assert presentation.text == expected
 
 
 def test_multiple_same_id_rows_are_insertion_order_independent_and_never_first_row_wins() -> None:
@@ -324,6 +361,29 @@ def test_production_service_excludes_synthetic_candidates_as_unavailable() -> No
     assert name.state is FacilityValueState.UNAVAILABLE
     assert name.alternatives == ()
     assert FacilitySourceKind.COMPLAINT_LINKED_FACILITY in name.unavailable_sources
+    assert projection.ineligible_candidate_excluded is True
+
+
+def test_eligible_reference_remains_visible_when_complaint_candidate_is_unsafe() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    _create_projection_tables(engine)
+    with engine.begin() as connection:
+        import_seeded_corpus_artifact(connection, load_seeded_corpus_artifact(FIXTURE))
+        _insert_reference(connection)
+
+        projection = load_authorized_facility_identity_projection(
+            connection,
+            _actor(),
+            scope=FIXTURE_SCOPE,
+            public_facility_id=FACILITY_ID,
+            import_batch_id=FIXTURE_SCOPE.scope_id,
+        )
+
+    name = projection.field(FacilityProjectionField.FACILITY_NAME)
+    assert name.display_value == "Current program reference name"
+    assert name.state is FacilityValueState.POPULATED
+    assert FacilitySourceKind.COMPLAINT_LINKED_FACILITY in name.unavailable_sources
+    assert projection.ineligible_candidate_excluded is False
 
 
 def test_service_requires_an_authorized_actor_before_candidate_reads() -> None:
