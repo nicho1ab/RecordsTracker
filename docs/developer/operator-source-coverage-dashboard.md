@@ -2,7 +2,7 @@
 
 ## Purpose and boundary
 
-The Issue #477 phase-one dashboard is a read-only operator diagnostic surface.
+The supported Issue #477 dashboard is a read-only operator diagnostic surface.
 It consumes an immutable coverage-contract package and presents producer-supplied
 source-to-screen aggregates separately from retrieval, import, artifact,
 checkpoint, and job facts. It does not calculate coverage or infer a coverage
@@ -17,6 +17,12 @@ reading a package.
 This phase provides no retry, dry-run start, apply, confirmation, cancel, resume,
 backfill, retrieval, import, job creation, checkpoint update, database write, or
 artifact mutation.
+
+The repository implementation is complete for this read-only scope. See the
+[Issue #477 completion report](../analysis/issue-477-completion-report.md).
+Mutation, scheduled refresh, retention automation, deployment, and Hosted
+execution remain separately governed or human-controlled work; their absence
+does not authorize extending these routes.
 
 ## Routes and authorization
 
@@ -249,14 +255,15 @@ The packet classifies `RT-DOM-001`, `RT-TIER-001`, `RT-STATE-001`,
 Generated evidence stays under ignored `data/processed/ui-evidence`. Do not
 commit it by default.
 
-## Deferred decisions
+## Separate decisions and human-controlled work
 
 A later decision must set retention duration; until then `policy_id` remains
 null, disposition is `pending_policy`, and automated cleanup is not authorized.
 
 Mutation routes, retry/apply/cancel/resume/backfill execution, retrieval/import,
-job/checkpoint mutation, persistence, and schedules require separately
-authorized work. Runtime coverage is a diagnostic of the measured deployed
-rows and governed boundaries. It is not proof of statewide completeness,
-freshness, absence of complaints, legal conclusions, or correct rendering
-without corresponding automated UI evidence.
+job/checkpoint mutation, persistence, schedules, deployment, and Hosted
+execution require separately authorized work. They are outside the completed
+Issue #477 repository scope. Runtime coverage is a diagnostic of the measured
+deployed rows and governed boundaries. It is not proof of statewide
+completeness, freshness, absence of complaints, legal conclusions, or correct
+rendering without corresponding automated UI evidence.

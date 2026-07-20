@@ -201,8 +201,10 @@ the governed primary future review experience.
   JWT boundary, publishes a validated contract `1.0.0` package atomically from
   SELECT-only PostgreSQL aggregates, reconciles the safe Facility ID index, and
   supports automated local-production-auth and header-provider hosted
-  acceptance. Issue #477 mutation, persistence, scheduling, retrieval/import,
-  job/checkpoint mutation, and retention automation remain deferred.
+  acceptance. The supported read-only Issue #477 repository scope is complete;
+  mutation, persistence, scheduling, retrieval/import, job/checkpoint mutation,
+  retention automation, deployment, and Hosted execution remain separately
+  governed or human-controlled work and do not block closing #477.
 - Completed the Issue #490 statewide facility-source evaluation with the final
   verdict **inconclusive; retain existing program-specific sources and keep the
   statewide candidate inactive**. That result remains historical evaluation
@@ -715,10 +717,12 @@ the governed primary future review experience.
   completed production-auth/runtime-package bridge while preserving explicit
   fixture, runtime, and unavailable evidence labels. Hosted acceptance still
   requires deployment by the human QNAP operator and a user-approved ephemeral
-  Cloudflare assertion provider. Continue Issue #477 only as a separately
-  authorized mutation phase; do not infer retry, apply, cancel, resume,
-  backfill, persistence, scheduling, retrieval/import, job/checkpoint mutation,
-  or retention authority from the completed read-only bridge.
+  Cloudflare assertion provider. Issue #477 is repository-complete for its
+  supported read-only dashboard and can close after its completion evidence
+  merges. Any later operational or mutation phase requires separate issue
+  authority; do not infer retry, apply, cancel, resume, backfill, persistence,
+  scheduling, retrieval/import, job/checkpoint mutation, deployment, or
+  retention authority from the completed read-only bridge.
 - Keep the local hosted scaffold runnable, prerequisite-checked, smoke-tested,
 	and focused on the CCLD facility/license number plus optional date-range
 	record request flow into the hosted reviewer UI. After ADR-0016, the next

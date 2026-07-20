@@ -48,7 +48,10 @@
   conclusions, correct rendering without UI evidence, deployment success, or
   QNAP behavior. Fully automated Hosted capture also requires a user-approved
   process-local header-provider command; no token or browser-cookie fallback is
-  implemented.
+  implemented. The supported read-only Issue #477 repository scope is complete
+  and can close after its completion evidence merges. The Hosted provider
+  prerequisite, deployment, mutation, scheduling, and retention work remain
+  human-controlled or separately governed rather than missing dashboard code.
 - Reviewer aggregates report their loaded-record universe, denominator,
   selected date dimension/range, source coverage, and explicit zero,
   unavailable, partial, or truncated cause. These counts describe authorized
