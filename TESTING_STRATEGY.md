@@ -509,10 +509,19 @@ Validate documentation structure and run manual or automated checks for user-fac
 - User-visible behavior changes include user documentation updates.
 - Implementation work uses focused local validation first, then required remote
   validation before merge.
-- PR bodies include focused validation, why those focused checks matched the
-  change, required remote check results, any intentionally unrun tests with the
-  reason, and full local validation results only when full local validation was
-  required or run.
+- PR bodies identify the governing issue and intended outcome, major changed
+  files or components, and map each acceptance criterion to concrete evidence.
+- PR bodies list exact validation commands and results, identify intentionally
+  unrun tests, and classify failures as implementation-caused, pre-existing, or
+  environmental. UI and accessibility evidence is required only when the
+  change affects those surfaces.
+- PR bodies explicitly review schemas and migrations, ingestion and source-
+  connector contracts, security and privacy, production data and correction
+  behavior, deployment and infrastructure, repository governance, and whether
+  tests or checks were weakened to obtain passage. A generic statement such as
+  "all tests passed" does not satisfy this governed-boundary review.
+- Self-reported evidence supplements and never replaces the required GitHub
+  checks.
 - Readiness, hardening, planning, and checklist PRs must also state the
 	user-facing CCLD MVP capability, tester productivity improvement, or concrete
 	MVP-blocking risk that justifies doing the work now. If that product-benefit
