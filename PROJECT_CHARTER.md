@@ -37,6 +37,11 @@ governed Phase A evaluation merged at
 replacement. The remaining completion scope is a governed dual-source model:
 program-specific snapshots remain the primary facility-reference source family,
 and ArcGIS is a separately versioned supplementary current-reference source.
+This merged decision supersedes the original #516 replacement premise. Issues
+#521-#523 completed the shared projection, named consumers/exports, and bounded
+backfill for eligible existing program-reference data; they did not consume or
+activate ArcGIS. The remaining work extends those governed boundaries to the
+ArcGIS supplement after #518 establishes its separate snapshot lifecycle.
 The required sequence is defined in the
 [Build Week ArcGIS facility-reference completion plan](docs/planning/build-week-2026-arcgis-facility-reference-completion-plan.md).
 

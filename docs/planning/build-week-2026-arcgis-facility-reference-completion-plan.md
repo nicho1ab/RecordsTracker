@@ -16,6 +16,12 @@ current deployed Build Week checkpoint is
 `d7e9b1fff9e1826c3387a7313777d14c1480d3b4`; it is not the final Build Week
 release.
 
+The original #516 issue body proposed replacing the program CSV sources. The
+later Issue #516 comments and merged Phase A evidence supersede that premise:
+program snapshots remain primary and ArcGIS may become only a separately
+governed current-reference supplement. Nothing in this plan authorizes ArcGIS
+activation, cutover, backfill, refresh scheduling, deployment, or issue closure.
+
 The phases below are sequential. Safe parallel implementation starts only after
 the Phase C identity and reconciliation contract is merged, and then only with
 exclusive file/behavior ownership plus an explicit integration gate. No later
@@ -55,6 +61,53 @@ source responded.
   Facility number is a non-unique matching/grouping value and cannot be a unique
   ArcGIS database or upsert key.
 - Scheduling remains blocked until a governed cadence is approved.
+
+## Decision and authority record
+
+### Completed evidence and implementation
+
+- #490 remains the historical, inconclusive evaluation that retained the
+  program-specific sources and left the then-evaluated statewide candidate
+  inactive. It is not rewritten by the later Phase A result.
+- #516 Phase A completed the deterministic ArcGIS shadow comparison and approved
+  **SUPPLEMENT**, not replacement, adoption, activation, or cutover.
+- #521 established the shared read-only facility projection for eligible
+  existing program-reference and complaint-linked data. #522 migrated the named
+  reviewer surfaces, and #523 aligned the governed exports and bounded existing
+  backfill. None of those completed issues consumes or activates ArcGIS.
+- #477 is closed and repository-complete for its supported read-only operator
+  dashboard. It did not authorize mutation, scheduling, source retrieval,
+  deployment, or Hosted execution.
+
+### Approved repository decisions
+
+- Program snapshots remain the primary facility-reference source family;
+  ArcGIS remains a separate, inactive supplementary current-reference source.
+- ArcGIS source-row identity is snapshot identity plus `ObjectId`; Facility ID
+  is a non-unique match/grouping value. Query and export remain distinct
+  observations.
+- Blank ArcGIS values do not erase nonblank program values. Identical values may
+  reconcile while retaining both observations. Conflicting nonblank values keep
+  both originals and explicit conflict state. No global source-wins rule exists.
+- Current reference and historical complaint-time facts remain distinct. Raw
+  `733` remains unresolved.
+
+### Decisions reserved to Andrew and later governed phases
+
+Andrew must explicitly approve the exact license/terms version and required
+attribution, the candidate's source-of-record role, maintainer/steward/update
+owner, refresh cadence, production field allowlist and field-specific
+precedence, accepted-snapshot promotion, ArcGIS activation/cutover, and any
+production backfill. Missing approval is a blocker, never permission to infer or
+bypass a decision. QNAP deployment remains a human-operator action, and Hosted
+acceptance remains a separate automated evidence gate against the exact deployed
+merge SHA.
+
+The exact next repository issue is **#518**, limited to the separate dual-source
+snapshot and lifecycle boundary described in Phase B. After #518, #482 owns the
+ArcGIS-specific identity/reconciliation and controlled-backfill extension; #453
+owns additional ArcGIS source-to-screen coverage through the completed #477
+read-only boundary; #478 owns any later approved scheduled refresh.
 
 ## Phase A — completed ArcGIS evaluation and SUPPLEMENT decision
 
@@ -183,6 +236,11 @@ snapshot for that source family while preserving the other source unchanged.
 
 ### Required outcome
 
+Current status: #521-#523 completed the shared projection, named consumers and
+exports, and bounded existing backfill for eligible program-reference data.
+They did not consume ArcGIS. Phase C therefore means the still-pending
+ArcGIS-specific extension of those governed boundaries, not their recreation.
+
 Under Issue #482, implement one governed facility identity and reconciliation
 projection over the separate program and ArcGIS source snapshots. Define stable
 identity, source-specific row identity, governed matching, field-level
@@ -255,6 +313,11 @@ history or reconstructing truth from current rows.
 
 ### Required outcome
 
+Current status: #522/#523 completed the named reviewer/export migration for the
+existing projection. Phase D remains open only for deterministic parity and
+source-traceability evidence after the approved ArcGIS supplement is integrated;
+it must not introduce a second projection or page-local precedence.
+
 Use the merged Phase C facility projection across search, facility hub, review
 queue, complaint detail, packet views, and exports. Every surface must consume
 the same identity, field-ownership, blank, conflict, disappearance, and current-
@@ -313,9 +376,11 @@ source history or authorize a page-local fallback.
 
 Extend Issue #453 source-to-screen coverage through both source-specific
 snapshots, the shared facility projection, approved PostgreSQL values, read
-models, every named user surface, exports, and operator reports. Extend Issue
-#477 beginning with read-only monitoring. Any minimum operational action needed
-later to safely control refresh/backfill jobs requires separate authorization.
+models, every named user surface, exports, and operator reports. Reuse the
+closed #477 read-only dashboard and stable package boundary without reopening or
+expanding #477. Any new ArcGIS-specific diagnostic contract, and any minimum
+operational action needed later to safely control refresh/backfill jobs, requires
+separate issue authorization.
 
 Operator diagnostics must show source family and snapshot identity, separate
 query/export observations, content and schema state, row/Facility ID
@@ -326,8 +391,8 @@ failures without exposing raw records or secrets.
 ### Dependencies
 
 - Completed Phase D shared-projection integration and Phase C reconciliation.
-- Existing Issue #453 contract adapter and Issue #477 production authorization
-  boundary.
+- Existing Issue #453 contract adapter and the completed Issue #477 production
+  authorization boundary.
 - Separately approved permissions and finite job/action contracts for any
   minimum operational action.
 
@@ -517,22 +582,28 @@ field provenance, conflicts, checkpoints, or the prior accepted release.
   not reopened or recharacterized as production adoption.
 - **#518:** owns Phase B separate program/ArcGIS snapshots, source-specific
   identity and lifecycle, validation, accepted/prior-accepted pointers, and
-  atomic rollback. It does not own reviewer integration or canonical backfill.
-- **#482:** required Build Week implementation for the unified facility identity
-  and reconciliation projection plus controlled dual-source backfill.
+  atomic rollback. It is the exact next repository issue and does not own
+  reviewer integration or canonical backfill.
+- **#482:** #521-#523 completed the shared projection, named reviewer/export
+  consumers, and bounded existing backfill for eligible program-reference data.
+  #482 remains required for the later ArcGIS-specific identity/reconciliation,
+  provenance, and controlled dual-source backfill extension after #518.
 - **#453:** remains open for blocked Hosted evidence and additional ArcGIS
   source-to-screen verification.
-- **#477:** remains required for read-only-first monitoring. Any minimum
-  operational action necessary to control refresh/backfill jobs remains
-  separately governed.
+- **#477:** closed and repository-complete for the supported read-only operator
+  dashboard. Future ArcGIS coverage may use its stable package boundary, but any
+  new diagnostics or operational action require separate issue authority.
 - **#478:** owns separate source refresh workflows, locking, attempts,
   checkpoints, recovery, retries, reconciliation, notifications, and approved
   cadence.
 - **#516:** governs this completion-scope alignment and records Phase A as
-  complete with **SUPPLEMENT**; it does not mark later phases complete.
+  complete with **SUPPLEMENT**. After this governance correction merges, #516
+  can close without marking any later implementation, deployment, or acceptance
+  phase complete.
 
-No new issue is required by this plan. Issue state changes occur only after the
-applicable implementation, deployment, evidence, and review gates pass.
+No new issue is required for the next step: proceed with open Issue #518. Issue
+state changes occur only after the applicable implementation, deployment,
+evidence, and review gates pass.
 
 ## Final Build Week release rule
 

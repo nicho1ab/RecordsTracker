@@ -6,10 +6,10 @@
   with **SUPPLEMENT**, but ArcGIS is not yet a production connector or active
   source. Program-specific snapshots remain the primary governed source family;
   ArcGIS is a separate supplementary current-reference source. Separate source
-  snapshots/lifecycle, unified identity and reconciliation, controlled
-  backfill, shared downstream projection, source-to-screen/operator
-  reconciliation, separate scheduled refresh/recovery, deployment, and
-  automated Hosted acceptance in the
+  snapshots/lifecycle; ArcGIS-specific identity, reconciliation, controlled
+  backfill, and downstream projection evidence; ArcGIS source-to-screen/operator
+  reconciliation; separate scheduled refresh/recovery; deployment; and automated
+  Hosted acceptance in the
   [Build Week ArcGIS completion plan](docs/planning/build-week-2026-arcgis-facility-reference-completion-plan.md)
   remain incomplete. Query/export atomicity failed for 47 shared Facility IDs;
   exact license/attribution, system-of-record status, maintainer, steward,
@@ -49,7 +49,7 @@
   QNAP behavior. Fully automated Hosted capture also requires a user-approved
   process-local header-provider command; no token or browser-cookie fallback is
   implemented. The supported read-only Issue #477 repository scope is complete
-  and can close after its completion evidence merges. The Hosted provider
+  and the issue is closed. The Hosted provider
   prerequisite, deployment, mutation, scheduling, and retention work remain
   human-controlled or separately governed rather than missing dashboard code.
 - Reviewer aggregates report their loaded-record universe, denominator,
