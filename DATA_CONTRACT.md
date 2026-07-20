@@ -141,6 +141,47 @@ retry, validates resume selection and operation, and remains idempotent on
 repeat. It does not change reviewer-created state, activate ArcGIS, schedule a
 refresh, or rewrite historical complaint observations.
 
+## Offline ArcGIS source-specific snapshot lifecycle
+
+Issue #518 adds an independently useful, source-reference-only lifecycle
+foundation for the inactive ArcGIS supplement. It does not change the existing
+program-reference preload table or the shared governed facility identity
+projection. The foundation accepts only explicitly marked repository synthetic
+fixture manifests and sibling raw-payload references; it contains no source URL,
+network endpoint authorization, fetch client, live data, canonical allocation,
+or reviewer-facing read path.
+
+The immutable snapshot record stores source family, synthetic observation kind,
+manifest and raw SHA-256 values, normalized-content hash, schema and domain
+fingerprints, deterministic counts, warnings, rejection reasons, and lifecycle
+timestamps. Immutable row identity is `(snapshot_id, ObjectId)`. `FAC_NBR` is
+nullable non-unique grouping metadata and is indexed but never used as a unique
+or upsert key. Candidate rows preserve the complete raw JSON object and a
+source-specific normalized observation with explicit `populated`, `null`,
+`blank`, `absent`, `unavailable`, or `invalid` state.
+
+The exact approved raw fixture boundary is `FAC_LATITUDE`, `FAC_LONGITUDE`,
+`FAC_NBR`, `TYPE`, `PROGRAM_TYPE`, `STATUS`, `CLIENT_SERVED`, `CAPACITY`,
+`NAME`, `RES_STREET_ADDR`, `RES_CITY`, `RES_STATE`, `RES_ZIP_CODE`,
+`FAC_PHONE_NBR`, `FAC_CO_NBR`, `COUNTY`, `FAC_DO_DESC`, `FAC_TYPE_DESC`, and
+`ObjectId`. Only the approved source-specific subset is normalized:
+`object_id`, `facility_number`, `source_latitude_raw`, `source_longitude_raw`,
+`raw_type_code`, `program_type_source`, `raw_status_code`, `capacity_source`,
+`facility_name_source`, `street_address_source`, `city_source`,
+`state_source`, `postal_code_source`, `telephone_source`, `county_source`,
+`regional_office_source`, and `facility_type_description_source`.
+`CLIENT_SERVED` and `FAC_CO_NBR` remain raw-only. Raw `TYPE` and `STATUS` are
+not mapped; in particular, raw `733` remains unresolved.
+
+The lifecycle is candidate to validated or rejected, then explicit acceptance.
+One pointer row per source family selects one accepted synthetic fixture and
+retains the prior accepted snapshot for deterministic rollback. This pointer is
+offline test lifecycle state, not production source activation. Promotion,
+repeat promotion, and expected-active rollback preserve all snapshot histories
+and do not write reviewer-created or canonical tables. A missing `ObjectId` in a
+later candidate is recorded as a disappearance pending reconciliation; it never
+deletes the prior row or infers closure.
+
 ## Public source inventory boundary
 
 `PUBLIC_SOURCE_DATA_INVENTORY.md` may document future source metadata, uploaded

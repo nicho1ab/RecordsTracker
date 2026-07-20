@@ -445,6 +445,22 @@ trends, substantiated, and serious-topic aggregate tests, plus export, ArcGIS,
 backfill, operator, refresh, deployment, and hosted-acceptance tests, remain
 later issue phases.
 
+Issue #518 offline snapshot-lifecycle tests use only clearly fictional repository
+fixtures. They must prove the exact 19-field raw boundary; the narrower approved
+source-specific normalized subset; snapshot-plus-`ObjectId` identity; non-unique
+`FAC_NBR` grouping without row collapse; raw-only `CLIENT_SERVED` and
+`FAC_CO_NBR`; unresolved raw `733`; null, blank, absent, invalid, and unavailable
+states; deterministic schema, domain, content, and row fingerprints; retained
+warnings and rejection evidence; and disappearance without deletion or closure
+inference. Lifecycle tests must prove candidate validation, fail-closed invalid
+transitions, acceptance, one active pointer per source family, prior-accepted
+preservation, idempotent promotion, expected-active rollback, and unchanged
+reviewer-created state. Migration tests cover additive upgrade and complete
+downgrade. An isolated PostgreSQL regression uses a temporary schema only when
+`CCLD_TEST_POSTGRES_URL` and `CCLD_TEST_POSTGRES_ALLOW_SCHEMA_MUTATION=1` are
+explicitly configured. Static coverage must fail if the lifecycle module adds a
+network client, live endpoint identity, or endpoint authorization.
+
 Issue #447 canonical-allocation evidence tests must cover the exact 12-field
 registry, canonical importer population, null versus verified zero, date-list
 ordering/deduplication, raw composite provenance, additive migration behavior,

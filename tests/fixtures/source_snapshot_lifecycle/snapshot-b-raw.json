@@ -1,0 +1,48 @@
+{
+  "fixture_notice": "SYNTHETIC TEST DATA - NO REAL FACILITIES",
+  "records": [
+    {
+      "FAC_LATITUDE": 0.0,
+      "FAC_LONGITUDE": 0.0,
+      "FAC_NBR": "SYNTHETIC-GROUP-A",
+      "TYPE": 733,
+      "PROGRAM_TYPE": "Synthetic program alpha revised",
+      "STATUS": 1,
+      "CLIENT_SERVED": "Synthetic raw-only audience",
+      "CAPACITY": 12,
+      "NAME": "Synthetic Facility Alpha Revised - Not Real",
+      "RES_STREET_ADDR": "1 Fictional Test Way",
+      "RES_CITY": "Exampleville",
+      "RES_STATE": "ZZ",
+      "RES_ZIP_CODE": "00000",
+      "FAC_PHONE_NBR": "000-000-0000",
+      "FAC_CO_NBR": "RAW-ONLY-001",
+      "COUNTY": "Synthetic County",
+      "FAC_DO_DESC": "Synthetic Regional Office",
+      "FAC_TYPE_DESC": "Synthetic direct type label",
+      "ObjectId": 910001
+    },
+    {
+      "FAC_LATITUDE": 2.5,
+      "FAC_LONGITUDE": -2.5,
+      "FAC_NBR": "SYNTHETIC-GROUP-D",
+      "TYPE": 704,
+      "PROGRAM_TYPE": "Synthetic program delta",
+      "STATUS": 4,
+      "CLIENT_SERVED": "Synthetic raw-only audience delta",
+      "CAPACITY": 8,
+      "NAME": "Synthetic Facility Delta - Not Real",
+      "RES_STREET_ADDR": "4 Fictional Test Way",
+      "RES_CITY": "Example City",
+      "RES_STATE": "ZZ",
+      "RES_ZIP_CODE": "00004",
+      "FAC_PHONE_NBR": "000-000-0004",
+      "FAC_CO_NBR": "RAW-ONLY-004",
+      "COUNTY": "Synthetic County",
+      "FAC_DO_DESC": "Synthetic Regional Office",
+      "FAC_TYPE_DESC": "Synthetic new type label",
+      "ObjectId": 910004
+    }
+  ]
+}
+
