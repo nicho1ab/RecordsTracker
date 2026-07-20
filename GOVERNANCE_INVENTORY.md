@@ -4,6 +4,13 @@
 
 - Active phase: production-discovery with local hosted scaffold implementation
   now started under ADR-0012.
+- Development-loop routing uses the governed machine-readable label taxonomy in
+  `.github/development-loop-labels.json` and the supported idempotent label
+  management script. `codex-loop-ready` requires a complete issue contract,
+  exactly one eligible low/medium risk label, resolved decisions, independent
+  testability, safe reversibility, and no prohibited blocker. Andrew retains
+  final eligibility and cross-boundary authority; labels and automation cannot
+  grant capabilities, override governance, clear blockers, merge, or deploy.
 - Current implementation state: the Python, SQLite, and Datasette proof of
   concept has proven governed ingestion, deterministic extraction, raw source
   preservation, source traceability, local validation and review support, and

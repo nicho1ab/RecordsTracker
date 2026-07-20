@@ -100,8 +100,9 @@ body:
     attributes:
       label: Risk classification
       description: >-
-        This records issue data only and does not create or apply a label. Explain
-        the classification in the issue body when it is not self-evident.
+        This records issue data only and does not create or apply a label. After
+        human review, the selected classification maps to risk-low, risk-medium,
+        or risk-high. Explain the classification when it is not self-evident.
       options:
         - Low - bounded, reversible, and strongly testable
         - Medium - broader impact or additional verification needed
@@ -157,7 +158,9 @@ body:
       label: Loop-readiness declaration
       description: >-
         This author assessment is not approval. An authorized human determines
-        readiness from the full issue and current repository governance.
+        readiness from the full issue and current repository governance. The
+        form never applies codex-loop-ready; only Andrew may apply or remove that
+        label after the governed eligibility review.
       options:
         - Ready for human readiness review - every confirmation is supported
         - Not ready - required information or a human decision is incomplete

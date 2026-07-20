@@ -1,0 +1,137 @@
+{
+  "schema_version": "1.0.0",
+  "repository": "nicho1ab/RecordsTracker",
+  "loop_ready_label": "codex-loop-ready",
+  "labels": [
+    {
+      "name": "codex-loop-ready",
+      "color": "1A7F37",
+      "description": "Eligible for the governed human-supervised development loop",
+      "purpose": "Marks an issue as eligible for bounded implementation selection.",
+      "application_rule": "Andrew may apply it only after reviewing the complete issue and confirming every eligibility rule.",
+      "removal_rule": "Andrew removes it when scope, evidence, risk, dependencies, decisions, or governance no longer satisfy eligibility."
+    },
+    {
+      "name": "risk-low",
+      "color": "2DA44E",
+      "description": "Bounded, reversible work with strong independent validation",
+      "purpose": "Records low implementation and verification risk.",
+      "application_rule": "Apply after confirming bounded impact, safe reversibility, and strong independent validation.",
+      "removal_rule": "Remove when the risk classification changes or the issue closes."
+    },
+    {
+      "name": "risk-medium",
+      "color": "BF8700",
+      "description": "Broader impact or verification needs; supervised execution allowed",
+      "purpose": "Records medium risk that remains suitable for supervised execution.",
+      "application_rule": "Apply when impact or evidence needs are broader but the issue remains independently testable and reversible.",
+      "removal_rule": "Remove when the risk classification changes or the issue closes."
+    },
+    {
+      "name": "risk-high",
+      "color": "CF222E",
+      "description": "Material governed-boundary risk; no automatic selection",
+      "purpose": "Routes material product, data, security, privacy, schema, ingestion, deployment, or operational risk to humans.",
+      "application_rule": "Apply when any material governed-boundary or operational risk requires human-controlled handling.",
+      "removal_rule": "Remove only after Andrew approves a documented reclassification or the issue closes."
+    },
+    {
+      "name": "requires-product-decision",
+      "color": "8250DF",
+      "description": "Unresolved product or UX authority is required before execution",
+      "purpose": "Makes an unresolved product or UX decision visible.",
+      "application_rule": "Apply as soon as implementation depends on an unresolved product or UX decision.",
+      "removal_rule": "Remove after the authorized human decision is recorded in the issue."
+    },
+    {
+      "name": "requires-data-decision",
+      "color": "0969DA",
+      "description": "Unresolved data, mapping, provenance, or contract decision",
+      "purpose": "Makes an unresolved data-governance decision visible.",
+      "application_rule": "Apply when data semantics, mapping, correction, provenance, or contract authority is unresolved.",
+      "removal_rule": "Remove after the authorized data decision and its evidence are recorded."
+    },
+    {
+      "name": "requires-security-review",
+      "color": "B62324",
+      "description": "Security or privacy review is required before implementation or merge",
+      "purpose": "Routes unresolved security or privacy review to human authority.",
+      "application_rule": "Apply when security or privacy review remains required before implementation or merge.",
+      "removal_rule": "Remove after the authorized review is recorded and any resulting blockers are resolved."
+    },
+    {
+      "name": "requires-manual-ui-review",
+      "color": "1B7C83",
+      "description": "Human visual or interaction review is required before completion",
+      "purpose": "Records a mandatory human UI evidence gate without necessarily blocking implementation.",
+      "application_rule": "Apply when automated implementation may proceed but visual or interaction review is required before merge or completion.",
+      "removal_rule": "Remove after the required human UI review and disposition are recorded."
+    },
+    {
+      "name": "blocked",
+      "color": "57606A",
+      "description": "Execution cannot proceed while a dependency or decision remains",
+      "purpose": "Stops execution while a dependency, decision, evidence gap, or governed boundary is unresolved.",
+      "application_rule": "Apply immediately when safe implementation cannot proceed.",
+      "removal_rule": "Remove only after the blocker and its resolution are recorded."
+    }
+  ],
+  "risk_policy": {
+    "labels": [
+      "risk-low",
+      "risk-medium",
+      "risk-high"
+    ],
+    "eligible_with_loop_ready": [
+      "risk-low",
+      "risk-medium"
+    ],
+    "exactly_one_required_with_loop_ready": true
+  },
+  "eligibility_policy": {
+    "required_issue_contract_sections": [
+      "goal",
+      "scope",
+      "exclusions",
+      "acceptance criteria",
+      "validation",
+      "risks"
+    ],
+    "required_decisions_resolved": true,
+    "independently_testable": true,
+    "safely_reversible": true,
+    "autonomous_production_deployment_allowed": false,
+    "labels_are_routing_metadata_only": true,
+    "prohibited_with_loop_ready": [
+      "risk-high",
+      "blocked",
+      "requires-product-decision",
+      "requires-data-decision",
+      "requires-security-review",
+      "needs-triage",
+      "question",
+      "invalid",
+      "duplicate",
+      "wontfix"
+    ],
+    "conditional_completion_gates": [
+      "requires-manual-ui-review",
+      "needs:stakeholder-validation"
+    ]
+  },
+  "authority": {
+    "final_human_authority": "Andrew",
+    "codex_loop_ready_apply": [
+      "Andrew"
+    ],
+    "codex_loop_ready_remove": [
+      "Andrew"
+    ],
+    "automation_may_validate": true,
+    "automation_may_apply": false,
+    "automation_may_remove": false,
+    "automation_may_override_human_removal": false,
+    "automation_may_override_blockers": false,
+    "automation_may_override_repository_governance": false
+  }
+}

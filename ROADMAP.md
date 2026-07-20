@@ -9,6 +9,11 @@ the governed primary future review experience.
 
 ## Completed foundation
 
+- Defined a governed development-loop issue contract, pull-request evidence
+  contract, and non-overlapping eligibility/risk/decision/review/blocker label
+  taxonomy. Label definitions are machine-readable and idempotently verifiable;
+  labels remain routing metadata under Andrew's final authority and do not
+  automate issue selection, merge, or deployment.
 - Expanded the existing Facility Review Hub into the per-facility drill-down
   from cross-facility intelligence, reusing stable complaint deduplication,
   serious-review, finding, trend/anomaly, coverage, and recommended-next logic

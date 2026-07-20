@@ -49,6 +49,14 @@ after the task's allowed correction attempts. Human authority, the task's
 explicit capability grant, required checks, review, and merge decision remain
 controlling after the form is submitted.
 
+After the complete issue is reviewed, use the
+[development-loop label taxonomy](docs/developer/development-loop-label-taxonomy.md)
+to record risk, unresolved decisions, required human review, blocking state,
+and loop eligibility. A label is routing metadata only. Only Andrew may apply
+or remove `codex-loop-ready`; automation may validate the documented rules but
+may not grant eligibility, clear blockers, or override human authority or
+repository governance.
+
 ## Local validation
 
 ```powershell
