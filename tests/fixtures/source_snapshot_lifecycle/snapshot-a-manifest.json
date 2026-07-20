@@ -1,0 +1,31 @@
+{
+  "contract_version": "1.0.0",
+  "fixture_kind": "repository_synthetic_fixture",
+  "source_family_id": "arcgis-ccl-facilities-supplement",
+  "observation_kind": "synthetic_query",
+  "recorded_at": "2026-07-20T12:00:00+00:00",
+  "raw_payload_ref": "snapshot-a-raw.json",
+  "raw_payload_sha256": "b518c36f894b2a2d64d08eaeedaa6dbc6a02317a9d6639d35fe5dd454cdc3a7e",
+  "schema_fields": [
+    {"name": "FAC_LATITUDE", "type": "esriFieldTypeDouble", "nullable": true, "domain": null},
+    {"name": "FAC_LONGITUDE", "type": "esriFieldTypeDouble", "nullable": true, "domain": null},
+    {"name": "FAC_NBR", "type": "esriFieldTypeString", "nullable": true, "domain": null},
+    {"name": "TYPE", "type": "esriFieldTypeInteger", "nullable": true, "domain": null},
+    {"name": "PROGRAM_TYPE", "type": "esriFieldTypeString", "nullable": true, "domain": null},
+    {"name": "STATUS", "type": "esriFieldTypeInteger", "nullable": true, "domain": null},
+    {"name": "CLIENT_SERVED", "type": "esriFieldTypeString", "nullable": true, "domain": null},
+    {"name": "CAPACITY", "type": "esriFieldTypeInteger", "nullable": true, "domain": null},
+    {"name": "NAME", "type": "esriFieldTypeString", "nullable": true, "domain": null},
+    {"name": "RES_STREET_ADDR", "type": "esriFieldTypeString", "nullable": true, "domain": null},
+    {"name": "RES_CITY", "type": "esriFieldTypeString", "nullable": true, "domain": null},
+    {"name": "RES_STATE", "type": "esriFieldTypeString", "nullable": true, "domain": null},
+    {"name": "RES_ZIP_CODE", "type": "esriFieldTypeString", "nullable": true, "domain": null},
+    {"name": "FAC_PHONE_NBR", "type": "esriFieldTypeString", "nullable": true, "domain": null},
+    {"name": "FAC_CO_NBR", "type": "esriFieldTypeString", "nullable": true, "domain": null},
+    {"name": "COUNTY", "type": "esriFieldTypeString", "nullable": true, "domain": null},
+    {"name": "FAC_DO_DESC", "type": "esriFieldTypeString", "nullable": true, "domain": null},
+    {"name": "FAC_TYPE_DESC", "type": "esriFieldTypeString", "nullable": true, "domain": null},
+    {"name": "ObjectId", "type": "esriFieldTypeOID", "nullable": false, "domain": null}
+  ]
+}
+

@@ -20,6 +20,12 @@ derived, reviewer-created, and audit rows.
 The facility-reference revisions must remain source-reference-only and additive;
 they must not convert visit-date arrays into complaint events or silently merge
 reference rows into canonical facilities.
+Revision `20260720_0008` adds a separate offline source-specific snapshot
+lifecycle table group for Issue #518. It preserves immutable synthetic fixture
+metadata and rows, disappearance evidence, and one active/prior pointer per
+source family. It neither backfills the existing facility-reference table nor
+creates a live connector, production activation, canonical allocation, or
+reviewer-created-state write path.
 These revisions do not implement full review workflows, annotations,
 corrections, full audit policy coverage, audit UI, audit export, export state,
 feedback, retention automation, destructive reset, reload execution, archive

@@ -14,6 +14,16 @@
   remain incomplete. Query/export atomicity failed for 47 shared Facility IDs;
   exact license/attribution, system-of-record status, maintainer, steward,
   update owner, cadence, and raw type value `733` remain unresolved.
+- Issue #518 now has an offline, fixture-driven lifecycle foundation for a
+  separately versioned ArcGIS supplement: immutable synthetic manifests/raw
+  references, snapshot-plus-`ObjectId` rows, validation/rejection evidence,
+  disappearance reconciliation, and accepted/active/prior pointer mechanics.
+  It operates only on clearly fictional repository fixtures. It is not a live
+  connector, endpoint authorization, license/attribution approval, ArcGIS
+  activation, source precedence rule, canonical/reviewer projection, production
+  backfill, scheduler, operator mutation, deployment, or hosted acceptance.
+  Issue #518 therefore remains open for the separately authorized live-source
+  and production-runtime phases after the authority blockers are resolved.
 - Issue #521 now provides a shared read-only facility identity projection over
   eligible existing program-reference rows and authorized complaint-linked
   canonical facility rows. It preserves separate public, internal canonical,

@@ -349,6 +349,24 @@ export packet, export packet item, and audit event. These concepts are planning
 boundaries only until future schema, import/sync, API, export, audit, and
 retention implementation PRs validate the concrete layer.
 
+## Offline source-specific snapshot lifecycle
+
+Issue #518 adds four additive PostgreSQL/Alembic source-reference tables for the
+inactive ArcGIS supplement: immutable snapshot metadata, immutable rows keyed by
+snapshot plus `ObjectId`, explicit disappearance records, and one active/prior
+pointer per source family. They are separate from the existing
+`hosted_facility_reference_records` program-source preload and from canonical,
+reviewer-created, audit, retrieval-job, and operator state.
+
+The current lifecycle service accepts repository-controlled fictional fixtures
+only. It has no HTTP client, endpoint allowlist, live connector, production
+promotion command, canonical bridge, or reviewer consumer. Validation records
+schema/domain drift, missing and invalid fields, duplicate source identities,
+non-unique Facility ID groups, normalized row fingerprints, warnings,
+rejections, and disappearances. A rejected candidate cannot become accepted or
+active; promotion and rollback move a complete pointer atomically inside the
+caller's database transaction while retaining both accepted snapshots.
+
 ## Boundaries
 
 - The repository owns ingestion, extraction, validation, storage, documentation, and tests.
