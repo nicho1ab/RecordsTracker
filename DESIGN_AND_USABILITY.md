@@ -1291,7 +1291,7 @@ Reviewer-facing complaint links and summaries must use deterministic source-back
 
 Facility name, facility type, address, city, state, ZIP, capacity, administrator, telephone, and other ordinary facility identity or context fields visibly present in a governed complaint report must not render as `Not provided` solely because a preferred directory or reference source lacks the value.
 
-Source precedence and fallback must be explicit. Distinguish at least: populated value, blank on source, field absent from source, source artifact unavailable, extraction or mapping failure, conflicting sources, and intentionally internal data. An extraction or import defect must not be presented as though the public source omitted the value.
+Source precedence and fallback must be explicit. Distinguish at least: populated value, blank on source, field absent from source, source artifact unavailable, unsupported source layout, invalid source value, source value not loaded into the current runtime, extraction or mapping failure, conflicting sources, and intentionally internal data. An extraction, import, or runtime-loading defect must not be presented as though the public source omitted the value.
 
 Migrated facility surfaces must use the shared governed facility presenter, not
 page-specific missing-value or status/type labels. Present `Blank in source`,
@@ -1312,6 +1312,8 @@ A source field is not implemented merely because it is extracted. Completion req
 
 ### Figma and visual acceptance gate
 
-Every important reviewer-facing redesign must name the exact approved Figma frame or approved design artifact. Before coding, provide the numbered page-change inventory and a design variance inventory. After coding, capture the exact route at the approved viewport sizes and compare it to the approved design.
+Every reviewer-facing visual or interaction implementation must name the exact approved Figma frame or approved design artifact. Before coding, provide the numbered page-change inventory and a design variance inventory. A nonvisual correction may reuse the currently approved artifact only when the handoff identifies it and explains why no visual variance is expected. If no applicable approved artifact exists, implementation stops.
+
+After coding, automated evidence capture must render the exact route at every approved viewport and named component state. The evidence handoff must compare those captures side by side with the approved design, classify every applicable requirement ID, and record an explicit visual-acceptance decision. Missing screenshots, an unreviewed variance, or screenshot comparison delegated to ad hoc manual browser inspection blocks merge.
 
 A reviewer-facing UI change is not complete when tests pass but the visual result materially differs from the approved hierarchy, component pattern, palette, spacing, density, responsive behavior, or interaction model. Visual rejection is a release blocker.

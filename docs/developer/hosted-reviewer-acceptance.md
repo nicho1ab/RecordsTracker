@@ -127,6 +127,18 @@ The route marker checks also look for visible page-level orientation on the
 main hosted workflow pages, including route headings, shared skip links, active
 navigation, and the existing control or link that moves the review forward.
 
+## Reviewer-facing visual acceptance boundary
+
+This general verifier does not establish the Issue #479 visual-acceptance gate.
+Its `-IncludeCapture` path intentionally runs without screenshots and therefore
+proves route and marker behavior only. A later reviewer-facing visual or
+interaction task must separately run automated screenshot capture with
+screenshots required, satisfy the structured contract in
+`docs/developer/ui-evidence-review.md`, compare exact-route captures with the
+named approved design artifacts, and record an explicit visual-acceptance
+decision. Absence of an automated screenshot tool remains a blocker for that
+task; it is not authorization to substitute manual browser inspection.
+
 ## Review Routing
 
 Use dedicated source, legal, production monitoring, production authentication,

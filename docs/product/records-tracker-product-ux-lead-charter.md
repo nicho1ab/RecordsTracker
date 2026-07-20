@@ -397,7 +397,12 @@ Terms that likely need support include Type A citation, Type B citation, POC, co
 
 The current design direction may be refined in Figma before implementation. Figma output can help define layout, hierarchy, icons, copy affordances, timelines, badges, and glossary interactions before Codex implements them.
 
-Use Figma or Figma AI when a design issue is visual/systemic enough that another code-only prompt is likely to produce rework. Figma is optional, not required for every change.
+Every reviewer-facing visual or interaction implementation requires an approved
+Figma frame or another explicit user-approved design package before coding.
+Figma is not required for a nonvisual correction that preserves an already
+approved pattern, but the implementation handoff must cite that pattern and
+state why no visual variance is expected. Agents must not invent missing visual
+direction while coding.
 
 A Figma-to-Codex handoff should specify:
 
@@ -471,7 +476,10 @@ A UI PR is not ready merely because:
 
 A UI PR is ready only when:
 
-- the exact target route screenshot or manual page review is complete;
+- automated exact-route screenshots exist for every applicable approved
+  viewport and component state;
+- the screenshots have been compared with the exact approved design artifact
+  and an explicit visual-acceptance decision is recorded;
 - the screenshot matches the blueprint or approved sitewide pattern;
 - the primary user task is visibly easier;
 - source/reviewer/operator tiers are respected;
