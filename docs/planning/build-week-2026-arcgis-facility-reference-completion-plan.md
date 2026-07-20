@@ -226,6 +226,16 @@ Complete when both source families can stage, validate, reject, promote, and
 roll back complete snapshots independently and atomically, with deterministic
 reconciliation of lifecycle pointers and no canonical/reviewer mutation.
 
+Current repository status: PR #545 merged the offline lifecycle foundation.
+The Issue #518 live-query completion branch adds the separately authorized
+fixed-policy connector, immutable ignored response evidence, exact ObjectId
+reconciliation, provisional attribution, and live-candidate adapters that reuse
+the same transitions. A controlled live candidate completed stage, validation,
+acceptance-state, promotion, and rollback in a disposable PostgreSQL schema;
+prior accepted and unrelated reviewer-created state were preserved. Phase B may
+be marked complete only after independent review, required checks, and merge.
+This gate does not activate ArcGIS or authorize Phase C.
+
 ### Rollback or preservation rule
 
 Retain every accepted, rejected, and superseded snapshot and manifest. A failed

@@ -3,8 +3,9 @@
 - The deployed Build Week checkpoint
   `d7e9b1fff9e1826c3387a7313777d14c1480d3b4` is not the final Build Week
   release. Phase A merged at `41d512127febdfd086432e7f082d0651da232e9f`
-  with **SUPPLEMENT**, but ArcGIS is not yet a production connector or active
-  source. Program-specific snapshots remain the primary governed source family;
+  with **SUPPLEMENT**. Issue #518 now has a bounded live query-only connector,
+  but ArcGIS is not a production-active source. Program-specific snapshots
+  remain the primary governed source family;
   ArcGIS is a separate supplementary current-reference source. Separate source
   snapshots/lifecycle; ArcGIS-specific identity, reconciliation, controlled
   backfill, and downstream projection evidence; ArcGIS source-to-screen/operator
@@ -12,18 +13,20 @@
   Hosted acceptance in the
   [Build Week ArcGIS completion plan](docs/planning/build-week-2026-arcgis-facility-reference-completion-plan.md)
   remain incomplete. Query/export atomicity failed for 47 shared Facility IDs;
-  exact license/attribution, system-of-record status, maintainer, steward,
-  update owner, cadence, and raw type value `733` remain unresolved.
-- Issue #518 now has an offline, fixture-driven lifecycle foundation for a
-  separately versioned ArcGIS supplement: immutable synthetic manifests/raw
-  references, snapshot-plus-`ObjectId` rows, validation/rejection evidence,
-  disappearance reconciliation, and accepted/active/prior pointer mechanics.
-  It operates only on clearly fictional repository fixtures. It is not a live
-  connector, endpoint authorization, license/attribution approval, ArcGIS
-  activation, source precedence rule, canonical/reviewer projection, production
-  backfill, scheduler, operator mutation, deployment, or hosted acceptance.
-  Issue #518 therefore remains open for the separately authorized live-source
-  and production-runtime phases after the authority blockers are resolved.
+  the exact Creative Commons version, dataset-specific attribution sentence,
+  system-of-record status, maintainer, steward, update owner, cadence, and raw
+  type value `733` label remain unresolved.
+- Issue #518 reuses its fixture-driven lifecycle foundation for a separately
+  versioned live ArcGIS query observation. The connector enforces the approved
+  endpoints and parameters, immutable ignored raw evidence, exact 19-field
+  schema, complete deterministic pagination, ID reconciliation, provisional
+  attribution, and an `isolated_nonproduction` transition gate. A controlled
+  29,871-row candidate was staged, accepted, promoted, and rolled back in a
+  disposable PostgreSQL schema while prior and reviewer-created state remained
+  unchanged. This is not ArcGIS activation, a source precedence rule,
+  canonical/reviewer projection, production backfill, scheduled refresh/retry,
+  operator mutation, deployment, QNAP/Cloudflare work, production PostgreSQL,
+  or Hosted acceptance. Real response bodies remain ignored local evidence.
 - Issue #521 now provides a shared read-only facility identity projection over
   eligible existing program-reference rows and authorized complaint-linked
   canonical facility rows. It preserves separate public, internal canonical,

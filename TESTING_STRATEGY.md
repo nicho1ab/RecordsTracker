@@ -445,21 +445,36 @@ trends, substantiated, and serious-topic aggregate tests, plus export, ArcGIS,
 backfill, operator, refresh, deployment, and hosted-acceptance tests, remain
 later issue phases.
 
-Issue #518 offline snapshot-lifecycle tests use only clearly fictional repository
-fixtures. They must prove the exact 19-field raw boundary; the narrower approved
-source-specific normalized subset; snapshot-plus-`ObjectId` identity; non-unique
-`FAC_NBR` grouping without row collapse; raw-only `CLIENT_SERVED` and
-`FAC_CO_NBR`; unresolved raw `733`; null, blank, absent, invalid, and unavailable
-states; deterministic schema, domain, content, and row fingerprints; retained
-warnings and rejection evidence; and disappearance without deletion or closure
-inference. Lifecycle tests must prove candidate validation, fail-closed invalid
-transitions, acceptance, one active pointer per source family, prior-accepted
-preservation, idempotent promotion, expected-active rollback, and unchanged
-reviewer-created state. Migration tests cover additive upgrade and complete
-downgrade. An isolated PostgreSQL regression uses a temporary schema only when
+Issue #518 snapshot-lifecycle fixtures remain clearly fictional. They prove the
+exact official 19-field schema, narrower approved source-specific normalized
+subset, snapshot-plus-`ObjectId` identity, non-unique `FAC_NBR` grouping without
+row collapse, raw-only `CLIENT_SERVED` and `FAC_CO_NBR`, unresolved raw `733`,
+null/blank/absent/invalid/unavailable states, deterministic fingerprints,
+retained rejection evidence, and disappearance without deletion or closure
+inference. Lifecycle tests prove candidate validation, fail-closed invalid
+transitions, acceptance, one active pointer, prior-accepted preservation,
+idempotent promotion, expected-active rollback, and unchanged reviewer-created
+state. Migration tests cover additive live-scope authorization, refusal to
+downgrade across retained live history, and the single Alembic head.
+
+Issue #518 live-connector unit tests use only the bounded fictional connector
+fixtures. They must prove fixed host/path/method/parameter policy, no redirects,
+bounded deterministic pagination, the empty terminal page, exact ID-only
+reconciliation, response-before-parse storage, immutable file creation, status
+and media-type validation, source identity, schema/domain drift, omitted or
+extra fields, duplicate/reordered/omitted ObjectIds, non-unique `FAC_NBR`, raw
+`733`, raw-only fields, provisional attribution, and no manifest for a failed
+candidate. No CI test makes a live external request.
+
+An isolated PostgreSQL regression uses a random temporary schema only when
 `CCLD_TEST_POSTGRES_URL` and `CCLD_TEST_POSTGRES_ALLOW_SCHEMA_MUTATION=1` are
-explicitly configured. Static coverage must fail if the lifecycle module adds a
-network client, live endpoint identity, or endpoint authorization.
+explicitly configured. Setting `CCLD_TEST_ARCGIS_LIVE_MANIFEST` additionally
+exercises a governed manifest located under the ignored Issue #518 evidence
+root, including complete row staging, acceptance-state, promotion, rollback,
+prior-snapshot retention, and reviewer-state isolation. The connection must be
+isolated nonproduction infrastructure; these flags never authorize production.
+Static coverage keeps HTTP policy in the connector and out of the shared
+lifecycle module.
 
 Issue #447 canonical-allocation evidence tests must cover the exact 12-field
 registry, canonical importer population, null versus verified zero, date-list

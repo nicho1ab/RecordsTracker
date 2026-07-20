@@ -1,0 +1,7 @@
+{
+  "currentVersion": 11.3,
+  "serviceDescription": "Synthetic metadata fixture for the approved service identity.",
+  "layers": [
+    {"id": 0, "name": "Master_CCL_County_Intersect_2023", "parentLayerId": -1}
+  ]
+}

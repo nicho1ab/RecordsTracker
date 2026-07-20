@@ -1,0 +1,50 @@
+{
+  "features": [
+    {
+      "attributes": {
+        "FAC_LATITUDE": "0.0",
+        "FAC_LONGITUDE": "0.0",
+        "FAC_NBR": 990000001,
+        "TYPE": 733,
+        "PROGRAM_TYPE": "Synthetic program alpha",
+        "STATUS": 1,
+        "CLIENT_SERVED": 1,
+        "CAPACITY": 12,
+        "NAME": "Synthetic Facility Alpha - Not Real",
+        "RES_STREET_ADDR": "1 Fictional Test Way",
+        "RES_CITY": "Exampleville",
+        "RES_STATE": "ZZ",
+        "RES_ZIP_CODE": "00000",
+        "FAC_PHONE_NBR": 9990000001.0,
+        "FAC_CO_NBR": 9001,
+        "COUNTY": "Synthetic County",
+        "FAC_DO_DESC": "Synthetic Regional Office",
+        "FAC_TYPE_DESC": "Synthetic direct type label",
+        "ObjectId": 910001
+      }
+    },
+    {
+      "attributes": {
+        "FAC_LATITUDE": null,
+        "FAC_LONGITUDE": null,
+        "FAC_NBR": 990000001,
+        "TYPE": 701,
+        "PROGRAM_TYPE": "",
+        "STATUS": 2,
+        "CLIENT_SERVED": null,
+        "CAPACITY": 0,
+        "NAME": "Synthetic Facility Beta - Not Real",
+        "RES_STREET_ADDR": "",
+        "RES_CITY": "Exampletown",
+        "RES_STATE": "ZZ",
+        "RES_ZIP_CODE": "00001",
+        "FAC_PHONE_NBR": 9990000002.0,
+        "FAC_CO_NBR": 9002,
+        "COUNTY": null,
+        "FAC_DO_DESC": "Synthetic Regional Office",
+        "FAC_TYPE_DESC": "Synthetic alternate type label",
+        "ObjectId": 910002
+      }
+    }
+  ]
+}

@@ -9,3 +9,7 @@ Each manifest points only to a sibling raw JSON payload and records the SHA-256
 of its Git-normalized bytes. Snapshot A and B are valid synthetic observations;
 the rejected fixture intentionally contains schema/domain and row defects.
 
+The fictional values follow the exact ArcGIS field types observed from the
+approved live layer on 2026-07-20, including string coordinates, integer
+`FAC_NBR`/`CLIENT_SERVED`/`FAC_CO_NBR`, and double `FAC_PHONE_NBR`. This corrects
+the earlier synthetic type assumptions without copying a live facility row.

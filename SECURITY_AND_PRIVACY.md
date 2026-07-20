@@ -20,6 +20,20 @@ The initial source is a public portal. Before expanding to new sources, document
 - Data sensitivity concerns
 - Retention approach
 
+The Issue #518 ArcGIS connector is limited to the approved public CDSS CCL
+Facilities catalog/item/service/layer and exact query identities. It sends
+unauthenticated GET requests without caller-supplied URLs, query expressions,
+credentials, cookies, authorization headers, user information, or fragments.
+It rejects redirects, unapproved parameters, export/replica/cache/Azure paths,
+signed or opaque queries, incomplete pagination, and non-reconciling ObjectIds.
+Original public responses remain under the Git-ignored
+`data/raw/source-profiling/issue-518-live-query/` retention boundary. Tracked
+evidence may include only sanitized public identities, aggregate counts,
+fingerprints, hashes, and limitations—not live facility rows or bulk response
+bodies. The connector has no retry, production activation, canonical/reviewer
+write, scheduler, operator mutation, deployment, QNAP, Cloudflare, or Hosted
+acceptance path.
+
 ## Secrets
 
 Local secrets must use environment variables or untracked `.env` files. `.env` is ignored by Git.
